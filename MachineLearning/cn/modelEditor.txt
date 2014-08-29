@@ -1,0 +1,60 @@
+m1=LoadModel("C:\temp\cntkdebug.dnn", format=cntk)
+SetDefaultModel(m1)
+Dump(m1, "c:\temp\dump1.txt", includeData = true)
+
+#add a layer to a 3-layer network, copy all nodes in layer 3 to layer 4
+# all strings that start with L3* will be copied to L4* along with internal connections
+#if L4* nodes exist they will be replaced, if not, they will be created
+Copy(L3*,L4*)
+
+#hook up layer 4 to the previous and next layers
+# name[#] is how inputs are identified
+SetInput(CE.*.T, 1, L4.RL);
+SetInput(L4.*.T, 1, L3.RL);
+
+#now lock down the first 3 layers learnable parameters
+SetProperty(L*.W, ComputeGradient, false);
+SetProperty(L*.B, ComputeGradient, false);
+SaveModel(m1, "C:\temp\mnist\cntkdebug2.dnn", format=cntk)
+
+#Remove the second layer and mean variance normalization
+Remove(L2.*, meanVal, stddev, normInput)
+#fixup the links
+SetInput(L3.*.T, 1, L1.RL)
+SetInput(L1.*.T, 1, features)
+
+#Add mean variance using in-line NDL 
+meanVal = Mean(features)
+invstdVal = InvStdDev(features)
+inputVal = PerDimMeanVarNormalization(features,meanVal,invstdVal)
+
+Dump(m1, "c:\temp\dump2.txt")
+SetInput(L1.*.T, 1, inputVal)
+SetProperty(features, Feature, true) # make sure the features node has the feature property
+Dump(m1, "c:\temp\dump2.txt")
+SaveModel(m1, "C:\temp\mnist\cntkdebug3.dnn", format=cntk)
+
+#replace rectified linear with Sigmoid
+Rename(L*.RL,L*.S)
+Dump(m1, "c:\temp\dumpRename.txt")
+Rename(L*.S,L*.RL)
+
+#add a new sigmoid hidden layer
+HDIM=256
+L2=SBFF(L1.RL,HDIM,HDIM, init=uniform)
+SetInput(L3.*.T, 1, L2.S)
+
+Dump(m1, "c:\temp\dump3.txt")
+
+#newly defined layer has no weight or bias values
+#so copy them from another model
+m2=LoadModel("C:\temp\mnist\cntkdebug2.dnn", format=cntk);
+Copy(m2.L2.*.W, L2.*.W, copy=value)
+Copy(m2.L2.*.B, L2.*.B, copy=value)
+Dump(m1, "c:\temp\dump4.txt")
+#now link the layer in
+#SetInput(L2.*.T, 1, L1.RL)
+
+Dump(m1, "c:\temp\dump5.txt")
+SaveModel(m1, "C:\temp\mnist\cntkdebug4.dnn", format=cntk)
+

@@ -1,0 +1,13 @@
+Current
+  Version from PTask git repository at 17:30 on 7/8/2014.
+
+Previous
+  Version from PTask git repository at 23:00 on 6/20/2014.
+  Version from MSR-SV Source Depot at 17:00 on 6/10/2014.
+  Version from MSR-SV Source Depot at 10:00 on 6/4/2014.
+  Version from MSR-SV Source Depot at 16:00 on 5/21/2014.
+  Version from MSR-SV Source Depot at 01:45 on 5/16/2014.
+  Version from MSR-SV Source Depot at 22:10 on 3/21/2014.
+  Version from MSR-SV Source Depot at 22:00 on 2/25/2014.
+  Version from MSR-SV Source Depot at 16:45 on 12/18/2013.
+  Version from MSR-SV Source Depot at 11:00 on 11/12/2013.

@@ -1,0 +1,411 @@
+# configuration file for CNTK MNIST Before Check-In Tests
+
+stderr=c:\temp\\penntreebank\lstmpenntreebank.log
+command=penntreebanklstmrndmb10lr01:penntreebanktestlstmrndmb10lr01
+
+#
+# Class-based cross entropy LSTM experiments
+#
+# learning rate: 0.15
+# minibatch size 10
+# number of sentences in each minibatch nbruttsineachrecurrentiter=10
+#
+# iter 30: PPL = exp(4.9226532) = 137.37
+# iter 20: PPL = exp(4.9226532) = 137.37
+# iter 10: PPL = exp(4.9226532) = 137.37
+# iter 1: PPL = exp(5.087323) = 161.96
+
+#
+# baseline from Thomas Mikolov's paper
+# http://www.fit.vutbr.cz/research/groups/speech/publi/2011/mikolov_icassp2011_5528.pdf
+# test PPL : 136
+#
+# LSTM results from Alex Graves LSTM paper
+# http://arxiv.org/pdf/1308.0850v2.pdf
+# test PPL : 138
+# notice that Alex's paper doesn't use class for speed-up.
+# 
+
+type=double
+
+penntreebanklstmrndmb10lr01=[
+    # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
+	# can be considered as the maximum length of a sentence
+	action=trainRNN
+
+# correspond to the number of words/characteres to train in a minibatch
+    minibatchSize=6
+	# need to be small since models are updated for each minibatch
+    traceLevel=1
+	deviceId=-1
+	epochSize=4430000
+	# which is 886 * 5000
+    SimpleNetworkBuilder=[
+	    recurrentLayer=1
+        defaultHiddenActivity=0.1
+        rnnType=CLASSLSTM
+
+	    trainingCriterion=classcrossentropywithsoftmax
+	    evalCriterion=classcrossentropywithsoftmax
+	    nodeType=Sigmoid
+        initValueScale=6.0
+		layerSizes=10000:200:10050
+        addPrior=false
+        addDropoutNodes=false
+        applyMeanVarNorm=false
+        uniformInit=true;
+    ]
+
+    # configuration file, base parameters
+    SGD=[
+		learningRatesPerSample=0.15
+        momentumPerMB=0.90
+#        momentumPerMB=0.0
+#        gradientClippingWithTruncation=false
+#		clippingThresholdPerSample=15.0
+
+	    maxEpochs=150
+		unroll=false
+        numMBsToShowResult=1000
+        useAdagrad=true
+		
+		modelPath=c:\temp\penntreebank\cntkdebug.dnn
+        loadBestModel=true
+
+        # settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            # auto learning rate adjustment
+	autoAdjustLR=adjustafterepoch
+    reduceLearnRateIfImproveLessThan=0
+    increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.618
+            learnRateIncreaseFactor=1.382
+            numMiniBatch4LRSearch=100
+            numPrevLearnRates=5
+            numBestSearchEpoch=1
+        ]
+
+
+        dropoutRate=0.0
+    ]
+
+    reader=[
+      # reader to use
+      readerType=SequenceReader
+      randomize=None
+
+      # word class info
+      wordclass=c:\exp\penntreebank\data\wordclass.txt
+
+	  # number of utterances to be allocated for each minibatch
+	  nbruttsineachrecurrentiter=10
+	  
+      # if writerType is set, we will cache to a binary file
+      # if the binary file exists, we will use it instead of parsing this file
+      # writerType=BinaryReader
+
+      #### write definition
+      wfile=c:\temp\penntreebank\sequenceSentence.bin
+      #wsize - inital size of the file in MB
+      # if calculated size would be bigger, that is used instead
+      wsize=256
+
+      #wrecords - number of records we should allocate space for in the file
+      # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+      wrecords=1000
+      #windowSize - number of records we should include in BinaryWriter window
+      windowSize=10000
+
+      file=c:\exp\penntreebank\data\ptb.train.cntk.100.txt
+
+      #additional features sections
+      #for now store as expanded category data (including label in)
+      features=[
+        # sentence has no features, so need to set dimension to zero
+        dim=0
+        ### write definition
+        sectionType=data
+      ]
+      # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
+      sequence=[
+        dim=1
+        wrecords=2
+        ### write definition
+        sectionType=data
+      ]
+      #labels sections
+      labelIn=[
+        dim=1
+
+		# vocabulary size
+        labelDim=10000
+	    labelMappingFile=c:\temp\penntreebank\sentenceLabels.txt
+	    labelType=Category
+        beginSequence="</s>"
+        endSequence="</s>"
+
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=11
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=11
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+      ]
+      #labels sections
+      labels=[
+        dim=1
+	    labelType=NextWord
+        beginSequence="O"
+        endSequence="O"
+
+		# vocabulary size
+        labelDim=10000
+
+	    labelMappingFile=c:\temp\penntreebank\sentenceLabels.out.txt
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=3
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=3
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+      ]
+    ]
+
+    cvReader=[
+      # reader to use
+      readerType=SequenceReader
+      randomize=None
+
+      # word class info
+      wordclass=c:\exp\penntreebank\data\wordclass.txt
+
+      # if writerType is set, we will cache to a binary file
+      # if the binary file exists, we will use it instead of parsing this file
+      # writerType=BinaryReader
+
+      #### write definition
+      wfile=c:\temp\penntreebank\sequenceSentence.valid.bin
+      #wsize - inital size of the file in MB
+      # if calculated size would be bigger, that is used instead
+      wsize=256
+
+      #wrecords - number of records we should allocate space for in the file
+      # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+      wrecords=1000
+      #windowSize - number of records we should include in BinaryWriter window
+      windowSize=10000
+
+      file=c:\exp\penntreebank\data\ptb.valid.cntk.100.txt
+
+      #additional features sections
+      #for now store as expanded category data (including label in)
+      features=[
+        # sentence has no features, so need to set dimension to zero
+        dim=0
+        ### write definition
+        sectionType=data
+      ]
+      # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
+      sequence=[
+        dim=1
+        wrecords=2
+        ### write definition
+        sectionType=data
+      ]
+      #labels sections
+	  # it should be the same as that in the training set
+      labelIn=[
+        dim=1
+
+		# vocabulary size
+        labelDim=10000
+	    labelMappingFile=c:\temp\penntreebank\sentenceLabels.out.txt
+	    labelType=Category
+        beginSequence="</s>"
+        endSequence="</s>"
+
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=11
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=11
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+      ]
+      #labels sections
+      labels=[
+        dim=1
+	    labelType=NextWord
+        beginSequence="O"
+        endSequence="O"
+
+        labelDim=10000
+	    labelMappingFile=c:\temp\penntreebank\sentenceLabels.out.txt
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=3
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=3
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+      ]
+	]
+]
+
+penntreebanktestlstmrndmb10lr01=[
+    # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
+	# can be considered as the maximum length of a sentence
+	action=eval
+
+# correspond to the number of words/characteres to train in a minibatch
+    minibatchSize=6
+	# need to be small since models are updated for each minibatch
+    traceLevel=1
+	deviceId=-1
+	epochSize=4430000
+	# which is 886 * 5000
+	recurrentLayer=1
+    defaultHiddenActivity=0.1
+	useValidation=true
+    rnnType=CLASSLM
+
+	modelPath=c:\temp\penntreebank\cntkdebug.dnn
+
+    reader=[
+      # reader to use
+      readerType=SequenceReader
+      randomize=None
+
+      # word class info
+      wordclass=c:\exp\penntreebank\data\wordclass.txt
+
+      # if writerType is set, we will cache to a binary file
+      # if the binary file exists, we will use it instead of parsing this file
+      # writerType=BinaryReader
+
+      #### write definition
+      wfile=c:\temp\penntreebank\sequenceSentence.bin
+      #wsize - inital size of the file in MB
+      # if calculated size would be bigger, that is used instead
+      wsize=256
+
+      #wrecords - number of records we should allocate space for in the file
+      # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
+      wrecords=1000
+      #windowSize - number of records we should include in BinaryWriter window
+      windowSize=10000
+
+      file=c:\exp\penntreebank\data\ptb.test.cntk.100.txt
+
+      #additional features sections
+      #for now store as expanded category data (including label in)
+      features=[
+        # sentence has no features, so need to set dimension to zero
+        dim=0
+        ### write definition
+        sectionType=data
+      ]
+      # sequence break table, list indexes into sequence records, so we know when a sequence starts/stops
+      sequence=[
+        dim=1
+        wrecords=2
+        ### write definition
+        sectionType=data
+      ]
+      #labels sections
+      labelIn=[
+        dim=1
+
+		# vocabulary size
+        labelDim=10000
+	    labelMappingFile=c:\temp\penntreebank\sentenceLabels.txt
+	    labelType=Category
+        beginSequence="</s>"
+        endSequence="</s>"
+
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=11
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=11
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+      ]
+      #labels sections
+      labels=[
+        dim=1
+	    labelType=NextWord
+        beginSequence="O"
+        endSequence="O"
+
+		# vocabulary size
+        labelDim=10000
+
+	    labelMappingFile=c:\temp\penntreebank\sentenceLabels.out.txt
+        #### Write definition ####
+        # sizeof(unsigned) which is the label index type
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          #redefine number of records for this section, since we don't need to save it for each data record
+          wrecords=3
+          #variable size so use an average string size
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=3
+          #elementSize=sizeof(ElemType) is default
+          sectionType=categoryLabels
+        ]
+      ]
+    ]
+]
+

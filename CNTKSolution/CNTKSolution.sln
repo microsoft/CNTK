@@ -1,0 +1,219 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMath", "..\Math\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cn", "..\MachineLearning\cn\cn.vcxproj", "{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68} = {9A2F2441-5972-4EA8-9215-4119FCE0FB68}
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6} = {62836DC1-DF77-4B98-BF2D-45C943B7DDC6}
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {1D5787D4-52E4-45DB-951B-82F220EE0C6A}
+		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {E6646FFE-3588-4276-8A15-8D65C22711C1}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{D45DF403-6781-444E-B654-A96868C5BE68}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMathTest", "..\Math\CNTKMathTest\CNTKMathTest.vcxproj", "{6CEE834A-8104-46A8-8902-64C81BD7928F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HTKMLFReader", "..\DataReader\HTKMLFReader\HTKMLFReader.vcxproj", "{33D2FD22-DEF2-4507-A58A-368F641AEBE5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MathPerformanceTests", "..\Math\MathPerformanceTests\MathPerformanceTests.vcxproj", "{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UCIFastReader", "..\DataReader\UCIFastReader\UCIFastReader.vcxproj", "{E6646FFE-3588-4276-8A15-8D65C22711C1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {1D5787D4-52E4-45DB-951B-82F220EE0C6A}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2326995F-9ABE-4DEE-BAD0-147541548B5A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BinaryReader", "..\DataReader\BinaryReader\BinaryReader.vcxproj", "{1D5787D4-52E4-45DB-951B-82F220EE0C6A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SequenceReader", "..\DataReader\SequenceReader\SequenceReader.vcxproj", "{9A2F2441-5972-4EA8-9215-4119FCE0FB68}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LUSequenceReader", "..\DataReader\LUSequenceReader\LUSequenceReader.vcxproj", "{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKEval", "..\MachineLearning\CNTKEval\CNTKEval.vcxproj", "{482999D1-B7E2-466E-9F8D-2119F93EAFD9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKEvalTest", "..\MachineLearning\CNTKEval\CNTKEvalTest\CNTKEvalTest.vcxproj", "{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 10
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://vstfcodebox:8080/tfs/kappa
+		SccProjectUniqueName0 = ..\\Math\\Math\\Math.vcxproj
+		SccProjectName0 = ../Math/Math
+		SccAuxPath0 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath0 = ..\\Math\\Math
+		SccProvider0 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName1 = ..\\Math\\MathPerformanceTests\\MathPerformanceTests.vcxproj
+		SccProjectTopLevelParentUniqueName1 = CNTKSolution.sln
+		SccProjectName1 = ../Math/MathPerformanceTests
+		SccAuxPath1 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath1 = ..\\Math\\MathPerformanceTests
+		SccProvider1 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName2 = ..\\Math\\CNTKMathTest\\CNTKMathTest.vcxproj
+		SccProjectTopLevelParentUniqueName2 = CNTKSolution.sln
+		SccProjectName2 = ../Math/CNTKMathTest
+		SccAuxPath2 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath2 = ..\\Math\\CNTKMathTest
+		SccProvider2 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName3 = ..\\DataReader\\BinaryReader\\BinaryReader.vcxproj
+		SccProjectName3 = ../DataReader/BinaryReader
+		SccAuxPath3 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath3 = ..\\DataReader\\BinaryReader
+		SccProvider3 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName4 = ..\\DataReader\\UCIFastReader\\UCIFastReader.vcxproj
+		SccProjectName4 = ../DataReader/UCIFastReader
+		SccAuxPath4 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath4 = ..\\DataReader\\UCIFastReader
+		SccProvider4 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName5 = ..\\MachineLearning\\CNTKEval\\CNTKEval.vcxproj
+		SccProjectName5 = ../MachineLearning/CNTKEval
+		SccAuxPath5 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath5 = ..\\MachineLearning\\CNTKEval
+		SccProvider5 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName6 = ..\\DataReader\\HTKMLFReader\\HTKMLFReader.vcxproj
+		SccProjectName6 = ../DataReader/HTKMLFReader
+		SccAuxPath6 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath6 = ..\\DataReader\\HTKMLFReader
+		SccProvider6 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName7 = ..\\DataReader\\SequenceReader\\SequenceReader.vcxproj
+		SccProjectName7 = ../DataReader/SequenceReader
+		SccAuxPath7 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath7 = ..\\DataReader\\SequenceReader
+		SccProvider7 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName8 = ..\\DataReader\\LUSequenceReader\\LUSequenceReader.vcxproj
+		SccProjectName8 = ../DataReader/LUSequenceReader
+		SccAuxPath8 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath8 = ..\\DataReader\\LUSequenceReader
+		SccProvider8 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName9 = ..\\MachineLearning\\cn\\cn.vcxproj
+		SccProjectName9 = ../MachineLearning/cn
+		SccAuxPath9 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath9 = ..\\MachineLearning\\cn
+		SccProvider9 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|x64 = Debug|x64
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|x64.ActiveCfg = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|x64.Build.0 = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|x64.ActiveCfg = Release|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|x64.Build.0 = Release|x64
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Debug|x64.ActiveCfg = Debug|x64
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Debug|x64.Build.0 = Debug|x64
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Release|x64.ActiveCfg = Release|x64
+		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}.Release|x64.Build.0 = Release|x64
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|x64.ActiveCfg = Debug|x64
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|x64.Build.0 = Debug|x64
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|x64.ActiveCfg = Release|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|x64.ActiveCfg = Debug|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|x64.Build.0 = Debug|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|x64.ActiveCfg = Release|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|x64.Build.0 = Release|x64
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Debug|x64.ActiveCfg = Debug|x64
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Debug|x64.Build.0 = Debug|x64
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}.Release|x64.ActiveCfg = Release|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|x64.ActiveCfg = Debug|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|x64.Build.0 = Debug|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|x64.ActiveCfg = Release|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|x64.Build.0 = Release|x64
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Debug|x64.ActiveCfg = Debug|x64
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Debug|x64.Build.0 = Debug|x64
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Release|x64.ActiveCfg = Release|x64
+		{1D5787D4-52E4-45DB-951B-82F220EE0C6A}.Release|x64.Build.0 = Release|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Debug|x64.ActiveCfg = Debug|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Debug|x64.Build.0 = Debug|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Release|Mixed Platforms.Build.0 = Release|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Release|x64.ActiveCfg = Release|x64
+		{9A2F2441-5972-4EA8-9215-4119FCE0FB68}.Release|x64.Build.0 = Release|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Debug|x64.ActiveCfg = Debug|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Debug|x64.Build.0 = Debug|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Release|Mixed Platforms.Build.0 = Release|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Release|x64.ActiveCfg = Release|x64
+		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6}.Release|x64.Build.0 = Release|x64
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Debug|x64.ActiveCfg = Debug|x64
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Debug|x64.Build.0 = Debug|x64
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Release|x64.ActiveCfg = Release|x64
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9}.Release|x64.Build.0 = Release|x64
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|x64.ActiveCfg = Debug|x64
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|x64.Build.0 = Debug|x64
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|x64.ActiveCfg = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6CEE834A-8104-46A8-8902-64C81BD7928F} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC} = {D45DF403-6781-444E-B654-A96868C5BE68}
+	EndGlobalSection
+EndGlobal

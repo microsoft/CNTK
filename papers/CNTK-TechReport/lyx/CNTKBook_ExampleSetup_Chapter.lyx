@@ -1,0 +1,1141 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass extbook
+\begin_preamble
+\usepackage{algorithm}
+\usepackage{algpseudocode}  
+\end_preamble
+\use_default_options false
+\master CNTKBook-master.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize 11
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 2
+\use_package cancel 0
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 0
+\use_package mhchem 1
+\use_package stackrel 0
+\use_package stmaryrd 0
+\use_package undertilde 0
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\listings_params "basicstyle={\small},breaklines=true,frame=tb"
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Chapter
+Example Setups
+\begin_inset CommandInset label
+LatexCommand label
+name "chap:ExampleSetup"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Acoustic Model
+\end_layout
+
+\begin_layout Section
+RNN Language Model
+\end_layout
+
+\begin_layout Standard
+Recurrent neural network (RNN) language models have been proven to obtain
+ state-of-the-art performance in language modeling.
+ We use Penn Treebank data set to demonstrate how to build a RNN language
+ model with CNTK.
+ In particular, we will build a class based RNN language model.
+ The setup file is CNTK
+\backslash
+MachineLearning
+\backslash
+cn
+\backslash
+rnnlmConfig.txt, which consists of two components: train and test.
+ 
+\end_layout
+
+\begin_layout Subsection
+Train
+\end_layout
+
+\begin_layout Standard
+Training parameters are specified in this section, with the most important
+ ones listed as follows.
+\end_layout
+
+\begin_layout Itemize
+action=trainRNN.
+ It indicates the section is for training.
+\end_layout
+
+\begin_layout Itemize
+minibatchSize=10.
+ Mini batch size is 10.
+ That is, 10 words are processed at the same time during forward (computing
+ evaluation value) and backward (computing gradients) processes.
+ 
+\end_layout
+
+\begin_layout Itemize
+deviceId=-1.
+ -1 is CPU device.
+ One can change to GPU devices in non-negative intergers (0, 1, etc.).
+\end_layout
+
+\begin_layout Itemize
+epochSize=4430000.
+ The max number of words used to train RNN model in each epoch.
+ This provides a way to use a proportion of entire training data for model
+ training.
+ 
+\end_layout
+
+\begin_layout Itemize
+rnnType=CLASSLM.
+ The RNN network structure.
+ It consists of an input layer, a recurrent hidden layer and an output layer
+ (including classes and vocabularies).
+ 
+\end_layout
+
+\begin_layout Itemize
+SimpleNetworkBuilder section
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+trainingCriterion=classcrossentropywithsoftmax.
+ Training criterion used in model training.
+\end_layout
+
+\begin_layout Itemize
+nodeType=Sigmoid.
+ Non-linearity function used in hidden layer.
+\end_layout
+
+\begin_layout Itemize
+layerSizes=10000:200:10050.
+ Sizes of input, hidden and ouput layers.
+ Input layer size is equal to vocabulary size, hidden layer is normally
+ in the range of 50 to 500, output layer size is the sum of vocabulary size
+ and class size.
+\end_layout
+
+\begin_layout Itemize
+uniformInit=true.
+ Whether to use uniformly randomizied values for initial paramter weights.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+SGD section
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+learningRatesPerSample=0.1.
+ Learning rate in stochastic gradient descent.
+\end_layout
+
+\begin_layout Itemize
+momentumPerMB=0.
+ Momentum used in updating parameter weights.
+ The updating equation is 
+\begin_inset Formula $g_{new}=(1-m)*g+m*g_{old}$
+\end_inset
+
+, where 
+\begin_inset Formula $m$
+\end_inset
+
+ is momentum, 
+\begin_inset Formula $g$
+\end_inset
+
+ is the gradient computed in backward pass, 
+\begin_inset Formula $g_{old}$
+\end_inset
+
+ is the gradient value in previous mini-batch, and 
+\begin_inset Formula $g_{new}$
+\end_inset
+
+ is the new gradient for the current min-batch.
+\end_layout
+
+\begin_layout Itemize
+gradientClippingWithTruncation=true.
+ Whether to truncate gradient values if their abosolute values are greater
+ than clippingThresholdPerSample.
+\end_layout
+
+\begin_layout Itemize
+clippingThresholdPerSample=15.0.
+ Used when gradientClippingWithTruncation=true.
+\end_layout
+
+\begin_layout Itemize
+maxEpochs=40.
+ Maximum number of training epochs.
+\end_layout
+
+\begin_layout Itemize
+numMBsToShowResult=2000.
+ The frequency of showing training/validation loss results (in terms of
+ how many mini-batches are processed).
+\end_layout
+
+\begin_layout Itemize
+gradUpdateType=None.
+ How the gradients are computed.
+ None stands for standard gradient update.
+ One can also choose adagrad or rmsprop.
+\end_layout
+
+\begin_layout Itemize
+modelPath=C:
+\backslash
+CNTKExp
+\backslash
+RNN
+\backslash
+log
+\backslash
+modelRnnCNTK.
+ The RNN model file location.
+\end_layout
+
+\begin_layout Itemize
+loadBestModel=true.
+ Wether to use the best of previous models to start training in each epoch.
+\end_layout
+
+\begin_layout Itemize
+reduceLearnRateIfImproveLessThan=0.001.
+ The learning parameter is reduced if the difference between previous criterion
+ and current criterion is smaller than previous criterion multiplied by
+ reduceLearnRateIfImproveLessThan.
+\end_layout
+
+\begin_layout Itemize
+continueReduce=true.
+ If true, the learning rate is always reduced per epoch once it is first
+ reduced.
+\end_layout
+
+\begin_layout Itemize
+learnRateDecreaseFactor=0.5.
+ Learning rate decrese factor.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+reader section
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+wordclass=C:
+\backslash
+CNTKExp
+\backslash
+RNN
+\backslash
+data
+\backslash
+PennTreeBank
+\backslash
+vocab.txt.
+ Word class file which contains words, their ids and their class ids, in
+ the following format 
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+word_id 
+\backslash
+t frequency 
+\backslash
+t word_string 
+\backslash
+t word_class
+\end_layout
+
+\begin_layout Standard
+word_id is a unique non-negative interger, frequency is the frequency of
+ word (optional), word_string is the word string (low frequent words may
+ be mapped to <unk>), and word_class is the class id of word.
+ Word class can be derived using frequency based heuristics 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Extensions-RNN-LM-Mikolov:2011"
+
+\end_inset
+
+or more sophisticated way
+\begin_inset CommandInset citation
+LatexCommand cite
+key "SpeedRegularization-Zweig:2013"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+file=C:
+\backslash
+CNTKExp
+\backslash
+RNN
+\backslash
+data
+\backslash
+PennTreeBank
+\backslash
+ptb.train.cntk.txt.
+ The location of training data file which has the following format
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+</s> word1 word2 ...
+ </s>
+\end_layout
+
+\end_deeper
+\end_deeper
+\begin_layout Itemize
+cvReader section
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+wordclass=C:
+\backslash
+CNTKExp
+\backslash
+RNN
+\backslash
+data
+\backslash
+PennTreeBank
+\backslash
+vocab.txt.
+ Word class file which contains words, their ids and their class ids.
+\end_layout
+
+\begin_layout Itemize
+file=C:
+\backslash
+CNTKExp
+\backslash
+RNN
+\backslash
+data
+\backslash
+PennTreeBank
+\backslash
+ptb.valid.cntk.txt.
+ Validation data file location.
+ It has the same format as training data.
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
+Test
+\end_layout
+
+\begin_layout Standard
+Test parameters are specified in this section, with the most important ones
+ specified as follows.
+\end_layout
+
+\begin_layout Itemize
+action=eval.
+ It indicates the section is for test.
+\end_layout
+
+\begin_layout Itemize
+minibatchSize=1.
+ Mini batch size is 1.
+\end_layout
+
+\begin_layout Itemize
+deviceId=-1.-1 is CPU device.
+ One can change to GPU devices in non-negative intergers (0, 1, etc.).
+\end_layout
+
+\begin_layout Itemize
+reader section
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+wordclass=C:
+\backslash
+CNTKExp
+\backslash
+RNN
+\backslash
+data
+\backslash
+PennTreeBank
+\backslash
+vocab.txt.
+ Word class file which contains words, their ids and their class ids.
+\end_layout
+
+\begin_layout Itemize
+file=C:
+\backslash
+CNTKExp
+\backslash
+RNN
+\backslash
+data
+\backslash
+PennTreeBank
+\backslash
+ptb.test.cntk.txt.
+ Test data file location.
+ It has the same format as training data.
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+With the above configuration, we achieved the training speech of 2600 words/sec
+ on CPU (Intel Xeon 2 processors with 2.60GHz).
+ This setup resulted in perplexity of 130 on Penn Treebank test data after
+ 12 epochs.
+ We have GPU version running slightly slower (2400 words/sec) for this release
+ with slightly different results (due to different randomization and slightly
+ different implementation of prediction normalization).
+ Currently the slowness of GPU is due to the data reader part which takes
+ around 40% of total training time.
+ Future release aims for training acceleration with a more efficient data
+ reader.
+ 
+\end_layout
+
+\begin_layout Section
+LSTM Language Model
+\end_layout
+
+\begin_layout Standard
+We apply long-short-term memory (LSTM) recurrent neural network for language
+ modeling task.
+ The example setup is at ExampleSetups
+\backslash
+LM
+\backslash
+LSTMLM
+\backslash
+lstmlmconfig.txt.
+ In this setup, the following need to specified for training
+\end_layout
+
+\begin_layout Subsection
+Training
+\end_layout
+
+\begin_layout Itemize
+action=trainRNN : this informs CNTK to call RNN function.
+ 
+\end_layout
+
+\begin_layout Itemize
+deviceId=-1 : this specifies using CPU.
+\end_layout
+
+\begin_layout Itemize
+SimpleNetworkBuilder: 
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+recurrentLayer=1 : this specifies that layer 1 is recurrent layer.
+\end_layout
+
+\begin_layout Itemize
+rnnType=CLASSLM : this informs CNTK to call class-based LSTM function in
+ simplenetworkbuilder.
+\end_layout
+
+\begin_layout Itemize
+trainingCriterion=classcrossentropywithsoftmax specifies that training set
+ to use class-based cross entropy
+\end_layout
+
+\begin_layout Itemize
+evalCriterion=classcrossentropywithsoftmax specifies validation set also
+ uses class-based cross entropy for evaluation.
+\end_layout
+
+\begin_layout Itemize
+layerSizes=10000:200:10050 : this specifies input, hidden and output layer
+ sizes.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+SGD
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+useAdagrad=true : this specifies using AdaGrad for weight update.
+\end_layout
+
+\begin_layout Itemize
+modelPath=c:
+\backslash
+temp
+\backslash
+penntreebank
+\backslash
+cntkdebug.dnn : this is the trained model file name.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Reader: specifies training reader
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+readerType=SequenceReader : specifies using sequence reader.
+\end_layout
+
+\begin_layout Itemize
+wordclass=c:
+\backslash
+exp
+\backslash
+penntreebank
+\backslash
+data
+\backslash
+wordclass.txt : specifies word class info.
+\end_layout
+
+\begin_layout Itemize
+file=c:
+\backslash
+exp
+\backslash
+penntreebank
+\backslash
+data
+\backslash
+ptb.train.cntk.txt : specifies training file
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+cvReader: specifies cross-validation reader
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+readerType=SequenceReader : specifies using sequence reader.
+\end_layout
+
+\begin_layout Itemize
+wordclass=c:
+\backslash
+exp
+\backslash
+penntreebank
+\backslash
+data
+\backslash
+wordclass.txt : specifies word class info.
+\end_layout
+
+\begin_layout Itemize
+file=c:
+\backslash
+exp
+\backslash
+penntreebank
+\backslash
+data
+\backslash
+ptb.valid.cntk.txt : specifies validation file
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
+Test
+\end_layout
+
+\begin_layout Standard
+In this setup, the following need to specified for testing
+\end_layout
+
+\begin_layout Itemize
+action=eval : this informs CNTK to call simplenetwork evaluation.
+ 
+\end_layout
+
+\begin_layout Itemize
+deviceId=-1 : this specifies using CPU.
+\end_layout
+
+\begin_layout Itemize
+modelPath=c:
+\backslash
+temp
+\backslash
+penntreebank
+\backslash
+cntkdebug.dnn : this is the trained model file name.
+\end_layout
+
+\begin_layout Itemize
+Reader: specifies test set reader
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+readerType=SequenceReader : specifies using sequence reader.
+\end_layout
+
+\begin_layout Itemize
+wordclass=c:
+\backslash
+exp
+\backslash
+penntreebank
+\backslash
+data
+\backslash
+wordclass.txt : specifies word class info.
+\end_layout
+
+\begin_layout Itemize
+file=c:
+\backslash
+exp
+\backslash
+penntreebank
+\backslash
+data
+\backslash
+ptb.test.cntk.txt : specifies testing file
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+LSTM converges very fast with this setup.
+ Perplexities are 161.96 and 137.37 at the 1st and the 10-th iteration.
+ Perplexies are not reduced after 10-th itreation.
+ For comparison, simple RNN by Tomas Mikolov obtained 136 perplexity with
+ 50 classes and LSTM by Alex Graves obtained 138 perplexity.
+ 
+\end_layout
+
+\begin_layout Section
+Spoken Language Understanding
+\end_layout
+
+\begin_layout Standard
+One of the important tasks in spoken language understanding is labeling
+ input sequence with semantic tags.
+ In this example, we show how CNTK can be used to train a LSTM recurrent
+ network for the labeling task.
+ The setup file is under ExampleSetups
+\backslash
+SLU
+\backslash
+rnnlu.config.
+ The data is ATIS, which consists of 944 unique words, including <unk>,
+ in the training/dev set.
+ Output has 127 dimension, each corresponding to a semantic tag in ATIS.
+ Unseen words in test will be mapped to <unk>.
+ A file provides such mapping from one word to the other, which is useful
+ to map low-frequency input or unseen input to a common input.
+ In this case, the common input is <unk>.
+ 
+\end_layout
+
+\begin_layout Subsection
+Training
+\end_layout
+
+\begin_layout Standard
+In this setup, the following need to specified for training
+\end_layout
+
+\begin_layout Itemize
+action=trainRNN : this informs CNTK to call RNN function.
+ 
+\end_layout
+
+\begin_layout Itemize
+deviceId=-1 : this specifies using CPU.
+\end_layout
+
+\begin_layout Itemize
+minibatchSize = 10 : this specifies the maximum number of words per minibatch.
+\end_layout
+
+\begin_layout Itemize
+SimpleNetworkBuilder: 
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+recurrentLayer=2 : this specifies that layer 2 is recurrent layer.
+\end_layout
+
+\begin_layout Itemize
+rnnType=LSTM: this informs CNTK to call LSTM function in simplenetworkbuilder.
+\end_layout
+
+\begin_layout Itemize
+lookupTableOrder=3: this specifies forming a context-dependent input with
+ a context window size of 3.
+\end_layout
+
+\begin_layout Itemize
+trainingCriterion=crossentropywithsoftmax specifies that training set to
+ use cross entropy
+\end_layout
+
+\begin_layout Itemize
+evalCriterion=crossentropywithsoftmax specifies validation set also uses
+ cross entropy for evaluation.
+\end_layout
+
+\begin_layout Itemize
+layerSizes=2832:50:300:127: this specifies input, hidden and output layer
+ sizes.
+ Notice that input layer has dimension of 2832, which is 3 times 944.
+ This number is obtained in consideration of context window size and the
+ number of unique words, which 944.
+ If lookupTableOrder is set to 1, the input layer size should be set to
+ 944.
+ 
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+SGD
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+learningRatePerSample=0.1 : this specifies learning rate per sample.
+\end_layout
+
+\begin_layout Itemize
+modelPath=c:
+\backslash
+temp
+\backslash
+exp
+\backslash
+ATIS
+\backslash
+temp
+\backslash
+cntkdebug.dnn : this is the trained model file name.
+\end_layout
+
+\begin_layout Itemize
+gradUpdateType=AdaGrad : this specifies using AdaGrad for updating weights.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Reader: specifies training reader
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+readerType=LUSequenceReader : specifies using LUsequence reader.
+\end_layout
+
+\begin_layout Itemize
+nbruttsineachrecurrentiter=10 : this specifies using maximum of 10 sentences
+ for each minibatch.
+\end_layout
+
+\begin_layout Itemize
+wordcontext=0:1:2 : this specifies the time indices for forming a context
+ window.
+ In this example, this setup coresponds to using the current input, the
+ next input, and the input after the next input for a context window of
+ size 3.
+ User can also use other cases such as wordcontext=0:-1:1 to form a context
+ window of 3 but using the current input, the previous input, and the next
+ input.
+ 
+\end_layout
+
+\begin_layout Itemize
+wordmap=c:
+\backslash
+exp
+\backslash
+atis
+\backslash
+data
+\backslash
+inputmap.txt : specifies a file that lists a mapping from word to the other
+ word.
+ This mapping file should be constructed only from training/dev sets.
+ 
+\end_layout
+
+\begin_layout Itemize
+file=c:
+\backslash
+exp
+\backslash
+ATIS
+\backslash
+data
+\backslash
+atis.train.apos.pred.pos.head.IOB.simple: specifies training file
+\end_layout
+
+\begin_layout Itemize
+labelIn : this specifies information of inputs
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+beginingSequence=
+\begin_inset Quotes erd
+\end_inset
+
+BOS
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies the symbol of sequence begining.
+\end_layout
+
+\begin_layout Itemize
+endSequence=
+\begin_inset Quotes erd
+\end_inset
+
+EOS
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies the symbol of sequence ending.
+\end_layout
+
+\begin_layout Itemize
+token=c:
+\backslash
+exp
+\backslash
+atis
+\backslash
+data
+\backslash
+input.txt : this specifies a list of word as input.
+ 
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+labels : this specifies information of labels
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+beginingSequence=
+\begin_inset Quotes erd
+\end_inset
+
+O
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies the symbol of output sequence begining.
+\end_layout
+
+\begin_layout Itemize
+endSequence=
+\begin_inset Quotes erd
+\end_inset
+
+O
+\begin_inset Quotes erd
+\end_inset
+
+ : this specifies the symbol of output sequence end.
+\end_layout
+
+\begin_layout Itemize
+token=c:
+\backslash
+exp
+\backslash
+atis
+\backslash
+data
+\backslash
+output.txt : this specifies output semantic labels.
+\end_layout
+
+\end_deeper
+\end_deeper
+\begin_layout Itemize
+cvReader: specifies cross-validation reader.
+ Most of setups should be same as those in Reader section.
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+readerType=LUSequenceReader : specifies using sequence reader.
+\end_layout
+
+\begin_layout Itemize
+wordcontext=0:1:2 : this specifies the time indices for forming a context
+ window.
+ This should be the same as specified in Reader section.
+\end_layout
+
+\begin_layout Itemize
+file=c:
+\backslash
+exp
+\backslash
+ATIS
+\backslash
+data
+\backslash
+atis.dev.apos.pred.pos.head.IOB.simple: specifies validation file
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
+Test
+\end_layout
+
+\begin_layout Standard
+In this setup, the following need to specified for writing/decoding test
+ set.
+ It uses LUSequenceWriter to decode test set word sequence to their semantic
+ tags.
+ 
+\end_layout
+
+\begin_layout Itemize
+action=write: this informs CNTK to call simplenetwork evaluation and write
+ outputs, which will be specified below.
+ 
+\end_layout
+
+\begin_layout Itemize
+deviceId=-1 : this specifies using CPU.
+\end_layout
+
+\begin_layout Itemize
+modelPath=c:
+\backslash
+temp
+\backslash
+exp
+\backslash
+ATIS
+\backslash
+temp
+\backslash
+cntkdebug.dnn: this is the trained model file name.
+\end_layout
+
+\begin_layout Itemize
+outputNodeNames=outputs:labels : this specifies which nodes to output results.
+ These node names are pre-spefied in CNTK's simple network builder.
+ The node 
+\begin_inset Quotes eld
+\end_inset
+
+outputs
+\begin_inset Quotes erd
+\end_inset
+
+ is the node that output activies before softmax.
+ The node 
+\begin_inset Quotes eld
+\end_inset
+
+labels
+\begin_inset Quotes erd
+\end_inset
+
+ is the node that has reference labels for comparison.
+\end_layout
+
+\begin_layout Itemize
+reader: specifies test set reader
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+readerType=LUSequenceReader : specifies using LUsequence reader.
+\end_layout
+
+\begin_layout Itemize
+wordmap=c:
+\backslash
+exp
+\backslash
+atis
+\backslash
+data
+\backslash
+inputmap.txt: specifies word map file, which should be the same as those
+ used in training/validation readers.
+ 
+\end_layout
+
+\begin_layout Itemize
+file=c:
+\backslash
+exp
+\backslash
+atis
+\backslash
+data
+\backslash
+atis.test.apos.pred.pos.head.IOB.simple: specifies testing file
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+writer : this specifies where to write 
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+writerType=LUSequenceWriter : this specifies using LUSequenceWriter.
+\end_layout
+
+\begin_layout Itemize
+outputs : specifies where to write for the outputs node.
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+file=c:
+\backslash
+temp
+\backslash
+exp
+\backslash
+atis
+\backslash
+output
+\backslash
+output.rec.txt : the file name for writting decode results from LUSequenceWriter.
+ 
+\end_layout
+
+\begin_layout Itemize
+token=c:
+\backslash
+exp
+\backslash
+atis
+\backslash
+data
+\backslash
+output.txt : this specifies the semantic labels.
+ 
+\end_layout
+
+\end_deeper
+\end_deeper
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+With this setup, F1 scores are 94.13%.
+ It is possible to get improved F1 score with larger hidden layer size,
+ and with more than one layer of LSTM.
+ Using more than one layer with LSTMs with different dimensions can be easily
+ done by setting recurrentLayer=2:3 and also setting layerSizes=2832:50:300:200:
+127 for instance.
+ In this case, two layers of LSTMs are used.
+ The lower layer LSTM has 300 dimension and the upper LSTM has 200 dimension.
+\end_layout
+
+\end_body
+\end_document

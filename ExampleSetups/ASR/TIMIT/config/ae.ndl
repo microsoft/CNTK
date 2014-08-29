@@ -1,0 +1,42 @@
+load=ndlMacroDefine
+run=ndlCreateNetwork
+
+ndlMacroDefine=[
+    # Macro definitions
+
+    MeanVarNorm(x)
+    {   
+		xMean = Mean(x)
+    	xStdDev = InvStdDev(x)
+    	xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    }
+ 
+    # Mean Square Error FeedForward
+    MSEBFF(x,r,c,labels)
+    {
+        BFF=BFF(x,r,c)
+        MSE=SquareError(labels,BFF)
+    }
+]
+
+ndlCreateNetwork=[
+
+	#define basic i/o
+	featInDim=792
+	featOutDim=792
+	hiddenDim=512
+	bottleneckDim=64
+	featIn=Input(featInDim,tag=feature)
+	featOut=Input(featOutDim,tag=feature)
+			       			       
+	 # define network
+	 featNormIn = MeanVarNorm(featIn)
+	 featNormOut = MeanVarNorm(featOut)
+	 L1 = SBFF(featNormIn,hiddenDim,featInDim)
+	 L2 = SBFF(L1,bottleneckDim,hiddenDim)
+	 L3 = SBFF(L2,hiddenDim,bottleneckDim)
+	 MeanSqErr = MSEBFF(L3, featOutDim, hiddenDim, featNormOut,tag=criteria)
+ 	 OutputNodes=(MeanSqErr.BFF.FF.P)
+	 EvalNodes=(MeanSqErr)
+	 
+]

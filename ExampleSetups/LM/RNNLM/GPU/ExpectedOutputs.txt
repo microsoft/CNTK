@@ -1,0 +1,27 @@
+Training loss
+Finished Epoch[1]: [Training Set] Train Loss Per Sample = 5.795685    EvalErr Per Sample = 5.795685   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=399.615
+Finished Epoch[2]: [Training Set] Train Loss Per Sample = 5.4050704    EvalErr Per Sample = 5.4050704   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=399.444
+Finished Epoch[3]: [Training Set] Train Loss Per Sample = 5.2311885    EvalErr Per Sample = 5.2311885   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=399.443
+Finished Epoch[4]: [Training Set] Train Loss Per Sample = 5.1104249    EvalErr Per Sample = 5.1104249   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=400.041
+Finished Epoch[5]: [Training Set] Train Loss Per Sample = 5.0157101    EvalErr Per Sample = 5.0157101   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=399.598
+Finished Epoch[6]: [Training Set] Train Loss Per Sample = 4.9356979    EvalErr Per Sample = 4.9356979   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=399.571
+Finished Epoch[7]: [Training Set] Train Loss Per Sample = 4.8680722    EvalErr Per Sample = 4.8680722   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=400.054
+Finished Epoch[8]: [Training Set] Train Loss Per Sample = 4.7753982    EvalErr Per Sample = 4.7753982   Ave Learn Rate Per Sample = 0.05000000075  Epoch Time=399.327
+Finished Epoch[9]: [Training Set] Train Loss Per Sample = 4.673374    EvalErr Per Sample = 4.673374   Ave Learn Rate Per Sample = 0.02500000037  Epoch Time=398.899
+Finished Epoch[10]: [Training Set] Train Loss Per Sample = 4.6104742    EvalErr Per Sample = 4.6104742   Ave Learn Rate Per Sample = 0.01250000019  Epoch Time=399.383
+
+validation loss
+Finished Epoch[1]: [Validation Set] Train Loss Per Sample: 5.573194  EvalErr Per Sample: 5.573194
+Finished Epoch[2]: [Validation Set] Train Loss Per Sample: 5.386846  EvalErr Per Sample: 5.386846
+Finished Epoch[3]: [Validation Set] Train Loss Per Sample: 5.333927  EvalErr Per Sample: 5.333927
+Finished Epoch[4]: [Validation Set] Train Loss Per Sample: 5.2457409  EvalErr Per Sample: 5.2457409
+Finished Epoch[5]: [Validation Set] Train Loss Per Sample: 5.2264109  EvalErr Per Sample: 5.2264109
+Finished Epoch[6]: [Validation Set] Train Loss Per Sample: 5.1882242  EvalErr Per Sample: 5.1882242
+Finished Epoch[7]: [Validation Set] Train Loss Per Sample: 5.1971332  EvalErr Per Sample: 5.1971332
+Finished Epoch[8]: [Validation Set] Train Loss Per Sample: 5.1156811  EvalErr Per Sample: 5.1156811
+Finished Epoch[9]: [Validation Set] Train Loss Per Sample: 5.0704934  EvalErr Per Sample: 5.0704934
+Finished Epoch[10]: [Validation Set] Train Loss Per Sample: 5.0692716  EvalErr Per Sample: 5.0692716
+
+test result
+Training speed is around 2400 Words/sec.
+Final Results: Minibatch[1-82430]: Samples Seen = 82430    ClassCrossEntropyWithSoftmax/Sample = 4.9014503  (perplexity 134)

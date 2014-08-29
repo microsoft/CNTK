@@ -1,0 +1,73 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HTKMLFReader", "HTKMLFReader\HTKMLFReader.vcxproj", "{33D2FD22-DEF2-4507-A58A-368F641AEBE5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMath", "..\Math\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DataReaderClient", "DataReaderClient\DataReaderClient.vcxproj", "{89A1BB74-345D-4CB4-BC56-2C05D8076183}"
+	ProjectSection(ProjectDependencies) = postProject
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://vstfcodebox:8080/tfs/kappa
+		SccProjectUniqueName0 = ..\\Math\\Math\\Math.vcxproj
+		SccProjectName0 = ../Math/Math
+		SccAuxPath0 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath0 = ..\\Math\\Math
+		SccProvider0 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName1 = DataReaderClient\\DataReaderClient.vcxproj
+		SccProjectName1 = DataReaderClient
+		SccAuxPath1 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath1 = DataReaderClient
+		SccProvider1 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccProjectUniqueName2 = HTKMLFReader\\HTKMLFReader.vcxproj
+		SccProjectName2 = HTKMLFReader
+		SccAuxPath2 = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath2 = HTKMLFReader
+		SccProvider2 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|Win32.Build.0 = Debug|Win32
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|x64.ActiveCfg = Debug|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|x64.Build.0 = Debug|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|Win32.ActiveCfg = Release|Win32
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|Win32.Build.0 = Release|Win32
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|x64.ActiveCfg = Release|x64
+		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|x64.Build.0 = Release|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|Win32.Build.0 = Debug|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|x64.ActiveCfg = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|x64.Build.0 = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|Win32.ActiveCfg = Release|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|Win32.Build.0 = Release|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|x64.ActiveCfg = Release|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|x64.Build.0 = Release|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|Win32.ActiveCfg = Debug|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|Win32.Build.0 = Debug|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|x64.ActiveCfg = Debug|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|x64.Build.0 = Debug|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|Win32.ActiveCfg = Release|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|Win32.Build.0 = Release|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|x64.ActiveCfg = Release|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

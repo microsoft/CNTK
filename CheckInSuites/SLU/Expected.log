@@ -1,0 +1,605 @@
+running on KAISHENGLP1 at 2014/08/28 16:50:28
+command line options: 
+configFile=C:\dev\cntk3\CheckInSuites\SLU\globals.config+C:\dev\cntk3\CheckInSuites\SLU\rnnlu.config 
+
+>>>>>>>>>>>>>>>>>>>> config >>>>>>>>>>>>>>>>>>>>
+configparameters: rnnlu.config:command=LSTM:LSTMTest
+configparameters: rnnlu.config:ConfigDir=$WorkDir$\config
+configparameters: rnnlu.config:DataDir=$WorkDir$
+configparameters: rnnlu.config:DeviceNumber=-1
+configparameters: rnnlu.config:ExpDir=c:\temp\exp\atis
+configparameters: rnnlu.config:LSTM=[
+    action=train
+	makeMode=true
+    minibatchSize=10
+    traceLevel=1
+	deviceId=-1
+    epochSize=4430000
+    SimpleNetworkBuilder=[
+	    trainingCriterion=crossentropywithsoftmax
+	    evalCriterion=crossentropywithsoftmax
+      defaultHiddenActivity=0.1
+    	recurrentLayer=2
+        initValueScale=6.0
+		layerSizes=2832:50:300:127
+        rnnType=LSTM
+        lookupTableOrder=3
+       addPrior=false
+       addDropoutNodes=false
+       applyMeanVarNorm=false
+       uniformInit=true
+    ]
+    SGD=[
+		learningRatesPerSample=0.1
+        momentumPerMB=0.90
+        gradientClippingWithTruncation=true
+		clippingThresholdPerSample=15.0
+	    maxEpochs=3
+        gradientcheck=false
+        numMBsToShowResult=1000
+		    modelPath=$ExpDir$\cntkdebug.dnn
+        loadBestModel=true
+        AutoAdjust=[
+	        autoAdjustLR=adjustafterepoch
+            reduceLearnRateIfImproveLessThan=0
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            learnRateIncreaseFactor=1.382
+            numMiniBatch4LRSearch=100
+            numPrevLearnRates=5
+            numBestSearchEpoch=1
+        ]
+        dropoutRate=0
+    ]
+    reader=[
+      readerType=LUSequenceReader
+	  wordContext=0:1:2
+      randomize=None
+	  nbruttsineachrecurrentiter=10
+      wfile=$ExpDir$\sequenceSentence.bin
+      wsize=256
+      wrecords=1000
+      windowSize=10000
+      unk="<unk>"
+      wordmap=$DataDir$\inputmap.txt
+      file=$DataDir$\atis.train.apos.pred.pos.head.IOB.simple
+      features=[
+        dim=0
+        sectionType=data
+      ]
+      sequence=[
+        dim=1
+        wrecords=2
+        sectionType=data
+      ]
+      labelIn=[
+        dim=1
+        usewordmap=true
+        labelDim=10000
+	    labelMappingFile=$ExpDir$\sentenceLabels.txt
+	    labelType=Category
+        beginSequence="BOS"
+        endSequence="EOS"
+        usewordmap=true
+        token=$DataDir$\input.txt
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          wrecords=11
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=11
+          sectionType=categoryLabels
+        ]
+      ]
+      labels=[
+        dim=1
+	    labelType=Category
+        beginSequence="O"
+        endSequence="O"
+        token=$DataDir$\output.txt
+	    labelMappingFile=$ExpDir$\sentenceLabels.out.txt
+        sectionType=labels
+        mapping=[
+          sectionType=labelMapping
+        ]
+        category=[
+          sectionType=categoryLabels
+        ]
+      ]
+    ]
+    cvReader=[
+      readerType=LUSequenceReader
+      randomize=None
+	  wordContext=0:1:2
+      wfile=$ExpDir$\sequenceSentence.valid.bin
+      wsize=256
+      wrecords=1000
+      windowSize=10000
+      unk="<unk>"
+      wordmap=$DataDir$\inputmap.txt
+      file=$DataDir$\atis.dev.IOB.simple
+      features=[
+        dim=0
+        sectionType=data
+      ]
+      sequence=[
+        dim=1
+        wrecords=2
+        sectionType=data
+      ]
+      labelIn=[
+        dim=1
+        labelDim=10000
+	    labelMappingFile=$ExpDir$\sentenceLabels.in.txt
+	    labelType=Category
+        beginSequence="BOS"
+        endSequence="EOS"
+        usewordmap=true
+        token=$DataDir$\input.txt
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          wrecords=11
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=11
+          sectionType=categoryLabels
+        ]
+      ]
+      labels=[
+        dim=1
+	    labelType=Category
+        beginSequence="O"
+        endSequence="O"
+        token=$DataDir$\output.txt
+        labelDim=10000
+	    labelMappingFile=$ExpDir$\sentenceLabels.out.txt
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          wrecords=3
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=3
+          sectionType=categoryLabels
+        ]
+      ]
+	]
+]
+configparameters: rnnlu.config:LSTMTest=[
+	action=write
+    minibatchSize=1
+    traceLevel=1
+	deviceId=-1
+	epochSize=4430000
+    defaultHiddenActivity=0.1
+    modelPath=$ExpDir$\cntkdebug.dnn
+	outputNodeNames=outputs
+    reader=[
+      readerType=LUSequenceReader
+      randomize=None
+	  wordContext=0:1:2
+      unk="<unk>"
+      wordmap=$DataDir$\inputmap.txt
+      file=$DataDir$\atis.test.apos.pred.pos.head.IOB.simple
+      wfile=$ExpDir$\sequenceSentence.bin
+      wsize=256
+      wrecords=1000
+      windowSize=10000
+      features=[
+        dim=0 
+        sectionType=data
+      ]
+      sequence=[
+        dim=1
+        wrecords=2
+        sectionType=data
+      ]
+      labelIn=[
+        dim=1
+        labelDim=10000
+	    labelMappingFile=$ExpDir$\sentenceLabels.txt
+	    labelType=Category
+        beginSequence="BOS"
+        endSequence="EOS"
+        usewordmap=true
+        token=$DataDir$\input.txt
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          wrecords=11
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=11
+          sectionType=categoryLabels
+        ]
+      ]
+      labels=[
+        dim=1
+	    labelType=Category
+        beginSequence="BOS"
+        endSequence="EOS"
+        token=$DataDir$\output.txt
+        labelDim=127
+	    labelMappingFile=$ExpDir$\sentenceLabels.out.txt
+        elementSize=4
+        sectionType=labels
+        mapping=[
+          wrecords=3
+          elementSize=10
+          sectionType=labelMapping
+        ]
+        category=[
+          dim=3
+          sectionType=categoryLabels
+        ]
+      ]
+    ]
+    writer=[
+        writerType=LUSequenceWriter
+        outputs=[
+            file=$OutDir$\output.rec.txt
+            token=$DataDir$\output.txt
+        ]
+    ]
+]
+configparameters: rnnlu.config:NdlDir=$ConfigDir$
+configparameters: rnnlu.config:OutDir=$ExpDir$
+configparameters: rnnlu.config:stderr=$ExpDir$\ATIS\log
+configparameters: rnnlu.config:type=double
+configparameters: rnnlu.config:WorkDir=.
+<<<<<<<<<<<<<<<<<<<< config <<<<<<<<<<<<<<<<<<<<
+command: LSTM LSTMTest 
+precision = double
+SimpleNetworkBuilder Using CPU
+reading sequence file .\atis.train.apos.pred.pos.head.IOB.simple
+reading sequence file .\atis.dev.IOB.simple
+GetTrainCriterionNodes  ...
+GetEvalCriterionNodes  ...
+ nodes in the recurrent loops : 
+AutoName37	AutoName4	AutoName15	AutoName16	AutoName18	AutoName19	AutoName5	AutoName8	AutoName1	AutoName9	AutoName12	AutoName13	AutoName14	AutoName20	AutoName7	AutoName6	AutoName21	AutoName2	AutoName22	AutoName25	AutoName26	AutoName27	AutoName28	AutoName29	AutoName30	AutoName3	AutoName31	AutoName34	AutoName35	AutoName36	AutoName38	
+
+Validating node CrossEntropyWithSoftmax 
+
+Validating --> labels = InputValue
+Validating --> W2 = LearnableParameter
+Validating --> WXO0 = LearnableParameter
+Validating --> E0 = LearnableParameter
+Validating --> features = InputValue
+Validating --> LookupTable = LookupTable(E0[50, 944], features[2832, 1])
+Validating --> AutoName32 = Times(WXO0[300, 150], LookupTable[150, 1])
+Validating --> bo0 = LearnableParameter
+Validating --> AutoName33 = Plus(AutoName32[300, 1], bo0[300, 1])
+Validating --> WHO0 = LearnableParameter
+Validating --> WCO0 = LearnableParameter
+Validating --> WXF0 = LearnableParameter
+Validating --> AutoName23 = Times(WXF0[300, 150], LookupTable[150, 1])
+Validating --> bf0 = LearnableParameter
+Validating --> AutoName24 = Plus(AutoName23[300, 1], bf0[300, 1])
+Validating --> WHF0 = LearnableParameter
+Validating --> WCF0 = LearnableParameter
+Validating --> WXI0 = LearnableParameter
+Validating --> AutoName10 = Times(WXI0[300, 150], LookupTable[150, 1])
+Validating --> bi0 = LearnableParameter
+Validating --> AutoName11 = Plus(AutoName10[300, 1], bi0[300, 1])
+Validating --> WHI0 = LearnableParameter
+Validating --> WCI0 = LearnableParameter
+Validating --> WXC0 = LearnableParameter
+Validating --> AutoName17 = Times(WXC0[300, 150], LookupTable[150, 1])
+Validating --> WHC0 = LearnableParameter
+Validating --> bc0 = LearnableParameter
+Validating --> AutoName3 = Delay(AutoName38[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName31 = Times(WHO0[300, 300], AutoName3[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName34 = Plus(AutoName33[300, 1], AutoName31[300, 1])
+Validating --> AutoName2 = Delay(AutoName38[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName22 = Times(WHF0[300, 300], AutoName2[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName25 = Plus(AutoName24[300, 1], AutoName22[300, 1])
+Validating --> AutoName6 = Delay(AutoName29[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName21 = DiagTimes(WCF0[300, 1], AutoName6[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName26 = Plus(AutoName25[300, 1], AutoName21[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName27 = Sigmoid(AutoName26[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName7 = Delay(AutoName29[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName28 = ElementTimes(AutoName27[300 {W=0, H=0, C=0}, 1], AutoName7[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName1 = Delay(AutoName38[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName9 = Times(WHI0[300, 300], AutoName1[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName12 = Plus(AutoName11[300, 1], AutoName9[300, 1])
+Validating --> AutoName5 = Delay(AutoName29[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName8 = DiagTimes(WCI0[300, 1], AutoName5[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName13 = Plus(AutoName12[300, 1], AutoName8[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName14 = Sigmoid(AutoName13[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName4 = Delay(AutoName38[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName15 = Times(WHC0[300, 300], AutoName4[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName16 = Plus(AutoName15[300, 1], bc0[300, 1])
+Validating --> AutoName18 = Plus(AutoName17[300, 1], AutoName16[300, 1])
+Validating --> AutoName19 = Tanh(AutoName18[300, 1])
+Validating --> AutoName20 = ElementTimes(AutoName14[300 {W=0, H=0, C=0}, 1], AutoName19[300, 1])
+Validating --> AutoName29 = Plus(AutoName28[300 {W=0, H=0, C=0}, 1], AutoName20[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName30 = DiagTimes(WCO0[300, 1], AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName35 = Plus(AutoName34[300, 1], AutoName30[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName36 = Sigmoid(AutoName35[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName37 = Tanh(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName38 = ElementTimes(AutoName36[300 {W=0, H=0, C=0}, 1], AutoName37[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName39 = Times(W2[127, 300], AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[127, 1], AutoName39[127, 1])
+
+No PreCompute nodes found, skipping PreCompute step
+Set Max Temp Mem Size For Convolution Nodes to 0 samples.
+WARNING: there is no convolution node.
+Finished Epoch[1]: [Training Set] Train Loss Per Sample = 4.7967326    EvalErr Per Sample = 4.7967326   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=0.177
+Final Results: Minibatch[1-11]: Samples Seen = 81    CrossEntropyWithSoftmax/Sample = 4.6260059    CrossEntropyWithSoftmax/Sample = 4.6260059    
+Finished Epoch[1]: [Validation Set] Train Loss Per Sample = 4.6260059  EvalErr Per Sample = 4.6260059
+Finished Epoch[2]: [Training Set] Train Loss Per Sample = 4.4580467    EvalErr Per Sample = 4.4580467   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=0.178
+Final Results: Minibatch[1-11]: Samples Seen = 81    CrossEntropyWithSoftmax/Sample = 4.0801723    CrossEntropyWithSoftmax/Sample = 4.0801723    
+Finished Epoch[2]: [Validation Set] Train Loss Per Sample = 4.0801723  EvalErr Per Sample = 4.0801723
+Finished Epoch[3]: [Training Set] Train Loss Per Sample = 3.6568716    EvalErr Per Sample = 3.6568716   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=0.171
+Final Results: Minibatch[1-11]: Samples Seen = 81    CrossEntropyWithSoftmax/Sample = 2.6959986    CrossEntropyWithSoftmax/Sample = 2.6959986    
+Finished Epoch[3]: [Validation Set] Train Loss Per Sample = 2.6959986  EvalErr Per Sample = 2.6959986
+reading sequence file .\atis.test.apos.pred.pos.head.IOB.simple
+ nodes in the recurrent loops : 
+AutoName37	AutoName4	AutoName15	AutoName16	AutoName18	AutoName19	AutoName5	AutoName8	AutoName1	AutoName9	AutoName12	AutoName13	AutoName14	AutoName20	AutoName7	AutoName6	AutoName21	AutoName2	AutoName22	AutoName25	AutoName26	AutoName27	AutoName28	AutoName29	AutoName30	AutoName3	AutoName31	AutoName34	AutoName35	AutoName36	AutoName38	
+
+Validating node CrossEntropyWithSoftmax 
+
+Validating --> labels = InputValue
+Validating --> W2 = LearnableParameter
+Validating --> WXO0 = LearnableParameter
+Validating --> E0 = LearnableParameter
+Validating --> features = InputValue
+Validating --> LookupTable = LookupTable(E0[50, 944], features[2832, 1])
+Validating --> AutoName32 = Times(WXO0[300, 150], LookupTable[150, 1])
+Validating --> bo0 = LearnableParameter
+Validating --> AutoName33 = Plus(AutoName32[300, 1], bo0[300, 1])
+Validating --> WHO0 = LearnableParameter
+Validating --> WCO0 = LearnableParameter
+Validating --> WXF0 = LearnableParameter
+Validating --> AutoName23 = Times(WXF0[300, 150], LookupTable[150, 1])
+Validating --> bf0 = LearnableParameter
+Validating --> AutoName24 = Plus(AutoName23[300, 1], bf0[300, 1])
+Validating --> WHF0 = LearnableParameter
+Validating --> WCF0 = LearnableParameter
+Validating --> WXI0 = LearnableParameter
+Validating --> AutoName10 = Times(WXI0[300, 150], LookupTable[150, 1])
+Validating --> bi0 = LearnableParameter
+Validating --> AutoName11 = Plus(AutoName10[300, 1], bi0[300, 1])
+Validating --> WHI0 = LearnableParameter
+Validating --> WCI0 = LearnableParameter
+Validating --> WXC0 = LearnableParameter
+Validating --> AutoName17 = Times(WXC0[300, 150], LookupTable[150, 1])
+Validating --> WHC0 = LearnableParameter
+Validating --> bc0 = LearnableParameter
+Validating --> AutoName3 = Delay(AutoName38[0, 0])
+Validating --> AutoName31 = Times(WHO0[300, 300], AutoName3[300, 1])
+Validating --> AutoName34 = Plus(AutoName33[300, 1], AutoName31[300, 1])
+Validating --> AutoName2 = Delay(AutoName38[0, 0])
+Validating --> AutoName22 = Times(WHF0[300, 300], AutoName2[300, 1])
+Validating --> AutoName25 = Plus(AutoName24[300, 1], AutoName22[300, 1])
+Validating --> AutoName6 = Delay(AutoName29[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName21 = DiagTimes(WCF0[300, 1], AutoName6[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName26 = Plus(AutoName25[300, 1], AutoName21[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName27 = Sigmoid(AutoName26[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName7 = Delay(AutoName29[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName28 = ElementTimes(AutoName27[300 {W=0, H=0, C=0}, 1], AutoName7[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName1 = Delay(AutoName38[0, 0])
+Validating --> AutoName9 = Times(WHI0[300, 300], AutoName1[300, 1])
+Validating --> AutoName12 = Plus(AutoName11[300, 1], AutoName9[300, 1])
+Validating --> AutoName5 = Delay(AutoName29[0 {W=0, H=0, C=0}, 0])
+Validating --> AutoName8 = DiagTimes(WCI0[300, 1], AutoName5[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName13 = Plus(AutoName12[300, 1], AutoName8[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName14 = Sigmoid(AutoName13[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName4 = Delay(AutoName38[0, 0])
+Validating --> AutoName15 = Times(WHC0[300, 300], AutoName4[300, 1])
+Validating --> AutoName16 = Plus(AutoName15[300, 1], bc0[300, 1])
+Validating --> AutoName18 = Plus(AutoName17[300, 1], AutoName16[300, 1])
+Validating --> AutoName19 = Tanh(AutoName18[300, 1])
+Validating --> AutoName20 = ElementTimes(AutoName14[300 {W=0, H=0, C=0}, 1], AutoName19[300, 1])
+Validating --> AutoName29 = Plus(AutoName28[300 {W=0, H=0, C=0}, 1], AutoName20[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName30 = DiagTimes(WCO0[300, 1], AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName35 = Plus(AutoName34[300, 1], AutoName30[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName36 = Sigmoid(AutoName35[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName37 = Tanh(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName38 = ElementTimes(AutoName36[300 {W=0, H=0, C=0}, 1], AutoName37[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName39 = Times(W2[127, 300], AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[127, 1], AutoName39[127, 1])
+
+
+
+Validating node outputs 
+
+Validating --> W2 = LearnableParameter
+Validating --> WXO0 = LearnableParameter
+Validating --> E0 = LearnableParameter
+Validating --> features = InputValue
+Validating --> LookupTable = LookupTable(E0[50, 944], features[2832, 1])
+Validating --> AutoName32 = Times(WXO0[300, 150], LookupTable[150, 1])
+Validating --> bo0 = LearnableParameter
+Validating --> AutoName33 = Plus(AutoName32[300, 1], bo0[300, 1])
+Validating --> WHO0 = LearnableParameter
+Validating --> AutoName3 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName31 = Times(WHO0[300, 300], AutoName3[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName34 = Plus(AutoName33[300, 1], AutoName31[300, 1])
+Validating --> WCO0 = LearnableParameter
+Validating --> WXF0 = LearnableParameter
+Validating --> AutoName23 = Times(WXF0[300, 150], LookupTable[150, 1])
+Validating --> bf0 = LearnableParameter
+Validating --> AutoName24 = Plus(AutoName23[300, 1], bf0[300, 1])
+Validating --> WHF0 = LearnableParameter
+Validating --> AutoName2 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName22 = Times(WHF0[300, 300], AutoName2[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName25 = Plus(AutoName24[300, 1], AutoName22[300, 1])
+Validating --> WCF0 = LearnableParameter
+Validating --> AutoName6 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName21 = DiagTimes(WCF0[300, 1], AutoName6[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName26 = Plus(AutoName25[300, 1], AutoName21[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName27 = Sigmoid(AutoName26[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName7 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName28 = ElementTimes(AutoName27[300 {W=0, H=0, C=0}, 1], AutoName7[300 {W=0, H=0, C=0}, 1])
+Validating --> WXI0 = LearnableParameter
+Validating --> AutoName10 = Times(WXI0[300, 150], LookupTable[150, 1])
+Validating --> bi0 = LearnableParameter
+Validating --> AutoName11 = Plus(AutoName10[300, 1], bi0[300, 1])
+Validating --> WHI0 = LearnableParameter
+Validating --> AutoName1 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName9 = Times(WHI0[300, 300], AutoName1[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName12 = Plus(AutoName11[300, 1], AutoName9[300, 1])
+Validating --> WCI0 = LearnableParameter
+Validating --> AutoName5 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName8 = DiagTimes(WCI0[300, 1], AutoName5[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName13 = Plus(AutoName12[300, 1], AutoName8[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName14 = Sigmoid(AutoName13[300 {W=0, H=0, C=0}, 1])
+Validating --> WXC0 = LearnableParameter
+Validating --> AutoName17 = Times(WXC0[300, 150], LookupTable[150, 1])
+Validating --> WHC0 = LearnableParameter
+Validating --> AutoName4 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName15 = Times(WHC0[300, 300], AutoName4[300 {W=0, H=0, C=0}, 1])
+Validating --> bc0 = LearnableParameter
+Validating --> AutoName16 = Plus(AutoName15[300, 1], bc0[300, 1])
+Validating --> AutoName18 = Plus(AutoName17[300, 1], AutoName16[300, 1])
+Validating --> AutoName19 = Tanh(AutoName18[300, 1])
+Validating --> AutoName20 = ElementTimes(AutoName14[300 {W=0, H=0, C=0}, 1], AutoName19[300, 1])
+Validating --> AutoName29 = Plus(AutoName28[300 {W=0, H=0, C=0}, 1], AutoName20[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName30 = DiagTimes(WCO0[300, 1], AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName35 = Plus(AutoName34[300, 1], AutoName30[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName36 = Sigmoid(AutoName35[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName37 = Tanh(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName38 = ElementTimes(AutoName36[300 {W=0, H=0, C=0}, 1], AutoName37[300 {W=0, H=0, C=0}, 1])
+Validating --> outputs = Times(W2[127, 300], AutoName38[300 {W=0, H=0, C=0}, 1])
+
+
+
+Validating node CrossEntropyWithSoftmax 
+
+Validating --> labels = InputValue
+Validating --> W2 = LearnableParameter
+Validating --> WXO0 = LearnableParameter
+Validating --> E0 = LearnableParameter
+Validating --> features = InputValue
+Validating --> LookupTable = LookupTable(E0[50, 944], features[2832, 1])
+Validating --> AutoName32 = Times(WXO0[300, 150], LookupTable[150, 1])
+Validating --> bo0 = LearnableParameter
+Validating --> AutoName33 = Plus(AutoName32[300, 1], bo0[300, 1])
+Validating --> WHO0 = LearnableParameter
+Validating --> WCO0 = LearnableParameter
+Validating --> WXF0 = LearnableParameter
+Validating --> AutoName23 = Times(WXF0[300, 150], LookupTable[150, 1])
+Validating --> bf0 = LearnableParameter
+Validating --> AutoName24 = Plus(AutoName23[300, 1], bf0[300, 1])
+Validating --> WHF0 = LearnableParameter
+Validating --> WCF0 = LearnableParameter
+Validating --> WXI0 = LearnableParameter
+Validating --> AutoName10 = Times(WXI0[300, 150], LookupTable[150, 1])
+Validating --> bi0 = LearnableParameter
+Validating --> AutoName11 = Plus(AutoName10[300, 1], bi0[300, 1])
+Validating --> WHI0 = LearnableParameter
+Validating --> WCI0 = LearnableParameter
+Validating --> WXC0 = LearnableParameter
+Validating --> AutoName17 = Times(WXC0[300, 150], LookupTable[150, 1])
+Validating --> WHC0 = LearnableParameter
+Validating --> bc0 = LearnableParameter
+Validating --> AutoName3 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName31 = Times(WHO0[300, 300], AutoName3[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName34 = Plus(AutoName33[300, 1], AutoName31[300, 1])
+Validating --> AutoName2 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName22 = Times(WHF0[300, 300], AutoName2[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName25 = Plus(AutoName24[300, 1], AutoName22[300, 1])
+Validating --> AutoName6 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName21 = DiagTimes(WCF0[300, 1], AutoName6[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName26 = Plus(AutoName25[300, 1], AutoName21[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName27 = Sigmoid(AutoName26[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName7 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName28 = ElementTimes(AutoName27[300 {W=0, H=0, C=0}, 1], AutoName7[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName1 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName9 = Times(WHI0[300, 300], AutoName1[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName12 = Plus(AutoName11[300, 1], AutoName9[300, 1])
+Validating --> AutoName5 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName8 = DiagTimes(WCI0[300, 1], AutoName5[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName13 = Plus(AutoName12[300, 1], AutoName8[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName14 = Sigmoid(AutoName13[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName4 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName15 = Times(WHC0[300, 300], AutoName4[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName16 = Plus(AutoName15[300, 1], bc0[300, 1])
+Validating --> AutoName18 = Plus(AutoName17[300, 1], AutoName16[300, 1])
+Validating --> AutoName19 = Tanh(AutoName18[300, 1])
+Validating --> AutoName20 = ElementTimes(AutoName14[300 {W=0, H=0, C=0}, 1], AutoName19[300, 1])
+Validating --> AutoName29 = Plus(AutoName28[300 {W=0, H=0, C=0}, 1], AutoName20[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName30 = DiagTimes(WCO0[300, 1], AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName35 = Plus(AutoName34[300, 1], AutoName30[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName36 = Sigmoid(AutoName35[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName37 = Tanh(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName38 = ElementTimes(AutoName36[300 {W=0, H=0, C=0}, 1], AutoName37[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName39 = Times(W2[127, 300], AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[127, 1], AutoName39[127, 1])
+
+ nodes in the recurrent loops : 
+AutoName37	AutoName4	AutoName15	AutoName16	AutoName18	AutoName19	AutoName5	AutoName8	AutoName1	AutoName9	AutoName12	AutoName13	AutoName14	AutoName20	AutoName7	AutoName6	AutoName21	AutoName2	AutoName22	AutoName25	AutoName26	AutoName27	AutoName28	AutoName29	AutoName30	AutoName3	AutoName31	AutoName34	AutoName35	AutoName36	AutoName38	
+
+Validating node outputs 
+
+Validating --> W2 = LearnableParameter
+Validating --> WXO0 = LearnableParameter
+Validating --> E0 = LearnableParameter
+Validating --> features = InputValue
+Validating --> LookupTable = LookupTable(E0[50, 944], features[2832, 1])
+Validating --> AutoName32 = Times(WXO0[300, 150], LookupTable[150, 1])
+Validating --> bo0 = LearnableParameter
+Validating --> AutoName33 = Plus(AutoName32[300, 1], bo0[300, 1])
+Validating --> WHO0 = LearnableParameter
+Validating --> WCO0 = LearnableParameter
+Validating --> WXF0 = LearnableParameter
+Validating --> AutoName23 = Times(WXF0[300, 150], LookupTable[150, 1])
+Validating --> bf0 = LearnableParameter
+Validating --> AutoName24 = Plus(AutoName23[300, 1], bf0[300, 1])
+Validating --> WHF0 = LearnableParameter
+Validating --> WCF0 = LearnableParameter
+Validating --> WXI0 = LearnableParameter
+Validating --> AutoName10 = Times(WXI0[300, 150], LookupTable[150, 1])
+Validating --> bi0 = LearnableParameter
+Validating --> AutoName11 = Plus(AutoName10[300, 1], bi0[300, 1])
+Validating --> WHI0 = LearnableParameter
+Validating --> WCI0 = LearnableParameter
+Validating --> WXC0 = LearnableParameter
+Validating --> AutoName17 = Times(WXC0[300, 150], LookupTable[150, 1])
+Validating --> WHC0 = LearnableParameter
+Validating --> bc0 = LearnableParameter
+Validating --> AutoName3 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName31 = Times(WHO0[300, 300], AutoName3[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName34 = Plus(AutoName33[300, 1], AutoName31[300, 1])
+Validating --> AutoName2 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName22 = Times(WHF0[300, 300], AutoName2[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName25 = Plus(AutoName24[300, 1], AutoName22[300, 1])
+Validating --> AutoName6 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName21 = DiagTimes(WCF0[300, 1], AutoName6[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName26 = Plus(AutoName25[300, 1], AutoName21[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName27 = Sigmoid(AutoName26[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName7 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName28 = ElementTimes(AutoName27[300 {W=0, H=0, C=0}, 1], AutoName7[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName1 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName9 = Times(WHI0[300, 300], AutoName1[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName12 = Plus(AutoName11[300, 1], AutoName9[300, 1])
+Validating --> AutoName5 = Delay(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName8 = DiagTimes(WCI0[300, 1], AutoName5[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName13 = Plus(AutoName12[300, 1], AutoName8[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName14 = Sigmoid(AutoName13[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName4 = Delay(AutoName38[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName15 = Times(WHC0[300, 300], AutoName4[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName16 = Plus(AutoName15[300, 1], bc0[300, 1])
+Validating --> AutoName18 = Plus(AutoName17[300, 1], AutoName16[300, 1])
+Validating --> AutoName19 = Tanh(AutoName18[300, 1])
+Validating --> AutoName20 = ElementTimes(AutoName14[300 {W=0, H=0, C=0}, 1], AutoName19[300, 1])
+Validating --> AutoName29 = Plus(AutoName28[300 {W=0, H=0, C=0}, 1], AutoName20[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName30 = DiagTimes(WCO0[300, 1], AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName35 = Plus(AutoName34[300, 1], AutoName30[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName36 = Sigmoid(AutoName35[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName37 = Tanh(AutoName29[300 {W=0, H=0, C=0}, 1])
+Validating --> AutoName38 = ElementTimes(AutoName36[300 {W=0, H=0, C=0}, 1], AutoName37[300 {W=0, H=0, C=0}, 1])
+Validating --> outputs = Times(W2[127, 300], AutoName38[300 {W=0, H=0, C=0}, 1])
+
+Total Samples Evaluated = 91

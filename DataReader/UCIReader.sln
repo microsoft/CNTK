@@ -1,0 +1,97 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMath", "..\Math\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UCIReaderClient", "UCIReaderClient\UCIReaderClient.vcxproj", "{89A1BB74-345D-4CB4-BC56-2C05D8076183}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1} = {44FF56FA-382A-43FA-BF87-7FDDB7819BF1}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UCIReader", "UCIReader\UCIReader.vcxproj", "{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DataReaderTest", "DataReaderTest\DataReaderTest.vcxproj", "{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}"
+	ProjectSection(ProjectDependencies) = postProject
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1} = {44FF56FA-382A-43FA-BF87-7FDDB7819BF1}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UCIFastReader", "UCIFastReader\UCIFastReader.vcxproj", "{E6646FFE-3588-4276-8A15-8D65C22711C1}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 6
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://vstfcodebox:8080/tfs/kappa
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = ..\\Math\\Math\\Math.vcxproj
+		SccProjectName1 = ../Math/Math
+		SccLocalPath1 = ..\\Math\\Math
+		SccProjectUniqueName2 = UCIReader\\UCIReader.vcxproj
+		SccProjectName2 = UCIReader
+		SccLocalPath2 = UCIReader
+		SccProjectUniqueName3 = UCIReaderClient\\UCIReaderClient.vcxproj
+		SccProjectName3 = UCIReaderClient
+		SccLocalPath3 = UCIReaderClient
+		SccProjectUniqueName4 = DataReaderTest\\DataReaderTest.vcxproj
+		SccProjectName4 = DataReaderTest
+		SccLocalPath4 = DataReaderTest
+		SccProjectUniqueName5 = UCIFastReader\\UCIFastReader.vcxproj
+		SccProjectName5 = UCIFastReader
+		SccLocalPath5 = UCIFastReader
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|Win32.Build.0 = Debug|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|x64.ActiveCfg = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Debug|x64.Build.0 = Debug|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|Win32.ActiveCfg = Release|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|Win32.Build.0 = Release|Win32
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|x64.ActiveCfg = Release|x64
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}.Release|x64.Build.0 = Release|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|Win32.ActiveCfg = Debug|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|Win32.Build.0 = Debug|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|x64.ActiveCfg = Debug|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Debug|x64.Build.0 = Debug|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|Win32.ActiveCfg = Release|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|Win32.Build.0 = Release|Win32
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|x64.ActiveCfg = Release|x64
+		{89A1BB74-345D-4CB4-BC56-2C05D8076183}.Release|x64.Build.0 = Release|x64
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Debug|Win32.Build.0 = Debug|Win32
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Debug|x64.ActiveCfg = Debug|x64
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Debug|x64.Build.0 = Debug|x64
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Release|Win32.ActiveCfg = Release|Win32
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Release|Win32.Build.0 = Release|Win32
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Release|x64.ActiveCfg = Release|x64
+		{44FF56FA-382A-43FA-BF87-7FDDB7819BF1}.Release|x64.Build.0 = Release|x64
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Debug|Win32.Build.0 = Debug|Win32
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Debug|x64.ActiveCfg = Debug|x64
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Debug|x64.Build.0 = Debug|x64
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Release|Win32.ActiveCfg = Release|Win32
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Release|Win32.Build.0 = Release|Win32
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Release|x64.ActiveCfg = Release|x64
+		{0A540EB6-4A85-49E4-BBB2-B75DA4F84159}.Release|x64.Build.0 = Release|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|Win32.Build.0 = Debug|Win32
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|x64.ActiveCfg = Debug|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Debug|x64.Build.0 = Debug|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|Win32.ActiveCfg = Release|Win32
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|Win32.Build.0 = Release|Win32
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|x64.ActiveCfg = Release|x64
+		{E6646FFE-3588-4276-8A15-8D65C22711C1}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

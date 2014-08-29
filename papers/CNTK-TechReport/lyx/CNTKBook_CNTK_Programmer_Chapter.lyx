@@ -1,0 +1,4054 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass extbook
+\begin_preamble
+\usepackage{algorithm}
+\usepackage{algpseudocode}  
+\end_preamble
+\use_default_options false
+\master CNTKBook-master.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize 11
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 2
+\use_package cancel 0
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 0
+\use_package mhchem 1
+\use_package stackrel 0
+\use_package stmaryrd 0
+\use_package undertilde 0
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\listings_params "basicstyle={\small},breaklines=true,frame=tb"
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Chapter
+Extending the Computational Network Toolkit
+\begin_inset CommandInset label
+LatexCommand label
+name "chap:CNTK_Programmer"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+CNTK is designed for extension as illustrated by Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:CNTK-Architecture"
+
+\end_inset
+
+, which indicates that the building blocks in CNTK are decoupled by interfaces.
+ It separates the core computational network operations, training algorithms,
+ network builders, and data readers.
+ Adding new computation nodes and data readers to fit your needs is as simple
+ as plug and play as we will introduce in this chapter.
+\end_layout
+
+\begin_layout Standard
+At the center of the CNTK is the ComputationNetwork class, which manages
+ the life span of computation nodes comprising the network and all the functions
+ operating at the network level such as forward computations and gradient
+ calculations.
+ To build a computational network you need to use one of the ComputationNetBuild
+er classes that implement the IComputationNetBuilder interface.
+ These classes include SimpleNetworkBuilder that supports building simple
+ layer-by-layer fully connected networks, recurrent neural networks (RNNs)
+ such as simple RNN and long short-term memory (LSTM) neural networks.
+ It also includes NDLNetworkBuilder that can build neural network, using
+ any computation node we have described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Typical-Computation-Nodes"
+
+\end_inset
+
+, based on the network definition language described in Chapter 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CNTK_Adv"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+IDataReader is an interface for loading data and its transcriptions.
+ Different data file format requires different data readers.
+ CNTK already implements the UCIFastReader and the BinaryReader that reads
+ in UCI data in either text or binary format, the HTKMLFReader that reads
+ in HTK/MLF speech data, the SequenceReader that is designed for language
+ model data files, and the LUSequenceReader designed for reading language
+ understanding data files.
+ Users need to either convert their data files into one of the data file
+ formats already supported or implement their own data reader.
+\end_layout
+
+\begin_layout Standard
+To train a model, a learner, such as the stochastic gradient descent (SGD)
+ learner, reads in features and labels through the IDataReader interface,
+ calls the Evaluate and ComputeGradient methods of the ComputationNetwork
+ object, and updates the model based on some training criterion and algorithm.
+ The SGD learner available in CNTK implements common SGD-based parameter
+ update methods such as momentum and AdaGrad.
+ In addition, the SGD learner also implements a gradient checker so that
+ users can validate gradient computations of their networks.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename ../figures/CNTKArch.png
+	scale 70
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:CNTK-Architecture"
+
+\end_inset
+
+CNTK Architecture
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In most cases you will find that the existing functionality in the CNTK
+ is sufficient to support your research.
+ However, occasionally you may need to modify CNTK to support, for example,
+ your special data format or computation.
+ In this chapter we introduce how to extend the CNTK to support your special
+ requirements.
+ We foresee that the most frequent needs are adding a special data reader
+ and writer, a special computation node, and a special training algorithm.
+ This chapter is organized to cover these topics in order.
+\end_layout
+
+\begin_layout Section
+Adding a Data Reader and Writer
+\end_layout
+
+\begin_layout Standard
+CNTK was designed with the idea that data input and output would need to
+ transpire in many different formats.
+ For this reason we have designed the data reader (IDataReader) and writer
+ (IDataWriter) interfaces to cover various data needs.
+ The reader/writer code is housed in separate DLLs which are dynamically
+ loaded to provide data services.
+ Each reader DLL exports the functions
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader);
+\end_layout
+
+\begin_layout Plain Layout
+
+extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
+\end_layout
+
+\end_inset
+
+to return the IDataReader interfaces for the floating and double precision,
+ respectively, and each writer DLL exports the functions
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter);
+\end_layout
+
+\begin_layout Plain Layout
+
+extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
+\end_layout
+
+\end_inset
+
+to return the IDataWriter interfaces for the floating and double precision,
+ respectively.
+ This allows the user to simply specify, for example, a reader block, in
+ the configuration setting to use a different reader.
+\end_layout
+
+\begin_layout Subsection
+IDataReader
+\end_layout
+
+\begin_layout Standard
+To add a new reader, you need to implement the IDataReader interface
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+// implemented by DataReader and underlying classes
+\end_layout
+
+\begin_layout Plain Layout
+
+template<class ElemType>
+\end_layout
+
+\begin_layout Plain Layout
+
+class DATAREADER_API IDataReader
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+public:     
+\end_layout
+
+\begin_layout Plain Layout
+
+    typedef std::string LabelType;
+\end_layout
+
+\begin_layout Plain Layout
+
+    typedef unsigned LabelIdType;
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual void Init(const ConfigParameters& config) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual void Destroy() = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+      
+\end_layout
+
+\begin_layout Plain Layout
+
+ virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEp
+ochSamples=requestDataSize) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>&
+ matrices) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+       
+\end_layout
+
+\begin_layout Plain Layout
+
+  virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapp
+ing(const std::wstring& sectionName) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+  virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<t
+ypename LabelIdType, typename LabelType>& labelMapping) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+   
+\end_layout
+
+\begin_layout Plain Layout
+
+   virtual bool GetData(const std::wstring& sectionName, size_t numRecords,
+ void* data, size_t& dataBufferSize, size_t recordStart) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual bool DataEnd(EndDataType endDataType) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    // Recursive network specific methods     
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual size_t NumberSlicesInEachRecurrentIter() = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd)=0;
+\end_layout
+
+\begin_layout Plain Layout
+
+};
+\end_layout
+
+\end_inset
+
+and the GetReaderF and GetReaderD methods, where
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+\begin_inset Formula $Init$
+\end_inset
+
+
+\series default
+ – initialize the reader from a set of ConfigurationParameters.
+ You can use configuration setups similar to that implemented in the existing
+ readers or add new setups specific to your own reader.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+Destroy
+\emph default
+ – release the resources used by the reader.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+StartMinibatchLoop
+\series bold
+\emph default
+ 
+\series default
+– Starts the minibatch loop with the parameters
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+
+\emph on
+mbSize
+\series bold
+\emph default
+ 
+\series default
+– minibatch size, can be number of frames for frame based training or number
+ of series for sequence level training.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+epoch
+\series bold
+\emph default
+ 
+\series default
+– epoch number we are currently processing
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+requestedEpochSize
+\series bold
+\emph default
+ – 
+\series default
+the number of records in an epoch.
+ It is used to determine when an epoch ends.
+ The epoch size can be different (larger or smaller) from the dataset size.
+ When a user passes the constant requestDataSize as the epoch size, the
+ actual epoch size equals the dataset size.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+
+\emph on
+GetMinibatch
+\emph default
+ – Get the values of the next minibatch.
+ To support multiple inputs/outputs for the CNs, 
+\emph on
+matrices
+\emph default
+, a dictionary that maps from the computation node names to the actual matrices
+ are passed into the function.
+ This function returns true if the next minibatch is fetched or false if
+ end of epoch is reached.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+GetLabelMapping
+\series bold
+\emph default
+ 
+\series default
+– Get the label map from the reader, where 
+\emph on
+sectionName
+\emph default
+ specifies the section which contains the label map, if applicable.
+ Some readers do not need a section name if only one label map is supported
+ and some readers may not need a label mapping at all.
+ This function returns the map from 
+\emph on
+labelId
+\emph default
+ (integer) to 
+\emph on
+label
+\emph default
+ (std::string).
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+SetLabelMapping
+\emph default
+ – Set the label map for the reader, where 
+\emph on
+sectionName
+\series bold
+\emph default
+ 
+\series default
+specifies the section which is assigned to the label map, if applicable,
+ and 
+\emph on
+labelMapping
+\series bold
+\emph default
+ 
+\series default
+is the label map that is being set.
+ Some readers do not need a section name or even a label map.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+GetData
+\emph default
+ – Get data from a predefined section with parameters
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+
+\emph on
+sectionName
+\emph default
+ – the section which contains the data,
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+numRecords
+\emph default
+ – the number of records to read,
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+data
+\emph default
+ 
+\series bold
+–
+\series default
+ pointer to the data buffer.
+ Needs to be released by the caller,
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+dataBufferSize
+\series bold
+\emph default
+ 
+\series default
+– size of the buffer.
+ If 
+\emph on
+dataBufferSize
+\emph default
+ equals zero or 
+\emph on
+data
+\emph default
+ equals nullptr, enough memory will be allocated by the function and the
+ number of bytes allocated will be returned through this variable,
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+recordStart
+\emph default
+ – the record to start reading from.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+
+\emph on
+DataEnd
+\emph default
+ – Returns whether it is the end of a dataset, an epoch or a sentence as
+ specified by 
+\emph on
+endDataType.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+NumberSlicesInEachRecurrentIter
+\emph default
+ – Get the number of slices for each truncated BPTT computation.
+ It is used in recurrent networks.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+SetNbrSlicesEachRecurrentIter
+\emph default
+ – Set the number of slices for each truncated BPTT computation.
+ It is used in recurrent networks.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+SetSentenceEndInBatch
+\emph default
+ – Set the end of sentences in the sentence minibatch.
+ It is used in recurrent networks.
+\end_layout
+
+\begin_layout Standard
+In some cases you don't need to write the data reader from scratch.
+ For example, you can build your reader upon an existing reader by deriving
+ from it or using it as a cache.
+ 
+\end_layout
+
+\begin_layout Standard
+CNTK was designed to support multiple input and output streams.
+ This is implemented by passing pairs of computation node names and matrices
+ to the GetMinibatch function.
+ In most cases you only need one named pair to get one feature stream during
+ testing and two named pairs to get both the feature and label during training.
+ However, you may pass any number of pairs to get as many streams as needed
+ if it is supported by your data reader.
+\end_layout
+
+\begin_layout Standard
+Randomization is important for many stochastic training algorithms.
+ It is thus suggested that you either require users to pre-randomize the
+ data or implement a random shuffling algorithm inside your reader.
+ Sample and sequence should be the unit for randomization, respectively,
+ when sample and sequence level model (e.g., RNN) or training criteria are
+ used.
+\end_layout
+
+\begin_layout Standard
+To support recurrent networks, it's suggested to implement the data reader
+ so that multiple sequences can be used as a batch as discussed in Chapter
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CN"
+
+\end_inset
+
+.
+ You can find example implementations in the HTKMLFReader.
+\end_layout
+
+\begin_layout Subsection
+IDataWriter
+\end_layout
+
+\begin_layout Standard
+To add a new writer, you need to implement the IDataWriter interface
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+// implemented by some DataWriters
+\end_layout
+
+\begin_layout Plain Layout
+
+template<class ElemType>
+\end_layout
+
+\begin_layout Plain Layout
+
+class DATAWRITER_API IDataWriter
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+public:
+\end_layout
+
+\begin_layout Plain Layout
+
+    typedef std::string LabelType;
+\end_layout
+
+\begin_layout Plain Layout
+
+    typedef unsigned LabelIdType;
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual void Init(const ConfigParameters& config) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual void Destroy() = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>
+& sections) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+    virtual bool SaveData(size_t recordStart, const std::map<std::wstring,
+ void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize,
+ size_t byteVariableSized) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+   virtual void SaveMapping(std::wstring saveId, const std::map<typename
+ LabelIdType, typename LabelType>& labelMapping) = 0;
+\end_layout
+
+\begin_layout Plain Layout
+
+};
+\end_layout
+
+\end_inset
+
+and the GetWriterF and GetWriterD methods, where
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+Init
+\emph default
+ – Initialize the writer from a set of ConfigurationParameters.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+Destroy
+\emph default
+ – Release the resources used by the writer.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+GetSections
+\emph default
+ – Gets the 
+\emph on
+sections
+\emph default
+ that are available in the file to write to.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+SaveData
+\emph default
+ – Save data to the file with parameters
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+
+\emph on
+recordStart
+\emph default
+ – the record to start writing to
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+matrices
+\emph default
+ – a dictionary that maps from the section names to the data pointers.
+ The names of the sections in the dictionary should be equal to the sections
+ returned by GetSections().
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+numRecords
+\emph default
+ – number of records to write out
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+datasetSize
+\emph default
+ – size of the dataset
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+byteVariableSized
+\emph default
+ – the number of bytes used for variable sized data.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+
+\emph on
+SaveMapping
+\emph default
+ – Save the label mapping table, where 
+\emph on
+saveId
+\emph default
+ is the section name where the mapping will be saved and 
+\emph on
+labelMapping
+\emph default
+ is the label map from 
+\emph on
+labelId
+\emph default
+ (integer) to 
+\emph on
+label
+\emph default
+ (std::string).
+\end_layout
+
+\begin_layout Subsection
+Configuration
+\end_layout
+
+\begin_layout Standard
+For users to use new data readers and writers they need to specify parameters.
+ CNTK provides a set of easy to use configuration parsing functions.
+ It is recommended that these functions are used so that the configuration
+ parsing can be consistent with other components.
+ 
+\end_layout
+
+\begin_layout Standard
+The programmer interface to the configuration files is contained in a few
+ C++ classes and focuses on “just-in-time” evaluation of the parameter values.
+ The idea is simple, leave the configuration values in string format until
+ they actually need to be parsed into some other form.
+ Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Config-Formats"
+
+\end_inset
+
+ summarizes the different data formats the configuration classes support.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:Config-Formats"
+
+\end_inset
+
+The Data Formats the Configuration Classes Support.
+ # means any number.
+ $ means a character used as a separator.
+ [] means optional.
+\end_layout
+
+\end_inset
+
+
+\begin_inset Tabular
+<lyxtabular version="3" rows="14" columns="3">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+Config Type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+C++ Type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+Data Format 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+integer
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+int, long, short, size_t 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+[-]#
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+floating-point
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float, double 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+[-]#.#[e{+-}#]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+string 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+std::wstring, std::string 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Any valid character
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="3" alignment="center" valignment="middle" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+boolean 
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="3" alignment="center" valignment="middle" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+bool 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+T, True, 1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+F, False, 0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="3" alignment="center" valignment="middle" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+array 
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="3" alignment="center" valignment="middle" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ConfigArray 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+value:value:value
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+value:value*#:value 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ {|value|value|value}
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+{|value|value*#|value} 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+{ value value value*# } 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="3" alignment="center" valignment="middle" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dictionary 
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="3" alignment="center" valignment="middle" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ConfigParameters 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+param1=value1;param2=value2;boolparam
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="4" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+[$param1=value1$param=value2$boolparam] 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multirow="4" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+[ param1=value1 param=value2 boolparam ]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+The three most frequently used configuration classes are 
+\emph on
+ConfigValue, ConfigParameters
+\emph default
+ and 
+\emph on
+ConfigArray.
+\end_layout
+
+\begin_layout Subsubsection
+
+\emph on
+ConfigValue
+\end_layout
+
+\begin_layout Standard
+The 
+\emph on
+ConfigValue
+\emph default
+ class allows the just-in-time (JIT) evaluation of configuration strings.
+ It inherits from std::string, and stores an optional configuration path
+ string, which is mainly used for error messages.
+ It contains many cast operators that parse the string value into the target
+ type on demand.
+\end_layout
+
+\begin_layout Subsubsection
+
+\emph on
+ConfigParameters
+\end_layout
+
+\begin_layout Standard
+The 
+\emph on
+ConfigParameters
+\emph default
+ class represents dictionaries of 
+\emph on
+ConfigValue
+\emph default
+ and is used to describe the hierarchy of configuration sets.
+ It accesses the configuration values and automatically searches up the
+ hierarchy of ConfigParameter classes if a value is not found on the current
+ level.
+ The hierarchy is maintained by the order of class instantiations on the
+ stack.
+ 
+\emph on
+ConfigParameters
+\emph default
+ should only be created on the stack.
+\end_layout
+
+\begin_layout Standard
+In configuration files the ‘name=value’ named pair are usually separated
+ by newlines.
+ However, they also can be separated by other characters and placed on the
+ same line.
+ The default separator for ConfigParmeters is a ‘;’ (semicolon).
+ This can be overridden by placing the alternate separator character immediately
+ following the opening brace.
+ For example ‘[|’ causes ‘|’ to be the separator for that ConfigParameter
+ instance:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+name=[|parameter1=value1|parameter2=value2|parameter3=value3]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+There are several ways to access the values stored inside the ConfigParameters
+ object 
+\emph on
+config
+\emph default
+:
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+value = config(“name”)
+\emph default
+ – returns the named parameter cast to the type of the value parameter.
+ If the named configuration parameter does not exist an exception will be
+ thrown.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+value = config(“name”, “defaultValue”)
+\emph default
+ – returns the named parameter, if it doesn’t exist returns defaultValue.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+config.Exists(“name”) 
+\emph default
+– returns whether the named value exists in the 
+\emph on
+ConfigParameters
+\emph default
+ object 
+\emph on
+config
+\emph default
+.
+\end_layout
+
+\begin_layout Standard
+To insert elements into the 
+\emph on
+ConfigParameters
+\emph default
+ object 
+\emph on
+config
+\emph default
+ the following methods can be used:
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+config.Insert(“name”, value)
+\emph default
+ – inserts a new value into 
+\emph on
+config
+\emph default
+.
+ If the value already exists, it will be replaced, unless the value is itself
+ another 
+\emph on
+ConfigParameters
+\emph default
+ object, or string representation surrounded by square braces ‘[]’, in which
+ case the parameters are “merged”.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+config.Insert(
+\begin_inset Quotes eld
+\end_inset
+
+name=value
+\begin_inset Quotes erd
+\end_inset
+
+) 
+\emph default
+– inserts the named pair in the format of ‘name=value’ into the dictionary.
+\end_layout
+
+\begin_layout Subsubsection
+
+\emph on
+ConfigArray
+\end_layout
+
+\begin_layout Standard
+The 
+\emph on
+ConfigArray
+\emph default
+ class holds an array of 
+\emph on
+ConfigValue
+\emph default
+s.
+ Since 
+\emph on
+ConfigValue
+\emph default
+ is evaluated JIT.
+ The values in the array need not be homogeneous, as long as the code knows
+ how to interpret the value of each element.
+\end_layout
+
+\begin_layout Standard
+In a 
+\emph on
+ConfigArray
+\emph default
+ the values are normally separated by the default separator character ‘:’
+ (colon).
+ However, they also can be separated by the newline character or other character
+s.
+ The default separator can be overridden by placing the alternate separator
+ character immediately following the opening brace.
+ For example ‘{|’ causes ‘|’ to be the separator for a ConfigArray object
+ as in
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+array={|c:
+\backslash
+temp
+\backslash
+new.txt|12*3|1e-12}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+A value may be repeated multiple times with the ‘*’ character followed by
+ an integer.
+ In the above example, there are 5 elements in the array, with three ‘12’
+ values occupying the center 3 positions.
+\end_layout
+
+\begin_layout Standard
+The values in a 
+\emph on
+ConfigArray
+\emph default
+ can be accessed just like values in a normal std::vector type.
+ If the index exceeds the length of the vector the last value in the vector
+ is returned.
+\end_layout
+
+\begin_layout Subsubsection
+Other Useful Configuration Methods
+\end_layout
+
+\begin_layout Standard
+Another convenient method that exists for both 
+\emph on
+ConfigParameters
+\emph default
+ and 
+\emph on
+ConfigArray
+\emph default
+ classes is to load a config file into an existing object as in 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+config.LoadConfigFile(path.c_str());
+\end_layout
+
+\end_inset
+
+It is implemented in the 
+\emph on
+ConfigParser
+\emph default
+ class, from which both of these two classes inherit.
+\end_layout
+
+\begin_layout Standard
+To use this method with a 
+\emph on
+ConfigArray
+\emph default
+, the file can simply contain a list of values each on its own line.
+ Both simple and complex types such as 
+\emph on
+ConfigParameters
+\emph default
+ and 
+\emph on
+ConfigArray
+\emph default
+ can be contained in the array using the data format summarized in Table
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Config-Formats"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+ConfigArray
+\emph default
+ objects can also be converted to 
+\emph on
+argvector<T>
+\emph default
+ objects simply by assigning them as
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ConfigArray configLearnRatesPerMB = config("learningRatesPerMB");
+\end_layout
+
+\begin_layout Plain Layout
+
+argvector<float> learnRatesPerMB = configLearnRatesPerMB;
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+ConfigParameters
+\emph default
+ and 
+\emph on
+ConfigArray
+\emph default
+ objects are very flexible.
+ However parsing is required every time a value is accessed.
+ Accessing 
+\emph on
+argvector<T>
+\emph default
+, on the other hand, is very efficient.
+ Parsing happens only when 
+\emph on
+ConfigParameters
+\emph default
+ or 
+\emph on
+ConfigArray
+\emph default
+ objects are converted to 
+\emph on
+argvector<T>
+\emph default
+ objects.
+ Care should be taken when the value is assigned to a local variable, due
+ to lifetime issues.
+\end_layout
+
+\begin_layout Subsubsection
+Configuration Parsing Example
+\end_layout
+
+\begin_layout Standard
+The following is a code snippet showing various ways of parsing configuration
+ files:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#include "commandArgUtil.h"
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+// process the command
+\end_layout
+
+\begin_layout Plain Layout
+
+void DoCommand(const ConfigParameters& config)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    ConfigArray command = config("command");
+\end_layout
+
+\begin_layout Plain Layout
+
+    for (int i=0; i < command.size(); i++)
+\end_layout
+
+\begin_layout Plain Layout
+
+        {
+\end_layout
+
+\begin_layout Plain Layout
+
+        //get the configuration parameters that match the command
+\end_layout
+
+\begin_layout Plain Layout
+
+        ConfigParameters commandParams=config(command[i]);
+\end_layout
+
+\begin_layout Plain Layout
+
+        ConfigArray action = commandParams("action","train");
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+        // determine the action to perform, and do it
+\end_layout
+
+\begin_layout Plain Layout
+
+        for (int j=0; j < action.size(); j++)
+\end_layout
+
+\begin_layout Plain Layout
+
+        {
+\end_layout
+
+\begin_layout Plain Layout
+
+            if (action[j] == "train")
+\end_layout
+
+\begin_layout Plain Layout
+
+                DoTrain(commandParams);
+\end_layout
+
+\begin_layout Plain Layout
+
+            else if (action[j] == "test" || action[j] == "eval")
+\end_layout
+
+\begin_layout Plain Layout
+
+                DoEval(commandParams);
+\end_layout
+
+\begin_layout Plain Layout
+
+            else
+\end_layout
+
+\begin_layout Plain Layout
+
+             throw runtime_error("unknown action: " + action[j] + " in command
+ set: " + command[i]);
+\end_layout
+
+\begin_layout Plain Layout
+
+        }
+\end_layout
+
+\begin_layout Plain Layout
+
+    }
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+void DoTrain(const ConfigParameters& config)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    ConfigParameters configSGD=config("SGD");
+\end_layout
+
+\begin_layout Plain Layout
+
+    ConfigParameters readerConfig = config("reader");
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    ConfigParameters configNDL = config("NDLNetworkBuilder");
+\end_layout
+
+\begin_layout Plain Layout
+
+    IComputationNetBuilder* netBuilder = (IComputationNetBuilder*)new NDLBuilder
+(configNDL);
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    DataReader* dataReader = new DataReader(readerConfig);
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB",
+ "");
+\end_layout
+
+\begin_layout Plain Layout
+
+    floatargvector learningRatesPerMB = learningRatesPerMBStr;
+\end_layout
+
+\begin_layout Plain Layout
+
+    ConfigArray minibatchSize = configSGD("minibatchSize", "256");
+\end_layout
+
+\begin_layout Plain Layout
+
+    size_t epochSize = configSGD("epochSize", "0");
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (epochSize == 0)
+\end_layout
+
+\begin_layout Plain Layout
+
+    {
+\end_layout
+
+\begin_layout Plain Layout
+
+        epochSize = requestDataSize;
+\end_layout
+
+\begin_layout Plain Layout
+
+    }
+\end_layout
+
+\begin_layout Plain Layout
+
+    size_t maxEpochs = configSGD("maxEpochs");
+\end_layout
+
+\begin_layout Plain Layout
+
+    wstring modelPath = configSGD("modelPath");
+\end_layout
+
+\begin_layout Plain Layout
+
+    int traceLevel = configSGD("traceLevel", "0");
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    SGD = sgd(learningRatesPerMB, minibatchSize, epochSize, maxEpochs, modelPath
+, traceLevel);
+\end_layout
+
+\begin_layout Plain Layout
+
+    sgd.Train(netBuilder, dataReader);
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    delete netBuilder;
+\end_layout
+
+\begin_layout Plain Layout
+
+    delete dataReader;
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+As shown in this example parsing configurations files is very simple: you
+ simply declare a variable on the stack and assign something from a ConfigParame
+ters class to that variable.
+ 
+\end_layout
+
+\begin_layout Standard
+The configuration classes are meant to be used on the stack as shown in
+ this example.
+ Storing them in member variables or allocating them using ‘new’ or other
+ methods is not supported.
+ This is because an internal pointer is used to link to parent objects of
+ configuration classes.
+ This allows us to trace up the stack and look for configuration values
+ that exist at a higher level.
+ Since our search traverses up the stack, we need to ensure that all the
+ parent configuration classes still exist, which is guaranteed if all configurat
+ion parameters are stack allocated and have lifetimes that extend past any
+ children.
+\end_layout
+
+\begin_layout Section
+Adding a New Computation Node
+\end_layout
+
+\begin_layout Standard
+The set of computation nodes implemented in the CNTK are described in Chapters
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CN"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CNTK_Adv"
+
+\end_inset
+
+.
+ These computation node types are sufficient for most applications.
+ However, sometimes you may need to add new computation node types due to
+ the special requirement you have.
+\end_layout
+
+\begin_layout Standard
+Adding a new computation node involves several steps: Implementing the new
+ computation node type, adding the new node type to the computational network,
+ and adding it to the network builder.
+\end_layout
+
+\begin_layout Subsection
+Implementing a New Computation Node Type
+\end_layout
+
+\begin_layout Standard
+In the current file structure, computation nodes are implemented in four
+ files:
+\end_layout
+
+\begin_layout Itemize
+ComputationNode.h: the base class ComputationNode and most computation nodes
+ are implemented in this file.
+\end_layout
+
+\begin_layout Itemize
+EvaluationCriterionNode.h: computation nodes used mainly as evaluation criterion
+ are implemented in this file.
+\end_layout
+
+\begin_layout Itemize
+TrainingCriterionNode.h: computation nodes used mainly as training criterion
+ are implemented in this file.
+\end_layout
+
+\begin_layout Itemize
+CompositeComputationNode.h: complicated computation nodes such as those used
+ in the convolutional neural networks are implemented in this file.
+\end_layout
+
+\begin_layout Standard
+All computation node classes should be inherited from the ComputationNode
+ class.
+ The simplest way to create a new computation node type is to find a node
+ type that is already implemented in the CNTK and use it as a template.
+ Here let's use the ScaleNode as the example.
+\end_layout
+
+\begin_layout Subsubsection
+Inherits from ComputationNode<ElemType>
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+template<class ElemType>      
+\end_layout
+
+\begin_layout Plain Layout
+
+class ScaleNode : public ComputationNode<ElemType>   
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Create Constructors
+\end_layout
+
+\begin_layout Standard
+There are three constructors that need to be implemented as shown below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "language={C++},tabsize=4"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ScaleNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name
+ = L"") 
+\end_layout
+
+\begin_layout Plain Layout
+
+: ComputationNode(deviceId)           
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    m_nodeName = (name == L""? CreateUniqNodeName() : name);           
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+    m_deviceId = deviceId;             
+\end_layout
+
+\begin_layout Plain Layout
+
+    MoveMatricesToDevice(deviceId);             
+\end_layout
+
+\begin_layout Plain Layout
+
+    InitRecurrentNode();         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+ScaleNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLA
+CEMATRIX, const std::wstring name = L"")
+\end_layout
+
+\begin_layout Plain Layout
+
+        : ComputationNode(deviceId)         
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    m_nodeName = (name == L""? CreateUniqNodeName() : name);           
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+    LoadFromFile(fstream, modelVersion, deviceId);         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+      
+\end_layout
+
+\begin_layout Plain Layout
+
+ScaleNode(const ScaleNode<ElemType>* node, const std::wstring& newName,
+ const CopyNodeFlags flags) 
+\end_layout
+
+\begin_layout Plain Layout
+
+        : ComputationNode(node->m_deviceId)         
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    node->CopyTo(this, newName, flags);         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first constructor creates the node based on a deviceId and a node name.
+ If node name passed in is empty a new node name will be created automatically.
+ The MoveMatricesToDevice(deviceId) call is important here.
+ It will set the preferred computation device to deviceId and move the matrices
+ to that device.
+ The InitRecurrentNode() call will initialize all the members needed to
+ handle recurrent loops in the network.
+\end_layout
+
+\begin_layout Standard
+The second constructor creates a node from a file.
+ It passes in a file stream to read data from and a modelVersion value to
+ control how to load the file, in addition to the deviceId and node name.
+ In this example, the actual code to load the node is in the LoadFromFile(fstrea
+m, modelVersion, deviceId) function implemented in the base class.
+ For some complicated nodes with additional node states, you need to implement
+ your own LoadFromFile function for your newly added node.
+\end_layout
+
+\begin_layout Standard
+The third constructor creates a node by copying information from another
+ node.
+ It passes in a node to copy from, a name for the new node, and a copy flag.
+ The actual code in this example is in the node->CopyTo(this, newName, flags)
+ function in the base class.
+ For some complicated nodes with additional node states, you need to implement
+ your own CopyTo function for your newly added node.
+\end_layout
+
+\begin_layout Subsubsection
+Duplicate a Node
+\end_layout
+
+\begin_layout Standard
+The Duplicate function creates a new node based on the current node.
+ Internally, it just calls the copy constructor.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual ComputationNodePtr Duplicate(const std::wstring& newName, const
+ CopyNodeFlags flags) const         
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    const std::wstring& name = (newName == L"")?NodeName():newName;    
+                          
+\end_layout
+
+\begin_layout Plain Layout
+
+    ComputationNodePtr node = new ScaleNode<ElemType>(this, name, flags);
+             
+\end_layout
+
+\begin_layout Plain Layout
+
+    return node;         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Give the Computation Node a Type Name
+\end_layout
+
+\begin_layout Standard
+It is important to give the new computation node type a unique name that
+ is easy to understand.
+ This is implemented through a static function TypeName() and a member function
+ OperationName().
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual const std::wstring OperationName() const {return TypeName();}  
+       
+\end_layout
+
+\begin_layout Plain Layout
+
+static const std::wstring TypeName() {return L"Scale";}  
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To check whether a node is of a special type you can use the pattern
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+if (node->OperationName() == ScaleNode<ElemType>::TypeName())
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Attach Input Nodes
+\end_layout
+
+\begin_layout Standard
+The AttachInputs function specifies the input nodes of the current node.
+ There are three AttachInputs function defined in the base class.
+ You only need to overwrite the one with the same number of inputs as what
+ expected from your node.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual void AttachInputs(const ComputationNodePtr scalarValue, const Computatio
+nNodePtr Value)          
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    m_children.resize(2);             
+\end_layout
+
+\begin_layout Plain Layout
+
+    m_children[0] = scalarValue;             
+\end_layout
+
+\begin_layout Plain Layout
+
+    m_children[1] = Value;         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Propagate Image Size Information
+\end_layout
+
+\begin_layout Standard
+If your input is an image, each column of the input is treated as an three
+ dimensional image with channel, row, and column.
+ The CopyImageSizeFromInputs propagate the image size information up through
+ the network so that the users don't need to compute and specify them when
+ convolutional network or pooling methods are used.
+ In this specific example, it called the CopyImageSizeFromInput function
+ implemented in the base class.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual void CopyImageSizeFromInputs()         
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    CopyImageSizeFromInput(1);          
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Validate the Node
+\end_layout
+
+\begin_layout Standard
+The Validate function is used to validate the inputs and outputs of the
+ node.
+ It also sets the function value matrix's size and copy the image size informati
+on from it's inputs.
+ Note that here FunctionValues() function returns the matrix that stores
+ the value of the current computation node.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual void Validate()         
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    PrintSelfBeforeValidation();
+\end_layout
+
+\begin_layout Plain Layout
+
+            
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (m_children.size() != 2)                  
+\end_layout
+
+\begin_layout Plain Layout
+
+        throw std::logic_error("Scale operation requires two inputs.");
+\end_layout
+
+\begin_layout Plain Layout
+
+            
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionV
+alues().GetNumElements() == 0)
+\end_layout
+
+\begin_layout Plain Layout
+
+        throw std::logic_error("Scale operation: one of the operants has
+ 0 element.");
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (Inputs(0)->FunctionValues().GetNumRows() != 1 || Inputs(0)->FunctionValue
+s().GetNumCols() != 1)      
+\end_layout
+
+\begin_layout Plain Layout
+
+        throw std::logic_error("The left value of ScaleNode must be a scarlar
+ value.");
+\end_layout
+
+\begin_layout Plain Layout
+
+            
+\end_layout
+
+\begin_layout Plain Layout
+
+    FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->F
+unctionValues().GetNumCols());             
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    //left Node must be a scalar             
+\end_layout
+
+\begin_layout Plain Layout
+
+    CopyImageSizeFromInputs();          
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Forward Evaluation
+\end_layout
+
+\begin_layout Standard
+For each node type you need to implement two forward computation functions
+ EvaluateThisNode(), which evaluate the whole minibatch, and EvaluateThisNode(co
+nst size_t timeIdxInSeq), which is used in the recurrent networks to evaluate
+ the timeIdxInSeq-th sample for all the sequences in the minibatch.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual void EvaluateThisNode()           
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->
+FunctionValues());
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+virtual void EvaluateThisNode(const size_t timeIdxInSeq)           
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(t
+imeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);     
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+    Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq
+ * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+\end_layout
+
+\begin_layout Plain Layout
+
+    EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1
+Value);         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const
+ Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    functionValues.AssignProductOf(input0, false, input1, false);
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that both these functions call the static function 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>&
+ input0, const Matrix<ElemType>& input1)
+\end_layout
+
+\end_inset
+
+which contains the actual evaluation code.
+ In the EvaluateThisNode(const size_t timeIdxInSeq) function you will notice
+ the calls to the ColumnSlice function.
+ As the name suggests, this function returns a column slice of a matrix.
+\end_layout
+
+\begin_layout Subsubsection
+Gradient Computation
+\end_layout
+
+\begin_layout Standard
+Similar to the forward computation, for each node type you need to implement
+ two gradient computation functions ComputeInputPartial(const size_t inputIndex)
+, which computes the gradient for the whole minibatch with regard to the
+ inputIndex-th input, and ComputeInputPartial(const size_t inputIndex, const
+ size_t timeIdxInSeq), which is used in the recurrent networks to compute
+ the gradient of the timeIdxInSeq-th sample for all the sequences in the
+ minibatch.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual void ComputeInputPartial(const size_t inputIndex)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (inputIndex > 1)
+\end_layout
+
+\begin_layout Plain Layout
+
+        throw std::invalid_argument("ScaleNode operation only takes two
+ inputs.");
+\end_layout
+
+\begin_layout Plain Layout
+
+            
+\end_layout
+
+\begin_layout Plain Layout
+
+    //left Node must be a scalar             
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (inputIndex == 0)  //left derivative
+\end_layout
+
+\begin_layout Plain Layout
+
+    {
+\end_layout
+
+\begin_layout Plain Layout
+
+        ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->Gradient
+Values(), GradientValues());             
+\end_layout
+
+\begin_layout Plain Layout
+
+    }             
+\end_layout
+
+\begin_layout Plain Layout
+
+    else             
+\end_layout
+
+\begin_layout Plain Layout
+
+    {
+\end_layout
+
+\begin_layout Plain Layout
+
+    ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientVal
+ues(), GradientValues());             
+\end_layout
+
+\begin_layout Plain Layout
+
+    }         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+		
+\end_layout
+
+\begin_layout Plain Layout
+
+virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxIn
+Seq)         
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (inputIndex > 1)                 
+\end_layout
+
+\begin_layout Plain Layout
+
+        throw std::invalid_argument("ScaleNode operation only takes two
+ inputs.");
+\end_layout
+
+\begin_layout Plain Layout
+
+            
+\end_layout
+
+\begin_layout Plain Layout
+
+    //left Node must be a scalar             
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (inputIndex == 0)  //left derivative             
+\end_layout
+
+\begin_layout Plain Layout
+
+    {                 
+\end_layout
+
+\begin_layout Plain Layout
+
+        Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxIn
+Seq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+\end_layout
+
+\begin_layout Plain Layout
+
+       Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlic
+e(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+\end_layout
+
+\begin_layout Plain Layout
+
+        ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(),
+ sliceOutputGrad);
+\end_layout
+
+\begin_layout Plain Layout
+
+    }             
+\end_layout
+
+\begin_layout Plain Layout
+
+    else
+\end_layout
+
+\begin_layout Plain Layout
+
+    {
+\end_layout
+
+\begin_layout Plain Layout
+
+        Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlic
+e(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+\end_layout
+
+\begin_layout Plain Layout
+
+        Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxIn
+Seq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+\end_layout
+
+\begin_layout Plain Layout
+
+        ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad,
+ sliceOutputGrad);
+\end_layout
+
+\begin_layout Plain Layout
+
+    }         
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& inputFunction
+Values, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientV
+alues)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    inputGradientValues += Matrix<ElemType>::InnerProductOfMatrices(gradientValu
+es, inputFunctionValues);
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& inputFunctio
+nValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>&
+ gradientValues)           
+\end_layout
+
+\begin_layout Plain Layout
+
+{             
+\end_layout
+
+\begin_layout Plain Layout
+
+    Matrix<ElemType>::ScaleAndAdd(inputFunctionValues.Get00Element(), gradientVal
+ues, inputGradientValues);         
+\end_layout
+
+\begin_layout Plain Layout
+
+} 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that both these functions call the static functions 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<Elem
+Type>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+\end_layout
+
+\end_inset
+
+and
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<Ele
+mType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+\end_layout
+
+\end_inset
+
+which contains the actual gradient computation code.
+\end_layout
+
+\begin_layout Subsubsection
+The CNTKMath Library
+\end_layout
+
+\begin_layout Standard
+In both the forward evaluation and backward gradient computation functions
+ we need to use matrix operations to complete the computation.
+ In the CNTK all the math operations are implemented in a separate DLL CNTKMath.d
+ll.
+ The library supports CPU and GPU computation with sparse and dense matrix
+ formats.
+\end_layout
+
+\begin_layout Standard
+The math library contains a wrapper class called Matrix<ElemType>, where
+ ElemType is either float or double.
+ This Matrix<ElemType> class hides the differences between the multiple
+ matrix implementations and takes care of data transfers between GPU and
+ CPU.
+ GPUs and CPUs have different memory spaces, and copying data between them
+ is necessary to access or modify the data from either device.
+ The library attempts to keep data on the GPU as much as possible if a GPU
+ is being used.
+\end_layout
+
+\begin_layout Standard
+When data are accessed or modified from the CPU, if the data is currently
+ on the GPU the matrix will automatically be relocated to the CPU, and relocated
+ back when the GPU attempts to access or modify the data.
+ Currently the entire matrix object is transferred, so care should be taken
+ when accessing matrix data from the CPU, e.g., when using the element value
+ access operators.
+ Each such memory transfer will cause significant slow down during training
+ and testing.
+\end_layout
+
+\begin_layout Standard
+If the operations needed by your node are already implemented in the Matrix<Elem
+Type> class you can just use them.
+ If, however, they are not implemented yet, you will need to implement the
+ related functions in the math library, for both CPU and GPU.
+ It is to be advised that you should not use operations that returns a value
+ instance of the matrix class except the ColumnSlice method.
+ This is because those objects will be created and released after each minibatch
+, causing inefficiency, and will not update values passed through the ColumnSlic
+e function.
+\end_layout
+
+\begin_layout Subsection
+Adding the New Node Type to the Computational Network
+\end_layout
+
+\begin_layout Standard
+Once the new computation node type is implemented, we need to make them
+ available in the computational network.
+ This is accomplished by adding them in three functions in the ComputationNetwor
+k.h file.
+\end_layout
+
+\begin_layout Standard
+The first function is CreateComputationNode as shown below.
+ This function allows a programmer to create a new node of a specific type.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ComputationNodePtr CreateComputationNode(const std::wstring nodeType, const
+ std::wstring nodeName) 
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    ComputationNode<ElemType>* newNode;
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (nodeType == NegateNode<ElemType>::TypeName())
+\end_layout
+
+\begin_layout Plain Layout
+
+        newNode = new NegateNode<ElemType>(m_deviceId, nodeName); 
+\end_layout
+
+\begin_layout Plain Layout
+
+//other node types
+\end_layout
+
+\begin_layout Plain Layout
+
+    else if (nodeType == ScaleNode<ElemType>::TypeName())
+\end_layout
+
+\begin_layout Plain Layout
+
+        newNode = new ScaleNode<ElemType>(m_deviceId, nodeName); 
+\end_layout
+
+\begin_layout Plain Layout
+
+    //other node types
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The second function is CreateNodeFromFile as shown below.
+ This function allows a programmer to create a new node of a specified type
+ from a file stream.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ComputationNode<ElemType>* CreateNodeFromFile(const std::wstring nodeType,
+ const std::wstring nodeName, File & fstream, size_t modelVersion)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    ComputationNode<ElemType>* newNode = nullptr;
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (nodeType == LearnableParameter<ElemType>::TypeName())
+\end_layout
+
+\begin_layout Plain Layout
+
+        newNode = new LearnableParameter<ElemType>(fstream, modelVersion,
+ m_deviceId, nodeName);
+\end_layout
+
+\begin_layout Plain Layout
+
+    //other node types
+\end_layout
+
+\begin_layout Plain Layout
+
+    else if (nodeType == ScaleNode<ElemType>::TypeName())
+\end_layout
+
+\begin_layout Plain Layout
+
+        newNode = new ScaleNode<ElemType>(fstream, modelVersion, m_deviceId,
+ nodeName); 
+\end_layout
+
+\begin_layout Plain Layout
+
+    //other node types
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The third function is type specific.
+ For the ScaleNode class we defined the Scale operation as shown below.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ComputationNodePtr Scale (const ComputationNodePtr scalar, const ComputationNode
+Ptr matrix, const std::wstring nodeName = L"")
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    ComputationNodePtr newNode(new ScaleNode<ElemType>(m_deviceId, nodeName));
+\end_layout
+
+\begin_layout Plain Layout
+
+    newNode->AttachInputs(scalar, matrix);
+\end_layout
+
+\begin_layout Plain Layout
+
+    AddNodeToNet(newNode);
+\end_layout
+
+\begin_layout Plain Layout
+
+    return newNode;
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This allows programmers to create nodes directly through operations.
+ For example, we can use
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+sNode = Scale(s, m, L"scale1")
+\end_layout
+
+\end_inset
+
+to create a ScaleNode named scale1 in the network and referenced as sNode
+ in the program.
+ This node scales the matrix m with a scalar s.
+\end_layout
+
+\begin_layout Subsection
+Adding the New Node Type to the Network Definition Language
+\end_layout
+
+\begin_layout Standard
+End users create computation nodes through network builders.
+ For this reason, we also need to add the node type to the network description
+ language (NDL).
+ This is done by modifying the CheckFunction function to make Scale a valid
+ function name.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+{     
+\end_layout
+
+\begin_layout Plain Layout
+
+    std::wstring nodeType = msra::strfun::utf16(p_nodeType);     
+\end_layout
+
+\begin_layout Plain Layout
+
+    bool ret = false;     
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    if (allowUndeterminedVariable)         
+\end_layout
+
+\begin_layout Plain Layout
+
+        *allowUndeterminedVariable = true; 
+\end_layout
+
+\begin_layout Plain Layout
+
+    //other node types    
+\end_layout
+
+\begin_layout Plain Layout
+
+    else if (EqualInsensitive(nodeType, ScaleNode<ElemType>::TypeName()))
+\end_layout
+
+\begin_layout Plain Layout
+
+        ret = true; 
+\end_layout
+
+\begin_layout Plain Layout
+
+    //other node types and codes
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Sometimes you may also need to modify the 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+virtual void Evaluate(NDLNode<ElemType>* node, const wstring& baseName,
+ const NDLPass pass)
+\end_layout
+
+\end_inset
+
+function in the SynchronousExecutionEngine.h file to handle special parameters.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+NDL Processing Phases
+\end_layout
+
+\begin_layout Standard
+The ability to describe a network architecture in NDL (Network Description
+ Language) is one of the major features of CNTK.
+ However, it is not immediately obvious to the developer looking at the
+ code how it all works.
+ Here we briefly describe the inner workings of NDL processing in CNTK.
+\end_layout
+
+\begin_layout Standard
+NDL is based on the same configuration parser that is used for config files
+ and MEL (Model Editing Language).
+ While this is convenient to share code, it also makes things a little less
+ clear when viewing the code.
+ The configuration file classes, MEL class, and NDL classes all inherit
+ from ConfigParser, which provides the basic parsing, bracket matching,
+ and other common features (quote handling, etc.).
+ The parsing engine implemented in ConfigParser calls back to a virtual
+ method called ParseValue() when it has a token that needs to be interpreted.
+ So ParseValue() in the NDLScript class is the main location where interpretatio
+n of tokens takes place.
+\end_layout
+
+\begin_layout Standard
+NDL supports Macros, which makes things much more convenient, but a bit
+ messier for the developer to deal with.
+ All the macros are parsed and stored in a global script so they can be
+ accessed by any NDL script.
+ It also means that you don’t want to load or define a set of macros more
+ than once, or you will get 
+\begin_inset Quotes eld
+\end_inset
+
+function already exists
+\begin_inset Quotes erd
+\end_inset
+
+ errors.
+\end_layout
+
+\begin_layout Standard
+The processing of NDL proceeds through the following phases:
+\end_layout
+
+\begin_layout Enumerate
+Parsing the script
+\end_layout
+
+\begin_layout Enumerate
+Evaluation (initial pass) – create ComputationNodes for all NDLNodes that
+ require it
+\end_layout
+
+\begin_layout Enumerate
+Evaluation (second pass) – connect the inputs of the ComputationNodes
+\end_layout
+
+\begin_layout Enumerate
+Validate the network – This also allocates all the matrix classes to their
+ correct dimensions, and computes dimensions derived from input nodes.
+\end_layout
+
+\begin_layout Enumerate
+Evaluation (final pass) – All operations that must have the matrix values
+ present occur here.
+ For example, matrix initialization happens here.
+\end_layout
+
+\begin_layout Standard
+There is a helper class in the NDLUtil class, which will take care of executing
+ through all phases.
+ It also tracks how far along in the current processing phase a script has
+ progressed.
+ Processing can continue statement by statement as needed.
+ This is how in-line NDL is processed.
+\end_layout
+
+\begin_layout Subsubsection
+Parsing
+\end_layout
+
+\begin_layout Standard
+The script in question is first parsed, and as each macro definition, macro
+ call, parameter, variable, or function call is encountered an NDLNode is
+ created.
+ This NDLNode describes the entity and a reference is stored in the NDLScript
+ class which owns it so it can be freed at some later point in time.
+ If the NDLNode is an executable statement, it will be added in order to
+ the list of statements to execute.
+ All variable names used in a script will be added to a symbol table in
+ the NDLScript class that owns the NDLNode.
+\end_layout
+
+\begin_layout Standard
+If the NDLNode is a macro or function call its parameters will be parsed
+ and added to a parameter list in the NDLNode.
+ Note that parameters may actually be other function and macro calls.
+ The actual parameter names used in the call and the names used in the macro
+ that will be called are recorded.
+\end_layout
+
+\begin_layout Standard
+If the NDLNode is a macro, it will have its own NDLScript, and contain its
+ own list of executable statements.
+ It will also be stored in the global script repository, which is just a
+ global NDLScript class.
+\end_layout
+
+\begin_layout Subsubsection
+Evaluation (Initial Pass)
+\end_layout
+
+\begin_layout Standard
+Each pass evaluates the entire script, but only certain actions are performed
+ based on what pass is being executed.
+ The main purpose of this pass is to create a computation node for every
+ NDL node that requires one.
+ Effectively every “Function call” in NDL maps to a computation node.
+ The full “dot path” will be the name of the node in the computational network.
+ Although all the parameters are evaluated in NDL, only function calls will
+ create computation nodes.
+\end_layout
+
+\begin_layout Subsubsection
+Evaluation (Second Pass)
+\end_layout
+
+\begin_layout Standard
+This pass goes through the entire evaluation process again, but this time
+ all computation nodes should already exist.
+ The main purpose of this pass is to hook up all the inputs between nodes.
+ At the end of this pass the computational network is fully connected and
+ complete.
+\end_layout
+
+\begin_layout Standard
+Doing this in a separate pass allows nodes to be referenced before they
+ are actually defined in the NDL Script.
+ This is a necessary feature for recursive neural networks with a DelayNode.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Validation
+\end_layout
+
+\begin_layout Standard
+Validation ensures that the network is fully connected and that all necessary
+ network nodes exist.
+ It also ensures that the dimensions of the matrices passed to nodes are
+ compatible with the nodes and enough memory is allocated for the matrices.
+ In addition, the existence of special nodes such as CriteriaNode, Features,
+ Labels, and Output are checked.
+\end_layout
+
+\begin_layout Subsubsection
+Evaluation (Final Pass)
+\end_layout
+
+\begin_layout Standard
+This pass does special processing, such as matrix initialization, that requires
+ the matrices to exist.
+ As an example there is an optional parameter for the Parameter() function
+ that allows a parameter to be initialized in various ways (zero, random
+ values, from a file).
+ Since matrix initialization requires the matrix to be there, it is done
+ in the final pass.
+\end_layout
+
+\begin_layout Section
+Adding a New Training Algorithm
+\end_layout
+
+\begin_layout Standard
+To add a new training algorithm to the CNTK you can use the stochastic gradient
+ algorithm (SGD) as a reference.
+ Note that the computational network only provides the first-order gradient
+ information, so only algorithms that depend on the first-order gradient
+ (e.g., quasi-second-order algorithms such as L-BFGS) can be easily implemented
+ in the CNTK.
+ In the following we list the main steps in a typical training algorithm.
+\end_layout
+
+\begin_layout Subsection
+Prepare the Mapping from Node Names to Matrices for Features and Labels
+\end_layout
+
+\begin_layout Standard
+Since features and labels are loaded from data files and in the IDataReader
+ interface we need to pass in the map from node names to matrices to read
+ features and labels, in a typical trainer the first step is to create this
+ map as shown in the following sample, where net is a Computational Network
+ object.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+std::vector<ComputationNodePtr> & FeatureNodes = net.FeatureNodes(); 
+\end_layout
+
+\begin_layout Plain Layout
+
+std::vector<ComputationNodePtr> & labelNodes = net.LabelNodes(); 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+std::map<std::wstring, Matrix<ElemType>*> inputMatrices; 
+\end_layout
+
+\begin_layout Plain Layout
+
+for (size_t i=0; i<FeatureNodes.size(); i++)
+\end_layout
+
+\begin_layout Plain Layout
+
+{                 
+\end_layout
+
+\begin_layout Plain Layout
+
+    inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValue
+s();
+\end_layout
+
+\begin_layout Plain Layout
+
+}             
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for (size_t i=0; i<labelNodes.size(); i++)             
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+    inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();
+             
+\end_layout
+
+\begin_layout Plain Layout
+
+} 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Evaluate Precomputed Nodes
+\end_layout
+
+\begin_layout Standard
+Before training happens, we need to evaluate the precomputed nodes.
+ The precomputed nodes are typically used to compute the mean and standard
+ deviations of input features so that we may normalize the features or get
+ the frequency information of labels, which can be used as the prior probability
+ of the output nodes.
+ It is advised that you save a model after each major model update so that
+ you may re-start from a checkpoint file in case you cannot finish the whole
+ training at once.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+if (PreCompute(net,trainSetDataReader, FeatureNodes,labelNodes,inputMatrices)
+ || startEpoch == 0)             
+\end_layout
+
+\begin_layout Plain Layout
+
+{                 
+\end_layout
+
+\begin_layout Plain Layout
+
+    net.SaveToFile(GetModelNameForEpoch(int(startEpoch)-1));            
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+} 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Main Loop
+\end_layout
+
+\begin_layout Standard
+Most of the training happens inside the loop through epochs.
+ In the following example we also show that you can specify some special
+ properties for nodes such as convolutional node and dropout node.
+ Depends on whether these properties should be set to different values for
+ different epoch they can be handled either inside or outside of the epoch
+ loop.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+std::vector<ComputationNodePtr> & criterionNodes = GetTrainCriterionNodes(net);
+\end_layout
+
+\begin_layout Plain Layout
+
+std::vector<ComputationNodePtr> & evaluationNodes = GetEvalCriterionNodes(net);
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+SetMaxTempMemSizeForCNN(net, criterionNodes[0], m_maxTempMemSizeInSamplesForCNN)
+; 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for (int i=int(startEpoch); i<int(m_maxEpochs); i++)             
+\end_layout
+
+\begin_layout Plain Layout
+
+{ 
+\end_layout
+
+\begin_layout Plain Layout
+
+    SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate,
+ dropOutSeed); 
+\end_layout
+
+\begin_layout Plain Layout
+
+    DecideLearningRate();
+\end_layout
+
+\begin_layout Plain Layout
+
+	TrainOneEpoch(); 
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Train One Epoch
+\end_layout
+
+\begin_layout Standard
+The TrainOneEpoch function contains your core training algorithm.
+ It typically looks like following:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+//start the minibatch loop in the data reader.
+\end_layout
+
+\begin_layout Plain Layout
+
+trainSetDataReader->StartMinibatchLoop(mbSize, epochNumber, epochSize);
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+while (trainSetDataReader->GetMinibatch(inputMatrices))             
+\end_layout
+
+\begin_layout Plain Layout
+
+{ 
+\end_layout
+
+\begin_layout Plain Layout
+
+    //update the time stamp of the input nodes for re-evaluation
+\end_layout
+
+\begin_layout Plain Layout
+
+	UpdateEvalTimeStamps(FeatureNodes);                 
+\end_layout
+
+\begin_layout Plain Layout
+
+	UpdateEvalTimeStamps(labelNodes);
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+	//set actual minibatch size, needed since delay nodes cannot infer it automatic
+ally
+\end_layout
+
+\begin_layout Plain Layout
+
+    size_t actualMBSize = net.GetActualMBSize();
+\end_layout
+
+\begin_layout Plain Layout
+
+	net.SetActualMiniBatchSize(actualMBSize);   
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+	//set the number of samples for each gradient computation in the truncated
+ BPTT.
+            
+\end_layout
+
+\begin_layout Plain Layout
+
+	net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurr
+entIter());  
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+	//set the sentence end information for multi-sequence RNN training    
+         
+\end_layout
+
+\begin_layout Plain Layout
+
+	trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd);  
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+	//compute the gradients, which will be stored in the GradientValues() of
+ each node
+\end_layout
+
+\begin_layout Plain Layout
+
+	net.ComputeGradient(criterionNodes[0]);
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+	//you can do statistics computation here for evaluation error and training
+ error
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+	//Update the model based on the gradient computed
+\end_layout
+
+\begin_layout Plain Layout
+
+	UpdateModel();
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The StartMinibatchLoop call will inform the reader how to prepare for the
+ minibatches.
+ The code then get minibatches until all minibatches are fetched for the
+ epoch.
+ Once a minibatch is fetched from the reader, you need to call the UpdateEvalTim
+eStamps function to inform the computational network that the values of
+ these nodes have been changed so that all nodes that depend on these nodes
+ will be recomputed when the forward computation is carried out.
+ You need to do the same thing for all the model parameters when they are
+ updated by your training algorithm.
+\end_layout
+
+\end_body
+\end_document

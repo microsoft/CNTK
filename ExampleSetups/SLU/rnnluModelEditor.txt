@@ -1,0 +1,53 @@
+m1=LoadModel("C:\temp\cntkdebug.fix.lrg.pj50.d300.mb6.lr0.1.dnn", format=cntk)
+SetDefaultModel(m1)
+# to print out estimated parameters, use includeData=true
+# Dump(m1, "c:\temp\dump1.txt", includeData = true)
+Dump(m1, "c:\temp\dump1.txt")
+
+# add AR delays
+hiddenDim=300
+labelDim=127
+BD0=Parameter(labelDim, init=fixedvalue, value=0)
+BD1=Parameter(labelDim, init=fixedvalue, value=0)
+BD2=Parameter(labelDim, init=fixedvalue, value=0)
+BD3=Parameter(labelDim, init=fixedvalue, value=0)
+D0=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
+D1=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
+D2=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
+D3=Parameter(labelDim, 1, init=fixedvalue, value=1.0)
+DNN_A_delay1=Delay(labelDim, AutoName39, delayTime=1)
+DNN_A_delay2=Delay(labelDim, AutoName39, delayTime=2)
+DNN_A_delay3=Delay(labelDim, AutoName39, delayTime=3)
+DRESPONSE0 = Plus(DiagTimes(D0, AutoName39), BD0)
+DRESPONSE1 = Plus(DiagTimes(D1, DNN_A_delay1), BD1)
+DRESPONSE2 = Plus(DiagTimes(D2, DNN_A_delay2), BD2)
+DRESPONSE3 = Plus(DiagTimes(D3, DNN_A_delay3), BD3)
+AUTOREGRESSRESPONSE = Plus(Plus(Plus(DRESPONSE0, DRESPONSE1), DRESPONSE2), DRESPONSE3)
+
+#SetPropertyForSubTree(A39, ComputeGradient, false);
+SetProperty(WC*, ComputeGradient, false);
+SetProperty(WH*, ComputeGradient, false);
+SetProperty(WX*, ComputeGradient, false);
+SetProperty(Wx*, ComputeGradient, false);
+SetProperty(bc*, ComputeGradient, false);
+SetProperty(bf*, ComputeGradient, false);
+SetProperty(bi*, ComputeGradient, false);
+SetProperty(bo*, ComputeGradient, false);
+SetProperty(E0*, ComputeGradient, false);
+
+# redirects the input to cross entroy node to the autoregressed sum
+SetInput(CrossEntropyWithSoftmax, 1, AUTOREGRESSRESPONSE)
+Rename(outputs, oldoutputs);
+
+# set outputs
+BOUTPUT=Parameter(labelDim, init=fixedvalue, value=0)
+SetProperty(BOUTPUT, ComputeGradient, false);
+#outputs = Plus(AUTOREGRESSRESPONSE, BOUTPUT);
+
+CopyNode(AUTOREGRESSRESPONSE, outputs);
+
+Dump(m1, "c:\temp\dump1ar.txt")
+
+SaveModel(m1, "c:\temp\cntkdebug.ar3.lrg.pj50.d300.mb6.lr0.1.dnn.1", format=cntk)
+
+#
