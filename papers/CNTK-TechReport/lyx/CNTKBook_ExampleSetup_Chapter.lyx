@@ -87,7 +87,83 @@ name "chap:ExampleSetup"
 \end_layout
 
 \begin_layout Section
-Acoustic Model
+Acoustic Model Training
+\end_layout
+
+\begin_layout Section
+Acoustic Model Decoding
+\end_layout
+
+\begin_layout Standard
+The argon decoder is provided to allow speech recognition decoding experiments
+ against CNTK acoustic models.
+ The first step is to build an acoustic model according to the previous
+ section, or using your own recipe.
+ This training process should generate both the binary CNTK model file,
+ and the CNTK mapping file, that describes how the dimensions of the ScaledLogLi
+kelihood layer of the acoustic model should be interpreted as acoustic model
+ states.
+ This example assumes these files have been generated and moved to TIMIT.dnn_map
+ and TIMIT.cnktSpeech.dnn in the ExampleSetups/ASR/TIMIT/decoding folder.
+\end_layout
+
+\begin_layout Standard
+Besides these two files, the decoding process needs some acoustic data to
+ decode, a language model to apply, and a pre-compiled a decoding graph.
+\end_layout
+
+\begin_layout Standard
+The acoustic is stored and accessed in the same way that the training acoustic
+ data was stored.
+ That is, a script file points to the precomputed acoustic features stored
+ on disc as HTK-format paramater files.
+ The setup assumes this script file is called TIMIT.core.scp.
+\end_layout
+
+\begin_layout Standard
+The language model we supply is a simple bigram language model over the
+ complete set of phones defined in the TIMIT corpus.
+ It is provided as TIMIT.bigram.arpa.
+\end_layout
+
+\begin_layout Standard
+In this example setup, we assume that the acoustic model consists of one
+ left to right hidden Markov model for each of the 61 TIMIT phonetic symbols,
+ and three states for every model, for a total of 183 acoustic model states.
+ The self and forward transition probabilities for these states are stored
+ in the file TIMIT.transitions and applied dynamically by the decoder during
+ recognition.
+ The TIMIT.tfsa file describes the core of the decoding graph, where paths
+ through this finite state acceptor indicate how sequences of states of
+ the acoustic model correspond to sequences of phone labels.
+ The scores on this graph are the language model lookahead scores, that
+ allow the decoder to properly rank partial hypotheses while pruning its
+ beam through the search space, before the full language model probability
+ is applied.
+ The graph structure is a phonetic loop, with the symbol h# forced at the
+ beginning and end of every path, and a restriction that two consecutive
+ silence models are disallowed.
+\end_layout
+
+\begin_layout Standard
+The decoding graph is compiled from the TIMIT.tfsa, TIMIT.transitions, and
+ TIMIT.lookahead files as follows:
+\end_layout
+
+\begin_layout Standard
+argon -precompile true -infsm TIMIT.tfsa -graph TIMIT.dg -transition-file
+ TIMIT.transitions -lookahead-file TIMIT.lookahead
+\end_layout
+
+\begin_layout Standard
+The decoding graph is used to recognize from HTK format paramater files
+ as follows:
+\end_layout
+
+\begin_layout Standard
+argon -graph i_lp.final.gzd.dg -lm TIMIT.bigram.arpa -am TIMIT.cntkSpeech.dnn -cntkmap
+ TIMIT.dnn_map -beam 120 -max-tokens 5000 -acweight 1.0 -word_end_beam_frac
+ 0.5 -infiles TIMIT.core.scp -outmlf TIMIT.core.rec.mlf
 \end_layout
 
 \begin_layout Section
