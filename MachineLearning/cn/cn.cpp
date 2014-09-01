@@ -12,7 +12,6 @@
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"
-#include "SimpleCNNBuilder.h"
 #include "NDLNetworkBuilder.h"
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
