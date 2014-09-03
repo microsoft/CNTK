@@ -80,7 +80,7 @@ public:
             if (parameter.size() < 1 || parameter.size() > 2)
                 Error("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType);
 
-            if (pass == ndlPassInitial);
+            if (pass == ndlPassInitial)
             {
                 size_t rows = parameter[0]->GetScalar();
                 size_t cols = parameter.size() > 1? parameter[1]->GetScalar() : 1;
