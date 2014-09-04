@@ -3856,7 +3856,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return r; 
     }
 
-    template<class ElemType>
+	template<class ElemType>
+	ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
+	{
+		ElemType temp, diff, z;
+
+		if (x < y) {
+			temp = x; x = y; y = temp;
+		}
+		diff = y - x;
+		if (diff < MINLOGEXP)
+		{
+			return (x < LSMALL) ? LZERO : x;
+		}
+		else
+		{
+			z = exp(diff);
+			return x + log(1.0 + z);
+		}
+	}
+
+	template<class ElemType>
     void Matrix<ElemType>::ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& wgt,
         const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
         const Matrix<ElemType>* idx2cls,  Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore)
