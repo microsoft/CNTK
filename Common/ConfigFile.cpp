@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // argc - count of arguments
     // argv - array of argument parameters
     // config - config to return
-    void ConfigParameters::ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config)
+    std::string ConfigParameters::ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config)
     {
         config.SetName(std::string("global"));
         
@@ -57,6 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         configString = config.ResolveIncludeStatements(configString, resolvedConfigFiles);
         config.FileParse(configString);
+        return configString;
     }
 
     // ResolveIncludeStatements - this function takes a config string, and looks for all lines of the
