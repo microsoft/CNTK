@@ -26,14 +26,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef enum tpRNNType { SIMPLENET=0, /// no recurrent connections
             SIMPLERNN = 1, LSTM=2, DEEPRNN=4, CLASSLM = 8, 
             LBLM=16,
-            NPLM=32, CLASSLSTM=64, TENSORIOLSTM=128} RNNTYPE; 
+            NPLM=32, CLASSLSTM=64, TENSORIOLSTM=128, RCRF=256} RNNTYPE; 
 
     enum class TrainingCriterion : int
     {
         CrossEntropyWithSoftmax,
         CrossEntropy,
         SquareError,
-        ClassCrossEntropyWithSoftmax
+        ClassCrossEntropyWithSoftmax, 
+		CRF
     };
 
     enum class EvalCriterion : int
@@ -42,7 +43,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CrossEntropy,
         SquareError,
         ErrorPrediction,
-        ClassCrossEntropyWithSoftmax
+        ClassCrossEntropyWithSoftmax,
+		CRF
     };
 
     extern TrainingCriterion ParseTrainingCriterionString(wstring s);
@@ -133,7 +135,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_rnnType= CLASSLSTM;
             if (std::find(strType.begin(), strType.end(), L"TENSORIOLSTM") != strType.end())
                 m_rnnType= TENSORIOLSTM;
-        }
+			if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
+				m_rnnType = RCRF;
+		}
 
         // Init - Builder Initialize for multiple data sets
         // config - [in] configuration parameters for the network builder
@@ -224,6 +228,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return BuildNeuralProbNetworkFromDescription(mbSize);
             if (m_rnnType == TENSORIOLSTM)
                 return BuildLSTMInputOutputTensorNetworkFromDescription(mbSize);
+			if (m_rnnType == RCRF)
+				return BuildSeqTrnLSTMNetworkFromDescription(mbSize);
 
 
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -340,7 +346,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
+		ComputationNetwork<ElemType>& BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
+
+		ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
         
         ComputationNetwork<ElemType>& BuildLSTMInputOutputTensorNetworkFromDescription(size_t mbSize = 1);        
         
@@ -556,7 +564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return output;
         }
 
-        ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr)
+        ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr)
         {
             m_net->LabelNodes().push_back(label);
 
@@ -569,23 +577,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             switch (m_trainCriterion)
             {
-            case TrainingCriterion::CrossEntropyWithSoftmax:
-                output = m_net->CrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"")?L"CrossEntropyWithSoftmax":trainNodeName);
-                break;
-            case TrainingCriterion::SquareError:
-                output = m_net->SquareError(label, tinput, (trainNodeName == L"")?L"SquareError":trainNodeName);
-                break;
-            case TrainingCriterion::ClassCrossEntropyWithSoftmax:
-                output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
-                break;
-         default:
-                throw std::logic_error("Unsupported training criterion.");
+                case TrainingCriterion::CrossEntropyWithSoftmax:
+                    output = m_net->CrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"")?L"CrossEntropyWithSoftmax":trainNodeName);
+                    break;
+                case TrainingCriterion::SquareError:
+                    output = m_net->SquareError(label, tinput, (trainNodeName == L"")?L"SquareError":trainNodeName);
+                    break;
+                case TrainingCriterion::CRF:
+                    assert(trans != nullptr);
+                    output = m_net->CRF(label, input, trans, (trainNodeName == L"") ? L"CRF" : trainNodeName);
+                    break;
+                case TrainingCriterion::ClassCrossEntropyWithSoftmax:
+                    output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
+                    break;
+                 default:
+                    throw std::logic_error("Unsupported training criterion.");
             }
             m_net->FinalCriterionNodes().push_back(output);
 
             if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
                 (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
-                (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax)))
+				(m_evalCriterion == EvalCriterion::CRF && m_trainCriterion == TrainingCriterion::CRF) ||
+				(m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax)))
             {
                 switch (m_evalCriterion)
                 {
@@ -598,10 +611,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 case EvalCriterion::SquareError:
                     output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"SquareError":evalNodeName);
                     break;
-                case EvalCriterion::ErrorPrediction:
-                    output = m_net->ErrorPrediction(label, tinput, (evalNodeName == L"")?L"ErrorPrediction":evalNodeName);
-                    break;
-                default:
+				case EvalCriterion::ErrorPrediction:
+					output = m_net->ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"ErrorPrediction" : evalNodeName);
+					break;
+				case EvalCriterion::CRF:
+					assert(trans != nullptr);
+					output = m_net->CRF(label, tinput, trans, (evalNodeName == L"") ? L"CRF" : evalNodeName);
+					break;
+				default:
                     throw std::logic_error("Unsupported training criterion.");
                 }
             }
