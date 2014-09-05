@@ -25,6 +25,7 @@
 #include "PTaskGraphBuilder.h"
 #include "commandArgUtil.h"
 #include "BestGpu.h"
+#include "SegmentalComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
@@ -764,7 +765,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == RowSliceNode<ElemType>::TypeName())
 				newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-            else
+			else if (nodeType == SegmentalEvaluateNode<ElemType>::TypeName())
+				newNode = new SegmentalEvaluateNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+			else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
@@ -915,7 +918,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new DelayNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == LookupTableNode<ElemType>::TypeName())
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
-            else
+			else if (nodeType == SegmentalEvaluateNode<ElemType>::TypeName())
+				newNode = new SegmentalEvaluateNode<ElemType>(m_deviceId, nodeName);
+			else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
@@ -1000,7 +1005,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr CrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
+
+		ComputationNodePtr RCRF(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"")
+		{
+			ComputationNodePtr newNode(new SegmentalEvaluateNode<ElemType>(m_deviceId, nodeName));
+			newNode->AttachInputs(label, prediction, pairscore);
+			AddNodeToNet(newNode);
+			return newNode;
+		}
+		
+		ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, prediction);
