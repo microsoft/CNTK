@@ -2224,6 +2224,54 @@ invStdDev - the per-dimensional inversed standard deviation vector.
 \end_layout
 
 \begin_layout Subsubsection
+PerDimMeanVarDeNormalization, PerDimMVDeNorm
+\end_layout
+
+\begin_layout Standard
+De-normalize from the mean-variance normalized input matrix for each column
+ (i.e., sample).
+ It is often used in the generative model where during the training the
+ network's output node is normalized which needs to be de-normalized at
+ the actual generation process.
+ The resulting matrix has the same dimensions as the input matrix.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+PerDimMeanVarDeNormalization(m, mean, invStdDev)
+\end_layout
+
+\begin_layout Plain Layout
+
+PerDimMVDeNorm(m, mean, invStdDev)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+m - input matrix than needs to be de-normalized
+\end_layout
+
+\begin_layout Standard
+mean - the mean vector.
+ It's a m.rows by one matrix.
+\end_layout
+
+\begin_layout Standard
+invStdDev - the per-dimensional inversed standard deviation vector.
+ It's a m.rows by one matrix in which all values are non-negative.
+\end_layout
+
+\begin_layout Subsubsection
 Dropout
 \end_layout
 

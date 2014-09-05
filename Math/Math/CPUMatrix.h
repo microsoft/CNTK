@@ -138,6 +138,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& ColumnElementMultiplyWith(const CPUMatrix<ElemType>& a);
         CPUMatrix<ElemType>& RowElementMultiplyWith(const CPUMatrix<ElemType>& a);
 
+        CPUMatrix<ElemType>& ColumnElementDivideWith(const CPUMatrix<ElemType>& a);
+
         CPUMatrix<ElemType>& ElementInverse ();
         CPUMatrix<ElemType>& AssignElementInverseOf (const CPUMatrix<ElemType>& a);
 

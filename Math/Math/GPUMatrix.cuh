@@ -162,6 +162,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& ColumnElementMultiplyWith(const GPUMatrix<ElemType>& a);
         GPUMatrix<ElemType>& RowElementMultiplyWith(const GPUMatrix<ElemType>& a);
 
+        GPUMatrix<ElemType>& ColumnElementDivideWith(const GPUMatrix<ElemType>& a);
+
         GPUMatrix<ElemType>& ElementInverse ();
         GPUMatrix<ElemType>& AssignElementInverseOf (const GPUMatrix<ElemType>& a);
 

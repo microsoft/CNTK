@@ -1359,6 +1359,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementDivideWith(const GPUMatrix<ElemType>& a)
+    {
+        if (a.IsEmpty() || IsEmpty())
+            throw std::logic_error("ColumnElementDivideWith: Matrix is empty.");
+
+        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
+            throw std::invalid_argument("ColumnElementDivideWith: The input matrix should be a col vector and match [this]'s rows.");
+
+        long N=(long)a.GetNumRows();
+        long M=(long)this->GetNumCols();        
+        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);  
+        a.PrepareDevice();
+        cudaEvent_t done;       
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
+        _columnElementDivideWith<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N,M);                        
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));      
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+    template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementInverse ()
     {
         if (IsEmpty())
