@@ -329,9 +329,11 @@ namespace Microsoft {
                     return TrainingCriterion::CrossEntropyWithSoftmax;
                 else if (s == L"squareerror")
                     return TrainingCriterion::SquareError;
-                else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-                    LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax)");
-                return TrainingCriterion::ClassCrossEntropyWithSoftmax;
+                else if (s == L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
+                    return TrainingCriterion::ClassCrossEntropyWithSoftmax;
+            	else if (s == L"crf")
+            		return TrainingCriterion::CRF;
+                LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax | CRF)");
             }
 
             EvalCriterion ParseEvalCriterionString(wstring s)
@@ -343,9 +345,11 @@ namespace Microsoft {
                     return EvalCriterion::CrossEntropyWithSoftmax;
                 else if (s == L"classcrossentropywithsoftmax")
                     return EvalCriterion::ClassCrossEntropyWithSoftmax;
-                else if (s != L"squareerror")
-                    LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError)");
-                return EvalCriterion::SquareError;
+                else if (s == L"squareerror")
+                    return EvalCriterion::SquareError;
+                else if (s == L"crf")
+                    return EvalCriterion::CRF;
+                LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | CRF)");
             }
 
         }
