@@ -308,6 +308,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType Exp10(ElemType num); 
         ElemType Mod(ElemType x , ElemType y);
 		ElemType LogAdd(ElemType x, ElemType y);
+        bool     IsClose(ElemType x, ElemType y, size_t significantDigit = 5);
 
     public:
         static short GetBestGPUDeviceId(); //{ return GPUMatrix<ElemType>::GetBestGPUDeviceId();}

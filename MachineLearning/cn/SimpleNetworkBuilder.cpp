@@ -1130,21 +1130,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			int offset = m_lookupTableOrder > 0 ? 1 : 0;
 			if (numHiddenLayers > 0)
 			{
-				output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-				input = output;
-				outputFromEachLayer[offset + 1] = input;
-
-				for (int i = 1 + offset; i<numHiddenLayers; i++)
+                for (int i = offset; i<numHiddenLayers; i++)
 				{
 					if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
 					{
-						output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-
+                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i] * (offset ? m_lookupTableOrder : 1), m_layerSizes[i + 1], input);
+                        input = output;
+ 
 						recur_idx++;
 					}
 					else
 					{
-						u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
+                        u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i] * (offset ? m_lookupTableOrder : 1));
 						m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 						b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"B%d", i), m_layerSizes[i + 1], 1);
 						output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
@@ -1154,33 +1151,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						input = m_net->Dropout(output);
 					else
 						input = output;
-
-					outputFromEachLayer[i + 1] = input;
 				}
-			}
-
-			for (size_t i = offset; i < m_layerSizes.size(); i++)
-			{
-				/// add direct connect from each layers' output to the layer before the output layer
-				output = BuildDirectConnect(randomSeed, mbSize, i, (i > 1) ? m_layerSizes[i] : ((offset == 0) ? m_layerSizes[i] : m_layerSizes[i] * m_lookupTableOrder), m_layerSizes[numHiddenLayers], outputFromEachLayer[i], input);
-				if (output != nullptr)
-					input = output;
 			}
 
 			w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"TimesBeforeSoftMax%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
 			m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-			output = m_net->Times(w, input, L"outputs");
+			output = m_net->Times(w, input, L"outputsBeforeSoftmax");
 
 			trans = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"TransProb%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers + 1]);
-			m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
+//			m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
+            trans->NeedGradient() = false;
 			label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
 			AddTrainAndEvalCriterionNodes(output, label, nullptr, trans);
 
+            input = output;
+            output = m_net->SequenceDecoder(label, input, trans, L"outputs");
 			m_net->OutputNodes().push_back(output);
 
-			//add softmax layer (if prob is needed or KL reg adaptation is needed)
-			output = m_net->Softmax(output, L"PosteriorProb");
+			output = m_net->Softmax(input, L"PosteriorProb");
 
 		}
 

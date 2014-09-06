@@ -3846,6 +3846,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    bool Matrix<ElemType>::IsClose(ElemType x, ElemType y, size_t significantDigit)
+    {
+        ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(x), fabs(y))))) - (int)significantDigit);
+        ElemType diff = (ElemType)fabs(x - y);
+        bool wrong = (_isnan(diff) || diff > threshold);
+        return !wrong;
+    }
+
+    template<class ElemType>
     ElemType Matrix<ElemType>::Mod(ElemType x, ElemType y)
     {
         assert(y > 0);
