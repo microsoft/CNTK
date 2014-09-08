@@ -9,20 +9,20 @@ namespace Microsoft {
 		namespace CNTK {
 
             /// pair_scores assumes (i,j) means transition from j to i
-			template<class ElemType>
-			void SegmentalEvaluateNode<ElemType>::EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, Matrix<ElemType>& logOfRight, Matrix<ElemType>& softmaxOfRight, const int iStep)
-			{
+            template<class ElemType>
+            void SegmentalEvaluateNode<ElemType>::EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, Matrix<ElemType>& logOfRight, Matrix<ElemType>& softmaxOfRight, const ElemType & gamma, const int iStep)
+            {
                 /// to-do, each slice is for one sentence
                 /// to-do, number of slices correspond to number of frames 
                 /// this implementation only supports one sentence per minibatch
-                
+
                 int nObs = lbls.GetNumCols();
 
                 /// change to other values so can support multiple sentences in each minibatch
                 assert(iStep == 1);
-				ForwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, iStep);
-				BackwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, iStep);
-				PostProbCompute(postprob, alpha, beta, iStep);
+                ForwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, gamma, iStep);
+                BackwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, gamma, iStep);
+                PostProbCompute(postprob, alpha, beta, iStep);
 
                 int firstLbl = -1;
                 for (int ik = 0; ik < lbls.GetNumRows(); ik++)
@@ -36,17 +36,18 @@ namespace Microsoft {
                     lastLbl = ik; break;
                 }
 
-                ElemType fAlpha = alpha(lastLbl, nObs - 1);
-                ElemType fBeta = beta(firstLbl, 0);
+                ElemType fAlpha = LZERO;
+                ElemType fBeta = LZERO;
 
-                assert(logOfRight.IsClose(fBeta, fAlpha, 5));
+                for (int k = 0; k < lbls.GetNumRows(); k++)
+                    fAlpha = logOfRight.LogAdd(fAlpha, alpha(k, nObs - 1));
 
                 logOfRight.SetValue(pos_scores);
                 functionValues.AssignInnerProductOfMatrices(lbls, logOfRight);
 
                 /// transition score
                 ElemType tscore = 0;
-                for (int t = 0; t < nObs-1; t++){
+                for (int t = 0; t < nObs - 1; t++){
                     int i = -1;
                     for (int ik = 0; ik < lbls.GetNumRows(); ik++)
                     if (lbls(ik, t) != 0){
@@ -54,67 +55,51 @@ namespace Microsoft {
                     }
                     int j = -1;
                     for (int ik = 0; ik < lbls.GetNumRows(); ik++)
-                    if (lbls(ik, t+1) != 0){
+                    if (lbls(ik, t + 1) != 0){
                         j = ik; break;
                     }
                     tscore += pair_scores(j, i);
                 }
-
                 tscore += functionValues.Get00Element();
-                tscore -= fAlpha; 
+                tscore -= fAlpha;
                 functionValues.SetValue(tscore);
 
                 functionValues *= (-1);
             };
 
-			template<class ElemType>
+            template<class ElemType>
 			void SegmentalEvaluateNode<ElemType>::ErrorSignalToPostitionDependentNode(const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& labls, const Matrix<ElemType>& postProb, Matrix<ElemType>& grd)
 			{
+#ifdef DBG_RCRF
+                ElemType fSum = LZERO;
+                for (int i = 0; i < postProb.GetNumCols(); i++){
+                    fSum = 0.0;
+                    for (int k = 0; k < postProb.GetNumRows(); k++)
+                        fSum += postProb(k, i);
+                    grd.IsClose(1.0, fSum, 3);
+                }
+#endif
 				Matrix<ElemType>::AddScaledDifference(gradientValues, postProb, labls, grd);
 			}
 
-            /**
-            postprob: linear scale posterior probability
-            */
-			template<class ElemType>
-			void SegmentalEvaluateNode<ElemType>::PostProbCompute(Matrix<ElemType>& postprob, const Matrix<ElemType>& alpha, 
-                const Matrix<ElemType>& beta , const int shift)
-			{
+            template<class ElemType>
+            void SegmentalEvaluateNode<ElemType>::PostProbCompute(Matrix<ElemType>& postprob, const Matrix<ElemType>& alpha,
+                const Matrix<ElemType>& beta, const int shift)
+            {
                 assert(shift == 1);
-				int iNumPos = alpha.GetNumCols();
-				int iNumLab = alpha.GetNumRows();
-                ElemType fSumOld = LZERO;
+                int iNumPos = alpha.GetNumCols();
+                int iNumLab = alpha.GetNumRows();
 
-				postprob.Resize(iNumLab, iNumPos);
-				for (int t = 0; t < iNumPos; t++)
-				{
-					ElemType fSum = LZERO;
-					for (int k = 0; k < iNumLab; k++)
-						fSum = postprob.LogAdd(fSum, alpha(k, t) + beta(k, t));
-                    if (t > 0)
-                    {
-                        assert(postprob.IsClose(fSumOld , fSum, 5));
-                    }
-                    fSumOld = fSum;
+                postprob.Resize(iNumLab, iNumPos);
+                postprob.SetValue(beta); 
+                postprob.InplaceExp();
+            };
 
-                    ElemType fAcc = 0.0;
-                    for (int k = 0; k < iNumLab; k++)
-					{
-						ElemType fTmp = alpha(k, t) + beta(k, t);
-						fTmp -= fSum;
-                        fTmp = exp(fTmp);
-                        postprob(k, t) = fTmp;
-                        fAcc += fTmp;
-					}
-                    assert(postprob.IsClose(1.0, fAcc, 2));
-				}
-			};
-
-			template<class ElemType>
+            template<class ElemType>
 			void SegmentalEvaluateNode<ElemType>::ForwardCompute(Matrix<ElemType>& alpha, const Matrix<ElemType>& beta, 
                 Matrix<ElemType>& functionValues,
                 const Matrix<ElemType>& lbls,
-                const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
+                const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const ElemType& gamma, const int shift)
 			{
                 /// to-do, shift more than 1 to support muliple sentences per minibatch
                 assert(shift == 1);
@@ -127,35 +112,40 @@ namespace Microsoft {
                     firstLbl = ik; break;
                 }
                 
+                /// need to have 
                 alpha.Resize(iNumLab, iNumPos);
-                alpha.SetValue(LZERO);
-                alpha.SetValue(firstLbl, 0, 0.0);
 
- 				for (int t = 1; t < iNumPos; t++)
+ 				for (int t = 0; t < iNumPos; t++)
 				{
 					for (int k = 0; k < iNumLab; k++)
 					{
 						ElemType fTmp = LZERO;
                         for (int j = 0; j < iNumLab; j++)
                         {
-                            ElemType fAlpha = alpha(j, t - 1);
+                            ElemType fAlpha = (j == firstLbl) ? 0.0 : LZERO;
+                            if (t > 0)
+                                fAlpha = alpha(j, t - 1);
                             fTmp = alpha.LogAdd(fTmp, fAlpha + pair_scores(k, j));
                         }
-                        fTmp += pos_scores(k, t);
+                        fTmp += gamma; 
+                        fTmp = alpha.LogAdd(fTmp, alpha.Log(1 - exp(gamma)));
+                        fTmp += pos_scores(k, t);  /// include position dependent score
 						alpha(k, t) = fTmp;
 					}
 				}
 
 			};
 
-			template<class ElemType>
-			void SegmentalEvaluateNode<ElemType>::BackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta, 
+            template<class ElemType>
+            void SegmentalEvaluateNode<ElemType>::BackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
                 Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
-				const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
-			{
+                const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const ElemType & gamma, const int shift)
+            {
                 assert(shift == 1);
-				int iNumPos = lbls.GetNumCols();
-				int iNumLab = lbls.GetNumRows();
+                int iNumPos = lbls.GetNumCols();
+                int iNumLab = lbls.GetNumRows();
+                ElemType fTmp2 = beta.Log(1.0 - exp(gamma));
+                ElemType fSum; 
 
                 int lastLbl = -1;
                 for (int ik = 0; ik < lbls.GetNumRows(); ik++)
@@ -164,24 +154,40 @@ namespace Microsoft {
                 }
 
                 beta.Resize(iNumLab, iNumPos);
-                beta.SetValue(LZERO);
-                beta.SetValue(lastLbl, iNumPos - 1, 0.0);
 
-				for (int t = iNumPos - 2; t >= 0; t--)
-				{
-					for (int k = 0; k < iNumLab; k++)
-					{
-						ElemType fTmp = LZERO;
-						for (int j = 0; j < iNumLab; j++)
-						{
-                            ElemType fBeta = beta(j, t + 1);
-							fTmp = beta.LogAdd(fTmp, fBeta + pos_scores(j, t + 1) + pair_scores(j, k));
-						}
-						beta(k, t) = fTmp;
-					}
-				}
+                for (int t = iNumPos - 1; t >= 0; t--)
+                {
+                    for (int k = 0; k < iNumLab; k++)
+                    {
+                        ElemType fTmp = LZERO;
+                        if (t == iNumPos - 1)
+                        {
+                            fSum = LZERO;
+                            for (int j = 0; j < iNumLab; j++)
+                            {
+                                fSum = beta.LogAdd(fSum, alpha(j, t));
+                            }
 
-			};
+                            fTmp = alpha(k, t) - fSum; 
+                            beta(k, t) = fTmp;
+                        }
+                        else
+                        {
+                            for (int j = 0; j < iNumLab; j++)
+                            {
+                                fSum = LZERO;
+                                for (int m = 0; m < iNumLab; m++)
+                                {
+                                    fSum = beta.LogAdd(fSum, alpha(m, t) + pair_scores(j, m));
+                                }
+                                fTmp = beta.LogAdd(fTmp, beta(j, t + 1) + alpha(k, t) + pair_scores(j, k) - fSum);
+                            }
+                            beta(k, t) = fTmp;
+                        }
+                    }
+                }
+
+            };
 
             /// pair_scores assumes (i,j) means transition from j to i
             template<class ElemType>
@@ -209,26 +215,30 @@ namespace Microsoft {
                 assert(shift == 1);
                 int iNumPos = pos_scores.GetNumCols();
                 int iNumLab = pos_scores.GetNumRows();
+                size_t iTmp;
 
+                /// need to have 
                 alpha.Resize(iNumLab, iNumPos);
                 backtrace.Resize(iNumLab, iNumPos);
-                for (int k = 0; k < iNumLab; k++)
-                    backtrace(k, 0) = k;
 
-                for (int t = 1; t < iNumPos; t++)
+                for (int t = 0; t < iNumPos; t++)
                 {
                     for (int k = 0; k < iNumLab; k++)
                     {
                         ElemType fTmp = LZERO;
-                        size_t   iTmp = -1;
                         for (int j = 0; j < iNumLab; j++)
                         {
-                            ElemType fAlpha = alpha(j, t - 1) + pair_scores(k, j);
+                            ElemType fAlpha = 0.0; 
+                            if (t > 0)
+                                fAlpha = alpha(j, t - 1);
+                            fAlpha += pair_scores(k, j);
+
                             if (fAlpha > fTmp){
-                                fTmp = fAlpha; 
-                                iTmp = j; 
+                                fTmp = fAlpha;
+                                iTmp = j;
                             }
                         }
+
                         fTmp += pos_scores(k, t);
                         alpha(k, t) = fTmp;
                         backtrace(k, t) = (ElemType)iTmp;

@@ -1114,7 +1114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			{
                 for (int i = offset; i<numHiddenLayers; i++)
 				{
-					if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
+					if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
 					{
                         output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i] * (offset ? m_lookupTableOrder : 1), m_layerSizes[i + 1], input);
                         input = output;
@@ -1142,6 +1142,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			output = m_net->Times(w, input, L"outputsBeforeSoftmax");
 
 			trans = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"TransProb%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers + 1]);
+            trans->FunctionValues().SetValue(1.0 / m_layerSizes[numHiddenLayers + 1]);
 //			m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
             trans->NeedGradient() = false;
 			label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
