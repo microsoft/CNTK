@@ -47,6 +47,10 @@ namespace Microsoft {
 				Matrix<ElemType> mAlpha;
 				Matrix<ElemType> mBeta;
 				Matrix<ElemType> mPostProb;
+                ElemType mGamma; /// for the interpolation between sequence and cross entropy training
+                /// when mGamma = 1, sequence training is used
+                /// when mGamma = 0, cross entropy training is used
+                /// mGamma can be set to a value between 0 and 1, inclusive.
 
                 Matrix<ElemType> mLogSoftMaxOfRight;
                 Matrix<ElemType> mSoftMaxOfRight;
@@ -59,23 +63,28 @@ namespace Microsoft {
 					m_deviceId = deviceId;
 					MoveMatricesToDevice(deviceId);
 					InitRecurrentNode();
-				}
+                    InitInterpolation();
+                }
 
 				SegmentalEvaluateNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
                     : ComputationNode(deviceId), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId), mLogSoftMaxOfRight(deviceId), mSoftMaxOfRight(deviceId)
 				{
 					m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
 					LoadFromFile(fstream, modelVersion, deviceId);
+                    InitInterpolation();
 				}
 
-				virtual const std::wstring OperationName() const { return TypeName(); }
+//                void InitInterpolation() { mGamma = LZERO; }
+                void InitInterpolation() { mGamma = 0.0; }
+
+                virtual const std::wstring OperationName() const { return TypeName(); }
 				static const std::wstring TypeName() { return L"SegmentalEvaluateNode"; }
 
 				/// compute posterior probability of label y at position t
 				virtual void EvaluateThisNode()
 				{
                     EvaluateThisNodeS(mPostProb, mAlpha, mBeta, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), 
-                        Inputs(2)->FunctionValues(), mLogSoftMaxOfRight, mSoftMaxOfRight);
+                        Inputs(2)->FunctionValues(), mLogSoftMaxOfRight, mSoftMaxOfRight, mGamma);
 				}
 
 				virtual void EvaluateThisNode(const size_t timeIdxInSeq)
@@ -103,15 +112,15 @@ namespace Microsoft {
 				static void ErrorSignalToPostitionDependentNode(const Matrix<ElemType> & thisGrd, const Matrix<ElemType>& labls, const Matrix<ElemType>& postProb, Matrix<ElemType>& inputGrd);
 
 				/// compute forward backward algorithm
-				static void EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& logOfRight, Matrix<ElemType>& softmaxOfRight, const int shift=1);
+                static void EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& logOfRight, Matrix<ElemType>& softmaxOfRight, const ElemType & gamma, const int shift = 1);
 
 				/// compute forward backward algorithm
 				static void ForwardCompute(Matrix<ElemType>& alpha, const Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0,
-					const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const int shift = 1);
+					const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const ElemType & gamma, const int shift = 1);
 
 				/// compute backward algorithm
 				static void BackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0,
-					const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const int shift = 1);
+                    const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const ElemType & gamma, const int shift = 1);
 
 				/// compute forward backward algorithm
 				static void PostProbCompute(Matrix<ElemType>& postprob, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta , const int shift = 1);
