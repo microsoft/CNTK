@@ -307,7 +307,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         ElemType Exp10(ElemType num); 
         ElemType Mod(ElemType x , ElemType y);
-		ElemType LogAdd(ElemType x, ElemType y);
+        ElemType LogAdd(ElemType x, ElemType y);
+        ElemType Log(ElemType x);
         bool     IsClose(ElemType x, ElemType y, size_t significantDigit = 5);
 
     public:

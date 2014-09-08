@@ -3885,7 +3885,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		}
 	}
 
-	template<class ElemType>
+    template<class ElemType>
+    ElemType Matrix<ElemType>::Log(ElemType x)
+    {
+        assert(x >= 0);
+        if (x == 0) return LZERO;
+        if (x > 0) return log(x);
+    }
+    
+    template<class ElemType>
     void Matrix<ElemType>::ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& wgt,
         const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
         const Matrix<ElemType>* idx2cls,  Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore)
