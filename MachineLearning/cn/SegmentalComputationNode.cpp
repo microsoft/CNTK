@@ -191,7 +191,33 @@ namespace Microsoft {
 
             /// pair_scores assumes (i,j) means transition from j to i
             template<class ElemType>
-            void SegmentalDecodeNode<ElemType>::EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int iStep)
+            void SegmentalDecodeNode<ElemType>::DecideStartEndingOutputLab(const Matrix<ElemType>& lbls, size_t & stt, size_t & stp)
+            {
+                if (stt != -1 && stp!= -1) 
+                    return; /// have computed before
+
+                int iNumPos = lbls.GetNumCols();
+                int iNumLab = lbls.GetNumRows();
+
+                int firstLbl = -1;
+                for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+                if (lbls(ik, 0) != 0){
+                    firstLbl = ik; break;
+                }
+
+                int lastLbl = -1;
+                for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+                if (lbls(ik, iNumPos - 1) != 0){
+                    lastLbl = ik; break;
+                }
+                
+                stt = firstLbl;
+                stp = lastLbl;
+            };
+
+            /// pair_scores assumes (i,j) means transition from j to i
+            template<class ElemType>
+            void SegmentalDecodeNode<ElemType>::EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp, const int iStep)
             {
                 /// to-do, each slice is for one sentence
                 /// to-do, number of slices correspond to number of frames 
@@ -201,15 +227,16 @@ namespace Microsoft {
 
                 /// change to other values so can support multiple sentences in each minibatch
                 assert(iStep == 1);
-                ForwardCompute(alpha, backtrace, pos_scores, pair_scores, iStep);
-                BackwardCompute(alpha, functionValues, backtrace, iStep);
+                ForwardCompute(alpha, backtrace, pos_scores, pair_scores, stt, iStep);
+                BackwardCompute(alpha, functionValues, backtrace, pair_scores, stp, iStep);
 
             };
 
             template<class ElemType>
             void SegmentalDecodeNode<ElemType>::ForwardCompute(Matrix<ElemType>& alpha, 
                 Matrix<ElemType>& backtrace,
-                const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
+                const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, 
+                const size_t stt, const int shift)
             {
                 /// to-do, shift more than 1 to support muliple sentences per minibatch
                 assert(shift == 1);
@@ -228,9 +255,7 @@ namespace Microsoft {
                         ElemType fTmp = LZERO;
                         for (int j = 0; j < iNumLab; j++)
                         {
-                            ElemType fAlpha = 0.0; 
-                            if (t > 0)
-                                fAlpha = alpha(j, t - 1);
+                            ElemType fAlpha = (t==0)?(j==stt?0:LZERO):alpha(j, t-1); 
                             fAlpha += pair_scores(k, j);
 
                             if (fAlpha > fTmp){
@@ -249,7 +274,7 @@ namespace Microsoft {
 
             template<class ElemType>
             void SegmentalDecodeNode<ElemType>::BackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& decodedpath,
-                const Matrix<ElemType>& backtrace, const int shift)
+                const Matrix<ElemType>& backtrace, const Matrix<ElemType>& pair_scores, const size_t stp, const int shift)
             {
                 assert(shift == 1);
                 int iNumPos = backtrace.GetNumCols();
@@ -262,8 +287,9 @@ namespace Microsoft {
                 for (int k = 0; k < iNumLab; k++)
                 {
                     /// get the highest score
-                    if (alpha(k, iNumPos - 1) > ftmp){
-                        ftmp = alpha(k, iNumPos - 1);
+                    ElemType ft2 = alpha(k, iNumPos - 1) + pair_scores(stp, k);
+                    if (ft2 > ftmp){
+                        ftmp = ft2;
                         lastlbl = k; 
                     }
                 }
