@@ -208,6 +208,9 @@ namespace Microsoft {
                 Matrix<ElemType> mAlpha;
                 Matrix<ElemType> mBacktrace;
 
+                size_t mStartLab; /// the starting output label
+                size_t mEndLab;   /// the ending output label, if avaliable
+
             public:
                 SegmentalDecodeNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
                     : ComputationNode(deviceId), mAlpha(deviceId), mBacktrace(deviceId)
@@ -216,6 +219,8 @@ namespace Microsoft {
                     m_deviceId = deviceId;
                     MoveMatricesToDevice(deviceId);
                     InitRecurrentNode();
+                    mStartLab = -1;
+                    mEndLab = -1;
                 }
 
                 SegmentalDecodeNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -223,16 +228,21 @@ namespace Microsoft {
                 {
                     m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
                     LoadFromFile(fstream, modelVersion, deviceId);
+                    mStartLab = -1;
+                    mEndLab = -1;
                 }
 
                 virtual const std::wstring OperationName() const { return TypeName(); }
                 static const std::wstring TypeName() { return L"SegmentalDecodeNode"; }
 
+                static void DecideStartEndingOutputLab(const Matrix<ElemType>& lbls, size_t & stt, size_t & stp);
+
                 /// compute posterior probability of label y at position t
                 virtual void EvaluateThisNode()
                 {
+                    DecideStartEndingOutputLab(Inputs(0)->FunctionValues(), mStartLab, mEndLab);
                     EvaluateThisNodeS(mAlpha, mBacktrace, FunctionValues(), Inputs(1)->FunctionValues(),
-                        Inputs(2)->FunctionValues());
+                        Inputs(2)->FunctionValues(), mStartLab, mEndLab);
                 }
 
                 virtual void EvaluateThisNode(const size_t timeIdxInSeq)
@@ -247,21 +257,26 @@ namespace Microsoft {
 
                 virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
                 {
-                    throw std::logic_error("SegmentalEvaluateNode node should never be in a loop.");
+                    throw std::logic_error("SegmentalDecodeNode node should never be in a loop.");
                 }
 
                 /// compute forward backward algorithm
-                static void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& decodepath, const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const int shift = 1);
+                static void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& decodepath, const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const size_t stt, const size_t stp, const int shift = 1);
 
                 /// compute forward backward algorithm
                 static void ForwardCompute(Matrix<ElemType>& alpha, 
                     Matrix<ElemType>& backtrace,
-                    const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const int shift = 1);
-
-                /// compute backward algorithm
-                static void BackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& decodepath, const Matrix<ElemType>& backtrace, 
+                    const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, const size_t stt, 
                     const int shift = 1);
 
+                /// compute backward algorithm
+                static void BackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& decodepath, const Matrix<ElemType>& backtrace,
+                    const Matrix<ElemType> & pair_scores, 
+                    const size_t stp, 
+                    const int shift = 1);
+
+                /// need to feed in quesudo label data, which tells the decoder what is the begining
+                /// and ending output symbol. these symbols will constrain the search space
                 virtual void Validate()
                 {
                     PrintSelfBeforeValidation();
@@ -270,6 +285,8 @@ namespace Microsoft {
                         throw std::logic_error("SegmentalDecodeNode requires three inputs.");
 
                     if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
+                        Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
+                        Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
                         Inputs(2)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumRows()))
                     {
                         throw std::logic_error("The Matrix<ElemType>  dimension in the SegmentalDecodeNode operation does not match.");
