@@ -1144,7 +1144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			trans = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"TransProb%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers + 1]);
             trans->FunctionValues().SetValue(1.0 / m_layerSizes[numHiddenLayers + 1]);
 //			m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
-            trans->NeedGradient() = false;
+            trans->NeedGradient() = true;
 			label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
 			AddTrainAndEvalCriterionNodes(output, label, nullptr, L"CRFTrainCriterion", L"CRFEvalCriterion", nullptr, trans);
 
