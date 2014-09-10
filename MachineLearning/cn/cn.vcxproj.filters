@@ -113,6 +113,9 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SegmentalComputationNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -155,6 +158,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SimpleNetworkBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SegmentalComputationNode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
