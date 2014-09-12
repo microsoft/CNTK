@@ -1432,8 +1432,575 @@ parameter up so that it can be shared by both the training and evaluation
 HTKMLFReader
 \end_layout
 
+\begin_layout Standard
+HTKMLFReader is a data reader that reads files typically associated with
+ speech recognition tasks, and specifically with the HTK suite of tools.
+ The reader can take as input two types of files, a list of feature files
+ known in HTK parlance as an SCP file (
+\begin_inset Quotes eld
+\end_inset
+
+script
+\begin_inset Quotes erd
+\end_inset
+
+ file) and a label file known as a MLF file (
+\begin_inset Quotes eld
+\end_inset
+
+model label file
+\begin_inset Quotes erd
+\end_inset
+
+).
+ Because CNTK can be used to build networks with arbitrary topology including
+ networks with multiple inputs and outputs, the HTKMLFReader can process
+ one or multiple SCP and MLF files.
+ A typical example of usage for the HTKMLFReader is as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+reader=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  readerType=HTKMLFReader
+\end_layout
+
+\begin_layout Plain Layout
+
+  readMethod=rollingWindow
+\end_layout
+
+\begin_layout Plain Layout
+
+  miniBatchMode=Partial
+\end_layout
+
+\begin_layout Plain Layout
+
+  randomize=Auto
+\end_layout
+
+\begin_layout Plain Layout
+
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+  features=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    dim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+    scpFile=$ScpDir$
+\backslash
+TIMIT.train.scp.fbank.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+  labels=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    mlfFile=$MlfDir$
+\backslash
+TIMIT.train.align_cistate.mlf.cntk
+\end_layout
+
+\begin_layout Plain Layout
+
+    labelDim=183
+\end_layout
+
+\begin_layout Plain Layout
+
+    labelMappingFile=$MlfDir$
+\backslash
+TIMIT.statelist
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+] 
+\end_layout
+
+\end_inset
+
+The HTKMLFReader has the following configuration parameters:
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+readMethod:
+\emph default
+ the method used to read the features files into memory for processing during
+ network training.
+ The 
+\begin_inset Quotes eld
+\end_inset
+
+rollingWindow
+\begin_inset Quotes erd
+\end_inset
+
+ option reads in all feature files and stores them on disk in one large
+ temporary binary file.
+ The data is randomized by running a large rollowing window over the data
+ is this file and randomizing the data within the window.
+ This method produces more thorough randomization of the data but requires
+ a large temprorary file written to disk.
+ The other option is 
+\begin_inset Quotes eld
+\end_inset
+
+blockRandomize
+\begin_inset Quotes erd
+\end_inset
+
+ which divides the data into large blocks and then randomizes the order
+ of the blocks and the order of the data within the block.
+ The data in each block is read directly from the feature files.
+ Because this does not require any temporary feature files, this option
+ is more appropriate for large corpora.
+ The default is blockRandomize.
+ Note that the blockRandomize option requires an archive format of SCP file,
+ described below.
+ Also, as described below, when used in conjunction with 
+\begin_inset Quotes eld
+\end_inset
+
+frameMode=false
+\begin_inset Quotes erd
+\end_inset
+
+ the blockRandomize read method will randomize over utterances, but not
+ frames.
+ This is appropriate for use with recurrent architectures when preserving
+ the sequential nature of the training examples is desired.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+randomize:
+\emph default
+ Auto or None, whether the reader should randomize the data
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+minibatchMode
+\emph default
+: Partial or Full, this option decides how to handle the last minibatch
+ if there are not enough frames to form a complete minibatch of the requested
+ size.
+ The default is Partial, which will use the remaining frames in a smaller
+ final minibatch of the training epoch.
+ The Full option will only process complete minibatches.
+\end_layout
+
+\begin_layout Standard
+The above example has two sources of data being processed by the reader,
+ 
+\emph on
+features,
+\emph default
+ in the form of a list of HTK feature files, and 
+\emph on
+labels,
+\emph default
+ which are in the form of an HTK MLF file.
+ Both features and labels correspond to nodes in the computational network,
+ in this case, the input and output nodes, respectively.
+ Note that 
+\begin_inset Quotes eld
+\end_inset
+
+features
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+labels
+\begin_inset Quotes erd
+\end_inset
+
+ are the default names used by the SimpleNetworkBuilder but if the network
+ is designed using the Network Descrition Language (NDL), then any names
+ can be used, as long as they each have a corresponding node in the network.
+\end_layout
+
+\begin_layout Standard
+To specify continuous-valued features, e.g.
+ MFCC's or log mel filterbank coefficients, the following parameters should
+ be included in the a confguration block:
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+scpFile: 
+\emph default
+a list of files to be processed.
+ The files should be HTK compatible files and can be specified in standard
+ mode or 
+\begin_inset Quotes eld
+\end_inset
+
+archive
+\begin_inset Quotes erd
+\end_inset
+
+ model.
+ The details of using an archive
+\emph on
+ 
+\emph default
+are described below.
+  configuration parameter.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+dim:
+\emph default
+ an integer that specifies the full feature vector dimension with the desired
+ context window.
+ For example, if you had 72-dimensional features (24-dimensional filterbank
+ features plus delta and delta-delta coefficients) and the network is designed
+ to process a context window of 11 frames, the specified dimension should
+ be 792.
+ Note that only symmetric context windows are supported.
+ 
+\end_layout
+
+\begin_layout Standard
+To specify the corresponding labels, e.g.
+ phoneme or senone labels, a configuration block should be used that specifies
+ the following parameters:
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+mlfFile:
+\emph default
+ an HTK-style MLF file that contains the labels for all utterances specified
+ in the SCP file.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+labelDim
+\emph default
+: the total cardinality of the label set 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+labelMappingFile
+\emph default
+: a list of all the labels seen in the MLF file 
+\end_layout
+
+\begin_layout Standard
+Note that multiple inputs and outputs can be specified using additional
+ reader blocks for either features read from files listed in an SCP file
+ or labels read from an MLF file.
+ For example, in a multi-task learning scenario, where the network was predictin
+g both speaker identity and senone label, the user would specify an additional
+ block that includes an MLF file that contains labels corresponding about
+ speaker identity.
+ Similarly, for a network with multiple inputs, e.g.
+ both MFCC and PLP features, an additional feature block would be used.
+ 
+\end_layout
+
+\begin_layout Standard
+For recurrent structures, such as an RNN or an LSTM, there are additional
+ configuration options in the HTKMLFReader
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+frameMode
+\emph default
+: true or false, whether the reader should randomize the data at the frame
+ level or the utterance level.
+ Setting frameMode to true is the default and is appropriate for training
+ networks without any temporal connections.
+ For networks that are designed to learn sequential information, e.g.
+ RNN, frameMode should be set to false, which means utterances are randomized
+ but proper sequence is maintained within an utterance.
+ Note that this only works with the 
+\begin_inset Quotes eld
+\end_inset
+
+blockRandomize
+\begin_inset Quotes erd
+\end_inset
+
+ read method.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+nbruttsineachrecurrentiter
+\emph default
+: specifies the number of utterances to process together for efficient training
+ of networks with recurrent structures.
+ The default is 1.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+truncated
+\emph default
+: true or false
+\end_layout
+
+\begin_layout Standard
+It is important to note that there are some small differences between the
+ standard SCP and MLF files used in HTK and the ones used in CNTK.
+ 
+\end_layout
+
+\begin_layout Standard
+Most notably, the MLF file must contain the actual symbols used for classificati
+on.
+ For continuous speech recognition, this typically means labels corresponding
+ to the senones (physical HMM states).
+ However, HVite typically generates an MLF during forced alignment that
+ includes only the logical HMM state names.
+ Thus, to use this MLF in CNTK, either the MLF must be post-processed to
+ replace the logical state names with thee corresponding senone labels,
+ or HVite must be modified so that it writes the senone labels directly.
+ 
+\end_layout
+
+\begin_layout Standard
+The SCP files processed by the HTKMLFReader can be one of two varieties:
+ either the standard format, where each line corresponds to a physical feature
+ file, or the aliased format, where each line contains a logical name and
+ refers to a segment of a possibly larger physical file, defined by start
+ and end frames.
+ The logical name is used to identify the corresponding labels in the MLF
+ file.
+ Even if the files are stored individually, as in the first case, the aliased
+ format must always be used with the blockRandomize read method, as it uses
+ the information about the starting and ending frames in the SCP file to
+ determine the utterance lengths without having to open the files themselves.
+ In this case, the start frame should be 0 and the ending frame should be
+ set appropriately based on the length of the utterance.
+ In addition, for multiple inputs and/or outputs, the aliased format should
+ also be used so that all SCP files and MLF files have their logical names
+ in common.
+ If the rollingWindow read method is used instead of blockRandomize, then
+ the start and end frame information may be omitted.
+ 
+\end_layout
+
+\begin_layout Standard
+Here are example snippets of SCP and MLF files for the TIMIT corpus for
+ appropriate for a network with 2 feature inputs (in this case, MFCC and
+ PLP features) and 1 output corresponding to phoneme states.
+ The SCP file for the MFCC features contains entries such as these.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+train-dr1-fcjf0-si1027.mfc=//hostname/data/TIMIT/mfc/train/dr1/fcjf0/train-dr1-fc
+jf0-si1027.mfc[0,306]
+\end_layout
+
+\begin_layout Plain Layout
+
+train-dr1-fcjf0-si1657.mfc=//hostname/data/TIMIT/mfc/train/dr1/fcjf0/train-dr1-fc
+jf0-si1657.mfc[0,281]
+\end_layout
+
+\begin_layout Plain Layout
+
+train-dr1-fcjf0-si648.mfc=//hostname/data/TIMIT/mfc/train/dr1/fcjf0/train-dr1-fcj
+f0-si648.mfc[0,359]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The SCP file for the PLP features is be similar but point to different physical
+ files.
+ Note that the logical root name in both SCP files is the same.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\footnotesize}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+train-dr1-fcjf0-si1027.plp=//hostname/data/TIMIT/plp/train/dr1/fcjf0/train-dr1-fc
+jf0-si1027.plp[0,306]
+\end_layout
+
+\begin_layout Plain Layout
+
+train-dr1-fcjf0-si1657.plp=//hostname/data/TIMIT/plp/train/dr1/fcjf0/train-dr1-fc
+jf0-si1657.plp[0,281]
+\end_layout
+
+\begin_layout Plain Layout
+
+train-dr1-fcjf0-si648.plp=//hostname/data/TIMIT/plp/train/dr1/fcjf0/train-dr1-fcj
+f0-si648.plp[0,359]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The MLF file also shares the logical name with both SCP files.
+ In this 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#!MLF!# 
+\end_layout
+
+\begin_layout Plain Layout
+
+"train-dr1-fcjf0-si1027.rec"
+\end_layout
+
+\begin_layout Plain Layout
+
+0 200000 h#_s2 -136.655975 h# -589.680481 h#
+\end_layout
+
+\begin_layout Plain Layout
+
+200000 400000 h#_s3 -145.780716
+\end_layout
+
+\begin_layout Plain Layout
+
+400000 800000 h#_s4 -307.243774
+\end_layout
+
+\begin_layout Plain Layout
+
+800000 1200000 q_s2 -349.529327 q -897.429504 q
+\end_layout
+
+\begin_layout Plain Layout
+
+1200000 1500000 q_s3 -280.568817
+\end_layout
+
+\begin_layout Plain Layout
+
+1500000 1800000 q_s4 -267.331390
+\end_layout
+
+\begin_layout Plain Layout
+
+1800000 1900000 iy_s2 -76.825096 iy -673.892883 iy
+\end_layout
+
+\begin_layout Plain Layout
+
+1900000 2400000 iy_s3 -305.832458
+\end_layout
+
+\begin_layout Plain Layout
+
+2400000 2800000 iy_s4 -291.235352 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally, it is important to note that in most speech recognition applications,
+ the continuous-valued features are used as the inputs discrete categorical
+ labels are used as the output.
+ However, the HTKMLFReader just associates data with node names and is agnostic
+ as to how this data is used.
+ For example, an appropriate MLF file of speaker identity labels could be
+ used to generate a one-hot vector of speaker identity features as an input
+ to the network.
+ 
+\end_layout
+
 \begin_layout Subsection
-SequenceReader
+SequenceReader 
 \end_layout
 
 \begin_layout Standard
