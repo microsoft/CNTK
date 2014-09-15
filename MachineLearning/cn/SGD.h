@@ -44,7 +44,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RmsProp
     };
     
-    typedef struct stGradientUpdateInfo{
+	// configuration parameters associated with RMSProp learning algorithm
+    typedef struct stRMSPropInfo{
+		double gamma;
+		double inc;
+		double dec;
+		double max;
+		double min;
+		stRMSPropInfo()
+		{
+			gamma = 0.99;
+			inc = 1.2;
+			dec = 0.75;
+			max = 10.0;
+			min = 0.1;
+		}
+	}RMSPropInfo;
+
+	typedef struct stGradientUpdateInfo{
         GradientsUpdateType mType;
         float mGaussianNoiseInjectStd;
         stGradientUpdateInfo()
@@ -123,6 +140,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gUpdateInfo.mType = gradUpdateType;
             gUpdateInfo.mGaussianNoiseInjectStd = (float)gaussianNoiseInjecStd;
             
+			// extract RMSProp parameters from config, if they exist. Default to reasonable values.
+			RMSPropInfo rpi;
+			rpi.dec = (double) configSGD("rms_wgt_dec","0.75");
+			rpi.inc = (double) configSGD("rms_wgt_inc","1.2");
+			rpi.min = (double) configSGD("rms_wgt_min","0.1");
+			rpi.max = (double) configSGD("rms_wgt_max","10.0");
+			rpi.gamma = (double) configSGD("rms_gamma","0.99");
+
             /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of 
             /// useAdagrad=true
             bool useAdagrad = configSGD("useAdagrad", "false");
@@ -146,7 +171,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 reduceLearnRateIfImproveLessThan, continueReduce, learnRateDecreaseFactor, dropoutRates,
                 loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, (UINT16)traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, usePtask, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
-                trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading);
+                trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
+				rpi);
         }
 	
 		void setMomentum(float momentum)
@@ -167,7 +193,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t numMBsToShowResult = 10, const size_t maxTempMemSizeInSamplesForCNN = 0,
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
-            const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true)
+            const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
+			RMSPropInfo rpi = RMSPropInfo())
         {
             numPrevLearnRates;
             m_mbSize=mbSize;
@@ -195,6 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numBestSearchEpoch=numBestSearchEpoch;
             m_maxTempMemSizeInSamplesForCNN=maxTempMemSizeInSamplesForCNN;
             m_gradType = gradUpdateType;
+			m_rpi = rpi;
             m_usePtask = usePtask;
             m_keepCheckPointFiles = keepCheckPointFiles;
 
@@ -1096,7 +1124,9 @@ public:
             }
             if (adpType == GradientsUpdateType::RmsProp)
             {
-                smoothedGradient.RmsProp(gradientValues);
+				// include L2 regularizer
+				Matrix<ElemType>::ScaleAndAdd(0.001,functionValues,gradientValues);
+                smoothedGradient.RmsProp(gradientValues,sgd->m_rpi.gamma,sgd->m_rpi.inc,sgd->m_rpi.max,sgd->m_rpi.dec,sgd->m_rpi.min);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample, gradientValues, functionValues);
             }
 
@@ -1423,6 +1453,8 @@ protected:
         ElemType m_minLearnRate;
 
         GradientUpdateInfo m_gradType;
+		RMSPropInfo m_rpi;
+
         bool m_usePtask;
 
         bool m_keepCheckPointFiles;

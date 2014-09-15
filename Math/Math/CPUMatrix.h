@@ -58,7 +58,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
         void Adagrad(CPUMatrix<ElemType>& gradients);
-        void RmsProp(CPUMatrix<ElemType>& gradients);
+        void RmsProp(CPUMatrix<ElemType>& gradients,
+			ElemType RMS_GAMMA,
+			ElemType RMS_WGT_INC,
+			ElemType RMS_WGT_MAX,
+			ElemType RMS_WGT_DEC,
+			ElemType RMS_WGT_MIN
+			);
 
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
