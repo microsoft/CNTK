@@ -1098,15 +1098,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients)
+    void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
+		ElemType RMS_GAMMA,
+		ElemType RMS_WGT_INC,
+		ElemType RMS_WGT_MAX,
+		ElemType RMS_WGT_DEC,
+		ElemType RMS_WGT_MIN
+		)
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &gradients,
-            m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix); SetDataLocation(CPU), 
+            m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(CPU), 
+            m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(GPU),
             NOT_IMPLEMENTED, 
-            m_CPUSparseMatrix->RmsProp(*this->m_CPUMatrix); SetDataLocation(CPU), 
             NOT_IMPLEMENTED
             );
     }
