@@ -677,9 +677,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 std::string rhs = iter->second;
-                result = this->ResolveVariables(rhs);
+                rhs = this->ResolveVariables(rhs);
                 std::string fullName = m_configName + ":" + name;
-                result = ConfigValue(result, fullName, this);
+                result = ConfigValue(rhs, fullName, this);
             }
             return result;
         }
@@ -814,13 +814,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return m_configName.substr(lastColon+1);
             return std::string();   // empty string
         }
-        static void ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config);
+        static std::string ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config);
         // dump for debugging purposes
         void dump() const
         {
             for (auto iter = begin(); iter != end(); iter++)
                 fprintf (stderr, "configparameters: %s:%s=%s\n", m_configName.c_str(), iter->first.c_str(), ((std::string)iter->second).c_str());
         }
+
+        void dumpWithResolvedVariables() const
+        {
+            for (auto iter = begin(); iter != end(); iter++)
+                fprintf(stderr, "configparameters: %s:%s=%s\n", m_configName.c_str(), iter->first.c_str(), ResolveVariables(((std::string)iter->second)).c_str());
+        }
+
         // cast ConfigParameters back to a string so we can return it as a ConfigValue
         operator ConfigValue() 
         {

@@ -612,6 +612,181 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class PerDimMeanVarNormalizationNode<float>; 
     template class PerDimMeanVarNormalizationNode<double>;
 
+	template<class ElemType>
+    class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
+    {
+        typedef ComputationNode<ElemType>* ComputationNodePtr; 
+
+
+    public:
+        PerDimMeanVarDeNormalizationNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode(deviceId) 
+        {
+            m_nodeName = (name == L""? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        PerDimMeanVarDeNormalizationNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode(deviceId)
+        {
+            m_nodeName = (name == L""? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        PerDimMeanVarDeNormalizationNode(const PerDimMeanVarDeNormalizationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"")?NodeName():newName;
+                
+            ComputationNodePtr node = new PerDimMeanVarDeNormalizationNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual const std::wstring OperationName() const {return TypeName();}
+        static const std::wstring TypeName() {return L"PerDimMeanVarDeNormalization";} 
+        virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        {
+            throw std::invalid_argument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            throw std::invalid_argument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
+        }
+
+        // GetTaskDescriptor - Get a task descriptor for this node
+        // taskType - task type we are generating a task for
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+        {
+            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+            switch(taskType)
+            {
+            case taskEvaluate:
+                descriptor->FunctionParam();
+                descriptor->FunctionParam(0, paramOptionsInput);
+                descriptor->FunctionParam(1, paramOptionsInput | paramOptionsConstant);
+                descriptor->FunctionParam(2, paramOptionsInput | paramOptionsConstant);
+                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
+                break;
+            default:
+                assert(false);
+                throw std::logic_error("Unsupported task requested");
+            }
+            return descriptor;
+        }
+
+        virtual void EvaluateThisNode()   //(feature-mean).*InvStdDev
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            //only feature (input0) and output needs to be sliced
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &input1, const Matrix<ElemType> &input2)
+        {
+#if DUMPOUTPUT
+            //input0.Print("PerDimMeanVarDeNormalization-input0");
+            //input1.Print("PerDimMeanVarDeNormalization-input1");
+            //input2.Print("PerDimMeanVarDeNormalization-input2");
+#endif
+
+#if NANCHECK
+            input0.HasNan("PerDimMeanVarDeNormalization-input0");
+            input1.HasNan("PerDimMeanVarDeNormalization-input1");
+            input2.HasNan("PerDimMeanVarDeNormalization-input2");
+#endif
+            //functionValues.AssignDifferenceOf(input0, input1);
+            //functionValues.ColumnElementMultiplyWith(input2);
+            //functionValues.AssignDifferenceOf(input0, input0);
+            //functionValues += input2;
+            //functionValues.ElementInverse();
+            //functionValues.ElementMultiplyWith(input0);
+            functionValues.SetValue(input0);
+            functionValues.ColumnElementDivideWith(input2);
+            functionValues += input1;
+#if NANCHECK
+            functionValues.HasNan("PerDimMeanVarDeNormalization");
+#endif
+#if DUMPOUTPUT
+            functionValues.Print("PerDimMeanVarDeNormalizationNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 3) 
+                throw std::logic_error("PerDimMeanVarDeNormalizationNode criterion requires three inputs.");
+
+            if (Inputs(0)->RequirePreCompute())
+                throw std::logic_error("PerDimMeanVarDeNormalizationNode criterion forbids first input from being a pre-compute node. "
+                                       "The first input should be the node whose output should be de-normalized, and the second and third inputs "
+                                       "should be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
+
+            if (!(Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName() && Inputs(2)->OperationName() == LearnableParameter<ElemType>::TypeName()) &&
+                !(Inputs(1)->OperationName() == MeanNode<ElemType>::TypeName() && Inputs(2)->OperationName() == InvStdDevNode<ElemType>::TypeName()))
+                throw std::logic_error("PerDimMeanVarDeNormalizationNode criterion requires the last two inputs to be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
+
+            if (Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            {
+                size_t rows = Inputs(1)->FunctionValues().GetNumRows() == 0? Inputs(0)->FunctionValues().GetNumRows() : Inputs(1)->FunctionValues().GetNumRows();
+                Inputs(1)->FunctionValues().Resize(rows, 1);
+            }
+
+            if (Inputs(2)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            {
+                size_t rows = Inputs(2)->FunctionValues().GetNumRows() == 0? Inputs(0)->FunctionValues().GetNumRows() : Inputs(2)->FunctionValues().GetNumRows();
+                Inputs(2)->FunctionValues().Resize(rows, 1);
+            }
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0 || Inputs(2)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("PerDimMeanVarDeNormalizationNode operation: one of the operants has 0 element.");
+
+            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match rows
+                Inputs(2)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()) )
+            {
+                //Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
+                //Inputs(2)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
+                throw std::logic_error("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
+            }       
+
+            if (!(Inputs(1)->FunctionValues().GetNumCols() == 1 && Inputs(2)->FunctionValues().GetNumCols() == 1))
+            {
+                throw std::logic_error("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+            }       
+
+            Inputs(1)->NeedGradient() = false;
+            Inputs(2)->NeedGradient() = false;  //prevent learning 
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs(); 
+        }
+
+        //leftNode should be the empirical
+        virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev) 
+        {
+            m_children.resize(3);
+            m_children[0] = feature;
+            m_children[1] = mean;
+            m_children[2] = InvStdDev;
+        }
+    };
+
+    template class PerDimMeanVarDeNormalizationNode<float>; 
+    template class PerDimMeanVarDeNormalizationNode<double>;
+
 
     // convolution parameters structure, to make it easier to pass these around all these parameters
     struct ConvolutionParams

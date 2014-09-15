@@ -87,83 +87,2119 @@ name "chap:ExampleSetup"
 \end_layout
 
 \begin_layout Section
-Acoustic Model Training
-\end_layout
-
-\begin_layout Section
-Acoustic Model Decoding
+Acoustic Model
 \end_layout
 
 \begin_layout Standard
-The argon decoder is provided to allow speech recognition decoding experiments
- against CNTK acoustic models.
- The first step is to build an acoustic model according to the previous
- section, or using your own recipe.
- This training process should generate both the binary CNTK model file,
- and the CNTK mapping file, that describes how the dimensions of the ScaledLogLi
-kelihood layer of the acoustic model should be interpreted as acoustic model
- states.
- This example assumes these files have been generated and moved to TIMIT.dnn_map
- and TIMIT.cnktSpeech.dnn in the ExampleSetups/ASR/TIMIT/decoding folder.
+In this section we describe how CNTK can be used to build several standard
+ models that can be used for acoustic modeling for speech recognition applicatio
+ns.
+ All examples are based on the TIMIT corpus for phonetic recognition but
+ can easily be modified for use for large vocabulary continuous speech recogniti
+on.
+ The only significant change is that context-indepenent phonetic states
+ used in the TIMIT example would be replaced by context-dependent senone
+ targets for large vocabulary tasks.
+ We note that these examples are not meant to be representative of state
+ of the art performance, but rather to demonstrate how CNTK can be used
+ in a variety of speech recognition applications.
+ All examples are located in the ExampleSetups folder (ExampleSetups
+\backslash
+ASR
+\backslash
+TIMIT) 
+\end_layout
+
+\begin_layout Subsection
+Training a DNN with SimpleNetworkBuilder
 \end_layout
 
 \begin_layout Standard
-Besides these two files, the decoding process needs some acoustic data to
- decode, a language model to apply, and a pre-compiled a decoding graph.
+The simplest way to create an acoustic model with CNTK is to use the SimpleNetwo
+rkBuilder.
+ This network builder constructs a fully-connected feed-forward network
+ of user-specified depth and size.
+ The configuration file is shown below.
+ As you can see there are several key blocks of data specified
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+SimpleNetworkBuilder
+\emph default
+: the overall network topology is specified here using the layerSizes parameter.
+ In this example, the network has 792 inputs (an 11-frame context window
+ of a 72-dimensional feature vector), 3 hidden layers of 512 sigmoidal neurons
+ and 183 outputs, corresponding to the TIMIT phoneme states (3 x 61 phonemes).
+ The cross entropy is the criterion for training and the frame error rate
+ will also be monitored during training using the evalCriterion parameter.
+ The input data will be mean and variance normalized since applyMeanVarNorm
+ has been set to true.
+ In addtion, if needPrior is set to true, the prior probablities of the
+ labels will be computed and a ScaledLogLikelihood node in the network will
+ be automatically created.
+ This is important if this netwok will be used to generate acoustic scores
+ in a speech recognition decoder.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+SGD
+\emph default
+: this block specifies the parameters for stochastic gradient descent optimizati
+on.
+ In this example, a total of 25 epochs will be run using a fixed learning
+ schedule, with a learning rate of 0.8 for the first epoch, 3.2 for the next
+ 14 epochs, and then 0.08 for all remaining epochs.
+ A minibatch size of 256 will be used for the first epoch, and all remaining
+ epochs will use a minibatch size of 1024.
+ A momentum value of 0.9 will also be used.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+reader:
+\emph default
+ this example uses the HTKMLFReader.
+ For SimpleNetworkBuilder, the inputs must be called 
+\begin_inset Quotes eld
+\end_inset
+
+features
+\begin_inset Quotes erd
+\end_inset
+
+ and the output labels must be called 
+\begin_inset Quotes eld
+\end_inset
+
+labels
+\begin_inset Quotes erd
+\end_inset
+
+.
+ The scpFile contains the list of files to be processed and the mlfFile
+ contains the labels for these files.
+ More details about the HTKMLFReader can be found in Section 1.4.2.
 \end_layout
 
 \begin_layout Standard
-The acoustic is stored and accessed in the same way that the training acoustic
- data was stored.
- That is, a script file points to the precomputed acoustic features stored
- on disc as HTK-format paramater files.
- The setup assumes this script file is called TIMIT.core.scp.
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+TIMIT_TrainSimple=[     
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=train
+\end_layout
+
+\begin_layout Plain Layout
+
+  modelPath=$ExpDir$
+\backslash
+TrainSimpleNetwork
+\backslash
+model
+\backslash
+cntkSpeech.dnn
+\end_layout
+
+\begin_layout Plain Layout
+
+  deviceId=$DeviceNumber$
+\end_layout
+
+\begin_layout Plain Layout
+
+  traceLevel=1
+\end_layout
+
+\begin_layout Plain Layout
+
+  SimpleNetworkBuilder=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    layerSizes=792:512*3:183
+\end_layout
+
+\begin_layout Plain Layout
+
+    trainingCriterion=CrossEntropyWithSoftmax
+\end_layout
+
+\begin_layout Plain Layout
+
+    evalCriterion=ErrorPrediction
+\end_layout
+
+\begin_layout Plain Layout
+
+    layerTypes=Sigmoid
+\end_layout
+
+\begin_layout Plain Layout
+
+    initValueScale=1.0
+\end_layout
+
+\begin_layout Plain Layout
+
+    applyMeanVarNorm=true
+\end_layout
+
+\begin_layout Plain Layout
+
+    uniformInit=true
+\end_layout
+
+\begin_layout Plain Layout
+
+    needPrior=true
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  SGD=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    epochSize=0
+\end_layout
+
+\begin_layout Plain Layout
+
+    minibatchSize=256:1024
+\end_layout
+
+\begin_layout Plain Layout
+
+    learningRatesPerMB=0.8:3.2*14:0.08
+\end_layout
+
+\begin_layout Plain Layout
+
+    momentumPerMB=0.9
+\end_layout
+
+\begin_layout Plain Layout
+
+    maxEpochs=25
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  reader=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    readerType=HTKMLFReader
+\end_layout
+
+\begin_layout Plain Layout
+
+    readMethod=rollingWindow
+\end_layout
+
+\begin_layout Plain Layout
+
+    miniBatchMode=Partial
+\end_layout
+
+\begin_layout Plain Layout
+
+    randomize=Auto
+\end_layout
+
+\begin_layout Plain Layout
+
+    verbosity=1
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    features=[
+\end_layout
+
+\begin_layout Plain Layout
+
+      dim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+      scpFile=$ScpDir$
+\backslash
+TIMIT.train.scp.fbank.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+    labels=[
+\end_layout
+
+\begin_layout Plain Layout
+
+      mlfFile=$MlfDir$
+\backslash
+TIMIT.train.align_cistate.mlf.cntk
+\end_layout
+
+\begin_layout Plain Layout
+
+      labelDim=183
+\end_layout
+
+\begin_layout Plain Layout
+
+      labelMappingFile=$MlfDir$
+\backslash
+TIMIT.statelist
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+]  
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Adapting the learning rate based on development data
 \end_layout
 
 \begin_layout Standard
-The language model we supply is a simple bigram language model over the
- complete set of phones defined in the TIMIT corpus.
- It is provided as TIMIT.bigram.arpa.
+In addition to using a fixed learning schedule, CNTK can adjust the learning
+ rate based on the performance on a held out development set.
+ To do this, the development set needs to be specified using a second data
+ reader known as a 
+\begin_inset Quotes eld
+\end_inset
+
+cvReader
+\begin_inset Quotes erd
+\end_inset
+
+ and the appropriate learning rate adjustment parameters need to specified
+ using an 
+\begin_inset Quotes eld
+\end_inset
+
+AutoAdjust
+\begin_inset Quotes erd
+\end_inset
+
+ configuration block within the SGD configuration block.
+ For example, the following cvReader could be added to the configuration
+ file in the previous example as follows:
 \end_layout
 
 \begin_layout Standard
-In this example setup, we assume that the acoustic model consists of one
- left to right hidden Markov model for each of the 61 TIMIT phonetic symbols,
- and three states for every model, for a total of 183 acoustic model states.
- The self and forward transition probabilities for these states are stored
- in the file TIMIT.transitions and applied dynamically by the decoder during
- recognition.
- The TIMIT.tfsa file describes the core of the decoding graph, where paths
- through this finite state acceptor indicate how sequences of states of
- the acoustic model correspond to sequences of phone labels.
- The scores on this graph are the language model lookahead scores, that
- allow the decoder to properly rank partial hypotheses while pruning its
- beam through the search space, before the full language model probability
- is applied.
- The graph structure is a phonetic loop, with the symbol h# forced at the
- beginning and end of every path, and a restriction that two consecutive
- silence models are disallowed.
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+  cvReader=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    readerType=HTKMLFReader
+\end_layout
+
+\begin_layout Plain Layout
+
+    readMethod=rollingWindow
+\end_layout
+
+\begin_layout Plain Layout
+
+    miniBatchMode=Partial
+\end_layout
+
+\begin_layout Plain Layout
+
+    randomize=Auto
+\end_layout
+
+\begin_layout Plain Layout
+
+    verbosity=1
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    features=[
+\end_layout
+
+\begin_layout Plain Layout
+
+      dim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+      scpFile=$ScpDir$
+\backslash
+TIMIT.dev.scp.fbank.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+    labels=[
+\end_layout
+
+\begin_layout Plain Layout
+
+      mlfFile=$MlfDir$
+\backslash
+TIMIT.dev.align_cistate.mlf.cntk
+\end_layout
+
+\begin_layout Plain Layout
+
+      labelDim=183
+\end_layout
+
+\begin_layout Plain Layout
+
+      labelMappingFile=$MlfDir$
+\backslash
+TIMIT.statelist
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-The decoding graph is compiled from the TIMIT.tfsa, TIMIT.transitions, and
- TIMIT.lookahead files as follows:
+The learning rate adjustment is specified within the SGD block as follows.
 \end_layout
 
 \begin_layout Standard
-argon -precompile true -infsm TIMIT.tfsa -graph TIMIT.dg -transition-file
- TIMIT.transitions -lookahead-file TIMIT.lookahead
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+  SGD=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    epochSize=0
+\end_layout
+
+\begin_layout Plain Layout
+
+    minibatchSize=256:1024
+\end_layout
+
+\begin_layout Plain Layout
+
+    learningRatesPerMB=0.8:3.2*14:0.08
+\end_layout
+
+\begin_layout Plain Layout
+
+    momentumPerMB=0.9
+\end_layout
+
+\begin_layout Plain Layout
+
+    maxEpochs=25
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AutoAdjust=[
+\end_layout
+
+\begin_layout Plain Layout
+
+      autoAdjustLR=AdjustAfterEpoch
+\end_layout
+
+\begin_layout Plain Layout
+
+      reduceLearnRateIfImproveLessThan=0
+\end_layout
+
+\begin_layout Plain Layout
+
+      loadBestModel=true
+\end_layout
+
+\begin_layout Plain Layout
+
+      increaseLearnRateIfImproveMoreThan=1000000000
+\end_layout
+
+\begin_layout Plain Layout
+
+      learnRateDecreaseFactor=0.5
+\end_layout
+
+\begin_layout Plain Layout
+
+      learnRateIncreaseFactor=1.382
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-The decoding graph is used to recognize from HTK format paramater files
+In this example, the learning rate will be reduced by a factor of 0.5 if
+ the error on the held out data gets worse.
+ While the learning rate can also be increased based on the performance
+ on a held-out set, this is effectively turned off by setting the criterion
+ for increasing the learning rate to a high value.
+ 
+\end_layout
+
+\begin_layout Subsection
+Training a DNN with NDLNetworkBuilder
+\end_layout
+
+\begin_layout Standard
+While standard feedforward architectures are simple to specify with SimpleNetwor
+kBuilder, NDLNetworkBuilder can be used when alternative structures are
+ desired.
+ In this case, the SimpleNetworkBuilder configuration block in the previous
+ example is replaced with an NDLNetworkBuilder block.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+  NDLNetworkBuilder=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    ndlMacros=$NdlDir$
+\backslash
+default_macros.ndl
+\end_layout
+
+\begin_layout Plain Layout
+
+    networkDescription=$NdlDir$
+\backslash
+classify.ndl
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In this example, a file contained several NDL macros will be loaded and
+ then the NDL file containing the actual network description will be loaded.
+ Note that macros can be defined in both files.
+ For example, commonly used macros used across of variety of experiments
+ can be specified by ndlMacros while macros specific to a particular network
+ description can be specified within the networkDescription file.
+ This example creates the exact same network as the first case, but demonstrates
+ how it can be done using NDL.
+ 
+\end_layout
+
+\begin_layout Standard
+One key thing to note is that when NDL is used, there are no longer restrictions
+ on the names for the network's inputs and outputs.
+ In this case, the inputs are associated with a node called 
+\begin_inset Quotes eld
+\end_inset
+
+myFeatures
+\begin_inset Quotes erd
+\end_inset
+
+ and the labels are associated with a node called 
+\begin_inset Quotes eld
+\end_inset
+
+myLabels
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Note that these new node names need to be used in the 
+\emph on
+reader
+\emph default
+ block in the main configuration file.
+ 
+\end_layout
+
+\begin_layout Subsection
+Training an autoencoder
+\end_layout
+
+\begin_layout Standard
+Training an autoencoder is straightforward using either SimpleNetworkBuilder
+ or NDLNetworkBuilder by using the SquareError criterion node rather than
+ the CrossEntropyWithSoftmax criterion node.
+ In this example, the network is constructed with NDL.
+ Below is a snippet from the NDL file for this example.
+ This autoencoder has three hidden layers including a middle bottleneck
+ layer of 64 neurons.
+ A macro is defined to peform mean and variance normalization and it is
+ applied to both the input and target features.
+ Also, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+load=ndlMacroDefine 
+\end_layout
+
+\begin_layout Plain Layout
+
+run=ndlCreateNetwork
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+ndlMacroDefine=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  MeanVarNorm(x)
+\end_layout
+
+\begin_layout Plain Layout
+
+  {    		
+\end_layout
+
+\begin_layout Plain Layout
+
+    xMean = Mean(x)
+\end_layout
+
+\begin_layout Plain Layout
+
+    xStdDev = InvStdDev(x)
+\end_layout
+
+\begin_layout Plain Layout
+
+    xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+\end_layout
+
+\begin_layout Plain Layout
+
+  }
+\end_layout
+
+\begin_layout Plain Layout
+
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+  MSEBFF(x,r,c,labels)     
+\end_layout
+
+\begin_layout Plain Layout
+
+  {         
+\end_layout
+
+\begin_layout Plain Layout
+
+    BFF=BFF(x,r,c)
+\end_layout
+
+\begin_layout Plain Layout
+
+    MSE=SquareError(labels,BFF)
+\end_layout
+
+\begin_layout Plain Layout
+
+  } 
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\begin_layout Plain Layout
+
+ndlCreateNetwork=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  featInDim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+  featOutDim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+  hiddenDim=512
+\end_layout
+
+\begin_layout Plain Layout
+
+  bottleneckDim=64
+\end_layout
+
+\begin_layout Plain Layout
+
+  featIn=Input(featInDim,tag=feature)
+\end_layout
+
+\begin_layout Plain Layout
+
+  featOut=Input(featOutDim,tag=feature) 			       			        	
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+  featNormIn = MeanVarNorm(featIn)
+\end_layout
+
+\begin_layout Plain Layout
+
+  featNormOut = MeanVarNorm(featOut)
+\end_layout
+
+\begin_layout Plain Layout
+
+  L1 = SBFF(featNormIn,hiddenDim,featInDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+  L2 = SBFF(L1,bottleneckDim,hiddenDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+  L3 = SBFF(L2,hiddenDim,bottleneckDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+  MeanSqErr = MSEBFF(L3, featOutDim, hiddenDim, featNormOut,tag=criteria)
+\end_layout
+
+\begin_layout Plain Layout
+
+  OutputNodes=(MeanSqErr.BFF.FF.P)
+\end_layout
+
+\begin_layout Plain Layout
+
+  EvalNodes=(MeanSqErr)
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For an autoencoder the reader will process features for both the input and
+ desired output (targets) for the network.
+ Thus, the reader configuration block in the main configuration file has
+ two entries 
+\begin_inset Quotes eld
+\end_inset
+
+featIn
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+featOut
+\begin_inset Quotes erd
+\end_inset
+
+ that both have scpFiles specified.
+ In this case, they point to the same file, but this is not required.
+ For example, if a network was trained for feature enhancement, then featIn
+ could be reading the noisy features while featOut would be reading the
+ desired clean feature targets.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status collapsed
+
+\begin_layout Plain Layout
+
+featIn=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  scpFile=$ScpDir$
+\backslash
+TIMIT.train.scp.fbank.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+  dim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+featOut=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  scpFile=$ScpDir$
+\backslash
+TIMIT.train.scp.fbank.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+  dim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Using layer-by-layer discriminative pre-training
+\end_layout
+
+\begin_layout Standard
+It is well known that deep networks can be difficult to optimize, especially
+ when a limited amount of training data is available.
+ As a result, a number of aproaches to initializing the parameters of these
+ networks have been proposed.
+ One of these methods is known as discriminative pre-training.
+ In this approach, a network with a single hidden layer is trained starting
+ from random initialization.
+ Then the network is grown one layer at a time, from one hidden layer to
+ two hidden layers and so on.
+ Each model is initialized using the parameters learned from the previous
+ model and random initialization for of the topmost output layer.
+\end_layout
+
+\begin_layout Standard
+This process can be performed in CNTK using alternating steps of model training
+ and model editing using the Model Editing Language (MEL).
+ The config file example shows how to do this using a series of execution
+ commands.
+ The top level command contains five configuration blocks to execute in
+ sequence, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+command=TIMIT_DiscrimPreTrain1:TIMIT_AddLayer2:TIMIT_DiscrimPreTrain2:TIMIT_AddL
+ayer3:TIMIT_Train3
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This main configuration file is a good example of how certain config blocks
+ can be placed at the top level of the config file.
+ In this example, the 
+\emph on
+SGD
+\emph default
+ and 
+\emph on
+reader
+\emph default
+ blocks are shared across all stages of processing.
+ The first three configuration blocks to be processed are shown below:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+TIMIT_DiscrimPreTrain1=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=train
+\end_layout
+
+\begin_layout Plain Layout
+
+  modelPath=$ExpDir$
+\backslash
+TrainWithPreTrain
+\backslash
+dptmodel1
+\backslash
+cntkSpeech.dnn
+\end_layout
+
+\begin_layout Plain Layout
+
+  NDLNetworkBuilder=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    NetworkDescription=$NdlDir$
+\backslash
+create_1layer.ndl
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+TIMIT_AddLayer2=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=edit
+\end_layout
+
+\begin_layout Plain Layout
+
+  CurrLayer=1
+\end_layout
+
+\begin_layout Plain Layout
+
+  NewLayer=2
+\end_layout
+
+\begin_layout Plain Layout
+
+  CurrModel=$ExpDir$
+\backslash
+TrainWithPreTrain
+\backslash
+dptmodel1
+\backslash
+cntkSpeech.dnn
+\end_layout
+
+\begin_layout Plain Layout
+
+  NewModel=$ExpDir$
+\backslash
+TrainWithPreTrain
+\backslash
+dptmodel2
+\backslash
+cntkSpeech.dnn.0
+\end_layout
+
+\begin_layout Plain Layout
+
+  editPath=$MelDir$
+\backslash
+add_layer.mel
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+TIMIT_DiscrimPreTrain2=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=train
+\end_layout
+
+\begin_layout Plain Layout
+
+  modelPath=$ExpDir$
+\backslash
+TrainWithPreTrain
+\backslash
+dptmodel2
+\backslash
+cntkSpeech.dnn
+\end_layout
+
+\begin_layout Plain Layout
+
+  NDLNetworkBuilder=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    NetworkDescription=$NdlDir$
+\backslash
+create_1layer.ndl
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the first block, TIMIT_DiscrimPreTrain1, the initial model is trained
+ according to the network description language file 
+\begin_inset Quotes eld
+\end_inset
+
+create_1layer.ndl
+\begin_inset Quotes erd
+\end_inset
+
+ and stored in a folder called dptmodel1.
+ Next, in TIMIT_AddLayer2, the previous model is edited according to the
+ MEL script 
+\begin_inset Quotes eld
+\end_inset
+
+add_layer.mel
+\begin_inset Quotes erd
+\end_inset
+
+ which will add a layer to the existing model and write the new model out
+ to a new model file.
+ This script will process the variables set in this configuration block
+ that refer to the current layer, new layer, current model, and new model.
+ Note that the new model has an extension 
+\begin_inset Quotes eld
+\end_inset
+
+0
+\begin_inset Quotes erd
+\end_inset
+
+ and has been placed in a folder called 
+\begin_inset Quotes eld
+\end_inset
+
+dptlayer2
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Now, the third configuration block 
+\begin_inset Quotes eld
+\end_inset
+
+TIMIT_DiscrimPreTrain2
+\begin_inset Quotes erd
+\end_inset
+
+ will train a model to be located in the 
+\begin_inset Quotes eld
+\end_inset
+
+dptmodel2
+\begin_inset Quotes erd
+\end_inset
+
+ folder.
+ Because, the previous step created a model in that location with the extension
+ 
+\begin_inset Quotes eld
+\end_inset
+
+0
+\begin_inset Quotes erd
+\end_inset
+
+, the training tool will use that model as the initial model rather than
+ creating a model from scratch.
+ This process repeats itself until the network contains the total number
+ of layers desired.
+ 
+\end_layout
+
+\begin_layout Standard
+To see how a new layer is added, we can look at the MEL script 
+\begin_inset Quotes eld
+\end_inset
+
+add_layer.mel
+\begin_inset Quotes erd
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+m1=LoadModel($CurrModel$, format=cntk)
+\end_layout
+
+\begin_layout Plain Layout
+
+SetDefaultModel(m1)
+\end_layout
+
+\begin_layout Plain Layout
+
+HDim=512
+\end_layout
+
+\begin_layout Plain Layout
+
+L$NewLayer$=SBFF(L$CurrLayer$.S,HDim,HDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+SetInput(CE.*.T, 1, L$NewLayer$.S)
+\end_layout
+
+\begin_layout Plain Layout
+
+SetInput(L$NewLayer$.*.T, 1, L$CurrLayer$.S)
+\end_layout
+
+\begin_layout Plain Layout
+
+SaveModel(m1,$NewModel$, format=cntk)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In this script, the initial model is loaded and set as the default model.
+ A new layer is created using the macro SBFF (the default macros have been
+ loaded in the top-level configuration file).
+ Then the new connections are made, with the input to the cross entropy
+ layer of the existing model connected to the output of the new layer, and
+ the input of the new layer connected to the output of the previous model's
+ top layer.
+ The new model is then saved to the specified file.
+ Note that through the use of configuration variables, this same script
+ can be reused anytime a new layer can be added.
+ If different layer sizes were desired, the HDim variable could be set by
+ the higher level configuration file in the the appropriate edit block,
+ rather than from within the MEL script.
+ 
+\end_layout
+
+\begin_layout Subsection
+Training a network with multi-task learning
+\end_layout
+
+\begin_layout Standard
+One interesting approach to network training is multi-task learning, where
+ the network is trained to optmize two objective functions simultaneously.
+ This can be done in CNTK through the appropriate use of NDL.
+ Let's assume that we have a network specified in NDL that has three hidden
+ layers and output of the third hidden layer is defined as L3.
+ Furthermore, let's assume we want to create a network that optimizes a
+ weighted combination of phoneme classification and the dialect region of
+ the speaker (dr1, dr2, etc in the TIMIT corpus).
+ To do this, we first define a macro that can compute the weighted sum of
+ two nodes as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+WtObjFcn(o1,w1,o2,w2)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+  A1=Constant(w1)
+\end_layout
+
+\begin_layout Plain Layout
+
+  A2=Constant(w2)
+\end_layout
+
+\begin_layout Plain Layout
+
+  T1=Times(A1,o1)
+\end_layout
+
+\begin_layout Plain Layout
+
+  T2=Times(A2,o2)
+\end_layout
+
+\begin_layout Plain Layout
+
+  O=Plus(T1,T2)
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+This macro can then be used to create a network for multi-task learning.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#objective function 1 
+\end_layout
+
+\begin_layout Plain Layout
+
+BFF1=BFF(L3,LabelDim1,HiddenDim) 
+\end_layout
+
+\begin_layout Plain Layout
+
+CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag=eval)
+\end_layout
+
+\begin_layout Plain Layout
+
+FER1 = ErrorPrediction(labels,BFF1.FF.P,tag=eval)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# objective function 2
+\end_layout
+
+\begin_layout Plain Layout
+
+BFF2=BFF(L3,LabelDim2,HiddenDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag=eval)
+\end_layout
+
+\begin_layout Plain Layout
+
+FER2 = ErrorPrediction(regions,BFF2.FF.P,tag=eval)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# weighted final objective function
+\end_layout
+
+\begin_layout Plain Layout
+
+Alpha1=0.8
+\end_layout
+
+\begin_layout Plain Layout
+
+Alpha2=0.2
+\end_layout
+
+\begin_layout Plain Layout
+
+ObjFcn = WtObjFcn(CE1,Alpha1,CE2,Alpha2,tag=criteria)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# for decoding
+\end_layout
+
+\begin_layout Plain Layout
+
+ScaledLogLikelihood=Minus(BFF1.FF.P, LogPrior)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# root Nodes
+\end_layout
+
+\begin_layout Plain Layout
+
+OutputNodes=(ScaledLogLikelihood) 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The output of the hidden layer L3 is connected to two cross entropy nodes,
+ one that predicts 
+\begin_inset Quotes eld
+\end_inset
+
+labels
+\begin_inset Quotes erd
+\end_inset
+
+ which correspond to phonetic labels in this example, and one that predict
+ 
+\begin_inset Quotes eld
+\end_inset
+
+region
+\begin_inset Quotes erd
+\end_inset
+
+, the dialect region of the speaker.
+ The final criterion used for training is the weighted combination of these
+ two criteria.
+ By tagging the individual CrossEntropyWithSoftmax and ErrorPredition nodes
+ with the 
+\begin_inset Quotes eld
+\end_inset
+
+eval
+\begin_inset Quotes erd
+\end_inset
+
+ tag, the values of these nodes can also be monitored and logged during
+ training.
+ As before, the ScaledLogLikelihood is also computed for use in a decoder.
+ 
+\end_layout
+
+\begin_layout Subsection
+Training a network with multiple inputs
+\end_layout
+
+\begin_layout Standard
+There are instances where it's desirable to input multiple features into
+ a network, such as MFCC and FBANK coefficients.
+ In this case, multiple feature inputs (two, in this example) need to be
+ specified in the 
+\emph on
+reader
+\emph default
+, and the network needs to be constructed appropriately using NDL.
+ The following is a snippet from reader configuration block showing how
+ two different feature types, defined as 
+\emph on
+features1
+\emph default
+ and 
+\emph on
+features2
+\emph default
+ can be read, along with the phonetic labels.
+ In this case, the log mel filterbank features which are 72-dimensional
+ will use an 11-frame context window, while the MFCC features which are
+ 39-dimensional will use a single frame of input.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+features1=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  dim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+  scpFile=$ScpDir$
+\backslash
+TIMIT.train.scp.fbank.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\begin_layout Plain Layout
+
+features2=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  dim=39
+\end_layout
+
+\begin_layout Plain Layout
+
+  scpFile=$ScpDir$
+\backslash
+TIMIT.train.scp.mfcc.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+] 
+\end_layout
+
+\begin_layout Plain Layout
+
+labels=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  mlfFile=$MlfDir$
+\backslash
+TIMIT.train.align_cistate.mlf.cntk
+\end_layout
+
+\begin_layout Plain Layout
+
+  labelMappingFile=$MlfDir$
+\backslash
+TIMIT.statelist
+\end_layout
+
+\begin_layout Plain Layout
+
+  labelDim=183
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The NDL for constructing a network with these inputs and outputs can be
+ done in a number of ways.
+ One way is to contruct a macro that constructs a layer that takes two inputs,
  as follows:
 \end_layout
 
 \begin_layout Standard
-argon -graph i_lp.final.gzd.dg -lm TIMIT.bigram.arpa -am TIMIT.cntkSpeech.dnn -cntkmap
- TIMIT.dnn_map -beam 120 -max-tokens 5000 -acweight 1.0 -word_end_beam_frac
- 0.5 -infiles TIMIT.core.scp -outmlf TIMIT.core.rec.mlf
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SBFF2(input1,rowCount,colCount1,input2,colCount2)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+  B=Parameter(rowCount,init=fixedvalue,value=0)
+\end_layout
+
+\begin_layout Plain Layout
+
+  W1=Parameter(rowCount, colCount1)
+\end_layout
+
+\begin_layout Plain Layout
+
+  W2=Parameter(rowCount, colCount2)
+\end_layout
+
+\begin_layout Plain Layout
+
+  T1=Times(W1,input1) T2=Times(W2,input2)
+\end_layout
+
+\begin_layout Plain Layout
+
+  P1=Plus(T1,T2)
+\end_layout
+
+\begin_layout Plain Layout
+
+  P2=Plus(P1,B)
+\end_layout
+
+\begin_layout Plain Layout
+
+  S=Sigmoid(P2) 
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+This macro can then be used to create the network.
+ For example, inputs and the first layer would be declared using the NDL
+ code below.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+FeatDim1 = 792
+\end_layout
+
+\begin_layout Plain Layout
+
+FeatDim2 = 39
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+features1=Input(FeatDim1,tag=feature)
+\end_layout
+
+\begin_layout Plain Layout
+
+features2=Input(FeatDim2,tag=feature) 
+\end_layout
+
+\begin_layout Plain Layout
+
+labels=Input(LabelDim1,tag=label)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+featInput1=MeanVarNorm(features1) 
+\end_layout
+
+\begin_layout Plain Layout
+
+featInput2=MeanVarNorm(features2)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+L1 = SBFF2(featInput1, HiddenDim, FeatDim1, featInput2, FeatDim2)
+\end_layout
+
+\end_inset
+
+The rest of the hidden layers and the output layer with a cross entropy
+ objective function would be the same as previous examples.
+ Notice that the names and dimensionality of the input adn output data have
+ to the same in both the NDL model description and the reader configuration.
+ 
+\end_layout
+
+\begin_layout Subsection
+Evaluating networks and cross validation
+\end_layout
+
+\begin_layout Standard
+One a network has been trained, we would like to test its performance.
+ To do so, we use a configuration very similar to training, except the 
+\begin_inset Quotes eld
+\end_inset
+
+train
+\begin_inset Quotes erd
+\end_inset
+
+ action is replaced with the action 
+\begin_inset Quotes eld
+\end_inset
+
+eval
+\begin_inset Quotes erd
+\end_inset
+
+, and the data reader needs to be updated to process the development or
+ evaluation data rather than the training data.
+ Of course, the SGD optimization block is not necessary and can be omitted.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+action=eval
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+One version of cross validation is early stopping, where a fixed learning
+ schedule is used during training but all intermediate models are evaluated
+ and the one with the best performance on a development set is selected
+ for evaluation.
+ If you perform network training for a large number of epochs, you can efficient
+ly evaluate the performance of a series of models using the 
+\begin_inset Quotes eld
+\end_inset
+
+cv
+\begin_inset Quotes erd
+\end_inset
+
+ action.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+action=cv
+\end_layout
+
+\end_inset
+
+In addition, you can choose the models you wish to evaluate if you do not
+ want the output of every single epoch.
+ This is done using the 
+\begin_inset Quotes eld
+\end_inset
+
+crossValidationInterval
+\begin_inset Quotes erd
+\end_inset
+
+ configuration parameters, which takes 3 colon-separated terms which are
+ interpreted as a Matlab-style specification of an array.
+ In the following example, the models from epoch 0, 2, 4, etc.
+ up to the final epoch will be evaluated
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+crossValidationInterval=0:2:25
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Writing network outputs to files
+\end_layout
+
+\begin_layout Standard
+There are many examples where it is necessary to write either the output
+ or an internal representation of the network to a file.
+ In speech recognition, some common examples of this are writing the output
+ of the network to a file for decoding or construction of a tandem style
+ acoustic model, or writing the internal representation to create bottleneck
+ features.
+ CNTK support this by the use of the 
+\begin_inset Quotes eld
+\end_inset
+
+write
+\begin_inset Quotes erd
+\end_inset
+
+ action, the specification of a desired output node, and the use of a data
+ 
+\emph on
+writer
+\emph default
+.
+ To write data from a particular node, the node is specified using the configura
+tion parameter 
+\begin_inset Quotes eld
+\end_inset
+
+outputNodeNames
+\begin_inset Quotes erd
+\end_inset
+
+.
+ For example, for decoding, this would typically be the ScaledLogLikelihood
+ node.
+ A data reader is used to specify the names of the files that will be input
+ to the network and a data writer is used to specify the names of the files
+ to store the output.
+ All nodes specified in the reader and writer must have SCP files that have
+ a line-by-line correspondence to each other.
+ Data is read from the first feature file listed in the SCP file specified
+ in the reader and processed by the network.
+ The values at the desired output node are then passed to the writer and
+ written to the first file in the SCP file that corresponds to that node
+ in the writer configuration.
+ The rest of the files are processed in a similar manner, going line-by-line
+ down the SCP files in the reader and writer.
+ The data is written as an HTK format feature file with the 
+\begin_inset Quotes eld
+\end_inset
+
+USER
+\begin_inset Quotes erd
+\end_inset
+
+ parameter kind.
+ 
+\end_layout
+
+\begin_layout Standard
+In the following example, data from the autoencoder described previously
+ will be written to files.
+ In particular, the activations in the second hidden layer prior to the
+ sigmoid non-linearity will be captured.
+ This node is specified as 
+\begin_inset Quotes eld
+\end_inset
+
+L2.BFF.FF.P
+\begin_inset Quotes erd
+\end_inset
+
+.
+ node will be written to files.
+ The output file names are specified using the SCP file in the writer, which
+ is line-by-line parallel with the SCP file used by the reader.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+TIMIT_WriteBottleneck=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=write
+\end_layout
+
+\begin_layout Plain Layout
+
+  modelPath=$ExpDir$
+\backslash
+TrainAutoEncoder
+\backslash
+model
+\backslash
+cntkSpeech.dnn 
+\end_layout
+
+\begin_layout Plain Layout
+
+  outputNodeNames=L2.BFF.FF.P 
+\end_layout
+
+\begin_layout Plain Layout
+
+  reader=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    readerType=HTKMLFReader
+\end_layout
+
+\begin_layout Plain Layout
+
+    features=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    dim=792
+\end_layout
+
+\begin_layout Plain Layout
+
+    scpFile=$ScpDir$
+\backslash
+TIMIT.core.scp.fbank.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+  writer=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    writerType=HTKMLFWriter
+\end_layout
+
+\begin_layout Plain Layout
+
+    L2.BFF.FF.P = [
+\end_layout
+
+\begin_layout Plain Layout
+
+      dim=64
+\end_layout
+
+\begin_layout Plain Layout
+
+      scpFile=$ScpDir$
+\backslash
+TIMIT.core.scp.bottleneck.fullpath
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+  ]
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For writing scaled log likelihoods, the configuration file would look very
+ similar, except a different node would be specified, e.g.
+ ScaledLogLikelihood, and the writer should be changed appropriately.
+ 
+\end_layout
+
+\begin_layout Standard
+If you are unsure of the exact node name you need to specify, you can use
+ the 
+\begin_inset Quotes eld
+\end_inset
+
+dumpnode
+\begin_inset Quotes erd
+\end_inset
+
+ action with printValues set to false.
+ This will generate a text file listing of all valid nodes in the network.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+TIMIT_DumpNodes=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=dumpnode
+\end_layout
+
+\begin_layout Plain Layout
+
+  modelPath=$ExpDir$
+\backslash
+TrainAutoEncoder
+\backslash
+model
+\backslash
+cntkSpeech.dnn 
+\end_layout
+
+\begin_layout Plain Layout
+
+  printValues=false
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
