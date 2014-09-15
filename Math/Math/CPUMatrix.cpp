@@ -1510,6 +1510,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementDivideWith(const CPUMatrix<ElemType>& a)
+    {
+        if (a.IsEmpty() || IsEmpty())
+            throw std::logic_error("ColumnElementDivideWith: Matrix is empty.");
+
+        assert (a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
+        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
+            throw std::invalid_argument("ColumnElementDivideWith: The input matrix should be a col vector and match [this]'s rows.");
+
+        auto& us=*this;
+
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
+
+        ElemType smallValue = EPS_IN_INVERSE;
+#pragma omp parallel for     
+        for (long j=0; j<n; j++)
+        {
+            for (long i=0; i<m; i++)
+            {
+                ElemType v = a(i,0);
+                if (v >= 0 && v < smallValue)
+                    us(i,j) /= smallValue;
+                else if (v < 0 && v > -smallValue)
+                    us(i,j) /= (-smallValue);
+                else
+                    us(i,j) /= v;
+            }
+        }
+            
+        return *this;
+    }
+
 
     //[this]=1 ./ a
     template<class ElemType>

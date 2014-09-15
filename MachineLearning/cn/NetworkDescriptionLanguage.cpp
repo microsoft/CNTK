@@ -103,6 +103,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, PerDimMeanVarNormalizationNode<ElemType>::TypeName(),L"PerDimMVNorm"))
         ret = true;            
+    else if (EqualInsensitive(nodeType, PerDimMeanVarDeNormalizationNode<ElemType>::TypeName(),L"PerDimMVDeNorm"))
+        ret = true;            
     else if (EqualInsensitive(nodeType, ErrorPredictionNode<ElemType>::TypeName(), L"ClassificationError"))
         ret = true;    
     else if (EqualInsensitive(nodeType, DropoutNode<ElemType>::TypeName()))

@@ -183,6 +183,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& ColumnElementMultiplyWith(const Matrix<ElemType>& a);
         Matrix<ElemType>& RowElementMultiplyWith(const Matrix<ElemType>& a);
 
+        Matrix<ElemType>& ColumnElementDivideWith(const Matrix<ElemType>& a);
+
         Matrix<ElemType>& ElementInverse ();
         Matrix<ElemType>& AssignElementInverseOf (const Matrix<ElemType>& a);
 
