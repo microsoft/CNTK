@@ -349,9 +349,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
             Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight)  
         {
-            softmaxOfRight.AssignSoftmaxOf(inputFunctionValues1, true);
-            logSoftmaxOfRight.SetValue(softmaxOfRight);
-            logSoftmaxOfRight.InplaceLog();
+			logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
+			softmaxOfRight.SetValue(logSoftmaxOfRight);
+			softmaxOfRight.InplaceExp();
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues*=(-1);
 #if NANCHECK

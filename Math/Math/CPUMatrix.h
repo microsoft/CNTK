@@ -155,8 +155,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& InplaceTanh ();
         CPUMatrix<ElemType>& AssignTanhOf (const CPUMatrix<ElemType>& a);
 
-        CPUMatrix<ElemType>& InplaceSoftmax (const bool isColWise);
-        CPUMatrix<ElemType>& AssignSoftmaxOf (const CPUMatrix<ElemType>& a, const bool isColWise);
+        CPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
+        CPUMatrix<ElemType>& AssignLogSoftmaxOf (const CPUMatrix<ElemType>& a, const bool isColWise);
         
         CPUMatrix<ElemType>& InplaceSqrt ();
         CPUMatrix<ElemType>& AssignSqrtOf (const CPUMatrix<ElemType>& a);
