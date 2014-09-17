@@ -1711,8 +1711,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // first give criteria nodes as root node
             if (FinalCriterionNodes().size() > 0)
             {
-                for each (ComputationNodePtr node in FinalCriterionNodes())
+                for (ComputationNodePtr node : FinalCriterionNodes())
                 {
+					PrintComputationTree(node, false);
                     if(!allowFragment) FormRecurentLoops(node);
 					size_t actualMBSize = this->GetActualMBSize();
 					this->SetActualMiniBatchSize(actualMBSize);
@@ -1726,7 +1727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // now output nodes
             if (OutputNodes().size() > 0)
             {
-                for each (ComputationNodePtr node in OutputNodes())
+                for (ComputationNodePtr node : OutputNodes())
                     ValidateNetwork(node);
             }
             else if (!allowFragment)
@@ -1736,7 +1737,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // now evaluation nodes
             if (EvaluationNodes().size() > 0)
             {
-                for each (ComputationNodePtr node in EvaluationNodes())
+                for (ComputationNodePtr node : EvaluationNodes())
                     ValidateNetwork(node);
             }
         }

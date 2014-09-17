@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<ComputationNodePtr> inputs = m_net->GetNodesWithType(InputValue<ElemType>::TypeName());
             int minibatchMax = 0;
             bool minibatchDifferent = false; // flag to see if all the values are already the same
-            for each (ComputationNodePtr node in inputs)
+            for (ComputationNodePtr node : inputs)
             {
                 size_t cols = node->FunctionValues().GetNumCols();
                 if (cols != minibatchMax)
@@ -51,7 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (minibatchDifferent)
             {
-                for each (ComputationNodePtr node in inputs)
+                for (ComputationNodePtr node : inputs)
                 {
                     Matrix<ElemType>& matrix = node->FunctionValues();
                     size_t cols = matrix.GetNumCols();
@@ -143,31 +143,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodePtr>& compNodes)
 		{
 			NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
-			bool valid = (nodeArray != NULL && nodeArray->GetType() == ndlTypeArray) || m_net->FeatureNodes().size() > 0;
+			bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
+			if (!valid && nodeArray) //otherwise, see if we found a symbol
+			{
+				NDLType outputType = nodeArray->GetType();
+				// accept either an array of nodes, or a single node
+				valid = (outputType == ndlTypeArray || outputType == ndlTypeFunction || outputType == ndlTypeMacroCall);
+			}
 			if (!valid)
 				Error("Invalid network node definition for '%s', nonexistant or wrong type", symbolName.c_str());
 			if (nodeArray)
 			{
-				vector<NDLNode<ElemType>*> nodes = nodeArray->GetParameters();
+				vector<NDLNode<ElemType>*> nodes;
+				if (nodeArray->GetType() == ndlTypeArray)
+					nodes = nodeArray->GetParameters();
+				else
+					nodes.push_back(nodeArray);
+
 				for (size_t i=0; i<nodes.size(); i++)
 				{
                     // get the computation node 
                     ComputationNodePtr cnNode = (ComputationNodePtr)nodes[i]->GetEvalValue();
 
-                    // if no evaluation value exists and the NDL node is a dot name, look it up
-                    if (cnNode == nullptr && nodes[i]->GetType() == ndlTypeDotParameter)
+                    // if no evaluation value exists throw an error
+                    if (cnNode == nullptr)
                     {
-                        const std::wstring& name = msra::strfun::utf16(nodes[i]->GetName());
-                        if (m_net->NodeNameExist(name))
-                        {
-                            cnNode = m_net->GetNodeFromName(name);
-                            nodes[i]->SetEvalValue(cnNode);
-                        }
+						Error("Invalid node '%s' as an output node, nonexistant or wrong type", nodes[i]->GetName().c_str());
                     }
 
                     // see if it's already in the collection
                     bool found = false;
-                    for each (ComputationNodePtr compNode in compNodes)
+                    for (ComputationNodePtr compNode : compNodes)
                     {
                         if (cnNode == compNode)
                         {

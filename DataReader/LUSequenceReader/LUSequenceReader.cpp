@@ -503,7 +503,7 @@ void LUSequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
-        for each (auto name in names)
+        for (auto name : names)
         {
             ConfigParameters config = readerConfig(name);
             filesList.push_back(config("wfile"));
@@ -528,7 +528,7 @@ void LUSequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
             m_cachingWriter->GetSections(sections);
-            for each (auto pair in sections)
+            for (auto pair : sections)
             {
                 // TODO: we would need to add a sequenceMap type here as well
                 // or maybe change to heirarchal name (i.e. root.labelIn.map)
@@ -761,7 +761,7 @@ void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& sectionName
 
     labelInfo.mapIdToLabel = labelMapping;
     labelInfo.mapLabelToId.clear();
-    for each (std::pair<unsigned, LabelType> var in labelMapping)
+    for (std::pair<unsigned, LabelType> var : labelMapping)
     {
         labelInfo.mapLabelToId[var.second] = var.first;
     }

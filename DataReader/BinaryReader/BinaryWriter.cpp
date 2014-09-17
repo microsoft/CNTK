@@ -30,7 +30,7 @@ BinaryWriter<ElemType>::~BinaryWriter()
     m_sections.clear();
 
     // delete all the sectionfiles
-    for each (auto pair in m_secFiles)
+    for (auto pair : m_secFiles)
     {
         delete pair.second;
     }
@@ -328,7 +328,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     FindConfigNames(config, "sectionType", subsections);
 
     // look for any children and create them as well
-    for each (std::wstring subsection in subsections)
+    for (std::wstring subsection : subsections)
     {
         Section* newSection = CreateSection(config(subsection), section, records, windowSize);
     }
@@ -385,7 +385,7 @@ void BinaryWriter<ElemType>::Init(const ConfigParameters& config)
 template<class ElemType>
 void BinaryWriter<ElemType>::GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections)
 {
-    for each (auto pair in m_sections)
+    for (auto pair : m_sections)
     {
         sections[pair.first] = pair.second->GetSectionType();
     }
@@ -415,7 +415,7 @@ bool BinaryWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::ws
         throw runtime_error(message);
     }
     bool written = false;
-    for each (auto pair in m_sections)
+    for (auto pair : m_sections)
     {
         Section* section = pair.second;
         written = section->SaveData(recordStart, matrices, numRecords, datasetSize, byteVariableSized) || written;

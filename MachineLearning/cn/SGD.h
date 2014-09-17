@@ -472,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // set the minibatch size to the largest thing we will ever see
                 int maxMbSize = 0;
-                for each (int val in m_mbSize)
+                for (int val : m_mbSize)
                 {
                     maxMbSize = max(val, maxMbSize);
                 }
@@ -888,7 +888,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ptaskGraphBuilder->StartPTaskGraph();
 
                 // currently CNTK likes to keep things on the GPU, and PTask expects things to be on the CPU, so tell CNTK to keep data on the CPU
-                for each (std::pair<std::wstring, Matrix<ElemType>*> inpair in inputMatrices)
+                for (std::pair<std::wstring, Matrix<ElemType>*> inpair : inputMatrices)
                 {
                     Matrix<ElemType>* mat = inpair.second;
                     mat->SetPreferredDeviceId(CPUDEVICE);
@@ -1030,7 +1030,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // when the epoch is complete, we need to transfer all the values back to the LearnableNodes, which will be saved off as the model
                 std::list<ComputationNodePtr> learnableNodes = net.LearnableNodes(criterionNodes[0]);
-                for each (ComputationNodePtr node in learnableNodes)
+                for (ComputationNodePtr node : learnableNodes)
                 {
                     ptaskGraphBuilder->GetValue(node, node->FunctionValues());
                 }

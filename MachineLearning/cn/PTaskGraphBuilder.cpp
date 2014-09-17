@@ -162,7 +162,7 @@ void TaskDescriptor<ElemType>::ConfigureInputsAndOutputs(UINT& uidCounter, std::
     // get the counts of ports
     m_numInputPorts = 0;
     m_numOutputPorts = 0;
-    for each (ParamData<ElemType>* param in m_paramData)
+    for (ParamData<ElemType>* param : m_paramData)
     {
         if (param->options & paramOptionsInput)
             m_numInputPorts++;
@@ -189,7 +189,7 @@ void TaskDescriptor<ElemType>::ConfigureInputsAndOutputs(UINT& uidCounter, std::
 
     // create the ports for the other parameters
     int paramNum = 0;
-    for each (ParamData<ElemType>* param in m_paramData)
+    for (ParamData<ElemType>* param : m_paramData)
     {
         Port* port = NULL;
 
@@ -504,7 +504,7 @@ template<class ElemType>
 void TaskDescriptor<ElemType>::CreateBackAndInitChannel(Graph* graph, std::map<const std::string, PTask::GraphOutputChannel*>& outputNameToChannelsMap)
 {
     const vector<ParamData<ElemType>*>& params = this->GetParameters();
-    for each (const ParamData<ElemType>* param in params)
+    for (const ParamData<ElemType>* param : params)
     {
         // initialize the values at the beginning, copy from source matrix
         if ((param->options & (paramOptionsInitOnBOF | paramOptionsMaintainValue | paramOptionsInitalValuesOnDestinations)) && param->assocData != NULL)
@@ -548,14 +548,14 @@ void TaskDescriptor<ElemType>::CreateBackAndInitChannel(Graph* graph, std::map<c
 template<class ElemType>
 void PTaskGraphBuilder<ElemType>::PushActualMBSize(const std::list<ComputationNodePtr>& learnableNodes, size_t actualMBSize, PTask::CONTROLSIGNAL signal/*=DBCTLC_NONE*/)
 {
-    for each (ComputationNodePtr node in learnableNodes)
+    for (ComputationNodePtr node : learnableNodes)
     {
         std::string inputName = msra::strfun::utf8(node->NodeName())+"_actualMBSize";
         auto iter = m_inputNameToChannelsMap.find(inputName);
         if (iter == m_inputNameToChannelsMap.end())
             throw std::runtime_error("input channel not created for actualMBSize");
         std::vector<PTask::GraphInputChannel*>* channels = iter->second;
-        for each (PTask::GraphInputChannel* channel in *channels)
+        for (PTask::GraphInputChannel* channel : *channels)
         {
             Datablock* pblock = PTask::Runtime::AllocateDatablock(channel->GetTemplate(), (void *)&actualMBSize, sizeof(size_t), channel, PT_ACCESS_DEFAULT, signal);
             channel->Push(pblock);
@@ -570,14 +570,14 @@ void PTaskGraphBuilder<ElemType>::PushActualMBSize(const std::list<ComputationNo
 template<class ElemType>
 void PTaskGraphBuilder<ElemType>::PushData(std::map<std::wstring, Matrix<ElemType>*>& data, PTask::CONTROLSIGNAL signal/*=DBCTLC_NONE*/)
 {
-    for each (std::pair<std::wstring, Matrix<ElemType>*> pair in data)
+    for (std::pair<std::wstring, Matrix<ElemType>*> pair : data)
     {
         std::string inputName = msra::strfun::utf8(pair.first)+"_FunctionValues";
         auto iter = m_inputNameToChannelsMap.find(inputName);
         if (iter == m_inputNameToChannelsMap.end())
             throw std::runtime_error("input channel not created for data matrix");
         std::vector<PTask::GraphInputChannel*>* channels = iter->second;
-        for each (PTask::GraphInputChannel* channel in *channels)
+        for (PTask::GraphInputChannel* channel : *channels)
         {
             Matrix<ElemType>* matrix = pair.second;
             PushMatrix(*matrix, channel, signal);
@@ -658,7 +658,7 @@ void PTaskGraphBuilder<ElemType>::GetValue(ComputationNode<ElemType>* node, Matr
 template<class ElemType>
 void PTaskGraphBuilder<ElemType>::CreateOutputChannels(const vector<ComputationNodePtr>& nodes)
 {
-    for each (ComputationNode<ElemType>* node in nodes)
+    for (ComputationNode<ElemType>* node : nodes)
     {
         std::string nameOutChannel = msra::strfun::utf8(node->NodeName());
         std::string name = nameOutChannel+"_FunctionValues";
@@ -916,7 +916,7 @@ template<class ElemType>
 void PTaskGraphBuilder<ElemType>::UpdateParameters(void* sgd, const ElemType learnRatePerSample, const size_t expectedMBSize)
 {
     std::list<ComputationNodePtr> precompNodes = m_cn->GetNodesRequirePreComputation(nullptr, false);
-    for each (ComputationNodePtr node in precompNodes)
+    for (ComputationNodePtr node : precompNodes)
     {
         std::string name = msra::strfun::utf8(node->NodeName()) + "_FunctionValues";
         std::map<const std::string, std::vector<PTask::GraphInputChannel*>*>::iterator iter 
@@ -929,14 +929,14 @@ void PTaskGraphBuilder<ElemType>::UpdateParameters(void* sgd, const ElemType lea
             mat.TransferFromDeviceToDevice(mat.GetDeviceId(), CPUDEVICE, true);
 
             vector<GraphInputChannel*>* inChannels = iter->second;
-            for each (GraphInputChannel* input in *inChannels)
+            for (GraphInputChannel* input : *inChannels)
             {
                 PushMatrix(node->FunctionValues(), input);
             }
         }
     }
 
-    for each (std::pair<const std::string, TaskDescriptorPtr> pair in m_taskNameToTaskDescriptorMap)
+    for (std::pair<const std::string, TaskDescriptorPtr> pair : m_taskNameToTaskDescriptorMap)
     {
         const TaskDescriptorPtr taskDescriptor = pair.second;
         const std::vector<ParamData<ElemType>*>& params = taskDescriptor->GetParameters();
