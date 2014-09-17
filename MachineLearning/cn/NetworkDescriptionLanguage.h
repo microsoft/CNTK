@@ -353,16 +353,6 @@ public:
             // assign the parameter symbols in the script we will call with the values passed to the call
             m_script->AssignSymbol(paramName, nodeParam);
 
-            // look for the symbol already in the node evaluators symbols
-			// this code should not happen, it's looking in the computation network for parameter names, just wrong
-    //        const wstring& name = msra::strfun::utf16(paramName);
-    //        void* evalValue = nodeEval.FindSymbol(name);
-    //        // if it's there, use it
-    //        if (evalValue != NULL)
-    //        {
-				//assert(nullptr == nodeParam->GetEvalValue() || evalValue == nodeParam->GetEvalValue());
-    //            nodeParam->SetEvalValue(evalValue);
-    //        }
         }
 
         std::wstring newBase = baseName;
