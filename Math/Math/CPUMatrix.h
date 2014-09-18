@@ -145,7 +145,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignSigmoidOf (const CPUMatrix<ElemType>& a);
 
         CPUMatrix<ElemType>& InplaceLinearRectifierDerivative();
-        CPUMatrix<ElemType>& AssignLinearRectifierDerivativeOf (const CPUMatrix<ElemType>& a);
+        CPUMatrix<ElemType>& AssignLinearRectifierDerivativeOf(const CPUMatrix<ElemType>& a);
+
+        CPUMatrix<ElemType>& InplaceHardTanhDerivative();
+        CPUMatrix<ElemType>& AssignHardTanhDerivativeOf(const CPUMatrix<ElemType>& a);
 
         CPUMatrix<ElemType>& InplaceSigmoidDerivative();
         CPUMatrix<ElemType>& AssignSigmoidDerivativeOf (const CPUMatrix<ElemType>& a);

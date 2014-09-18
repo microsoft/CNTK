@@ -189,6 +189,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceLinearRectifierDerivative();
         Matrix<ElemType>& AssignLinearRectifierDerivativeOf (const Matrix<ElemType>& a);
 
+        Matrix<ElemType>& InplaceHardTanhDerivative();
+        Matrix<ElemType>& AssignHardTanhDerivativeOf(const Matrix<ElemType>& a);
+
         Matrix<ElemType>& InplaceSigmoidDerivative();
         Matrix<ElemType>& AssignSigmoidDerivativeOf (const Matrix<ElemType>& a);
 

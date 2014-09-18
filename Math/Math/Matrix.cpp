@@ -1839,6 +1839,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //[this]=hardtanh([this]) element wise
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::InplaceHardTanhDerivative()
+    {
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->InplaceHardTanhDerivative(),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return (*this);
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignHardTanhDerivativeOf(const Matrix<ElemType>& a)
+    {
+        DecideAndMoveToRightDevice(a, *this);
+        SwitchToMatrixType(a.GetMatrixType());
+
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            this,
+            this->m_CPUMatrix->AssignHardTanhDerivativeOf(*a.m_CPUMatrix),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
     //[this]=sigmoid([this]) element wise
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::InplaceSigmoidDerivative ()
