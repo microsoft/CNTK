@@ -312,19 +312,6 @@ public:
                 m_parameters.size(),m_paramMacro.size(),m_value.c_str());
         }
 
-		// on the initial pass we want to expand the macros out, 
-		// in other words make a copy of the global macro so we can call macros multiple times
-		// and have each instance refer to different nodes
-		//if (pass == ndlPassInitial)
-		//{
-		//	// make a copy of the script
-		//	NDLScript<ElemType>* macroScript = m_script;
-		//	m_script = new NDLScript<ElemType>(*macroScript);
-		//}
-        // we need to clear out the eval values, because we need to re-evaluate each time a macro is called
-        // otherwise, we look at the eval values from last time and think it is accurate
-        // m_script->ClearEvalValues();
-
         // assign the actual parameters in the script so we can execute it
         for (int i=0; i < m_parameters.size(); ++i)
         {
