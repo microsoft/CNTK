@@ -1616,6 +1616,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceHardTanhDerivative()
+    {
+        return AssignHardTanhDerivativeOf(*this);
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardTanhDerivativeOf(const CPUMatrix<ElemType>& a)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AssignLinearRectifierDerivativeOf: Matrix a is empty.");
+
+        auto& us = *this;
+        if (this != &a)
+            Resize(a.GetNumRows(), a.GetNumCols());
+
+        long m = (long)GetNumRows(), n = (long)GetNumCols();
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (long i = 0; i<(m & ~3); i += 4)
+            {
+                ElemType a11 = a(i, j);
+                ElemType a12 = a(i + 1, j);
+                ElemType a13 = a(i + 2, j);
+                ElemType a14 = a(i + 3, j);
+                us(i, j) = a11 > 0.0f && a11 < 1.0f ? 1.0f : 0.0f;
+                us(i + 1, j) = a12 > 0.0f && a12 < 1.0f ? 1.0f : 0.0f;
+                us(i + 2, j) = a13 > 0.0f && a13 < 1.0f ? 1.0f : 0.0f;
+                us(i + 3, j) = a14 > 0.0f && a14 < 1.0f ? 1.0f : 0.0f;
+            }
+            //handle remaining stuffs
+            for (long i = m & ~3; i<m; i++)
+            {
+                us(i, j) = a(i, j) > 0.0f && a(i, j) < 1.0f ? 1.0f : 0.0f;
+            }
+        }
+
+
+        return *this;
+    }
+
+    template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSigmoidDerivative ()
     {
         return AssignSigmoidDerivativeOf(*this);

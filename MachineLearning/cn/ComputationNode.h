@@ -1922,6 +1922,168 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TanhNode<double>;
 
     template<class ElemType>
+    class HardTanhNode : public ComputationNode<ElemType>
+    {
+        typedef ComputationNode<ElemType>* ComputationNodePtr;
+
+    public:
+        HardTanhNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode(deviceId), m_gradientOfHardTanh(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        HardTanhNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode(deviceId), m_gradientOfHardTanh(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"HardTanh"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("HardTanh only has one input.");
+            ComputeInputPartialS(m_gradientOfHardTanh, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfHardTanh, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+            gradientOfHardTanh.AssignHardTanhDerivativeOf(inputFunctionValues);
+            inputGradientValues.AddElementProductOf(gradientValues, gradientOfHardTanh);
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("HardTanh only has one input.");
+
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            ComputeInputPartialS(m_gradientOfHardTanh, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            functionValues.SetValue(inputFunctionValues);
+            functionValues.InplaceTruncate(1.0); 
+        }
+
+
+        // GetTaskDescriptor - Get a task descriptor for this node
+        // taskType - task type we are generating a task for
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
+        {
+            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+            switch (taskType)
+            {
+            case taskComputeInputPartial:
+                descriptor->MatrixParam(m_gradientOfHardTanh, "GradientOfHardTanh", paramOptionsInput | paramOptionsTemporary);
+                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
+                descriptor->GradientParam();
+                descriptor->FunctionParam(-1, paramOptionsInput);
+                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
+                break;
+            case taskEvaluate:
+                descriptor->FunctionParam();
+                descriptor->FunctionParam(0, paramOptionsInput);
+                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
+                break;
+            default:
+                assert(false);
+                throw std::logic_error("Unsupported task requested");
+            }
+            return descriptor;
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("HardTanh operation should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("HardTanh  operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_gradientOfHardTanh.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void MoveMatricesToDevice(const short deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_gradientOfHardTanh.GetDeviceId() != deviceId)
+                    m_gradientOfHardTanh.TransferFromDeviceToDevice(m_gradientOfHardTanh.GetDeviceId(), deviceId);
+            }
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            HardTanhNode<ElemType>* node = (HardTanhNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_gradientOfHardTanh = m_gradientOfHardTanh;
+            }
+        }
+
+        // copy constructor
+        HardTanhNode(const HardTanhNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode(node->m_deviceId), m_gradientOfHardTanh(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new HardTanhNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    private:
+        Matrix<ElemType> m_gradientOfHardTanh;
+    };
+
+    template class HardTanhNode<float>;
+    template class HardTanhNode<double>;
+
+    template<class ElemType>
     class LogNode : public ComputationNode<ElemType>
     {
         typedef ComputationNode<ElemType>* ComputationNodePtr; 
