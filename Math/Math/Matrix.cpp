@@ -1741,6 +1741,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::ColumnElementDivideWith(const Matrix<ElemType>& a)
+    {
+        if (a.IsEmpty() || IsEmpty())
+            throw std::logic_error("ColumnElementDivideWith: Matrix is empty.");
+
+        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
+            throw std::invalid_argument("ColumnElementDivideWith: The input matrix should be a col vector and match [this]'s rows.");
+
+        DecideAndMoveToRightDevice(*this, a);
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        SwitchToMatrixType(a.GetMatrixType());
+
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            this,
+            this->m_CPUMatrix->ColumnElementDivideWith(*a.m_CPUMatrix), 
+            this->m_GPUMatrix->ColumnElementDivideWith(*a.m_GPUMatrix), 
+            NOT_IMPLEMENTED, 
+            NOT_IMPLEMENTED
+            );
+                
+        return *this;
+    }
+
+
     //[this]=1 ./ a
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::ElementInverse ()
@@ -3856,7 +3884,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return r; 
     }
 
-    template<class ElemType>
+	template<class ElemType>
+	ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
+	{
+		ElemType temp, diff, z;
+
+		if (x < y) {
+			temp = x; x = y; y = temp;
+		}
+		diff = y - x;
+		if (diff < MINLOGEXP)
+		{
+			return (x < LSMALL) ? LZERO : x;
+		}
+		else
+		{
+			z = exp(diff);
+			return x + log(1.0 + z);
+		}
+	}
+
+	template<class ElemType>
     void Matrix<ElemType>::ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& wgt,
         const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
         const Matrix<ElemType>* idx2cls,  Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore)

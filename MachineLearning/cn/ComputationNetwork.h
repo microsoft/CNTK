@@ -750,6 +750,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new MatrixL2RegNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName() || nodeType==L"PerDimMeanVarNormalizationNode") // mseltzer - hack b/c this changed (Dong?) and old models didn't load...
                 newNode = new PerDimMeanVarNormalizationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);            
+            else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() || nodeType==L"PerDimMeanVarDeNormalizationNode") // mseltzer - hack b/c this changed (Dong?) and old models didn't load...
+                newNode = new PerDimMeanVarDeNormalizationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())
                 newNode = new ErrorPredictionNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);    
             else if (nodeType == DropoutNode<ElemType>::TypeName())
@@ -903,6 +905,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new MatrixL2RegNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName())
                 newNode = new PerDimMeanVarNormalizationNode<ElemType>(m_deviceId, nodeName);        
+            else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName())
+                newNode = new PerDimMeanVarDeNormalizationNode<ElemType>(m_deviceId, nodeName);        
             else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())
                 newNode = new ErrorPredictionNode<ElemType>(m_deviceId, nodeName);    
             else if (nodeType == DropoutNode<ElemType>::TypeName())
@@ -987,6 +991,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr PerDimMeanVarNormalization (const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new PerDimMeanVarNormalizationNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(feature, mean, InvStdDev);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr PerDimMeanVarDeNormalization (const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new PerDimMeanVarDeNormalizationNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(feature, mean, InvStdDev);
             AddNodeToNet(newNode);
             return newNode;
