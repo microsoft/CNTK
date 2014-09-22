@@ -8,10 +8,16 @@
 #include "fileutil.h"
 #include "Matrix.h"
 #include <assert.h>
+#include <math.h>
 
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning (disable: 4239) // nonstandard extension; triggered by this pattern: "auto& second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;"
 #pragma warning (disable: 4702) // unreachable code; triggered for unknown reasons
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
 
 //before calling the following macro the current matrix location and matrix type on MatrixPointerToCheck must have been set correctly
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
@@ -218,7 +224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    Matrix<ElemType>::Matrix(FILE* f, const char * matrixName, short deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE)
+    Matrix<ElemType>::Matrix(FILE* f, const char * matrixName, short deviceId, const MatrixType matrixType)
     {
         if (deviceId == MANAGEDEXTERN)
             throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue()\n");            
@@ -256,7 +262,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, short deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE)
+    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, short deviceId, const MatrixType matrixType)
     {
         if (deviceId == MANAGEDEXTERN)
             throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
@@ -294,7 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, short deviceId=AUTOPLACEMATRIX, const size_t nnz=0)
+    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, short deviceId, const size_t nnz)
     {
         Init(deviceId);
 
@@ -332,7 +338,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //copy constructor, deep copy
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, short deviceId=AUTOPLACEMATRIX)
+    Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, short deviceId)
     {
         if (deviceId == MANAGEDEXTERN)
             throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
@@ -519,7 +525,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED;
         }
         else 
+        {
+#ifndef LINUX
             throw std::exception("Unknown matrix type");
+#else
+            throw std::exception();
+#endif	/* LINUX */
+        }
     }
      
     template<class ElemType>
@@ -608,7 +620,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED;
         }
         else 
+        {
+#ifndef	LINUX
             throw std::exception("Unknown matrix type");
+#else
+            throw std::exception();
+#endif	/* LINUX */
+        }
 
         return slice;
     }
@@ -820,7 +838,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->SetValue(*db_number.ExposePointer2Value()), 
-            if (GetDeviceId()!=db_number.GetDeviceId()) throw std::exception("Matrix and device bound number must be on the same device");
+            if (GetDeviceId()!=db_number.GetDeviceId()) 
+            {
+#ifndef	LINUX
+                throw std::exception("Matrix and device bound number must be on the same device");
+#else
+                throw std::exception();
+#endif	/* LINUX */
+            }
             m_GPUMatrix->SetValue(db_number.ExposePointer2Value()), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
@@ -889,7 +914,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //WARNING: what's the exact meaning of MANAGEDEXTERN here? This is not handled currently
     template<class ElemType>
-    void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, int deviceId=MANAGEDEXTERN)
+    void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, int deviceId)
     {
         if (pArray == nullptr)
             throw std::invalid_argument("Invalid pArray.");
@@ -1054,7 +1079,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //maskRate: percentage of values masked out (similar to dropout rate)
     //scaleValue: which scale value to set to the left ones (unmasked items).
     template<class ElemType>
-    void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed=USE_TIME_BASED_SEED)
+    void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
     {
         if (IsEmpty())
             throw std::logic_error("SetUniformRandomMask: Matrix is empty.");
@@ -2308,24 +2333,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (sizeof(ElemType)==sizeof(float))
         {
-            if (!_finitef((float)threshold))
+            if (!isfinite((float)threshold))
                 return *this;
         }
         else
         {
-            if (!_finite(threshold))
+            if (!isfinite(threshold))
                 return *this;
         }
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->InplaceTruncate(threshold), 
-            this->m_GPUMatrix->InplaceTruncateTop(abs(threshold)); this->m_GPUMatrix->InplaceTruncateBottom(-abs(threshold)), 
+            this->m_GPUMatrix->InplaceTruncateTop(fabs(threshold)); this->m_GPUMatrix->InplaceTruncateBottom(-fabs(threshold)), 
             this->m_CPUSparseMatrix->InplaceTruncate(threshold),
             if(this->m_GPUSparseMatrix->m_legacy)
             {
-                this->m_GPUSparseMatrix->InplaceTruncateTop(abs(threshold));
-                this->m_GPUSparseMatrix->InplaceTruncateBottom(-abs(threshold));
+                this->m_GPUSparseMatrix->InplaceTruncateTop(fabs(threshold));
+                this->m_GPUSparseMatrix->InplaceTruncateBottom(-fabs(threshold));
             }
             else //new GPU Sparse matrix
             {
@@ -2345,12 +2370,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (sizeof(ElemType)==sizeof(float))
         {
-            if (!_finitef((float)threshold))
+            if (!isfinite((float)threshold))
                 return *this;
         }
         else
         {
-            if (!_finite(threshold))
+            if (!isfinite(threshold))
                 return *this;
         }
 
@@ -2374,7 +2399,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (sizeof(ElemType)==sizeof(float))
         {
-            if (!_finitef((float)threshold))
+		    if (!isfinite((float)threshold))
         {
                 (*this) = a;
                 return *this;
@@ -2382,7 +2407,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         else
         {
-            if (!_finite(threshold))
+            if (!isfinite(threshold))
             {
                 (*this) = a;
                 return *this;
@@ -2412,12 +2437,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (sizeof(ElemType)==sizeof(float))
         {
-            if (!_finitef((float)threshold))
+            if (!isfinite((float)threshold))
                 return *this;
             }
         else
         {
-            if (!_finite(threshold))
+            if (!isfinite(threshold))
                 return *this;
             }
 
@@ -2440,7 +2465,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (sizeof(ElemType)==sizeof(float))
         {
-            if (!_finitef((float)threshold))
+            if (!isfinite((float)threshold))
             {
                 (*this) = a;
                 return *this;
@@ -2448,7 +2473,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         else
         {
-            if (!_finite(threshold))
+            if (!isfinite(threshold))
             {
                 (*this) = a;
                 return *this;
@@ -3396,7 +3421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (a.m_matrixType==MatrixType::SPARSE && b.m_matrixType==c.m_matrixType && b.m_matrixType==MatrixType::DENSE) //Sparse*Dense+Dense
             {
-                auto& second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
+                GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
                 GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha,*a.m_GPUSparseMatrix,transposeA,second,beta,*c.m_GPUMatrix);    
                 c.SetDataLocation(GPU, DENSE);
             }
@@ -3409,8 +3434,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else 
                 {
-                    auto& first = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
-                    auto& second = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
+                    GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
+                    GPUMatrix<ElemType> & first= firstDummy;				// By Malcolm.. gcc doesn't support auto
+                    GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
+                    GPUSparseMatrix<ElemType> & second = secondDummy;			// By Malcolm.. gcc doesn't support auto
                     if (beta==0)
                     {
                         GPUSparseMatrix<ElemType>::Multiply(first,second,*c.m_GPUMatrix);
@@ -3432,7 +3459,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (a.m_matrixType==b.m_matrixType && b.m_matrixType==c.m_matrixType && a.m_matrixType==MatrixType::SPARSE)
             {
-                auto& first = alpha==1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix)*alpha;
+                GPUSparseMatrix<ElemType> firstDummy = alpha==1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix)*alpha;
+                GPUSparseMatrix<ElemType> & first = firstDummy;				 // By Malcolm.. gcc doesn't support auto
                 if (beta==0)
                 {
                     GPUSparseMatrix<ElemType>::Multiply(first,transposeA,*b.m_GPUSparseMatrix,transposeB,*c.m_GPUSparseMatrix);   
@@ -3897,18 +3925,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool Matrix<ElemType>::HasNan (const char * name) const
     {
-#if 0
-        name;
-        return false;
-#else
-        const auto & us = *this;
+        // const auto & us = *this;
+        const Matrix<ElemType> & us = *this;
+
         foreach_coord (i, j, us)
-            if (_isnan (us(i,j)))
+            // if (isnan (us(i,j)))
+            if (isnan (us(i,j)))
             {
-                fprintf (stderr, "hasnan: NaN detected at %s (%d,%d)\n", name, i, j);
+                fprintf (stderr, "hasnan: NaN detected at %s (%ld,%ld)\n", name, i, j);
                 return true;
             }
-#endif
             return false;
     }
 #define CheckNan(m) m.HasNan (#m)
@@ -3924,7 +3950,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         foreach_coord (i, j, us)
         {
             auto val = us(i,j);
-            if (_isnan (val) || !_finite (val))
+            if (isnan (val) || !isfinite (val))
                 n++;
         }
         return n;

@@ -15,7 +15,9 @@
 #include "CPUSparseMatrix.h"
 #include <random>
 #include <chrono>
+#ifndef	LINUX
 #include <Windows.h>
+#endif	/* LINUX */
 #ifdef LEAKDETECT
 #include <vld.h>
 #endif
@@ -90,70 +92,77 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::ZeroInit()
     {   
-        m_numRows = 0;
-        m_numCols = 0;
-        m_elemSizeAllocated = 0;
-        m_externalBuffer = false;
-        m_pArray = NULL;
-        m_computeDevice = CPUDEVICE;
-        m_nz = 0;
-        m_matrixName = NULL;   
+        this->m_numRows = 0;
+        this->m_numCols = 0;
+        this->m_elemSizeAllocated = 0;
+        this->m_externalBuffer = false;
+        this->m_pArray = NULL;
+        this->m_computeDevice = CPUDEVICE;
+        this->m_nz = 0;
+        this->m_matrixName = NULL;   
 
-        if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+        if(this->m_format == MatrixFormat::matrixFormatSparseCSC || this->m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
-            m_colIdx = -1;
-            m_val = NULL;
-            m_row = NULL;
-            m_pb = NULL;
+            this->m_colIdx = -1;
+            this->m_val = NULL;
+            this->m_row = NULL;
+            this->m_pb = NULL;
         } 
-        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        else if (this->m_format == MatrixFormat::matrixFormatSparseBlockCol || this->m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
-            m_blockSize = 0;      
-            m_blockVal = NULL;
-            m_blockIds = NULL;
+            this->m_blockSize = 0;      
+            this->m_blockVal = NULL;
+            this->m_blockIds = NULL;
         }
     }
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format)
     {
+        this->CheckInit(format);
+    }
+
+    //should only be used by constructors.
+    template<class ElemType>
+    void CPUSparseMatrix<ElemType>::CheckInit(const MatrixFormat format)
+    {   
         if(format != MatrixFormat::matrixFormatSparseCSC && format != MatrixFormat::matrixFormatSparseCSR && format != MatrixFormat::matrixFormatSparseBlockCol && format != MatrixFormat::matrixFormatSparseBlockRow) 
         {
             throw std::logic_error("CPUSparseMatrix:  unsupported sparse matrix format");
         }
-        m_format = format;
+        this->m_format = format;
         ZeroInit();
     }
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
-    {   CPUSparseMatrix<ElemType>::CPUSparseMatrix(format);
+    {   this->CheckInit(format);
         Resize(numRows, numCols, size);
     }
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
     {       
-        if (m_matrixName!=NULL) 
+        if (this->m_matrixName!=NULL) 
         {
-            delete[] m_matrixName;
-            m_matrixName = nullptr;
+            delete[] this->m_matrixName;
+            this->m_matrixName = nullptr;
         }
-        if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+        if(this->m_format == MatrixFormat::matrixFormatSparseCSC || this->m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
-            if(m_val != NULL) 
-                delete[] m_val;
-            if(m_row != NULL) 
-                delete[] m_row;
-            if(m_pb != NULL)
-                delete[] m_pb;
+            if(this->m_val != NULL) 
+                delete[] this->m_val;
+            if(this->m_row != NULL) 
+                delete[] this->m_row;
+            if(this->m_pb != NULL)
+                delete[] this->m_pb;
         }  
-        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        else if (this->m_format == MatrixFormat::matrixFormatSparseBlockCol || this->m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
-            if(m_blockVal != NULL) 
-                delete[] m_blockVal;
-            if(m_blockIds != NULL) 
-                delete[] m_blockIds;
+            if(this->m_blockVal != NULL) 
+                delete[] this->m_blockVal;
+            if(this->m_blockIds != NULL) 
+                delete[] this->m_blockIds;
         }
     }
 
@@ -167,76 +176,76 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, const ElemType v)
     {
-        if(m_format != MatrixFormat::matrixFormatSparseCSC && m_format != MatrixFormat::matrixFormatSparseCSR) 
+        if(this->m_format != MatrixFormat::matrixFormatSparseCSC && this->m_format != MatrixFormat::matrixFormatSparseCSR) 
         {
             throw std::logic_error("CPUSparseMatrix:  unsupported SetValue() call.");
         }
 
-        if(m_elemSizeAllocated < m_nz +1) {
+        if(this->m_elemSizeAllocated < this->m_nz +1) {
             throw std::logic_error("CPUSparseMatrix:  allocated size is too small.");
         }
 
-        if(rIdx < 0 || rIdx >= m_numRows) {
+        if(rIdx < 0 || rIdx >= this->m_numRows) {
             throw std::logic_error("CPUSparseMatrix: SetValue() invalid row id");
         }
 
-        if(cIdx < 0 || cIdx >= m_numCols) {
+        if(cIdx < 0 || cIdx >= this->m_numCols) {
             throw std::logic_error("CPUSparseMatrix: SetValue() invalid column id");
         }
 
-        size_t r = (m_format == matrixFormatSparseCSC) ? rIdx: cIdx;
-        size_t c = (m_format == matrixFormatSparseCSC) ? cIdx: rIdx;
+        size_t r = (this->m_format == matrixFormatSparseCSC) ? rIdx: cIdx;
+        size_t c = (this->m_format == matrixFormatSparseCSC) ? cIdx: rIdx;
 
-        m_val[m_nz] = v;
-        m_row[m_nz] = r;
+        this->m_val[this->m_nz] = v;
+        this->m_row[this->m_nz] = r;
 
         //consistency check
-        if(c == m_colIdx && r <= m_row[m_nz-1]) 
+        if(c == this->m_colIdx && r <= this->m_row[this->m_nz-1]) 
         {
             throw std::logic_error("CPUSparseMatrix:  SetValue is not called properly");
         }
 
-        if (c != m_colIdx) 
+        if (c != this->m_colIdx) 
         {
             m_pb[c] = m_nz;
             m_colIdx = (int) c;
         } 
-        m_pb[c+1] = m_nz+1;
-        m_nz++;
+        this->m_pb[c+1] = this->m_nz+1;
+        this->m_nz++;
     }
 
     template<class ElemType>
     ElemType* CPUSparseMatrix<ElemType>::BufferPointer() const
     {
-        if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+        if(this->m_format == MatrixFormat::matrixFormatSparseCSC || this->m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
-            return m_val;
+            return this->m_val;
         }  
         else
         {
-            return m_blockVal;
+            return this->m_blockVal;
         }
     }
 
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t size)
     {               
-        m_nz = 0; 
-        m_colIdx = -1;
-        m_numRows = numRows;
-        m_numCols = numCols;            
+        this->m_nz = 0; 
+        this->m_colIdx = -1;
+        this->m_numRows = numRows;
+        this->m_numCols = numCols;            
         
-        if(m_elemSizeAllocated < size) 
+        if(this->m_elemSizeAllocated < size) 
         {                
-            m_elemSizeAllocated = size;
-            if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+            this->m_elemSizeAllocated = size;
+            if(this->m_format == MatrixFormat::matrixFormatSparseCSC || this->m_format == MatrixFormat::matrixFormatSparseCSR) 
             {
-                if(m_val != NULL) 
-                    delete[] m_val;
-                if(m_row != NULL) 
-                    delete[] m_row;
-                if(m_pb != NULL) 
-                    delete[] m_pb; 
+                if(this->m_val != NULL) 
+                    delete[] this->m_val;
+                if(this->m_row != NULL) 
+                    delete[] this->m_row;
+                if(this->m_pb != NULL) 
+                    delete[] this->m_pb; 
                 
                 //int len = m_format == MatrixFormat::matrixFormatSparseCSC ? numCols : numRows;
                 size_t len = numCols > numRows ? numCols : numRows;
@@ -245,12 +254,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_pb = new size_t[len+1];  
                 
             } 
-            else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+            else if(this->m_format == MatrixFormat::matrixFormatSparseBlockCol || this->m_format == MatrixFormat::matrixFormatSparseBlockRow) 
             {
-                if(m_blockVal != NULL) 
-                    delete[] m_blockVal;
-                if(m_blockIds != NULL) 
-                    delete[] m_blockIds;
+                if(this->m_blockVal != NULL) 
+                    delete[] this->m_blockVal;
+                if(this->m_blockIds != NULL) 
+                    delete[] this->m_blockIds;
 
                 size_t max = numCols > numRows ? numCols : numRows;
                 m_blockVal = new ElemType[size];                
@@ -263,9 +272,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::Reset()
     {                
-        m_nz = 0;
-        m_colIdx = -1;
-        m_blockSize = 0;
+        this->m_nz = 0;
+        this->m_colIdx = -1;
+        this->m_blockSize = 0;
     }
 
     //c = op(a) * op(this) or c += op(a) * op(this) 
@@ -489,7 +498,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         else 
         {
+#ifndef	LINUX
             throw std::exception("CPUSparseMatrix:: ScaleAndAdd() Not implemented");
+#else
+            throw std::exception();
+#endif	/* LINUX */
         }
     }
 
@@ -509,7 +522,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignSoftmaxOf: Matrix a, class, idx2cls or label is empty.");
 
         if(etp.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
+#ifndef	LINUX
             throw std::exception("CPUSparseMatrix:: ClassEntropy() only support CSC");  
+#else
+            throw std::exception();  
+#endif	/* LINUX */
 
         size_t nC = cls.GetNumCols();
         size_t nV = label.GetNumRows() - nC;
@@ -682,7 +699,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             c.SetValue(0.0);
         }
 
-        if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        if(this->m_format == MatrixFormat::matrixFormatSparseBlockCol || this->m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
             for(size_t j = 0; j < m_blockSize; j++) 
             {
@@ -701,7 +718,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         else 
         {
+#ifndef	LINUX
             throw std::exception("CPUSparseMatrix:: NormalGrad() only support block sparse format");
+#else
+            throw std::exception();
+#endif	/* LINUX */
         }
     }
 
@@ -716,7 +737,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         const ElemType floor = 1e-16f;
-        if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+        if(this->m_format == MatrixFormat::matrixFormatSparseCSC || this->m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
             size_t col_num = (m_format == MatrixFormat::matrixFormatSparseCSC) ? GetNumCols() : GetNumRows();
             for(size_t j = 0; j < col_num; j++) 
@@ -737,7 +758,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     c(row, col) = adenorm; 
                 }
             }
-        } else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        } else if(this->m_format == MatrixFormat::matrixFormatSparseBlockCol || this->m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
             for(size_t j = 0; j < m_blockSize; j++)
             {
@@ -746,7 +767,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t start = j* len;
                 for(size_t p = start; p < start+len; p++) 
                 {
-                    ElemType val = m_blockVal[p];
+                    ElemType val = this->m_blockVal[p];
 
                     size_t row = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
@@ -763,7 +784,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
-        if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        if(this->m_format == MatrixFormat::matrixFormatSparseBlockCol || this->m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
             ElemType locThresholdPos = abs(threshold);
             ElemType locTHresholdNeg = -locThresholdPos; 
@@ -774,20 +795,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t start = j* len;
                 for (size_t p = start; p < start+len; p++)
                 {
-                    if (m_blockVal[p] > locThresholdPos)
+                    if (this->m_blockVal[p] > locThresholdPos)
                     {
-                        m_blockVal[p] = locThresholdPos;
+                        this->m_blockVal[p] = locThresholdPos;
                     }
-                    else if (m_blockVal[p] < locTHresholdNeg)
+                    else if (this->m_blockVal[p] < locTHresholdNeg)
                     {
-                        m_blockVal[p] = locTHresholdNeg;
+                        this->m_blockVal[p] = locTHresholdNeg;
                     }
                 }
             }
         } 
         else 
         {
+#ifndef	LINUX
             throw std::exception("CPUSparseMatrix:: InplaceTruncate() only support block based sparse matrix");
+#else
+            throw std::exception();
+#endif	/* LINUX */
         }
         return *this;
     }    

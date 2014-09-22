@@ -123,13 +123,18 @@ public:
     template <typename T>
     File& operator<<(T val)
     {
+#ifndef	LINUX
         attempt([=]()
+#endif
         {
             if (IsTextBased())
                 fputText(m_file, val);
             else
                 fput(m_file, val);
-        });
+        }
+#ifndef	LINUX
+        );
+#endif
         return *this;
     }
     File& operator<<(const std::wstring& val);
@@ -156,13 +161,18 @@ public:
     template <typename T>
     File& operator>>(T& val)
     {
+#ifndef	LINUX
         attempt([&]()
+#endif
         {
             if (IsTextBased())
                 fgetText(m_file, val);
             else
                 fget(m_file, val);
-        });
+        }
+#ifndef	LINUX
+        );
+#endif
         return *this;
     }
 

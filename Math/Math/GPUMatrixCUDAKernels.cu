@@ -2626,7 +2626,11 @@ __global__ void _normalGrad(
     }
 }
 
+#ifndef	LINUX
 static __inline__ __device__ double atomicAdd(double* address, double val)
+#else
+static  __device__ double atomicAdd(double* address, double val)
+#endif
 {
     unsigned long long int* address_as_ull = (unsigned long long int*)address;
     unsigned long long int old = *address_as_ull, assumed;
