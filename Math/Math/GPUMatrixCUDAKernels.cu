@@ -1518,6 +1518,34 @@ __global__ void _rowElementMultiplyWith(
     }
 }
 
+template<class ElemType>
+__global__ void _columnElementDivideWith(
+    ElemType* us,
+    const ElemType* a,
+    const long N, //a.GetNumRows();
+    const long M) //us.GetNumCols();
+{
+    long id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id>=N)
+        return;
+
+    ElemType smallValue = EPS_IN_INVERSE;
+
+    //__shared__ ElemType _a[threadsPerBlock];
+    //_a[threadIdx.x]=a[id];
+    ElemType v=a[id];
+    for (long j=0;j<M;++j)
+    {
+        if (v <0 && v > -smallValue)
+            us[IDX2C(id,j,N)] /= (-smallValue);
+        else if (v >=0 && v < smallValue)
+            us[IDX2C(id,j,N)] /= smallValue;
+        else
+            us[IDX2C(id,j,N)] /= v;
+    }
+
+}
+
 
 template<class ElemType>
 __global__ void _innerProduct(

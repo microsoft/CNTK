@@ -568,7 +568,7 @@ int _tmain(int argc, _TCHAR* argv[])
     try
     {
         ConfigParameters config;
-        ConfigParameters::ParseCommandLine(argc, argv, config);
+        std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
 
         // get the command param set they want
         wstring logpath = config("stderr", L"");
@@ -592,12 +592,26 @@ int _tmain(int argc, _TCHAR* argv[])
         fprintf (stderr, "command line options: \n");
         for (int i = 1; i < argc; i++)
             fprintf (stderr, "%s ", WCharToString(argv[i]).c_str());
-        fprintf (stderr, "\n\n>>>>>>>>>>>>>>>>>>>> config >>>>>>>>>>>>>>>>>>>>\n");
 
-        config.dump();
+        // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+        // and prints it.
+        fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", rawConfigString.c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
-        fprintf (stderr, "<<<<<<<<<<<<<<<<<<<< config <<<<<<<<<<<<<<<<<<<<\n");
-        fprintf (stderr, "command: ");
+        // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+        // All of these assignments will appear, even though only the last assignment matters.
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+
+        // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
+        // value it is set to will appear).
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        config.dumpWithResolvedVariables();
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+
+        fprintf(stderr, "command: ");
         for (int i=0; i < command.size(); i++)
         {
             fprintf(stderr, "%s ", command[i].c_str());

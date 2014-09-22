@@ -183,6 +183,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& ColumnElementMultiplyWith(const Matrix<ElemType>& a);
         Matrix<ElemType>& RowElementMultiplyWith(const Matrix<ElemType>& a);
 
+        Matrix<ElemType>& ColumnElementDivideWith(const Matrix<ElemType>& a);
+
         Matrix<ElemType>& ElementInverse ();
         Matrix<ElemType>& AssignElementInverseOf (const Matrix<ElemType>& a);
 
@@ -307,6 +309,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         ElemType Exp10(ElemType num); 
         ElemType Mod(ElemType x , ElemType y);
+		ElemType LogAdd(ElemType x, ElemType y);
 
     public:
         static short GetBestGPUDeviceId(); //{ return GPUMatrix<ElemType>::GetBestGPUDeviceId();}

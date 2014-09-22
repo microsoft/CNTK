@@ -865,6 +865,7 @@ void PTaskGraphBuilder<ElemType>::CreateTaskDescriptorsForComputationNodes()
         // Forward only node types.
         else if (
             opName == PerDimMeanVarNormalizationNode<ElemType>::TypeName() ||
+            opName == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() ||
             opName == ErrorPredictionNode<ElemType>::TypeName())
         {
             if (m_verbosity >= 1) fprintf(stderr, "Creating forward task only\n");
