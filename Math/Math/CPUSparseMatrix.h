@@ -6,15 +6,17 @@
 #pragma once
 
 #include <stdio.h>
-#include "cpumatrix.h"
+#include "CPUMatrix.h"
 #include <map>
 #include <unordered_map>
 
+#ifndef	LINUX
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
 #endif
+#endif	/* Linux - already defined in CPUMatrix.h */
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
@@ -24,6 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         void ZeroInit();
+        void CheckInit(const MatrixFormat format);
 
     public:
         CPUSparseMatrix(const MatrixFormat format);
@@ -37,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ShiftBy(int numShift) { NOT_IMPLEMENTED; }
 
-        size_t BufferSize() const {return m_elemSizeAllocated*sizeof(ElemType);}
+        size_t BufferSize() const {return this->m_elemSizeAllocated*sizeof(ElemType);}
         ElemType* BufferPointer() const;
 
         void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed) { NOT_IMPLEMENTED; }
@@ -46,14 +49,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const CPUSparseMatrix<ElemType> & label, const CPUMatrix<ElemType>& cls, 
             const CPUMatrix<ElemType>& idx2cls, CPUSparseMatrix<ElemType>& etp, CPUMatrix<ElemType>& entropyScore);
 
-        static void CPUSparseMatrix<ElemType>::ClassEntropyError(CPUSparseMatrix<ElemType>& a);
+        static void ClassEntropyError(CPUSparseMatrix<ElemType>& a);
 
-        static void CPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(
+        static void ClassEntropyGradientOfInput(
             const CPUSparseMatrix<ElemType>& error, 
             const CPUMatrix<ElemType>& weight,
             CPUMatrix<ElemType>& grd);
 
-        static void CPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(
+        static void ClassEntropyGradientOfWeight(
             const CPUSparseMatrix<ElemType>& error,             
             const CPUMatrix<ElemType>& input,
             const CPUSparseMatrix<ElemType> & label, 

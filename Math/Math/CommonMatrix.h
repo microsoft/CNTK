@@ -6,6 +6,11 @@
 #pragma once
 
 #include <string>
+#include <stdint.h>
+
+#ifdef	LINUX
+#define	wcsnlen_s	wcsnlen			/* Not sure if this is best replacement... Malcolm */
+#endif	
 
 #define AUTOPLACEMATRIX 1000 // used in parameters only
 #define MANAGEDEXTERN -2 // managed externally (i.e. PTask)
@@ -78,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetMatrixName(const wchar_t* s) 
         { 
             Clear();
-            if (s!=nullptr)
+            if (s!=NULL)
             {
                 size_t n = wcsnlen_s(s, SIZE_MAX);
                 m_matrixName = new wchar_t[n+1];
@@ -103,10 +108,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         void Clear()
         {
-            if (m_matrixName!=nullptr)
+            if (m_matrixName!=NULL)
             {
                 delete[] m_matrixName;
-                m_matrixName = nullptr;
+                m_matrixName = NULL;
             }
         }
 

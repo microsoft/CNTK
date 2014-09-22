@@ -7,7 +7,11 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <cassert>
 #include "fileutil.h"
+#ifdef	LINUX
+#include	<unistd.h>
+#endif	/* LINUX */
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
@@ -55,7 +59,11 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
             if (attempt >= retries)
                 throw;      // failed N times --give up and rethrow the error
             fprintf (stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt+1, retries);
+#ifdef	LINUX
+            sleep(1);
+#else
             ::Sleep (1000); // wait a little, then try again
+#endif	/* LINUX */
 #ifdef _DEBUG
             DebugBreak();
 #endif
@@ -83,8 +91,8 @@ public:
     File(const wchar_t* filename, int fileOptions);
     ~File(void);
 
-    unsigned _int64 GetPosition();
-    void SetPosition(unsigned _int64 pos);
+    unsigned long long GetPosition();
+    void SetPosition(unsigned long long pos);
     void goToDelimiter(int delim);
 
     bool IsTextBased();
@@ -111,13 +119,18 @@ public:
     template <typename T>
     File& operator<<(T val)
     {
+#ifndef	LINUX
         attempt([=]()
+#endif
         {
             if (IsTextBased())
                 fputText(m_file, val);
             else
                 fput(m_file, val);
-        });
+        }
+#ifndef	LINUX
+        );
+#endif
         return *this;
     }
     File& operator<<(const std::wstring& val);
@@ -144,13 +157,18 @@ public:
     template <typename T>
     File& operator>>(T& val)
     {
+#ifndef	LINUX
         attempt([&]()
+#endif
         {
             if (IsTextBased())
                 fgetText(m_file, val);
             else
                 fget(m_file, val);
-        });
+        }
+#ifndef	LINUX
+        );
+#endif
         return *this;
     }
 

@@ -7,6 +7,12 @@
 #ifndef _BASETYPES_
 #define _BASETYPES_
 
+#ifdef	LINUX
+typedef char16_t TCHAR;
+#include <stdarg.h>
+#define	vsprintf_s vsprintf		/* Not sure this is right... Malcolm */
+#endif	 /* LINUX */
+
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
 #undef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
@@ -70,13 +76,22 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <string.h>     // include here because we redefine some names later
 #include <string>
 #include <vector>
-#include <cmath>        // for HUGE_VAL
+#ifndef LINUX
+#include <cmath>        // for HUGE_VAL  // Remove for a test by Malcolm because of double isnan definition...
+#endif
+
+#ifndef	LINUX
 #include <tchar.h>
+#endif	/* LINUX */
+
 #include <assert.h>
 using namespace std;
 #include <map>
 #include <stdexcept>
+
+#ifndef	LINUX
 #include <windows.h>    // for CRITICAL_SECTION
+
 #pragma push_macro("STRSAFE_NO_DEPRECATE")
 #define STRSAFE_NO_DEPRECATE    // deprecation managed elsewhere, not by strsafe
 #include <strsafe.h>    // for strbcpy() etc templates
@@ -92,6 +107,9 @@ using namespace std;
 // strerror(x) - x here is normally errno - TODO: make this return errno as a string
 #define strerror(x) "strerror error but can't report error number sorry!"
 #endif
+
+#endif	/* LINUX */
+
 
 #ifndef __in // dummies for sal annotations if compiler does not support it
 #define __in
@@ -286,6 +304,16 @@ public:
     noncopyable(){}
 };
 
+
+#ifdef	LINUX
+#define	CRITICAL_SECTION 	int
+void InitializeCriticalSection(int *) {}
+void DeleteCriticalSection(int *) {}
+void EnterCriticalSection(int *) {}
+void LeaveCriticalSection(int *) {}
+
+#endif
+
 // class CCritSec and CAutoLock -- simple critical section handling
 class CCritSec
 {
@@ -297,6 +325,8 @@ public:
     void Lock() { EnterCriticalSection(&m_CritSec); };
     void Unlock() { LeaveCriticalSection(&m_CritSec); };
 };
+
+#ifndef	LINUX
 
 // locks a critical section, and unlocks it automatically
 // when the lock goes out of scope
@@ -390,7 +420,10 @@ public:
     void *operator = (void *val) { if (!TlsSetValue (tlsSlot,val)) throw std::runtime_error ("tls: TlsSetValue failed"); return val; }
 };
 
+#endif	/* LINUX */
+
 };};    // namespace
+
 
 #ifndef BASETYPES_NO_UNSAFECRTOVERLOAD // if on, no unsafe CRT overload functions
 
@@ -542,6 +575,7 @@ typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 // string-encoding conversion functions
 struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
 {
+#ifdef	MALCOLM
     size_t len = p.length();
     if (len == 0) { return;}    // empty string
     msra::basetypes::fixed_vector<char> buf (3 * len + 1);   // max: 1 wchar => up to 3 mb chars
@@ -551,9 +585,11 @@ struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
                                   &buf[0], (int) buf.size(), NULL, NULL);
     if (rc == 0) throw std::runtime_error ("WideCharToMultiByte");
     (*(std::string*)this) = &buf[0];
+#endif	/* Malcolm */
 }};
 struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
 {
+#ifdef	MALCOLM
     size_t len = p.length();
     if (len == 0) { return;}    // empty string
     msra::basetypes::fixed_vector<wchar_t> buf (len + 1);
@@ -564,6 +600,7 @@ struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
     if (rc == 0) throw std::runtime_error ("MultiByteToWideChar");
     ASSERT (rc < buf.size ());
     (*(std::wstring*)this) = &buf[0];
+#endif	/* Malcolm */
 }};
 
 #pragma warning(push)
@@ -572,8 +609,10 @@ static inline std::string wcstombs (const std::wstring & p)  // output: MBCS
 {
     size_t len = p.length();
     msra::basetypes::fixed_vector<char> buf (2 * len + 1); // max: 1 wchar => 2 mb chars
+#ifdef	MALCOLM
     std::fill (buf.begin (), buf.end (), 0);
     ::wcstombs (&buf[0], p.c_str(), 2 * len + 1);
+#endif	/* Malcolm */
     return std::string (&buf[0]);
 }
 static inline std::wstring mbstowcs (const std::string & p)  // input: MBCS
@@ -615,7 +654,11 @@ template<class _T> static inline std::basic_string<_T> join (const std::vector<s
 // parsing strings to numbers
 static inline int toint (const wchar_t * s)
 {
+#ifdef	MALCOLM
     return _wtoi (s);   // ... TODO: check it
+#else
+	return 0;
+#endif
 }
 static inline int toint (const char * s)
 {
@@ -701,6 +744,8 @@ public:
 
 namespace msra { namespace basetypes {
 
+#ifdef	MALCOLM
+
 // FILE* with auto-close; use auto_file_ptr instead of FILE*.
 // Warning: do not pass an auto_file_ptr to a function that calls fclose(),
 // except for fclose() itself.
@@ -727,7 +772,9 @@ public:
     void swap (auto_file_ptr & other)  throw() { std::swap (f, other.f); }
 };
 inline int fclose (auto_file_ptr & af) { return af.fclose(); }
+#endif	/* MALCOLM */
 
+#ifdef	MALCOLM
 // auto-closing container for Win32 handles.
 // Pass close function if not CloseHandle(), e.g.
 // auto_handle h (FindFirstFile(...), FindClose);
@@ -744,7 +791,9 @@ public:
     operator _H () const { return h; }
 };
 typedef auto_handle_t<HANDLE> auto_handle;
+#endif	/* MALCOLM */
 
+#ifdef	MALCOLM
 // like auto_ptr but calls freeFunc_p (type free_func_t) instead of delete to clean up
 // minor difference - wrapped object is T, not T *, so to wrap a 
 // T *, use auto_clean<T *>
@@ -764,7 +813,9 @@ public:
     operator const T () const { return it; }
     T detach () { T tmp = it; it = 0; return tmp; } // release ownership of object
 };
+#endif	/* MALCOLM */
 
+#ifdef	MALCOLM
 // simple timer
 // auto_timer timer; run(); double seconds = timer; // now can abandon the object
 class auto_timer
@@ -790,6 +841,7 @@ public:
         fprintf (stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0/*to ms*/);
     }
 };
+#endif	/* MALCOLM */
 
 };};
 
@@ -804,12 +856,23 @@ namespace msra { namespace files {
 
 class textreader
 {
+#ifndef	LINUX
     msra::basetypes::auto_file_ptr f;
+#else
+    FILE *f;
+#endif	/* LINUX */
     std::vector<char> buf;  // read buffer (will only grow, never shrink)
     int ch;                 // next character (we need to read ahead by one...)
     char getch() { char prevch = (char) ch; ch = fgetc (f); return prevch; }
 public:
+#ifndef	LINUX
     textreader (const std::wstring & path) : f (path.c_str(), "rb") { buf.reserve (10000); ch = fgetc (f); }
+#else
+    textreader (const std::wstring & path) {
+        f = fopen((char *)path.c_str(), "rb");
+        ch = fgetc(f);				/* I Think this is right ... Malcolm */
+    }
+#endif	/* LINUX */
     operator bool() const { return ch != EOF; } // true if still a line to read
     std::string getline()                       // get and consume the next line
     {
@@ -894,7 +957,11 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
             if (attempt >= retries)
                 throw;      // failed N times --give up and rethrow the error
             fprintf (stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt+1, retries);
+#ifndef	LINUX
             ::Sleep (1000); // wait a little, then try again
+#else
+            sleep(1);
+#endif	/* LINUX */
         }
     }
 }
@@ -905,6 +972,7 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
 // frequently missing Win32 functions
 // ----------------------------------------------------------------------------
 
+#ifndef	LINUX 
 // strerror() for Win32 error codes
 static inline std::wstring FormatWin32Error (DWORD error)
 {
@@ -916,6 +984,7 @@ static inline std::wstring FormatWin32Error (DWORD error)
     if (last != std::string::npos) res.erase (last +1, res.length());
     return res;
 }
+#endif	/* LINUX */
 
 // we always wanted this!
 #pragma warning (push)
@@ -923,12 +992,16 @@ static inline std::wstring FormatWin32Error (DWORD error)
 #pragma warning (disable: 6322) // Empty _except block
 static inline void SetCurrentThreadName (const char* threadName)
 {   // from http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
+#ifndef	LINUX
     ::Sleep(10);
 #pragma pack(push,8)
    struct { DWORD dwType; LPCSTR szName; DWORD dwThreadID; DWORD dwFlags; } info = { 0x1000, threadName, (DWORD) -1, 0 };
 #pragma pack(pop)
    __try { RaiseException (0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info); }
    __except(EXCEPTION_EXECUTE_HANDLER) { }
+#else
+		/* Not sure what to do here... Malcolm */
+#endif /* LINUX */
 }
 #pragma warning (pop)
 

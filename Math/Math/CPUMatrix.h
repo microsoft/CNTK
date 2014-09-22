@@ -7,15 +7,21 @@
 #include <vector>
 #include <stdio.h>
 #include <ctime>
+#include <limits.h>			/* LINUX */
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
 
+#ifndef	LINUX
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
 #endif
+
+#else	/* LINUX */
+#define	MATH_API 
+#endif	/* LINUX */
 
 #ifndef USE_TIME_BASED_SEED
 #define USE_TIME_BASED_SEED ULONG_MAX
@@ -51,8 +57,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ~CPUMatrix();
 
     public:
-        size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
-        ElemType* BufferPointer() const {return m_pArray;}
+        size_t BufferSize() const {return this->m_numRows*this->m_numCols*sizeof(ElemType);}
+        ElemType* BufferPointer() const {return this->m_pArray;}
 
         CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
@@ -68,15 +74,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         inline ElemType& operator() (const size_t row, const size_t col) 
         {
-            return m_pArray[LocateElement(row, col)];
+            return this->m_pArray[LocateElement(row, col)];
         }
         inline const ElemType& operator() (const size_t row, const size_t col) const 
         {
-            return m_pArray[LocateElement(row, col)];
+            return this->m_pArray[LocateElement(row, col)];
         }
         inline ElemType Get00Element() const 
         {
-            return m_pArray[0];
+            return this->m_pArray[0];
         }        
 
         void SetValue(const ElemType v);
@@ -337,8 +343,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     protected:
-        inline size_t LocateElement (const size_t i, const size_t j) const;
-        inline size_t LocateColumn (const size_t j) const;
+	// Was inline.. but without definition, it doesn't make sense.
+        size_t LocateElement (const size_t i, const size_t j) const;
+        size_t LocateColumn (const size_t j) const;
 
     private:
         void ZeroInit(); //should only be used by constructors.
