@@ -17,10 +17,16 @@ typedef struct cublasContext *cublasHandle_t;
 struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 
+#ifndef	LINUX
+#ifndef	MATH_API
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
+#endif
+#endif	/* MATH_API */
+#else	/* LINUX  */
+#define MATH_API 
 #endif
 
 #ifndef USE_TIME_BASED_SEED
@@ -45,10 +51,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:        
         DeviceBoundNumber() {m_data=NULL;};        
         DeviceBoundNumber(const DeviceBoundNumber<ElemType> &deepCopy);
+#ifndef	LINUX
         DeviceBoundNumber(DeviceBoundNumber<ElemType> &&shallowCopy);
+#endif
         ~DeviceBoundNumber();
         int GetDeviceId() const {return m_computeDevice;}
-        ElemType* ExposePointer2Value() const {return m_data;}
+        ElemType* ExposePointer2Value() const {return this->m_data;}
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
     };
@@ -76,8 +84,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal,int deviceId=0);        
         GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom);    
         GPUMatrix<ElemType>& operator=(const GPUMatrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
+#ifndef	LINUX
         GPUMatrix(GPUMatrix<ElemType>&& moveFrom);
         GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom);  //move assignment operator, shallow copy
+#endif	/* LINUX */
         ~GPUMatrix(void);       
 
         static int GetBestGPUDeviceId();  
@@ -95,8 +105,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
-        size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
-        ElemType* BufferPointer() const {return m_pArray;}
+        size_t BufferSize() const {return this->m_numRows*this->m_numCols*sizeof(ElemType);}
+        ElemType* BufferPointer() const {return this->m_pArray;}
 
         void Adagrad(GPUMatrix<ElemType>& gradients);
 		void RmsProp(GPUMatrix<ElemType>& gradients,
@@ -109,8 +119,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
-        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::exception("GPUMatrix doesn't support this"); }
-        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::exception("GPUMatrix doesn't support this"); }
+        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::logic_error("GPUMatrix doesn't support this"); }
+        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::logic_error("GPUMatrix doesn't support this"); }
         ElemType Get00Element() const;
 
         void SetValue(const ElemType v);
@@ -262,7 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignInnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 
 
         void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
-        void Print(const char* matrixName = nullptr) const; //print whole matrix. can be expensive
+        void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
 
         void ReadFromFile(FILE* f, const char * matrixName); //matrixName is used to verify that correct matrix is read.
         void WriteToFile(FILE* f, const char * matrixName); //matrixName is used to verify that correct matrix is read.
@@ -334,7 +344,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t elsize;
             stream>>elsize;
             if (sizeof(ElemType)!=elsize)
+#ifndef	LINUX
                 throw std::exception("Template argument size doesn't match those in file");
+#else
+                throw std::exception();
+#endif
             std::wstring matrixName;
             size_t numRows, numCols;
             int format;
