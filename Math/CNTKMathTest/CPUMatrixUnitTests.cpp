@@ -274,13 +274,15 @@ namespace CNTKMathTest
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
            
             M3.SetValue(M0);
-            M3.InplaceSoftmax(true);
+            M3.InplaceLogSoftmax(true);
+			M3.InplaceExp();
             M2(0,0) = 0.0474; M2(0,1) = 0.0474; M2(0,2) = 0.0474;
             M2(1,0) = 0.9526; M2(1,1) = 0.9526; M2(1,2) = 0.9526;
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
            
             M3.SetValue(M0);
-            M3.InplaceSoftmax(false);
+            M3.InplaceLogSoftmax(false);
+			M3.InplaceExp();
             M2(0,0) = 0.0900; M2(0,1) = 0.2447; M2(0,2) = 0.6652;
             M2(1,0) = 0.0900; M2(1,1) = 0.2447; M2(1,2) = 0.6652;
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
