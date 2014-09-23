@@ -542,7 +542,7 @@ __global__ void _elemInverse(
 }
 
 template<class ElemType>
-__global__ void _softMaxColWise(
+__global__ void _logSoftMaxColWise(
     ElemType *a,
     const long m_numCols,
     const long m_numRows) //ld
@@ -566,20 +566,13 @@ __global__ void _softMaxColWise(
 
     for (long i=0;i<m_numRows;++i)
     {
-        if (sizeof(ElemType)==sizeof(float))
-        {
-            a[IDX2C(i,col_id,m_numRows)] = expf(a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x]);
-        }
-        else
-        {
-            a[IDX2C(i,col_id,m_numRows)] = exp(a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x]);
-        }
-        Sum[threadIdx.x] +=  a[IDX2C(i,col_id,m_numRows)];
-    }
-
+		ElemType tmp = a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x];
+		Sum[threadIdx.x] += (sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp));
+	}
+	Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
     for (long i=0;i<m_numRows;++i)
     {
-        a[IDX2C(i,col_id,m_numRows)] /= Sum[threadIdx.x] ;
+        a[IDX2C(i,col_id,m_numRows)] -= Sum[threadIdx.x] ;
     }
 }
 
@@ -627,7 +620,7 @@ __global__ void _softMaxColWise(
 //}
 
 template<class ElemType>
-__global__ void _assignColumnwiseSoftmaxOf(
+__global__ void _assignColumnwiseLogSoftmaxOf(
     const ElemType *a,
     ElemType* us,
     const long m_numCols,
@@ -709,17 +702,9 @@ __global__ void _assignColumnwiseSoftmaxOf(
     colSum[0]=0.0f;
     for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
     {
-        ElemType tmp=0;
-        if (sizeof(ElemType)==sizeof(float))
-        {
-            tmp = expf(a[IDX2C(i,blockIdx.x,m_numRows)]-colMax[0]);
-        }
-        else
-        {
-            tmp = exp(a[IDX2C(i,blockIdx.x,m_numRows)]-colMax[0]);
-        }
-        us[IDX2C(i,blockIdx.x,m_numRows)]=tmp;
-        partials[threadIdx.x]+=tmp;
+        ElemType tmp=a[IDX2C(i,blockIdx.x,m_numRows)]-colMax[0];
+		us[IDX2C(i,blockIdx.x,m_numRows)]=tmp;
+		partials[threadIdx.x]+=(sizeof(ElemType)==sizeof(float)?expf(tmp):exp(tmp));
     }
     __syncthreads();
 
@@ -774,18 +759,19 @@ __global__ void _assignColumnwiseSoftmaxOf(
 
     if (threadIdx.x==0)
     {
-        colSum[0] = partials[0]+partials[1]+partials[2]+partials[3];        
+        colSum[0] = partials[0]+partials[1]+partials[2]+partials[3];
+		colSum[0] = (sizeof(ElemType)==sizeof(float)?logf(colSum[0]):log(colSum[0]));
     }
     __syncthreads();
     //end of finding sums
     for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
     {        
-        us[IDX2C(i,blockIdx.x,m_numRows)]/=colSum[0];        
+        us[IDX2C(i,blockIdx.x,m_numRows)]-=colSum[0];        
     }
 }
 
 template<class ElemType>
-__global__ void _softMaxRowWise(
+__global__ void _logSoftMaxRowWise(
     ElemType *a,
     const long m_numCols,
     const long m_numRows) //ld
@@ -809,20 +795,13 @@ __global__ void _softMaxRowWise(
 
     for (long j=0;j<m_numCols;++j)
     {
-        if (sizeof(ElemType)==sizeof(float))
-        {
-            a[IDX2C(row_id,j,m_numRows)] = expf(a[IDX2C(row_id,j,m_numRows)]-maxV[threadIdx.x]);
-        }
-        else
-        {
-            a[IDX2C(row_id,j,m_numRows)] = exp(a[IDX2C(row_id,j,m_numRows)]-maxV[threadIdx.x]);
-        }
-        Sum[threadIdx.x] +=  a[IDX2C(row_id,j,m_numRows)];
+		ElemType tmp = a[IDX2C(row_id,j,m_numRows)]-maxV[threadIdx.x];
+		Sum[threadIdx.x] += sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp);
     }
-
+	Sum[threadIdx.x] = maxV[threadIdx.x]+(sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
     for (long j=0;j<m_numCols;++j)
     {
-        a[IDX2C(row_id,j,m_numRows)] /= Sum[threadIdx.x] ;
+        a[IDX2C(row_id,j,m_numRows)] -= Sum[threadIdx.x] ;
     }
 }
 
