@@ -588,8 +588,8 @@ public:
         if (found != m_symbols.end())
         {
             NDLNode<ElemType>* nodeFound = found->second;
-            // check for undetermined node, because these nodes are to be defined later
-            if (nodeFound->GetType() != ndlTypeUndetermined)
+            // check for undetermined nodes, because these nodes are to be defined later
+			if (nodeFound->GetType() != ndlTypeUndetermined && nodeFound->GetType() != ndlTypeParameter)
             {
                 std::string value = found->second->GetValue();
                 Error("Symbol '%s' currently assigned to '%s' reassigning to a different value not allowed\n", symbol.c_str(), value.c_str());
