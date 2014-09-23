@@ -1,4 +1,4 @@
-set cnpath=d:\src\CNTK\CNTKSolution\x64\Release
+set cnpath=d:\src\codeplex\cntk\CNTKSolution\x64\Release
 set proc=%1
 echo on
 %cnpath%\cn.exe configFile=globals_%proc%.config+TIMIT_TrainSimpleNetwork.config
@@ -7,6 +7,8 @@ echo on
 %cnpath%\cn.exe configFile=globals_%proc%.config+TIMIT_TrainMultiInput.config
 %cnpath%\cn.exe configFile=globals_%proc%.config+TIMIT_TrainMultiTask.config
 %cnpath%\cn.exe configFile=globals_%proc%.config+TIMIT_EvalSimpleNetwork.config
+%cnpath%\cn.exe configFile=globals_%proc%.config+TIMIT_WriteScaledLogLike.config
+%cnpath%\cn.exe configFile=globals_%proc%.config+TIMIT_WriteBottleneck.config
 
 
 

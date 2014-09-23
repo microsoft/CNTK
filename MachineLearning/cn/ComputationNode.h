@@ -2353,7 +2353,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
-            functionValues.AssignSoftmaxOf(inputFunctionValues, true);
+            functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
+			functionValues.InplaceExp();
 #if NANCHECK
             functionValues.HasNan("SoftMax");
 #endif

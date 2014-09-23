@@ -1737,16 +1737,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //[this]=softmax([this]) element wise
     template<class ElemType>
-    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSoftmax (const bool isColWise)
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceLogSoftmax (const bool isColWise)
     {
-        return AssignSoftmaxOf(*this, isColWise);
+        return AssignLogSoftmaxOf(*this, isColWise);
     }
 
     template<class ElemType>
-    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSoftmaxOf (const CPUMatrix<ElemType>& a, const bool isColWise)
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignLogSoftmaxOf (const CPUMatrix<ElemType>& a, const bool isColWise)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignSoftmaxOf: Matrix a is empty.");
+            throw std::logic_error("AssignLogSoftmaxOf: Matrix a is empty.");
 
         auto& us=*this;
         if (this != &a)
@@ -1764,12 +1764,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 ElemType sum = 0;
                 foreach_row(i, a)
-                {
-                    us(i,j) = exp(a(i,j)-maxV);
-                    sum +=  us(i,j);
-                }
+                    sum +=  exp(us(i,j) = a(i,j) - maxV);
+				sum = log(sum);
                 foreach_row(i, us)
-                    us(i,j) /= sum;
+                    us(i,j) -= sum;
             }
 
         }
@@ -1785,12 +1783,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 ElemType sum = 0;
                 foreach_column(j,a)
-                {
-                    us(i,j) = exp(a(i,j)-maxV);
-                    sum +=  us(i,j);
-                }
+                    sum +=  exp(us(i,j) = a(i,j) - maxV);
+				sum = log(sum);
                 foreach_column(j,us)
-                    us(i,j) /= sum;
+                    us(i,j) -= sum;
             }
 
         }

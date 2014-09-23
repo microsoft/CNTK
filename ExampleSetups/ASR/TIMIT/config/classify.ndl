@@ -6,15 +6,15 @@ ndlMacroDefine=[
 
     MeanVarNorm(x)
     {
-		xMean = Mean(x)
+	xMean = Mean(x)
     	xStdDev = InvStdDev(x)
     	xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
     }
  
     LogPrior(labels)
     {
-		Prior=Mean(labels)
-		LogPrior=Log(Prior)
+	Prior=Mean(labels)
+	LogPrior=Log(Prior)
     }   
 ]
 
@@ -36,6 +36,6 @@ ndlCreateNetwork=[
 	 Err = ErrorPrediction(myLabels,CE.BFF.FF.P,tag=Eval)
 
 	 # define output (scaled loglikelihood)
-     logPrior = LogPrior(myLabels)	 
+     	 logPrior = LogPrior(myLabels)	 
 	 ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
 ]

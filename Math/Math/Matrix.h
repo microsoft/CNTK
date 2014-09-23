@@ -200,8 +200,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceTanh ();
         Matrix<ElemType>& AssignTanhOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceSoftmax (const bool isColWise);
-        Matrix<ElemType>& AssignSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise);
+        Matrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
+        Matrix<ElemType>& AssignLogSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise);
 
         Matrix<ElemType>& InplaceSqrt ();
         Matrix<ElemType>& AssignSqrtOf (const Matrix<ElemType>& a);
