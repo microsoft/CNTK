@@ -1953,12 +1953,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //[this]=softmax([this]) element wise
     template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::InplaceSoftmax (const bool isColWise)
+    Matrix<ElemType>& Matrix<ElemType>::InplaceLogSoftmax (const bool isColWise)
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->InplaceSoftmax(isColWise), 
-            this->m_GPUMatrix->InplaceSoftmax(isColWise), 
+            this->m_CPUMatrix->InplaceLogSoftmax(isColWise), 
+            this->m_GPUMatrix->InplaceLogSoftmax(isColWise), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1967,17 +1967,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise)
+    Matrix<ElemType>& Matrix<ElemType>::AssignLogSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignSoftmaxOf: Matrix a is empty.");
+            throw std::logic_error("AssignLogSoftmaxOf: Matrix a is empty.");
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType());
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->AssignSoftmaxOf(*a.m_CPUMatrix,isColWise), 
-            this->m_GPUMatrix->AssignSoftmaxOf(*a.m_GPUMatrix,isColWise), 
+            this->m_CPUMatrix->AssignLogSoftmaxOf(*a.m_CPUMatrix,isColWise), 
+            this->m_GPUMatrix->AssignLogSoftmaxOf(*a.m_GPUMatrix,isColWise), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );

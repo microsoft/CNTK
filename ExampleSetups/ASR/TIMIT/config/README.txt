@@ -23,11 +23,12 @@ Network Training Examples:
 ==========================
 * TIMIT_TrainSimpleNetwork.config [train basic feedforward fully connected neural network]
 * TIMIT_TrainNDLNetwork.config [train a neural network defined using NDL]
+* TIMIT_TrainAdaptLearnRate.config [similar to simple network example, but learning rate adapted based on dev set]
 * TIMIT_TrainAutoEncoder.config [train autoencoder with bottleneck layer]
 * TIMIT_TrainWithPreTrain.config [pre-train using layerwise discriminative pre-training, then do full network training]
 * TIMIT_TrainMultiTask.config [train with multi-task learning with joint prediciton of senone labels and dialect region]
 * TIMIT_TrainMultiInput.config [train with 2 different inputs: fbank and mfcc]
-
+* TIMIT_TrainLSTM.config [train single layer LSTM network]
 
 Network Evaluation Examples:
 ============================
@@ -46,5 +47,6 @@ Network Description Language (NDL) & Model Editing Language (MEL) files for expe
 * mtl_fbank_mfcc.ndl
 * mtl_senones_dr.ndl
 * create_1layer.ndl
-* add_layer.mel
 * default_macros.ndl
+* lstm.ndl
+* add_layer.mel

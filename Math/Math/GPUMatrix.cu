@@ -1478,10 +1478,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSoftmax (const bool isColWise)
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax (const bool isColWise)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceSoftmax: Matrix is empty.");
+            throw std::logic_error("InplaceLogSoftmax: Matrix is empty.");
 
         PrepareDevice();
         if (isColWise)
@@ -1490,7 +1490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);             
             cudaEvent_t done;       
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-            _softMaxColWise<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,(long)m_numCols,(long)m_numRows);
+            _logSoftMaxColWise<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,(long)m_numCols,(long)m_numRows);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
             if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));  
             if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1501,7 +1501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
             cudaEvent_t done;       
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-            _softMaxRowWise<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,(long)m_numCols,(long)m_numRows);
+            _logSoftMaxRowWise<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,(long)m_numCols,(long)m_numRows);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
             if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
             if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1510,7 +1510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise)
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise)
     {
         this->Resize(a.GetNumRows(),a.GetNumCols());        
         if (isColWise)
@@ -1520,7 +1520,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             long M = (long)GetNumRows();
             cudaEvent_t done;       
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-            _assignColumnwiseSoftmaxOf<<<N,512,0,t_stream>>>(a.m_pArray,m_pArray,N,M);
+            _assignColumnwiseLogSoftmaxOf<<<N,512,0,t_stream>>>(a.m_pArray,m_pArray,N,M);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
             if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
             if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1530,8 +1530,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
         }
 
-        /*this->SetValue(a);
-        this->InplaceSoftmax(isColWise);*/
         return *this;
     }
 
