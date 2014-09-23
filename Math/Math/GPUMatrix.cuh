@@ -179,8 +179,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& InplaceTanh ();
         GPUMatrix<ElemType>& AssignTanhOf (const GPUMatrix<ElemType>& a);
 
-        GPUMatrix<ElemType>& InplaceSoftmax (const bool isColWise);
-        GPUMatrix<ElemType>& AssignSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise);
+        GPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
+        GPUMatrix<ElemType>& AssignLogSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise);
 
         GPUMatrix<ElemType>& InplaceSqrt ();
         GPUMatrix<ElemType>& AssignSqrtOf (const GPUMatrix<ElemType>& a);
