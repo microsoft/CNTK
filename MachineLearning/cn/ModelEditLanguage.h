@@ -41,7 +41,7 @@ public:
     // cleanup all the computational networks we loaded
     ~MELScript() 
     {
-        for each (auto iter in m_mapNameToNetNdl)
+        for (auto iter : m_mapNameToNetNdl)
         {
             iter.second.Clear();
         }
@@ -58,15 +58,21 @@ public:
         Parse(m_scriptString);
     }
 
+
     // copy and move constructors
     MELScript(const MELScript& melScript) : ConfigParser(melScript)
     {
-        *this = melScript;
+		m_scriptString = melScript.m_scriptString;
+		m_mapNameToNetNdl = melScript.m_mapNameToNetNdl; // computational networks
+		m_netNdlDefault = melScript.m_netNdlDefault;
+		// don't need to copy m_ndlScript, only used to store macros (which are stored in global instance anyway)
     }
     MELScript(const MELScript&& melScript) : ConfigParser(move(melScript))
     {
-        *this = move(melScript);
-    }
+		m_scriptString = move(melScript.m_scriptString);
+		m_mapNameToNetNdl = move(melScript.m_mapNameToNetNdl); // computational networks
+		m_netNdlDefault = move(melScript.m_netNdlDefault);
+	}
     void ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil=ndlPassAll, bool fullValidate = false);
     void MELScript<ElemType>::SetProperty(ComputationNode<ElemType>* nodeProp, vector<ComputationNode<ElemType>*>& propArray, bool set);
     void CallFunction(const std::string& name, const ConfigParamList& params);
@@ -252,7 +258,7 @@ public:
 
             // this is the *.W = L2.W case
             // We want to find all the destination existing matches and then assign the in node to all of them
-            for each (ComputationNode<ElemType>* node in nodesOut)
+            for (ComputationNode<ElemType>* node : nodesOut)
             {
                 std::wstring nodeOutName = node->NodeName();
                 GenNameValue value(nodeIn, nodeOutName);
@@ -263,7 +269,7 @@ public:
         else
         {
             // we are matching up one for one the input to output
-            for each (ComputationNode<ElemType>* node in nodes)
+            for (ComputationNode<ElemType>* node : nodes)
             {
                 std::wstring nodeName = node->NodeName();
                 size_t start = firstCount;
@@ -307,7 +313,7 @@ public:
             copyFlags = CopyNodeFlags(copyFlags | CopyNodeFlags::copyNodeChildrenCrossNetwork);
 
         // now we have the original names from the input symbol, generate the output names
-        for each (GenNameValue name in copyNodes)
+        for (GenNameValue name : copyNodes)
         {
             ComputationNode<ElemType>* node = name.first;
             std::wstring nodeName = node->NodeName();
@@ -321,7 +327,7 @@ public:
         if (copyFlags & CopyNodeFlags::copyNodeChildren) 
         {
             // loop through the nodes that were copied and fixup all the child links
-            for each (GenNameValue nodeVal in copyNodes)
+            for (GenNameValue nodeVal : copyNodes)
             {
                 ComputationNode<ElemType>* fromNode = nodeVal.first;
                 ComputationNode<ElemType>* toNode = mapCopied[fromNode];

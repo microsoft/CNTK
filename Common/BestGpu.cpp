@@ -173,7 +173,7 @@ void BestGpu::GetCudaProperties()
 
 	int dev = 0;
 
-	for each (ProcessorData* pd in m_procData)
+	for (ProcessorData* pd : m_procData)
 	{
 		cudaSetDevice(dev);
 		pd->deviceId = dev;
@@ -217,7 +217,7 @@ void BestGpu::Init()
 
 BestGpu::~BestGpu()
 {
-	for each (ProcessorData* data in m_procData)
+	for (ProcessorData* data : m_procData)
 	{
 		delete data;
 	}
@@ -259,7 +259,7 @@ int BestGpu::GetDevice(BestGpuFlags bestFlags)
 void BestGpu::SetAllowedDevices(const std::vector<int>& devices)
 {
     m_allowedDevices = 0;
-    for each (int device in devices)
+    for (int device : devices)
     {
         m_allowedDevices |= (1 << device);
     }
@@ -343,7 +343,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 		speedW *= 2;
 	}
 
-	for each (ProcessorData* pd in m_procData)
+	for (ProcessorData* pd : m_procData)
 	{
 		double score = 0.0;
 
@@ -430,7 +430,7 @@ void BestGpu::QueryNvmlData()
         }
 
 		ProcessorData* curPd = NULL;
-		for each (ProcessorData* pd in m_procData)
+		for (ProcessorData* pd : m_procData)
 		{
 			if (pd->deviceProp.pciBusID == pci.bus)
 			{
@@ -472,7 +472,7 @@ void BestGpu::QueryNvmlData()
 		{
 			std::vector<nvmlProcessInfo_t> processInfo(size);
 			processInfo.resize(size);
-			for each (nvmlProcessInfo_t info in processInfo)
+			for (nvmlProcessInfo_t info : processInfo)
 				info.usedGpuMemory = 0;
 			result = nvmlDeviceGetComputeRunningProcesses(device, &size, &processInfo[0]);
 			if (NVML_SUCCESS != result)
@@ -481,7 +481,7 @@ void BestGpu::QueryNvmlData()
 			}
 			bool cnFound = false;
 			bool dbnFound = false;
-			for each (nvmlProcessInfo_t info in processInfo)
+			for (nvmlProcessInfo_t info : processInfo)
 			{
 				std::string name;
 				name.resize(256);
