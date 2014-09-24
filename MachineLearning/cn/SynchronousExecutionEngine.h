@@ -51,11 +51,16 @@ public:
         std::wstring cnNodeType = msra::strfun::utf16(node->GetValue());
 
         ComputationNodePtr nodePtr = nullptr;
-        if (pass != ndlPassInitial)
-        {
-            nodePtr = (ComputationNodePtr)m_net.GetNodeFromName(name);
-            // set the node eval pointer just to be safe (should already be set)
-            node->SetEvalValue(nodePtr);
+
+		// get the node pointer for the node, should be stored in the EvalValue;
+		if (pass > ndlPassInitial) 
+		{
+			nodePtr = (ComputationNodePtr)node->GetEvalValue();
+			if (nodePtr == nullptr)
+			{
+				nodePtr = (ComputationNodePtr)m_net.GetNodeFromName(name);
+				node->SetEvalValue(nodePtr);
+			}
         }
         
         if (InputValue<ElemType>::TypeName() == cnNodeType)
@@ -65,8 +70,10 @@ public:
 
             if (pass == ndlPassInitial)
             {
-                size_t rows = parameter[0]->GetScalar();
-                size_t cols = parameter.size() > 1? parameter[1]->GetScalar() : 1;
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+				size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+				size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
                 if (m_net.NodeNameExist(name))
@@ -82,8 +89,10 @@ public:
 
             if (pass == ndlPassInitial)
             {
-                size_t rows = parameter[0]->GetScalar();
-                size_t cols = parameter.size() > 1? parameter[1]->GetScalar() : 1;
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+				size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+				size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
                 if (m_net.NodeNameExist(name))
@@ -99,10 +108,12 @@ public:
 
             if (pass == ndlPassInitial)
             {
-                size_t imageWidth = parameter[0]->GetScalar();
-                size_t imageHeight = parameter[1]->GetScalar();
-                size_t imageChannels = parameter[2]->GetScalar();
-                size_t numImages = parameter.size() > 3? parameter[3]->GetScalar() : 1;
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+				size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
+				size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
+				size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
+				size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
 
                 nodePtr = m_net.CreateInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
             }
@@ -114,8 +125,10 @@ public:
 
             if (pass == ndlPassInitial)
             {
-                size_t rows = parameter[0]->GetScalar();
-                size_t cols = parameter.size() > 1? parameter[1]->GetScalar() : 1;
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+				size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+				size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "true");
 
@@ -160,8 +173,10 @@ public:
 
             if (pass == ndlPassInitial)
             {
-                size_t rows = parameter[0]->GetScalar();
-                size_t cols = parameter.size() > 1? parameter[1]->GetScalar() : 1;
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+				size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+				size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "true");
 
@@ -227,8 +242,11 @@ public:
             nodeParamStart = parameter.size() > 2?2:1;
 			if (pass == ndlPassInitial)
 			{
-				size_t start_index = parameter[0]->GetScalar();
-				size_t num_rows = parameter[1]->GetScalar();
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+				size_t start_index = ((NDLNode<ElemType>*)params[0])->GetScalar();
+				size_t num_rows = ((NDLNode<ElemType>*)params[1])->GetScalar();
+
 				bool needGradient = node->GetOptionalParameter("needGradient", "false");
 				nodePtr = m_net.RowSlice(NULL, start_index, num_rows, name);
 				nodePtr->NeedGradient() = needGradient;
@@ -244,9 +262,12 @@ public:
 
 			if (pass == ndlPassInitial)
 			{
-                size_t rows = parameter[0]->GetScalar();
-                // if we have three parameters the second is columns
-                size_t cols = parameter.size() > 2? parameter[1]->GetScalar() : 1;
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+				size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+				// if we have three parameters the second is columns
+				size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+
 				bool needGradient = node->GetOptionalParameter("needGradient", "false");
 				float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
                 nodePtr = m_net.Delay(NULL, defaultHiddenActivity, rows, cols, name);
@@ -269,13 +290,16 @@ public:
             {
                 int id = 2; // skip weightNode and inputValueNode
 
-                size_t kernelWidth = parameter[id++]->GetScalar();
-                size_t kernelHeight = parameter[id++]->GetScalar();
-                size_t outputChannels = parameter[id++]->GetScalar();
-                size_t horizontalSubsample = parameter[id++]->GetScalar();
-                size_t verticalSubsample = parameter[id++]->GetScalar();
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size()-id, pass);
+				id = 0; // reset counter because the params array starts at zero
+				size_t kernelWidth = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t kernelHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t outputChannels = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
             
-                assert (id == 7);
+                assert (id == 5);
 
                 //optional
                 bool zeroPadding = node->GetOptionalParameter("zeroPadding", "false");
@@ -299,12 +323,15 @@ public:
             {
                 int id = 1; // skip inputValueNode
 
-                size_t windowWidth = parameter[id++]->GetScalar();
-                size_t windowHeight = parameter[id++]->GetScalar();
-                size_t horizontalSubsample = parameter[id++]->GetScalar();
-                size_t verticalSubsample = parameter[id++]->GetScalar();
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+				id = 0; // reset counter because the params array starts at zero
+				size_t windowWidth = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t windowHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
             
-                assert (id == 5);
+                assert (id == 4);
 
                 nodePtr = m_net.MaxPooling(NULL, /*inputWidth,inputHeight, channels,*/windowWidth, windowHeight, 
                             horizontalSubsample, verticalSubsample, name);
@@ -313,7 +340,7 @@ public:
         else if (cnNodeType == AveragePoolingNode<ElemType>::TypeName())
         {
             if (parameter.size() != 5)
-                Error("%ws should have 8 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
+                Error("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
 
             // setup the parameter position of children so we can hook them up later
             nodeParamCount = 1;
@@ -323,15 +350,15 @@ public:
             {
                 int id = 1; // skip inputValueNode
 
-                //size_t inputWidth = parameter[id++]->GetScalar();
-                //size_t inputHeight = parameter[id++]->GetScalar();
-                //size_t channels = parameter[id++]->GetScalar();
-                size_t windowWidth = parameter[id++]->GetScalar();
-                size_t windowHeight = parameter[id++]->GetScalar();
-                size_t horizontalSubsample = parameter[id++]->GetScalar();
-                size_t verticalSubsample = parameter[id++]->GetScalar();
-            
-                assert (id == 5);
+				// evaluate only scalar parameters
+				vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+				id = 0; // reset counter because the params array starts at zero
+				size_t windowWidth = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t windowHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+				size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+
+                assert (id == 4);
 
                 nodePtr = m_net.AveragePooling(NULL, /*inputWidth,inputHeight, channels,*/windowWidth, windowHeight, 
                             horizontalSubsample, verticalSubsample, name);
@@ -387,6 +414,99 @@ public:
         }
     }
 
+#ifdef LATER
+	// EvaluateDotName - Evaluate a dot name and resolve to target node
+	// node - NDLNode of the script
+	// nodeParam - NDLNode parameter we are evaluating
+	// baseName - name of the base node
+	// pass - which pass through the NDL nodes
+	// returns: the node that is the evaluated parameter
+	virtual NDLNode<ElemType>* EvaluateDotName(NDLNode<ElemType>* node, NDLNode<ElemType>* nodeParam, const std::wstring& baseNameP, const NDLPass pass)
+
+	{
+		if (pass > ndlPassInitial && evaluateNode)
+		{
+			std::string name = nodeParam->GetName();
+			std::wstring wname = msra::strfun::utf16(name);
+			if (nodeParam->GetType() == ndlTypeDotParameter)
+			{
+				// When we see a variable of the form "A.B" in a macro, we need to resolve it to an actual node, by first constructing it's
+				// fully-qualified name. There are 2 possibilities: 
+				// 1) "A" was defined locally within the macro.  In this case, we must find the fully-qualified name of the node that this macro
+				//    call is being assigned to (eg, "C" in the example "C=Macro(X)"), and concatenate it's name with "A.B" (eg, "C.A.B").
+				// 2) "A" was passed in as a parameter to a macro.  In this case, we must find the fully-qualified name of the node that
+				//    was passed in as "A", and replace the "A" and "A.B" with this name.
+
+				// Consider the following example:
+				// NdlBLob=[
+				//      P=MacroCall1(...)
+				//      C=MacroCall2(P) 
+				// ]
+				// # MacroDefinition
+				// MacroCall2(X)
+				// { 
+				//      A=MacroCall3(...)
+				//      D=Times(A.B,X.B)}
+				// }
+				// 
+
+				// In this example, in the call D=Times(A.B,X.B), we need to resolve A.B and X.B appropriately.
+				// Specifically, "A.B" must be resolved to the fully qualified name "C.A.B", whereas "X.B" must be resolved to the fully qualified name "P.B".
+				// We then use this fully-qualified name to look up this node in the model (using "m_net.GetNodeFromName").
+
+				std::size_t firstDotPos = name.find_first_of(".");
+				if (firstDotPos == std::string::npos)
+				{
+					Error("Logic Error: nodeParam of type \"ndlTypeDotParameter\" doesn't have a dot in its name: %s", name.c_str());
+				}
+
+				std::string nameBeforeDot = name.substr(0, firstDotPos);
+				std::string nameAfterDot = name.substr(firstDotPos + 1, name.size() - (firstDotPos + 1));
+
+				// look up if "nameBeforeDot" was a parameter to the macro.
+				NDLNode<ElemType>* resolvedParam = nodeParam->GetParentScript()->FindSymbol(nameBeforeDot);
+				if (resolvedParam != nullptr && resolvedParam->GetType() == ndlTypeMacroCall)
+				{
+					// if "nameBeforeDot" was a parameter to the macro, builds it's fully qualified name by
+					// replacing "nameBeforeDot" with the fully qualified name of the node passed in as the parameter.
+					NDLScript<ElemType>* parentScript = resolvedParam->GetParentScript();
+					baseName = parentScript->GetBaseName();
+					std::wstring resolvedParamName = msra::strfun::utf16(resolvedParam->GetName());
+					wname = baseName.empty() ?
+						resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot) :
+						baseName + L"." + resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot);
+				}
+				else if (!baseName.empty())
+				{
+					// else, "nameBeforeDot" wasn't a parameter to the macro, so treat it as a local variable.
+					wname = baseName + L"." + wname;
+				}
+			}
+			else if (!baseName.empty())
+			{
+				wname = baseName + L"." + wname;
+			}
+
+			// fully qualified names can be looked up in the model
+			if (m_net.NodeNameExist(wname))
+			{
+				void* np = (void*)m_net.GetNodeFromName(wname);
+				nodeParam->SetEvalValue(np);
+			}
+			// NOTE: there is a bug here, we allow an abbreviated node reference (i.e. L1.BFF) based on return values in NDL 
+			// when the actual full node reference that the computational network uses would be L1.BFF.FF.P, so that is what CN sees
+			// can we do the normal find symbol here to allow abbreviated node references?
+
+			// if we still didn't get a value, throw an error
+			if (nodeParam->GetEvalValue() == nullptr)
+			{
+				Error("Logic Error: Dot name could not be resolved '%s': should have a node named '%ls' in computational network\n", nodeParam->GetName().c_str(), name.c_str());
+			}
+		}
+		return nodeParam;
+	}
+#endif
+
     // EvaluateParameter - Evaluate a parameter of a call
     // node - NDLNode of the script
     // nodeParam - NDLNode parameter we are evaluating
@@ -410,100 +530,46 @@ public:
         {
         // if the node is a parameter then look it up in the symbol table
         case ndlTypeUndetermined: // an undetermined parameter needs to be looked up again in the symbol table
-        case ndlTypeParameter:
-            nodeParam = script->FindSymbol(nodeParam->GetName());
+		case ndlTypeParameter:
+		{
+			// lookup the parameter
+			NDLNode<ElemType>* nodeResolve = script->FindSymbol(nodeParam->GetName());
 
-            // if the parmeter/undetermined results in a dotParameter we need to continue evaluation with a different base name
-            if (nodeParam->GetType() == ndlTypeDotParameter)
-            {
-                baseName = nodeParam->GetParentScript()->GetBaseName();
-            }
-            // if we have resolved the name break; otherwise continue evaluation
-            if (!(pass == ndlPassResolve && nodeParam->GetEvalValue() == nullptr))
-            {
-                break;
-            }
-        case ndlTypeDotParameter:
-            if (pass > ndlPassInitial && evaluateNode)
-            {
-                std::string name = nodeParam->GetName();
-				std::wstring wname = msra::strfun::utf16(name);
-				if(nodeParam->GetType() == ndlTypeDotParameter)
-				{	
-                    // When we see a variable of the form "A.B" in a macro, we need to resolve it to an actual node, by first constructing it's
-                    // fully-qualified name. There are 2 possibilities: 
-                    // 1) "A" was defined locally within the macro.  In this case, we must find the fully-qualified name of the node that this macro
-                    //    call is being assigned to (eg, "C" in the example "C=Macro(X)"), and concatenate it's name with "A.B" (eg, "C.A.B").
-                    // 2) "A" was passed in as a parameter to a macro.  In this case, we must find the fully-qualified name of the node that
-                    //    was passed in as "A", and replace the "A" and "A.B" with this name.
+			// if we have resolved the name, no need to continue evaluation
+			if (!(pass == ndlPassResolve && nodeResolve && nodeParam->GetEvalValue() == nullptr))
+			{
+				break;
+			}
+			if (pass > ndlPassInitial && evaluateNode && nodeResolve)
+			{
+				std::string name = nodeResolve->GetName();
+				// we need to start from the parent script, because that is the namespace of the parameter being passed in
+				NDLScript<ElemType>* parentScript = nodeResolve->GetParentScript();
+				nodeResolve = parentScript->FindSymbol(name, true);
 
-                    // Consider the following example:
-                    // NdlBLob=[
-                    //      P=MacroCall1(...)
-                    //      C=MacroCall2(P) 
-                    // ]
-                    // # MacroDefinition
-                    // MacroCall2(X)
-                    // { 
-                    //      A=MacroCall3(...)
-                    //      D=Times(A.B,X.B)}
-                    // }
-                    // 
-
-                    // In this example, in the call D=Times(A.B,X.B), we need to resolve A.B and X.B appropriately.
-                    // Specifically, "A.B" must be resolved to the fully qualified name "C.A.B", whereas "X.B" must be resolved to the fully qualified name "P.B".
-                    // We then use this fully-qualified name to look up this node in the model (using "m_net.GetNodeFromName").
-
-					std::size_t firstDotPos = name.find_first_of(".");                
-					if(firstDotPos == std::string::npos)
-					{
-						Error("Logic Error: nodeParam of type \"ndlTypeDotParameter\" doesn't have a dot in its name: %s", name.c_str());
-					}
-					
-					std::string nameBeforeDot = name.substr(0, firstDotPos);
-					std::string nameAfterDot = name.substr(firstDotPos + 1, name.size() - (firstDotPos + 1));
-
-                    // look up if "nameBeforeDot" was a parameter to the macro.
-					NDLNode<ElemType>* resolvedParam = nodeParam->GetParentScript()->FindSymbol(nameBeforeDot);
-					if (resolvedParam != nullptr && resolvedParam->GetType() == ndlTypeMacroCall)
-					{
-                        // if "nameBeforeDot" was a parameter to the macro, builds it's fully qualified name by
-                        // replacing "nameBeforeDot" with the fully qualified name of the node passed in as the parameter.
-						NDLScript<ElemType>* parentScript = resolvedParam->GetParentScript();
-						baseName = parentScript->GetBaseName();
-						std::wstring resolvedParamName = msra::strfun::utf16(resolvedParam->GetName());
-						wname = baseName.empty() ? 
-                            resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot) :
-                            baseName + L"." + resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot);
-					}
-					else if(!baseName.empty())
-					{
-                        // else, "nameBeforeDot" wasn't a parameter to the macro, so treat it as a local variable.
-						wname = baseName + L"." + wname;
-					}
-				}
-				else if(!baseName.empty())
+				// if we still didn't get a value
+				if (nodeResolve == nullptr || nodeResolve->GetEvalValue() == nullptr)
 				{
-					wname = baseName + L"." + wname;
+					// check for the fully quantified name in the computation network
+					// this is needed for MEL processing, since CN nodes names can be used as parameters in MEL
+					std::wstring wname = msra::strfun::utf16(name);
+					if (m_net.NodeNameExist(wname))
+					{
+						void* np = (void*)m_net.GetNodeFromName(wname);
+						// if we don't have a resolve node, it's because the name didn't exist in NDL
+						if (!nodeResolve)
+							nodeResolve = nodeParam;
+						nodeResolve->SetEvalValue(np);
+					}
+					else
+					{
+						Error("Parameter name could not be resolved '%s'\n", name.c_str());
+					}
 				}
-
-                // fully qualified names can be looked up in the model
-                if (m_net.NodeNameExist(wname))
-                {
-                    void* np = (void*)m_net.GetNodeFromName(wname);
-                    nodeParam->SetEvalValue(np);
-                }
-                // NOTE: there is a bug here, we allow an abbreviated node reference (i.e. L1.BFF) based on return values in NDL 
-                // when the actual full node reference that the computational network uses would be L1.BFF.FF.P, so that is what CN sees
-                // can we do the normal find symbol here to allow abbreviated node references?
-
-                // if we still didn't get a value, throw an error
-                if (nodeParam->GetEvalValue() == nullptr)                    
-                {
-                    Error("Logic Error: Dot name could not be resolved '%s': should have a node named '%ls' in computational network\n", nodeParam->GetName().c_str(), name.c_str());
-                }
-            }
-            break;
+			}
+			nodeParam = nodeResolve;
+			break;
+		}
         case ndlTypeFunction:
             if (evaluateNode)
                 Evaluate(nodeParam, baseName, pass);
@@ -565,6 +631,10 @@ public:
                 assert(np != nullptr);
                 inputs.push_back((void*)np);
             }
+			else if (pass == ndlPassInitial) // for initial pass we are only interested in resolved nodes (to get constant values)
+			{
+				inputs.push_back((void*)nodeResult);
+			}
             // NOTE: in final pass inputs are always NULL
         }
 
@@ -580,7 +650,7 @@ public:
         std::string empty;
 
 		// loop through all the optional parameters processing them as necessary
-        for each (NDLNode<ElemType>* param in params)
+        for (NDLNode<ElemType>* param : params)
         {
 			// make sure it's a "tag" optional parameter, that's all we process currently
 			if (_strcmpi(param->GetName().c_str(), "tag"))
@@ -616,7 +686,7 @@ public:
 	// compNode - computation node to add
 	void SetOutputNode(std::vector<ComputationNode<ElemType>*>& nodeGroup, ComputationNode<ElemType>* compNode)
 	{
-		for each (ComputationNodePtr node in nodeGroup)
+		for (ComputationNodePtr node : nodeGroup)
 		{
 			if (node == compNode)
 				return;

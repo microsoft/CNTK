@@ -498,8 +498,6 @@ static inline size_t strnlen (const char *s, size_t n) { return std::find (s,s+n
 template<class CHAR>
 CHAR * fgetline (FILE * f, CHAR * buf, int size)
 {
-
-    unsigned __int64 filepos = fgetpos (f); // (for error message only)
     CHAR * p = fgets (buf, size, f);
     if (p == NULL)            // EOF reached: next time feof() = true
     {
@@ -515,7 +513,8 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (n >= (size_t) size -1)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
-        ERROR ("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
+		unsigned __int64 filepos = fgetpos(f); // (for error message only)
+		ERROR("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
                filepos, size -1, _utf8 (example).c_str());
     }
 

@@ -111,7 +111,7 @@ ndlMacroDefine=[
         BFF_final = Plus(BFF1, BFF2)
     }
 
-    LSTMComponent(inputDim, outputDim, input)
+    LSTMComponent(inputDim, outputDim, in)
     {
         Wxo = Parameter(outputDim, inputDim, init=Uniform, initValueScale=6);
         Wxi = Parameter(outputDim, inputDim, init=Uniform, initValueScale=6);
@@ -139,17 +139,17 @@ ndlMacroDefine=[
         delayCF = Delay(outputDim, ct, delayTime=1);
         delayCC = Delay(outputDim, ct, delayTime=1);
 
-        WxiInput = Times(Wxi, input);
+        WxiInput = Times(Wxi, in);
         WhidelayHI = Times(Whi, delayHI);
         WcidelayCI = DiagTimes(Wci, delayCI);
 
         it = Sigmoid (Plus ( Plus (Plus (WxiInput, bi), WhidelayHI), WcidelayCI));
 
-        WxcInput = Times(Wxc, input);
+        WxcInput = Times(Wxc, in);
         WhcdelayHC = Times(Whc, delayHC);
         bit = ElementTimes(it, Tanh( Plus(WxcInput, Plus(WhcdelayHC, bc))));
         
-        Wxfinput = Times(Wxf, input);
+        Wxfinput = Times(Wxf, in);
         WhfdelayHF = Times(Whf, delayHF);
         WcfdelayCF = DiagTimes(Wcf, delayCF);
 
@@ -159,7 +159,7 @@ ndlMacroDefine=[
 
         ct = Plus(bft, bit);
 
-        Wxoinput = Times(Wxo, input);
+        Wxoinput = Times(Wxo, in);
         WhodelayHO = Times(Who, delayHO);
         Wcoct = DiagTimes(Wco, ct);
 

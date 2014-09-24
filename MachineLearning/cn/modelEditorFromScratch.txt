@@ -5,6 +5,11 @@ m1=[
     HDim=256
     LDim=10
 
+	macro(test)
+	{
+		local=test
+	}
+
     features=Input(SDim, tag=feature)
     labels=Input(LDim, tag=label)
 
@@ -26,7 +31,7 @@ m1=[
 
 SetDefaultModel(m1)
 Dump(m1, "c:\temp\dump1.txt", includeData = true)
-LoadNDLSnippet(m2, "NdlScript.txt")
+LoadNDLSnippet(m2, "C:\dev\CNTK\MachineLearning\cn\NdlScript.txt")
 Copy(L3.RL, L4.RL)
 #add a layer to a 3-layer network, copy all nodes in layer 3 to layer 4
 # all strings that start with L3* will be copied to L4* along with internal connections

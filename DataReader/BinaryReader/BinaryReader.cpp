@@ -115,13 +115,13 @@ void BinaryReader<ElemType>::DisplayProperties()
 
     fprintf(stderr,"BinaryReader in use...\n");
     // enumerate the files 
-    for each (SectionFile* file in m_secFiles)
+    for (SectionFile* file : m_secFiles)
     {
         Section* section = file->FileSection();
         fprintf(stderr,"File: %ls, Records: %lld\n", file->GetName(), section->GetElementCount());
     }
 
-    for each (auto pair in m_sections)
+    for (auto pair : m_sections)
     {
         Section* section = pair.second;
         fprintf(stderr,"Section: %ls, Elements: %lld, ElementsPerRecord: %lld, ElementSize: %lld\n", pair.first.c_str(), section->GetElementCount(), section->GetElementsPerRecord(), section->GetElementSize());
@@ -132,7 +132,7 @@ void BinaryReader<ElemType>::DisplayProperties()
             size_t size = sizeof(NumericStatistics)*stats.size();
             GetData(pair.first, stats.size(), &stats[0], size);
             fprintf(stderr,"  *Stats*: ");
-            for each (NumericStatistics stat in stats)
+            for (NumericStatistics stat : stats)
             {
                 fprintf(stderr,"%s:%lf, ",stat.statistic, stat.value);
             }
@@ -148,7 +148,7 @@ BinaryReader<ElemType>::~BinaryReader()
     // clear the section references, they will be deleted by the sectionFile destructors
     m_sections.clear();
 
-    for each (SectionFile* secFile in m_secFiles)
+    for (SectionFile* secFile : m_secFiles)
     {
         delete secFile;
     }

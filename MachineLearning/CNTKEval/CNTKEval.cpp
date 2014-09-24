@@ -93,7 +93,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
     case nodeInput:
         {
         std::list<ComputationNode<ElemType>*> nodes = m_net->InputNodes(outputNodes[0]);
-        for each (ComputationNode<ElemType>* node in nodes)
+        for (ComputationNode<ElemType>* node : nodes)
         {
             std::wstring name = node->NodeName();
             size_t size = node->FunctionValues().GetNumRows();
@@ -104,7 +104,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
     case nodeOutput:
         {
         std::vector<ComputationNode<ElemType>*> nodes = outputNodes;
-        for each (ComputationNode<ElemType>* node in nodes)
+        for (ComputationNode<ElemType>* node : nodes)
         {
             std::wstring name = node->NodeName();
             size_t size = node->FunctionValues().GetNumRows();
