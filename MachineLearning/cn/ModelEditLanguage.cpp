@@ -318,7 +318,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             Error("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0], params[1]);
 
         ProcessNDLScript(netNdlFrom, ndlPassAll);
-        for each (GenNameValue name in names)
+        for (GenNameValue name : names)
         {
             ComputationNode<ElemType>* node = name.first;
             std::wstring nodeName = node->NodeName();
@@ -350,7 +350,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
         ProcessNDLScript(netNdlFrom, ndlPassResolve); 
-        for each (ComputationNode<ElemType>* node in nodeTo)
+        for (ComputationNode<ElemType>* node : nodeTo)
         {
             node->SetInput(inputNum, nodeFrom[0]);
         }
@@ -443,7 +443,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         ProcessNDLScript(netNdl, ndlPassInitial, false);
 
         ComputationNetwork<ElemType>* cn = netNdl->cn;
-        for each (ComputationNode<ElemType>* node in nodes)
+        for (ComputationNode<ElemType>* node : nodes)
         {
             switch(prop)
             {
@@ -519,7 +519,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // make sure all NDL links have been resolved
         ProcessNDLScript(netNdl, ndlPassResolve);
 
-        for each (ComputationNode<ElemType>* node in nodes)
+        for (ComputationNode<ElemType>* node : nodes)
         {
             switch(prop)
             {
@@ -557,7 +557,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
             if (nodes.size() < 1)
                 Error("Delete must have at least one target, %s doesn't represent any items",params[i]);
-            for each (ComputationNode<ElemType>* node in nodes)
+            for (ComputationNode<ElemType>* node : nodes)
             {
                 netNdl->cn->DeleteNode(node->NodeName());
             }
@@ -581,7 +581,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         ProcessNDLScript(netNdlFrom, ndlPassAll);
 
         // now we have the original nodeNames from the input symbol, generate the output nodeNames
-        for each (GenNameValue nodeName in nodeNames)
+        for (GenNameValue nodeName : nodeNames)
         {
             ComputationNode<ElemType>* node = nodeName.first;
             netNdlFrom->cn->RenameNode(node, nodeName.second);
