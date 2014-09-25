@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -22,10 +22,14 @@
     <ProjectGuid>{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Math</RootNamespace>
-    <SccProjectName>SAK</SccProjectName>
-    <SccAuxPath>SAK</SccAuxPath>
-    <SccLocalPath>SAK</SccLocalPath>
-    <SccProvider>SAK</SccProvider>
+    <SccProjectName>
+    </SccProjectName>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccProvider>
+    </SccProvider>
     <ProjectName>CNTKMath</ProjectName>
     <CudaToolkitCustomDir>$(CUDA_PATH)</CudaToolkitCustomDir>
   </PropertyGroup>
@@ -33,26 +37,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -80,8 +84,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\common\include;$(ACML_PATH)\include;$(CUDA_PATH)include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)lib\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\common\include;$(ACML_PATH)\include;$(CUDA_PATH)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)\lib\$(Platform);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -90,8 +94,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\common\include;$(CUDA_PATH)include;$(ACML_PATH)\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)lib\$(Platform);$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <IncludePath>..\..\common\include;$(CUDA_PATH)\include;$(ACML_PATH)\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -134,8 +138,7 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(ACML_PATH)\lib\*.dll $(OutputPath)
-copy /Y "$(CUDA_PATH)bin\cudart64_65.dll" $(OutputPath)</Command>
+      <Command>copy /Y $(ACML_PATH)\lib\*.dll $(OutputPath)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy ACML DLLs and cudart64_65.dll</Message>
@@ -203,8 +206,8 @@ copy /Y "$(CUDA_PATH)bin\cudart64_65.dll" $(OutputPath)</Command>
       <DelayLoadDLLs>cublas64_65.dll;cusparse64_65.dll;curand64_65.dll;cudart64_65.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(ACML_PATH)\lib\*.dll $(OutputPath)
-copy /Y "$(CUDA_PATH)bin\cudart64_65.dll" $(OutputPath)</Command>
+      <Command>copy /Y $(ACML_PATH)\lib\*.dll $(OutputPath) 
+copy /Y "$(CUDA_PATH)\bin\cudart64_65.dll" $(OutputPath)</Command>
       <Message>Copy ACML DLLs and cudart64_65.dll</Message>
     </PostBuildEvent>
     <CudaCompile>

@@ -37,7 +37,6 @@ enum NDLType
     ndlTypeVariable,
     ndlTypeParameter, // parameter value, must be looked up to get actual value
     ndlTypeUndetermined, // an undetermined value that will later be resolved
-    ndlTypeDotParameter, // a dot parameter that needs to be fully resolved
     ndlTypeOptionalParameter,
     ndlTypeArray,
     ndlTypeMacroCall, // calling a macro
@@ -183,11 +182,18 @@ public:
     ~NDLNode()
     {}
 
+	// publicly accessible Copy method
+	// should only be used for macro expansion
+	NDLNode* Copy() const
+	{
+		NDLNode* ret = new NDLNode(*this);
+		return ret;
+	}
+
 private:
-    NDLNode(NDLNode& copyMe) 
-    {            
-        throw std::logic_error("'NDLNode(NDLNode& copyMe)' should never be called.");
-    } 
+
+	// copy constructor, creates a new disconnected copy of this node for macro expansion
+	NDLNode(const NDLNode& copyMe);
 
     NDLNode& operator=(NDLNode& copyMe)  //this is just a place holder implementation which is not functioning but prevent callers to use it.
     {            
@@ -205,29 +211,30 @@ private:
 
 public:
     void SetScript(NDLScript<ElemType>* script) {m_script = script;}
-    NDLScript<ElemType>* GetScript() {return m_script;}
+    NDLScript<ElemType>* GetScript() const {return m_script;}
     void SetType(NDLType type) {m_type = type;}
-    NDLType GetType() {return m_type;}
-    std::string GetName() {return m_name;}
+    NDLType GetType() const {return m_type;}
+    const std::string& GetName() const {return m_name;}
     void SetName(std::string &name) {m_name = name;}
-    ConfigValue GetValue() {return m_value;}
+    ConfigValue GetValue() const {return m_value;}
     void SetValue(std::string &value) {m_value = value;}
 
     // parameters of a function (ndlTypFunction), or parameters in the call to a macro
     void SetParamString(ConfigValue paramString) {m_paramString = paramString;} 
-    ConfigArray GetParamString() {return m_paramString;}
+    ConfigArray GetParamString() const {return m_paramString;}
 
     // parameters of a macro
     void SetParamMacro(ConfigValue paramMacro) {m_paramMacro = paramMacro;} 
-    ConfigArray GetParamMacro() {return m_paramMacro;}
+    ConfigArray GetParamMacro() const {return m_paramMacro;}
 
-    NDLScript<ElemType>* GetParentScript() {return m_parent;}
+	void SetParentScript(NDLScript<ElemType>* script) {m_parent = script;}
+	NDLScript<ElemType>* GetParentScript() { return m_parent; } 
 
     // get parameters, either just optional or just regular
-    vector<NDLNode*> GetParameters(bool optional=false) 
+    vector<NDLNode*> GetParameters(bool optional=false) const
     { 
         vector<NDLNode*> result;
-        for each(NDLNode* param in m_parameters)
+        for (NDLNode* param : m_parameters)
         {
             bool optParam = param->GetType() == ndlTypeOptionalParameter;
             if (optParam == optional)
@@ -237,16 +244,16 @@ public:
     }
     
     // Get/Set eval values
-    void* GetEvalValue() { return m_eval;}
+    void* GetEvalValue() const { return m_eval;}
     void SetEvalValue(void* evalValue) {m_eval = evalValue;}
 
-    // FindOptionalParameter - Get an optional parameter value
+    // GetOptionalParameter - Get an optional parameter value
     // name - the name to search for in the optional parameters
     // default - the default value (if not found)
     // returns: parameter value if found, or default value otherwise
-    ConfigValue GetOptionalParameter(const std::string& name, const std::string& default)
+    ConfigValue GetOptionalParameter(const std::string& name, const std::string& default) const
     {
-        for each(NDLNode* param in m_parameters)
+        for (NDLNode* param : m_parameters)
         {
             bool optParam = param->GetType() == ndlTypeOptionalParameter;
             if (optParam && !_strcmpi(param->GetName().c_str(), name.c_str()))
@@ -274,8 +281,7 @@ public:
     ConfigValue GetScalar()
     {
         NDLNode<ElemType>* node = this;
-        while (node && (node->GetType() == ndlTypeVariable || node->GetType() == ndlTypeParameter 
-            || node->GetType() == ndlTypeDotParameter))
+        while (node && (node->GetType() == ndlTypeVariable || node->GetType() == ndlTypeParameter))
         {
             node = node->FindNode(node->GetValue(), true /*searchForDotNames*/);
         }
@@ -306,10 +312,6 @@ public:
                 m_parameters.size(),m_paramMacro.size(),m_value.c_str());
         }
 
-        // we need to clear out the eval values, because we need to re-evaluate each time a macro is called
-        // otherwise, we look at the eval values from last time and think it is accurate
-        m_script->ClearEvalValues();
-
         // assign the actual parameters in the script so we can execute it
         for (int i=0; i < m_parameters.size(); ++i)
         {
@@ -338,14 +340,6 @@ public:
             // assign the parameter symbols in the script we will call with the values passed to the call
             m_script->AssignSymbol(paramName, nodeParam);
 
-            // look for the symbol already in the node evaluators symbols
-            const wstring& name = msra::strfun::utf16(paramName);
-            void* evalValue = nodeEval.FindSymbol(name);
-            // if it's there, use it
-            if (evalValue != NULL)
-            {
-                nodeParam->SetEvalValue(evalValue);
-            }
         }
 
         std::wstring newBase = baseName;
@@ -389,14 +383,16 @@ private:
     static NDLScript<ElemType> s_global; //("global"); // global script for storing macros and global nodes
     std::vector<NDLNode<ElemType>*> m_children; // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
     ComputationNetwork<ElemType>* m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+	bool m_definingMacro; // currently defining a macro, flag to determine if we are defining or interpretting a macro call
+
 public:
     // constructors that take a config name
-    NDLScript (const std::string & configname) : ConfigParser(';', configname) { m_macroNode = NULL; m_noDefinitions=false;}
-    NDLScript (const std::wstring & configname) : ConfigParser(';', configname) {  m_macroNode = NULL; m_noDefinitions=false;}
+	NDLScript(const std::string & configname) : ConfigParser(';', configname) { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; }
+	NDLScript(const std::wstring & configname) : ConfigParser(';', configname) { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; }
     ~NDLScript() 
     {
         // need to free all the child nodes attached to this script node
-        for each (NDLNode<ElemType>* node in m_children)
+        for (NDLNode<ElemType>* node : m_children)
         {
             delete node;
         }
@@ -404,13 +400,14 @@ public:
     }
 
     // empty constructor 
-    NDLScript () : ConfigParser(';') {  m_macroNode = NULL; m_noDefinitions=false; } // parameterless version if needed
+	NDLScript() : ConfigParser(';') { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; } // parameterless version if needed
 
     // construct NDLScript from a ConfigValue, propogate the config Name
     NDLScript(const ConfigValue& configValue) : ConfigParser(';',configValue.Name())
     {
         m_macroNode = NULL;
         m_noDefinitions=false;
+		m_definingMacro = false;
         m_scriptString = configValue;
         Parse(m_scriptString);
     }
@@ -422,6 +419,7 @@ public:
     NDLScript(const ConfigValue& configValue, std::string macroName, bool oneLineDefinition) : ConfigParser(';',configValue.Name())
     {
         m_noDefinitions = oneLineDefinition;
+		m_definingMacro = true;
         m_macroNode = NULL;
         m_scriptString = configValue;
         NDLNode<ElemType>* ndlNode = s_global.CheckName(macroName, true);
@@ -441,21 +439,16 @@ public:
             AddSymbol(param, paramNode);
         }
         Parse(m_scriptString);
+		m_definingMacro = false;
     }
 
 
     // copy and move constructors
-    NDLScript(const NDLScript& configValue) : ConfigParser(configValue)
-    {
-        *this = configValue;
-        m_macroNode = NULL;
-    }
-    NDLScript(const NDLScript&& configValue) : ConfigParser(move(configValue))
-    {
-        *this = move(configValue);
-        m_macroNode = NULL;
-    }
-
+	NDLScript(const NDLScript& copyMe);
+	NDLScript(const NDLScript&& moveMe);
+private:
+	NDLNode<ElemType>* NDLScript<ElemType>::DuplicateNode(NDLNode<ElemType>* node);
+public:
     // GlobalScript - Access to global script
     static NDLScript<ElemType>& GlobalScript() {return s_global;}
 
@@ -483,12 +476,12 @@ public:
 	void Clear()
 	{
 
-		for each (NDLNode<ElemType>* node in m_children)
+		for (NDLNode<ElemType>* node : m_children)
         {
             delete node;
         }
         m_children.clear();
-		for each (NDLNode<ElemType>* node in m_script)
+		for (NDLNode<ElemType>* node : m_script)
         {
             delete node;
         }
@@ -498,7 +491,7 @@ public:
 	}
     void ClearEvalValues()
     {
-        for each (NDLNode<ElemType>* node in m_children)
+        for (NDLNode<ElemType>* node : m_children)
         {
             node->SetEvalValue(NULL);
         }
@@ -521,7 +514,7 @@ public:
     // symbol - symbol to find
     // searchForDotNames - search for NDL symbols traversing call heirarchy
     // returns - node this symbol references
-    NDLNode<ElemType>* FindSymbol(const std::string& symbol, bool searchForDotNames=false)
+    NDLNode<ElemType>* FindSymbol(const std::string& symbol, bool searchForDotNames=true)
     {
         // handle the no dot names case
         if (!searchForDotNames)
@@ -551,7 +544,7 @@ public:
             {
                 if (node->GetType() != ndlTypeMacroCall || script == NULL)
                     Error("Symbol name not valid, %s is not a macro, so %s cannot be interpretted",search.c_str(),symbol.c_str() );
-                return script->FindSymbol(symbol.substr(firstDot+1));
+                return script->FindSymbol(symbol.substr(firstDot+1), searchForDotNames);
             }
         }
         return found->second;
@@ -573,7 +566,7 @@ public:
     {
         vector<NDLNode<ElemType>*> result;
         std::string empty;
-        for each (auto symbol in m_symbols)
+        for (auto symbol : m_symbols)
         {
             NDLNode<ElemType>* node = symbol.second;
             std::string value = node->GetOptionalParameter(optParamName, empty);
@@ -595,8 +588,8 @@ public:
         if (found != m_symbols.end())
         {
             NDLNode<ElemType>* nodeFound = found->second;
-            // check for undetermined node, because these nodes are to be defined later
-            if (nodeFound->GetType() != ndlTypeUndetermined)
+            // check for undetermined nodes, because these nodes are to be defined later
+			if (nodeFound->GetType() != ndlTypeUndetermined && nodeFound->GetType() != ndlTypeParameter)
             {
                 std::string value = found->second->GetValue();
                 Error("Symbol '%s' currently assigned to '%s' reassigning to a different value not allowed\n", symbol.c_str(), value.c_str());
@@ -657,6 +650,13 @@ public:
         }
     }
 
+	// IsMacroDefinition - is this a macro definition?
+	// returns - true if a definition, otherwise false
+	bool IsMacroDefinition()
+	{
+		return m_definingMacro;
+	}
+
     // CheckName - check for a name in our symbols, see if it exists
     // name - name we are looking for
     // localOnly - only look in the current scope, and not the global scope
@@ -682,7 +682,15 @@ public:
                     // if we are calling a macro we need to keep track of formal parameters, 
                     // keep them as strings in this macroCall node
                     NDLNode<ElemType>* newNode = new NDLNode<ElemType>("", name, this, ndlTypeMacroCall);
-                    newNode->SetScript(node->GetScript());
+					NDLScript<ElemType>* script = node->GetScript();
+
+					// if this is a macro call (and not a definition), we want to expand the macro (make a copy)
+					if (!IsMacroDefinition())
+					{
+						script = new NDLScript<ElemType>(*script);
+					}
+					newNode->SetScript(script);
+
                     newNode->SetParamMacro(node->GetParamMacro());
                     node = newNode;
                 }
@@ -724,7 +732,8 @@ public:
     // ParseParameters - parse the parameters of a macro, or an array
     // ndlNode - node we should add the parameters to
     // value - parameters as config value
-    void ParseParameters(NDLNode<ElemType>* ndlNode, const ConfigValue& value)
+	// createNew - create a new parameter node if one does not exist
+    void ParseParameters(NDLNode<ElemType>* ndlNode, const ConfigValue& value, bool createNew=false)
     {
         ConfigArray parameters = value;
         for (auto iter = parameters.begin(); iter != parameters.end(); ++iter)
@@ -736,13 +745,12 @@ public:
                 paramNode = ParseCall(param);
             else // must be predefined variable or constant
             {
-                paramNode = ParseVariable(param, false);
+                paramNode = ParseVariable(param, createNew);
 
-                // if the method we are allowing undetermined parameters, create a placeholder that will be filled in later
+                // if we can't find the node right now, it's undetermined, must be defined later, or throw an error later
                 if (paramNode == nullptr)
                 {
-                    bool dotName = param.find('.') != npos; // look for a dot name
-                    paramNode = new NDLNode<ElemType>(param, param, this, dotName?ndlTypeDotParameter:ndlTypeUndetermined);
+                    paramNode = new NDLNode<ElemType>(param, param, this, ndlTypeUndetermined);
                     // add to the symbol table
                     AddSymbol(param, paramNode);
                 }
@@ -779,7 +787,7 @@ public:
         if (found == npos)
         {
             ndlNode = new NDLNode<ElemType>("", token, this, ndlTypeConstant);
-        }
+		}
         // not a constant, so must be a variable
         else
         {
@@ -794,13 +802,18 @@ public:
                 Trim(value);
                 
                 ndlNode = new NDLNode<ElemType>(name, value, this, ndlTypeOptionalParameter);
-            }
+			}
             else
             {
                 ndlNode = CheckName(token);
-                if (createNew && ndlNode == NULL)
-                    ndlNode = new NDLNode<ElemType>("", token, this, ndlTypeVariable);
-            }
+				if (createNew && ndlNode == NULL)
+				{
+					// NOTE: currently we only get here in Parameter scenarios, 
+					// if other scenarios present themselves, need a good way to change the type
+                    ndlNode = new NDLNode<ElemType>(token, token, this, ndlTypeParameter);
+					AddSymbol(token, ndlNode);
+				}
+			}
         }
         return ndlNode;
     }
@@ -975,6 +988,31 @@ public:
         return tokenEnd;
     }
 
+	// ExpandMacro - Expand a macro into a new macro definition
+	// node - NDLNode that holds the macro call
+	// returns: new node with the expanded macro
+	NDLNode<ElemType>* ExpandMacro(const NDLNode<ElemType>* node)
+	{
+		assert(node->GetType() == ndlTypeMacroCall); // needs to be a macro call (not definition)
+
+		std::string name = node->GetName();
+		// if we are calling a macro make a new copy of it and execute that instead (macro expansion)
+		// we do this so the evalValues in the macros will be valid regardless of number of instantiations
+		NDLNode<ElemType>* newNode = new NDLNode<ElemType>(name, node->GetValue(), this, ndlTypeMacroCall);
+		NDLScript<ElemType>* newScript = new NDLScript<ElemType>(*node->GetScript());
+		newNode->SetScript(newScript);
+		newNode->SetParamMacro(node->GetParamMacro());
+
+		// now get the parameters to the macro added
+		ConfigValue paramString = node->GetParamString();
+		ParseParameters(newNode, paramString, true /*createNew*/);
+		newNode->SetParamString(paramString);
+
+		// fixup the symbol table to point to this one instead
+		AssignSymbol(name, newNode);
+		return newNode;
+	}
+
     // Evaluate - Evaluate the script
     // nodeEval - the node evaluator to call
     // baseName - baseName for all labels
@@ -987,7 +1025,7 @@ public:
         std::wstring prevBaseName = GetBaseName();
         SetBaseName(baseName);
 
-        for each (auto node in m_script)
+        for (auto& node : m_script)
         {
             // if we are in skip mode, and we found the skipThrough node, 
             // move out of skip mode and start processing at next node

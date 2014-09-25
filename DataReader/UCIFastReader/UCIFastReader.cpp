@@ -446,7 +446,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
-        for each (auto name in names)
+        for (auto name : names)
         {
             ConfigParameters config = readerConfig(name);
             filesList.push_back(config("wfile"));
@@ -471,7 +471,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
             m_cachingWriter->GetSections(sections);
-            for each (auto pair in sections)
+            for (auto pair : sections)
             {
                 if (pair.second == sectionTypeCategoryLabel)
                 {
@@ -925,7 +925,7 @@ void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, c
     }
     m_mapIdToLabel = labelMapping;
     m_mapLabelToId.clear();
-    for each (std::pair<unsigned, LabelType> var in labelMapping)
+    for (std::pair<unsigned, LabelType> var : labelMapping)
     {
         m_mapLabelToId[var.second] = var.first;
     }
