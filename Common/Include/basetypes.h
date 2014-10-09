@@ -11,6 +11,8 @@
 typedef char16_t TCHAR;
 #include <stdarg.h>
 #define	vsprintf_s vsprintf		/* Not sure this is right... Malcolm */
+#include <chrono>
+#include <thread>
 #endif	 /* LINUX */
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
@@ -108,6 +110,7 @@ using namespace std;
 #define __inout_cap(x)
 #define __inout_cap_c(x)
 #endif
+#endif	// LINUX 
 #ifndef __out_z_cap    // non-VS2005 annotations
 #define __out_cap(x)
 #define __out_z_cap(x)
@@ -321,7 +324,6 @@ public:
 #endif
 };
 
-#ifndef	LINUX
 
 // locks a critical section, and unlocks it automatically
 // when the lock goes out of scope
@@ -447,7 +449,11 @@ public:
 #include <xlocale>      // uses strlen()
 #endif
 #define strlen strlen_
+#ifndef	LINUX
 template<typename _T> inline __declspec(deprecated("Dummy general template, cannot be used directly")) 
+#else
+template<typename _T> inline 
+#endif	// LINUX
 size_t strlen_(_T &s) { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); } // never be called but needed to keep compiler happy
 template<typename _T> inline size_t strlen_(const _T &s)     { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); }
 template<> inline size_t strlen_(char * &s)                  { return strnlen_s(s, SIZE_MAX); }
@@ -980,7 +986,8 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
 #ifndef	LINUX
             ::Sleep (1000); // wait a little, then try again
 #else
-            sleep(1);
+            std::chrono::milliseconds dura(1000);
+            std::this_thread::sleep_for(dura);
 #endif	/* LINUX */
         }
     }

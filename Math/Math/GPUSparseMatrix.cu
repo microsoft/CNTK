@@ -1044,7 +1044,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // canReuseBuffer - target matrix can be reused for temporary space
     // func - function to call to count elements in the result (returns count, and fills csrRowPtr array)
     template<class ElemType>
+#ifndef	LINUX
     void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t (int* csrRowPtrC)> func)
+#else
+    void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, size_t (*func)(int *csRowPtrC))
+#endif	/* LINUX */
     {
         int* csrRowPtrC=NULL;
         GPUSparseMatrix<ElemType>& c = *this;
@@ -1099,6 +1103,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDACALL(cudaFree(csrRowPtrC));
     }
 
+#ifdef	LINUXxx
+    size_t PrepareBufferMultiply(int* csrRowPtrC)
+        {
+            int nnzTotal = -1; 
+            CUSPARSECALL(cusparseXcsrgemmNnz(cusparseHandle,operA,operB,m,n,k,descrA,nnzA,S1.RowLocation(),S1.ColLocation(),descrB,nnzB,
+                S2.RowLocation(),S2.ColLocation(),descrC,csrRowPtrC,&nnzTotal));
+            return nnzTotal;
+        }
+#endif
+
     // Multiply - multiply one spares matrix by another sparse matrix
     // S1 - first sparse matrix
     // transposeS1 - transpose first matrix?
@@ -1136,13 +1150,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaEventCreate(&done));
         //Step 1 
         c.PrepareBuffer(m, n, true, // true means we can reuse the "c" buffer if it exists for temporaries
+#ifndef	LINUX
             [&](int* csrRowPtrC) -> size_t
         {
             int nnzTotal = -1; 
             CUSPARSECALL(cusparseXcsrgemmNnz(cusparseHandle,operA,operB,m,n,k,descrA,nnzA,S1.RowLocation(),S1.ColLocation(),descrB,nnzB,
                 S2.RowLocation(),S2.ColLocation(),descrC,csrRowPtrC,&nnzTotal));
             return nnzTotal;
-        });
+        }
+#else
+	NULL		// PrepareBufferMultiply
+#endif
+	);
 
 
         //Step 2
@@ -1196,12 +1215,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaEventCreate(&done));
         //Step 1 
         bool inOutParameter = (&b == &c);
-        c.PrepareBuffer(m, n, !inOutParameter, [&] (int* csrRowPtrC) -> size_t
+        c.PrepareBuffer(m, n, !inOutParameter, 
+#ifndef	LINUX
+	[&] (int* csrRowPtrC) -> size_t
         {
             int nnzTotal = -1;
             CUSPARSECALL(cusparseXcsrgeamNnz(cusparseHandle,m,n,descrA,nnzA,a.RowLocation(),a.ColLocation(),descrB,nnzB,b.RowLocation(),b.ColLocation(),descrC,csrRowPtrC,&nnzTotal));
             return nnzTotal;
-        });
+        }
+#else
+	NULL
+#endif	// Linux
+	);
 
         //Step 2
         if (sizeof(ElemType)==sizeof(float))
@@ -1588,7 +1613,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this->IsEmpty())
             return;
         // transfer converted block over to this pointer
+#ifndef	LINUX
         *this = std::move(this->Transpose());
+#else	
+	std::cerr << "Not sure how to do the InplaceTranspose()";
+#endif
     }
 
     template<class ElemType>

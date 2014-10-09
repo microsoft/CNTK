@@ -18,6 +18,13 @@
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
 
+// Predefine this for later.
+#ifndef LINUX
+static __inline__ __device__ double atomicAdd(double* address, double val);
+#else
+static  __device__ double atomicAdd(double* address, double val);
+#endif
+
 //CUDA Kernels code
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(

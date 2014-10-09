@@ -9,6 +9,10 @@
 #include "GPUMatrix.cuh"
 #include "GPUSparseMatrix.cuh"
 
+#ifdef	LINUX
+// typedef char wchar_t;
+#endif
+
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
     enum CurrentDataLocation
