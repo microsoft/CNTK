@@ -10,6 +10,7 @@
 
 #ifdef	LINUX
 #define	wcsnlen_s	wcsnlen			/* Not sure if this is best replacement... Malcolm */
+// typedef	char wchar_t;
 #endif	
 
 #define AUTOPLACEMATRIX 1000 // used in parameters only

@@ -231,8 +231,10 @@
 #include "basetypes.h"
 #include "message.h"
 #include <stdio.h>
+#ifndef	LINUX
 #include <windows.h>    // for mmreg.h and FILETIME
 #include <mmreg.h>
+#endif
 #include <algorithm>    // for std::find
 #include <vector>
 #include <map>
@@ -264,7 +266,9 @@ void fsetmode (FILE * f, char type);
 // ----------------------------------------------------------------------------
 
 void freadOrDie (void * ptr, size_t size, size_t count, FILE * f);
+#ifndef LINUX
 void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f);
+#endif
 
 template<class _T>
 void freadOrDie (_T & data, int num, FILE * f)    // template for vector<>
@@ -273,12 +277,14 @@ template<class _T>
 void freadOrDie (_T & data, size_t num, FILE * f)    // template for vector<>
 { data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
 
+#ifndef	LINUX
 template<class _T>
 void freadOrDie (_T & data, int num, const HANDLE f)    // template for vector<>
 { data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
 template<class _T>
 void freadOrDie (_T & data, size_t num, const HANDLE f)    // template for vector<>
 { data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
+#endif
 
 
 // ----------------------------------------------------------------------------
@@ -286,15 +292,19 @@ void freadOrDie (_T & data, size_t num, const HANDLE f)    // template for vecto
 // ----------------------------------------------------------------------------
 
 void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f);
+#ifndef	LINUX
 void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f);
+#endif
 
 template<class _T>
 void fwriteOrDie (const _T & data, FILE * f)    // template for vector<>
 { if (data.size() > 0) fwriteOrDie (&data[0], sizeof (data[0]), data.size(), f); }
 
+#ifndef	LINUX
 template<class _T>
 void fwriteOrDie (const _T & data, const HANDLE f)    // template for vector<>
 { if (data.size() > 0) fwriteOrDie (&data[0], sizeof (data[0]), data.size(), f); }
+#endif
 
 
 // ----------------------------------------------------------------------------
@@ -322,7 +332,7 @@ void fflushOrDie (FILE * f);
 
 size_t filesize (const wchar_t * pathname);
 size_t filesize (FILE * f);
-__int64 filesize64 (const wchar_t * pathname);
+long filesize64 (const wchar_t * pathname);
 
 // ----------------------------------------------------------------------------
 // fseekOrDie(),ftellOrDie(), fget/setpos(): seek functions with error handling
@@ -330,8 +340,8 @@ __int64 filesize64 (const wchar_t * pathname);
 
 size_t fseekOrDie (FILE * f, size_t offset, int mode = SEEK_SET);
 #define ftellOrDie _ftelli64
-unsigned __int64 fgetpos (FILE * f);
-void fsetpos (FILE * f, unsigned __int64 pos);
+unsigned long fgetpos (FILE * f);
+void fsetpos (FILE * f, unsigned long pos);
 
 // ----------------------------------------------------------------------------
 // unlinkOrDie(): unlink() with error handling
@@ -389,8 +399,10 @@ void fgetline (FILE * f, ARRAY<wchar_t> & buf);
 
 const char * fgetstring (FILE * f, char * buf, int size);
 template<size_t n> const char * fgetstring (FILE * f, char (& buf)[n]) { return fgetstring (f, buf, n); }
+#ifndef	LINUX
 const char * fgetstring (const HANDLE f, char * buf, int size);
 template<size_t n> const char * fgetstring (const HANDLE f, char (& buf)[n]) { return fgetstring (f, buf, n); }
+#endif
 const wchar_t * fgetstring (FILE * f, __out_z_cap(size) wchar_t * buf, int size);
 wstring fgetwstring (FILE * f);
 string fgetstring (FILE * f);
@@ -409,7 +421,9 @@ int fskipwNewline (FILE * f, bool skip = true);
 // ----------------------------------------------------------------------------
 
 void fputstring (FILE * f, const char *);
+#ifndef	LINUX
 void fputstring (const HANDLE f, const char * str);
+#endif
 void fputstring (FILE * f, const std::string &);
 void fputstring (FILE * f, const wchar_t *);
 void fputstring (FILE * f, const std::wstring &);
@@ -425,7 +439,9 @@ string fgetTag (FILE * f);
 // ----------------------------------------------------------------------------
 
 void fcheckTag (FILE * f, const char * expectedTag);
+#ifndef	LINUX
 void fcheckTag (const HANDLE f, const char * expectedTag);
+#endif
 void fcheckTag_ascii (FILE * f, const string & expectedTag);
 
 // ----------------------------------------------------------------------------
@@ -439,7 +455,9 @@ void fcompareTag (const string & readTag, const string & expectedTag);
 // ----------------------------------------------------------------------------
 
 void fputTag (FILE * f, const char * tag);
+#ifndef	LINUX
 void fputTag(const HANDLE f, const char * tag);
+#endif
 
 // ----------------------------------------------------------------------------
 // fskipstring(): skip a 0-terminated string, such as a pad string
@@ -477,7 +495,9 @@ int fgetint24 (FILE * f);
 // ----------------------------------------------------------------------------
 
 int fgetint (FILE * f);
+#ifndef	LINUX
 int fgetint (const HANDLE f);
+#endif
 int fgetint_bigendian (FILE * f);
 int fgetint_ascii (FILE * f);
 
@@ -485,7 +505,9 @@ int fgetint_ascii (FILE * f);
 // fgetlong(): read an long value
 // ----------------------------------------------------------------------------
 long fgetlong (FILE * f);
+#ifndef	 LINUX
 long fgetlong (const HANDLE f);
+#endif
 
 // ----------------------------------------------------------------------------
 // fgetfloat(): read a float value
@@ -538,14 +560,18 @@ void fputint24 (FILE * f, int v);
 // ----------------------------------------------------------------------------
 
 void fputint (FILE * f, int val);
+#ifndef	LINUX
 void fputint (const HANDLE f, int v);
+#endif
 
 // ----------------------------------------------------------------------------
 // fputlong(): write an long value
 // ----------------------------------------------------------------------------
 
 void fputlong (FILE * f, long val);
+#ifndef	LINUX
 void fputlong (const HANDLE f, long v);
+#endif
 
 // ----------------------------------------------------------------------------
 // fputfloat(): write a float value
@@ -567,11 +593,13 @@ void fput(FILE * f, T v)
     fwriteOrDie (&v, sizeof (v), 1, f);
 }
 
+#ifndef	 LINUX
 template <typename T>
 void fput(const HANDLE f, T v)
 {
     fwriteOrDie (&v, sizeof (v), 1, f);
 }
+#endif
 
 
 // template versions of put/get functions for binary files
@@ -581,6 +609,7 @@ void fget(FILE * f, T& v)
     freadOrDie ((void *)&v, sizeof (v), 1, f);
 }
 
+#ifndef	LINUX
 template <typename T>
 long fget(const HANDLE f)
 {
@@ -588,6 +617,7 @@ long fget(const HANDLE f)
     freadOrDie (&v, sizeof (v), 1, f);
     return v;
 }
+#endif
 
 
 // GetFormatString - get the format string for a particular type
@@ -732,12 +762,15 @@ namespace msra { namespace files {
     vector<char*> fgetfilelines (const wstring & pathname, vector<char> & readbuffer);
 };};
 
+#ifndef	LINUX
 // ----------------------------------------------------------------------------
 // getfiletime(), setfiletime(): access modification time
 // ----------------------------------------------------------------------------
 
 bool getfiletime (const std::wstring & path, FILETIME & time);
 void setfiletime (const std::wstring & path, const FILETIME & time);
+
+#endif
 
 // ----------------------------------------------------------------------------
 // expand_wildcards() -- expand a path with wildcards (also intermediate ones)

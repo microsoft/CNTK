@@ -29,7 +29,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Clear();
 #ifndef	LINUX
         void PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t (int* csrRowPtrC)> func);
-#endif
+#else
+        void PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, size_t (*func)(int *csRowPtrC));
+#endif	
         size_t ElemCountFromBufferSize(size_t totalBufferSize);
         void PrepareDevice(short deviceId=-1) const;
 

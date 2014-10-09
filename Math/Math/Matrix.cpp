@@ -3338,9 +3338,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else 
                 {
                     GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
-                    GPUMatrix<ElemType> & first= firstDummy;				// By Malcolm.. gcc doesn't support auto
+                    GPUMatrix<ElemType> & first= firstDummy;				// By Malcolm.. gcc doesn't support auto like original
                     GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
-                    GPUSparseMatrix<ElemType> & second = secondDummy;			// By Malcolm.. gcc doesn't support auto
+                    GPUSparseMatrix<ElemType> & second = secondDummy;			// By Malcolm.. gcc doesn't support auto like original
                     if (beta==0)
                     {
                         GPUSparseMatrix<ElemType>::Multiply(first,second,*c.m_GPUMatrix);

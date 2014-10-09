@@ -235,12 +235,21 @@ namespace msra { namespace logging
         char buf[1024];         // local buffer for message
         const char * dup_what (const char * what)
         {
+#ifndef LINUX
             strcpy_s (buf, "message_exception:"); // security hint: safe overloads
             strcat_s (buf, what);
+#else
+            strcpy (buf, "message_exception:"); // security hint: safe overloads
+            strcat (buf, what);
+#endif	// Linux
             return &buf[0];
         }
     public:
+#ifndef LINUX
         message_exception (const char * what) : exception (dup_what (what))
+#else
+        message_exception (const char * what) : exception ()
+#endif
         {
         }
     };
@@ -374,12 +383,20 @@ namespace msra { namespace logging
 
     static inline std::string timeDateStamp (void)
     {
-        __time64_t localtime; _time64 (&localtime);       // get current time and date
-        struct tm now; _localtime64_s (&now, &localtime); // convert
+        time_t localtimeNow; time (&localtimeNow);       // get current time and date
         char buf[20];
+#ifndef	LINUX
+        struct tm now; _localtime64_s (&now, &localtimeNow); // convert
         sprintf_s (buf, "%04d/%02d/%02d %02d:%02d:%02d",    // security hint: this is an overload
                  now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
                  now.tm_hour, now.tm_min, now.tm_sec);
+#else
+        struct tm *now;
+        now = localtime(&localtimeNow); // convert
+        sprintf (buf, "%04d/%02d/%02d %02d:%02d:%02d",    // security hint: this is an overload
+                 now->tm_year + 1900, now->tm_mon + 1, now->tm_mday,
+                 now->tm_hour, now->tm_min, now->tm_sec);
+#endif	// LINUX
         return buf;
     }
 
@@ -581,7 +598,7 @@ namespace msra { namespace logging
 #pragma warning (disable : 4702)    // the 'return 0;' causes this in Release
     static int error (const char * fmt, ...)
     {
-#if 1   // special test code to determine the Windows error in case of a network error
+#ifndef	 LINUX // special test code to determine the Windows error in case of a network error
         DWORD winErr = GetLastError();
         try
         {
@@ -632,8 +649,13 @@ namespace msra { namespace logging
         }
 
         // format msg for __throw_or_exit()
+#ifndef	LINUX
         sprintf_s (G.buf, fmt, arg);  // security hint: this is an overload
         strcat_s (G.buf, "\n");       // security hint: this is an overload
+#else
+        sprintf (G.buf, fmt, arg);  // security hint: this is an overload
+        strcat (G.buf, "\n");       // security hint: this is an overload
+#endif	// LINUX
         __throw_or_exit();
         return 0;
     }
