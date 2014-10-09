@@ -424,7 +424,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ZeroInit(deepCopyFrom.m_computeDevice);
         SetValue(deepCopyFrom);
-        SetMatrixName(deepCopyFrom.m_matrixName);       
+        this->SetMatrixName(deepCopyFrom.m_matrixName);       
     }
 
 #ifndef	LINUX
@@ -452,7 +452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &deepCopyFrom)
         {
             SetValue(deepCopyFrom);
-            SetMatrixName(deepCopyFrom.m_matrixName);       
+            this->SetMatrixName(deepCopyFrom.m_matrixName);       
         }
         return *this;
     }
@@ -464,7 +464,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &moveFrom)
         {
-            if (OwnBuffer() && this->m_pArray!=NULL)
+            if (this->OwnBuffer() && this->m_pArray!=NULL)
             {
                 CUDA_CALL(cudaFree(this->m_pArray));  
             }
