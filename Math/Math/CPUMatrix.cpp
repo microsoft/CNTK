@@ -29,7 +29,7 @@
 // use ACML as default. 
 // Download ACML 5.3.1 (e.g., acml5.3.1-ifort64.exe) or above 
 // from http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-// Install the ifort64 variant (compiled with intel compiler) of the library
+// Install the ifort64_mp variant (compiled with intel compiler) of the library
 // Set Environment variable ACML_PATH to C:\AMD\acml5.3.1\ifort64_mp or the folder you installed acml
 // to point to your folder for the include file and link library
 #include <acml.h>  // requires ACML 5.3.1 and above

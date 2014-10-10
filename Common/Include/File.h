@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
-#include "fileutil.h"
+#include "fileutil.h"   // for f{ge,pu}t{,Text}()
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
