@@ -338,10 +338,10 @@ public:
 			{
 				if (i % (infiles[m].size() / 100 + 1) == 0) { fprintf (stderr, "."); fflush (stderr); }
 				// build utterance descriptor
-
-				if (m==0) { classidsbegin.push_back(classids[0]->size());}
-
-				utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels[0].empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids every non-empty? 
+				if (m == 0 && !labels.empty())
+					classidsbegin.push_back(classids[0]->size());
+					
+				utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels.empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
 				const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
 				// we need at least 2 frames for boundary markers to work
 				if (uttframes < 2)
@@ -353,13 +353,15 @@ public:
 				}
 
 				// check whether we have the ref transcript
-				auto labelsiter = labels[0].end();
+				//auto labelsiter = labels[0].end();
+				bool lacksmlf = true;
 				if (!labels.empty())    // empty means unsupervised mode (don't load any)
 				{
 					key = utterance.key();
 					// check if labels are available (if not, it normally means that no path was found in realignment)
-					labelsiter = labels[0].find (key);
-					const bool lacksmlf = (labelsiter == labels[0].end());
+					auto labelsiter = labels[0].find (key);
+					//const bool lacksmlf = (labelsiter == labels[0].end());
+					lacksmlf = (labelsiter == labels[0].end());
 					if (lacksmlf)
 						if (nomlf++ < 5)
 							fprintf (stderr, " [no labels for  %S]", key.c_str());
@@ -383,7 +385,8 @@ public:
 				{
 					_totalframes += uttframes;
 					framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
-					if (labelsiter != labels[0].end())
+					if (!labels.empty() && !lacksmlf)
+					//if (!labels.empty() && labelsiter != labels[0].end())
 					{
 						foreach_index (j, labels)
 						{
