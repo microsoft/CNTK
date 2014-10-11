@@ -3870,7 +3870,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType Matrix<ElemType>::Exp10(ElemType num)
     { 
-        return exp(num*2.302585093);
+        return (ElemType)exp(num*2.302585093);
     }
 
     template<class ElemType>
@@ -3895,12 +3895,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		diff = y - x;
 		if (diff < MINLOGEXP)
 		{
-			return (x < LSMALL) ? LZERO : x;
+			return (ElemType) ((x < LSMALL) ? LZERO : x);
 		}
 		else
 		{
 			z = exp(diff);
-			return x + log(1.0 + z);
+                        return (ElemType) (x + log(1.0 + z));
 		}
 	}
 
