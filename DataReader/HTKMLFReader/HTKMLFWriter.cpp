@@ -161,7 +161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			{
 				for (int i=0; i<outputData.GetNumRows(); i++)
 				{
-					output(i,j) = *pValue++;				
+					output(i,j) = (float)*pValue++;				
 				}
 			}
 			
