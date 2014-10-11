@@ -219,7 +219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, int size)
+    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t size)
     {               
         m_nz = 0; 
         m_colIdx = -1;

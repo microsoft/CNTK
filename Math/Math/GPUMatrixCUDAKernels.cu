@@ -328,7 +328,8 @@ __global__ void _assignRowSliceValuesOf(ElemType * dest, ElemType * src, const L
     long col = id / destRows;
     long row = id - (col * destRows);
 
-    dest[id] = src[col*srcRows+row+startIndex];
+    //dest[id] = src[col*srcRows + row + startIndex];
+    dest[id] = src[IDX2C(row + startIndex, col, srcRows)];
 }
 
 template<class ElemType>
@@ -341,7 +342,23 @@ __global__ void _addToRowSliceValuesOf(ElemType * dest, ElemType * src, const LO
     long col = id / srcRows;
     long row = id - (col * srcRows);
 
-    dest[col*destRows+row+startIndex] += src[id];
+    //dest[col*destRows + row + startIndex] += src[id];
+    dest[IDX2C(row + startIndex, col, destRows)] += src[id];
+}
+
+template<class ElemType>
+__global__ void _assignRepeatOf(ElemType * dest, ElemType * src, const LONG64 N, const long srcRows, const long srcCols, const long destRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long destCol = id / destRows;
+    long destRow = id - (destCol * destRows);
+    long srcRow = destRow % srcRows;
+    long srcCol = destCol % srcCols;
+
+    dest[id] = src[IDX2C(srcRow,srcCol,srcRows)];
 }
 
 template<class ElemType>
@@ -1498,7 +1515,32 @@ __global__ void _rowElementMultiplyWith(
 }
 
 template<class ElemType>
-__global__ void _columnElementDivideWith(
+__global__ void _rowElementDivideBy(
+    ElemType* us,
+    const ElemType* a,
+    const long N, //us.GetNumRows();
+    const long M) //a.GetNumCols();
+{
+    long id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= M)
+        return;
+
+    //__shared__ ElemType _a[threadsPerBlock];
+    //_a[threadIdx.x]=a[id];
+    ElemType v = a[id];
+    if (v >= 0 && v < EPS_IN_INVERSE)
+        v = EPS_IN_INVERSE;
+    else if (v < 0 && v > -EPS_IN_INVERSE)
+        v = (-EPS_IN_INVERSE);
+
+    for (long i = 0; i<N; ++i)
+    {
+        us[IDX2C(i, id, N)] = us[IDX2C(i, id, N)] / v;
+    }
+}
+
+template<class ElemType>
+__global__ void _ColumnElementDivideBy(
     ElemType* us,
     const ElemType* a,
     const long N, //a.GetNumRows();
