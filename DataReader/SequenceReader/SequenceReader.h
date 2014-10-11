@@ -224,7 +224,11 @@ public:
     bool   DataEnd(EndDataType endDataType);
     void   SetSentenceEnd(int wrd, int pos, int actualMbSize);
     void   SetSentenceBegin(int wrd, int pos, int actualMbSize);
-    void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
+    void   SetSentenceBegin(int wrd, size_t pos, size_t actualMbSize) { SetSentenceBegin(wrd, (int)pos, (int)actualMbSize); }   // TODO: clean this up
+    void   SetSentenceEnd(int wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd(wrd, (int)pos, (int)actualMbSize); }
+    void   SetSentenceBegin(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceBegin((int)wrd, (int)pos, (int)actualMbSize); }
+    void   SetSentenceEnd(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd((int)wrd, (int)pos, (int)actualMbSize); }
+    void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices,
                        size_t m_mbStartSample, size_t actualmbsize);
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);

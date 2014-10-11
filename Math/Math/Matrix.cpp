@@ -3910,10 +3910,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType Matrix<ElemType>::Exp10(ElemType num)
     {
-        if (sizeof(ElemType) == sizeof(double))
-            return (ElemType)exp(num*2.302585093);
-        else
-            return (ElemType)expf((ElemType)num*2.302585093f);
+        return (ElemType)exp(num*2.302585093);
     }
 
     template<class ElemType>
@@ -3930,7 +3927,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	template<class ElemType>
 	ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
 	{
-		ElemType temp, diff;
+		ElemType temp, diff, z;
 
 		if (x < y) {
 			temp = x; x = y; y = temp;
@@ -3938,15 +3935,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		diff = y - x;
 		if (diff < MINLOGEXP)
 		{
-			return (ElemType)((x < LSMALL) ? LZERO : x);
+			return (ElemType) ((x < LSMALL) ? LZERO : x);
 		}
 		else
-        {
-            if (sizeof(ElemType) == sizeof(double))
-                return (ElemType)(x + log(1.0 + exp(diff)));
-            else
-                return x + logf(1.0f + expf((ElemType)diff));
-        }
+		{
+			z = exp(diff);
+                        return (ElemType) (x + log(1.0 + z));
+		}
 	}
 
 	template<class ElemType>
