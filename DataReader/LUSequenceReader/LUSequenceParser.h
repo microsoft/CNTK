@@ -295,7 +295,7 @@ public:
 
         long TickStart = GetTickCount( );
         long recordCount = 0;
-        long orgRecordCount = labels->size();
+        long orgRecordCount = (long)labels->size();
         long lineCount = 0;
         size_t bufferIndex = m_byteCounter-m_bufferStart;
         SequencePosition sequencePositionLast(0,0,seqFlagNull);
@@ -324,7 +324,7 @@ public:
                 seqPos->push_back(sequencePos);
                 sequencePositionLast = sequencePos;
 
-                recordCount = labels->size() - orgRecordCount;
+                recordCount = (long)labels->size() - orgRecordCount;
                 lineCount ++;
             }
 

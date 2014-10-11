@@ -15,6 +15,7 @@
 #include <vld.h> // leak detection
 #endif
 #include <fstream>
+#include "fileutil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -458,7 +459,7 @@ void LUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
     char stmp[MAX_STRING];
     string strtmp; 
     size_t sz;
-    int cnt, widx = 0, b;
+    int widx = 0, b;
     class_size  = 0;
 
     wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
@@ -697,7 +698,7 @@ bool LUSequenceReader<ElemType>::SentenceEnd()
 {
     // this is after getMinibatch size, which has increased m_seqIndex by 1
     // so the real index is m_seqIndex - 1; 
-    int seqIndex = m_seqIndex - 1; 
+    int seqIndex = (int)m_seqIndex - 1; 
 
     // now get the labels
     const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
@@ -1082,7 +1083,7 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
         bool allDone = false; 
         for (int s = 0; s < mToProcess.size(); s++)
         {
-            int mp = mToProcess[s];
+            size_t mp = mToProcess[s];
             if (mProcessed[mp])
             {
                 mLastProcssedSentenceId = mp;
@@ -1103,7 +1104,7 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
         return sln;
     }
 
-    for (int seq = mLastProcssedSentenceId ; seq < numRead; seq++)
+    for (size_t seq = mLastProcssedSentenceId ; seq < numRead; seq++)
     {
         if (mProcessed[seq]) continue;
         
@@ -1156,8 +1157,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample)
         }
 
         /// add one minibatch 
-        int i = mLastPosInSentence; 
-        int j = 0;
+        size_t i = mLastPosInSentence; 
+        size_t j = 0;
 
         for (i = mLastPosInSentence; j < m_mbSize &&  i < sLn; i++ , j++)
         {
@@ -1175,7 +1176,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample)
                     if (featIn.type == labelCategory)
                     {
                         vector<LabelIdType> index ;
-                        int ilabel = label + m_wordContext[i_cxt] ;
+                        int ilabel = (int) (label + m_wordContext[i_cxt]);
                         if (ilabel < m_parser.mSentenceIndex2SentenceInfo[seq].sBegin )
                         {
                             GetIdFromLabel(m_featureTemp[m_parser.mSentenceIndex2SentenceInfo[seq].sBegin], featIn, index);
