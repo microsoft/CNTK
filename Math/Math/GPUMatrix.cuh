@@ -158,11 +158,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AddElementProductOf (const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
 
         GPUMatrix<ElemType>& AssignElementDivisionOf (const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
+        GPUMatrix<ElemType>& ElementDivideBy(const GPUMatrix<ElemType>& a);
 
         GPUMatrix<ElemType>& ColumnElementMultiplyWith(const GPUMatrix<ElemType>& a);
         GPUMatrix<ElemType>& RowElementMultiplyWith(const GPUMatrix<ElemType>& a);
 
-        GPUMatrix<ElemType>& ColumnElementDivideWith(const GPUMatrix<ElemType>& a);
+        GPUMatrix<ElemType>& ColumnElementDivideBy(const GPUMatrix<ElemType>& a);
+        GPUMatrix<ElemType>& RowElementDivideBy(const GPUMatrix<ElemType>& a);
 
         GPUMatrix<ElemType>& ElementInverse ();
         GPUMatrix<ElemType>& AssignElementInverseOf (const GPUMatrix<ElemType>& a);
@@ -241,6 +243,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>&  AssignRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         GPUMatrix<ElemType>&  AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+
+        GPUMatrix<ElemType>&  AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
 
         void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const;
         void VectorMin(GPUMatrix<ElemType>& mainndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;

@@ -256,20 +256,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    template<class ElemType>
-    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const ElemType val, size_t startColumn, size_t numCols)
-    {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
-
-        if (startColumn + numCols > m_numCols)
-            throw std::logic_error("The slice is out of range of the source matrix.");
-        
-        for (size_t j = startColumn; j < startColumn + numCols; j++)
-            SetColumn(val, j); 
-
-        return *this;
-    }
 
     //for each column of a, we assign numRows starting from startIndex to this
     template<class ElemType>
@@ -346,6 +332,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (long i=m & ~3, startRow = startIndex+(m & ~3); i<m; i++, startRow++)
             {
                 us(startRow,j)  += a(i,j);
+            }
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
+    {
+        if (this == &a)
+            throw std::logic_error("AssignRepeatOf: a is the same as [this]. Does not support inplace repeat.");
+
+        if (a.IsEmpty())
+            throw std::logic_error("AssignRepeatOf: Matrix a is empty.");
+
+        Resize(a.GetNumRows() * numRowRepeats, a.GetNumCols() * numColRepeats);
+        long n = (long)a.GetNumCols(), m = (long)a.GetNumRows();
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long q = 0; q < numColRepeats; q++)
+        {
+            for (long p = 0; p < numRowRepeats; p++)
+            {
+                long colOffset = q*n;
+
+                for (long j = 0; j < n; j++, colOffset++)
+                {
+                    long rowOffset = p*m;
+
+                    //four-way unrolling
+                    for (long i = 0; i < (m & ~3); i += 4, rowOffset += 4)
+                    {
+                        us(rowOffset, colOffset) = a(i, j);
+                        us(rowOffset + 1, colOffset) = a(i + 1, j);
+                        us(rowOffset + 2, colOffset) = a(i + 2, j);
+                        us(rowOffset + 3, colOffset) = a(i + 3, j);
+                    }
+                    //handle remaining stuffs
+                    for (long i = m & ~3; i < m; i++, rowOffset++)
+                    {
+                        us(rowOffset, colOffset) = a(i, j);
+                    }
+                }
             }
         }
 
@@ -1023,34 +1053,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 
-    template<class ElemType>
-    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementSumOf(size_t cColIdx, const CPUMatrix<ElemType>& a, size_t aColIdx, const CPUMatrix<ElemType>& b, size_t bColIdx)
-    {
-        if (a.IsEmpty())
-            throw std::logic_error("AssignElementSumOf: Matrix a is empty.");
-
-        auto& us=*this;
-
-        long m=(long)GetNumRows();
-#pragma omp parallel for     
-        //four-way unrolling
-        for (long i=0; i<(m & ~3); i+=4)
-        {
-            us(i,cColIdx) = a(i,aColIdx) + b(i, bColIdx);
-            us(i+1,cColIdx) = a(i+1,aColIdx) + b(i+1, bColIdx);
-            us(i+2,cColIdx) = a(i+2,aColIdx) + b(i+2, bColIdx);
-            us(i+3,cColIdx) = a(i+3,aColIdx) + b(i+3, bColIdx);
-        }
-        //handle remaining stuffs
-        for (long i=m & ~3; i<m; i++)
-        {
-            us(i,cColIdx) = a(i,aColIdx) + b(i, bColIdx);
-        }   
-
-        return *this;
-    }
-
-
     //if [this] and a have same dimension then [this]=[this]+a
     //if a is a column vector, add to all columns of [this] 
     //if a is a row vector, add to all rows of [this]
@@ -1333,6 +1335,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return AssignElementProductOf(*this, a);
     }
 
+    //[this]=[this] .* a (we cannot override operator .* in c++)
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::ElementDivideBy(const CPUMatrix<ElemType>& a)
+    {
+        return AssignElementDivisionOf(*this, a);
+    }
+
     //[this]=a .* b
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf (const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
@@ -1511,14 +1520,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementDivideWith(const CPUMatrix<ElemType>& a)
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementDivideBy(const CPUMatrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("ColumnElementDivideWith: Matrix is empty.");
+            throw std::logic_error("RowElementDivideBy: Matrix is empty.");
+
+        assert(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
+        if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
+            throw std::invalid_argument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
+
+        auto& us = *this;
+
+        long m = (long)GetNumRows(), n = (long)GetNumCols();
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            ElemType v = a(0, j);
+            if (v >= 0 && v < EPS_IN_INVERSE)
+                v = EPS_IN_INVERSE;
+            else if (v < 0 && v > -EPS_IN_INVERSE)
+                v = (-EPS_IN_INVERSE);
+
+            //four-way unrolling
+            for (long i = 0; i<(m & ~3); i += 4)
+            {
+                us(i, j) /= v;
+                us(i + 1, j) /= v;
+                us(i + 2, j) /= v;
+                us(i + 3, j) *= v;
+            }
+            //handle remaining stuffs
+            for (long i = m & ~3; i<m; i++)
+            {
+                us(i, j) /= v;
+            }
+        }
+
+        return *this;
+    }
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementDivideBy(const CPUMatrix<ElemType>& a)
+    {
+        if (a.IsEmpty() || IsEmpty())
+            throw std::logic_error("ColumnElementDivideBy: Matrix is empty.");
 
         assert (a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
-            throw std::invalid_argument("ColumnElementDivideWith: The input matrix should be a col vector and match [this]'s rows.");
+            throw std::invalid_argument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
         auto& us=*this;
 
