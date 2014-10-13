@@ -1100,7 +1100,7 @@ public:
                 releaserandomizedchunk (k);
             for (size_t k = windowbegin; k < windowend; k++)
                 readfromdisk |= requirerandomizedchunk (k, windowbegin, windowend); // (window range passed in for checking only, redundant here)
-            for (size_t k = windowend; k < randomizedchunks.size(); k++)
+            for (size_t k = windowend; k < randomizedchunks[0].size(); k++)
                 releaserandomizedchunk (k);
 
 			// resize feat and uids
