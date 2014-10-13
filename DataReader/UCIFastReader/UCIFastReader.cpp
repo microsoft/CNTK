@@ -29,7 +29,7 @@ size_t UCIFastReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 // readSample - sample to read in global sample space
 // returns - true if we successfully read a record, otherwise false
 template<class ElemType>
-bool UCIFastReader<ElemType>::ReadRecord(size_t readSample)
+bool UCIFastReader<ElemType>::ReadRecord(size_t /*readSample*/)
 {
     return false; // not used
 }
@@ -55,7 +55,6 @@ size_t UCIFastReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
     if (numberToRead == 0 && !tail)
         numberToRead = m_mbSize;
 
-    size_t randomRangePerEpoch = 1;
     if (randomize)
     {
         size_t randomizeSweep = RandomizeSweep(mbStartSample);
@@ -80,7 +79,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
 {
     assert(mbStartSample >= m_epochStartSample);
     // determine how far ahead we need to read
-    bool randomize = Randomize();
+    Randomize();
     // need to read to the end of the next minibatch
     size_t epochSample = mbStartSample;
     epochSample %= m_epochSize;
@@ -797,7 +796,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         // loop through and copy data to matrix
         int j = 0; // vector of vectors of feature data
         // determine randomization base index
-        size_t randBase;
+        size_t randBase = 0;    // (keep compiler happy)
         if (randomize)
             randBase = epochSample - epochSample%m_randomizeRange;
 
@@ -918,7 +917,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {

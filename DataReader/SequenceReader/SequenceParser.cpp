@@ -438,7 +438,7 @@ void SequenceParser<NumType, LabelType>::SetTraceLevel(int traceLevel)
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void SequenceParser<float, std::string>::StoreLabel(float finalResult)
+void SequenceParser<float, std::string>::StoreLabel(float /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
@@ -482,7 +482,7 @@ void SequenceParser<float, std::string>::StoreLastLabel()
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void SequenceParser<double, std::string>::StoreLabel(double finalResult)
+void SequenceParser<double, std::string>::StoreLabel(double /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)

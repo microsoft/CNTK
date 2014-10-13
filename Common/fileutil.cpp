@@ -675,7 +675,7 @@ string fgetstring (FILE * f)
     string res;
     for (;;)
     {
-    char c = fgetc (f);
+    char c = (char)fgetc (f);
     if (c == EOF)
         ERROR ("error reading string or missing 0: %s", strerror (errno));
     if (c == 0) break;
