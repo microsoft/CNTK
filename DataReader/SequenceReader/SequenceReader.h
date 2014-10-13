@@ -173,8 +173,8 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    void SetNbrSlicesEachRecurrentIter(const size_t mz) {};
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd) {};
+    void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
+    void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
