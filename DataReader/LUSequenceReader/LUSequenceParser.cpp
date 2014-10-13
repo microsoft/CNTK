@@ -357,8 +357,8 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
         size_t iln = ptr->labelPos - prvat;
         stSentenceInfo stinfo;
         stinfo.sLen = iln;
-        stinfo.sBegin = prvat;
-        stinfo.sEnd = ptr->labelPos;
+        stinfo.sBegin = (int)prvat;
+        stinfo.sEnd = (int)ptr->labelPos;
         mSentenceIndex2SentenceInfo.push_back(stinfo); 
 
         prvat = ptr->labelPos;

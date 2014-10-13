@@ -8,6 +8,7 @@
 #include "IExecutionEngine.h"
 #include "ComputationNetwork.h"
 #include "NDLUtil.h"
+#include "fileutil.h"   // for fexists()
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

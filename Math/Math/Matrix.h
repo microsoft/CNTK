@@ -102,7 +102,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
-        Matrix<ElemType>& AssignColumnSlice(const ElemType val, size_t startColumn, size_t numCols);
 
         void ShiftBy(int numShift) ;
 
@@ -176,15 +175,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignElementProductOf (const Matrix<ElemType>& a, const Matrix<ElemType>& b);
         Matrix<ElemType>& AddElementProductOf (const Matrix<ElemType>& a, const Matrix<ElemType>& b);
 
-        Matrix<ElemType>& AssignElementSumOf (size_t cCol, const Matrix<ElemType>& a, size_t aCol, const Matrix<ElemType>& b, size_t bCol);
-
         Matrix<ElemType>& AssignElementDivisionOf (const Matrix<ElemType>& a, const Matrix<ElemType>& b);
+        Matrix<ElemType>& ElementDivideBy(const Matrix<ElemType>& a);
 
         Matrix<ElemType>& ColumnElementMultiplyWith(const Matrix<ElemType>& a);
         Matrix<ElemType>& RowElementMultiplyWith(const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& ColumnElementDivideWith(const Matrix<ElemType>& a);
-
+        Matrix<ElemType>& ColumnElementDivideBy(const Matrix<ElemType>& a);
+        Matrix<ElemType>& RowElementDivideBy(const Matrix<ElemType>& a);
+        
         Matrix<ElemType>& ElementInverse ();
         Matrix<ElemType>& AssignElementInverseOf (const Matrix<ElemType>& a);
 
@@ -239,6 +238,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         Matrix<ElemType>&  AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+
+        Matrix<ElemType>&  AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+        
 
         bool IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
@@ -324,8 +326,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void MultiplyAndAdd(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
-
-        Matrix<ElemType>& CrossProduct(const Matrix<ElemType>& a, size_t aCol, const Matrix<ElemType>& b, size_t bCol);
 
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);

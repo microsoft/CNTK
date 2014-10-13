@@ -42,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
         ~GPUSparseMatrix();
     public:
-        void Resize(const size_t numRows, const size_t numCols, int size = 0);
+        void Resize(const size_t numRows, const size_t numCols, size_t size = 0);
         void Reset();
 
     public:
