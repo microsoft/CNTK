@@ -13,6 +13,7 @@
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
+#include "fileutil.h"   // for fexists()
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -685,7 +686,7 @@ void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, si
         if (!m_partialMinibatch)
             m_epochSize = RoundUp(requestedEpochSamples, mbSize);
         if (m_epochSize != requestedEpochSamples)
-            fprintf(stderr, "epochSize rounded up to %d to fit an integral number of minibatches\n");
+            fprintf(stderr, "epochSize rounded up to %d to fit an integral number of minibatches\n", (int)m_epochSize);
     }
     
     // set the randomization range for randomizationAuto

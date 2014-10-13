@@ -592,6 +592,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
+    {
+        if (this == &a)
+            throw std::logic_error("AssignRepeatOf: a is the same as [this]. Does not support inplace repeat.");
+
+        if (a.IsEmpty())
+            throw std::logic_error("AssignRepeatOf: Matrix a is empty.");
+
+        Resize(a.GetNumRows() * numRowRepeats, a.GetNumCols() * numColRepeats);
+
+        LONG64 N = (LONG64)GetNumElements();
+        long n = (long)a.GetNumCols(), m = (long)a.GetNumRows();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignRepeatOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, m, n, (long)GetNumRows());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+        
+    template<class ElemType>
     GPUMatrix<ElemType> GPUMatrix<ElemType>::Transpose() const
     {
         if (IsEmpty())
@@ -1359,13 +1384,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementDivideWith(const GPUMatrix<ElemType>& a)
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::RowElementDivideBy(const GPUMatrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("ColumnElementDivideWith: Matrix is empty.");
+            throw std::logic_error("RowElementDivideBy: Matrix is empty.");
+
+        if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
+            throw std::invalid_argument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
+
+        long N = (long)a.GetNumRows();
+        long M = (long)this->GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        a.PrepareDevice();
+        cudaEvent_t done;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _rowElementDivideBy<ElemType> << <blocksPerGrid, threadsPerBlock >> >(m_pArray, a.m_pArray, N, M);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementDivideBy(const GPUMatrix<ElemType>& a)
+    {
+        if (a.IsEmpty() || IsEmpty())
+            throw std::logic_error("ColumnElementDivideBy: Matrix is empty.");
 
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
-            throw std::invalid_argument("ColumnElementDivideWith: The input matrix should be a col vector and match [this]'s rows.");
+            throw std::invalid_argument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
         long N=(long)a.GetNumRows();
         long M=(long)this->GetNumCols();        
@@ -1373,7 +1421,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         a.PrepareDevice();
         cudaEvent_t done;       
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _columnElementDivideWith<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N,M);                        
+        _ColumnElementDivideBy<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N,M);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));      
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1878,6 +1926,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
         return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementDivideBy(const GPUMatrix<ElemType>& a)
+    {
+        return AssignElementDivisionOf(*this, a);
     }
 
     template<class ElemType>
