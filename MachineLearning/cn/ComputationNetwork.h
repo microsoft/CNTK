@@ -1809,7 +1809,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom) 
         {            
             throw std::logic_error("'ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
-            return (*this);
         } 
 
         void ClearCalcOrderCaches()
