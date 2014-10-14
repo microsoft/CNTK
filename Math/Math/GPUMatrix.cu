@@ -16,6 +16,7 @@
 #include "GPUMatrix.cuh"
 #include "GPUMatrixCUDAKernels.cu"
 #include "GPUSparseMatrix.cuh"
+#include <iostream> // for cout
 
 #pragma warning (disable: 4267)
 
