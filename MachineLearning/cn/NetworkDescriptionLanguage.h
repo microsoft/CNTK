@@ -198,7 +198,6 @@ private:
     NDLNode& operator=(NDLNode& copyMe)  //this is just a place holder implementation which is not functioning but prevent callers to use it.
     {            
         throw std::logic_error("'NDLNode& operator=(NDLNode& copyMe)' should never be called.");
-        return (*this);
     } 
 
     // generate a generic symbol name for a node

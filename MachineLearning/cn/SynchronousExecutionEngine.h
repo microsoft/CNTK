@@ -770,7 +770,6 @@ protected:
     SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom) 
     {            
         throw std::logic_error("'SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
-        return (*this);
     } 
 };
 
