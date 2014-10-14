@@ -779,12 +779,9 @@ void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& sectionName
 template<class ElemType>
 bool LUSequenceReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
 {
-    if (m_cachingReader)
-    {
-        return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
-    }
-    Error("GetData not supported in LUSequenceReader");
-    return false;
+    if (!m_cachingReader)
+        Error("GetData not supported in LUSequenceReader");
+    return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
 }
 
 // instantiate all the combinations we expect to be used
