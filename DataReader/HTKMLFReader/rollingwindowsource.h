@@ -216,7 +216,6 @@ namespace msra { namespace dbn {
 		wstring pagepathname(){ return pagepath;}
 		void cleanuppagefile()
 		{
-			int res=0;
 			if (paging()) {
 				fclose (f); 
 				if (_wunlink (pagepath.c_str())==0){
@@ -787,13 +786,12 @@ namespace msra { namespace dbn {
 
         }
 
-        bool getbatch (const size_t globalts, const size_t framesrequested, msra::dbn::matrix & feat, std::vector<size_t> & uids,
-            std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
-            std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
+        bool getbatch (const size_t /*globalts*/, const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
+            std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/, 
+            std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
         {
             // should never get here
             throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchframesource instead\n");
-            return true;
         }
 
         double gettimegetbatch () { return timegetbatch;}

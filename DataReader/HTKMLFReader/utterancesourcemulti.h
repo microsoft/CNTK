@@ -229,7 +229,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         unsigned int frameindex : 11;           // frame index within the utterance
         static const size_t maxframesperutterance = 2047;
 #endif
-        frameref (size_t ci, size_t ui, size_t fi) : chunkindex ((unsigned int) ci), utteranceindex ((unsigned int) ui), frameindex ((unsigned int) fi)
+        frameref (size_t ci, size_t ui, size_t fi) : chunkindex ((unsigned short) ci), utteranceindex ((unsigned short) ui), frameindex ((unsigned short) fi)
         {
 #ifndef  _WIN64
             static_assert (sizeof (frameref) == 4, "frameref: bit fields too large to fit into 32-bit integer");
