@@ -2550,7 +2550,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long rowsB = (long) b.GetNumRows();
         Resize(rowsA * rowsB, cols);
 
+#ifdef __INTEL_COMPILER // TODO: check this
 #pragma simd statement
+#endif
 #pragma omp parallel for
         for (long k=0; k<cols; k++)
         {
@@ -2601,7 +2603,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             long nrows = rowsB;
             long ncols = rowsC;
 
+#ifdef __INTEL_COMPILER // TODO: check this
 #pragma simd statement
+#endif
 #pragma omp parallel for
             foreach_column(t, a)
             {
@@ -2623,7 +2627,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t ncols = rowsB;
             size_t nrows = rowsC;
 
+#ifdef __INTEL_COMPILER // TODO: check this
 #pragma simd statement
+#endif
 #pragma omp parallel for
             foreach_column(t, a)
             {
