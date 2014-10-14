@@ -714,7 +714,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //functionValues.ElementInverse();
             //functionValues.ElementMultiplyWith(input0);
             functionValues.SetValue(input0);
-            functionValues.ColumnElementDivideWith(input2);
+            functionValues.ColumnElementDivideBy(input2);
             functionValues += input1;
 #if NANCHECK
             functionValues.HasNan("PerDimMeanVarDeNormalization");
