@@ -4,11 +4,10 @@
 // </copyright>
 //
 #include "stdafx.h"
-#include "Matrix.h"
-#include <assert.h>
-
 #include "basetypes.h"
 #include "fileutil.h"
+#include "Matrix.h"
+#include <assert.h>
 
 //before calling the following macro the current matrix location and matrix type on MatrixPointerToCheck must have been set correctly
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \

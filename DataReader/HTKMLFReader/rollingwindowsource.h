@@ -800,7 +800,7 @@ namespace msra { namespace dbn {
         // In frame mode, there is no constraint, i.e. it is 'globalts' itself.
         /*implement*/ size_t firstvalidglobalts (const size_t globalts) { return globalts; }
 
-        /*implement*/ const std::vector<size_t> & unitcounts() const { throw logic_error ("unitcounts: not implemented for this feature source"); static std::vector<size_t> x; return x;/*keep compiler happy*/ }
+        /*implement*/ const std::vector<size_t> & unitcounts() const { throw logic_error ("unitcounts: not implemented for this feature source"); }
 
     };
 };};

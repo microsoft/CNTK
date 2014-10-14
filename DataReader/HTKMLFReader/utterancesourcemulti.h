@@ -456,8 +456,8 @@ public:
 			// distribute them over chunks
 			// We simply count off frames until we reach the chunk size.
 			// Note that we first randomize the chunks, i.e. when used, chunks are non-consecutive and thus cause the disk head to seek for each chunk.
-			const size_t framespersec = 100;            // we just assume this; our efficiency calculation is based on this
-			const size_t chunkframes = 15 * 60 * 100;   // number of frames to target for each chunk
+			const size_t framespersec = 100;                    // we just assume this; our efficiency calculation is based on this
+                        const size_t chunkframes = 15 * 60 * framespersec;  // number of frames to target for each chunk
 			// Loading an initial 24-hour range will involve 96 disk seeks, acceptable.
 			// When paging chunk by chunk, chunk size ~14 MB.
 			std::vector<utterancechunkdata> & thisallchunks = allchunks[m];
@@ -765,7 +765,7 @@ private:
             // Later we will randomize those as well.
             foreach_index (i, randomizedchunks[0])
             {
-                frameref.chunkindex = i;
+                frameref.chunkindex = (unsigned short)i;
                 checkoverflow (frameref.chunkindex, i, "frameref::chunkindex");
                 const auto & chunk = randomizedchunks[0][i];
                 const auto & chunkdata = chunk.getchunkdata();
@@ -1163,14 +1163,13 @@ public:
     double gettimegetbatch() { return timegetbatch;}
 
 	// alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
-    /*implement*/ bool getbatch (const size_t globalts,
-                           const size_t framesrequested, msra::dbn::matrix & feat, std::vector<size_t> & uids,
-                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-                           std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
+    /*implement*/ bool getbatch (const size_t /*globalts*/,
+                           const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
+                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
+                           std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {
            // should never get here
             throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
-            return true;
         
 			// for single input/output set size to be 1 and run old getbatch
 	        //feat.resize(1);

@@ -7,6 +7,9 @@
 //
 
 #include "stdafx.h"
+#include "basetypes.h"
+#include "fileutil.h"
+
 #include <assert.h>
 #include <stdexcept>
 #include <omp.h>
@@ -18,9 +21,6 @@
 #ifdef LEAKDETECT
 #include <vld.h>
 #endif
-
-#include "basetypes.h"
-#include "fileutil.h"
 
 #pragma warning (disable: 4267)
 

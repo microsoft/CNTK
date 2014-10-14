@@ -971,7 +971,6 @@ int ftrygetText<bool>(FILE * f, bool& v)
     return rc;
 }
 
-#if 0
 // ----------------------------------------------------------------------------
 // fputText(): write a bool out as character
 // ----------------------------------------------------------------------------
@@ -980,7 +979,6 @@ void fputText<bool>(FILE * f, bool v)
 {
     fputText(f, v?L'T':L'F');
 }
-#endif
 
 // ----------------------------------------------------------------------------
 // fgetTag(): read a 4-byte tag & return as a string

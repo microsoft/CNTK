@@ -93,13 +93,13 @@ public:
     // FindSymbol - Search the engines symbol table for a fully quantified symbol
     // symbol - name of the symbol
     // returns - pointer to the matching EvalValue for that node, of NULL if not found
-    virtual void* FindSymbol(const wstring& symbol)
+    virtual void* FindSymbol(const wstring& /*symbol*/)
     {
         return NULL;
     }
     // ProcessOptionalParameters - Process the optional parameters of a node
     // node to process
-    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node)
+    virtual void ProcessOptionalParameters(NDLNode<ElemType>* /*node*/)
     {
         return;
     }
@@ -195,7 +195,7 @@ private:
 	// copy constructor, creates a new disconnected copy of this node for macro expansion
 	NDLNode(const NDLNode& copyMe);
 
-    NDLNode& operator=(NDLNode& copyMe)  //this is just a place holder implementation which is not functioning but prevent callers to use it.
+    NDLNode& operator=(NDLNode& /*copyMe*/)  //this is just a place holder implementation which is not functioning but prevent callers to use it.
     {            
         throw std::logic_error("'NDLNode& operator=(NDLNode& copyMe)' should never be called.");
     } 

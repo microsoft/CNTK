@@ -46,12 +46,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of elements in the Matrix<ElemType>
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of elements in the Matrix<ElemType>
         {
             throw std::logic_error("ErrorPrediction is used for evaluation only.");
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("ErrorPrediction is used for evaluation only.");
         }
@@ -84,7 +84,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues);
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("ErrorPrediction node should never be in a loop.");
         }
