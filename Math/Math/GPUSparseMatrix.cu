@@ -11,6 +11,7 @@
 #include "GPUMatrixCUDAKernels.cu"
 #include <functional>
 #include "CommonMatrix.h"
+#include <iostream> // for cout
 
 // thread local storage to access the current stream, initalize to default stream
 extern __declspec( thread ) cudaStream_t t_stream;
