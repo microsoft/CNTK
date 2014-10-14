@@ -13,6 +13,7 @@
 #include "targetver.h"
 
 // Headers for CppUnitTest
+#pragma warning (disable: 4505) // 'Microsoft::VisualStudio::CppUnitTestFramework::ToString' : unreferenced local function has been removed
 #include "CppUnitTest.h"
 
 // TODO: reference additional headers your program requires here

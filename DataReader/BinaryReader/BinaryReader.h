@@ -241,7 +241,7 @@ public:
     {
         assert(size < 0x10000);
         m_sectionHeader->bytesPerElement = (WORD)size;
-        m_sectionHeader->sectionData = dataType;
+        m_sectionHeader->sectionData = (WORD)dataType;
     }
     void GetDataTypeSize(SectionData& dataType, size_t& size) const
     {
@@ -261,9 +261,9 @@ public:
     void SetFlags(SectionFlags flags) {m_sectionHeader->flags |= flags;}
     void ClearFlags(SectionFlags flags) {m_sectionHeader->flags &= ~flags;}
     SectionFlags GetFlags() const {return (SectionFlags)m_sectionHeader->flags;}
-    void SetCustomStruct(CustomStructure customStruct) {m_sectionHeader->customStructureID = customStruct;}
+    void SetCustomStruct(CustomStructure customStruct) {m_sectionHeader->customStructureID = (WORD)customStruct;}
     CustomStructure GetCustomStruct() const {return (CustomStructure)m_sectionHeader->customStructureID;}
-    void SetSectionType(SectionType sectionType) {m_sectionHeader->sectionType = sectionType;}
+    void SetSectionType(SectionType sectionType) {m_sectionHeader->sectionType = (WORD)sectionType;}
     SectionType GetSectionType() const {return (SectionType)m_sectionHeader->sectionType;}
     size_t GetFileUniqueId() const {return m_sectionHeader->writtenID;}
     void SetFileUniqueId(WORD fileId) {m_sectionHeader->writtenID = fileId;}
@@ -361,9 +361,9 @@ public:
     SectionLabel(SectionFile* file, Section* parentSection, size_t filePosition, MappingType mappingType=mappingParent, size_t size=0);
 
     // accessors for header members
-    void SetLabelKind(LabelKind labelKind) {m_sectionHeader->labelKind = labelKind;}
+    void SetLabelKind(LabelKind labelKind) {m_sectionHeader->labelKind = (WORD)labelKind;}
     LabelKind GetLabelKind() {return (enum LabelKind)(m_sectionHeader->labelKind);}
-    void SetLabelDim(LabelIdType labelDim) {m_sectionHeader->labelDim = labelDim;}
+    void SetLabelDim(LabelIdType labelDim) {m_sectionHeader->labelDim = (WORD)labelDim;}
     LabelIdType GetLabelDim() {return m_sectionHeader->labelDim;}
 };
 
@@ -414,7 +414,7 @@ public:
 
     size_t NumberSlicesInEachRecurrentIter() { return 1 ;} 
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
-	void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd) {};
+    void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);

@@ -135,18 +135,18 @@ short DeviceFromConfig(const ConfigParameters& config)
     if (!_stricmp(val.c_str(), "Auto"))
     {
         std::vector<int> devices = g_bestGpu->GetDevices(1);
-        deviceId = devices[0];
+        deviceId = (short)devices[0];
     }
     else if (!_stricmp(val.c_str(), "All"))
     {
         std::vector<int> devices = g_bestGpu->GetDevices(BestGpu::AllDevices);
-        deviceId = devices[0];
+        deviceId = (short)devices[0];
     }
     else if (val.size() == 2 && val[0] == '*' && isdigit(val[1]))
     {
         int number = (int)(val[1] - '0');
         std::vector<int> devices = g_bestGpu->GetDevices(number);
-        deviceId = devices[0];
+        deviceId = (short)devices[0];
     }
     else
     {
@@ -160,7 +160,7 @@ short DeviceFromConfig(const ConfigParameters& config)
             argvector<int> allowed = arr;
             g_bestGpu->SetAllowedDevices(allowed);
             std::vector<int> devices = g_bestGpu->GetDevices();
-            deviceId = devices[0];
+            deviceId = (short)devices[0];
         }
     }
     return deviceId;
@@ -196,7 +196,8 @@ void BestGpu::Init()
 		return;
 
 	//get the count of objects
-	cudaError_t err = cudaGetDeviceCount(&m_deviceCount);
+	//cudaError_t err =
+        cudaGetDeviceCount(&m_deviceCount);
 
 	ProcessorData pdEmpty = { 0 };
 	for (int i = 0; i < m_deviceCount; i++)
@@ -432,7 +433,7 @@ void BestGpu::QueryNvmlData()
 		ProcessorData* curPd = NULL;
 		for (ProcessorData* pd : m_procData)
 		{
-			if (pd->deviceProp.pciBusID == pci.bus)
+			if (pd->deviceProp.pciBusID == (int)pci.bus)
 			{
 				curPd = pd;
 				break;

@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << OperationName() << NodeName();
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& /*fstream*/, const size_t /*modelVersion*/, const short deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
@@ -101,14 +101,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             NOT_IMPLEMENTED;
         }
         
         virtual void EvaluateThisNode() = 0;
         // evaluate only at time index timeIdxInSeq
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
         {
             NOT_IMPLEMENTED;
         }
@@ -117,22 +117,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Reset() {}
         virtual void NotReset() {}
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
             throw std::logic_error("This operation does not support single input.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftInput, const ComputationNodePtr rightInput) 
+        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*rightInput*/) 
         {
             throw std::logic_error("This operation does not support two inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftInput, const ComputationNodePtr middleInput, const ComputationNodePtr rightInput) 
+        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/) 
         {
             throw std::logic_error("This operation does not support three inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftInput, const ComputationNodePtr middleInput, const ComputationNodePtr rightInput, const ComputationNodePtr extPtr1, const ComputationNodePtr extPtr2) 
+        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/, const ComputationNodePtr /*extPtr1*/, const ComputationNodePtr /*extPtr2*/) 
         {
             throw std::logic_error("This operation does not support four inputs.");
         }
@@ -829,6 +829,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
         virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
         {
+            inputIndex;
             assert(false);
             return NULL;
         }
@@ -920,10 +921,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
         virtual const std::wstring OperationName() const {return TypeName();}
-        virtual void ComputeInputPartial(const size_t inputIndex) {}
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
         virtual void EvaluateThisNode()  {}
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) {}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
         virtual void Validate() 
         {
             PrintSelfBeforeValidation();

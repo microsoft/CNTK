@@ -244,7 +244,6 @@ bool BinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
         SectionData dataType;
         size_t dataSize;
         section->GetDataTypeSize(dataType, dataSize);
-        size_t gpuRows = gpuData->GetNumRows();
 
         // if the data types are not as expected
         if (dataType != sectionDataFloat || dataSize != sizeof(ElemType)) 
@@ -350,7 +349,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void BinaryReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void BinaryReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& /*labelMapping*/)
 {
     throw runtime_error("Binary reader does not support setting the mapping table.\n");
 }

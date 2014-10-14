@@ -592,7 +592,7 @@ long fget(const HANDLE f)
 
 // GetFormatString - get the format string for a particular type
 template <typename T>
-wchar_t* GetFormatString(T t)
+wchar_t* GetFormatString(T /*t*/)
 {
     // if this assert goes off it means that you are using a type that doesn't have
     // a read and/or write routine. 
