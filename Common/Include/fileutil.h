@@ -592,7 +592,7 @@ long fget(const HANDLE f)
 template <typename T>
 wchar_t* GetFormatString(T /*t*/)
 {
-    // if this assert goes off it means that you are using a type that doesn't have
+    // if this _ASSERT goes off it means that you are using a type that doesn't have
     // a read and/or write routine. 
     // If the type is a user defined class, you need to create some global functions that handles file in/out.
     // for example: 
@@ -605,7 +605,7 @@ wchar_t* GetFormatString(T /*t*/)
     //
     // if you are using wchar_t* or char* types, these use other methods because they require buffers to be passed
     // either use std::string and std::wstring, or use the WriteString() and ReadString() methods
-    assert(false);  // need a specialization
+    _ASSERT(false);  // need a specialization
     return NULL;
 }
 
@@ -627,7 +627,7 @@ template <>        wchar_t* GetFormatString(long long);
 template <typename T>
 wchar_t* GetScanFormatString(T t)
 {
-    // if this assert goes off it means that you are using a type that doesn't have
+    // if this _ASSERT goes off it means that you are using a type that doesn't have
     // a read and/or write routine. 
     // If the type is a user defined class, you need to create some global functions that handles file in/out.
     // for example: 
@@ -640,7 +640,7 @@ wchar_t* GetScanFormatString(T t)
     //
     // if you are using wchar_t* or char* types, these use other methods because they require buffers to be passed
     // either use std::string and std::wstring, or use the WriteString() and ReadString() methods
-    assert(false);  // need a specialization
+    _ASSERT(false);  // need a specialization
     return NULL;
 }
 
@@ -667,10 +667,10 @@ void fgetText(FILE * f, T& v)
 {
     int rc = ftrygetText(f, v);
     if (rc == 0)
-        throw std::runtime_error(std::string ("error reading value from file (invalid format): ") + GetScanFormatString<T>(v));
+        throw std::runtime_error("error reading value from file (invalid format)");
     else if (rc == EOF)
         throw std::runtime_error(std::string("error reading from file: ") + strerror(errno));
-    ASSERT(rc == 1);
+    _ASSERT(rc == 1);
 }
 
 // version to try and get a string, and not throw exceptions if contents don't match
@@ -679,7 +679,7 @@ int ftrygetText(FILE * f, T& v)
 {
     wchar_t* formatString = GetScanFormatString<T>(v);
     int rc = fwscanf_s(f, formatString, &v);
-    ASSERT(rc == 1 || rc == 0);
+    _ASSERT(rc == 1 || rc == 0);
     return rc;
 }
 
@@ -702,7 +702,7 @@ void fputText(FILE * f, T v)
     if (rc == 0)
         throw std::runtime_error("error writing value to file, no values written");
     else if (rc < 0)
-        throw std::runtime_error(std::string("error writing to file: " + strerror(errno));
+        throw std::runtime_error(std::string("error writing to file: ") + strerror(errno));
 }
 
 // ----------------------------------------------------------------------------
