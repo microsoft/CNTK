@@ -1959,7 +1959,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				rInfo.m_loopId = loopId;
 				rInfo.m_sourceNode = cur;
 				size_t sccSize = 0;
-				while(true)
+                                for (;;)
 				{
 					ComputationNodePtr w = sccStack.back();
 					sccStack.pop_back();

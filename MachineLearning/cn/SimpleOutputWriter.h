@@ -208,6 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         ComputationNetwork<ElemType>& m_net;
         int m_verbosity;
+        //void operator=(const SimpleOutputWriter&) { throw std::logic_error("operator= not available"); }
     };
     template class SimpleOutputWriter<float>; 
     template class SimpleOutputWriter<double>;
