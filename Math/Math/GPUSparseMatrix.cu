@@ -612,8 +612,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             c *= beta;
         }
 
-        int blocksPerGrid = rhs.m_nz;
-        int p = (threadsPerBlock < lhs.GetNumRows())? threadsPerBlock : lhs.GetNumRows();
+        size_t blocksPerGrid = rhs.m_nz;
+        size_t p = (threadsPerBlock < lhs.GetNumRows())? threadsPerBlock : lhs.GetNumRows();
         
         if (!transposeA && !transposeB)
         {
@@ -684,7 +684,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {   
             cudaEvent_t done;       
             CUDACALL(cudaEventCreate(&done));
-            int blocksPerGrid =rhs.GetNZElements();  
+            size_t blocksPerGrid =rhs.GetNZElements();  
             _denseMulSparseToSparse<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
                 lhs.BufferPointer(),
                 lhs.GetNumRows(),
@@ -720,7 +720,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             cudaEvent_t done;       
             CUDACALL(cudaEventCreate(&done));
-            int blocksPerGrid =lhs.m_blockSize;  
+            size_t blocksPerGrid = lhs.m_blockSize;
             _scaleAndAdd<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
                 alpha,
                 blockCol,
@@ -772,7 +772,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         cudaEvent_t done;       
         CUDACALL(cudaEventCreate(&done));
-        int blocksPerGrid = label.m_expandedSize;
+        size_t blocksPerGrid = label.m_expandedSize;
 
         //_computePrediction<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
         _computePrediction<ElemType><<<blocksPerGrid, 20>>>(
@@ -834,7 +834,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEvent_t done; 
         CUDACALL(cudaEventCreate(&done));
 
-        int blocksPerGrid =grd.GetNumElements();
+        size_t blocksPerGrid = grd.GetNumElements();
         //_computeGradientOfInput<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
         _computeGradientOfInput<ElemType><<<blocksPerGrid, 20>>>(
             error.m_val,
@@ -872,7 +872,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEvent_t done;  
         CUDACALL(cudaEventCreate(&done));
 
-        int blocksPerGrid =error.m_nz; 
+        size_t blocksPerGrid = error.m_nz;
         _computeGradientOfWeight<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
             error.m_val,
             error.m_row,
@@ -925,7 +925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
-            int blocksPerGrid = m_blockSize;    
+            size_t blocksPerGrid = m_blockSize;
             bool isBlockCol = (m_format == MatrixFormat::matrixFormatSparseBlockCol);
             size_t len = isBlockCol ? GetNumRows(): GetNumCols();
             cudaEvent_t done;       
@@ -1636,9 +1636,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaMemcpy(&h_sum,d_sum,sizeof(ElemType),cudaMemcpyDeviceToHost));
         CUDACALL(cudaFree(d_sum));               
         if (sizeof(ElemType)==sizeof(float))
-            return (ElemType)sqrtf(h_sum);
+            return (ElemType)sqrtf((float)h_sum);
         else
-            return (ElemType)sqrt(h_sum);
+            return (ElemType)sqrt((double)h_sum);
     }
 
     template<class ElemType>

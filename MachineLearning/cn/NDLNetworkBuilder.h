@@ -211,8 +211,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
-
                 LoadNetworkFromConfig(m_networkConfig);
             }
 
