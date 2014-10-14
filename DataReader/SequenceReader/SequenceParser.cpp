@@ -7,9 +7,10 @@
 //
 
 #include "stdafx.h"
+#include "basetypes.h"
 #include "SequenceParser.h"
 #include <stdexcept>
-#include <fileutil.h>
+#include "fileutil.h"
 
 // SetState for a particular value
 template <typename NumType, typename LabelType>

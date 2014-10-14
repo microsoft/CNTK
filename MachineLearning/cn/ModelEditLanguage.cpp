@@ -103,7 +103,6 @@ template <typename ElemType>
 void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigParamList& params)
 {
     std::string name = p_name;
-    bool ret = false;
     if (EqualInsensitive(name, "CreateModel"))  //create a blank model
     {
         size_t numFixedParams = 0, numOptionalParams = 0;
@@ -324,7 +323,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             std::wstring nodeName = node->NodeName();
             std::wstring toNodeName = name.second;
 
-            ComputationNode<ElemType>* nodeOut = netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName,toNodeName,CopyNodeFlags::copyNodeChildren);
+            netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName,toNodeName,CopyNodeFlags::copyNodeChildren);
         }
     }
     else if (EqualInsensitive(name, "SetNodeInput", "SetInput"))

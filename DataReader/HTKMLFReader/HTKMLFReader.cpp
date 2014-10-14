@@ -433,8 +433,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		}
 
 		m_fileEvalSource = new msra::dbn::FileEvalSource(realDims,evalchunksize);
-
-		double htktimetoframe = 100000.0;           // default is 10ms 
 	}
 
 	
@@ -609,7 +607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	}
 
 	template<class ElemType>
-	void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+	void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples*/)
 	{
 		m_fileEvalSource->Reset();
 		m_fileEvalSource->SetMinibatchSize(mbSize);
@@ -671,8 +669,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			{
 			if (!(*m_mbiter))
 				return false;
-
-			const size_t mbstartframe = m_mbiter->currentmbstartframe();
 
 			// now, access all features and and labels by iterating over map of "matrices"
 			std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
@@ -1136,7 +1132,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					size_t dim = m_featureNameToDimMap[iter->first];
 
 					const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
-					const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
 
 					// copy the features over to our array type
 					assert(feat.rows()==dim); // check feature dimension matches what's expected
@@ -1261,8 +1256,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				}
 			}
 			assert (actualmbsizeOri == m_mbiter->currentmbframes());
-			const size_t mbstartframe = m_mbiter->currentmbstartframe();
-
 
 			if (sizeof(ElemType) == sizeof(float))
 			{
@@ -1332,7 +1325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	// GetLabelMapping - Gets the label mapping from integer to type in file 
 	// mappingTable - a map from numeric datatype to native label type stored as a string 
 	template<class ElemType>
-	const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& HTKMLFReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+	const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& HTKMLFReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
 	{
 		return m_idToLabelMap;
 	}
@@ -1341,7 +1334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	// labelMapping - mapping table from label values to IDs (must be 0-n)
 	// note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 	template<class ElemType>
-	void HTKMLFReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& labelMapping)
+	void HTKMLFReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& labelMapping)
 	{
 		m_idToLabelMap = labelMapping;
 	}
@@ -1410,7 +1403,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	// recordStart - record to start reading from, defaults to zero (start of data)
 	// returns: true if data remains to be read, false if the end of data was reached
 	template<class ElemType>
-	bool HTKMLFReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
+	bool HTKMLFReader<ElemType>::GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/)
 	{
 		throw std::runtime_error("GetData not supported in HTKMLFReader");
 	}

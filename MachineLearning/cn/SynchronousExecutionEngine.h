@@ -761,13 +761,13 @@ private:
     SynchronousNodeEvaluator<ElemType>* m_nodeEvaluator;
 protected:
     // Copy constructor, should never be called.
-    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom) 
+    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {            
         throw std::logic_error("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
     } 
 
     // Assignment operator, should never be called.
-    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom) 
+    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {            
         throw std::logic_error("'SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
     } 

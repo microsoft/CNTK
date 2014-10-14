@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (dropoutRate != prevDropoutRate)
             {
                 fprintf(stderr,"Switching dropout rate to %.8g.\n", dropoutRate);
-                std::list<ComputationNodePtr>&  dropoutNodes = net.GetNodesWithType(DropoutNode<ElemType>::TypeName(), criterionNode);
+                std::list<ComputationNodePtr> dropoutNodes = net.GetNodesWithType(DropoutNode<ElemType>::TypeName(), criterionNode);
                 if (dropoutNodes.size() == 0)
                 {
                     fprintf(stderr,"WARNING: there is no dropout node.\n");
@@ -63,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetMaxTempMemSizeForCNN(ComputationNetwork<ElemType>& net, const ComputationNodePtr criterionNode, const size_t maxTempMemSizeInSamples)
         {
             fprintf(stderr,"Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
-            std::list<ComputationNodePtr>&  convolutionNodes = net.GetNodesWithType(ConvolutionNode<ElemType>::TypeName(), criterionNode);
+            std::list<ComputationNodePtr> convolutionNodes = net.GetNodesWithType(ConvolutionNode<ElemType>::TypeName(), criterionNode);
             if (convolutionNodes.size() == 0)
             {
                 fprintf(stderr,"WARNING: there is no convolution node.\n");

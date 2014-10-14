@@ -167,7 +167,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool RequirePreCompute() const { return false;}
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
             WCHAR str[4096];
             wsprintf(str, L"\n%ws=%ws", NodeName().c_str(), OperationName().c_str());           
@@ -531,7 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               return false;
         }
 
-        void ClearGradientForChildren(const int iActMiniBatchSize)
+        void ClearGradientForChildren(const int /*iActMiniBatchSize*/)
         {
             for (size_t i=0; i<m_children.size(); i++)
             {
@@ -560,7 +560,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
                 s_constOnes[rows].find(cols) == s_constOnes[rows].end()) //not found
             {
-                Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, deviceId);
+                Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, (short)deviceId);
                 matrix->SetValue(ElemType(1.000));
                 s_constOnes[rows][cols] = matrix;
             }
@@ -702,8 +702,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
             std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode) 
         {
-            bool haveVisited = false;
-
             if (visited.find(this) == visited.end())  //not visited
             {   
                 visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
@@ -737,8 +735,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodePtr>& visited, std::map<int, std::list<ComputationNodePtr>>& recurrentResult, 
             std::list<ComputationNodePtr>& noRecurrentResult) 
         {
-            bool haveVisited = false;
-
             if (visited.find(this) == visited.end())  //not visited
             {   
                 visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
@@ -770,8 +766,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result) 
         {
-            bool haveVisited = false;
-
             if (visited.find(this) == visited.end())  //not visited
             {   
                 visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
@@ -827,7 +821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
         {
             inputIndex;
             assert(false);
@@ -1085,10 +1079,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() {return L"InputValue";} 
 
         virtual void EvaluateThisNode()  {} 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) {}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
         
-        virtual void ComputeInputPartial(const size_t inputIndex) {}
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
 
         virtual void Validate() 
         {
@@ -1119,8 +1113,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
         {
+            inputIndex;
             return nullptr;
         }
     };
@@ -1210,10 +1205,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() {return L"SparseInputValue";} 
 
         virtual void EvaluateThisNode()  {} 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) {}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
         
-        virtual void ComputeInputPartial(const size_t inputIndex) {}
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
 
         virtual void Validate() 
         {
@@ -1244,8 +1239,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
         {
+            inputIndex;
             return nullptr;
         }
     };
@@ -3823,7 +3819,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rowsc = child->FunctionValues().GetNumRows(), colsc = child->FunctionValues().GetNumCols();
             size_t rowsp = FunctionValues().GetNumRows(), colsp = FunctionValues().GetNumCols();
 
-            Matrix<ElemType> &ones = Matrix<ElemType>();
+            Matrix<ElemType> ones = Matrix<ElemType>();
             if (colsc == 1 && colsp != 1)
             {
                 size_t colspExpand = rowsp*colsp/rowsc;
@@ -3855,7 +3851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceInput0Value = Inputs(inputIndex)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> &ones = Matrix<ElemType>();
+            Matrix<ElemType> ones = Matrix<ElemType>();
 
             size_t rowsc = Inputs(inputIndex)->FunctionValues().GetNumRows(), rowsp = FunctionValues().GetNumRows();
             size_t colsp = FunctionValues().GetNumCols();
@@ -4682,7 +4678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> &sliceMask = Matrix<ElemType>();
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if(m_dropoutRate > 0)
             {
                 sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -4739,7 +4735,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> &sliceMask = Matrix<ElemType>();
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if(m_dropoutRate > 0)
             {
                 m_maskOfDropout.Resize(m_functionValues.GetNumRows(), m_functionValues.GetNumCols());
@@ -5299,7 +5295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
         }
 
-        void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        void LoadFromFile(File& fstream, const size_t /*modelVersion*/, const short deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
@@ -5479,7 +5475,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 functionValues.Resize(inputFunctionValues.GetNumRows(),
                     inputFunctionValues.GetNumCols());
 
-            size_t iSizeInput = inputFunctionValues.GetNumCols();
             int iPastIndex = (int) (timeIdxInSeq - delay) * mNbr;
             int d = iPastIndex; 
             if (d < 0)
@@ -5487,7 +5482,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
            /// this can point to the past activity of the previous mninibatch
 
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp(functionValues.GetDeviceId()) ;
+            Matrix<ElemType> inp((short)functionValues.GetDeviceId()) ;
 
             if (iPastIndex < 0 && reset)
                 out.SetValue(default_activity);
@@ -5510,7 +5505,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 functionValues.Resize(inputFunctionValues.GetNumRows(),
                     inputFunctionValues.GetNumCols());
 
-            size_t iSizeInput = inputFunctionValues.GetNumCols();
             int iPastIndex = (int) (timeIdxInSeq - delay) * mNbr;
             int d = iPastIndex; 
             if (d < 0)
@@ -5518,7 +5512,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// this can point to the past activity of the previous mninibatch
 
 			Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr+indexInBatch, 1);
-            Matrix<ElemType> inp(functionValues.GetDeviceId()) ;
+            Matrix<ElemType> inp((short)functionValues.GetDeviceId()) ;
 
             if (iPastIndex < 0 && reset)
                 out.SetValue(default_activity);

@@ -5,9 +5,9 @@
 //
 #pragma once
 
+#include "basetypes.h"
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
-#include "basetypes.h"
 #include <string>
 #include "commandArgUtil.h"
 #include "matrix.h"
@@ -617,7 +617,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> mat(numRows, numCols, m_deviceId);
 
             // dbn operates on row vectors not column vectors. x*W + b, so need to read in as W'
-            ElemType* d_array = new ElemType[numRows*numCols];
+            //ElemType* d_array = new ElemType[numRows*numCols];
             float tmp;
             for (long i=0;i<numRows;i++)
                 for (long j=0;j<numCols;j++)

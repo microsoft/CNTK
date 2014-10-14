@@ -115,12 +115,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Mean";} 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
             throw std::logic_error("Mean operation should not be involved in the gradient calculation.");
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("Mean operation should not be involved in the gradient calculation.");
         }
@@ -154,7 +154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             }
         }
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("Mean operation should not be involved in a recurrent loop.");
         }
@@ -304,12 +304,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"InvStdDev";} 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
             throw std::logic_error("InvStdDev operation should not be involved in the gradient calculation.");
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("InvStdDev operation should not be involved in the gradient calculation.");
         }
@@ -354,7 +354,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("InvStdDev operation should not be involved in a recurrent loop.");
         }
@@ -481,12 +481,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"PerDimMeanVarNormalization";} 
-        virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
             throw std::invalid_argument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
         {
             throw std::invalid_argument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
@@ -649,12 +649,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"PerDimMeanVarDeNormalization";} 
-        virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
             throw std::invalid_argument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
         {
             throw std::invalid_argument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
         }
@@ -1000,8 +1000,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t packedInputRows = convParam.kernelWidth * convParam.kernelHeight * convParam.inputChannels;
             size_t packedInputColsPerSample = convParam.outputWidth * convParam.outputHeight;
             size_t outputSizePerChannel = packedInputColsPerSample;
-            size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
+            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            //size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
 
             long batchSize = (long)input1.GetNumCols();  //right child is the input sample
 
@@ -1150,21 +1150,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         static void WINAPI ComputeInputPartialOverWeight(const ConvolutionNode<ElemType>* pConv, Matrix<ElemType> &gradientValues, 
-            Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop=false)
+            Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop=false)
         {
             ConvolutionParams convParam = pConv->GetConvolutionParams();
 
             size_t packedInputRows = convParam.kernelWidth * convParam.kernelHeight * convParam.inputChannels;
             size_t packedInputColsPerSample = convParam.outputWidth * convParam.outputHeight;
             size_t outputSizePerChannel = packedInputColsPerSample;
-            size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
+            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            //size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
 
             long batchSize = (long) input1.GetNumCols(); //right child is the input sample
 
             long maxTempMemSizeInSamples = (long) (convParam.maxTempMemSizeInSamples == 0? batchSize : convParam.maxTempMemSizeInSamples);
 
-            const Matrix<ElemType> & weightMatrix = input0;
+            //const Matrix<ElemType> & weightMatrix = input0;
             //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
 
             gradientValues.Reshape(convParam.outputChannels,  outputSizePerChannel * batchSize);  //reshape to match the longernal operation
@@ -1208,8 +1208,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t packedInputRows = convParam.kernelWidth * convParam.kernelHeight * convParam.inputChannels;
             size_t packedInputColsPerSample = convParam.outputWidth * convParam.outputHeight;
             size_t outputSizePerChannel = packedInputColsPerSample;
-            size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
+            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            //size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
 
             long batchSize = (long) input1.GetNumCols(); //right child is the input sample
 
