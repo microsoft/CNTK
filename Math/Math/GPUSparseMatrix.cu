@@ -1038,10 +1038,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         int* csrRowPtrC=NULL;
         GPUSparseMatrix<ElemType>& c = *this;
-        int cSize = c.BufferSize();
-        int rowBufferRequired = (m+1)*sizeof(int);
+        size_t cSize = c.BufferSize();
+        size_t rowBufferRequired = (m + 1)*sizeof(int);
         // determine the size of the buffer and align the final location of the row index buffer
-        int nzBufSize = cSize-rowBufferRequired;
+        size_t nzBufSize = cSize-rowBufferRequired;
         nzBufSize -= nzBufSize%(sizeof(int)+sizeof(ElemType));
         bool allocatedBuffer = false;
 
@@ -1058,7 +1058,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get the non-zero count from the function (and 
-        int nnzC = func(csrRowPtrC);
+        size_t nnzC = func(csrRowPtrC);
 
         // now we know the number of Non-zeros in the result set, set the output size
         c.m_elemSizeAllocated = c.m_nz = nnzC;
@@ -1634,9 +1634,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaMemcpy(&h_sum,d_sum,sizeof(ElemType),cudaMemcpyDeviceToHost));
         CUDACALL(cudaFree(d_sum));               
         if (sizeof(ElemType)==sizeof(float))
-            return sqrtf(h_sum);
+            return (ElemType)sqrtf(h_sum);
         else
-            return sqrt(h_sum); 
+            return (ElemType)sqrt(h_sum);
     }
 
     template<class ElemType>
@@ -1886,10 +1886,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::Unrolling (//GPUSparseMatrix<ElemType>& debugMatrix, 
-        GPUMatrix<ElemType>& UnrolledMatrix, const GPUMatrix<ElemType>& InMatrix, GPUSparseMatrix<ElemType>& UnrollMapping, 
-        const int inputWidth, const int inputHeight, const int inputChannelNum,
-        const int FltWidth,const int FltHeight, const int FltChannel,
-        const int FltStepW,  const int FltStepH)
+        GPUMatrix<ElemType>& /*UnrolledMatrix*/, const GPUMatrix<ElemType>& /*InMatrix*/, GPUSparseMatrix<ElemType>& /*UnrollMapping*/, 
+        const int /*inputWidth*/, const int /*inputHeight*/, const int /*inputChannelNum*/,
+        const int /*FltWidth*/,const int /*FltHeight*/, const int /*FltChannel*/,
+        const int /*FltStepW*/,  const int /*FltStepH*/)
     {
         ////if ((UnrolledMatrix.m_computeDevice!=InMatrix.m_computeDevice) ||(InMatrix.m_computeDevice!=UnrollMapping.m_computeDevice)) //different GPUs
         ////{
