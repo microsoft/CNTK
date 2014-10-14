@@ -39,8 +39,8 @@ public:
     }
 
 public:
-    void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections){}
-    void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping){}
+    void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/){}
+    void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/){}
 
 public:
 	virtual void Init(const ConfigParameters& writerConfig);
