@@ -33,14 +33,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); 
-        void SetValue(const CPUSparseMatrix& val) { NOT_IMPLEMENTED; }
+        void SetValue(const CPUSparseMatrix& /*val*/) { NOT_IMPLEMENTED; }
 
-        void ShiftBy(int numShift) { NOT_IMPLEMENTED; }
+        void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
 
         size_t BufferSize() const {return m_elemSizeAllocated*sizeof(ElemType);}
         ElemType* BufferPointer() const;
 
-        void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed) { NOT_IMPLEMENTED; }
+        void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/) { NOT_IMPLEMENTED; }
         
         static void ClassEntropy(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& weight,
             const CPUSparseMatrix<ElemType> & label, const CPUMatrix<ElemType>& cls, 
@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
 
     public:
-        void Print(const char* matrixName) const { NOT_IMPLEMENTED; }
+        void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
 
         int m_colIdx; //used to SetValue()
         ElemType *m_val; // values

@@ -156,9 +156,9 @@ public:
     virtual ~LUSequenceReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
 
-    void SetNbrSlicesEachRecurrentIter(const size_t mz) {};
-	void SentenceEnd(std::vector<size_t> &sentenceEnd) {};
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd) {};
+    void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
+    void SentenceEnd(std::vector<size_t> &/*sentenceEnd*/) {};
+    void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);

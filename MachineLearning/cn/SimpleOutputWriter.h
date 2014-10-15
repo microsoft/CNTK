@@ -75,8 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             dataReader.SetNbrSlicesEachRecurrentIter(1);
 
             size_t totalEpochSamples = 0;
-            size_t numMBsRun = 0;
-			std::map<std::wstring, void *, nocase_compare> outputMatrices;
+            std::map<std::wstring, void *, nocase_compare> outputMatrices;
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
@@ -178,8 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					
                     Matrix<ElemType> & outputValues = outputNodes[i]->FunctionValues();
                     ofstream & outputStream = *outputStreams[i];
-                    size_t numElements = outputValues.CopyToArray(tempArray, tempArraySize);
-                    size_t numRows = outputValues.GetNumRows();
+                    outputValues.CopyToArray(tempArray, tempArraySize);
                     ElemType * pCurValue = tempArray;
                     foreach_column(j, outputValues)
                     {
@@ -210,8 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         ComputationNetwork<ElemType>& m_net;
         int m_verbosity;
+        void operator=(const SimpleOutputWriter&); // (not assignable)
     };
-    template class SimpleOutputWriter<float>; 
-    template class SimpleOutputWriter<double>;
 
 }}}

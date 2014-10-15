@@ -120,16 +120,16 @@ ParamData<ElemType>* TaskDescriptor<ElemType>::Param(ParamType paramType, const 
 // if PTask is not being used, comment it all out
 #ifndef USE_PTASK
 template<class ElemType>
-void PTaskGraphBuilder<ElemType>::PushActualMBSize(const std::list<ComputationNodePtr>& learnableNodes, size_t actualMBSize, CONTROLSIGNAL signal/*=DBCTLC_NONE*/)
+void PTaskGraphBuilder<ElemType>::PushActualMBSize(const std::list<ComputationNodePtr>& /*learnableNodes*/, size_t /*actualMBSize*/, CONTROLSIGNAL /*signal=DBCTLC_NONE*/)
 {}
 template<class ElemType>
-void PTaskGraphBuilder<ElemType>::PushData(std::map<std::wstring, Matrix<ElemType>*>& data, CONTROLSIGNAL signal/*=DBCTLC_NONE*/)
+void PTaskGraphBuilder<ElemType>::PushData(std::map<std::wstring, Matrix<ElemType>*>& /*data*/, CONTROLSIGNAL /*signal=DBCTLC_NONE*/)
 {}
 template<class ElemType>
-ElemType PTaskGraphBuilder<ElemType>::GetValue(ComputationNode<ElemType>* node)
+ElemType PTaskGraphBuilder<ElemType>::GetValue(ComputationNode<ElemType>*)
 { return ElemType(1);}
 template<class ElemType>
-void PTaskGraphBuilder<ElemType>::GetValue(ComputationNode<ElemType>* node, Matrix<ElemType>& matTo)
+void PTaskGraphBuilder<ElemType>::GetValue(ComputationNode<ElemType>* /*node*/, Matrix<ElemType>& /*matTo*/)
 {}
 template<class ElemType>
 PTaskGraphBuilder<ElemType>::PTaskGraphBuilder() 
@@ -138,17 +138,19 @@ template<class ElemType>
 PTaskGraphBuilder<ElemType>::~PTaskGraphBuilder() 
 {}
 template<class ElemType>
-void PTaskGraphBuilder<ElemType>::BuildFromComputationNetwork(ComputationNetwork<ElemType>* cn)
+void PTaskGraphBuilder<ElemType>::BuildFromComputationNetwork(ComputationNetwork<ElemType>*)
 {}
 template<class ElemType>
 void PTaskGraphBuilder<ElemType>::StartPTaskGraph()
 {}
 template<class ElemType>
-void PTaskGraphBuilder<ElemType>::UpdateParameters(void* sgd, const ElemType learnRatePerSample, const size_t expectedMBSize)
+void PTaskGraphBuilder<ElemType>::UpdateParameters(void* /*sgd*/, const ElemType /*learnRatePerSample*/, const size_t /*expectedMBSize*/)
 {}
 template<class ElemType>
-void PTaskGraphBuilder<ElemType>::PushMatrix(const Matrix<ElemType>& matrix, Channel* channel, CONTROLSIGNAL signal=DBCTLC_NONE)
-{}
+void PTaskGraphBuilder<ElemType>::PushMatrix(const Matrix<ElemType>& /*matrix*/, Channel* /*channel*/, CONTROLSIGNAL signal=DBCTLC_NONE)
+{
+    signal;
+}
 
 #else //defined(USE_PTASK)
 #pragma comment(lib, "ptask.lib")

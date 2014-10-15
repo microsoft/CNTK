@@ -20,7 +20,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define OPENBRACES "[{(\""
 #define CLOSINGBRACES "]})\""
 
-    static const std::string::size_type npos = -1;
+    static const std::string::size_type npos = (std::string::size_type )-1;
 
     // These are the constants associated with the "ResolveVariables" method.
     static const std::string openBraceVar = "$";
@@ -301,8 +301,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // pos - postion to start parsing at
         void Parse(const std::string& stringParse, std::string::size_type pos=0)
         {
-            char *token = NULL;
-            char *next_token = NULL;
             // list of possible custom separators
             const std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
             std::string seps = ",\r\n";   // default separators
@@ -506,7 +504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return *this;
         }
         // hide new so only stack allocated
-        void * operator new(size_t size) {}
+        void * operator new(size_t /*size*/) {}
     public:
         // explicit copy function. Only to be used when a copy must be made.
         // this also clears out the parent pointer, so only local configs can be used

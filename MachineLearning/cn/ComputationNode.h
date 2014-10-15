@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << OperationName() << NodeName();
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& /*fstream*/, const size_t /*modelVersion*/, const short deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
@@ -101,14 +101,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             NOT_IMPLEMENTED;
         }
         
         virtual void EvaluateThisNode() = 0;
         // evaluate only at time index timeIdxInSeq
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
         {
             NOT_IMPLEMENTED;
         }
@@ -117,22 +117,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Reset() {}
         virtual void NotReset() {}
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
             throw std::logic_error("This operation does not support single input.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftInput, const ComputationNodePtr rightInput) 
+        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*rightInput*/) 
         {
             throw std::logic_error("This operation does not support two inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftInput, const ComputationNodePtr middleInput, const ComputationNodePtr rightInput) 
+        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/) 
         {
             throw std::logic_error("This operation does not support three inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr firstInput, const ComputationNodePtr secondInput, const ComputationNodePtr thirdInput, const ComputationNodePtr fourthInput)
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, const ComputationNodePtr /*fourthInput*/)
         {
             throw std::logic_error("This operation does not support four inputs.");
         }
@@ -172,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool RequirePreCompute() const { return false;}
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
             WCHAR str[4096];
             wsprintf(str, L"\n%ws=%ws", NodeName().c_str(), OperationName().c_str());           
@@ -537,7 +537,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               return false;
         }
 
-        void ClearGradientForChildren(const int iActMiniBatchSize)
+        void ClearGradientForChildren(const int /*iActMiniBatchSize*/)
         {
             for (size_t i=0; i<m_children.size(); i++)
             {
@@ -566,7 +566,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
                 s_constOnes[rows].find(cols) == s_constOnes[rows].end()) //not found
             {
-                Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, deviceId);
+                Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, (short)deviceId);
                 matrix->SetValue(ElemType(1.000));
                 s_constOnes[rows][cols] = matrix;
             }
@@ -708,8 +708,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
             std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode) 
         {
-            bool haveVisited = false;
-
             if (visited.find(this) == visited.end())  //not visited
             {   
                 visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
@@ -743,8 +741,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodePtr>& visited, std::map<int, std::list<ComputationNodePtr>>& recurrentResult, 
             std::list<ComputationNodePtr>& noRecurrentResult) 
         {
-            bool haveVisited = false;
-
             if (visited.find(this) == visited.end())  //not visited
             {   
                 visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
@@ -776,8 +772,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result) 
         {
-            bool haveVisited = false;
-
             if (visited.find(this) == visited.end())  //not visited
             {   
                 visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
@@ -833,8 +827,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
         {
+            inputIndex;
             assert(false);
             return NULL;
         }
@@ -926,10 +921,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
         virtual const std::wstring OperationName() const {return TypeName();}
-        virtual void ComputeInputPartial(const size_t inputIndex) {}
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
         virtual void EvaluateThisNode()  {}
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) {}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
         virtual void Validate() 
         {
             PrintSelfBeforeValidation();
@@ -966,9 +961,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const;
     };
-
-    //template class LearnableParameter<float>; 
-    //template class LearnableParameter<double>;
 
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
@@ -1090,10 +1082,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() {return L"InputValue";} 
 
         virtual void EvaluateThisNode()  {} 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) {}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
         
-        virtual void ComputeInputPartial(const size_t inputIndex) {}
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
 
         virtual void Validate() 
         {
@@ -1124,8 +1116,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
         {
+            inputIndex;
             return nullptr;
         }
     };
@@ -1215,10 +1208,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() {return L"SparseInputValue";} 
 
         virtual void EvaluateThisNode()  {} 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) {}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
         
-        virtual void ComputeInputPartial(const size_t inputIndex) {}
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
 
         virtual void Validate() 
         {
@@ -1249,8 +1242,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
         {
+            inputIndex;
             return nullptr;
         }
     };
@@ -1927,174 +1921,341 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TanhNode<float>; 
     template class TanhNode<double>;
 
-    template<class ElemType>
-    class LogNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType>* ComputationNodePtr; 
+	template<class ElemType>
+	class LogNode : public ComputationNode<ElemType>
+	{
+		typedef ComputationNode<ElemType>* ComputationNodePtr;
 
 
-    public:
-        LogNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode(deviceId), m_gradientOfLog(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
-        }
+	public:
+		LogNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+			: ComputationNode(deviceId), m_gradientOfLog(deviceId)
+		{
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			m_deviceId = deviceId;
+			MoveMatricesToDevice(deviceId);
+			InitRecurrentNode();
+		}
 
-        LogNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode(deviceId), m_gradientOfLog(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
+		LogNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+			: ComputationNode(deviceId), m_gradientOfLog(deviceId)
+		{
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			LoadFromFile(fstream, modelVersion, deviceId);
+		}
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Log";} 
+		virtual const std::wstring OperationName() const { return TypeName(); }
+		static const std::wstring TypeName() { return L"Log"; }
 
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
-        {
-            if (inputIndex != 0)
-                throw std::invalid_argument("Log only has one input.");
-            ComputeInputPartialS(m_gradientOfLog, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
-        }
+		virtual void ComputeInputPartial(const size_t inputIndex)
+		{
+			if (inputIndex != 0)
+				throw std::invalid_argument("Log only has one input.");
+			ComputeInputPartialS(m_gradientOfLog, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
+		}
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
-        {
-            if (inputIndex != 0)
-                throw std::invalid_argument("Log only has one input.");
+		virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+		{
+			if (inputIndex != 0)
+				throw std::invalid_argument("Log only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientOfLog, sliceInputGrad, sliceInputValue, sliceOutputGrad);
-        }
+			ComputeInputPartialS(m_gradientOfLog, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+		}
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfLog, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)  
-        {
-            gradientOfLog.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
+		static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfLog, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
+		{
+			gradientOfLog.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
 
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfLog);
-        }
+			inputGradientValues.AddElementProductOf(gradientValues, gradientOfLog);
+		}
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfLog, "GradientOfLog", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
+		// GetTaskDescriptor - Get a task descriptor for this node
+		// taskType - task type we are generating a task for
+		virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
+		{
+			TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+			switch (taskType)
+			{
+			case taskComputeInputPartial:
+				descriptor->MatrixParam(m_gradientOfLog, "GradientOfLog", paramOptionsInput | paramOptionsTemporary);
+				descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
+				descriptor->FunctionParam(0, paramOptionsInput);
+				descriptor->GradientParam();
+				descriptor->SetFunction((FARPROC)ComputeInputPartialS);
+				break;
+			case taskEvaluate:
+				descriptor->FunctionParam();
+				descriptor->FunctionParam(0, paramOptionsInput);
+				descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
+				break;
+			default:
+				assert(false);
+				throw std::logic_error("Unsupported task requested");
+			}
+			return descriptor;
+		}
 
-        virtual void EvaluateThisNode()  
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
+		virtual void EvaluateThisNode()
+		{
+			EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
+		}
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
-        {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+		virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+		{
+			Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
-        }
+			EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
+		}
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
-        {
-            functionValues.AssignLogOf(inputFunctionValues);
+		static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+		{
+			functionValues.AssignLogOf(inputFunctionValues);
 #if NANCHECK
-            functionValues.HasNan("Log");
+			functionValues.HasNan("Log");
 #endif
-        }
+		}
 
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
+		virtual void Validate()
+		{
+			PrintSelfBeforeValidation();
 
-            if (m_children.size() != 1) 
-                throw std::logic_error("Log operation should have one input.");
+			if (m_children.size() != 1)
+				throw std::logic_error("Log operation should have one input.");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
-                throw std::logic_error("Log operation: the input node has 0 element.");
+			if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+				throw std::logic_error("Log operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradientOfLog.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
-        }
+			FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			m_gradientOfLog.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			CopyImageSizeFromInputs();
+		}
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+		virtual void AttachInputs(const ComputationNodePtr singleInput)
+		{
+			m_children.resize(1);
+			m_children[0] = singleInput;
+		}
 
-        virtual void MoveMatricesToDevice(const short deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+		virtual void MoveMatricesToDevice(const short deviceId)
+		{
+			ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_gradientOfLog.GetDeviceId() != deviceId)
-                    m_gradientOfLog.TransferFromDeviceToDevice(m_gradientOfLog.GetDeviceId(), deviceId);
-            }
-        }
+			if (deviceId != AUTOPLACEMATRIX)
+			{
+				if (m_gradientOfLog.GetDeviceId() != deviceId)
+					m_gradientOfLog.TransferFromDeviceToDevice(m_gradientOfLog.GetDeviceId(), deviceId);
+			}
+		}
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            LogNode<ElemType>* node = (LogNode<ElemType>*) nodeP;
+		virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+		{
+			ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+			LogNode<ElemType>* node = (LogNode<ElemType>*) nodeP;
 
-            if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_gradientOfLog = m_gradientOfLog;
-            }
-        }
+			if (flags & CopyNodeFlags::copyNodeValue)
+			{
+				node->m_gradientOfLog = m_gradientOfLog;
+			}
+		}
 
-        // copy constructor
-        LogNode(const LogNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode(node->m_deviceId), m_gradientOfLog(node->m_deviceId)
-        {
-            node->CopyTo(this, newName, flags);
-        }
+		// copy constructor
+		LogNode(const LogNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+			: ComputationNode(node->m_deviceId), m_gradientOfLog(node->m_deviceId)
+		{
+			node->CopyTo(this, newName, flags);
+		}
 
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new LogNode<ElemType>(this, name, flags);
-            return node;
-        }
+		virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+		{
+			const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-    private:
-        Matrix<ElemType> m_gradientOfLog;
-    };
+			ComputationNodePtr node = new LogNode<ElemType>(this, name, flags);
+			return node;
+		}
 
-    template class LogNode<float>; 
-    template class LogNode<double>;
+	private:
+		Matrix<ElemType> m_gradientOfLog;
+	};
+
+	template class LogNode<float>;
+	template class LogNode<double>;
 
 
-    template<class ElemType>
+	template<class ElemType>
+	class ExpNode : public ComputationNode<ElemType>
+	{
+		typedef ComputationNode<ElemType>* ComputationNodePtr;
+
+
+	public:
+		ExpNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+			: ComputationNode(deviceId), m_gradientOfExp(deviceId)
+		{
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			m_deviceId = deviceId;
+			MoveMatricesToDevice(deviceId);
+			InitRecurrentNode();
+		}
+
+		ExpNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+			: ComputationNode(deviceId), m_gradientOfExp(deviceId)
+		{
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			LoadFromFile(fstream, modelVersion, deviceId);
+		}
+
+		virtual const std::wstring OperationName() const { return TypeName(); }
+		static const std::wstring TypeName() { return L"Exp"; }
+
+
+		virtual void ComputeInputPartial(const size_t inputIndex)
+		{
+			if (inputIndex != 0)
+				throw std::invalid_argument("Exp only has one input.");
+			ComputeInputPartialS(m_gradientOfExp, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
+		}
+
+		virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+		{
+			if (inputIndex != 0)
+				throw std::invalid_argument("Exp only has one input.");
+
+			Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+			Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+			ComputeInputPartialS(m_gradientOfExp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+		}
+
+		static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfExp, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
+		{
+			gradientOfExp.AssignExpOf(inputFunctionValues); // Exp(x) is its own partial
+
+			inputGradientValues.AddElementProductOf(gradientValues, gradientOfExp);
+		}
+
+		// GetTaskDescriptor - Get a task descriptor for this node
+		// taskType - task type we are generating a task for
+		virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
+		{
+			TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+			switch (taskType)
+			{
+			case taskComputeInputPartial:
+				descriptor->MatrixParam(m_gradientOfExp, "GradientOfExp", paramOptionsInput | paramOptionsTemporary);
+				descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
+				descriptor->FunctionParam(0, paramOptionsInput);
+				descriptor->GradientParam();
+				descriptor->SetFunction((FARPROC)ComputeInputPartialS);
+				break;
+			case taskEvaluate:
+				descriptor->FunctionParam();
+				descriptor->FunctionParam(0, paramOptionsInput);
+				descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
+				break;
+			default:
+				assert(false);
+				throw std::logic_error("Unsupported task requested");
+			}
+			return descriptor;
+		}
+
+		virtual void EvaluateThisNode()
+		{
+			EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
+		}
+
+		virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+		{
+			Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+			EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
+		}
+
+		static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+		{
+			functionValues.AssignExpOf(inputFunctionValues);
+#if NANCHECK
+			functionValues.HasNan("Exp");
+#endif
+		}
+
+		virtual void Validate()
+		{
+			PrintSelfBeforeValidation();
+
+			if (m_children.size() != 1)
+				throw std::logic_error("Exp operation should have one input.");
+
+			if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+				throw std::logic_error("Exp operation: the input node has 0 element.");
+
+			FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			m_gradientOfExp.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			CopyImageSizeFromInputs();
+		}
+
+		virtual void AttachInputs(const ComputationNodePtr singleInput)
+		{
+			m_children.resize(1);
+			m_children[0] = singleInput;
+		}
+
+		virtual void MoveMatricesToDevice(const short deviceId)
+		{
+			ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+			if (deviceId != AUTOPLACEMATRIX)
+			{
+				if (m_gradientOfExp.GetDeviceId() != deviceId)
+					m_gradientOfExp.TransferFromDeviceToDevice(m_gradientOfExp.GetDeviceId(), deviceId);
+			}
+		}
+
+		virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+		{
+			ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+			ExpNode<ElemType>* node = (ExpNode<ElemType>*) nodeP;
+
+			if (flags & CopyNodeFlags::copyNodeValue)
+			{
+				node->m_gradientOfExp = m_gradientOfExp;
+			}
+		}
+
+		// copy constructor
+		ExpNode(const ExpNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+			: ComputationNode(node->m_deviceId), m_gradientOfExp(node->m_deviceId)
+		{
+			node->CopyTo(this, newName, flags);
+		}
+
+		virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+		{
+			const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+			ComputationNodePtr node = new ExpNode<ElemType>(this, name, flags);
+			return node;
+		}
+
+	private:
+		Matrix<ElemType> m_gradientOfExp;
+	};
+
+	template class ExpNode<float>;
+	template class ExpNode<double>;
+
+
+	template<class ElemType>
     class CosineNode : public ComputationNode<ElemType>
     {
         typedef ComputationNode<ElemType>* ComputationNodePtr; 
@@ -3661,7 +3822,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rowsc = child->FunctionValues().GetNumRows(), colsc = child->FunctionValues().GetNumCols();
             size_t rowsp = FunctionValues().GetNumRows(), colsp = FunctionValues().GetNumCols();
 
-            Matrix<ElemType> &ones = Matrix<ElemType>();
+            Matrix<ElemType> ones = Matrix<ElemType>();
             if (colsc == 1 && colsp != 1)
             {
                 size_t colspExpand = rowsp*colsp/rowsc;
@@ -3693,7 +3854,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceInput0Value = Inputs(inputIndex)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> &ones = Matrix<ElemType>();
+            Matrix<ElemType> ones = Matrix<ElemType>();
 
             size_t rowsc = Inputs(inputIndex)->FunctionValues().GetNumRows(), rowsp = FunctionValues().GetNumRows();
             size_t colsp = FunctionValues().GetNumCols();
@@ -4520,7 +4681,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> &sliceMask = Matrix<ElemType>();
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if(m_dropoutRate > 0)
             {
                 sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -4577,7 +4738,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> &sliceMask = Matrix<ElemType>();
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if(m_dropoutRate > 0)
             {
                 m_maskOfDropout.Resize(m_functionValues.GetNumRows(), m_functionValues.GetNumCols());
@@ -5137,7 +5298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
         }
 
-        void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        void LoadFromFile(File& fstream, const size_t /*modelVersion*/, const short deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
@@ -5317,7 +5478,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 functionValues.Resize(inputFunctionValues.GetNumRows(),
                     inputFunctionValues.GetNumCols());
 
-            size_t iSizeInput = inputFunctionValues.GetNumCols();
             int iPastIndex = (int) (timeIdxInSeq - delay) * mNbr;
             int d = iPastIndex; 
             if (d < 0)
@@ -5325,7 +5485,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
            /// this can point to the past activity of the previous mninibatch
 
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp(functionValues.GetDeviceId()) ;
+            Matrix<ElemType> inp((short)functionValues.GetDeviceId()) ;
 
             if (iPastIndex < 0 && reset)
                 out.SetValue(default_activity);
@@ -5348,7 +5508,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 functionValues.Resize(inputFunctionValues.GetNumRows(),
                     inputFunctionValues.GetNumCols());
 
-            size_t iSizeInput = inputFunctionValues.GetNumCols();
             int iPastIndex = (int) (timeIdxInSeq - delay) * mNbr;
             int d = iPastIndex; 
             if (d < 0)
@@ -5356,7 +5515,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// this can point to the past activity of the previous mninibatch
 
 			Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr+indexInBatch, 1);
-            Matrix<ElemType> inp(functionValues.GetDeviceId()) ;
+            Matrix<ElemType> inp((short)functionValues.GetDeviceId()) ;
 
             if (iPastIndex < 0 && reset)
                 out.SetValue(default_activity);

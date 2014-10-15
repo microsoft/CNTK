@@ -9,6 +9,8 @@
 #include "SGD.h"
 #include "SimpleNetworkBuilder.h"
 
+#pragma warning (disable: 4189)     // (we have lots of unused variables to show how variables can be set up)
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
@@ -20,9 +22,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
-				size_t numRecurrentLayers = m_recurrentLayers.size(); 
+                size_t numRecurrentLayers = m_recurrentLayers.size();
 
-				ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
                 //TODO: to figure out sparse matrix size
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize, 0);
                 m_net->FeatureNodes().push_back(input);
@@ -494,9 +496,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
-				size_t numRecurrentLayers = m_recurrentLayers.size(); 
+                size_t numRecurrentLayers = m_recurrentLayers.size();
 
-				ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr, featin=nullptr, e=nullptr;
+                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr, featin = nullptr, e = nullptr;
                 ComputationNodePtr bi=nullptr;
                 ComputationNodePtr Wxi1=nullptr, Wxi=nullptr;
                 ComputationNodePtr Wxi2=nullptr, Wxi3=nullptr, Wxi4=nullptr;
@@ -754,7 +756,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildDirectConnect(ULONG &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildDirectConnect(ULONG &randomSeed, size_t /*mbSize*/, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
     {
         ComputationNodePtr directOutput = nullptr, mergedNode = nullptr;
 
@@ -784,7 +786,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t numHiddenLayers = m_layerSizes.size()-2;
 
-		ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
         ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
         ComputationNodePtr Wxf=nullptr, Whf=nullptr, Wcf=nullptr, bf=nullptr, Wxc=nullptr, Whc=nullptr, bc=nullptr;
         ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, ct=nullptr, ht=nullptr;
@@ -1191,5 +1193,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return *m_net;
     }
+
+    template class SimpleNetworkBuilder<float>;
+    template class SimpleNetworkBuilder<double>;
 
 }}}

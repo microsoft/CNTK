@@ -49,7 +49,6 @@ namespace msra { namespace dbn {
 		void saveandflush(msra::dbn::matrix &pred)
 		{
 			const size_t framesinblock = frames.size();
-			const size_t targetnfwd = 8;    // 8 -> 8.4% RTF (higher gets a little slower, but only little)
 
 			// write out all files
 			size_t firstframe = 0;
@@ -163,7 +162,6 @@ namespace msra { namespace dbn {
 		void saveandflush(msra::dbn::matrix &pred, size_t index)
 		{
 			const size_t framesinblock = framesmulti[index].size();
-			const size_t targetnfwd = 8;    // 8 -> 8.4% RTF (higher gets a little slower, but only little)
 
 			// write out all files
 			size_t firstframe = 0;
@@ -312,7 +310,7 @@ namespace msra { namespace dbn {
 		}
 
 		// append data to chunk
-		template<class MATRIX> void AddFile (const MATRIX & feat, const string & featkind, unsigned int sampPeriod, size_t index)
+		template<class MATRIX> void AddFile (const MATRIX & feat, const string & /*featkind*/, unsigned int sampPeriod, size_t index)
 		{
 			// append to frames; also expand neighbor frames
 			if (feat.cols() < 2)
