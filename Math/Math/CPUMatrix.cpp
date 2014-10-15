@@ -1547,7 +1547,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 us(i, j) /= v;
                 us(i + 1, j) /= v;
                 us(i + 2, j) /= v;
-                us(i + 3, j) *= v;
+                us(i + 3, j) /= v;
             }
             //handle remaining stuffs
             for (long i = m & ~3; i<m; i++)
