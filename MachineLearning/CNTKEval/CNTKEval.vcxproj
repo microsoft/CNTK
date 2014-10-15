@@ -51,7 +51,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>..\cn;..\..\common\include;..\..\math\math;$(CUDA_PATH)\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(CUDA_LIB_PATH)\;$(SolutionDir)$(Platform)\;$(Configuration);$(SolutionDir)..\Common\lib;$(Configuration)\;$(SolutionDir)..\..\cntk\Common\lib;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\;$(Platform)</LibraryPath>
+    <LibraryPath>$(CUDA_PATH)\lib\$(Platform);$(SolutionDir)$(Platform)\;$(Configuration);$(SolutionDir)..\Common\lib;$(Configuration)\;$(SolutionDir)..\..\cntk\Common\lib;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\;$(Platform)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>

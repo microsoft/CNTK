@@ -137,7 +137,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("This operation does not support four inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr firstInput, const ComputationNodePtr secondInput, const ComputationNodePtr thirdInput, const ComputationNodePtr fourthInput, const ComputationNodePtr fifthInput)
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
+            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
             throw std::logic_error("This operation does not support five inputs.");
         }
