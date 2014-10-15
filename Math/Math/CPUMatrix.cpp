@@ -22,8 +22,8 @@
 #include <vld.h>
 #endif
 
-#pragma warning (disable: 4267)
-
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
+#pragma warning (disable: 4702) // unreachable code; triggered for unknown reasons
 
 #ifndef USE_MKL
 // use ACML as default. 
@@ -269,9 +269,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Resize(numRows, a.GetNumCols());
 
-        long n=(long)a.GetNumCols(), m=(long)numRows, k=a.GetNumRows();
-
-        auto& us = *this; 
+        long n = (long)a.GetNumCols();        // note: OpenMP requires loop indices to be long, not size_t
+        long k = (long)a.GetNumRows();
 
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
@@ -321,7 +320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
-            for (long i=0, startRow = startIndex; i<(m & ~3); i+=4, startRow+=4)
+            for (long i=0, startRow = (long)startIndex; i<(m & ~3); i+=4, startRow+=4)
             {
                 us(startRow,j)   += a(i,j)  ;
                 us(startRow+1,j) += a(i+1,j);
@@ -329,7 +328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 us(startRow+3,j) += a(i+3,j);
             }
             //handle remaining stuffs
-            for (long i=m & ~3, startRow = startIndex+(m & ~3); i<m; i++, startRow++)
+            for (long i=m & ~3, startRow = (long)startIndex+(m & ~3); i<m; i++, startRow++)
             {
                 us(startRow,j)  += a(i,j);
             }
@@ -434,7 +433,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("SetValue: Matrix is empty.");
 
-        auto& us = *this; 
         if (v == 0)
         {
             memset(m_pArray, 0, sizeof(ElemType) * GetNumElements());
@@ -712,7 +710,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
-        auto& us = *this;
         std::ranlux64_base_01 generator;   
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
         std::uniform_real_distribution<ElemType> r(low, high);
@@ -2294,7 +2291,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SumOfElements: Matrix is empty.");
 
         ElemType sum=0;
-        int m=GetNumElements();
+        long m=(long)GetNumElements();        // note: OpenMP requires loop indices to be long, not size_t
 
         //four-way unrolling
 #pragma omp parallel for reduction(+:sum)
@@ -2661,7 +2658,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("FrobeniusNorm: Matrix is empty.");
 
-        auto& us=*this;
         ElemType v = 0;
 
         long m=(long)GetNumElements();
@@ -2976,14 +2972,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // file I/O
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    void CPUMatrix<ElemType>::ReadFromFile(FILE* f, const char * matrixName) 
+    void CPUMatrix<ElemType>::ReadFromFile(FILE*, const char * /*matrixName*/)
     {
         throw std::runtime_error("not implemented.");
     }
 
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    void CPUMatrix<ElemType>::WriteToFile(FILE* f, const char * matrixName) 
+    void CPUMatrix<ElemType>::WriteToFile(FILE*, const char * /*matrixName*/)
     {
         throw std::runtime_error("not implemented.");
     }
@@ -2992,7 +2988,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPUMatrix<ElemType>& inputSubBatch, 
                                                 const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
-                                                const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
+                                                const size_t outputWidth, const size_t outputHeight, const size_t /*outputChannels*/,
                                                 const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample, 
                                                 const bool zeroPadding)
     {
@@ -3068,13 +3064,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>&  CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemType>& inputSubBatch, 
                                                 const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
-                                                const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
+                                                const size_t outputWidth, const size_t outputHeight, const size_t /*outputChannels*/,
                                                 const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample, 
                                                 const bool zeroPadding) const
     {
         assert (verticalSubsample <= kernelHeight && horizontalSubsample <= kernelWidth);
 
-        const size_t packedInputRows = kernelWidth * kernelHeight * inputChannels;
         const size_t packedInputColsPerSample = outputWidth * outputHeight;  //output size per channel
         const size_t inputDim = inputWidth*inputHeight*inputChannels;
         const size_t smallBatchSize = inputSubBatch.GetNumCols();
@@ -3141,8 +3136,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //assume each column is an input sample. Each sample is stored in  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignMaxPoolingResult(const CPUMatrix<ElemType>& inputBatch, const size_t channels, 
-                                                const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample, 
-                                                const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample, 
+                                                const size_t /*inputWidth*/, const size_t inputHeight, const size_t /*inputSizePerSample*/,
+                                                const size_t /*outputWidth*/, const size_t outputHeight, const size_t outputSizePerSample, 
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
     {
         const long inputHeightTimesChannel = (long) (inputHeight * channels); 
@@ -3163,12 +3158,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const long y = outputIndexWithinSample / outputHeightTimesChannel; //wcol
                 const long nXC = outputIndexWithinSample % outputHeightTimesChannel; //channel + wrow*channels
-                const long x = nXC / channels; //wrow
-                const long c = nXC % channels; //channel
+                const long x = (long) (nXC / channels); //wrow
+                const long c = (long) (nXC % channels); //channel
 
                 ElemType maxVal = -FLT_MAX; 
                 ElemType minVal = FLT_MAX; 
-                const long rowInWindowBase = (x*verticalSubsample + y*horizontalSubsample*inputHeight)*channels+c;
+                const long rowInWindowBase = (long) ((x*verticalSubsample + y*horizontalSubsample*inputHeight)*channels + c);
                 for (long colInWindow=0; colInWindow<windowWidth; colInWindow++) 
                 {   
                     long rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
@@ -3177,7 +3172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         const ElemType val = inputBatch(rowInInput, sample); //pf[rowInWindow*channels]; 
                         maxVal = max(maxVal, val); 
                         minVal = min(minVal, val);
-                        rowInInput += channels;
+                        rowInInput += (long) channels;
                     }
                 }
 
@@ -3191,13 +3186,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddMaxPoolingGradient(const CPUMatrix<ElemType>& outputGradientBatch, const CPUMatrix<ElemType>& inputBatch, const CPUMatrix<ElemType>& outputBatch, 
                                                 const size_t channels, 
-                                                const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample, 
-                                                const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample, 
+                                                const size_t /*inputWidth*/, const size_t inputHeight, const size_t inputSizePerSample, 
+                                                const size_t outputWidth, const size_t outputHeight, const size_t /*outputSizePerSample*/,
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
     {
         size_t batchSize = inputBatch.GetNumCols();
-        const long inputHeightTimesChannel = inputHeight * channels; 
-        const long outputHeightTimesChannel = outputHeight * channels; 
+        const long inputHeightTimesChannel = (long) (inputHeight * channels);
+        const long outputHeightTimesChannel = (long) (outputHeight * channels);
 
         // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
         // IN_ELEM_COLPOS = sample
@@ -3212,20 +3207,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const long y = inputIndexWithinSample / inputHeightTimesChannel; //col in input
                 const long nXC = inputIndexWithinSample % inputHeightTimesChannel; //channel + row*chanels
-                const long x = nXC / channels; //row in input
-                const long c = nXC % channels; //channel
+                const long x = (long) (nXC / channels); //row in input
+                const long c = (long) (nXC % channels); //channel
 
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
-                long endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
-                long startOutY =(long)  max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1; //inclusive end
+                long endOutX = (long) ((x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1); //inclusive end
+                long startOutY = (long)  max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
+                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
 
                 ElemType inputValue = inputBatch(inputIndexWithinSample, sample);
                 for (long outY=startOutY; outY<=endOutY; outY++)
                 {
                     for (long outX=startOutX; outX<=endOutX; outX++)
                     {
-                        long outputIndex = outY * outputHeightTimesChannel + outX * channels + c; 
+                        long outputIndex = (long) (outY * outputHeightTimesChannel + outX * channels + c);
                         if (inputValue == outputBatch(outputIndex, sample))
                             (*this)(inputIndexWithinSample, sample) += outputGradientBatch(outputIndex, sample);
                     }
@@ -3237,12 +3232,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAveragePoolingResult(const CPUMatrix<ElemType>& inputBatch, const size_t channels, 
-                                                const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample, 
-                                                const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample, 
+                                                const size_t /*inputWidth*/, const size_t inputHeight, const size_t /*inputSizePerSample*/,
+                                                const size_t /*outputWidth*/, const size_t outputHeight, const size_t outputSizePerSample, 
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
     {
-        const long inputHeightTimesChannel = inputHeight * channels; 
-        const long outputHeightTimesChannel = outputHeight * channels; 
+        const long inputHeightTimesChannel = (long) (inputHeight * channels);
+        const long outputHeightTimesChannel = (long) (outputHeight * channels);
         const size_t batchSize = inputBatch.GetNumCols();
         const size_t windowSize = windowWidth * windowHeight;
         Resize(outputSizePerSample, batchSize);
@@ -3260,11 +3255,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const long y = outputIndexWithinSample / outputHeightTimesChannel; //wcol
                 const long nXC = outputIndexWithinSample % outputHeightTimesChannel; //channel + wrow*channels
-                const long x = nXC / channels; //wrow
-                const long c = nXC % channels; //channel
+                const long x = (long) (nXC / channels); //wrow
+                const long c = (long) (nXC % channels); //channel
 
                 ElemType sum = 0; 
-                const long rowInWindowBase = (x*verticalSubsample + y*horizontalSubsample*inputHeight)*channels+c;
+                const long rowInWindowBase = (long) ((x*verticalSubsample + y*horizontalSubsample*inputHeight)*channels+c);
                 for (long colInWindow=0; colInWindow<windowWidth; colInWindow++) 
                 {   
                     long rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
@@ -3285,14 +3280,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMatrix<ElemType>& outputGradientBatch, 
                                                 const size_t channels, 
-                                                const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample, 
-                                                const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample, 
+                                                const size_t /*inputWidth*/, const size_t inputHeight, const size_t inputSizePerSample, 
+                                                const size_t outputWidth, const size_t outputHeight, const size_t /*outputSizePerSample*/,
                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
     {
         size_t batchSize = outputGradientBatch.GetNumCols();
-        const long inputHeightTimesChannel = inputHeight * channels; 
-        const long outputHeightTimesChannel = outputHeight * channels; 
-        const long windowSize = windowWidth * windowHeight;
+        const long inputHeightTimesChannel = (long)(inputHeight * channels);
+        const long outputHeightTimesChannel = (long)(outputHeight * channels);
+        const long windowSize = (long) (windowWidth * windowHeight);
 
         // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
         // IN_ELEM_COLPOS = sample
@@ -3307,19 +3302,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const long y = inputIndexWithinSample / inputHeightTimesChannel; //col in input
                 const long nXC = inputIndexWithinSample % inputHeightTimesChannel; //channel + row*chanels
-                const long x = nXC / channels; //row in input
-                const long c = nXC % channels; //channel
+                const long x = nXC / (long)channels; //row in input
+                const long c = nXC % (long)channels; //channel
 
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
-                long endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
+                long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / (long)verticalSubsample : outputHeight - 1); //inclusive end
                 long startOutY = (long) max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1; //inclusive end
+                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
 
                 for (long outY=startOutY; outY<=endOutY; outY++)
                 {
                     for (long outX=startOutX; outX<=endOutX; outX++)
                     {
-                        long outputIndex = outY * outputHeightTimesChannel + outX * channels + c; 
+                        long outputIndex = outY * outputHeightTimesChannel + outX * (long)channels + c; 
                         (*this)(inputIndexWithinSample, sample) += outputGradientBatch(outputIndex, sample)/windowSize;    
                     }
                 }  
@@ -3439,7 +3434,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SVD:  input matrix is empty.");
 
         int info;
-        size_t m , n, lda, ldu, ldvt;
+        size_t m, n, lda, ldu, ldvt;
         m = A.GetNumRows();
         n = A.GetNumCols();
         lda = m; 
@@ -3450,11 +3445,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         VT.Resize(n,n);
 
         if (sizeof(ElemType) == sizeof(double))
-            dgesvd('A', 'A', m, n, reinterpret_cast <double*>(A.m_pArray), lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), ldu, reinterpret_cast <double*>(VT.m_pArray), ldvt, &info);
+            dgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <double*>(A.m_pArray), (int)lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), (int)ldu, reinterpret_cast <double*>(VT.m_pArray), (int)ldvt, &info);
         else
         {
 #pragma warning (suppress: 4244)
-            sgesvd('A', 'A', m, n, reinterpret_cast <float*>(A.m_pArray), lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), ldu, reinterpret_cast <float*>(VT.m_pArray), ldvt, &info);
+            sgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <float*>(A.m_pArray), (int)lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), (int)ldu, reinterpret_cast <float*>(VT.m_pArray), (int)ldvt, &info);
         }
     }
 
@@ -3566,7 +3561,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (a.GetNumCols() == 1) //col vector, add it to all columns
         {
             int m = (int)c.GetNumRows();
-            int n = (int)c.GetNumCols();
             assert (m == (int)a.GetNumRows());
             if (m != (int)a.GetNumRows())
                 throw std::invalid_argument("To add column vector, rows should match.");
@@ -3579,7 +3573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     daxpy(m, alpha, reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(c.m_pArray+c.LocateColumn(j)), 1);
 #else
-					cblas_daxpy (m, alpha, reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(c.m_pArray+c.LocateColumn(j)), 1);
+                    cblas_daxpy (m, alpha, reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(c.m_pArray+c.LocateColumn(j)), 1);
 #endif
                 }
             }
@@ -3592,7 +3586,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     saxpy(m, alpha, reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(c.m_pArray+c.LocateColumn(j)), 1);
 #else
-					cblas_saxpy (m, alpha, reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(c.m_pArray+c.LocateColumn(j)), 1);
+                    cblas_saxpy (m, alpha, reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(c.m_pArray+c.LocateColumn(j)), 1);
 #endif
                 }                
             }
@@ -3613,7 +3607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     daxpy(n, alpha, reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(c.m_pArray+i), m);
 #else
-					cblas_daxpy (n, alpha, reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(c.m_pArray+i), m);
+                    cblas_daxpy (n, alpha, reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(c.m_pArray+i), m);
 #endif                
                 }
             }
@@ -3626,7 +3620,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     saxpy(n, alpha, reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(c.m_pArray+i), m);
 #else
-					cblas_saxpy (n, alpha, reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(c.m_pArray+i), m);
+                    cblas_saxpy (n, alpha, reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(c.m_pArray+i), m);
 #endif                
 
                 }                
@@ -4066,7 +4060,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>  CPUMatrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed)
     {
-        CPUMatrix<ElemType> c(rows, rows); //will initialize to 0
+        CPUMatrix<ElemType> c(rows, cols); //will initialize to 0
         c.SetGaussianRandomValue(mean, sigma, seed);
         return c;
     }
@@ -4074,7 +4068,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma endregion Static BLAS Functions
 
     //The explicit instantiation part
-    template class CPUMatrix<float>; 
+    template class CPUMatrix<float>;
     template class CPUMatrix<double>;
 
     double logadd(double x, double y)

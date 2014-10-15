@@ -103,8 +103,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
-        ElemType& operator() (const size_t row, const size_t col) { throw std::exception("GPUMatrix doesn't support this"); }
-        const ElemType& operator() (const size_t row, const size_t col) const { throw std::exception("GPUMatrix doesn't support this"); }
+        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::exception("GPUMatrix doesn't support this"); }
+        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::exception("GPUMatrix doesn't support this"); }
         ElemType Get00Element() const;
 
         void SetValue(const ElemType v);

@@ -149,8 +149,8 @@ bool DataReader<ElemType>::DataEnd(EndDataType endDataType)
     return m_dataReader->DataEnd(endDataType);
 }
 
-template class DataReader<float>;
-template class DataReader<double>;
+//template class DataReader<float>;
+//template class DataReader<double>;
 
 // Utility function, in ConfigFile.cpp, but HTKMLFReader doesn't need that code...
 

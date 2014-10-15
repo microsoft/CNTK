@@ -71,7 +71,7 @@ namespace msra { namespace dbn {
 				});
 				firstframe += n;
 			}
-			assert (firstframe == framesinblock);
+			assert (firstframe == framesinblock); framesinblock;
 
 			// and we are done --forget the FIFO content & get ready for next chunk
 			clear();
@@ -142,7 +142,7 @@ namespace msra { namespace dbn {
 		std::vector<size_t> udims; // output dimension
 		bool minibatchready;
 
-		void operator=(const chunkevalsource &);
+                void operator=(const chunkevalsourcemulti &);
 	private:
 		void clear()    // empty the FIFO
 		{
@@ -184,7 +184,7 @@ namespace msra { namespace dbn {
 				});
 				firstframe += n;
 			}
-			assert (firstframe == framesinblock);
+			assert (firstframe == framesinblock); framesinblock;
 
 			// and we are done --forget the FIFO content & get ready for next chunk
 			

@@ -548,7 +548,7 @@ private:
             foreach_index (i, randomizedutterancerefs)
             {
                 auto & uttref = randomizedutterancerefs[i];
-                assert (positionchunkwindows[i].isvalidforthisposition (uttref));
+                assert (positionchunkwindows[i].isvalidforthisposition (uttref)); uttref;
             }
 
             // check we got those setup right
@@ -939,7 +939,7 @@ public:
                 auto uttframes = chunkdata.getutteranceframes (frameref.utteranceindex);
                 matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                 const size_t n = uttframevectors.size();
-                assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n);
+                assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n); n;
 
                 // copy frame and class labels
                 const size_t t = frameref.frameindex;
@@ -990,7 +990,7 @@ public:
         if (framemode)
             return globalts;
         // utterance mode
-        assert (globalts >= sweep * _totalframes && globalts < (sweep + 1) * _totalframes);
+        assert (globalts >= sweep * _totalframes && globalts < (sweep + 1) * _totalframes); sweep;
         foreach_index (pos, randomizedutterancerefs)
             if (randomizedutterancerefs[pos].globalts >= globalts)
                 return randomizedutterancerefs[pos].globalts;   // exact or inexact match
