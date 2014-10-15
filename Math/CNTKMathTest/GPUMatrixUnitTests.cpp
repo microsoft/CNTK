@@ -25,7 +25,6 @@ namespace CNTKMathTest
         static void DebugPrint(FILE* gpuDebugFile, const GPUMatrix<float>& M, const char* str, const bool colwiseVec)
         {
             fprintf(gpuDebugFile, "\n %s\n", str);
-            const int matNumRow = (int)M.GetNumRows();
             const int matNumCol = (int)M.GetNumCols();
             const int elemNum = (int)M.GetNumElements();
 
@@ -191,15 +190,15 @@ namespace CNTKMathTest
 
             M0.VectorNorm2(M3, true);
             M2.Resize(1, 3);
-            fArray[0] = 4.1231; fArray[1] = 5.3852; fArray[2] = 6.7082; 
+            fArray[0] = 4.1231f; fArray[1] = 5.3852f; fArray[2] = 6.7082f; 
             M2.SetValue(1, 3, fArray, matrixFlagNormal);
-            Assert::IsTrue(M3.IsEqualTo(M2, 0.0005)); 
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0005f)); 
 
             M0.VectorNorm2(M3, false);
             M2.Resize(2,1);
-            fArray[0] =  3.7417; fArray[1] = 8.7750;
+            fArray[0] =  3.7417f; fArray[1] = 8.7750f;
             M2.SetValue(2, 1, fArray, matrixFlagNormal);
-            Assert::IsTrue(M3.IsEqualTo(M2, 0.0005)); 
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0005f)); 
 
             fArray[0] = 1; fArray[2] = 2; fArray[4] = 3; 
             fArray[1] = 4; fArray[3] = 5; fArray[5] = 6; 
@@ -210,19 +209,19 @@ namespace CNTKMathTest
             M2.Resize(1, 3);
             fArray[0] = 4; fArray[1] = 5; fArray[2] = 6; 
             M2.SetValue(1, 3, fArray, matrixFlagNormal);
-            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001f)); 
 
             M00.VectorMax(M1, M3, false);
             M2.Resize(2,1);
             fArray[0] =  3.; fArray[1] = 6;
             M2.SetValue(2, 1, fArray, matrixFlagNormal);
-            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001f)); 
 
             M0.VectorNormInf(M3, true);
             M2.Resize(1, 3);
             fArray[0] = 4; fArray[1] = 5; fArray[2] = 6; 
             M2.SetValue(1, 3, fArray, matrixFlagNormal);
-            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001f)); 
 
             M0.VectorNormInf(M3, false);
             M2.Resize(2,1);
