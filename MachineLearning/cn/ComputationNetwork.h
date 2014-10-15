@@ -1814,7 +1814,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNetwork(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
         {   
             assert(false);
-            //throw std::logic_error("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
+            throw std::logic_error("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
         } 
 
         // Assignment operator, should never be called.

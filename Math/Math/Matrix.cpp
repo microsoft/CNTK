@@ -10,6 +10,8 @@
 #include <assert.h>
 
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
+#pragma warning (disable: 4239) // nonstandard extension; triggered by this pattern: "auto& second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;"
+#pragma warning (disable: 4702) // unreachable code; triggered for unknown reasons
 
 //before calling the following macro the current matrix location and matrix type on MatrixPointerToCheck must have been set correctly
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \

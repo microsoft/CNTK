@@ -70,12 +70,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& c);
 
         /// sum(vec(a).*vec(b))
-        static ElemType InnerProductOfMatrices(const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b) { NOT_IMPLEMENTED; }
+        static ElemType InnerProductOfMatrices(const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/) { NOT_IMPLEMENTED; }
         
-        static void AddScaledDifference(const ElemType alpha, const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, 
-            bool bDefaultZero ) { NOT_IMPLEMENTED; }
-        static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, CPUMatrix<ElemType>& c, 
-            bool bDefaultZero ) { NOT_IMPLEMENTED; }
+        static void AddScaledDifference(const ElemType /*alpha*/, const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/, CPUMatrix<ElemType>& /*c*/,
+            bool /*bDefaultZero*/ ) { NOT_IMPLEMENTED; }
+        static void AddScaledDifference(const ElemType /*alpha*/, const CPUMatrix<ElemType>& /*a*/, const CPUSparseMatrix<ElemType>& /*b*/, CPUMatrix<ElemType>& /*c*/,
+            bool /*bDefaultZero*/ ) { NOT_IMPLEMENTED; }
         
         int GetComputeDeviceId() const {return -1;}
         
@@ -88,9 +88,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void RmsProp(CPUMatrix<ElemType>& c);
 
         public:
-        CPUSparseMatrix<ElemType>& InplaceTruncateTop (const ElemType threshold) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType threshold) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceTruncateTop (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
+        CPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
+        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType /*threshold*/);
 
     public:
         void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }

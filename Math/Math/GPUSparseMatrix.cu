@@ -191,7 +191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType* pArrayDev = NULL;
         CUDACALL(cudaMalloc((void**)&pArrayDev,sizeof(ElemType)*m_numCols*m_numRows));
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         CUSPARSECALL(cusparseSetStream(cusparseHandle, t_stream));
         if (sizeof(ElemType)==sizeof(float))
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int nnzTotalDevHostPtr = -1;
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -620,7 +620,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         if (!transposeA && !transposeB)
         {
-            cudaEvent_t done; 
+            cudaEvent_t done = nullptr; 
             CUDACALL(cudaEventCreate(&done));
             _denseMulSparseToDense<ElemType><<<blocksPerGrid, p>>>(
                 alpha,
@@ -660,7 +660,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
         int n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
 
-        assert (m>0 && k>0 && l>0 && n>0); m; n;  //converting from size_t to int may cause overflow
+        assert(m>0 && k>0 && l>0 && n>0); (void)m; (void)n;  //converting from size_t to int may cause overflow
         assert (k == l);
         if (k != l) 
         {
@@ -685,7 +685,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (!transposeA && transposeB)
         {   
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             CUDACALL(cudaEventCreate(&done));
             size_t blocksPerGrid =rhs.GetNZElements();  
             _denseMulSparseToSparse<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
@@ -721,7 +721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t len = (lhs.m_format == MatrixFormat::matrixFormatSparseBlockCol) ? lhs.GetNumRows(): lhs.GetNumCols();
             bool blockCol = (lhs.m_format == MatrixFormat::matrixFormatSparseBlockCol);
 
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             CUDACALL(cudaEventCreate(&done));
             size_t blocksPerGrid = lhs.m_blockSize;
             _scaleAndAdd<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
@@ -773,7 +773,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaMemset(etp.m_val,0,sizeof(ElemType)*(etp.m_nz)));
         entropyScore.SetValue((ElemType)0);     
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         size_t blocksPerGrid = label.m_expandedSize;
 
@@ -811,7 +811,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ClassEntropyError(GPUSparseMatrix<ElemType>& a)
     {
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
 
         int N = a.m_nz;
@@ -834,7 +834,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::exception("GPUSparseMatrix::ClassEntropyGradientOfInput() All matrices must be on the same GPU");
 
         grd.SetValue((ElemType)0); 
-        cudaEvent_t done; 
+        cudaEvent_t done = nullptr; 
         CUDACALL(cudaEventCreate(&done));
 
         size_t blocksPerGrid = grd.GetNumElements();
@@ -872,7 +872,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaMemset(grd.m_blockVal,0,sizeof(ElemType)*(grd.m_nz)));
         CUDACALL(cudaMemset(grd.m_blockIds,0,sizeof(size_t)*(grd.m_blockSize)));
 
-        cudaEvent_t done;  
+        cudaEvent_t done = nullptr;  
         CUDACALL(cudaEventCreate(&done));
 
         size_t blocksPerGrid = error.m_nz;
@@ -902,7 +902,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             long N=(long)GetNZElements();
             int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             CUDACALL(cudaEventCreate(&done));        
             _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_blockVal,threshold,N);                        
             CUDACALL(cudaEventRecord(done));        
@@ -931,7 +931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t blocksPerGrid = m_blockSize;
             bool isBlockCol = (m_format == MatrixFormat::matrixFormatSparseBlockCol);
             size_t len = isBlockCol ? GetNumRows(): GetNumCols();
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             CUDACALL(cudaEventCreate(&done));        
             _normalGrad<ElemType><<<blocksPerGrid,threadsPerBlock>>>(
                 isBlockCol,
@@ -975,7 +975,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(n==(int)c.GetNumCols());
         int k = (int)a.GetNumCols();
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -1127,7 +1127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int nnzA = (int)S1.GetNZElements();
         int nnzB = (int)S2.GetNZElements();
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         //Step 1 
         c.PrepareBuffer(m, n, true, // true means we can reuse the "c" buffer if it exists for temporaries
@@ -1187,7 +1187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cusparseSetMatType(descrA,CUSPARSE_MATRIX_TYPE_GENERAL); cusparseSetMatType(descrB,CUSPARSE_MATRIX_TYPE_GENERAL); cusparseSetMatType(descrB,CUSPARSE_MATRIX_TYPE_GENERAL);
         cusparseSetMatIndexBase(descrA,CUSPARSE_INDEX_BASE_ZERO); cusparseSetMatIndexBase(descrB,CUSPARSE_INDEX_BASE_ZERO); cusparseSetMatIndexBase(descrC,CUSPARSE_INDEX_BASE_ZERO);
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         //Step 1 
         bool inOutParameter = (&b == &c);
@@ -1229,7 +1229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             c*=beta;
         }
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         long M=(long)a.GetNumRows();
         int blocksPerGrid =(int)ceil(1.0*M/threadsPerBlock);        
@@ -1253,7 +1253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         long N=(long)a.GetNZElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         _scaleArray<ElemType><<<blocksPerGrid,threadsPerBlock>>>(alpha,a.NzLocation(),N);
         CUDACALL(cudaEventRecord(done));        
@@ -1275,7 +1275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (a.GetNumRows()!=c.GetNumRows() || a.GetNumCols()!=c.GetNumCols() || a.GetNZElements()!=c.GetNZElements())
                 c.ResizeAs(a);
 
-            cudaEvent_t done;
+            cudaEvent_t done = nullptr;
             CUDACALL(cudaEventCreate(&done));
             a.PrepareDevice();
             long N=(long)a.GetNZElements();
@@ -1308,7 +1308,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaMalloc((void **)&cscColPtrA,(n+1)*sizeof(int)));
         cusparseHandle_t cusparseHandle = 0;
         CUSPARSECALL(cusparseCreate(&cusparseHandle));
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -1453,7 +1453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         b.PrepareDevice();        
         GPUMatrix<ElemType> c(b.GetNumRows(),b.GetNumCols(),b.GetComputeDeviceId());
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         long M=(long)a.GetNumRows();
         int blocksPerGrid =(int)ceil(1.0*M/threadsPerBlock);        
@@ -1545,7 +1545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cusparseHandle_t cusparseHandle = 0;
         CUSPARSECALL(cusparseCreate(&cusparseHandle));
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -1683,7 +1683,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         long N=(long)GetNZElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         _elemInverse<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,N);                        
         CUDACALL(cudaEventRecord(done));        
@@ -1810,7 +1810,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
         long N=(long)GetNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         _inplaceTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,threshold,N);                        
         CUDACALL(cudaEventRecord(done));        
@@ -1831,7 +1831,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         long N=(long)GetNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         _assignTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,a.NzLocation(),threshold,N);                        
         CUDACALL(cudaEventRecord(done));        
@@ -1846,7 +1846,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("InplaceTruncateTop: Matrix is empty.");
         long N=(long)GetNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         _inplaceTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,threshold,N);                        
         CUDACALL(cudaEventRecord(done));        
@@ -1867,7 +1867,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         long N=(long)GetNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         _assignTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,a.NzLocation(),threshold,N);                        
         CUDACALL(cudaEventRecord(done));        
@@ -1882,7 +1882,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SetToZeroIfAbsLessThan: Matrix is empty.");
         long N=(long)GetNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         _setToZeroIfAbsLessThan<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,threshold,N);                        
         CUDACALL(cudaEventRecord(done));        
@@ -1973,7 +1973,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {        
         long N=(long)GetNZElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDACALL(cudaEventCreate(&done));        
         switch (kind)
         {
