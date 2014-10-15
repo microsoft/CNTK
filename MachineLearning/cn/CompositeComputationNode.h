@@ -2016,11 +2016,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // GetTaskDescriptor - Get a task descriptor for this node
         // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t /*inputIndex = 0*/) const
         {
             NOT_IMPLEMENTED;
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            return descriptor;
+           // TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+           // return descriptor;
         }
 
         virtual void SetFunctionAndGradientSize(const int numSamples)
