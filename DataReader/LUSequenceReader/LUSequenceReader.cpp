@@ -1340,7 +1340,7 @@ void BatchLUSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actua
 
     if (pos == actualMbSize - 1) 
     {
-        if ((LabelIdType)wrd == index)
+        if (wrd == (int)index)
             mSentenceEnd = true;
         else
             mSentenceEnd = false; 
@@ -1356,7 +1356,7 @@ void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*a
 
     if (pos == 0) 
     {
-        if ((LabelIdType)wrd == index)
+        if (wrd == (int)index)
             mSentenceBegin = true;
         else
             mSentenceBegin = false; 
