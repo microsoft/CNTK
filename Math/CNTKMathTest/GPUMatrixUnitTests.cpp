@@ -387,5 +387,52 @@ namespace CNTKMathTest
             M1.InplaceSqrt();
             Assert::IsTrue(M1.IsEqualTo(M2));         
         }
+        TEST_METHOD(GPUAssignRepeatOf)
+        {
+            float *fArray = new float[36];
+            fArray[0] = 1; fArray[2] = 6; fArray[4] = 11;
+            fArray[1] = 2; fArray[3] = 7; fArray[5] = 12;
+            GPUMatrix<float> M0(2, 3, fArray, matrixFlagNormal);
+
+            GPUMatrix<float>  M1;
+            M1.AssignRepeatOf(M0, 1, 1);
+            Assert::IsTrue(M1.IsEqualTo(M0, 0.0001));
+
+            fArray[0] = 1; fArray[0 + 6] = 6; fArray[0 + 12] = 11; fArray[0 + 18] = 1; fArray[0 + 24] = 6; fArray[0 + 30] = 11;
+            fArray[1] = 2; fArray[1 + 6] = 7; fArray[1 + 12] = 12; fArray[1 + 18] = 2; fArray[1 + 24] = 7; fArray[1 + 30] = 12;
+            fArray[2] = 1; fArray[2 + 6] = 6; fArray[2 + 12] = 11; fArray[2 + 18] = 1; fArray[2 + 24] = 6; fArray[2 + 30] = 11;
+            fArray[3] = 2; fArray[3 + 6] = 7; fArray[3 + 12] = 12; fArray[3 + 18] = 2; fArray[3 + 24] = 7; fArray[3 + 30] = 12;
+            fArray[4] = 1; fArray[4 + 6] = 6; fArray[4 + 12] = 11; fArray[4 + 18] = 1; fArray[4 + 24] = 6; fArray[4 + 30] = 11;
+            fArray[5] = 2; fArray[5 + 6] = 7; fArray[5 + 12] = 12; fArray[5 + 18] = 2; fArray[5 + 24] = 7; fArray[5 + 30] = 12;
+            GPUMatrix<float> M3(6, 6, fArray, matrixFlagNormal);
+
+            M1.AssignRepeatOf(M0, 3, 2);
+            Assert::IsTrue(M1.IsEqualTo(M3, 0.0001));
+        }
+
+        TEST_METHOD(GPURowElementOperations)
+        {
+            GPUMatrix<float>   M0 = GPUMatrix<float>::RandomUniform(20, 28, -1, 1);
+            GPUMatrix<float>   M1 = GPUMatrix<float>::RandomUniform(1, 28, 1, 2);
+
+            GPUMatrix<float>   M3;
+            M3.SetValue(M0);
+            M3.RowElementMultiplyWith(M1);
+            M3.RowElementDivideBy(M1);
+
+            Assert::IsTrue(M0.IsEqualTo(M3, 0.0001));
+        }
+        TEST_METHOD(GPUColumnElementOperations)
+        {
+            GPUMatrix<float>   M0 = GPUMatrix<float>::RandomUniform(20, 28, -1, 1);
+            GPUMatrix<float>   M1 = GPUMatrix<float>::RandomUniform(20, 1, 1, 2);
+
+            GPUMatrix<float>   M3;
+            M3.SetValue(M0);
+            M3.ColumnElementMultiplyWith(M1);
+            M3.ColumnElementDivideBy(M1);
+
+            Assert::IsTrue(M0.IsEqualTo(M3, 0.0001));
+        }
     };
 }

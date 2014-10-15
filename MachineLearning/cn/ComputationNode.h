@@ -132,9 +132,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("This operation does not support three inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/, const ComputationNodePtr /*extPtr1*/, const ComputationNodePtr /*extPtr2*/) 
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, const ComputationNodePtr /*fourthInput*/)
         {
             throw std::logic_error("This operation does not support four inputs.");
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
+            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
+        {
+            throw std::logic_error("This operation does not support five inputs.");
         }
 
         virtual void DetachInputs()
@@ -187,12 +193,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void SetFunctionAndGradientSize(const int iAsize) {
-            size_t ir = m_functionValues.GetNumRows();
-            if (ir > 0 && iAsize > 0)
+        virtual void SetFunctionAndGradientSize(const int numSamples) 
+        {
+            size_t numRows = m_functionValues.GetNumRows();
+            if (numRows > 0 && numSamples > 0)
             {
-                m_functionValues.Resize(ir, iAsize); 
-                m_gradientValues.Resize(ir, iAsize); 
+                m_functionValues.Resize(numRows, numSamples); 
+                m_gradientValues.Resize(numRows, numSamples); 
             }
         }
 		void ResetBound(size_t indexInBatch, size_t frameNum)

@@ -19,17 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}</ProjectGuid>
-    <SccProjectName>
-    </SccProjectName>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccProvider>
-    </SccProvider>
+    <ProjectGuid>{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>cn</RootNamespace>
+    <RootNamespace>CNTKEvalTest</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -60,7 +52,6 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -80,24 +71,20 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\Math\Math;..\..\Common\;..\..\Common\include;..\..\Common\PTask\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(SolutionDir)..\Common\PTask\lib\$(Configuration)\;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
-    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
+    <IncludePath>..\..\..\Math\Math;..\..\..\Common\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\Math\Math;..\..\Common\;..\..\Common\include;..\..\Common\PTask\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(SolutionDir)..\Common\PTask\lib\$(Configuration)\;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
-    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
-    <ExecutablePath>$(SolutionDir)..\Common\PTask\bin\;$(ExecutablePath)</ExecutablePath>
+    <IncludePath>..\..\..\Math\Math;..\..\..\Common\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -110,47 +97,23 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <OpenMPSupport>true</OpenMPSupport>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Delayimp.lib;nvml.lib;cudart.lib;cntkMath.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>CNTKMath.dll;nvml.dll</DelayLoadDLLs>
+      <AdditionalDependencies>cntkMath.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-      <Message>
-      </Message>
-    </PostBuildEvent>
-    <CustomBuildStep>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Outputs>$(TargetDir)config.txt;$(TargetDir)labels.txt;$(TargetDir)network.txt;$(TargetDir)NdlScript.txt</Outputs>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <TreatOutputAsContent>true</TreatOutputAsContent>
-      <Message>Copy content files to target directory</Message>
-    </CustomBuildStep>
-    <CudaCompile>
-      <GenerateLineInfo>true</GenerateLineInfo>
-      <CodeGeneration>compute_20,sm_20;compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CodeGeneration>
-    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -162,121 +125,57 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <Optimization>Disabled</Optimization>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Delayimp.lib;nvml.lib;cudart.lib;cntkMath.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Profile>true</Profile>
-      <DelayLoadDLLs>CNTKMath.dll;nvml.dll</DelayLoadDLLs>
+      <AdditionalDependencies>cntkMath.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PostBuildEvent>
-      <Command>copy $(SolutionDir)..\Common\PTask\bin\*.dll $(TargetDir)</Command>
-      <Message>Copy over the NVidia tools extention DLL</Message>
-    </PostBuildEvent>
-    <CustomBuildStep>
-      <Command>
-      </Command>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Outputs>
-      </Outputs>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <TreatOutputAsContent>true</TreatOutputAsContent>
-      <Message>
-      </Message>
-    </CustomBuildStep>
-    <CudaCompile>
-      <GenerateLineInfo>true</GenerateLineInfo>
-    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="config.txt">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </Text>
-    <Text Include="DefaultMacros.txt" />
-    <Text Include="modelEditor.txt" />
-    <Text Include="modelEditorFromScratch.txt" />
+    <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Common\hostname.h" />
-    <ClInclude Include="..\..\Common\Include\basetypes.h" />
-    <ClInclude Include="..\..\Common\Include\BestGpu.h" />
-    <ClInclude Include="..\..\Common\Include\commandArgUtil.h" />
-    <ClInclude Include="..\..\Common\Include\File.h" />
-    <ClInclude Include="..\..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\..\Common\Include\nvml.h" />
-    <ClInclude Include="CompositeComputationNode.h" />
-    <ClInclude Include="ComputationNetwork.h" />
-    <ClInclude Include="ComputationNetworkHelper.h" />
-    <ClInclude Include="ComputationNode.h" />
-    <ClInclude Include="EvaluationCriterionNode.h" />
-    <ClInclude Include="IComputationNetBuilder.h" />
-    <ClInclude Include="IExecutionEngine.h" />
-    <ClInclude Include="ModelEditLanguage.h" />
-    <ClInclude Include="NDLNetworkBuilder.h" />
-    <ClInclude Include="NDLUtil.h" />
-    <ClInclude Include="NetworkDescriptionLanguage.h" />
-    <ClInclude Include="PTask.h" />
-    <ClInclude Include="PTaskGraphBuilder.h" />
-    <ClInclude Include="SimpleEvaluator.h" />
-    <ClInclude Include="SimpleOutputWriter.h" />
-    <ClInclude Include="SGD.h" />
-    <ClInclude Include="SimpleNetworkBuilder.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="SynchronousExecutionEngine.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TrainingCriterionNode.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\BestGpu.cpp" />
-    <ClCompile Include="..\..\Common\ConfigFile.cpp" />
-    <ClCompile Include="..\..\Common\DataReader.cpp" />
-    <ClCompile Include="..\..\Common\DataWriter.cpp" />
-    <ClCompile Include="..\..\Common\File.cpp">
+    <ClCompile Include="..\..\..\Common\ConfigFile.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
+    <ClCompile Include="..\..\..\Common\DataReader.cpp" />
+    <ClCompile Include="..\..\..\Common\Eval.cpp" />
+    <ClCompile Include="..\..\..\Common\File.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="cn.cpp" />
-    <ClCompile Include="ComputationNode.cpp" />
-    <ClCompile Include="ModelEditLanguage.cpp" />
-    <ClCompile Include="NetworkDescriptionLanguage.cpp" />
-    <ClCompile Include="PTaskGraphBuilder.cpp" />
-    <ClCompile Include="SimpleNetworkBuilder.cpp" />
-    <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="tests.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Math\Math\Math.vcxproj">
-      <Project>{60bdb847-d0c4-4fd3-a947-0c15c08bcdb5}</Project>
-    </ProjectReference>
+    <ClCompile Include="..\..\..\Common\fileutil.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="CNTKEvalTest.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
   </ImportGroup>
 </Project>
