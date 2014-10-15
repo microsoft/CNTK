@@ -956,9 +956,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const;
     };
 
-    template class LearnableParameter<float>; 
-    template class LearnableParameter<double>;
-
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {

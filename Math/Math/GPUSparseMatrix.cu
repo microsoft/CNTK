@@ -14,6 +14,9 @@
 #include <iostream> // for cout
 #include <assert.h>
 
+#pragma warning (disable: 4267) // conversion from 'size_t' to 'unsigned int'; happens in CUDA <<<a,b>>> syntax if a and b are size_t
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
+
 // thread local storage to access the current stream, initalize to default stream
 extern __declspec( thread ) cudaStream_t t_stream;
 
@@ -116,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // if default value use current compute device
         if (deviceId == -1)
-            deviceId = m_computeDevice;
+            deviceId = (short)m_computeDevice;
         Microsoft::MSR::CNTK::PrepareDevice(deviceId);
     }
 
@@ -646,7 +649,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // backward pass from hidden layer to feature weight
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, 
+    void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType /*alpha*/, const GPUMatrix<ElemType>& lhs, const bool transposeA, 
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
     {
         if (lhs.GetComputeDeviceId()!=rhs.GetComputeDeviceId())
@@ -657,7 +660,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
         int n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
 
-        assert (m>0 && k>0 && l>0 && n>0);  //converting from size_t to int may cause overflow
+        assert (m>0 && k>0 && l>0 && n>0); m; n;  //converting from size_t to int may cause overflow
         assert (k == l);
         if (k != l) 
         {

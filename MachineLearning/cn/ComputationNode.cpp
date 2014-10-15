@@ -49,4 +49,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return descriptor;
     }
 
+    template class LearnableParameter<float>; 
+    template class LearnableParameter<double>;
 }}}
