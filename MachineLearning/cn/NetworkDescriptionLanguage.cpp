@@ -22,6 +22,9 @@ NDLNode<ElemType>* NDLScript<ElemType>::DuplicateNode(NDLNode<ElemType>* node)
 	return newNode;
 }
 
+template class NDLNode<float>;
+template class NDLNode<double>;
+
 template <typename ElemType>
 NDLScript<ElemType>::NDLScript(const NDLScript& copyMe) : ConfigParser(copyMe)
 {
@@ -232,7 +235,7 @@ NDLScript<double> NDLScript<double>::s_global;
 int NDLNode<float>::s_nameCounter=0;
 int NDLNode<double>::s_nameCounter=0;
 
-    template class NDLScript<float>; 
-    template class NDLScript<double>;
+template class NDLScript<float>;
+template class NDLScript<double>;
 
 }}}

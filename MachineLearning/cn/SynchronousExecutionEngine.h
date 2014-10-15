@@ -712,10 +712,8 @@ public:
 private:
     ComputationNetwork<ElemType>& m_net;
     typedef ComputationNode<ElemType>* ComputationNodePtr;
-    //void operator=(const SynchronousNodeEvaluator&) { throw std::logic_error("operator= not available"); }
+    void operator=(const SynchronousNodeEvaluator&);
 };
-//template class SynchronousNodeEvaluator<float>; 
-//template class SynchronousNodeEvaluator<double>;
 
 // SynchronousExecutionEngine
 // TODO JC Refactor eligible methods and members into abstract base class.

@@ -366,9 +366,6 @@ public:
     }
 };
 
-template class NDLNode<float>; 
-template class NDLNode<double>;
-
 template <typename ElemType>
 class NDLScript: public ConfigParser
 {

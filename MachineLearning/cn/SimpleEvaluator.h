@@ -340,9 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNetwork<ElemType>& m_net;
         size_t m_numMBsToShowResult;
         UINT16 m_traceLevel;
-        //void operator=(const SimpleEvaluator&) { throw std::logic_error("operator= not available"); }
+        void operator=(const SimpleEvaluator&); // (not assignable)
     };
 
-    template class SimpleEvaluator<float>; 
-    template class SimpleEvaluator<double>;
 }}}

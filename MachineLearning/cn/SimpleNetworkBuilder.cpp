@@ -9,6 +9,8 @@
 #include "SGD.h"
 #include "SimpleNetworkBuilder.h"
 
+#pragma warning (disable: 4189)     // (we have lots of unused variables to show how variables can be set up)
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
@@ -20,9 +22,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
-				size_t numRecurrentLayers = m_recurrentLayers.size(); 
+                size_t numRecurrentLayers = m_recurrentLayers.size();
 
-				ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
                 //TODO: to figure out sparse matrix size
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize, 0);
                 m_net->FeatureNodes().push_back(input);
@@ -754,7 +756,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildDirectConnect(ULONG &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildDirectConnect(ULONG &randomSeed, size_t /*mbSize*/, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
     {
         ComputationNodePtr directOutput = nullptr, mergedNode = nullptr;
 
@@ -1191,5 +1193,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return *m_net;
     }
+
+    template class SimpleNetworkBuilder<float>;
+    template class SimpleNetworkBuilder<double>;
 
 }}}
