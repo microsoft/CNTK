@@ -188,7 +188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_writeFile)
                 FlushViewOfFile(iter->view, iter->size);
-            bool ret = UnmapViewOfFile(iter->view)!=FALSE;
+            bool ret = UnmapViewOfFile(iter->view)!=FALSE; ret;
             iter = m_views.erase(iter);
         }
         return iter;
@@ -335,7 +335,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     SectionFile::SectionFile(std::wstring fileName, FileOptions options, size_t size) : BinaryFile(fileName, options, size)
     {
         m_fileSection = new Section(this, 0, NULL, mappingFile, sectionHeaderMin);
-        SectionHeader* fileHeader = m_fileSection->GetHeader();
         if (m_writeFile)
         {
             m_fileSection->InitHeader(sectionTypeFile, string("Binary Data File"), sectionDataNone, 0);
@@ -377,8 +376,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_sectionHeader->version = 0x0100;   // version number ##.## in hex
         m_sectionHeader->sizeHeader = sectionHeaderMin; // size of this header (rounded up to nearest 64 byte boundary)
         m_sectionHeader->dataSections = 0; // number of data sub-sections (for nesting)
-        m_sectionHeader->sectionType = type; // what is the type of the data in this section
-        m_sectionHeader->sectionData = dataType;  // type of section (SectionData enum)
+        m_sectionHeader->sectionType = (WORD)type; // what is the type of the data in this section
+        m_sectionHeader->sectionData = (WORD)dataType;  // type of section (SectionData enum)
         m_sectionHeader->bytesPerElement = elementSize;  // number of bytes per element, (0 means variable)
         m_sectionHeader->customStructureID = customStructureNone;  // ID for custom structure
         m_sectionHeader->elementsPerRecord = 0;  // number of elements per Record
@@ -583,7 +582,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // save off the header size so we can reestablish pointers if necessary
             //size_t headerSize = m_sectionHeader->sizeHeader;
             //assert((char*)m_elementBuffer - (char*)m_sectionHeader);
-            void* elementBuffer = EnsureMapped(m_elementBuffer, windowSize);
+            //void* elementBuffer =
+            EnsureMapped(m_elementBuffer, windowSize);
 
             // check to see if the mapping changed, if so update pointers
             //if (elementBuffer != m_elementBuffer)
@@ -1004,7 +1004,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // hum, is this allowable?
             throw runtime_error("Invalid size in Binary Writer, variable sized data with no length");
-            size = 0;
         }
 
         char* data = section->EnsureElements(index, size);
@@ -1278,9 +1277,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // datasetSize - Size of the dataset
     // byteVariableSized - for variable sized data, size of current block to be written, zero when not used, or ignored if not variable sized data
     // returns: true if more data is desired, false if no more data is required (signal that file may be closed)
-    bool SectionStats::SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized)
+    bool SectionStats::SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t /*byteVariableSized*/)
     {
-        Section* section = this;
         // if the section is not the data stream we are a child of ignore it
         auto iterator = matrices.find(m_parent->GetName());
         if (iterator == matrices.end())

@@ -1341,7 +1341,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false; 
         }
 
-        void EvaluateLoop(std::list<ComputationNodePtr>& allNodes , const ComputationNodePtr startNode)
+        void EvaluateLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
         {
             bool bLoopCompleted = true;
             std::vector<ComputationNodePtr> recurrentNodes;
@@ -1375,7 +1375,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Evaluate(const ComputationNodePtr rootNode)
         {
-            bool bStartRecordLoops = false; /// initially set loop completed
             BuildAndValidateNetwork(rootNode);
 
             std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
@@ -1462,7 +1461,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			m_sentenceEnd.assign(aSize, m_actMiniBSize/aSize);
         }
 
-        void ComputeGradientLoop(std::list<ComputationNodePtr>& allNodes , const ComputationNodePtr startNode)
+        void ComputeGradientLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
         {
             std::vector<ComputationNodePtr> recurrentNodes;
             int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
@@ -1812,16 +1811,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PTaskGraphBuilder<ElemType>* GetPTaskGraphBuilder() {return m_PTaskGraphBuilder;}
     protected:
         // Copy constructor, should never be called.
-        ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom) 
+        ComputationNetwork(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
         {            
             throw std::logic_error("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
         } 
 
         // Assignment operator, should never be called.
-        ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom) 
+        ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
         {            
             throw std::logic_error("'ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
-            return (*this);
         } 
 
         void ClearCalcOrderCaches()
@@ -1830,7 +1828,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_cacheGradientCalcOrders.clear();
         } 
 
-        void MergeRecurrentLoops(const ComputationNodePtr rootNode)
+        void MergeRecurrentLoops(const ComputationNodePtr /*rootNode*/)
         {
             /// merge loops if they have the same source node
             std::vector<RecurrentInfo>      m_recurrentInfoTmp;
@@ -1973,7 +1971,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				rInfo.m_loopId = loopId;
 				rInfo.m_sourceNode = cur;
 				size_t sccSize = 0;
-				while(true)
+                                for (;;)
 				{
 					ComputationNodePtr w = sccStack.back();
 					sccStack.pop_back();
@@ -2025,14 +2023,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //must be called before ValidateNetwork
         void FormRecurentLoops(const ComputationNodePtr rootNode)
         {
-            bool bStartOfLoop = false;
-            int  loopId = 0;
             std::vector<ComputationNodePtr> sourceLoopNodes; 
-			getStrongSCC(rootNode);
+            getStrongSCC(rootNode);
             std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode, sourceLoopNodes);
 
-
-			/// debug purpose 
+            /// debug purpose 
             for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 fprintf(stderr, " nodes in the recurrent loops : \n"); 
@@ -2081,7 +2076,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					for (size_t j = 0 ; j < (*iter).m_recurrentNodes.size(); j++)
 					{
 						ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[j];
-						bool bFound = false;
 						for (size_t i = 0; i < nodeRecIter->ChildrenSize() ; i++)
 						{
 							if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != L"Delay"))
@@ -2135,8 +2129,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void ReorderLoops(std::list<ComputationNodePtr>&  nodes, 
-            const std::map<int , std::list<ComputationNodePtr>>& recurrentNodes, 
-            const std::list<ComputationNodePtr> & noRecurrentNodes)
+            const std::map<int , std::list<ComputationNodePtr>>& /*recurrentNodes*/,
+            const std::list<ComputationNodePtr> & /*noRecurrentNodes*/)
         {
             std::list<ComputationNodePtr> newList;
 

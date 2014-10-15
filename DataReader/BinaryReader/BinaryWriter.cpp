@@ -330,7 +330,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     // look for any children and create them as well
     for (std::wstring subsection : subsections)
     {
-        Section* newSection = CreateSection(config(subsection), section, records, windowSize);
+        CreateSection(config(subsection), section, records, windowSize);
     }
 
     // wait until here so everything is mapped and valid in the object
@@ -377,7 +377,7 @@ void BinaryWriter<ElemType>::Init(const ConfigParameters& config)
     m_uniqueID = (WORD)GetTickCount();
 
     // get the configuration, this will recursively go down and create all subfiles/sections as well 
-    Section* mainSection = CreateSection(config, NULL, m_recordMax);
+    CreateSection(config, NULL, m_recordMax);
 }
 
 // GetSections - Get the sections of the file

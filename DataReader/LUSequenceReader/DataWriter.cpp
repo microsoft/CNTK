@@ -42,7 +42,7 @@ void DataWriter<ElemType>::Destroy()
 template<class ElemType>
 void DataWriter<ElemType>::Init(const ConfigParameters& writerConfig)
 {
-	m_dataWriter = new LUSequenceWriter<ElemType>();
+    m_dataWriter = new LUSequenceWriter<ElemType>();
     m_dataWriter->Init(writerConfig);
 }
 

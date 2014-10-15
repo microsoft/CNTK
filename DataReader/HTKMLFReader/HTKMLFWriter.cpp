@@ -46,7 +46,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		vector<wstring> filelist;
 		size_t numFiles;
 		size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
-		size_t evalchunksize = 2048;
 
 		ConfigArray outputNames = writerConfig("outputNodeNames","");
 		if (outputNames.size()<1)
@@ -118,12 +117,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	}
 
 	template<class ElemType>
-	void HTKMLFWriter<ElemType>::GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections)
+	void HTKMLFWriter<ElemType>::GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/)
 	{
 	}
 
 	template<class ElemType>
-	bool HTKMLFWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized)
+	bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
 	{
 		
 
@@ -182,7 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
 	template<class ElemType>
-	void HTKMLFWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping)
+	void HTKMLFWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/)
 	{
 	}
    

@@ -710,15 +710,13 @@ public:
 
     virtual ~SynchronousNodeEvaluator()
     {
-
     }
 
 private:
     ComputationNetwork<ElemType>& m_net;
     typedef ComputationNode<ElemType>* ComputationNodePtr;
+    void operator=(const SynchronousNodeEvaluator&);
 };
-template class SynchronousNodeEvaluator<float>; 
-template class SynchronousNodeEvaluator<double>;
 
 // SynchronousExecutionEngine
 // TODO JC Refactor eligible methods and members into abstract base class.
@@ -764,16 +762,15 @@ private:
     SynchronousNodeEvaluator<ElemType>* m_nodeEvaluator;
 protected:
     // Copy constructor, should never be called.
-    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom) 
+    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {            
         throw std::logic_error("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
     } 
 
     // Assignment operator, should never be called.
-    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom) 
+    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {            
         throw std::logic_error("'SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
-        return (*this);
     } 
 };
 

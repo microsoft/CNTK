@@ -23,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // readSample - sample to read in global sample space
 // returns - true if we successfully read a record, otherwise false
 template<class ElemType>
-bool LUSequenceReader<ElemType>::ReadRecord(size_t readSample)
+bool LUSequenceReader<ElemType>::ReadRecord(size_t /*readSample*/)
 {
     return false; // not used
 }
@@ -179,7 +179,6 @@ void LUSequenceReader<ElemType>::LoadLabelFile(const std::wstring &filePath, std
         path = path.substr(location+1);
     
     // read the entire file into a string
-    size_t fileLength = file.Size();
     string str;
     retLabels.resize(0);
     while (!file.IsEOF())
@@ -459,7 +458,7 @@ void LUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
     char stmp[MAX_STRING];
     string strtmp; 
     size_t sz;
-    int widx = 0, b;
+    int b;
     class_size  = 0;
 
     wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
@@ -686,10 +685,7 @@ void LUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch,
     m_clsinfoRead = false; 
     m_idx2clsRead = false; 
 
-    const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-    const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseReset(); 
-
 }
 
 
@@ -752,7 +748,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {
@@ -779,12 +775,9 @@ void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& sectionName
 template<class ElemType>
 bool LUSequenceReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
 {
-    if (m_cachingReader)
-    {
-        return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
-    }
-    Error("GetData not supported in LUSequenceReader");
-    return false;
+    if (!m_cachingReader)
+        Error("GetData not supported in LUSequenceReader");
+    return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
 }
 
 // instantiate all the combinations we expect to be used
@@ -1059,8 +1052,6 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
     m_clsinfoRead = false; 
     m_idx2clsRead = false; 
 
-    const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-    const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseReset(); 
 
     Reset();
@@ -1123,7 +1114,7 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 }
 
 template<class ElemType>
-bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample)
+bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/)
 {
     bool bDataIsThere = true; 
 
@@ -1135,10 +1126,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample)
     LabelInfo& featIn = m_labelInfo[labelInfoIn];
     LabelInfo& labelIn = m_labelInfo[labelInfoOut];
 
-    bool nextWord = false;
-
     // see how many we already read
-    int sequencesRead = 0;
     std::vector<SequencePosition> seqPos;
 
     {
@@ -1254,7 +1242,6 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
     }
 
     // now get the labels
-    const LabelInfo& labelInfo = m_labelInfo[labelInfoOut];
     const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
 
     if (actualmbsize > 0)
@@ -1312,9 +1299,8 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 template<class ElemType>
 void BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, 
     Matrix<ElemType>*>& matrices, 
-    size_t m_mbStartSample, size_t actualmbsize)
+    size_t /*m_mbStartSample*/, size_t actualmbsize)
 {
-    size_t j = 0;
     const LabelInfo& labelInfo = m_labelInfo[labelInfoOut];
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr) return;
@@ -1354,7 +1340,7 @@ void BatchLUSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actua
 
     if (pos == actualMbSize - 1) 
     {
-        if (wrd == index)
+        if ((LabelIdType)wrd == index)
             mSentenceEnd = true;
         else
             mSentenceEnd = false; 
@@ -1362,7 +1348,7 @@ void BatchLUSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actua
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int actualMbSize)
+void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*actualMbSize*/)
 {
     // now get the labels
     LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -1370,7 +1356,7 @@ void BatchLUSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int act
 
     if (pos == 0) 
     {
-        if (wrd == index)
+        if ((LabelIdType)wrd == index)
             mSentenceBegin = true;
         else
             mSentenceBegin = false; 

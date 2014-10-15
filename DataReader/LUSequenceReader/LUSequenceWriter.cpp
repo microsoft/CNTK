@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         char stmp[MAX_STRING];
         string strtmp; 
         size_t sz;
-        int widx = 0, b;
+        int b;
 
         wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
 
@@ -97,7 +97,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 	template<class ElemType>
-	bool LUSequenceWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized)
+	bool LUSequenceWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
 	{
 		
 		for (auto iter = matrices.begin();iter!=matrices.end(); iter++)
