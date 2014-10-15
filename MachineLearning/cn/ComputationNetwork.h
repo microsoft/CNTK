@@ -1,3 +1,4 @@
+#pragma warning (disable: 4702) // this function is flagged but unclear why
 //
 // <copyright file="ComputationNetwork.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -1811,11 +1812,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PTaskGraphBuilder<ElemType>* GetPTaskGraphBuilder() {return m_PTaskGraphBuilder;}
     protected:
         // Copy constructor, should never be called.
+#pragma warning (push)
+#pragma warning (disable: 4702) // this function is flagged but unclear why
         ComputationNetwork(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
         {   
-            assert(false);
+            //assert(false);
             throw std::logic_error("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
         } 
+#pragma warning (pop)
 
         // Assignment operator, should never be called.
         ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)

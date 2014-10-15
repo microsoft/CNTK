@@ -29,6 +29,8 @@
 #include <vld.h> // for memory leak detection
 #endif
 
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
+
 int msra::numa::node_override = -1;     // for numahelpers.h
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -850,7 +852,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						{
 							// dereference matrix that corresponds to key (input/output name) and 
 							// populate based on whether its a feature or a label
-							Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+							//Matrix<ElemType>& data =
+                                                        *matrices[iter->first]; // can be features or labels
 
 							if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
 							{
@@ -927,7 +930,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						{
 							// dereference matrix that corresponds to key (input/output name) and 
 							// populate based on whether its a feature or a label
-							Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+							//Matrix<ElemType>& data =
+                                                        *matrices[iter->first]; // can be features or labels
 
 							if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
 							{
@@ -997,7 +1001,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						{
 							// dereference matrix that corresponds to key (input/output name) and 
 							// populate based on whether its a feature or a label
-							Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+							//Matrix<ElemType>& data =
+                                                        *matrices[iter->first]; // can be features or labels
 
 							if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
 							{
