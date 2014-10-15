@@ -1850,7 +1850,7 @@ void BatchSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actualM
 
     if (pos == actualMbSize - 1) 
     {
-        if ((LabelIdType) wrd == index)
+        if (wrd == (int)index)
             mSentenceEnd = true;
         else
             mSentenceEnd = false; 
@@ -1866,7 +1866,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*act
 
     if (pos == 0) 
     {
-        if ((LabelIdType) wrd == index)
+        if (wrd == (int)index)
             mSentenceBegin = true;
         else
             mSentenceBegin = false; 
