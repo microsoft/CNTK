@@ -400,6 +400,9 @@ public:
             case 3:
                 nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]));
                 break;
+            case 4:
+                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]));
+                break;
             default:
                 if (nodeParamCount > 0)
                     Error("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());

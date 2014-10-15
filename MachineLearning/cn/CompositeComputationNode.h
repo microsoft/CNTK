@@ -14,6 +14,9 @@
 #include "ComputationNode.h"
 #include "TrainingCriterionNode.h"
 
+#define TWO_PI 6.283185307f
+
+
 //this file will contain computation nodes that require several atomic computation.
 //composite nodes can save memory, computation, or both
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -714,7 +717,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //functionValues.ElementInverse();
             //functionValues.ElementMultiplyWith(input0);
             functionValues.SetValue(input0);
-            functionValues.ColumnElementDivideWith(input2);
+            functionValues.ColumnElementDivideBy(input2);
             functionValues += input1;
 #if NANCHECK
             functionValues.HasNan("PerDimMeanVarDeNormalization");
@@ -1793,4 +1796,461 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class AveragePoolingNode<float>; 
     template class AveragePoolingNode<double>;    
+
+    //calculates: the log likelihood of a feature given GMM parameters
+    template<class ElemType>
+    class GMMLogLikelihoodNode : public ComputationNode<ElemType>
+    {
+        typedef ComputationNode<ElemType>* ComputationNodePtr;
+
+    public:
+        GMMLogLikelihoodNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode(deviceId), m_prior(deviceId), m_normedDeviation(deviceId), m_normedDeviationVectors(deviceId), m_stddev(deviceId), m_posterior(deviceId), m_temp(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        GMMLogLikelihoodNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode(deviceId), m_prior(deviceId), m_normedDeviation(deviceId), m_normedDeviationVectors(deviceId), m_stddev(deviceId), m_posterior(deviceId), m_temp(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        GMMLogLikelihoodNode(const GMMLogLikelihoodNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode(node->m_deviceId), m_prior(node->m_deviceId), m_normedDeviation(node->m_deviceId), m_normedDeviationVectors(node->m_deviceId),
+            m_stddev(node->m_deviceId), m_posterior(node->m_deviceId), m_temp(m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new GMMLogLikelihoodNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            switch (inputIndex)
+            {
+            case 0:
+                ComputeInputPartialUnnormedPrior(Inputs(0)->GradientValues(), m_gradientValues, m_prior, m_posterior, m_temp);
+                break;
+            case 1:
+                ComputeInputPartialMean(Inputs(1)->GradientValues(), m_gradientValues, m_normedDeviationVectors, m_posterior, m_temp);
+                break;
+            case 2:
+                ComputeInputPartialLogStddev(Inputs(2)->GradientValues(), m_gradientValues, m_normedDeviation, m_posterior, m_temp);
+                break;
+            case 3:
+                ComputeInputPartialFeature(Inputs(3)->GradientValues(), m_gradientValues, m_normedDeviationVectors, m_posterior, m_temp);
+                break;
+            default:
+                throw std::invalid_argument("GMMLogLikelihoodNode only takes four inputs.");
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            //get the right slice 
+            size_t startIndex = timeIdxInSeq * m_samplesInRecurrentStep;
+
+            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
+
+            Matrix<ElemType> sliceGradientValue = m_gradientValues.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+            Matrix<ElemType> slicePosterior = m_posterior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                
+            switch (inputIndex)
+            {
+            case 0:
+                {
+                    if (colsPrior == 1)
+                        ComputeInputPartialUnnormedPrior(Inputs(0)->GradientValues(), sliceGradientValue, m_prior, slicePosterior, m_temp);
+                    else
+                    {
+                        Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                        Matrix<ElemType> slicePrior = m_prior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                        ComputeInputPartialUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, m_temp);
+                    }
+                }
+                break;
+            case 1:
+                {
+                      Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                      if (colsPrior == 1)
+                        ComputeInputPartialMean(Inputs(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
+                    else
+                    {
+                        Matrix<ElemType> sliceMeanGradient = Inputs(1)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                        ComputeInputPartialMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
+                    }
+                }
+                break;
+            case 2:
+                {
+                    Matrix<ElemType> sliceNormedDeviation = m_normedDeviation.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                    if (colsPrior == 1)
+                        ComputeInputPartialLogStddev(Inputs(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
+                    else
+                    {
+                        Matrix<ElemType> sliceLotStddevGradient = Inputs(2)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                        ComputeInputPartialLogStddev(sliceLotStddevGradient, sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
+                    }
+                }
+                break;
+            case 3:
+                {
+                    Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                    ComputeInputPartialFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
+                }
+                break;
+            default:
+                throw std::invalid_argument("GMMLogLikelihoodNode criterion only takes four inputs.");
+            }
+        }
+
+        static void WINAPI ComputeInputPartialUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
+            const Matrix<ElemType>& prior, const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+        {
+            temp.AssignDifferenceOf(posterior, prior);
+            temp.RowElementMultiplyWith(gradientValues);
+            if (prior.GetNumCols() == posterior.GetNumCols())
+            {
+                unnormedPriorGradientValues += temp; 
+            }
+            else if (prior.GetNumCols() == 1)
+            {
+                Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(posterior.GetNumCols(), 1, unnormedPriorGradientValues.GetDeviceId()), false, unnormedPriorGradientValues);
+            }
+            else
+            {
+                throw std::runtime_error("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
+            }
+        }
+
+        static void WINAPI ComputeInputPartialMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+            Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+        {
+            size_t numComponent = posterior.GetNumRows(); 
+            size_t numSamples = posterior.GetNumCols();
+            size_t featureSize = normedDeviationVectors.GetNumRows() / numComponent;
+
+            temp.SetValue(normedDeviationVectors); //recall normedDeviationVectors <-- (x-u_c)/(stddev^2)
+            temp.Reshape(featureSize, numSamples* numComponent);
+
+            posterior.Reshape(1, numSamples* numComponent);
+            temp.RowElementMultiplyWith(posterior); //temp <-- posterior * (x-u_c)/(stddev^2)
+
+            posterior.Reshape(numComponent, numSamples);  //reshape back
+            temp.Reshape(featureSize * numComponent, numSamples); //reshape back
+
+            temp.RowElementMultiplyWith(gradientValues);
+
+            if (numSamples == meanGradientValues.GetNumCols())
+            {
+                meanGradientValues += temp;
+            }
+            else if (meanGradientValues.GetNumCols() == 1)
+            {
+                Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(numSamples, 1, meanGradientValues.GetDeviceId()), false, meanGradientValues);
+            }
+            else
+            {
+                throw std::runtime_error("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
+            }
+        }
+
+        static void WINAPI ComputeInputPartialLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
+            const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+        {
+            size_t numComponent = posterior.GetNumRows();
+            size_t numSamples = posterior.GetNumCols();
+
+            temp.AssignDifferenceOf(normedDeviation, (ElemType)numComponent);
+            temp.ElementMultiplyWith(posterior);
+            temp.RowElementMultiplyWith(gradientValues);
+            if (logStddevGradientValues.GetNumCols() == numSamples)
+            {
+                logStddevGradientValues += temp;
+            }
+            else if (logStddevGradientValues.GetNumCols() == 1)
+            {
+                Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(numSamples, 1, logStddevGradientValues.GetDeviceId()), false, logStddevGradientValues);
+            }
+            else
+            {
+                throw std::runtime_error("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
+            }
+        }
+
+        static void WINAPI ComputeInputPartialFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+            Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+        {
+            size_t numComponent = posterior.GetNumRows();
+            size_t numSamples = posterior.GetNumCols();
+            size_t featureSize = normedDeviationVectors.GetNumRows() / numComponent;
+
+            temp.SetValue(normedDeviationVectors);
+            temp *= -1;
+            temp.Reshape(featureSize, numSamples* numComponent);
+            posterior.Reshape(1, numSamples* numComponent);
+            temp.RowElementMultiplyWith(posterior);
+
+            posterior.Reshape(numComponent, numSamples);
+            temp.Reshape(featureSize * numComponent, numSamples);
+            temp.RowElementMultiplyWith(gradientValues);
+
+            featureGradientValues += temp;
+        }
+
+        // GetTaskDescriptor - Get a task descriptor for this node
+        // taskType - task type we are generating a task for
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
+        {
+            NOT_IMPLEMENTED;
+            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+            return descriptor;
+        }
+
+        virtual void SetFunctionAndGradientSize(const int numSamples)
+        {
+            ComputationNode<ElemType>::SetFunctionAndGradientSize(numSamples);
+
+            size_t numComponents = Inputs(0)->FunctionValues().GetNumRows();
+            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
+            //size_t numSamples = Inputs(3)->FunctionValues().GetNumCols();
+            size_t featureSize = Inputs(3)->FunctionValues().GetNumRows();
+
+            m_prior.Resize(numComponents, colsPrior);
+            m_stddev.Resize(numComponents, colsPrior);
+            m_normedDeviation.Resize(numComponents, numSamples);
+            m_normedDeviationVectors.Resize(numComponents * featureSize, numSamples);
+            m_posterior.Resize(numComponents, numSamples);
+        }
+
+        //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
+        virtual void EvaluateThisNode()
+        {
+            // all internal matrices will be automatically resized since all of them are assigned to a value so no resize is needed here.
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), 
+                m_prior, m_stddev, m_normedDeviationVectors, m_normedDeviation, m_posterior, m_temp);
+        }
+
+        //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
+            size_t numSamples = Inputs(3)->FunctionValues().GetNumCols();
+
+            //get the right slice 
+            size_t startIndex = timeIdxInSeq * m_samplesInRecurrentStep;
+
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceFeature = Inputs(3)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceNormedDeviation = m_normedDeviation.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+            Matrix<ElemType> slicePosterior = m_posterior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+
+            if (colsPrior == 1)
+            {
+                EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), sliceFeature,
+                    m_prior, m_stddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, m_temp);
+            }
+            else if (colsPrior == numSamples)
+            {
+                Matrix<ElemType> sliceUnnormedPrior = Inputs(0)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceMean = Inputs(1)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceLogstddev = Inputs(2)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+
+                Matrix<ElemType> slicePrior = m_prior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceStddev = m_stddev.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+
+                EvaluateThisNodeS(sliceOutputValue, sliceUnnormedPrior, sliceMean, sliceLogstddev, sliceFeature,
+                    slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, m_temp);
+            }
+            else  //should not reach the code since validation should fail already
+            {
+                throw std::runtime_error("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
+            }
+
+        }
+
+        //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
+        //If we want to speed up we need to replace following code with a several specialized GPU functions
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean, const Matrix<ElemType>& logstddev,
+            const Matrix<ElemType>& feature, Matrix<ElemType>& prior, Matrix<ElemType>& stddev, Matrix<ElemType>& normedDeviationVectors,
+            Matrix<ElemType>& normedDeviation, Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
+        {
+            int numComponent = unnormedPrior.GetNumRows();
+            size_t numSamples = feature.GetNumCols();
+            size_t featureDim = feature.GetNumRows();
+
+            //compute prior which is softmax of unnormedPrior
+            prior.AssignLogSoftmaxOf(unnormedPrior, true);
+            prior.InplaceExp();
+
+            //compute stddev
+            stddev.AssignExpOf(logstddev);
+
+            //compute normedDeviation <-- ||x-u_c||^2/(stddev^2)
+            normedDeviationVectors.AssignRepeatOf(feature, numComponent, 1);
+            normedDeviationVectors -= mean; //each column of the mean has multiple mean components
+            normedDeviationVectors.Reshape(featureDim, numSamples* numComponent);  //now each column is feature-mean_i
+
+            normedDeviation.AssignVectorNorm2Of(normedDeviationVectors, true);
+            temp.AssignRepeatOf(stddev, 1, numSamples / stddev.GetNumCols());  //stddev.GetNumCols() is either 1 or =numSamples
+            temp.Reshape(1, temp.GetNumElements());  //one stddev value for each component for each sample
+            normedDeviation.ElementDivideBy(temp);  //normedDeviation and temp have same dim (1, numSamples* numComponent)
+            normedDeviation ^= 2;
+
+            //compute  normedDeviationVectors <-- (x-u_c)/(stddev^2)
+            normedDeviationVectors.RowElementDivideBy(temp); //temp is stddev. divide once  
+            normedDeviationVectors.RowElementDivideBy(temp);  //divide twice
+            normedDeviationVectors.Reshape(featureDim*numComponent, numSamples);  //reshape back
+
+            //compute per-component likelihood
+            posterior.AssignProductOf(-0.5f, normedDeviation); //posterior  <-- -||x-u_c||^2/(stddev^2)/2 and in (1, numSamples* numComponent) dim
+            posterior.InplaceExp(); //posterior  <-- exp(-||x-u_c||^2/(stddev^2)/2)
+            temp ^= (ElemType)numComponent; //temp <-- stddev^c and in (1, numSamples* numComponent) dim
+            posterior.RowElementDivideBy(temp);  // posterior  <-- exp[-||x-u_c||^2/(stddev^2)/2]/(stddev^c)
+            posterior /= (ElemType)pow(TWO_PI, numComponent / 2.0f); //likelihood for each component and sample is now computed and stored in posterior
+
+            normedDeviation.Reshape(numComponent, numSamples);  //reshape back
+            posterior.Reshape(numComponent, numSamples);  //reshape back
+
+            //compute posterior <-- prior_i * likelihood_i
+            if (unnormedPrior.GetNumCols() == numSamples)  //each sample has different prior
+                posterior.ElementMultiplyWith(prior);
+            else  //all samples share the same prior
+                posterior.ColumnElementMultiplyWith(prior);  
+
+
+            //compute GMM log-likelihood
+            Matrix<ElemType>::Multiply(ConstOnes(1, numComponent, posterior.GetDeviceId()), false, posterior, false, functionValues);  //functionValues <-- total likelihood
+            posterior.RowElementDivideBy(functionValues); //posterior <-- per-comp likelihood / total likelihood
+            functionValues.InplaceLog(); //log likelihood
+
+#if NANCHECK
+            functionValues.HasNan("GMMLogLikelihood");
+#endif
+#if DUMPOUTPUT
+            functionValues.Print("GMMLogLikelihoodNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 4)
+                throw std::logic_error("GMMLogLikelihoodNode requires four inputs.");
+
+            size_t rows[4], cols[4];
+            for (int i = 0; i < 4; i++)
+            {
+                rows[i] = Inputs(i)->FunctionValues().GetNumRows();
+                cols[i] = Inputs(i)->FunctionValues().GetNumCols();
+            }
+
+            if (cols[0] != cols[1] || cols[0] != cols[2])
+                throw std::logic_error("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
+
+            if (cols[0] != 1 && cols[0] != cols[3])
+                throw std::logic_error("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
+
+            if (rows[0] != rows[2])
+                throw std::logic_error("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
+
+            if (rows[1] != rows[0]*rows[3])
+                throw std::logic_error("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
+
+            FunctionValues().Resize(1, cols[3]);
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(3, false);
+
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;
+        }
+
+        //leftNode should be the empirical
+        virtual void AttachInputs(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature)
+        {
+            m_children.resize(4);
+            m_children[0] = unnormedPrior;
+            m_children[1] = mean;
+            m_children[2] = logStddev;
+            m_children[3] = feature;
+        }
+
+        virtual void MoveMatricesToDevice(const short deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_prior.GetDeviceId() != deviceId)
+                {
+                    m_prior.TransferFromDeviceToDevice(m_prior.GetDeviceId(), deviceId, true);
+                }
+                if (m_normedDeviation.GetDeviceId() != deviceId)
+                {
+                    m_normedDeviation.TransferFromDeviceToDevice(m_normedDeviation.GetDeviceId(), deviceId, true);
+                }
+                if (m_normedDeviationVectors.GetDeviceId() != deviceId)
+                {
+                    m_normedDeviationVectors.TransferFromDeviceToDevice(m_normedDeviationVectors.GetDeviceId(), deviceId, true);
+                }
+                if (m_stddev.GetDeviceId() != deviceId)
+                {
+                    m_stddev.TransferFromDeviceToDevice(m_stddev.GetDeviceId(), deviceId, true);
+                }
+                if (m_posterior.GetDeviceId() != deviceId)
+                {
+                    m_posterior.TransferFromDeviceToDevice(m_posterior.GetDeviceId(), deviceId, true);
+                }
+            }
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            GMMLogLikelihoodNode<ElemType>* node = (GMMLogLikelihoodNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_prior = m_prior;
+                node->m_normedDeviation = m_normedDeviation;
+                node->m_normedDeviationVectors = m_normedDeviationVectors;
+                node->m_stddev = m_stddev;
+                node->m_posterior = m_posterior;
+            }
+        }
+
+    protected:
+        Matrix<ElemType> m_prior;
+        Matrix<ElemType> m_normedDeviation;
+        Matrix<ElemType> m_normedDeviationVectors;
+        Matrix<ElemType> m_stddev;
+        Matrix<ElemType> m_posterior;
+        Matrix<ElemType> m_temp;
+    };
+
+    template class GMMLogLikelihoodNode<float>;
+    template class GMMLogLikelihoodNode<double>;
 }}}
