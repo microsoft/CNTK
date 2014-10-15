@@ -766,12 +766,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == RowSliceNode<ElemType>::TypeName())
 				newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
+                newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
-
+            
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -919,12 +921,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new DelayNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == LookupTableNode<ElemType>::TypeName())
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
+                newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
-
+            
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -1223,6 +1227,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			return newNode;
 		}
 
+        ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(unnormedPrior, mean, logStddev, feature);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+        
         ComputationNodePtr LookupTable (const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
