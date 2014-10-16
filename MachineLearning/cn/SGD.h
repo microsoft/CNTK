@@ -518,6 +518,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (learnRatePerSample < m_minLearnRate)
                 {
                     fprintf(stderr,"Learn Rate Per Sample for Epoch[%lu] = %.8g is less than minLearnRate %.8g. Training stops.\n", i+1, learnRatePerSample, m_minLearnRate);
+                    if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
+                        net.SaveToFile(m_modelPath);
                     break;
                 }
 
