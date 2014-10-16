@@ -764,8 +764,7 @@ protected:
     // Copy constructor, should never be called.
     SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {         
-        assert(false);
-        //throw std::logic_error("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
+        throw std::logic_error("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
     } 
 
     // Assignment operator, should never be called.

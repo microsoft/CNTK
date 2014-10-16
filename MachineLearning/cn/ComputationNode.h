@@ -828,11 +828,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t /*inputIndex=0*/) const
         {
-            inputIndex;
             assert(false);
-            return NULL;
+            NOT_IMPLEMENTED;
+            //return NULL;
         }
     protected:
 

@@ -1347,7 +1347,7 @@ protected:
                 bool wrong = (_isnan(diff) || diff > threshold);
                 if (wrong)
 				{
-                    fprintf (stdout, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                    fprintf (stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
                     return false; 
 				}
             }
