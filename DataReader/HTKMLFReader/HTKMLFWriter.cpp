@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			size_t dim = outputNameToDimMap[outputName];
 			wstring outFile = outputFiles[id][outputFileIndex];
 			
-			assert(outputData.GetNumRows()==dim);
+			assert(outputData.GetNumRows()==dim); dim;
 
 			SaveToFile(outFile,outputData);
 		}

@@ -772,10 +772,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 						if (m_convertLabelsToTargetsMultiIO[id])
 						{
-							size_t labelDim = m_labelToTargetMapMultiIO[id].size();
-							for (int i = 0; i < uids.size(); i++)
+                                                    size_t labelDim = m_labelToTargetMapMultiIO[id].size();
+                                                    for (int i = 0; i < uids.size(); i++)
 							{
-								assert(uids[i] < labelDim);
+								assert(uids[i] < labelDim); labelDim;
 								size_t labelId = uids[i];
 								for (int j = 0; j < dim; j++)
 								{
@@ -1134,12 +1134,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				{
 					Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 					size_t id = m_featureNameToIdMap[iter->first];
-					size_t dim = m_featureNameToDimMap[iter->first];
+                                        size_t dim = m_featureNameToDimMap[iter->first];
 
 					const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
 
 					// copy the features over to our array type
-					assert(feat.rows()==dim); // check feature dimension matches what's expected
+					assert(feat.rows()==dim); dim; // check feature dimension matches what's expected
 
 					if (m_featuresBufferMultiIO[id]==NULL)
 					{
@@ -1295,7 +1295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				size_t labelDim = m_labelToTargetMapMultiIO[id].size();
 				for (int k=0; k < actualmbsizeOri; k++)
 				{
-					assert(uids[k] < labelDim);
+					assert(uids[k] < labelDim); labelDim;
 					size_t labelId = uids[k];
 					for (int j = 0; j < dim; j++)
 					{
