@@ -1737,7 +1737,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty() || IsEmpty())
             throw std::logic_error("RowElementMultiplyWith: Matrix is empty.");
 
-        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
+        if (!(a.GetNumCols() == GetNumCols() && a.GetNumRows() == 1))
             throw std::invalid_argument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
         //WARNING: a and this must have same type
@@ -1763,7 +1763,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty() || IsEmpty())
             throw std::logic_error("RowElementDivideBy: Matrix is empty.");
 
-        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
+        if (!(a.GetNumCols() == GetNumCols() && a.GetNumRows() == 1))
             throw std::invalid_argument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
 
         //WARNING: a and this must have same type

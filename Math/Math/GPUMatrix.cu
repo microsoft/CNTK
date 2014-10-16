@@ -1371,9 +1371,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
             throw std::invalid_argument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
-        long N=(long)a.GetNumRows();
-        long M=(long)this->GetNumCols();        
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);  
+        long N = (long)this->GetNumRows();
+        long M = (long)a.GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*M / threadsPerBlock);
         a.PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
@@ -1394,9 +1394,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
             throw std::invalid_argument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
 
-        long N = (long)a.GetNumRows();
-        long M = (long)this->GetNumCols();
-        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        long N = (long)this->GetNumRows();
+        long M = (long)a.GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*M / threadsPerBlock);
         a.PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
@@ -1417,9 +1417,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
             throw std::invalid_argument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
-        long N=(long)a.GetNumRows();
-        long M=(long)this->GetNumCols();        
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);  
+        long N = (long)a.GetNumRows();
+        long M = (long)this->GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
         a.PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
