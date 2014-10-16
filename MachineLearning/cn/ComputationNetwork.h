@@ -336,7 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-                    ComputationNodePtr childNodePtr0, childNodePtr1, childNodePtr2;
+                    ComputationNodePtr childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4;
                     switch (numChildren)
                     {
                     case 1:
@@ -353,6 +353,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         childNodePtr1 = GetNodeFromName(childrenNames[1]);
                         childNodePtr2 = GetNodeFromName(childrenNames[2]);
                         nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2);
+                        break;
+                    case 4:
+                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
+                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
+                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
+                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
+                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3);
+                        break;
+                    case 5:
+                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
+                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
+                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
+                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
+                        childNodePtr4 = GetNodeFromName(childrenNames[4]);
+                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4);
                         break;
                     default:
                         throw std::logic_error("Invalid number of children.");
