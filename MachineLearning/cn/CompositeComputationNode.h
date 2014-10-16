@@ -2135,7 +2135,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else  //all samples share the same prior
                 posterior.ColumnElementMultiplyWith(prior);  
 
-
             //compute GMM log-likelihood
             Matrix<ElemType>::Multiply(ConstOnes(1, numComponent, posterior.GetDeviceId()), false, posterior, false, functionValues);  //functionValues <-- total likelihood
             posterior.RowElementDivideBy(functionValues); //posterior <-- per-comp likelihood / total likelihood
