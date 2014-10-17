@@ -296,7 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    //for each column of a, we add all rows of a to this starting from startIndex
+    //for the row slice of this starting from startIndex we add a to it.
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
@@ -331,6 +331,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (long i=m & ~3, startRow = (long)startIndex+(m & ~3); i<m; i++, startRow++)
             {
                 us(startRow,j)  += a(i,j);
+            }
+        }
+
+        return *this;
+    }
+
+    //for each column of this, we add row slice of a starting from startIndex
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddWithRowSliceValuesOf: input matrix a is empty.");
+
+        if (GetNumRows() != numRows)
+            throw std::logic_error("AddWithRowSliceValuesOf: this->GetNumRows() != numRows.");
+
+        if (startIndex + numRows > a.GetNumRows())
+            throw std::logic_error("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
+
+        if (a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddWithRowSliceValuesOf: columns does not match.");
+
+        long n = (long)a.GetNumCols(), m = (long)numRows;
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (long i = 0, startRow = (long)startIndex; i<(m & ~3); i += 4, startRow += 4)
+            {
+                us(i, j) += a(startRow, j);
+                us(i + 1, j) += a(startRow + 1, j);
+                us(i + 2, j) += a(startRow + 2, j);
+                us(i + 3, j) += a(startRow + 3, j);
+            }
+            //handle remaining stuffs
+            for (long i = m & ~3, startRow = (long)startIndex + (m & ~3); i<m; i++, startRow++)
+            {
+                us(i, j) += a(startRow, j);
             }
         }
 
