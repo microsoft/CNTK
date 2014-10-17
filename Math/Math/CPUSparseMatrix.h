@@ -85,7 +85,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
         void Adagrad(CPUMatrix<ElemType>& c);
-        void RmsProp(CPUMatrix<ElemType>& c);
 
         public:
         CPUSparseMatrix<ElemType>& InplaceTruncateTop (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }

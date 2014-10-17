@@ -966,6 +966,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _adagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(m_pArray, gradients.m_pArray, GetNumElements());
     }
 
+	template<class ElemType>
+	void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
+		ElemType RMS_GAMMA,
+		ElemType RMS_WGT_INC,
+		ElemType RMS_WGT_MAX,
+		ElemType RMS_WGT_DEC,
+		ElemType RMS_WGT_MIN
+		)
+	{
+        const ElemType floor = 1e-6f;
+		static ElemType *upd_gpu = (ElemType*)0;
+
+        size_t n = gradients.GetNumElements();
+		int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
+
+        if (this->IsEmpty() || this->GetNumCols() < gradients.GetNumCols() * 3)
+        {
+            this->Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+            this->SetValue(0.0);
+
+			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+			ElemType *signs=m_pArray+n; // sign of previous gradient
+			ElemType *steps=m_pArray+2*n; // current step size
+
+			_rmsprop_init<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n);
+
+        }
+
+        ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+		ElemType *signs=m_pArray+n; // sign of previous gradient
+		ElemType *steps=m_pArray+2*n; // current step size
+
+        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols() * 3);
+
+		if( !upd_gpu )
+		{
+			ElemType upd[] = {
+				2,2,0,
+				2,2,0,
+				1,1,1,
+				2,2,0,
+				1,2,1,
+				0,2,2,
+				1,1,1,
+				0,2,2,
+				0,2,2,
+			};
+
+			CUDA_CALL(cudaMalloc((void**)&upd_gpu,sizeof(ElemType)*27));
+            CUDA_CALL(cudaMemcpy(upd_gpu,upd,sizeof(ElemType)*27,cudaMemcpyHostToDevice));
+		}
+
+		_rmsprop<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n,
+			RMS_GAMMA,RMS_WGT_INC,RMS_WGT_MAX,RMS_WGT_DEC,RMS_WGT_MIN,
+			floor,upd_gpu);
+	}
+
     template<class ElemType>
     void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
     {
