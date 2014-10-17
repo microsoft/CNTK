@@ -224,7 +224,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         CPUMatrix<ElemType>&  AssignRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         CPUMatrix<ElemType>&  AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
-        
+        CPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
+
         CPUMatrix<ElemType>&  AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
 
         void VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise) const;

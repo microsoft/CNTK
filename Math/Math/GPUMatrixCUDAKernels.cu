@@ -339,11 +339,24 @@ __global__ void _addToRowSliceValuesOf(ElemType * dest, ElemType * src, const LO
     if (id>=N)
         return;
 
-    long col = id / srcRows;
+    long col = id / srcRows;  //src is the full matrix, rowslice is taken from the dest
     long row = id - (col * srcRows);
 
     //dest[col*destRows + row + startIndex] += src[id];
     dest[IDX2C(row + startIndex, col, destRows)] += src[id];
+}
+
+template<class ElemType>
+__global__ void _addWithRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / destRows;  //dest is the full matrix, rowslice is taken from the src
+    long row = id - (col * destRows);
+
+    dest[id] += src[IDX2C(row + startIndex, col, srcRows)];
 }
 
 template<class ElemType>
