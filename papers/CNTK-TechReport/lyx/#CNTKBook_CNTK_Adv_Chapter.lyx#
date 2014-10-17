@@ -1923,9 +1923,7 @@ Compute the Gaussian mixture model log likelihood of feature values given
  the unnormalized Gaussian mixture weights (i.e., priors), Gaussian means
  and log standard deviation.
  The resulting matrix is a 1 by FeatureValues.cols matrix.
- This node can be used in generative models to implement normal Gaussian
- mixture models or mixture density network.
- The syntax is
+ 
 \end_layout
 
 \begin_layout Standard
@@ -1948,35 +1946,20 @@ GMMLL(UnnormedPrior, Means, LogStddev, FeatureValues)
 
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 UnnormedPrior- unnormalized Gaussian mixture weights (or prior).
- The actual prior is the softmax of UnnormedPrior to make sure each prior
- is non-negative and all priors sum to 1.
- UnnormedPrior.rows equals to the number of Gaussian components.
- 
+ The actual prior is the softmax of UnnormedPrior.
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 Means - the mean vectors of all the Gaussian components.
- Means.rows equals to the number of Gaussian components times feature size.
-\end_layout
-
-\begin_layout Itemize
-LogStddev - the log of the standard deviation for each Gaussian component.
- All dimensions share the same LogStddev.
- The actual standard deviation is the exponential of LogStddev to make sure
- it's positive.
- LogStddev.rows equals to the number of Gaussian components.
-\end_layout
-
-\begin_layout Itemize
-FeatureValues - the feature values on which to compute the log likelihood.
  
 \end_layout
 
 \begin_layout Standard
-Note, UnnormedPrior, Means and LogStddev should have the same number of
- columns which should be either 1 or the same as the columns in FeatureValues.
+LogStddev - the log of the standard deviation for each Gaussian component.
+ All dimensions share the same LogStddev.
+ The actual .
 \end_layout
 
 \begin_layout Subsubsection
@@ -2177,7 +2160,7 @@ L2Reg(m)
 
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 m - input matrix
 \end_layout
 
@@ -2239,7 +2222,7 @@ InvStdDev(m)
 
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 m - input matrix
 \end_layout
 
@@ -2274,16 +2257,16 @@ PerDimMVNorm(m, mean, invStdDev)
 
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 m - input matrix than needs to be normalized
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 mean - the mean vector.
  It's a m.rows by one matrix.
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 invStdDev - the per-dimensional inversed standard deviation vector.
  It's a m.rows by one matrix in which all values are non-negative.
 \end_layout
@@ -2322,16 +2305,16 @@ PerDimMVDeNorm(m, mean, invStdDev)
 
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 m - input matrix than needs to be de-normalized
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 mean - the mean vector.
  It's a m.rows by one matrix.
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 invStdDev - the per-dimensional inversed standard deviation vector.
  It's a m.rows by one matrix in which all values are non-negative.
 \end_layout
@@ -2375,7 +2358,7 @@ Dropout(m)
 
 \end_layout
 
-\begin_layout Itemize
+\begin_layout Standard
 m - input matrix
 \end_layout
 
