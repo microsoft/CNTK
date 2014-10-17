@@ -1125,8 +1125,8 @@ public:
             if (adpType == GradientsUpdateType::RmsProp)
             {
 				// include L2 regularizer
-				Matrix<ElemType>::ScaleAndAdd(0.001,functionValues,gradientValues);
-                smoothedGradient.RmsProp(gradientValues,sgd->m_rpi.gamma,sgd->m_rpi.inc,sgd->m_rpi.max,sgd->m_rpi.dec,sgd->m_rpi.min);
+				Matrix<ElemType>::ScaleAndAdd((ElemType)0.001, functionValues, gradientValues);
+				smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma, (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max, (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample, gradientValues, functionValues);
             }
 

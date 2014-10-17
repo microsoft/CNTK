@@ -946,7 +946,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
 			curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
-			signs[i] = grad_sign;
+			signs[i] = (ElemType)grad_sign;
         }
     }
 
