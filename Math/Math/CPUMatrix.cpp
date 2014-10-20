@@ -296,7 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    //for each column of a, we add all rows of a to this starting from startIndex
+    //for the row slice of this starting from startIndex we add a to it.
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
@@ -331,6 +331,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (long i=m & ~3, startRow = (long)startIndex+(m & ~3); i<m; i++, startRow++)
             {
                 us(startRow,j)  += a(i,j);
+            }
+        }
+
+        return *this;
+    }
+
+    //for each column of this, we add row slice of a starting from startIndex
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddWithRowSliceValuesOf: input matrix a is empty.");
+
+        if (GetNumRows() != numRows)
+            throw std::logic_error("AddWithRowSliceValuesOf: this->GetNumRows() != numRows.");
+
+        if (startIndex + numRows > a.GetNumRows())
+            throw std::logic_error("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
+
+        if (a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddWithRowSliceValuesOf: columns does not match.");
+
+        long n = (long)a.GetNumCols(), m = (long)numRows;
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (long i = 0, startRow = (long)startIndex; i<(m & ~3); i += 4, startRow += 4)
+            {
+                us(i, j) += a(startRow, j);
+                us(i + 1, j) += a(startRow + 1, j);
+                us(i + 2, j) += a(startRow + 2, j);
+                us(i + 3, j) += a(startRow + 3, j);
+            }
+            //handle remaining stuffs
+            for (long i = m & ~3, startRow = (long)startIndex + (m & ~3); i<m; i++, startRow++)
+            {
+                us(i, j) += a(startRow, j);
             }
         }
 
@@ -865,43 +906,89 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients)
+    void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
+		ElemType RMS_GAMMA,
+		ElemType RMS_WGT_INC,
+		ElemType RMS_WGT_MAX,
+		ElemType RMS_WGT_DEC,
+		ElemType RMS_WGT_MIN
+		)
     {
-        if (this->IsEmpty())
+        const ElemType floor = 1e-6f;
+
+        size_t n = gradients.GetNumElements();
+		ElemType *curr_grad=gradients.m_pArray;
+
+        if (this->IsEmpty() || this->GetNumCols() < gradients.GetNumCols() * 3)
         {
-            this->Resize(gradients.GetNumRows(), gradients.GetNumCols());
+            this->Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
             this->SetValue(0.0);
+
+			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+			ElemType *steps=m_pArray+2*n; // current step size
+
+			// initialize moving average of gradient-squared
+			for( long i = 0; i < n; i++ )
+				avars[i] = curr_grad[i]*curr_grad[i];
+
+			// initialize starting step size
+			for( long i = 0; i < n; i++ )
+				steps[i] = ElemType(0.02);
         }
 
-        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols());
+        ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+		ElemType *signs=m_pArray+n; // sign of previous gradient
+		ElemType *steps=m_pArray+2*n; // current step size
 
-        ElemType *a=m_pArray, *d_v=gradients.m_pArray;
-        size_t n = GetNumElements();
-        long nLoop = (long)n - n%4;
+        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols() * 3);
 
-        const ElemType floor = 1e-16f;
+		ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
+		//int upd[] = {
+		//	2,2,0,
+		//	2,2,0,
+		//	1,1,1,
+		//	2,2,0,
+		//	1,2,1,
+		//	0,2,2,
+		//	1,1,1,
+		//	0,2,2,
+		//	0,2,2,
+		//};
 
-#pragma omp parallel for
-        for (long i=0; i<nLoop; i+=4)
+  //      for (long i=0; i<n; i++)
+  //      {
+  //          avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
+		//	// grad sign base 3: 0->neg, 1->zero, 2->pos
+		//	const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+
+		//	// signs[i] contains three consecutive grad_sign
+		//	signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
+
+		//	switch(upd[int(signs[i])])
+		//	{
+		//	case 0:
+		//		steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+		//		break;
+		//	case 2:
+		//		steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+		//		break;
+		//	}
+		//	curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+  //      }
+
+        for (long i=0; i<n; i++)
         {
-            a[i] = a[i] * ElemType(0.9) + ElemType(0.1) * d_v[i] * d_v[i];
-            a[i+1] = a[i+1] * ElemType(0.9) + ElemType(0.1) * d_v[i+1] * d_v[i+1];
-            a[i+2] = a[i+2] * ElemType(0.9) + ElemType(0.1) * d_v[i+2] * d_v[i+2];
-            a[i+3] = a[i+3] * ElemType(0.9) + ElemType(0.1) * d_v[i+3] * d_v[i+3];
+            avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
+			const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
 
-            d_v[i] /= (sqrt(a[i]) + floor);
-            d_v[i+1] /= (sqrt(a[i+1]) + floor);
-            d_v[i+2] /= (sqrt(a[i+2]) + floor);
-            d_v[i+3] /= (sqrt(a[i+3]) + floor);
+			if( signs[i] * grad_sign > 0 )
+				steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+			else
+				steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+
+			curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+			signs[i] = (ElemType)grad_sign;
         }
-
-        for (long i=nLoop; i<n; i++)
-        {
-            a[i] = a[i] * ElemType(0.9) + ElemType(0.1) * d_v[i] * d_v[i];
-
-            d_v[i] /= (sqrt(a[i]) + floor);
-        }
-
     }
 
     template<class ElemType>

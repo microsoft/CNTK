@@ -1425,12 +1425,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		switch (endDataType)
 		{
 		case endDataNull:
-			assert(false);
-			break;
 		case endDataEpoch:
 		case endDataSet:
-			assert(false); // not support
-			break;
+            throw std::logic_error("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
+            break;
 		case endDataSentence:
 			if (m_truncated)
 				ret = m_sentenceEnd[0];

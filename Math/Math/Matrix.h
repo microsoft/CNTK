@@ -107,7 +107,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         void Adagrad(Matrix<ElemType>& gradients);
-        void RmsProp(Matrix<ElemType>& gradients);
+        void RmsProp(Matrix<ElemType>& gradients,
+			ElemType RMS_GAMMA,
+			ElemType RMS_WGT_INC,
+			ElemType RMS_WGT_MAX,
+			ElemType RMS_WGT_DEC,
+			ElemType RMS_WGT_MIN
+			);
        
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow        
@@ -238,6 +244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         Matrix<ElemType>&  AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+        Matrix<ElemType>&  AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
         Matrix<ElemType>&  AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
         

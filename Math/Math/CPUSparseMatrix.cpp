@@ -760,42 +760,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
     }
 
-
-    template<class ElemType>
-    void CPUSparseMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& c)
-    {
-        if (c.IsEmpty())
-        {
-            c.Resize(this->GetNumRows(), this->GetNumCols());
-            c.SetValue(0.0);
-        }
-
-        if(c.GetFormat() == MatrixFormat::matrixFormatSparseCSC) 
-        {
-            const ElemType floor = 1e-16f;
-            for(size_t j = 0; j < GetNumCols(); j++) 
-            {
-                size_t start = m_pb[j];
-                size_t end = m_pb[j+1];
-                for(size_t p = start; p < end; p++) 
-                {
-                    size_t i = m_row[p];
-                    ElemType val = m_val[p];
-
-                    ElemType adenorm = c(i, j); 
-                    adenorm = adenorm * (ElemType)0.9 + (ElemType)0.1 * val * val;
-                    val = val / (floor + sqrt(adenorm)); 
-                    m_val[p] = val;
-                    c(i, j) = adenorm; 
-                }
-            }
-        } 
-        else 
-        {
-            throw std::exception("CPUSparseMatrix:: RmsProp() only support CSC");
-        }
-    }
-
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {

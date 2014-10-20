@@ -339,11 +339,24 @@ __global__ void _addToRowSliceValuesOf(ElemType * dest, ElemType * src, const LO
     if (id>=N)
         return;
 
-    long col = id / srcRows;
+    long col = id / srcRows;  //src is the full matrix, rowslice is taken from the dest
     long row = id - (col * srcRows);
 
     //dest[col*destRows + row + startIndex] += src[id];
     dest[IDX2C(row + startIndex, col, destRows)] += src[id];
+}
+
+template<class ElemType>
+__global__ void _addWithRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / destRows;  //dest is the full matrix, rowslice is taken from the src
+    long row = id - (col * destRows);
+
+    dest[id] += src[IDX2C(row + startIndex, col, srcRows)];
 }
 
 template<class ElemType>
@@ -972,6 +985,72 @@ __global__ void _adagrad(
     d_v[id] /= sqrt(a[id]+floor);
 }
 
+template<class ElemType>
+__global__ void _rmsprop_init(
+	ElemType* avars, ElemType* signs, ElemType* steps,
+	ElemType* curr_grad,
+	const LONG64 N
+	)
+{
+    LONG64 i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= N)
+        return;
+
+	ElemType tmp = curr_grad[i];
+	avars[i] = tmp * tmp;
+	signs[i] = ElemType(0.0);
+	steps[i] = ElemType(0.02);
+}
+
+template<class ElemType>
+__global__ void _rmsprop(
+	ElemType* avars, ElemType* signs, ElemType* steps,
+	ElemType* curr_grad,
+	const LONG64 N,
+	ElemType RMS_GAMMA,ElemType RMS_WGT_INC,ElemType RMS_WGT_MAX,ElemType RMS_WGT_DEC,ElemType RMS_WGT_MIN,
+	ElemType floor,
+	ElemType *upd_gpu
+	)
+{
+    LONG64 i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= N)
+        return;
+
+	avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0)-RMS_GAMMA)* (curr_grad[i] * curr_grad[i]);
+
+	//// grad sign base 3: 0->neg, 1->zero, 2->pos
+	//const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+
+	//// signs[i] contains three consecutive grad_sign
+	//signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
+
+	//// update according to the following table:
+	//// (!pos,!pos,!pos) or (!neg,!neg,!neg): RMS_WGT_INC
+	//// (!neg,!neg,neg) or (!pos,!pos,pos): RMS_WGT_DEC
+	//// otherwise: no action
+
+	//switch(int(upd_gpu[int(signs[i])]))
+	//{
+	//case 0:
+	//	steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+	//	break;
+	//case 2:
+	//	steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+	//	break;
+	//}
+	//curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+
+	const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+
+	if( signs[i] * grad_sign > 0 )
+		steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+	else
+		steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+
+	curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+	signs[i] = grad_sign;
+
+}
 
 template<class ElemType>
 __global__ void _rescaleToRange(
