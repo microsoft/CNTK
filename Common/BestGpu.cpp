@@ -4,14 +4,28 @@
 // </copyright>
 //
 
+#include "BestGpu.h"
+#include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
+
+#ifdef CPUONLY
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
+            short DeviceFromConfig(const ConfigParameters& config)
+            {
+                return CPUDEVICE;
+            }
+        }
+    }
+}
+#else
+
 // CUDA-C includes
 #include <cuda.h>
 #include <windows.h>
 #include <delayimp.h>
 #include <Shlobj.h>
 #include <stdio.h>
-#include "BestGpu.h"
-#include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
 
 // The "notify hook" gets called for every call to the
 // delay load helper.  This allows a user to hook every call and
@@ -51,7 +65,7 @@ extern "C" INT_PTR WINAPI DelayLoadNofify(
 	if (dliNotify == dliFailGetProc && !strcmp(pdli->szDll, "nvml.dll"))
     {
         char name[256];
-        int len = strlen(pdli->dlp.szProcName);
+        int len = (int)strlen(pdli->dlp.szProcName);
         strcpy_s(name, pdli->dlp.szProcName);
         // if the version 2 APIs are not supported, truncate "_v2"
         if (name[len-1] == '2')
@@ -366,7 +380,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 		    if (score > scores[i])
 		    {
                 // make room for this score in the correct location (insertion sort)
-                for (int j=best.size()-1; j > i; --j)
+                for (int j=(int)best.size()-1; j > i; --j)
                 {
                     scores[j] = scores[j-1];
                     best[j] = best[j-1];
@@ -379,7 +393,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 	}
 
     // now get rid of any extra empty slots and disallowed devices
-    for (int j=best.size()-1; j > 0; --j)
+    for (int j=(int)best.size()-1; j > 0; --j)
     {
         // if this device is not allowed, or never was set remove it
         if (best[j] == -1)
@@ -390,7 +404,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 
     // save off the last values for future requeries
     m_lastFlags = bestFlags;
-    m_lastCount = best.size();
+    m_lastCount = (int)best.size();
 
     // if we eliminated all GPUs, use CPU
     if (best.size() == 0)
@@ -505,3 +519,4 @@ void BestGpu::QueryNvmlData()
 	return;
 }
 }}}
+#endif

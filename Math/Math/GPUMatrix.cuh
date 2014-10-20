@@ -122,7 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         const ElemType& operator() (const size_t row, const size_t col) const { 
 #ifndef	LINUX
-            throw std::exception("GPUMatrix doesn't support this"); }
+            throw std::exception("GPUMatrix doesn't support this");
 #else
             throw std::exception(); 
 #endif	/* LINUX */

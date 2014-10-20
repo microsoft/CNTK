@@ -913,7 +913,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
             cudaEvent_t done;       
             CUDACALL(cudaEventCreate(&done));        
-            _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_blockVal,threshold,N);                        
+            _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_blockVal,threshold,N);
             CUDACALL(cudaEventRecord(done));        
             CUDACALL(cudaEventSynchronize(done));   
             CUDACALL(cudaEventDestroy(done));
@@ -1318,7 +1318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             a.PrepareDevice();
             long N=(long)a.GetNZElements();
             int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-            _elementWisePowerOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(alpha,a.NzLocation(),c.NzLocation(),N);             
+            _elementWisePowerOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(alpha,a.NzLocation(),c.NzLocation(),N);
             CUDACALL(cudaEventRecord(done));        
             CUDACALL(cudaEventSynchronize(done));   
         }
@@ -1368,7 +1368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //int* h_vectArray= new int[a.m_nz];
         int blocksPerGrid =(int)ceil(1.0*M/threadsPerBlock);   
         CUDACALL(cudaEventCreate(&done));
-        _getSparseVectorRepresntationForMatrix<ElemType><<<blocksPerGrid,threadsPerBlock>>>(cscColPtrA,cscRowIndA,vectArray,M,N);        
+        _getSparseVectorRepresntationForMatrix<ElemType><<<blocksPerGrid,threadsPerBlock>>>(cscColPtrA,cscRowIndA,vectArray,M,N);
         CUDACALL(cudaEventRecord(done));        
         CUDACALL(cudaEventSynchronize(done));
         CUDACALL(cudaEventDestroy(done));
@@ -1419,7 +1419,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaMemcpy(d_res,res,sizeof(long)*3,cudaMemcpyHostToDevice));
 
         int blocksPerGrid =(int)ceil(1.0*a.GetNZElements()/threadsPerBlock); 
-        _areEqual<ElemType><<<blocksPerGrid,threadsPerBlock>>>(a.NzLocation(),b.NzLocation(),(long)a.GetNZElements(),threshold,d_res);        
+        _areEqual<ElemType><<<blocksPerGrid,threadsPerBlock>>>(a.NzLocation(),b.NzLocation(),(long)a.GetNZElements(),threshold,d_res);
         _areEqual<int><<<blocksPerGrid,threadsPerBlock>>>(a.ColLocation(),b.ColLocation(),(long)a.GetNZElements(),(int)threshold,d_res+1);
         blocksPerGrid =(int)ceil((1.0*a.GetNumRows()+1.0)/threadsPerBlock); 
         _areEqual<int><<<blocksPerGrid,threadsPerBlock>>>(a.RowLocation(),b.RowLocation(),(long)a.GetNumRows()+1,(int)threshold,d_res+2);
@@ -1727,7 +1727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
         cudaEvent_t done;       
         CUDACALL(cudaEventCreate(&done));        
-        _elemInverse<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);                        
+        _elemInverse<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);
         CUDACALL(cudaEventRecord(done));        
         CUDACALL(cudaEventSynchronize(done));        
         return *this;
@@ -1854,7 +1854,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done;       
         CUDACALL(cudaEventCreate(&done));        
-        _inplaceTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,threshold,N);                        
+        _inplaceTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,threshold,N);
         CUDACALL(cudaEventRecord(done));        
         CUDACALL(cudaEventSynchronize(done)); 
         return *this;
@@ -1875,7 +1875,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done;       
         CUDACALL(cudaEventCreate(&done));        
-        _assignTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,a.NzLocation(),threshold,N);                        
+        _assignTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,a.NzLocation(),threshold,N);
         CUDACALL(cudaEventRecord(done));        
         CUDACALL(cudaEventSynchronize(done));
         return *this;
@@ -1890,7 +1890,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done;       
         CUDACALL(cudaEventCreate(&done));        
-        _inplaceTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,threshold,N);                        
+        _inplaceTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,threshold,N);
         CUDACALL(cudaEventRecord(done));        
         CUDACALL(cudaEventSynchronize(done)); 
         return *this;        
@@ -1911,7 +1911,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done;       
         CUDACALL(cudaEventCreate(&done));        
-        _assignTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,a.NzLocation(),threshold,N);                        
+        _assignTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,a.NzLocation(),threshold,N);
         CUDACALL(cudaEventRecord(done));        
         CUDACALL(cudaEventSynchronize(done));
         return *this;        
@@ -1926,7 +1926,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done;       
         CUDACALL(cudaEventCreate(&done));        
-        _setToZeroIfAbsLessThan<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,threshold,N);                        
+        _setToZeroIfAbsLessThan<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,threshold,N);
         CUDACALL(cudaEventRecord(done));        
         CUDACALL(cudaEventSynchronize(done)); 
         return *this;  
@@ -2020,22 +2020,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         switch (kind)
         {
         case 0:
-            _inplaceSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);            
+            _inplaceSigmoidOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);
             break;
         case 1:
-            _inplaceTanhOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);   
+            _inplaceTanhOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);
             break;
         case 2:
-            _inplaceSqrtOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);   
+            _inplaceSqrtOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);
             break;
         case 3:
-            _inplaceExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);   
+            _inplaceExpOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);
             break;
         case 4:
-            _inplaceLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);   
+            _inplaceLogOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);
             break;
         case 5:
-            _inplaceAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);   
+            _inplaceAbsOnCuda<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);
             break;
         case 6:
             _inplaceLinRectDerivative<ElemType><<<blocksPerGrid,threadsPerBlock>>>(this->m_pArray,N);

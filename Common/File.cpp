@@ -343,7 +343,7 @@ void File::ReadString(wchar_t* str, int size)
 bool File::IsUnicodeBOM(bool skip)
 {
     File& file = *this;
-    unsigned __int64 pos = GetPosition();
+    size_t pos = GetPosition();
     // if we aren't at the beginning of the file, it can't be the byte order mark
     if (pos != 0)
         return false;
@@ -620,7 +620,7 @@ unsigned _int64 File::GetPosition()
 
 // Set the position in the file
 // pos - position in the file
-void File::SetPosition(unsigned _int64 pos)
+void File::SetPosition(size_t pos)
 {
     fsetpos (m_file, pos);
 }

@@ -326,9 +326,9 @@ size_t filesize (const wchar_t * pathname)
 #ifndef UNDER_CE    // no 64-bit under winCE
 
 // filesize64(): determine size of the file in bytes (with pathname)
-__int64 filesize64 (const wchar_t * pathname)
+size_t filesize64 (const wchar_t * pathname)
 {
-    __stat64 fileinfo;
+    struct _stat64 fileinfo;
     if (_wstat64 (pathname,&fileinfo) == -1) 
         return 0;
     else
@@ -355,7 +355,7 @@ size_t fseekOrDie (FILE * f, size_t offset, int mode)
     return curPos;
 }
 
-unsigned __int64 fgetpos (FILE * f)
+size_t fgetpos (FILE * f)
 {
     fpos_t post;
     int rc = ::fgetpos (f, &post);
@@ -364,14 +364,14 @@ unsigned __int64 fgetpos (FILE * f)
     return post;
 }
 
-void fsetpos (FILE * f, unsigned __int64 reqpos)
+void fsetpos (FILE * f, size_t reqpos)
 {
     // ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
 
-    unsigned __int64 curpos = fgetpos (f);
-    unsigned __int64 cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
+    size_t curpos = fgetpos (f);
+    size_t cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
     while (reqpos >= curpos && reqpos < cureob)
     {
         // if we made it then do not call fsetpos()
@@ -499,7 +499,6 @@ template<class CHAR>
 CHAR * fgetline (FILE * f, CHAR * buf, int size)
 {
 
-    unsigned __int64 filepos = fgetpos (f); // (for error message only)
     CHAR * p = fgets (buf, size, f);
     if (p == NULL)            // EOF reached: next time feof() = true
     {
@@ -515,7 +514,8 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (n >= (size_t) size -1)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
-        ERROR ("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
+        size_t filepos = fgetpos(f); // (for error message only)
+        ERROR("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
                filepos, size -1, _utf8 (example).c_str());
     }
 
@@ -1814,6 +1814,21 @@ vector<char*> msra::files::fgetfilelines (const wstring & path, vector<char> & b
 
 bool getfiletime (const wstring & path, FILETIME & time)
 {   // return file modification time, false if cannot be determined
+	struct _stat buf;
+	int result;
+
+	// Get data associated with "crt_stat.c": 
+	result = _wstat(path.c_str(), &buf);
+	// Check if statistics are valid: 
+	if( result != 0 )
+	{
+		return false;
+	}
+
+	(*(time_t*)(&time))= buf.st_mtime;
+	return true;
+
+#ifdef OLD
     WIN32_FIND_DATAW findFileData;
     auto_handle hFind (FindFirstFileW (path.c_str(), &findFileData), ::FindClose);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -1825,10 +1840,14 @@ bool getfiletime (const wstring & path, FILETIME & time)
     {
         return false;
     }
+#endif
 }
 
 void setfiletime (const wstring & path, const FILETIME & time)
 {   // update the file modification time of an existing file
+#ifdef LINUX
+	throw new logic_error("setfiletime has not been converted to linux yet...");
+#else
     auto_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
                                 FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
@@ -1841,6 +1860,7 @@ void setfiletime (const wstring & path, const FILETIME & time)
     {
         ERROR ("setfiletime: error setting file time information: %d", GetLastError());
     }
+#endif
 }
 
 // ----------------------------------------------------------------------------

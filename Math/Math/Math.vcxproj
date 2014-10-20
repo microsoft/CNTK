@@ -259,10 +259,7 @@ copy /Y "$(CUDA_PATH)bin\cudart64_65.dll" $(OutputPath)</Command>
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CPUMatrix.cpp" />
-    <CudaCompile Include="GPUSparseMatrix.cu" />
-    <CudaCompile Include="GPUWatcher.cu">
-      <FileType>CppCode</FileType>
-    </CudaCompile>
+    <ClCompile Include="GPUDummy.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -270,10 +267,6 @@ copy /Y "$(CUDA_PATH)bin\cudart64_65.dll" $(OutputPath)</Command>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="GPUMatrix.cu" />
-    <CudaCompile Include="GPUMatrixCUDAKernels.cu" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.cuh" />

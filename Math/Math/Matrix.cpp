@@ -285,15 +285,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_preferredDeviceId == CPUDEVICE)
             {
-            m_CPUMatrix = new CPUMatrix<ElemType>(numRows,numCols);
+				m_CPUMatrix = new CPUMatrix<ElemType>(numRows,numCols);
                 SetDataLocation(CPU, DENSE);
-        }
-        else
-        {
-                m_GPUMatrix = new GPUMatrix<ElemType>(numRows,numCols,m_preferredDeviceId);
-                SetDataLocation(GPU, DENSE);
-        }
-    }
+			}
+			else
+			{
+					m_GPUMatrix = new GPUMatrix<ElemType>(numRows,numCols,m_preferredDeviceId);
+					SetDataLocation(GPU, DENSE);
+			}
+		}
     }
 
     template<class ElemType>
@@ -850,11 +850,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_CPUMatrix->SetValue(*db_number.ExposePointer2Value()), 
             if (GetDeviceId()!=db_number.GetDeviceId()) 
             {
-#ifndef	LINUX
-                throw std::exception("Matrix and device bound number must be on the same device");
-#else
-                throw std::exception();
-#endif	/* LINUX */
+                throw std::runtime_error("Matrix and device bound number must be on the same device");
             }
             m_GPUMatrix->SetValue(db_number.ExposePointer2Value()), 
             NOT_IMPLEMENTED, 

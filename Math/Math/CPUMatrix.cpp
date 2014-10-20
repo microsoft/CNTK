@@ -18,13 +18,15 @@
 
 #ifndef	 LINUX
 #include <Windows.h>
+#define Linux(x)
 #else
+#define Linux(x) x
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
 
-#include <values.h>
+#include <cfloat> 
 #endif	/* LINUX */
 
 #ifdef LEAKDETECT
@@ -3384,7 +3386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (A.IsEmpty())
             throw std::logic_error("SVD:  input matrix is empty.");
 
-        long int info;			/* Was just int... Malcolm */
+        Linux(long) int info;			/* linux version wants a long int, windows wants an int */
         size_t m , n, lda, ldu, ldvt;
         m = A.GetNumRows();
         n = A.GetNumCols();

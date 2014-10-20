@@ -4,15 +4,18 @@
 // </copyright>
 //
 #pragma once
+#ifndef CPUONLY
 #include <cuda_runtime.h>
 #include <nvml.h>
 #include <vector>
+#endif
 #include "commandArgUtil.h"
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 short DeviceFromConfig(const ConfigParameters& config);
 
+#ifndef CPUONLY
 struct ProcessorData
 {
 	int cores;
@@ -68,5 +71,5 @@ public:
     std::vector<int> GetDevices(int number=AllDevices, BestGpuFlags flags=bestGpuNormal); // get multiple devices
 };
 extern BestGpu* g_bestGpu;
-
+#endif
 }}}

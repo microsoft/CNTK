@@ -59,20 +59,9 @@
     <ClCompile Include="CPUSparseMatrix.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="GPUMatrix.cu">
+    <ClCompile Include="GPUDummy.cpp">
       <Filter>Source Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="GPUMatrixCUDAKernels.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="GPUSparseMatrix.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="GPUWatcher.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.cuh">
