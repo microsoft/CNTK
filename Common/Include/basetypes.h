@@ -13,7 +13,13 @@ typedef char16_t TCHAR;
 #define	vsprintf_s vsprintf		/* Not sure this is right... Malcolm */
 #include <chrono>
 #include <thread>
-#endif	 /* LINUX */
+#include <cstdlib> 
+#include <cerrno>
+#define Linux(a) a
+#else
+#include <tchar.h>
+#endif	/* LINUX */
+#include <cmath>        // for HUGE_VAL  // Remove for a test by Malcolm because of double isnan definition...
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
@@ -80,11 +86,13 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <errno.h>
 #include <string>
 #include <vector>
-#include <cmath>        // for HUGE_VAL // potential double isnan definition
+#include <math.h>        // for HUGE_VAL // potential double isnan definition
 #include <assert.h>
 #include <stdarg.h>
 #include <map>
 #include <stdexcept>
+#include <locale>         // std::wstring_convert
+#include <codecvt>        // std::codecvt_utf8
 #ifdef _MSC_VER
 #include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
 #endif
@@ -578,6 +586,9 @@ typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 #ifdef _WIN32
 struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
 {
+ //TODO: confirm it builds on VS2013
+       std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cv;
+        (*(std::string*)this) = cv.to_bytes(p);
 #ifdef	MALCOLM
     size_t len = p.length();
     if (len == 0) { return;}    // empty string
@@ -592,16 +603,19 @@ struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
 }};
 struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
 {
-#ifdef	MALCOLM
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cv;
+    (*(std::wstring*)this) = cv.from_bytes(p);
+
+#ifdef OLD
     size_t len = p.length();
     if (len == 0) { return;}    // empty string
     msra::basetypes::fixed_vector<wchar_t> buf (len + 1);
     // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-    std::fill (buf.begin (), buf.end (), (wchar_t) 0);
-    int rc = MultiByteToWideChar (CP_UTF8, 0, p.c_str(), (int) len,
-                                  &buf[0], (int) buf.size());
-    if (rc == 0) throw std::runtime_error ("MultiByteToWideChar");
-    ASSERT (rc < buf.size ());
+    std::fill(buf.begin(), buf.end(), (wchar_t)0);
+    int rc = MultiByteToWideChar(CP_UTF8, 0, p.c_str(), (int)len,
+        &buf[0], (int)buf.size());
+    if (rc == 0) throw std::runtime_error("MultiByteToWideChar");
+    ASSERT(rc < buf.size());
     (*(std::wstring*)this) = &buf[0];
 #endif	/* Malcolm */
 }};
@@ -641,12 +655,8 @@ static inline std::string wcstombs (const std::wstring & p)  // output: MBCS
 }
 static inline std::wstring mbstowcs (const std::string & p)  // input: MBCS
 {
-    size_t len = p.length();
-    msra::basetypes::fixed_vector<wchar_t> buf (len + 1); // max: >1 mb chars => 1 wchar
-    std::fill (buf.begin (), buf.end (), (wchar_t) 0);
-    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
-    ::mbstowcs (&buf[0], p.c_str(), len + 1);
-    return std::wstring (&buf[0]);
+	std::wstring ret = utf16(p);
+    return ret;
 }
 #pragma warning(pop)
 
@@ -769,8 +779,6 @@ static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return
 
 namespace msra { namespace basetypes {
 
-#ifdef	MALCOLM
-
 // FILE* with auto-close; use auto_file_ptr instead of FILE*.
 // Warning: do not pass an auto_file_ptr to a function that calls fclose(),
 // except for fclose() itself.
@@ -789,7 +797,7 @@ public:
     auto_file_ptr() : f (NULL) { }
     ~auto_file_ptr() { close(); }
     auto_file_ptr (const char * path, const char * mode) { f = fopen (path, mode); if (f == NULL) openfailed (path); }
-    auto_file_ptr (const wchar_t * path, const char * mode) { f = _wfopen (path, msra::strfun::utf16 (mode).c_str()); if (f == NULL) openfailed (msra::strfun::utf8 (path)); }
+    auto_file_ptr (const wchar_t * wpath, const char * mode) {string path = msra::strfun::utf8(wpath); f = fopen (path.c_str(), mode); if (f == NULL) openfailed (path); }
     FILE * operator= (FILE * other) { close(); f = other; return f; }
     auto_file_ptr (FILE * other) : f (other) { }
     operator FILE * () const { return f; }
@@ -797,7 +805,6 @@ public:
     void swap (auto_file_ptr & other)  throw() { std::swap (f, other.f); }
 };
 inline int fclose (auto_file_ptr & af) { return af.fclose(); }
-#endif	/* MALCOLM */
 
 #ifdef _MSC_VER
 // auto-closing container for Win32 handles.
