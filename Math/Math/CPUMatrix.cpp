@@ -21,13 +21,15 @@
 
 #ifndef	 LINUX
 #include <Windows.h>
+#define Linux(x)
 #else
+#define Linux(x) x
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
 
-#include <values.h>
+#include <cfloat> 
 #endif	/* LINUX */
 
 #ifdef LEAKDETECT
