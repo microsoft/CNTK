@@ -564,7 +564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    //for each column of a, we add all rows of a to this starting from startIndex
+    //for the row slice of this starting from startIndex we add a to it.
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
@@ -588,6 +588,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _addToRowSliceValuesOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, a.m_pArray, N, (long)startIndex, (long)GetNumRows(), (long)a.GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+    //for each column of this, we add row slice of a starting from startIndex
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddWithRowSliceValuesOf: input matrix a is empty.");
+
+        if (GetNumRows() != numRows)
+            throw std::logic_error("AddWithRowSliceValuesOf: this->GetNumRows() != numRows.");
+
+        if (startIndex + numRows > a.GetNumRows())
+            throw std::logic_error("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
+
+        if (a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddWithRowSliceValuesOf: columns does not match.");
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _addWithRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (long)startIndex, (long)GetNumRows(), (long)a.GetNumRows());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
 
         return *this;
@@ -965,6 +994,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
         _adagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(m_pArray, gradients.m_pArray, GetNumElements());
     }
+
+	template<class ElemType>
+	void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
+		ElemType RMS_GAMMA,
+		ElemType RMS_WGT_INC,
+		ElemType RMS_WGT_MAX,
+		ElemType RMS_WGT_DEC,
+		ElemType RMS_WGT_MIN
+		)
+	{
+        const ElemType floor = 1e-6f;
+		static ElemType *upd_gpu = (ElemType*)0;
+
+        size_t n = gradients.GetNumElements();
+		int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
+
+        if (this->IsEmpty() || this->GetNumCols() < gradients.GetNumCols() * 3)
+        {
+            this->Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+            this->SetValue(0.0);
+
+			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+			ElemType *signs=m_pArray+n; // sign of previous gradient
+			ElemType *steps=m_pArray+2*n; // current step size
+
+			_rmsprop_init<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n);
+
+        }
+
+        ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+		ElemType *signs=m_pArray+n; // sign of previous gradient
+		ElemType *steps=m_pArray+2*n; // current step size
+
+        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols() * 3);
+
+		if( !upd_gpu )
+		{
+			ElemType upd[] = {
+				2,2,0,
+				2,2,0,
+				1,1,1,
+				2,2,0,
+				1,2,1,
+				0,2,2,
+				1,1,1,
+				0,2,2,
+				0,2,2,
+			};
+
+			CUDA_CALL(cudaMalloc((void**)&upd_gpu,sizeof(ElemType)*27));
+            CUDA_CALL(cudaMemcpy(upd_gpu,upd,sizeof(ElemType)*27,cudaMemcpyHostToDevice));
+		}
+
+		_rmsprop<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n,
+			RMS_GAMMA,RMS_WGT_INC,RMS_WGT_MAX,RMS_WGT_DEC,RMS_WGT_MIN,
+			floor,upd_gpu);
+	}
 
     template<class ElemType>
     void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)

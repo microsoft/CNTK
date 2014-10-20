@@ -99,7 +99,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* BufferPointer() const {return m_pArray;}
 
         void Adagrad(GPUMatrix<ElemType>& gradients);
-
+		void RmsProp(GPUMatrix<ElemType>& gradients,
+			ElemType RMS_GAMMA,
+			ElemType RMS_WGT_INC,
+			ElemType RMS_WGT_MAX,
+			ElemType RMS_WGT_DEC,
+			ElemType RMS_WGT_MIN
+			);
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
@@ -243,6 +249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>&  AssignRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         GPUMatrix<ElemType>&  AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+        GPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
         GPUMatrix<ElemType>&  AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
 

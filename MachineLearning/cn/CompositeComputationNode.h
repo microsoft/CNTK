@@ -2011,7 +2011,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             temp.Reshape(featureSize * numComponent, numSamples);
             temp.RowElementMultiplyWith(gradientValues);
 
-            featureGradientValues += temp;
+            for (int i = 0; i < numComponent; i++)
+                featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
         // GetTaskDescriptor - Get a task descriptor for this node

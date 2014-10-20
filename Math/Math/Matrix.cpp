@@ -1098,15 +1098,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients)
+    void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
+		ElemType RMS_GAMMA,
+		ElemType RMS_WGT_INC,
+		ElemType RMS_WGT_MAX,
+		ElemType RMS_WGT_DEC,
+		ElemType RMS_WGT_MIN
+		)
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &gradients,
-            m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix); SetDataLocation(CPU), 
+            m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(CPU), 
+            m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(GPU),
             NOT_IMPLEMENTED, 
-            m_CPUSparseMatrix->RmsProp(*this->m_CPUMatrix); SetDataLocation(CPU), 
             NOT_IMPLEMENTED
             );
     }
@@ -1339,9 +1345,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    //for each column of a, we add all rows of a to this starting from startIndex
+    //for the row slice of this starting from startIndex we add a to it.
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        DecideAndMoveToRightDevice(*this, a);
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AddToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            this->m_GPUMatrix->AddToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
+    //for each column of this, we add row slice of a starting from startIndex
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
         DecideAndMoveToRightDevice(*this, a);
 
@@ -1351,8 +1378,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AddToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows), 
-            this->m_GPUMatrix->AddToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows), 
+            this->m_CPUMatrix->AddWithRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            this->m_GPUMatrix->AddWithRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
