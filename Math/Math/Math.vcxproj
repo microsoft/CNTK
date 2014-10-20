@@ -84,7 +84,7 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(ACML_PATH)\lib\*.dll $(OutputPath)</Command>
+      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath) &amp;&amp; xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_65.dll" $(OutputPath)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copy ACML DLLs and cudart64_65.dll</Message>
@@ -131,8 +131,7 @@
       <DelayLoadDLLs>cublas64_65.dll;cusparse64_65.dll;curand64_65.dll;cudart64_65.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(ACML_PATH)\lib\*.dll $(OutputPath) 
-copy /Y "$(CUDA_PATH)\bin\cudart64_65.dll" $(OutputPath)</Command>
+      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath) &amp;&amp; xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_65.dll" $(OutputPath)</Command>
       <Message>Copy ACML DLLs and cudart64_65.dll</Message>
     </PostBuildEvent>
     <CudaCompile>

@@ -151,7 +151,7 @@ Global
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|x64.Build.0 = Debug|x64
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|Mixed Platforms.ActiveCfg = Release|Win32
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|x64.ActiveCfg = Release|Win32
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
