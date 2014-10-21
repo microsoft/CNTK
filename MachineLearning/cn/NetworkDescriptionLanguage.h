@@ -432,6 +432,16 @@ public:
         {
             // we are adding parameters that will be replaced by actual values later
             ConfigValue param = *iter;
+
+            // check to make sure this parameter name is not a reserved word
+            std::string functionName = param;
+            // check for function name, a function may have two valid names
+            // in which case 'functionName' will get the default node name returned
+            if (CheckFunction<ElemType>(functionName))
+            {
+                Error("NDLScript: Macro %s includes a parameter %s, which is also the name of a function. Parameter names may not be the same as function names.", macroName.c_str(), param.c_str());
+            }
+
             NDLNode<ElemType>* paramNode = new NDLNode<ElemType>(param, param, this, ndlTypeParameter);
             // add to node parameters
             ndlNode->InsertParam(paramNode);
@@ -699,8 +709,8 @@ public:
         }
 
         std::string functionName = name;
-        // check for function name, a substring at the beginning of the function name will work
-        // in which case 'functionName' will get the full node name returned
+        // check for function name, a function may have two valid names
+        // in which case 'functionName' will get the default node name returned
         if (CheckFunction<ElemType>(functionName))
         {
             NDLNode<ElemType>* ndlNode = new NDLNode<ElemType>("", functionName, this, ndlTypeFunction);
