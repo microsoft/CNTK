@@ -20,7 +20,7 @@ template<> std::string GetReaderName(float) {std::string name = "GetReaderF"; re
 template<> std::string GetReaderName(double) {std::string name = "GetReaderD"; return name;}
 
 template<class ElemType>
-void DataReader<ElemType>::Init(const ConfigParameters& config)
+void DataReader<ElemType>::Init(const ConfigParameters& /*config*/)
 {
     Error("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead

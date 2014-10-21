@@ -11,13 +11,15 @@
 #include <cuda_runtime.h>
 #include <curand.h>
 #include <curand_kernel.h>
-#include <omp.h>
 #include "device_launch_parameters.h"
 #include "GPUMatrix.cuh"
 #include "GPUMatrixCUDAKernels.cu"
 #include "GPUSparseMatrix.cuh"
+#include <iostream> // for cout
 
-#pragma warning (disable: 4267)
+#pragma warning (disable: 4267) // conversion from 'size_t' to 'unsigned int'; happens in CUDA <<<a,b>>> syntax if a and b are size_t
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
+#pragma warning (disable: 4702) // unreachable code; triggered for unknown reasons
 
 #ifdef NO_SYNC
 bool do_sync = false;
@@ -88,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region DeviceBoundNumber class
 
     template<class ElemType>
-    DeviceBoundNumber<ElemType>::DeviceBoundNumber(const DeviceBoundNumber<ElemType> &deepCopy)
+    DeviceBoundNumber<ElemType>::DeviceBoundNumber(const DeviceBoundNumber<ElemType> &/*deepCopy*/)
     {
         NOT_IMPLEMENTED;
     }
@@ -128,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>    
     cublasHandle_t _initCUBLAS(int devId)
     {
-        PrepareDevice(devId);
+        PrepareDevice((short)devId);
         cublasHandle_t cuHandle;
         CUBLAS_CALL(cublasCreate(&cuHandle));
         return cuHandle;
@@ -200,7 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // if default value use current compute device
         if (deviceId == -1)
-            deviceId = m_computeDevice;
+            deviceId = (short)m_computeDevice;
         Microsoft::MSR::CNTK::PrepareDevice(deviceId);
     }
 
@@ -254,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_computeDevice==to_id) 
             return;
 
-        PrepareDevice(to_id);       
+        PrepareDevice((short)to_id);       
         ElemType* d_dst=NULL;
         CUDA_CALL(cudaMalloc((void**)&d_dst,sizeof(ElemType)*m_numRows*m_numCols));
 
@@ -279,7 +281,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				PrepareDevice();
 				CUDA_CALL(cudaMallocHost((void**)&h_dst,sizeof(ElemType)*m_numRows*m_numCols));
 				CUDA_CALL(cudaMemcpy(h_dst,m_pArray,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyDeviceToHost));  
-				PrepareDevice(to_id);       
+				PrepareDevice((short)to_id);       
 				CUDA_CALL(cudaMemcpy(d_dst,h_dst,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyHostToDevice)); 
 				CUDA_CALL(cudaFreeHost(h_dst));  
 			}
@@ -288,7 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaFree(m_pArray));
         m_pArray=d_dst;
 
-        PrepareDevice(to_id);       
+        PrepareDevice((short)to_id);       
         m_computeDevice=to_id;
     }
 
@@ -298,7 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         LONG64 N= (LONG64) GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         switch (kind)
         {
@@ -552,7 +554,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignRowSliceValuesOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, a.m_pArray, N, (long)startIndex, (long)numRows, (long)a.GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -562,7 +564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    //for each column of a, we add all rows of a to this starting from startIndex
+    //for the row slice of this starting from startIndex we add a to it.
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
@@ -581,7 +583,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)a.GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _addToRowSliceValuesOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray, a.m_pArray, N, (long)startIndex, (long)GetNumRows(), (long)a.GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -591,6 +593,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //for each column of this, we add row slice of a starting from startIndex
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddWithRowSliceValuesOf: input matrix a is empty.");
+
+        if (GetNumRows() != numRows)
+            throw std::logic_error("AddWithRowSliceValuesOf: this->GetNumRows() != numRows.");
+
+        if (startIndex + numRows > a.GetNumRows())
+            throw std::logic_error("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
+
+        if (a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddWithRowSliceValuesOf: columns does not match.");
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _addWithRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (long)startIndex, (long)GetNumRows(), (long)a.GetNumRows());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
+    {
+        if (this == &a)
+            throw std::logic_error("AssignRepeatOf: a is the same as [this]. Does not support inplace repeat.");
+
+        if (a.IsEmpty())
+            throw std::logic_error("AssignRepeatOf: Matrix a is empty.");
+
+        Resize(a.GetNumRows() * numRowRepeats, a.GetNumCols() * numColRepeats);
+
+        LONG64 N = (LONG64)GetNumElements();
+        long n = (long)a.GetNumCols(), m = (long)a.GetNumRows();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignRepeatOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, m, n, (long)GetNumRows());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+        
     template<class ElemType>
     GPUMatrix<ElemType> GPUMatrix<ElemType>::Transpose() const
     {
@@ -671,7 +727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _setValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,v,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -688,7 +744,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _setValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,d_v,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -784,7 +840,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         unsigned long N=(unsigned long)GetNumRows();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _setDiagonalValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,v,N,(unsigned long)GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -814,7 +870,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             long N=(long)GetNumRows();
             int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
             PrepareDevice();
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             _setDiagonalValueFromVector<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,vector.m_pArray,N);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -836,7 +892,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0],CURAND_ORDERING_PSEUDO_SEEDED));
         }
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -851,8 +907,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //CURAND_CALL(curandDestroyGenerator(gen));
         CUDA_CALL(cudaEventDestroy(done));
 
-        float N=(float)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
+        size_t N=GetNumElements();
+        size_t blocksPerGrid = (size_t)ceil(N/(double)threadsPerBlock);
 
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _rescaleToRange<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N,low,high);
@@ -876,11 +932,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (sizeof(ElemType)==sizeof(float))
         {
-            CURAND_CALL(curandGenerateNormal(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(m_pArray), GetNumElements(),mean, sigma));
+            CURAND_CALL(curandGenerateNormal(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(m_pArray), GetNumElements(), (float)mean, (float)sigma));
         }
         else
         {
-            CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(m_pArray), GetNumElements(),mean, sigma));
+            CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(m_pArray), GetNumElements(), (double)mean, (double)sigma));
         }
         //CURAND_CALL(curandDestroyGenerator(gen));
     }
@@ -900,7 +956,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0],CURAND_ORDERING_PSEUDO_SEEDED));
         }
 
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -915,8 +971,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaEventDestroy(done));
         //CURAND_CALL(curandDestroyGenerator(gen));
 
-        float N=(float)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);        
+        size_t N=GetNumElements();
+        size_t blocksPerGrid = (size_t)ceil(N/(double)threadsPerBlock);        
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _setMaskAndScale<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N,maskRate,scaleValue);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -938,6 +994,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
         _adagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(m_pArray, gradients.m_pArray, GetNumElements());
     }
+
+	template<class ElemType>
+	void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
+		ElemType RMS_GAMMA,
+		ElemType RMS_WGT_INC,
+		ElemType RMS_WGT_MAX,
+		ElemType RMS_WGT_DEC,
+		ElemType RMS_WGT_MIN
+		)
+	{
+        const ElemType floor = 1e-6f;
+		static ElemType *upd_gpu = (ElemType*)0;
+
+        size_t n = gradients.GetNumElements();
+		int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
+
+        if (this->IsEmpty() || this->GetNumCols() < gradients.GetNumCols() * 3)
+        {
+            this->Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+            this->SetValue(0.0);
+
+			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+			ElemType *signs=m_pArray+n; // sign of previous gradient
+			ElemType *steps=m_pArray+2*n; // current step size
+
+			_rmsprop_init<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n);
+
+        }
+
+        ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+		ElemType *signs=m_pArray+n; // sign of previous gradient
+		ElemType *steps=m_pArray+2*n; // current step size
+
+        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols() * 3);
+
+		if( !upd_gpu )
+		{
+			ElemType upd[] = {
+				2,2,0,
+				2,2,0,
+				1,1,1,
+				2,2,0,
+				1,2,1,
+				0,2,2,
+				1,1,1,
+				0,2,2,
+				0,2,2,
+			};
+
+			CUDA_CALL(cudaMalloc((void**)&upd_gpu,sizeof(ElemType)*27));
+            CUDA_CALL(cudaMemcpy(upd_gpu,upd,sizeof(ElemType)*27,cudaMemcpyHostToDevice));
+		}
+
+		_rmsprop<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n,
+			RMS_GAMMA,RMS_WGT_INC,RMS_WGT_MAX,RMS_WGT_DEC,RMS_WGT_MIN,
+			floor,upd_gpu);
+	}
 
     template<class ElemType>
     void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
@@ -1012,7 +1125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("operator+=: Matrix is empty.");
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _addValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,alpha,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1050,7 +1163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //    //*this += a.Get00Element();
         //    LONG64 N=(LONG64)GetNumElements();
         //    int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
-        //    cudaEvent_t done;       
+        //    cudaEvent_t done = nullptr;
         //    if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         //    _addValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N); 
         //    if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1118,7 +1231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignDifferenceOf1<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,alpha,a.m_pArray,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1138,7 +1251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignDifferenceOf2<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,alpha,a.m_pArray,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1303,7 +1416,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);    
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _addElementProductOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,b.m_pArray,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));      
@@ -1325,7 +1438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long M=(long)this->GetNumCols();        
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);  
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _columnElementMultiplyWith<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N,M);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));      
@@ -1344,11 +1457,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
             throw std::invalid_argument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
-        long N=(long)a.GetNumRows();
-        long M=(long)this->GetNumCols();        
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);  
+        long N = (long)this->GetNumRows();
+        long M = (long)a.GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*M / threadsPerBlock);
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _rowElementMultiplyWith<ElemType><<<blocksPerGrid,threadsPerBlock>>>(m_pArray,a.m_pArray,N,M);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));      
@@ -1359,21 +1472,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementDivideWith(const GPUMatrix<ElemType>& a)
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::RowElementDivideBy(const GPUMatrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("ColumnElementDivideWith: Matrix is empty.");
+            throw std::logic_error("RowElementDivideBy: Matrix is empty.");
+
+        if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
+            throw std::invalid_argument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
+
+        long N = (long)this->GetNumRows();
+        long M = (long)a.GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*M / threadsPerBlock);
+        a.PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _rowElementDivideBy<ElemType> << <blocksPerGrid, threadsPerBlock >> >(m_pArray, a.m_pArray, N, M);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementDivideBy(const GPUMatrix<ElemType>& a)
+    {
+        if (a.IsEmpty() || IsEmpty())
+            throw std::logic_error("ColumnElementDivideBy: Matrix is empty.");
 
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
-            throw std::invalid_argument("ColumnElementDivideWith: The input matrix should be a col vector and match [this]'s rows.");
+            throw std::invalid_argument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
-        long N=(long)a.GetNumRows();
-        long M=(long)this->GetNumCols();        
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);  
+        long N = (long)a.GetNumRows();
+        long M = (long)this->GetNumCols();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        _columnElementDivideWith<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N,M);                        
+        _ColumnElementDivideBy<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N,M);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));      
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
@@ -1390,7 +1526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);  
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _elemInverse<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1420,7 +1556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignSigmoidOf<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,m_pArray,N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1451,7 +1587,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
 
         _assignSigmoidDerivative<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, m_pArray, N);
@@ -1488,7 +1624,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             long N=(long)GetNumCols(); //one kernel per column
             int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);             
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             _logSoftMaxColWise<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,(long)m_numCols,(long)m_numRows);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1499,7 +1635,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             long N=(long)GetNumRows(); //one kernel per column
             int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             _logSoftMaxRowWise<<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,(long)m_numCols,(long)m_numRows);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1518,7 +1654,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrepareDevice();
             long N = (long)GetNumCols();
             long M = (long)GetNumRows();
-            cudaEvent_t done;       
+            cudaEvent_t done = nullptr;
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
             _assignColumnwiseLogSoftmaxOf<<<N,512,0,t_stream>>>(a.m_pArray,m_pArray,N,M);
             if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1647,7 +1783,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock); 
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _inplaceTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,threshold,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1670,7 +1806,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);      
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _assignTruncateBottom<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,threshold,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1688,7 +1824,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);      
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _inplaceTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,threshold,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1711,7 +1847,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock); 
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _assignTruncateTop<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,threshold,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1728,7 +1864,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock); 
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _setToZeroIfAbsLessThan<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,threshold,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1785,7 +1921,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         this->Resize(1,1);
 
         PrepareDevice();     
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         //WARNING: THIS kernel is not the most efficient way!
         _reductionSumAndAssign<ElemType><<<1,1024>>>(this->m_pArray,a.m_pArray,(LONG64)a.GetNumElements(),(LONG64)this->GetNumElements());       
@@ -1848,7 +1984,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(((double)N)/threadsPerBlock); 
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _elemMul<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1871,13 +2007,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(((double)N)/threadsPerBlock);  
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _assignElementProductOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,b.m_pArray,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
         return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementDivideBy(const GPUMatrix<ElemType>& a)
+    {
+        return AssignElementDivisionOf(*this, a);
     }
 
     template<class ElemType>
@@ -1894,7 +2036,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N=(LONG64)GetNumElements();
         int blocksPerGrid =(int)ceil(((double)N)/threadsPerBlock);  
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _assignElementDivisionOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,b.m_pArray,N);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -1919,7 +2061,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const long m = (long)this->GetNumCols();
         assert (m>0 && n>0); //converting from size_t to int may cause overflow
 
-        cudaEvent_t done;  
+        cudaEvent_t done = nullptr;  
         PrepareDevice();
         c.ChangeDeviceTo(GetComputeDeviceId());
 
@@ -1960,7 +2102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const long m = (long)this->GetNumCols();
         assert (m>0 && n>0); //converting from size_t to int may cause overflow
 
-        cudaEvent_t done;  
+        cudaEvent_t done = nullptr;  
         PrepareDevice();
         c.ChangeDeviceTo(GetComputeDeviceId());
 
@@ -2035,7 +2177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         float N=(float)GetNumElements();
         int blocksPerGrid =(int)ceil(N/threadsPerBlock);  
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _assignKhatriRaoProductOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,b.m_pArray,rowsA, rowsB, cols);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -2073,7 +2215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         float N=(float)GetNumElements();
         int blocksPerGrid =(int)ceil(N/threadsPerBlock);  
         a.PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _addColumnReshapeProductOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,a.m_pArray,b.m_pArray, rowsB, rowsC, cols, transposeAColumn);                        
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -2175,7 +2317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         int blocksPerGrid=(int)ceil(1.0*this->GetNumElements()/threadsPerBlock);  
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _assignSignOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(this->m_pArray, a.m_pArray, (long)this->GetNumElements());                        
@@ -2195,7 +2337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         int blocksPerGrid=(int)ceil(1.0*this->GetNumElements()/threadsPerBlock);  
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _addSignOf<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(this->m_pArray, a.m_pArray, (LONG64)this->GetNumElements());                        
@@ -2216,7 +2358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const long n = (long)GetNumCols();
         assert (m>0 && n>0); //converting from size_t to int may cause overflow
         PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         if (do_sync)     CUDA_CALL(cudaEventCreate(&done));                
         if (isColWise)
         {
@@ -2253,7 +2395,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         assert (m>0 && n>0); //converting from size_t to int may cause overflow
         PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));                
         if (isColWise)
         {
@@ -2288,7 +2430,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Resize(1,1); //result should be one element
 
         PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         //int blocksPerGrid=(int)ceil(1.0*a.GetNumElements()/threadsPerBlock);  
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         //_assignNumOfDiff<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, b.m_pArray, this->m_pArray, a.GetNumElements());                        
@@ -2303,7 +2445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Other helper functions
     template<class ElemType>
-    void GPUMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
+    void GPUMatrix<ElemType>::Print(const char* /*matrixName*/, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const
     {
         NOT_IMPLEMENTED;
     }
@@ -2317,14 +2459,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // file I/O
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    void GPUMatrix<ElemType>::ReadFromFile(FILE* f, const char * matrixName) 
+    void GPUMatrix<ElemType>::ReadFromFile(FILE*, const char * /*matrixName*/)
     {
         NOT_IMPLEMENTED;
     }
 
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    void GPUMatrix<ElemType>::WriteToFile(FILE* f, const char * matrixName) 
+    void GPUMatrix<ElemType>::WriteToFile(FILE*, const char * /*matrixName*/)
     {
         NOT_IMPLEMENTED;
     }
@@ -2353,7 +2495,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #else
         dim3 blocksPerGrid((inputWidth*inputHeight*inputChannels + numThreadPerBlock - 1)/numThreadPerBlock, smallBatchSize);
 #endif
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignPackedConvolutionInput<<<blocksPerGrid, numThreadPerBlock,0,t_stream>>>(this->m_pArray, 
                                             inputSubBatch.m_pArray, 
@@ -2387,7 +2529,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #else
         dim3 blocksPerGrid((inputWidth*inputHeight*inputChannels + numThreadPerBlock - 1)/numThreadPerBlock, smallBatchSize);
 #endif
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _unpackConvolutionInput<<<blocksPerGrid, numThreadPerBlock,0,t_stream>>>(this->m_pArray, 
                                             inputSubBatch.m_pArray, 
@@ -2417,7 +2559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid = (batchSize * outputSizePerSample + numThreadPerBlock - 1)/numThreadPerBlock; 
 
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignMaxPoolingResult<<<blocksPerGrid, numThreadPerBlock,0,t_stream>>>(this->m_pArray, inputBatch.m_pArray, batchSize, channels,
                                                  inputWidth, inputHeight,inputSizePerSample, 
@@ -2443,7 +2585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int numThreadPerBlock = threadsPerBlock; 
 
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
 
         int blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1)/numThreadPerBlock; 
@@ -2473,7 +2615,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid = (batchSize * outputSizePerSample + numThreadPerBlock - 1)/numThreadPerBlock; 
 
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignAveragePoolingResult<<<blocksPerGrid, numThreadPerBlock,0,t_stream>>>(this->m_pArray, inputBatch.m_pArray, batchSize, channels,
                                                  inputWidth, inputHeight,inputSizePerSample, 
@@ -2495,15 +2637,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         assert (verticalSubsample <= windowHeight && horizontalSubsample <= windowWidth);
 
-        UINT batchSize = outputGradientBatch.GetNumCols();
+        size_t batchSize = outputGradientBatch.GetNumCols();
         int numThreadPerBlock = threadsPerBlock; 
 
         PrepareDevice();
-        cudaEvent_t done;       
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
 
-        int blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1)/numThreadPerBlock; 
-        _addAveragePoolingGradient<<<blocksPerGrid, numThreadPerBlock,0,t_stream>>>(this->m_pArray, outputGradientBatch.m_pArray, batchSize, channels,
+        size_t blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1)/numThreadPerBlock; 
+        _addAveragePoolingGradient<<<blocksPerGrid, numThreadPerBlock,0,t_stream>>>(this->m_pArray, outputGradientBatch.m_pArray, (long)batchSize, channels,
                                                  inputWidth, inputHeight,inputSizePerSample, 
                                                  outputWidth, outputHeight,  outputSizePerSample, 
                                                  windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
@@ -2622,7 +2764,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LONG64 N=(LONG64)c.GetNumElements();
                 int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
                 c.PrepareDevice();
-                cudaEvent_t done;       
+                cudaEvent_t done = nullptr;
                 if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
                 _scaleAndAddScalar<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(c.m_pArray, N, alpha, a.m_pArray);
                 if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
@@ -2636,7 +2778,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m != (long)a.GetNumRows())
                     throw std::invalid_argument("To add column vector, rows should match.");
 
-                cudaEvent_t done;
+                cudaEvent_t done = nullptr;
                 int blocksPerGrid = (int)ceil(1.0*m/threadsPerBlock);
                 if (do_sync)    CUDA_CALL(cudaEventCreate(&done));   
 #ifdef VALIDATION
@@ -2667,7 +2809,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (sizeof(ElemType) == sizeof(double))
                 {
-#pragma omp parallel for
                     foreach_row(i,c)
                     {
                         CUBLAS_CALL(cublasDaxpy(cuHandle,n,reinterpret_cast <double*>(&alpha),reinterpret_cast <double*>(a.m_pArray),1,reinterpret_cast <double*>(c.m_pArray+i),m));
@@ -2675,7 +2816,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-#pragma omp parallel for
                     foreach_row(i,c)
                     {
                         CUBLAS_CALL(cublasSaxpy(cuHandle,n,reinterpret_cast <float*>(&alpha),reinterpret_cast <float*>(a.m_pArray),1,reinterpret_cast <float*>(c.m_pArray+i),m));
@@ -2716,7 +2856,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (a.IsEmpty())
                 throw std::logic_error("AddScaledDifference:  Input matrix a is empty.");
 
-            cudaEvent_t done;
+            cudaEvent_t done = nullptr;
             LONG64 n=(LONG64)a.GetNumElements();            
             int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
@@ -2757,7 +2897,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (&c != &a && &c != &b)
                 c.Resize(a.GetNumRows(), a.GetNumCols());
 
-            cudaEvent_t done;
+            cudaEvent_t done = nullptr;
             LONG64 n=(LONG64)a.GetNumElements();            
             int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
@@ -2801,7 +2941,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (a.IsEmpty())
                 throw std::logic_error("AddScaledDifference:  Input matrix a is empty.");
 
-            cudaEvent_t done;
+            cudaEvent_t done = nullptr;
             LONG64 n=(LONG64)a.GetNumElements();            
             int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
@@ -2845,7 +2985,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             c.Resize(a.GetNumRows(), a.GetNumCols());
 
-            cudaEvent_t done;
+            cudaEvent_t done = nullptr;
             LONG64 n=(LONG64)a.GetNumElements();            
             int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
@@ -2865,7 +3005,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::invalid_argument("AddElementToElement:  index out of range.");
 
         a.PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         int blocksPerGrid=1;  //only one element
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
         _addElementToElement<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, (LONG64)a.LocateElement(ai, aj), c.m_pArray, (LONG64)c.LocateElement(ci, cj));                        
@@ -2880,7 +3020,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
         if (sizeof(ElemType)==sizeof(float))
         {
-            float alph = alpha;            
+            float alph = (float)alpha;            
             CUBLAS_CALL(cublasSscal(cuHandle,int(a.m_numRows*a.m_numCols),&alph,(float*)a.m_pArray,1));
         }
         else if (sizeof(ElemType)==sizeof(double))
@@ -2956,7 +3096,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else 
         {
-            cudaEvent_t done;  
+            cudaEvent_t done = nullptr;  
             c.PrepareDevice();
 
             int blocksPerGrid=0;
@@ -3060,7 +3200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (a.GetNumRows()!=c.GetNumRows() || a.GetNumCols()!=c.GetNumCols())
                 throw std::logic_error("ElementWisePower: matrices must be of the same size");
 
-            cudaEvent_t done;
+            cudaEvent_t done = nullptr;
             a.PrepareDevice();
             if (do_sync)    CUDA_CALL(cudaEventCreate(&done));            
             LONG64 N=(LONG64)a.GetNumElements();

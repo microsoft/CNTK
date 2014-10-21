@@ -33,19 +33,28 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
 }
 
 
+template<class ElemType>
+void DataWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+{
+    m_dataWriter = new HTKMLFWriter<ElemType>();
+    m_dataWriter->Init(writerConfig);
+}
+
+
+template<class ElemType>
+void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& /*config*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
 template<class ElemType>
 void DataWriter<ElemType>::Destroy()
 {
-	delete m_dataWriter;
+    delete m_dataWriter;
     m_dataWriter = NULL;
-}
-template<class ElemType>
-void DataWriter<ElemType>::Init(const ConfigParameters& writerConfig)
-{
-	m_dataWriter = new HTKMLFWriter<ElemType>();
-    m_dataWriter->Init(writerConfig);
 }
 
 

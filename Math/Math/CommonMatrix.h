@@ -15,8 +15,7 @@
 #define LOG_OF_EPS_IN_LOG -92.1f // log(EPS_IN_LOG)
 #define LOG10_OF_EPS_IN_LOG -40 // log_10(EPS_IN_LOG)
 
-#define NOT_IMPLEMENTED throw std::runtime_error("Not implemented.")
-#define NOT_IMPLEMENTED_WITHLINEINFO throw std::runtime_error(__FILE__##" ["##__LINE__##"]: Not implemented.")
+#define NOT_IMPLEMENTED throw std::logic_error("Not implemented.")
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 

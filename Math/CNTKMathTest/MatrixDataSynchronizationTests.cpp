@@ -105,9 +105,9 @@ namespace CNTKMathTest
             Assert::IsTrue(A.GetCurrentMatrixLocation()==CurrentDataLocation::GPU);
             Assert::IsTrue(B.GetCurrentMatrixLocation()==CurrentDataLocation::GPU);
 
-            float x = A(1,1);
+            float x = A(1,1); x;
             Assert::IsTrue(A.GetCurrentMatrixLocation()==CurrentDataLocation::CPU);
-            float y = B(1,1);
+            float y = B(1,1); y;
             Assert::IsTrue(B.GetCurrentMatrixLocation()==CurrentDataLocation::CPU);
 
             SingleMatrix C = A*B;

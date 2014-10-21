@@ -51,7 +51,7 @@ public:
         }
     }
 
-    virtual void Init(const ConfigParameters& config)
+    virtual void Init(const ConfigParameters& /*config*/)
     {
     }
 
@@ -75,11 +75,12 @@ public:
     {
     }
 
-    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) 
+    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/) 
     {
         assert(false);
+        NOT_IMPLEMENTED;
     }
-    virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized)
+    virtual bool SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
     {
         // loop through all the output vectors to copy the data over
         for (std::map<std::wstring, std::vector<ElemType>*>::iterator iter = m_outputs->begin();
@@ -88,7 +89,7 @@ public:
             // figure out the dimension of the data
             std::wstring val = iter->first;
             size_t rows = (*m_dimensions)[val];
-            size_t count = rows*numRecords;
+            //size_t count = rows*numRecords;
 
             // find the output matrix we want to fill
             const std::map<std::wstring, void*, nocase_compare>::const_iterator iterIn = matrices.find(val);
@@ -120,7 +121,7 @@ public:
         return (m_currentRecord >= m_recordCount);
 
     }
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping) {};
+    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/) {};
 
 };
 

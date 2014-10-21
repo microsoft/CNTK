@@ -31,19 +31,28 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter)
 }
 
 
+template<class ElemType>
+void DataWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+{
+    m_dataWriter = new LUSequenceWriter<ElemType>();
+    m_dataWriter->Init(writerConfig);
+}
+
+
+template<class ElemType>
+void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& /*config*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
 template<class ElemType>
 void DataWriter<ElemType>::Destroy()
 {
-	delete m_dataWriter;
+    delete m_dataWriter;
     m_dataWriter = NULL;
-}
-template<class ElemType>
-void DataWriter<ElemType>::Init(const ConfigParameters& writerConfig)
-{
-	m_dataWriter = new LUSequenceWriter<ElemType>();
-    m_dataWriter->Init(writerConfig);
 }
 
 
@@ -60,9 +69,10 @@ DataWriter<ElemType>::DataWriter(const ConfigParameters& config)
 template<class ElemType>
 DataWriter<ElemType>::~DataWriter()
 {
-	delete m_dataWriter;
+    delete m_dataWriter;
     m_dataWriter = NULL;
 }
+
 
 // GetSections - Get the sections of the file
 // sections - a map of section name to section. Data sepcifications from config file will be used to determine where and how to save data

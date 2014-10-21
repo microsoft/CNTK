@@ -22,6 +22,9 @@ NDLNode<ElemType>* NDLScript<ElemType>::DuplicateNode(NDLNode<ElemType>* node)
 	return newNode;
 }
 
+template class NDLNode<float>;
+template class NDLNode<double>;
+
 template <typename ElemType>
 NDLScript<ElemType>::NDLScript(const NDLScript& copyMe) : ConfigParser(copyMe)
 {
@@ -213,7 +216,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 		ret = true;
 	else if (EqualInsensitive(nodeType, LookupTableNode<ElemType>::TypeName()))
 		ret = true;
-
+    else if (EqualInsensitive(nodeType, GMMLogLikelihoodNode<ElemType>::TypeName(), L"GMMLL"))
+        ret = true;
+    
     // return the actual node name in the parameter if we found something
     if (ret)
     {
@@ -232,7 +237,10 @@ NDLScript<double> NDLScript<double>::s_global;
 int NDLNode<float>::s_nameCounter=0;
 int NDLNode<double>::s_nameCounter=0;
 
-    template class NDLScript<float>; 
-    template class NDLScript<double>;
+template class NDLNode<float>;
+template class NDLNode<double>;
+
+template class NDLScript<float>;
+template class NDLScript<double>;
 
 }}}

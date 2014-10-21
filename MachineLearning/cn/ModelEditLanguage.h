@@ -639,7 +639,6 @@ public:
             }
             else //createModel, loadModel, or loadNDL
             {
-                ComputationNetwork<ElemType>* cn = NULL;
                 // model1=[...] - Embedded NDL script
                 if (0 == foundBrace)
                 {

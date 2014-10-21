@@ -75,7 +75,7 @@ public:
 
 	}
 
-    virtual void Init(const ConfigParameters& config)
+    virtual void Init(const ConfigParameters& /*config*/)
     {
     }
 
@@ -103,7 +103,7 @@ public:
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize)
+    virtual void StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples=requestDataSize*/)
     {
         m_mbSize = min(mbSize,m_recordCount);
     }
@@ -128,7 +128,7 @@ public:
             // figure out the dimension of the data
             std::wstring val = iter->first;
             size_t rows = (*m_dimensions)[val];
-            size_t count = rows*recordCount;
+            //size_t count = rows*recordCount;
 
             // find the output matrix we want to fill
             std::map<std::wstring, Matrix<ElemType>*>::iterator iterIn = matrices.find(val);
@@ -146,7 +146,7 @@ public:
 
             // copy over the data
             std::vector<ElemType>* data = iter->second;
-            size_t index = m_currentRecord*rows;
+            //size_t  = m_currentRecord*rows;
             void* mat = &(*matrix)(0,0);
             size_t matSize = matrix->GetNumElements()*sizeof(ElemType);
             void* dataPtr = (void*)data->data();
@@ -182,7 +182,7 @@ public:
 	}
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
-    virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapping(const std::wstring& sectionName) 
+    virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/) 
     {
         static std::map<typename LabelIdType, typename LabelType> labelMap;
         return labelMap;
@@ -191,7 +191,7 @@ public:
     // SetLabelMapping - Sets the label mapping from integer index to label 
     // labelMapping - mapping table from label values to IDs (must be 0-n)
     // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename LabelIdType, typename LabelType>& labelMapping) {}
+    virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/) {}
 
     // GetData - Gets metadata from the specified section (into CPU memory) 
     // sectionName - section name to retrieve data from
@@ -201,12 +201,12 @@ public:
     //                  [out] size of buffer filled with data
     // recordStart - record to start reading from, defaults to zero (start of data)
     // returns: true if data remains to be read, false if the end of data was reached
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0) 
+    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart=0*/) 
     {
         return false;
     }
 
-    virtual bool DataEnd(EndDataType endDataType)
+    virtual bool DataEnd(EndDataType /*endDataType*/)
     {
         return m_currentRecord < m_recordCount;
     }

@@ -1,3 +1,4 @@
+#pragma warning (disable: 4702) // this function is flagged but unclear why
 //
 // <copyright file="ComputationNetwork.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -335,7 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-                    ComputationNodePtr childNodePtr0, childNodePtr1, childNodePtr2;
+                    ComputationNodePtr childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4;
                     switch (numChildren)
                     {
                     case 1:
@@ -352,6 +353,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         childNodePtr1 = GetNodeFromName(childrenNames[1]);
                         childNodePtr2 = GetNodeFromName(childrenNames[2]);
                         nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2);
+                        break;
+                    case 4:
+                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
+                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
+                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
+                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
+                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3);
+                        break;
+                    case 5:
+                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
+                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
+                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
+                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
+                        childNodePtr4 = GetNodeFromName(childrenNames[4]);
+                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4);
                         break;
                     default:
                         throw std::logic_error("Invalid number of children.");
@@ -766,12 +782,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == RowSliceNode<ElemType>::TypeName())
 				newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
+                newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
-
+            
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -919,12 +937,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new DelayNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == LookupTableNode<ElemType>::TypeName())
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
+                newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
-
+            
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -1223,6 +1243,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			return newNode;
 		}
 
+        ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(unnormedPrior, mean, logStddev, feature);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+        
         ComputationNodePtr LookupTable (const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
@@ -1329,7 +1357,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false; 
         }
 
-        void EvaluateLoop(std::list<ComputationNodePtr>& allNodes , const ComputationNodePtr startNode)
+        void EvaluateLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
         {
             bool bLoopCompleted = true;
             std::vector<ComputationNodePtr> recurrentNodes;
@@ -1363,7 +1391,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Evaluate(const ComputationNodePtr rootNode)
         {
-            bool bStartRecordLoops = false; /// initially set loop completed
             BuildAndValidateNetwork(rootNode);
 
             std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
@@ -1450,7 +1477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			m_sentenceEnd.assign(aSize, m_actMiniBSize/aSize);
         }
 
-        void ComputeGradientLoop(std::list<ComputationNodePtr>& allNodes , const ComputationNodePtr startNode)
+        void ComputeGradientLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
         {
             std::vector<ComputationNodePtr> recurrentNodes;
             int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
@@ -1800,16 +1827,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PTaskGraphBuilder<ElemType>* GetPTaskGraphBuilder() {return m_PTaskGraphBuilder;}
     protected:
         // Copy constructor, should never be called.
-        ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom) 
-        {            
+#pragma warning (push)
+#pragma warning (disable: 4702) // this function is flagged but unclear why
+        ComputationNetwork(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
+        {   
+            //assert(false);
             throw std::logic_error("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
         } 
+#pragma warning (pop)
 
         // Assignment operator, should never be called.
-        ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom) 
+        ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
         {            
             throw std::logic_error("'ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
-            return (*this);
         } 
 
         void ClearCalcOrderCaches()
@@ -1818,7 +1848,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_cacheGradientCalcOrders.clear();
         } 
 
-        void MergeRecurrentLoops(const ComputationNodePtr rootNode)
+        void MergeRecurrentLoops(const ComputationNodePtr /*rootNode*/)
         {
             /// merge loops if they have the same source node
             std::vector<RecurrentInfo>      m_recurrentInfoTmp;
@@ -1961,7 +1991,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				rInfo.m_loopId = loopId;
 				rInfo.m_sourceNode = cur;
 				size_t sccSize = 0;
-				while(true)
+                                for (;;)
 				{
 					ComputationNodePtr w = sccStack.back();
 					sccStack.pop_back();
@@ -2013,14 +2043,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //must be called before ValidateNetwork
         void FormRecurentLoops(const ComputationNodePtr rootNode)
         {
-            bool bStartOfLoop = false;
-            int  loopId = 0;
             std::vector<ComputationNodePtr> sourceLoopNodes; 
-			getStrongSCC(rootNode);
+            getStrongSCC(rootNode);
             std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode, sourceLoopNodes);
 
-
-			/// debug purpose 
+            /// debug purpose 
             for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 fprintf(stderr, " nodes in the recurrent loops : \n"); 
@@ -2069,7 +2096,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					for (size_t j = 0 ; j < (*iter).m_recurrentNodes.size(); j++)
 					{
 						ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[j];
-						bool bFound = false;
 						for (size_t i = 0; i < nodeRecIter->ChildrenSize() ; i++)
 						{
 							if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != L"Delay"))
@@ -2123,8 +2149,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void ReorderLoops(std::list<ComputationNodePtr>&  nodes, 
-            const std::map<int , std::list<ComputationNodePtr>>& recurrentNodes, 
-            const std::list<ComputationNodePtr> & noRecurrentNodes)
+            const std::map<int , std::list<ComputationNodePtr>>& /*recurrentNodes*/,
+            const std::list<ComputationNodePtr> & /*noRecurrentNodes*/)
         {
             std::list<ComputationNodePtr> newList;
 
