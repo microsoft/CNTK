@@ -598,14 +598,14 @@ std::wstring fgetlinew (FILE * f)
 }
 
 // STL string version avoiding most memory allocations
-void fgetline (FILE * f, std::string & s, ARRAY<char> & buf)
+void fgetline (FILE * f, std::string & s, std::vector<char> & buf)
 {
     buf.resize (1000000);    // enough? // KIT: increased to 1M to be safe
     const char * p = fgetline (f, &buf[0], (int) buf.size());
     s.assign (p);
 }
  
-void fgetline (FILE * f, std::wstring & s, ARRAY<wchar_t> & buf)
+void fgetline (FILE * f, std::wstring & s, std::vector<wchar_t> & buf)
 {
     buf.resize (1000000);    // enough? // KIT: increased to 1M to be safe
     const wchar_t * p = fgetline (f, &buf[0], (int) buf.size());
@@ -613,7 +613,7 @@ void fgetline (FILE * f, std::wstring & s, ARRAY<wchar_t> & buf)
 }
 
 // char buffer version
-void fgetline (FILE * f, ARRAY<char> & buf)
+void fgetline (FILE * f, std::vector<char> & buf)
 {
     const int BUF_SIZE = 1000000;    // enough? // KIT: increased to 1M to be safe
     buf.resize (BUF_SIZE);
@@ -621,7 +621,7 @@ void fgetline (FILE * f, ARRAY<char> & buf)
     buf.resize (strnlen (&buf[0], BUF_SIZE) +1); // SECURITY NOTE: string use has been reviewed
 }
 
-void fgetline (FILE * f, ARRAY<wchar_t> & buf)
+void fgetline (FILE * f, std::vector<wchar_t> & buf)
 {
     const int BUF_SIZE = 1000000;    // enough? // KIT: increased to 1M to be safe
     buf.resize (BUF_SIZE);
@@ -675,7 +675,7 @@ string fgetstring (FILE * f)
     string res;
     for (;;)
     {
-    char c = fgetc (f);
+    char c = (char)fgetc (f);
     if (c == EOF)
         ERROR ("error reading string or missing 0: %s", strerror (errno));
     if (c == 0) break;
@@ -1406,14 +1406,14 @@ static short toolULawToLinear(unsigned char p_ucULawByte)
 
 // fgetwavraw(): only read data of .wav file. For multi-channel data, samples
 // are kept interleaved.
-static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
+static void fgetwavraw(FILE * f, std::vector<short> & wav, const WAVEHEADER & wavhd)
 {
     int bytesPerSample = wavhd.wBitsPerSample / 8;  // (sample size on one channel)
     wav.resize (wavhd.DataLength / bytesPerSample);
     if (wavhd.wFormatTag == 7)    // mulaw
     {
         (wavhd.nChannels == 1) || ERROR ("fgetwav: wChannels=%d not supported for mulaw", wavhd.nChannels);
-        ARRAY<unsigned char> data;
+        std::vector<unsigned char> data;
         int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
         data.resize (numSamples);
         freadOrDie (&data[0], sizeof (data[0]), numSamples, f);
@@ -1437,7 +1437,7 @@ static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
 // fgetwav(): read an entire .wav file. Stereo is mapped to mono.
 // ----------------------------------------------------------------------------
 
-void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
+void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate)
 {
     WAVEHEADER wavhd;           // will be filled in for 16-bit PCM!!
     signed short wFormatTag;    // real format tag as found in data
@@ -1453,7 +1453,7 @@ void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
     else if (wavhd.nChannels == 2)
     {
         //read raw data        
-        ARRAY<short> buf;
+        std::vector<short> buf;
         buf.resize(numSamples * 2);
         fgetwavraw(f, buf, wavhd);
         
@@ -1474,7 +1474,7 @@ void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
     }
 }
 
-void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate)
+void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate)
 {
     auto_file_ptr f = fopenOrDie (fn, L"rbS");
     fgetwav (f, wav, sampleRate);
@@ -1489,9 +1489,9 @@ void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate)
 //            channel. j is sample index.
 // ----------------------------------------------------------------------------
 
-void fgetraw (FILE *f, ARRAY< ARRAY<short> > & data, const WAVEHEADER & wavhd)
+void fgetraw (FILE *f, std::vector< std::vector<short> > & data, const WAVEHEADER & wavhd)
 {
-    ARRAY<short> wavraw;
+    std::vector<short> wavraw;
     fgetwavraw (f, wavraw, wavhd);
     data.resize (wavhd.nChannels);
     int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
@@ -1677,7 +1677,7 @@ void fputdouble (FILE * f, double v)
 // fputfile(): write a binary block or a string as a file
 // ----------------------------------------------------------------------------
 
-void fputfile (const wstring & pathname, const ARRAY<char> & buffer)
+void fputfile (const wstring & pathname, const std::vector<char> & buffer)
 {
     FILE * f = fopenOrDie (pathname, L"wb");
     try
@@ -1735,7 +1735,7 @@ void fputfile (const wstring & pathname, const std::string & string)
 // fgetfile(): load a file as a binary block
 // ----------------------------------------------------------------------------
 
-void fgetfile (const wstring & pathname, ARRAY<char> & buffer)
+void fgetfile (const wstring & pathname, std::vector<char> & buffer)
 {
     FILE * f = fopenOrDie (pathname, L"rb");
     size_t len = filesize (f);
@@ -1747,11 +1747,11 @@ void fgetfile (const wstring & pathname, ARRAY<char> & buffer)
     fclose (f);
 }
 
-void fgetfile (FILE * f, ARRAY<char> & buffer)
+void fgetfile (FILE * f, std::vector<char> & buffer)
 {   // this version reads until eof
     buffer.resize (0);
     buffer.reserve (1000000);   // avoid too many reallocations
-    ARRAY<char> inbuf;
+    std::vector<char> inbuf;
     inbuf.resize (65536);         // read in chunks of this size
     while (!feof (f))           // read until eof
     {

@@ -56,10 +56,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
-        CPUMatrix<ElemType>& AssignColumnSlice(const ElemType val, size_t startColumn, size_t numCols);
 
         void Adagrad(CPUMatrix<ElemType>& gradients);
-        void RmsProp(CPUMatrix<ElemType>& gradients);
+        void RmsProp(CPUMatrix<ElemType>& gradients,
+			ElemType RMS_GAMMA,
+			ElemType RMS_WGT_INC,
+			ElemType RMS_WGT_MAX,
+			ElemType RMS_WGT_DEC,
+			ElemType RMS_WGT_MIN
+			);
 
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
@@ -131,14 +136,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignElementProductOf (const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
         CPUMatrix<ElemType>& AddElementProductOf (const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
 
-        CPUMatrix<ElemType>& AssignElementSumOf (size_t cCol, const CPUMatrix<ElemType>& a, size_t aColIdx, const CPUMatrix<ElemType>& b,  size_t bColIdx);
-
         CPUMatrix<ElemType>& AssignElementDivisionOf (const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
+        CPUMatrix<ElemType>& ElementDivideBy(const CPUMatrix<ElemType>& a);
 
         CPUMatrix<ElemType>& ColumnElementMultiplyWith(const CPUMatrix<ElemType>& a);
         CPUMatrix<ElemType>& RowElementMultiplyWith(const CPUMatrix<ElemType>& a);
 
-        CPUMatrix<ElemType>& ColumnElementDivideWith(const CPUMatrix<ElemType>& a);
+        CPUMatrix<ElemType>& ColumnElementDivideBy(const CPUMatrix<ElemType>& a);
+        CPUMatrix<ElemType>& RowElementDivideBy(const CPUMatrix<ElemType>& a);
 
         CPUMatrix<ElemType>& ElementInverse ();
         CPUMatrix<ElemType>& AssignElementInverseOf (const CPUMatrix<ElemType>& a);
@@ -219,7 +224,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         CPUMatrix<ElemType>&  AssignRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         CPUMatrix<ElemType>&  AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
-        
+        CPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
+
+        CPUMatrix<ElemType>&  AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+
         void VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise) const;
         void VectorMin(CPUMatrix<ElemType>& mainndexes, CPUMatrix<ElemType>& minValues, const bool isColWise) const;
 

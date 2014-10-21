@@ -33,14 +33,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); 
-        void SetValue(const CPUSparseMatrix& val) { NOT_IMPLEMENTED; }
+        void SetValue(const CPUSparseMatrix& /*val*/) { NOT_IMPLEMENTED; }
 
-        void ShiftBy(int numShift) { NOT_IMPLEMENTED; }
+        void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
 
         size_t BufferSize() const {return m_elemSizeAllocated*sizeof(ElemType);}
         ElemType* BufferPointer() const;
 
-        void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed) { NOT_IMPLEMENTED; }
+        void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/) { NOT_IMPLEMENTED; }
         
         static void ClassEntropy(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& weight,
             const CPUSparseMatrix<ElemType> & label, const CPUMatrix<ElemType>& cls, 
@@ -70,30 +70,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& c);
 
         /// sum(vec(a).*vec(b))
-        static ElemType InnerProductOfMatrices(const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b) { NOT_IMPLEMENTED; }
+        static ElemType InnerProductOfMatrices(const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/) { NOT_IMPLEMENTED; }
         
-        static void AddScaledDifference(const ElemType alpha, const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, 
-            bool bDefaultZero ) { NOT_IMPLEMENTED; }
-        static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, CPUMatrix<ElemType>& c, 
-            bool bDefaultZero ) { NOT_IMPLEMENTED; }
+        static void AddScaledDifference(const ElemType /*alpha*/, const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/, CPUMatrix<ElemType>& /*c*/,
+            bool /*bDefaultZero*/ ) { NOT_IMPLEMENTED; }
+        static void AddScaledDifference(const ElemType /*alpha*/, const CPUMatrix<ElemType>& /*a*/, const CPUSparseMatrix<ElemType>& /*b*/, CPUMatrix<ElemType>& /*c*/,
+            bool /*bDefaultZero*/ ) { NOT_IMPLEMENTED; }
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, int size = 0);
+        void Resize(const size_t numRows, const size_t numCols, size_t size = 0);
         void Reset();
 
     public:
         void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
         void Adagrad(CPUMatrix<ElemType>& c);
-        void RmsProp(CPUMatrix<ElemType>& c);
 
         public:
-        CPUSparseMatrix<ElemType>& InplaceTruncateTop (const ElemType threshold) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType threshold) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceTruncateTop (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
+        CPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
+        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType /*threshold*/);
 
     public:
-        void Print(const char* matrixName) const { NOT_IMPLEMENTED; }
+        void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
 
         int m_colIdx; //used to SetValue()
         ElemType *m_val; // values

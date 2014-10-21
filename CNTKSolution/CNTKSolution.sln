@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMath", "..\Math\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cn", "..\MachineLearning\cn\cn.vcxproj", "{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}"
@@ -149,7 +151,7 @@ Global
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|x64.Build.0 = Debug|x64
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|Mixed Platforms.ActiveCfg = Release|Win32
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|x64.ActiveCfg = Release|Win32
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

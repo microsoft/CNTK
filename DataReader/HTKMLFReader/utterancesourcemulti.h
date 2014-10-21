@@ -229,7 +229,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         unsigned int frameindex : 11;           // frame index within the utterance
         static const size_t maxframesperutterance = 2047;
 #endif
-        frameref (size_t ci, size_t ui, size_t fi) : chunkindex ((unsigned int) ci), utteranceindex ((unsigned int) ui), frameindex ((unsigned int) fi)
+        frameref (size_t ci, size_t ui, size_t fi) : chunkindex ((unsigned short) ci), utteranceindex ((unsigned short) ui), frameindex ((unsigned short) fi)
         {
 #ifndef  _WIN64
             static_assert (sizeof (frameref) == 4, "frameref: bit fields too large to fit into 32-bit integer");
@@ -338,10 +338,10 @@ public:
 			{
 				if (i % (infiles[m].size() / 100 + 1) == 0) { fprintf (stderr, "."); fflush (stderr); }
 				// build utterance descriptor
-
-				if (m==0) { classidsbegin.push_back(classids[0]->size());}
-
-				utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels[0].empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids every non-empty? 
+				if (m == 0 && !labels.empty())
+					classidsbegin.push_back(classids[0]->size());
+					
+				utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels.empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
 				const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
 				// we need at least 2 frames for boundary markers to work
 				if (uttframes < 2)
@@ -353,13 +353,15 @@ public:
 				}
 
 				// check whether we have the ref transcript
-				auto labelsiter = labels[0].end();
+				//auto labelsiter = labels[0].end();
+				bool lacksmlf = true;
 				if (!labels.empty())    // empty means unsupervised mode (don't load any)
 				{
 					key = utterance.key();
 					// check if labels are available (if not, it normally means that no path was found in realignment)
-					labelsiter = labels[0].find (key);
-					const bool lacksmlf = (labelsiter == labels[0].end());
+					auto labelsiter = labels[0].find (key);
+					//const bool lacksmlf = (labelsiter == labels[0].end());
+					lacksmlf = (labelsiter == labels[0].end());
 					if (lacksmlf)
 						if (nomlf++ < 5)
 							fprintf (stderr, " [no labels for  %S]", key.c_str());
@@ -383,7 +385,8 @@ public:
 				{
 					_totalframes += uttframes;
 					framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
-					if (labelsiter != labels[0].end())
+					if (!labels.empty() && !lacksmlf)
+					//if (!labels.empty() && labelsiter != labels[0].end())
 					{
 						foreach_index (j, labels)
 						{
@@ -453,8 +456,8 @@ public:
 			// distribute them over chunks
 			// We simply count off frames until we reach the chunk size.
 			// Note that we first randomize the chunks, i.e. when used, chunks are non-consecutive and thus cause the disk head to seek for each chunk.
-			const size_t framespersec = 100;            // we just assume this; our efficiency calculation is based on this
-			const size_t chunkframes = 15 * 60 * 100;   // number of frames to target for each chunk
+			const size_t framespersec = 100;                    // we just assume this; our efficiency calculation is based on this
+                        const size_t chunkframes = 15 * 60 * framespersec;  // number of frames to target for each chunk
 			// Loading an initial 24-hour range will involve 96 disk seeks, acceptable.
 			// When paging chunk by chunk, chunk size ~14 MB.
 			std::vector<utterancechunkdata> & thisallchunks = allchunks[m];
@@ -672,7 +675,7 @@ private:
             foreach_index (i, randomizedutterancerefs)
             {
                 auto & uttref = randomizedutterancerefs[i];
-                assert (positionchunkwindows[i].isvalidforthisposition (uttref));
+                assert (positionchunkwindows[i].isvalidforthisposition(uttref)); uttref;
             }
 
             // check we got those setup right
@@ -762,7 +765,7 @@ private:
             // Later we will randomize those as well.
             foreach_index (i, randomizedchunks[0])
             {
-                frameref.chunkindex = i;
+                frameref.chunkindex = (unsigned short)i;
                 checkoverflow (frameref.chunkindex, i, "frameref::chunkindex");
                 const auto & chunk = randomizedchunks[0][i];
                 const auto & chunkdata = chunk.getchunkdata();
@@ -1097,7 +1100,7 @@ public:
                 releaserandomizedchunk (k);
             for (size_t k = windowbegin; k < windowend; k++)
                 readfromdisk |= requirerandomizedchunk (k, windowbegin, windowend); // (window range passed in for checking only, redundant here)
-            for (size_t k = windowend; k < randomizedchunks.size(); k++)
+            for (size_t k = windowend; k < randomizedchunks[0].size(); k++)
                 releaserandomizedchunk (k);
 
 			// resize feat and uids
@@ -1140,7 +1143,7 @@ public:
 					auto uttframes = chunkdata.getutteranceframes (frameref.utteranceindex);
 					matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
 					const size_t n = uttframevectors.size();
-					assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n);
+					assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n); n;
 
 					// copy frame and class labels
 					const size_t t = frameref.frameindex;
@@ -1160,14 +1163,13 @@ public:
     double gettimegetbatch() { return timegetbatch;}
 
 	// alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
-    /*implement*/ bool getbatch (const size_t globalts,
-                           const size_t framesrequested, msra::dbn::matrix & feat, std::vector<size_t> & uids,
-                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-                           std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
+    /*implement*/ bool getbatch (const size_t /*globalts*/,
+                           const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
+                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
+                           std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {
            // should never get here
             throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
-            return true;
         
 			// for single input/output set size to be 1 and run old getbatch
 	        //feat.resize(1);
@@ -1187,15 +1189,15 @@ public:
         if (framemode)
             return globalts;
         // utterance mode
-        assert (globalts >= sweep * _totalframes && globalts < (sweep + 1) * _totalframes);
+        assert (globalts >= sweep * _totalframes && globalts < (sweep + 1) * _totalframes); sweep;
         foreach_index (pos, randomizedutterancerefs)
             if (randomizedutterancerefs[pos].globalts >= globalts)
                 return randomizedutterancerefs[pos].globalts;   // exact or inexact match
         return randomizedutterancerefs.back().globalte();       // boundary case: requested time falls within the last utterance
     }
 
-	const std::vector<size_t> & unitcounts() const { return counts[0];} 
-	const std::vector<size_t> & unitcounts(size_t index) const { return counts[index];} 
+    const std::vector<size_t> & unitcounts() const { return counts[0]; }
+    const std::vector<size_t> & unitcounts(size_t index) const { return counts[index]; }
 
 };
 

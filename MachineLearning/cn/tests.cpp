@@ -7,6 +7,7 @@
 //
 
 #include "stdafx.h"
+#include "basetypes.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
 #include "DataReader.h"
@@ -102,7 +103,6 @@ void TestReader(const ConfigParameters& configBase)
     {
         epochSize = requestDataSize;
     }
-    size_t datasetSize = 10000;
 
     DataReader<ElemType> dataReader(readerConfig);
 
@@ -383,8 +383,8 @@ void TestCommandLine(const ConfigParameters& configBase)
     //    boolFalse=f
     bool bf = config("boolFalse");
     //    boolImpliedTrue
-    bool bit = config("boolImpliedTrue");
-    bool bif = config.Exists(L"boolImpliedFalse");
+    bool bit = config("boolImpliedTrue"); bit;
+    bool bif = config.Exists(L"boolImpliedFalse"); bif;
     bf = config("nothere", "false");
     //cout << bf << endl;
     //    float=1234.5678
@@ -473,7 +473,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     //    ]
     ConfigParameters dictQuotedStrings = dictTests("dictQuotedStrings");
     arrayQuotedStrings = dictQuotedStrings("files");
-    const char * mapping = dictQuotedStrings("mapping");
+    const char * mapping = dictQuotedStrings("mapping"); mapping;
     //
     //    #super nesting
     //    dictNested=[

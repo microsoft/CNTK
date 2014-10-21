@@ -5,6 +5,7 @@
 *.suo
 *.user
 *.sln.docstates
+*.orig
 
 # Build results
 
@@ -156,3 +157,4 @@ $RECYCLE.BIN/
 .DS_Store
 
 *.lyx~
+*.bak

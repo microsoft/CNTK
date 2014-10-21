@@ -21,7 +21,7 @@ ndlMacroDefine=[
 	LogPrior=Log(Prior)
     }   
 
-    LSTMComponent(inputDim, outputDim, input)
+    LSTMComponent(inputDim, outputDim, inputVal)
     {
         Wxo = Parameter(outputDim, inputDim)
         Wxi = Parameter(outputDim, inputDim)
@@ -49,17 +49,17 @@ ndlMacroDefine=[
         delayCF = Delay(outputDim, ct, delayTime=1)
         delayCC = Delay(outputDim, ct, delayTime=1)
 
-        WxiInput = Times(Wxi, input)
+        WxiInput = Times(Wxi, inputVal)
         WhidelayHI = Times(Whi, delayHI)
         WcidelayCI = DiagTimes(Wci, delayCI)
 
         it = Sigmoid (Plus ( Plus (Plus (WxiInput, bi), WhidelayHI), WcidelayCI))
 
-        WxcInput = Times(Wxc, input)
+        WxcInput = Times(Wxc, inputVal)
         WhcdelayHC = Times(Whc, delayHC)
         bit = ElementTimes(it, Tanh( Plus(WxcInput, Plus(WhcdelayHC, bc))))
         
-        Wxfinput = Times(Wxf, input)
+        Wxfinput = Times(Wxf, inputVal)
         WhfdelayHF = Times(Whf, delayHF)
         WcfdelayCF = DiagTimes(Wcf, delayCF)
 
@@ -69,7 +69,7 @@ ndlMacroDefine=[
 
         ct = Plus(bft, bit)
 
-        Wxoinput = Times(Wxo, input)
+        Wxoinput = Times(Wxo, inputVal)
         WhodelayHO = Times(Who, delayHO)
         Wcoct = DiagTimes(Wco, ct)
 

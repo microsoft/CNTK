@@ -291,13 +291,11 @@ public:
         // transfer to member variables
         m_inputs = input;
         m_labels = labels;
-        size_t sequencePos = 0; 
 
         long TickStart = GetTickCount( );
         long recordCount = 0;
-        long orgRecordCount = labels->size();
+        long orgRecordCount = (long)labels->size();
         long lineCount = 0;
-        size_t bufferIndex = m_byteCounter-m_bufferStart;
         SequencePosition sequencePositionLast(0,0,seqFlagNull);
         /// get line
         char ch2[MAXSTRING]; 
@@ -324,7 +322,7 @@ public:
                 seqPos->push_back(sequencePos);
                 sequencePositionLast = sequencePos;
 
-                recordCount = labels->size() - orgRecordCount;
+                recordCount = (long)labels->size() - orgRecordCount;
                 lineCount ++;
             }
 

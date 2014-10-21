@@ -227,7 +227,7 @@ class minibatchutterancesource : public minibatchsource
         unsigned int frameindex : 11;           // frame index within the utterance
         static const size_t maxframesperutterance = 2047;
 #endif
-        frameref (size_t ci, size_t ui, size_t fi) : chunkindex ((unsigned int) ci), utteranceindex ((unsigned int) ui), frameindex ((unsigned int) fi)
+        frameref(size_t ci, size_t ui, size_t fi) : chunkindex((unsigned short)ci), utteranceindex((unsigned short)ui), frameindex((unsigned short)fi)
         {
 #ifndef  _WIN64
             static_assert (sizeof (frameref) == 4, "frameref: bit fields too large to fit into 32-bit integer");
@@ -375,8 +375,8 @@ public:
         // distribute them over chunks
         // We simply count off frames until we reach the chunk size.
         // Note that we first randomize the chunks, i.e. when used, chunks are non-consecutive and thus cause the disk head to seek for each chunk.
-        const size_t framespersec = 100;            // we just assume this; our efficiency calculation is based on this
-        const size_t chunkframes = 15 * 60 * 100;   // number of frames to target for each chunk
+        const size_t framespersec = 100;                    // we just assume this; our efficiency calculation is based on this
+        const size_t chunkframes = 15 * 60 * framespersec;  // number of frames to target for each chunk
         // Loading an initial 24-hour range will involve 96 disk seeks, acceptable.
         // When paging chunk by chunk, chunk size ~14 MB.
 
@@ -548,7 +548,7 @@ private:
             foreach_index (i, randomizedutterancerefs)
             {
                 auto & uttref = randomizedutterancerefs[i];
-                assert (positionchunkwindows[i].isvalidforthisposition (uttref));
+                assert (positionchunkwindows[i].isvalidforthisposition (uttref)); uttref;
             }
 
             // check we got those setup right
@@ -638,7 +638,7 @@ private:
             // Later we will randomize those as well.
             foreach_index (i, randomizedchunks)
             {
-                frameref.chunkindex = i;
+                frameref.chunkindex = (unsigned short)i;
                 checkoverflow (frameref.chunkindex, i, "frameref::chunkindex");
                 const auto & chunk = randomizedchunks[i];
                 const auto & chunkdata = chunk.getchunkdata();
@@ -939,7 +939,7 @@ public:
                 auto uttframes = chunkdata.getutteranceframes (frameref.utteranceindex);
                 matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                 const size_t n = uttframevectors.size();
-                assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n);
+                assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n); n;
 
                 // copy frame and class labels
                 const size_t t = frameref.frameindex;
@@ -990,7 +990,7 @@ public:
         if (framemode)
             return globalts;
         // utterance mode
-        assert (globalts >= sweep * _totalframes && globalts < (sweep + 1) * _totalframes);
+        assert (globalts >= sweep * _totalframes && globalts < (sweep + 1) * _totalframes); sweep;
         foreach_index (pos, randomizedutterancerefs)
             if (randomizedutterancerefs[pos].globalts >= globalts)
                 return randomizedutterancerefs[pos].globalts;   // exact or inexact match

@@ -8,6 +8,7 @@
 #include "IExecutionEngine.h"
 #include "ComputationNetwork.h"
 #include "NDLUtil.h"
+#include "fileutil.h"   // for fexists()
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -399,6 +400,9 @@ public:
             case 3:
                 nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]));
                 break;
+            case 4:
+                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]));
+                break;
             default:
                 if (nodeParamCount > 0)
                     Error("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());
@@ -706,15 +710,13 @@ public:
 
     virtual ~SynchronousNodeEvaluator()
     {
-
     }
 
 private:
     ComputationNetwork<ElemType>& m_net;
     typedef ComputationNode<ElemType>* ComputationNodePtr;
+    void operator=(const SynchronousNodeEvaluator&);
 };
-template class SynchronousNodeEvaluator<float>; 
-template class SynchronousNodeEvaluator<double>;
 
 // SynchronousExecutionEngine
 // TODO JC Refactor eligible methods and members into abstract base class.
@@ -760,16 +762,15 @@ private:
     SynchronousNodeEvaluator<ElemType>* m_nodeEvaluator;
 protected:
     // Copy constructor, should never be called.
-    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom) 
-    {            
+    SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
+    {         
         throw std::logic_error("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
     } 
 
     // Assignment operator, should never be called.
-    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom) 
+    SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {            
         throw std::logic_error("'SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
-        return (*this);
     } 
 };
 
