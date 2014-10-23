@@ -5,6 +5,9 @@
 //
 // NetworkDescriptionLanguage.cpp : Code used to interpret the Network Description Language.
 //
+
+#define _CRT_SECURE_NO_WARNINGS    // needed to make VS accept standard ("unsafe") CRT string functions
+
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
 
