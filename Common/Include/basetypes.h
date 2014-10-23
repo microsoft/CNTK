@@ -68,6 +68,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 
 #include <stdio.h>
 #include <string.h>     // include here because we redefine some names later
+#include <errno.h>
 #include <string>
 #include <vector>
 #include <cmath>        // for HUGE_VAL
@@ -524,10 +525,10 @@ template<class _T> struct _strprintf : public std::basic_string<_T>
     }
 private:
     // helpers
-    inline size_t _cprintf (const wchar_t * format, va_list args) { return _vscwprintf (format, args); }
-    inline size_t _cprintf (const  char   * format, va_list args) { return _vscprintf  (format, args); }
-    inline const wchar_t * _sprintf (wchar_t * buf, size_t bufsiz, const wchar_t * format, va_list args) { vswprintf_s (buf, bufsiz, format, args); return buf; }
-    inline const  char   * _sprintf ( char   * buf, size_t bufsiz, const  char   * format, va_list args) { vsprintf_s  (buf, bufsiz, format, args); return buf; }
+    inline size_t _cprintf (const wchar_t * format, va_list args) { return vswprintf (nullptr, 0, format, args); }
+    inline size_t _cprintf (const  char   * format, va_list args) { return vsprintf  (nullptr, format, args); }
+    inline const wchar_t * _sprintf (wchar_t * buf, size_t bufsiz,  const wchar_t * format, va_list args) { vswprintf (buf, bufsiz, format, args); return buf; }
+    inline const  char   * _sprintf ( char   * buf, size_t /*bufsiz*/, const char * format, va_list args) { vsprintf  (buf, format, args); return buf; }
 };
 typedef strfun::_strprintf<char>    strprintf;  // char version
 typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
@@ -610,7 +611,8 @@ template<class _T> static inline std::basic_string<_T> join (const std::vector<s
 // parsing strings to numbers
 static inline int toint (const wchar_t * s)
 {
-    return _wtoi (s);   // ... TODO: check it
+    return (int)wcstol(s, 0, 10);
+    //return _wtoi (s);   // ... TODO: check it
 }
 static inline int toint (const char * s)
 {
@@ -909,15 +911,14 @@ using namespace msra::basetypes;    // for compatibility
 #pragma warning (pop)
 
 // Error - throw an error after formatting a message
-static inline void Error( char * format, ... )
+static inline void Error (char * format, ...)
 {
     va_list args;
-    char buffer[256];
+    char buffer[1024];
 
-    va_start( args, format );
-    vsprintf_s( buffer, format, args );
-    throw runtime_error(buffer);
+    va_start (args, format);
+    vsprintf (buffer, format, args);
+    throw runtime_error (buffer);
 };
-
 
 #endif    // _BASETYPES_
