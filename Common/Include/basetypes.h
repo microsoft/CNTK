@@ -89,6 +89,7 @@ using namespace std;
 #define strerror(x) "strerror error but can't report error number sorry!"
 #endif
 
+#if 0
 #ifndef __in // dummies for sal annotations if compiler does not support it
 #define __in
 #define __inout_z
@@ -104,6 +105,7 @@ using namespace std;
 
 #ifndef __override      // and some more non-std extensions required by Office
 #define __override virtual
+#endif
 #endif
 
 // disable warnings for which fixing would make code less readable
@@ -695,6 +697,10 @@ public:
 // ----------------------------------------------------------------------------
 // wrappers for some basic types (files, handles, timer)
 // ----------------------------------------------------------------------------
+
+#ifndef _MSC_VER    // add some functions that are VS-only
+static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return fopen(msra::strfun::wcstombs(path).c_str(), msra::strfun::utf8(mode).c_str()); }
+#endif
 
 namespace msra { namespace basetypes {
 

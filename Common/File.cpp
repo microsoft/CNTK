@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-#define _CRT_SECURE_NO_WARNINGS    // needed to make VS accept standard ("unsafe") CRT string functions
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include <string>
 #include "basetypes.h"

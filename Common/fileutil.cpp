@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-#define _CRT_SECURE_NO_WARNINGS    // needed to make VS accept standard ("unsafe") CRT string functions
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
@@ -26,6 +26,8 @@
 #include <fcntl.h>      // for _O_BINARY/TEXT - not needed for wince
 #include <io.h>         // for _setmode()
 #endif
+
+#define __out_z_cap(x)      // a fake SAL annotation; this may come in handy some day if we try static code analysis, so I don't want to delete it
 
 #include <errno.h>
 
