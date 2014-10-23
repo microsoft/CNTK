@@ -730,7 +730,7 @@ void UCIParser<double, std::string>::StoreLastLabel()
 }
 
 #ifdef STANDALONE
-int _tmain(int argc, _TCHAR* argv[])
+int wmain(int argc, wchar_t* argv[])
 {
     UCIParser<double, int> parser;
     std::vector<double> values;

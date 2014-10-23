@@ -563,7 +563,7 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int wmain(int argc, wchar_t* argv[])
 {
     try
     {

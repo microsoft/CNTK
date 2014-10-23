@@ -6,7 +6,7 @@
 // ConfigFile.cpp : Defines the configuration file loader.
 //
 
-#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#define _CRT_SECURE_NO_WARNINGS    // needed to make VS accept standard ("unsafe") CRT string functions
 
 #include "File.h"
 #include "commandArgUtil.h"
@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // argc - count of arguments
     // argv - array of argument parameters
     // config - config to return
-    std::string ConfigParameters::ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config)
+    std::string ConfigParameters::ParseCommandLine(int argc, wchar_t* argv[], ConfigParameters& config)
     {
         config.SetName(std::string("global"));
         

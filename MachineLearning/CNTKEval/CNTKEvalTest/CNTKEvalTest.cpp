@@ -60,7 +60,7 @@ void DoCommand(const ConfigParameters& configRoot)
     }
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int wmain(int argc, wchar_t* argv[])
 {
     try
     {

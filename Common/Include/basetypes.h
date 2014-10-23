@@ -71,7 +71,6 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <string>
 #include <vector>
 #include <cmath>        // for HUGE_VAL
-#include <tchar.h>
 #include <assert.h>
 using namespace std;
 #include <map>

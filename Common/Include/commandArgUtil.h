@@ -458,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // If this is not the case for a particular variable (stored in a class or something), you must call ClearParent() to disconnect it from it's parents before they are freed.
     // usage: This class is intended to be used as local variables where the "parent" parameters have lifetimes longer than the "child" parameters
     // for example:
-    // int _tmain(int argc, _TCHAR* argv[]) {
+    // int wmain(int argc, wchar_t* argv[]) {
     //    ConfigParameters config = ConfigParameters::ParseCommandLine(argc, argv);
     //    A(config);
     // }
@@ -812,7 +812,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return m_configName.substr(lastColon+1);
             return std::string();   // empty string
         }
-        static std::string ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config);
+        static std::string ParseCommandLine(int argc, wchar_t* argv[], ConfigParameters& config);
         // dump for debugging purposes
         void dump() const
         {
