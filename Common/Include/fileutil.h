@@ -238,6 +238,7 @@
 #include <cctype>
 #include <errno.h>
 #include <stdint.h>
+#include <assert.h>
 
 using namespace std;
 

@@ -374,6 +374,7 @@ namespace msra { namespace logging
 
     static inline std::string timeDateStamp (void)
     {
+#ifdef _MSC_VER
         __time64_t localtime; _time64 (&localtime);         // get current time and date
         struct tm now = *_localtime64 (&localtime);         // convert
         char buf[20];
@@ -381,6 +382,9 @@ namespace msra { namespace logging
                  now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
                  now.tm_hour, now.tm_min, now.tm_sec);
         return buf;
+#else
+        return "(now)"; // TODO: fix this for GCC builds
+#endif
     }
 
     // ------------------------------------------------------------------------
