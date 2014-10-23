@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <stdint.h>
 #include "fileutil.h"   // for f{ge,pu}t{,Text}()
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
@@ -83,8 +84,8 @@ public:
     File(const wchar_t* filename, int fileOptions);
     ~File(void);
 
-    unsigned _int64 GetPosition();
-    void SetPosition(unsigned _int64 pos);
+    uint64_t GetPosition();
+    void SetPosition(uint64_t pos);
     void goToDelimiter(int delim);
 
     bool IsTextBased();

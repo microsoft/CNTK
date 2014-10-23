@@ -6,12 +6,13 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include <string>
 #include "basetypes.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
 #include "fileutil.h"
 #include "message.h"
 #include "File.h"
+#include <string>
+#include <stdint.h>
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
@@ -263,12 +264,12 @@ void File::WriteString(const char* str, int size)
     attempt([&]{
         if (size > 0)
         {
-            fwprintf_s(m_file, L" %.*hs", size, str);
+            fwprintf(m_file, L" %.*hs", size, str);
         }
         else
         {
             if (IsTextBased())
-                fwprintf_s(m_file, L" %hs", str);
+                fwprintf(m_file, L" %hs", str);
             else
                 fputstring (m_file, str);
         }
@@ -315,12 +316,12 @@ void File::WriteString(const wchar_t* str, int size)
 #endif
         if (size > 0)
         {
-            fwprintf_s(m_file, L" %.*ls", size, str);
+            fwprintf(m_file, L" %.*ls", size, str);
         }
         else
         {
             if (IsTextBased())
-                fwprintf_s(m_file, L" %ls", str);
+                fwprintf(m_file, L" %ls", str);
             else
                 fputstring (m_file, str);
         }
@@ -346,7 +347,7 @@ void File::ReadString(wchar_t* str, int size)
 bool File::IsUnicodeBOM(bool skip)
 {
     File& file = *this;
-    unsigned __int64 pos = GetPosition();
+    uint64_t pos = GetPosition();
     // if we aren't at the beginning of the file, it can't be the byte order mark
     if (pos != 0)
         return false;
@@ -615,14 +616,14 @@ bool File::TryGetMarker(FileMarker marker, const std::string& section)
 }
 
 // GetPosition - Get position in a file
-unsigned _int64 File::GetPosition()
+uint64_t File::GetPosition()
 {
     return fgetpos(m_file);
 }
 
 // Set the position in the file
 // pos - position in the file
-void File::SetPosition(unsigned _int64 pos)
+void File::SetPosition(uint64_t pos)
 {
     fsetpos (m_file, pos);
 }

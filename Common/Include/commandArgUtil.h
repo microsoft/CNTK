@@ -9,6 +9,7 @@
 #include <string>
 #include <map>
 #include <stdexcept>
+#include <stdint.h>
 
 using namespace std;
 
@@ -155,26 +156,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::runtime_error ("ConfigValue (unsigned int): integer argument expected");
             return ival;
         }
-        operator __int64 () const
+        operator int64_t () const
         {
             char * ep;          // will be set to point to first character that failed parsing
-            __int64 value = _strtoui64 (c_str(), &ep, 10);
+            int64_t value = _strtoui64 (c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (__int64): invalid input string");
+                throw std::runtime_error ("ConfigValue (int64_t): invalid input string");
             return value;
         }
-        operator unsigned __int64 () const
+        operator uint64_t () const
         {
             char * ep;          // will be set to point to first character that failed parsing
-            unsigned __int64 value = _strtoui64 (c_str(), &ep, 10);
+            uint64_t value = _strtoui64 (c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (unsigned __int64): invalid input string");
+                throw std::runtime_error ("ConfigValue (uint64_t): invalid input string");
             return value;
         }
-        // size_t is the same as unsigned __int64()
+        // size_t is the same as uint64_t()
         //operator size_t () const
         //{
-        //    unsigned __int64 val = (unsigned __int64) *this;
+        //    uint64_t val = (uint64_t) *this;
         //    size_t ival = (size_t) val;
         //    if (val != ival)
         //        throw std::runtime_error ("ConfigValue (size_t): integer argument expected");
