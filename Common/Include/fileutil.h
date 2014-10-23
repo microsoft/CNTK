@@ -502,6 +502,7 @@ float fgetfloat_ascii (FILE * f);
 
 double fgetdouble (FILE * f);
 
+#if 0   // TODO: remove these in CNTK
 // ----------------------------------------------------------------------------
 // fgetwav(): read an entire .wav file
 // ----------------------------------------------------------------------------
@@ -515,6 +516,7 @@ void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate);
 
 void fputwav (FILE * f, const vector<short> & wav, int sampleRate, int nChannels = 1); 
 void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int nChannels = 1); 
+#endif
 
 // ----------------------------------------------------------------------------
 // fputbyte(): write a byte value

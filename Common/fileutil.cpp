@@ -19,6 +19,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <assert.h>
 #include "Windows.h"    // for FILETIME
 #include <algorithm>    // for std::find
 
@@ -70,7 +71,7 @@ void fgetText(FILE * f, char& v)
         ERROR ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
         ERROR ("error reading from file: %s", strerror (errno));
-    ASSERT(rc == 1);
+    assert(rc == 1);
 }
 void fgetText(FILE * f, wchar_t& v)
 {
@@ -80,7 +81,7 @@ void fgetText(FILE * f, wchar_t& v)
         ERROR ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
         ERROR ("error reading from file: %s", strerror (errno));
-    ASSERT(rc == 1);
+    assert(rc == 1);
 }
 
 // ----------------------------------------------------------------------------
@@ -370,7 +371,8 @@ uint64_t fgetpos (FILE * f)
 
 void fsetpos (FILE * f, uint64_t reqpos)
 {
-    // ::fsetpos() flushes the read buffer. This conflicts with a situation where
+#ifdef _MSC_VER
+    // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
 
@@ -392,6 +394,7 @@ void fsetpos (FILE * f, uint64_t reqpos)
         if (curpos != fgetpos (f) || curpos + f->_cnt != cureob)
             break;                              // oops
     }
+#endif
 
     // actually perform the seek
     fpos_t post = reqpos;
@@ -490,7 +493,8 @@ bool funicode (FILE * f)
 // Returns 'buf' (always). buf guaranteed to be 0-terminated.
 // ----------------------------------------------------------------------------
 
-static inline wchar_t * fgets (wchar_t * buf, int n, FILE * f) { return fgetws (buf, n, f); }
+// TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+static inline wchar_t * fgets(wchar_t * buf, int n, FILE * f) { return fgetws(buf, n, f); }
 static inline string _utf8 (const string & s) { return s; }
 static inline string _utf8 (const wstring & s) { return msra::strfun::utf8 (s); }
 static inline size_t strnlen (wchar_t * s, size_t n) { return wcsnlen (s, n); }
@@ -502,7 +506,8 @@ static inline size_t strnlen (const char *s, size_t n) { return std::find (s,s+n
 template<class CHAR>
 CHAR * fgetline (FILE * f, CHAR * buf, int size)
 {
-    CHAR * p = fgets (buf, size, f);
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    CHAR * p = fgets(buf, size, f);
     if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
@@ -639,17 +644,17 @@ const char * fgetstring (FILE * f, __out_z_cap(size) char * buf, int size)
     int i;
     for (i = 0; ; i++)
     {
-    int c = fgetc (f);
-    if (c == EOF)
-        ERROR ("error reading string or missing 0: %s", strerror (errno));
-    if (c == 0) break;
-    if (i >= size -1)
-    {
-        ERROR ("input line too long (max. %d characters allowed)", size -1);
+        int c = fgetc(f);
+        if (c == EOF)
+            ERROR("error reading string or missing 0: %s", strerror(errno));
+        if (c == 0) break;
+        if (i >= size - 1)
+        {
+            ERROR("input line too long (max. %d characters allowed)", size - 1);
+        }
+        buf[i] = (char)c;
     }
-    buf[i] = (char) c;
-    }
-    ASSERT (i < size);
+    assert (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -668,7 +673,7 @@ const char * fgetstring (const HANDLE f, __out_z_cap(size) char * buf, int size)
         }
         buf[i] = (char) c;
     }
-    ASSERT (i < size);
+    assert (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -694,17 +699,18 @@ const wchar_t * fgetstring (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
     int i;
     for (i = 0; ; i++)
     {
-    wint_t c = fgetwc (f);
-    if (c == WEOF)
-            ERROR ("error reading string or missing 0: %s", strerror (errno));
-    if (c == 0) break;
-    if (i >= size -1)
-    {
-        ERROR ("input line too long (max. %d wchar_tacters allowed)", size -1);
+        // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+        wint_t c = fgetwc(f);
+        if (c == WEOF)
+            ERROR("error reading string or missing 0: %s", strerror(errno));
+        if (c == 0) break;
+        if (i >= size - 1)
+        {
+            ERROR("input line too long (max. %d wchar_tacters allowed)", size - 1);
+        }
+        buf[i] = (wchar_t)c;
     }
-    buf[i] = (wchar_t) c;
-    }
-    ASSERT (i < size);
+    assert(i < size);
     buf[i] = 0;
     return buf;
 }
@@ -713,6 +719,7 @@ const wchar_t * fgetstring (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
 // read a 0-terminated wstring
 wstring fgetwstring (FILE * f)
 {
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     wstring res;
     for (;;)
     {
@@ -741,14 +748,15 @@ wstring fgetwstring (FILE * f)
 // read a 0-terminated wstring
 wstring fgetwstring (FILE * f)
 {
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     wstring res;
     for (;;)
     {
-    wint_t c = fgetwc (f);
-    if (c == WEOF)
-            ERROR ("error reading string or missing 0: %s", strerror (errno));
-    if (c == 0) break;
-        res.push_back ((wchar_t) c);
+        wint_t c = fgetwc(f);
+        if (c == WEOF)
+            ERROR("error reading string or missing 0: %s", strerror(errno));
+        if (c == 0) break;
+        res.push_back((wchar_t)c);
     }
     return res;
 }
@@ -761,25 +769,26 @@ bool fskipspace (FILE * f)
     {
         int c = fgetc (f);
         if (c == EOF)       // hit the end
-            {
-                if (ferror (f))
-                    ERROR ("error reading from file: %s", strerror (errno));
-                break;
-            }
+        {
+            if (ferror(f))
+                ERROR("error reading from file: %s", strerror(errno));
+            break;
+        }
         if (!isspace (c))    // end of space: undo getting that character
-            {
-                int rc = ungetc (c, f);
-                if (rc != c)
-                    ERROR ("error in ungetc(): %s", strerror (errno));
-                break;          
-            }
+        {
+            int rc = ungetc(c, f);
+            if (rc != c)
+                ERROR("error in ungetc(): %s", strerror(errno));
+            break;
+        }
     }
     return count>0;
 }
 
 bool fskipwspace (FILE * f)
 {
-    int count=0;
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    int count = 0;
     for (;;count++)
     {
         wint_t c = fgetwc (f);
@@ -840,6 +849,7 @@ int fskipNewline (FILE * f, bool skip)
 // skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
 int fskipwNewline (FILE * f, bool skip)
 {
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     wint_t c;
     bool found = false;
     // skip white space
@@ -893,7 +903,7 @@ const char * fgettoken (FILE * f, __out_z_cap(size) char * buf, int size)
         if (rc != c)
             ERROR ("error in ungetc(): %s", strerror (errno)); 
     }
-    ASSERT (i < size);
+    assert (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -907,7 +917,8 @@ string fgettoken (FILE * f)
 // read a space-terminated token
 const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
 {
-    fskipwspace (f);                         // skip leading space
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    fskipwspace(f);                         // skip leading space
     wint_t c = WEOF;
     int i;
     for (i = 0; ; i++)
@@ -926,7 +937,7 @@ const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
         if (rc != c)
             ERROR ("error in ungetwc(): %s", strerror (errno));
     }
-    ASSERT (i < size);
+    assert (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -934,7 +945,7 @@ const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
 wstring fgetwtoken (FILE * f)
 {
     wchar_t buf[80];
-    return fgettoken(f, buf, sizeof(buf)/sizeof(*buf));
+    return fgettoken(f, buf, sizeof(buf) / sizeof(*buf));
 }
 
 // ----------------------------------------------------------------------------
@@ -958,7 +969,8 @@ void fputstring (FILE * f, const std::string & str)
 
 void fputstring (FILE * f, const wchar_t * str)
 {
-    fwriteOrDie ((void *) str, sizeof (*str), wcsnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    fwriteOrDie((void *)str, sizeof (*str), wcsnlen(str, SIZE_MAX) + 1, f); // SECURITY NOTE: string use has been reviewed
 }
 
 void fputstring (FILE * f, const std::wstring & str)
@@ -1050,14 +1062,14 @@ void fcompareTag (const string & readTag, const string & expectedTag)
 void fputTag (FILE * f, const char * tag)
 {
     const int TAG_LEN = 4;
-    ASSERT (strnlen (tag, TAG_LEN + 1) == TAG_LEN);
+    assert (strnlen (tag, TAG_LEN + 1) == TAG_LEN);
     fwriteOrDie ((void *) tag, sizeof (*tag), strnlen (tag, TAG_LEN), f);
 }
 
 void fputTag(const HANDLE f, const char * tag)
 {
     const int TAG_LEN = 4;
-    ASSERT (strnlen (tag, TAG_LEN + 1) == TAG_LEN);
+    assert (strnlen (tag, TAG_LEN + 1) == TAG_LEN);
     fwriteOrDie ((void *) tag, sizeof (*tag), strnlen (tag, TAG_LEN), f);
 }
 
@@ -1070,7 +1082,7 @@ void fskipstring (FILE * f)
     char c;
     do
     {
-    freadOrDie (&c, sizeof (c), 1, f);
+        freadOrDie(&c, sizeof (c), 1, f);
     }
     while (c);
 }
@@ -1085,14 +1097,14 @@ void fpad (FILE * f, int n)
     int pos = ftell (f);
     if (pos == -1)
     {
-    ERROR ("error in ftell(): %s", strerror (errno));
+        ERROR ("error in ftell(): %s", strerror (errno));
     }
     // determine how many bytes are needed (at least 1 for the 0-terminator)
     // and create a dummy string of that length incl. terminator
     int len = n - (pos % n);
     const char dummyString[] = "MSR-Asia: JL+FS";
     size_t offset = sizeof(dummyString)/sizeof(dummyString[0]) - len;
-    ASSERT (offset >= 0);
+    assert (offset >= 0);
     fputstring (f, dummyString + offset);
 }
 // ----------------------------------------------------------------------------
@@ -1131,7 +1143,7 @@ short fgetshort_bigendian (FILE * f)
 int fgetint24 (FILE * f)
 {
     int v;
-    ASSERT (sizeof (v) == 4);
+    assert (sizeof (v) == 4);
     freadOrDie (&v, sizeof (v) -1, 1, f);   // only read 3 lower-order bytes
     v <<= 8;                                // shift up (upper 8 bits uninit'ed)
     v >>= 8;                                // shift down 8 bits with sign-extend
@@ -1227,7 +1239,7 @@ float fgetfloat_ascii (FILE * f)
     ERROR ("error reading float value from file (invalid format): %s");
     else if (rc == EOF)
     ERROR ("error reading from file: %s", strerror (errno));
-    ASSERT (rc == 1);
+    assert (rc == 1);
     return val;
 }
 
@@ -1242,6 +1254,7 @@ double fgetdouble (FILE * f)
     return v;
 }
 
+#if 0   // TODO: delete this for CNTK
 // ----------------------------------------------------------------------------
 // fgetwav(): read an entire .wav file
 // ----------------------------------------------------------------------------
@@ -1317,8 +1330,8 @@ void WAVEHEADER::write (FILE * f)
     fputint (f, nAvgBytesPerSec);
     fputshort (f, nBlockAlign);
     fputshort (f, wBitsPerSample);
-    ASSERT (FmtLength == 16);
-    ASSERT (wFormatTag == 1);
+    assert (FmtLength == 16);
+    assert (wFormatTag == 1);
     fputTag (f, "data");
     fputint (f, DataLength);
     fflushOrDie (f);
@@ -1499,7 +1512,7 @@ void fgetraw (FILE *f, std::vector< std::vector<short> > & data, const WAVEHEADE
     fgetwavraw (f, wavraw, wavhd);
     data.resize (wavhd.nChannels);
     int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
-    ASSERT (numSamples == (int) wavraw.size() / wavhd.nChannels);
+    assert (numSamples == (int) wavraw.size() / wavhd.nChannels);
 
     for (int i = 0; i < wavhd.nChannels; i++)
     {
@@ -1554,7 +1567,7 @@ void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples)
     unsigned int RiffLength = 36 + DataLength;
     unsigned int FmtLength  = 16; 
     // file header
-    ASSERT (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
+    assert (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
     fputTag (f, "RIFF");
     fputint (f, RiffLength);
     fputTag (f, "WAVE");
@@ -1601,6 +1614,7 @@ void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int
     fputwav (f, wav, sampleRate, nChannels);
     fflushOrDie (f);    // after this, fclose() (in destructor of f) cannot fail
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // fputbyte(): write a byte value
@@ -1626,7 +1640,7 @@ void fputshort (FILE * f, short v)
 
 void fputint24 (FILE * f, int v)
 {
-    ASSERT (sizeof (v) == 4);
+    assert (sizeof (v) == 4);
     fwriteOrDie (&v, sizeof (v) -1, 1, f);  // write low-order 3 bytes
 }
 
@@ -1782,8 +1796,7 @@ static size_t fgetfilechars (const std::wstring & path, vector<char> & buffer)
 
 template<class LINES> static void strtoklines (char * s, LINES & lines)
 {
-    char * context = nullptr;
-    for (char * p = strtok_s (s, "\r\n", &context); p; p = strtok_s (NULL, "\r\n", &context))
+    for (char * p = strtok (s, "\r\n"); p; p = strtok (NULL, "\r\n"))
         lines.push_back (p);
 }
 
@@ -1949,7 +1962,7 @@ void msra::files::make_intermediate_dirs (const wstring & filepath)
 {
     vector<wchar_t> buf;
     buf.resize (filepath.length() +1, 0);
-    wcscpy_s (&buf[0], buf.size(), filepath.c_str());
+    wcscpy (&buf[0], filepath.c_str());
     wstring subpath;
     int skip = 0;
     // if share (\\) then the first two levels (machine, share name) cannot be made
