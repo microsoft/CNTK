@@ -85,8 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 std::string filePaths = line.substr(includeKeywordSize, line.size() - includeKeywordSize);
                 if (filePaths.find(openBraceVar) != std::string::npos)
                 {
-                    Error("Variable usage (eg, \"$varName$\") not supported in \"include\" statements. " 
-                                              "Explicit path to config file must be provided");
+                    Error("Variable usage (eg, \"$varName$\") not supported in \"include\" statements. Explicit path to config file must be provided");
                 }
 
                 std::vector<std::string> filePathVec = msra::strfun::split (filePaths, "+");

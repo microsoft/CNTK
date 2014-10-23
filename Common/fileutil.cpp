@@ -33,39 +33,39 @@
 
 using namespace std;
 
-template <>             wchar_t* GetScanFormatString(char) {return L" %hc";}
-template <>          wchar_t* GetScanFormatString(wchar_t) {return L" %lc";}
-template <>            wchar_t* GetScanFormatString(short) {return L" %hi";}
-template <>              wchar_t* GetScanFormatString(int) {return L" %i";}
-template <>             wchar_t* GetScanFormatString(long) {return L" %li";}
-template <>   wchar_t* GetScanFormatString(unsigned short) {return L" %hu";}
-template <>     wchar_t* GetScanFormatString(unsigned int) {return L" %u";}
-template <>    wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
-template <>            wchar_t* GetScanFormatString(float) {return L" %g";}
-template <>           wchar_t* GetScanFormatString(double) {return L" %lg";}
-template <>           wchar_t* GetScanFormatString(size_t) {return L" %llu";}
-template <>        wchar_t* GetScanFormatString(long long) {return L" %lli";}
+template <>             const wchar_t* GetScanFormatString(char) {return L" %hc";}
+template <>          const wchar_t* GetScanFormatString(wchar_t) {return L" %lc";}
+template <>            const wchar_t* GetScanFormatString(short) {return L" %hi";}
+template <>              const wchar_t* GetScanFormatString(int) {return L" %i";}
+template <>             const wchar_t* GetScanFormatString(long) {return L" %li";}
+template <>   const wchar_t* GetScanFormatString(unsigned short) {return L" %hu";}
+template <>     const wchar_t* GetScanFormatString(unsigned int) {return L" %u";}
+template <>    const wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
+template <>            const wchar_t* GetScanFormatString(float) {return L" %g";}
+template <>           const wchar_t* GetScanFormatString(double) {return L" %lg";}
+template <>           const wchar_t* GetScanFormatString(size_t) {return L" %llu";}
+template <>        const wchar_t* GetScanFormatString(long long) {return L" %lli";}
 
-template <>             wchar_t* GetFormatString(char) {return L" %hc";}
-template <>          wchar_t* GetFormatString(wchar_t) {return L" %lc";}
-template <>            wchar_t* GetFormatString(short) {return L" %hi";}
-template <>              wchar_t* GetFormatString(int) {return L" %i";}
-template <>             wchar_t* GetFormatString(long) {return L" %li";}
-template <>   wchar_t* GetFormatString(unsigned short) {return L" %hu";}
-template <>     wchar_t* GetFormatString(unsigned int) {return L" %u";}
-template <>    wchar_t* GetFormatString(unsigned long) {return L" %lu";}
-template <>            wchar_t* GetFormatString(float) {return L" %.9g";}
-template <>           wchar_t* GetFormatString(double) {return L" %.17g";}
-template <>           wchar_t* GetFormatString(size_t) {return L" %llu";}
-template <>        wchar_t* GetFormatString(long long) {return L" %lli";}
+template <>             const wchar_t* GetFormatString(char) {return L" %hc";}
+template <>          const wchar_t* GetFormatString(wchar_t) {return L" %lc";}
+template <>            const wchar_t* GetFormatString(short) {return L" %hi";}
+template <>              const wchar_t* GetFormatString(int) {return L" %i";}
+template <>             const wchar_t* GetFormatString(long) {return L" %li";}
+template <>   const wchar_t* GetFormatString(unsigned short) {return L" %hu";}
+template <>     const wchar_t* GetFormatString(unsigned int) {return L" %u";}
+template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
+template <>            const wchar_t* GetFormatString(float) {return L" %.9g";}
+template <>           const wchar_t* GetFormatString(double) {return L" %.17g";}
+template <>           const wchar_t* GetFormatString(size_t) {return L" %llu";}
+template <>        const wchar_t* GetFormatString(long long) {return L" %lli";}
 
 // ----------------------------------------------------------------------------
 // fgetText() specializations for fwscanf differences: get a value from a text file
 // ----------------------------------------------------------------------------
 void fgetText(FILE * f, char& v)
 {
-    wchar_t* formatString = GetFormatString(v);
-    int rc = fwscanf_s(f, formatString, &v, 1);
+    const wchar_t* formatString = GetFormatString(v);
+    int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
         ERROR ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
@@ -74,8 +74,8 @@ void fgetText(FILE * f, char& v)
 }
 void fgetText(FILE * f, wchar_t& v)
 {
-    wchar_t* formatString = GetFormatString(v);
-    int rc = fwscanf_s(f, formatString, &v, 1);
+    const wchar_t* formatString = GetFormatString(v);
+    int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
         ERROR ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
@@ -168,7 +168,7 @@ void freadOrDie (void * ptr, size_t size, size_t count, FILE * f)
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min (count, 15*1024*1024);  // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
+        size_t chunkn = min (count, (size_t)15*1024*1024);  // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
         size_t n = fread (ptr, size, chunkn, f);
         if (n != chunkn)
             ERROR ("error reading from file: %s", strerror (errno));
@@ -182,8 +182,8 @@ void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f)
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min (count * size, 15*1024*1024);  
-        DWORD n ;
+        size_t chunkn = min(count * size, (size_t)15 * 1024 * 1024);
+        DWORD n;
         ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
         if (n != chunkn)
             ERROR ("error number for reading from file: %s", GetLastError());

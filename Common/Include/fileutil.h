@@ -593,7 +593,7 @@ long fget(const HANDLE f)
 
 // GetFormatString - get the format string for a particular type
 template <typename T>
-wchar_t* GetFormatString(T /*t*/)
+const wchar_t* GetFormatString(T /*t*/)
 {
     // if this _ASSERT goes off it means that you are using a type that doesn't have
     // a read and/or write routine. 
@@ -613,22 +613,22 @@ wchar_t* GetFormatString(T /*t*/)
 }
 
 // GetFormatString - specalizations to get the format string for a particular type
-template <>             wchar_t* GetFormatString(char);
-template <>          wchar_t* GetFormatString(wchar_t);
-template <>            wchar_t* GetFormatString(short);
-template <>              wchar_t* GetFormatString(int);
-template <>             wchar_t* GetFormatString(long);
-template <>   wchar_t* GetFormatString(unsigned short);
-template <>     wchar_t* GetFormatString(unsigned int);
-template <>    wchar_t* GetFormatString(unsigned long);
-template <>            wchar_t* GetFormatString(float);
-template <>           wchar_t* GetFormatString(double);
-template <>           wchar_t* GetFormatString(size_t);
-template <>        wchar_t* GetFormatString(long long);
+template <>             const wchar_t* GetFormatString(char);
+template <>          const wchar_t* GetFormatString(wchar_t);
+template <>            const wchar_t* GetFormatString(short);
+template <>              const wchar_t* GetFormatString(int);
+template <>             const wchar_t* GetFormatString(long);
+template <>   const wchar_t* GetFormatString(unsigned short);
+template <>     const wchar_t* GetFormatString(unsigned int);
+template <>    const wchar_t* GetFormatString(unsigned long);
+template <>            const wchar_t* GetFormatString(float);
+template <>           const wchar_t* GetFormatString(double);
+template <>           const wchar_t* GetFormatString(size_t);
+template <>        const wchar_t* GetFormatString(long long);
 
 // GetFormatString - get the format string for a particular type
 template <typename T>
-wchar_t* GetScanFormatString(T t)
+const wchar_t* GetScanFormatString(T t)
 {
     // if this _ASSERT goes off it means that you are using a type that doesn't have
     // a read and/or write routine. 
@@ -648,18 +648,18 @@ wchar_t* GetScanFormatString(T t)
 }
 
 // GetFormatString - specalizations to get the format string for a particular type
-template <>             wchar_t* GetScanFormatString(char);
-template <>          wchar_t* GetScanFormatString(wchar_t);
-template <>            wchar_t* GetScanFormatString(short);
-template <>              wchar_t* GetScanFormatString(int);
-template <>             wchar_t* GetScanFormatString(long);
-template <>   wchar_t* GetScanFormatString(unsigned short);
-template <>     wchar_t* GetScanFormatString(unsigned int);
-template <>    wchar_t* GetScanFormatString(unsigned long);
-template <>            wchar_t* GetScanFormatString(float);
-template <>           wchar_t* GetScanFormatString(double);
-template <>           wchar_t* GetScanFormatString(size_t);
-template <>        wchar_t* GetScanFormatString(long long);
+template <>             const wchar_t* GetScanFormatString(char);
+template <>          const wchar_t* GetScanFormatString(wchar_t);
+template <>            const wchar_t* GetScanFormatString(short);
+template <>              const wchar_t* GetScanFormatString(int);
+template <>             const wchar_t* GetScanFormatString(long);
+template <>   const wchar_t* GetScanFormatString(unsigned short);
+template <>     const wchar_t* GetScanFormatString(unsigned int);
+template <>    const wchar_t* GetScanFormatString(unsigned long);
+template <>            const wchar_t* GetScanFormatString(float);
+template <>           const wchar_t* GetScanFormatString(double);
+template <>           const wchar_t* GetScanFormatString(size_t);
+template <>        const wchar_t* GetScanFormatString(long long);
 
 
 // ----------------------------------------------------------------------------
@@ -680,7 +680,7 @@ void fgetText(FILE * f, T& v)
 template <typename T>
 int ftrygetText(FILE * f, T& v)
 {
-    wchar_t* formatString = GetScanFormatString<T>(v);
+    const wchar_t* formatString = GetScanFormatString<T>(v);
     int rc = fwscanf (f, formatString, &v);
     assert(rc == 1 || rc == 0);
     return rc;
@@ -700,7 +700,7 @@ void fgetText(FILE * f, wchar_t& v);
 template <typename T>
 void fputText(FILE * f, T v)
 {
-    wchar_t* formatString = GetFormatString(v);
+    const wchar_t* formatString = GetFormatString(v);
     int rc = fwprintf(f, formatString, v);
     if (rc == 0)
         throw std::runtime_error("error writing value to file, no values written");
