@@ -236,6 +236,7 @@
 #include <map>
 #include <functional>
 #include <cctype>
+#include <errno.h>
 
 using namespace std;
 

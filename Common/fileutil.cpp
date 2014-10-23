@@ -4,6 +4,7 @@
 // </copyright>
 //
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
@@ -55,6 +56,7 @@ template <>            wchar_t* GetFormatString(float) {return L" %.9g";}
 template <>           wchar_t* GetFormatString(double) {return L" %.17g";}
 template <>           wchar_t* GetFormatString(size_t) {return L" %llu";}
 template <>        wchar_t* GetFormatString(long long) {return L" %lli";}
+
 // ----------------------------------------------------------------------------
 // fgetText() specializations for fwscanf differences: get a value from a text file
 // ----------------------------------------------------------------------------
@@ -1842,6 +1844,7 @@ void setfiletime (const wstring & path, const FILETIME & time)
     }
 }
 
+#if 0
 // ----------------------------------------------------------------------------
 // expand_wildcards -- wildcard expansion of a path, including directories.
 // ----------------------------------------------------------------------------
@@ -1916,8 +1919,9 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 {
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
-        ERROR ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error (::GetLastError()).c_str());
+        ERROR("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error(::GetLastError()).c_str());
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // make_intermediate_dirs() -- make all intermediate dirs on a path
