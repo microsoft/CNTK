@@ -606,7 +606,7 @@ wchar_t* GetFormatString(T /*t*/)
     //
     // if you are using wchar_t* or char* types, these use other methods because they require buffers to be passed
     // either use std::string and std::wstring, or use the WriteString() and ReadString() methods
-    _ASSERT(false);  // need a specialization
+    assert(false);  // need a specialization
     return NULL;
 }
 
@@ -641,7 +641,7 @@ wchar_t* GetScanFormatString(T t)
     //
     // if you are using wchar_t* or char* types, these use other methods because they require buffers to be passed
     // either use std::string and std::wstring, or use the WriteString() and ReadString() methods
-    _ASSERT(false);  // need a specialization
+    assert(false);  // need a specialization
     return NULL;
 }
 
@@ -671,7 +671,7 @@ void fgetText(FILE * f, T& v)
         throw std::runtime_error("error reading value from file (invalid format)");
     else if (rc == EOF)
         throw std::runtime_error(std::string("error reading from file: ") + strerror(errno));
-    _ASSERT(rc == 1);
+    assert(rc == 1);
 }
 
 // version to try and get a string, and not throw exceptions if contents don't match
@@ -680,7 +680,7 @@ int ftrygetText(FILE * f, T& v)
 {
     wchar_t* formatString = GetScanFormatString<T>(v);
     int rc = fwscanf_s(f, formatString, &v);
-    _ASSERT(rc == 1 || rc == 0);
+    assert(rc == 1 || rc == 0);
     return rc;
 }
 
