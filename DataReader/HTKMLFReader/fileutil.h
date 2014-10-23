@@ -1,3 +1,5 @@
+// TODO: this is a dup; use the one in Include/ instead
+
 //
 // <copyright file="fileutil.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -12,6 +14,7 @@
 #include <stdio.h>
 #include <windows.h>    // for mmreg.h and FILETIME
 #include <mmreg.h>
+#include <stdint.h>
 using namespace std;
 
 #define SAFE_CLOSE(f) (((f) == NULL) || (fcloseOrDie ((f)), (f) = NULL))
@@ -95,7 +98,7 @@ void fflushOrDie (FILE * f);
 
 size_t filesize (const wchar_t * pathname);
 size_t filesize (FILE * f);
-__int64 filesize64 (const wchar_t * pathname);
+int64_t filesize64 (const wchar_t * pathname);
 
 // ----------------------------------------------------------------------------
 // fseekOrDie(),ftellOrDie(), fget/setpos(): seek functions with error handling
@@ -104,8 +107,8 @@ __int64 filesize64 (const wchar_t * pathname);
 // 32-bit offsets only
 long fseekOrDie (FILE * f, long offset, int mode = SEEK_SET);
 #define ftellOrDie ftell
-unsigned __int64 fgetpos (FILE * f);
-void fsetpos (FILE * f, unsigned __int64 pos);
+uint64_t fgetpos (FILE * f);
+void fsetpos (FILE * f, uint64_t pos);
 
 // ----------------------------------------------------------------------------
 // unlinkOrDie(): unlink() with error handling

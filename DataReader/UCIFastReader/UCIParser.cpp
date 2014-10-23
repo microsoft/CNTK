@@ -9,6 +9,7 @@
 #include "stdafx.h"
 #include "UCIParser.h"
 #include <stdexcept>
+#include <stdint.h>
 
 
 // SetState for a particular value
@@ -374,9 +375,9 @@ void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeat
 // GetFilePosition - Get the current file position in the text file
 // returns current position in the file
 template <typename NumType, typename LabelType>
-_int64 UCIParser<NumType, LabelType>::GetFilePosition()
+int64_t UCIParser<NumType, LabelType>::GetFilePosition()
 {
-    _int64 position = _ftelli64(m_pFile);
+    int64_t position = _ftelli64(m_pFile);
     if (position == -1L)
         throw new std::runtime_error("UCIParser::GetFilePosition - error retrieving file position in file");
     return position;
@@ -387,7 +388,7 @@ _int64 UCIParser<NumType, LabelType>::GetFilePosition()
 // it is recommneded that only return values from GetFilePosition() known to be the start of a line
 // and zero be passed to this function
 template <typename NumType, typename LabelType>
-void UCIParser<NumType, LabelType>::SetFilePosition(_int64 position)
+void UCIParser<NumType, LabelType>::SetFilePosition(int64_t position)
 {
     int rc = _fseeki64(m_pFile, position, SEEK_SET);
     if (rc)

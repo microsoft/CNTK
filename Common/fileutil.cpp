@@ -12,14 +12,14 @@
 #endif
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #endif
-#include <Windows.h>
 #include "basetypes.h"
 #include "fileutil.h"
 #include "message.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "windows.h"    // for FILETIME
+#include <stdint.h>
+#include "Windows.h"    // for FILETIME
 #include <algorithm>    // for std::find
 
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
@@ -330,7 +330,7 @@ size_t filesize (const wchar_t * pathname)
 #ifndef UNDER_CE    // no 64-bit under winCE
 
 // filesize64(): determine size of the file in bytes (with pathname)
-__int64 filesize64 (const wchar_t * pathname)
+int64_t filesize64 (const wchar_t * pathname)
 {
     __stat64 fileinfo;
     if (_wstat64 (pathname,&fileinfo) == -1) 
@@ -359,7 +359,7 @@ size_t fseekOrDie (FILE * f, size_t offset, int mode)
     return curPos;
 }
 
-unsigned __int64 fgetpos (FILE * f)
+uint64_t fgetpos (FILE * f)
 {
     fpos_t post;
     int rc = ::fgetpos (f, &post);
@@ -368,14 +368,14 @@ unsigned __int64 fgetpos (FILE * f)
     return post;
 }
 
-void fsetpos (FILE * f, unsigned __int64 reqpos)
+void fsetpos (FILE * f, uint64_t reqpos)
 {
     // ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
 
-    unsigned __int64 curpos = fgetpos (f);
-    unsigned __int64 cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
+    uint64_t curpos = fgetpos (f);
+    uint64_t cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
     while (reqpos >= curpos && reqpos < cureob)
     {
         // if we made it then do not call fsetpos()
@@ -517,7 +517,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (n >= (size_t) size -1)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
-		unsigned __int64 filepos = fgetpos(f); // (for error message only)
+		uint64_t filepos = fgetpos(f); // (for error message only)
 		ERROR("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
                filepos, size -1, _utf8 (example).c_str());
     }

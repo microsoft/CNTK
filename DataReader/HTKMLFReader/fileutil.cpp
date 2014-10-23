@@ -280,7 +280,7 @@ size_t filesize (const wchar_t * pathname)
 #ifndef UNDER_CE    // no 64-bit under winCE
 
 // filesize64(): determine size of the file in bytes (with pathname)
-__int64 filesize64 (const wchar_t * pathname)
+int64_t filesize64 (const wchar_t * pathname)
 {
     __stat64 fileinfo;
     if (_wstat64 (pathname,&fileinfo) == -1) 
@@ -309,7 +309,7 @@ long fseekOrDie (FILE * f, long offset, int mode)
     return curPos;
 }
 
-unsigned __int64 fgetpos (FILE * f)
+uint64_t fgetpos (FILE * f)
 {
     fpos_t post;
     int rc = ::fgetpos (f, &post);
@@ -318,14 +318,14 @@ unsigned __int64 fgetpos (FILE * f)
     return post;
 }
 
-void fsetpos (FILE * f, unsigned __int64 reqpos)
+void fsetpos (FILE * f, uint64_t reqpos)
 {
     // ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
 
-    unsigned __int64 curpos = fgetpos (f);
-    unsigned __int64 cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
+    uint64_t curpos = fgetpos (f);
+    uint64_t cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
     while (reqpos >= curpos && reqpos < cureob)
     {
         // if we made it then do not call fsetpos()
@@ -453,7 +453,7 @@ template<class CHAR>
 CHAR * fgetline (FILE * f, CHAR * buf, int size)
 {
 
-    unsigned __int64 filepos = fgetpos (f); // (for error message only)
+    uint64_t filepos = fgetpos (f); // (for error message only)
     CHAR * p = fgets (buf, size, f);
     if (p == NULL)            // EOF reached: next time feof() = true
     {

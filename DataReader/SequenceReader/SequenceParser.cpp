@@ -10,6 +10,7 @@
 #include "basetypes.h"
 #include "SequenceParser.h"
 #include <stdexcept>
+#include <stdint.h>
 #include "fileutil.h"
 
 // SetState for a particular value
@@ -336,9 +337,9 @@ void SequenceParser<NumType, LabelType>::StoreLastLabel()
 // GetFilePosition - Get the current file position in the text file
 // returns current position in the file
 template <typename NumType, typename LabelType>
-_int64 SequenceParser<NumType, LabelType>::GetFilePosition()
+int64_t SequenceParser<NumType, LabelType>::GetFilePosition()
 {
-    _int64 position = _ftelli64(m_pFile);
+    int64_t position = _ftelli64(m_pFile);
     if (position == -1L)
         Error("SequenceParser::GetFilePosition - error retrieving file position in file");
     return position;
@@ -349,7 +350,7 @@ _int64 SequenceParser<NumType, LabelType>::GetFilePosition()
 // it is recommneded that only return values from GetFilePosition() known to be the start of a line
 // and zero be passed to this function
 template <typename NumType, typename LabelType>
-void SequenceParser<NumType, LabelType>::SetFilePosition(_int64 position)
+void SequenceParser<NumType, LabelType>::SetFilePosition(int64_t position)
 {
     int rc = _fseeki64(m_pFile, position, SEEK_SET);
     if (rc)

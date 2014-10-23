@@ -237,6 +237,7 @@
 #include <functional>
 #include <cctype>
 #include <errno.h>
+#include <stdint.h>
 
 using namespace std;
 
@@ -321,7 +322,7 @@ void fflushOrDie (FILE * f);
 
 size_t filesize (const wchar_t * pathname);
 size_t filesize (FILE * f);
-__int64 filesize64 (const wchar_t * pathname);
+int64_t filesize64 (const wchar_t * pathname);
 
 // ----------------------------------------------------------------------------
 // fseekOrDie(),ftellOrDie(), fget/setpos(): seek functions with error handling
@@ -329,8 +330,8 @@ __int64 filesize64 (const wchar_t * pathname);
 
 size_t fseekOrDie (FILE * f, size_t offset, int mode = SEEK_SET);
 #define ftellOrDie _ftelli64
-unsigned __int64 fgetpos (FILE * f);
-void fsetpos (FILE * f, unsigned __int64 pos);
+uint64_t fgetpos (FILE * f);
+void fsetpos (FILE * f, uint64_t pos);
 
 // ----------------------------------------------------------------------------
 // unlinkOrDie(): unlink() with error handling
@@ -679,7 +680,7 @@ template <typename T>
 int ftrygetText(FILE * f, T& v)
 {
     wchar_t* formatString = GetScanFormatString<T>(v);
-    int rc = fwscanf_s(f, formatString, &v);
+    int rc = fwscanf (f, formatString, &v);
     assert(rc == 1 || rc == 0);
     return rc;
 }
