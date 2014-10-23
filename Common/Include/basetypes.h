@@ -917,7 +917,7 @@ using namespace msra::basetypes;    // for compatibility
 #pragma warning (pop)
 
 // Error - throw an error after formatting a message
-static inline void Error (char * format, ...)
+static inline void Error (const char * format, ...)
 {
     va_list args;
     char buffer[1024];
