@@ -77,10 +77,6 @@ using namespace std;
 #include <map>
 #include <stdexcept>
 #include <windows.h>    // for CRITICAL_SECTION
-#pragma push_macro("STRSAFE_NO_DEPRECATE")
-#define STRSAFE_NO_DEPRECATE    // deprecation managed elsewhere, not by strsafe
-#include <strsafe.h>    // for strbcpy() etc templates
-#pragma pop_macro("STRSAFE_NO_DEPRECATE")
 
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
@@ -314,13 +310,13 @@ public:
 //  COM_function() || throw_hr ("message");
 //  while ((s->Read (p, n, &m) || throw_hr ("Read failure")) == S_OK) { ... }
 // is that cool or what?
-struct bad_hr : public std::exception
+struct bad_hr : public std::runtime_error
 {
     HRESULT hr;
-    bad_hr (HRESULT p_hr, const char * msg) : hr (p_hr), std::exception (msg) { }
+    bad_hr (HRESULT p_hr, const char * msg) : hr (p_hr), std::runtime_error (msg) { }
     // (only for use in || expression  --deprecated:)
-    bad_hr() : std::exception (NULL) { }
-    bad_hr (const char * msg) : std::exception (msg) { }
+    bad_hr() : std::runtime_error(NULL) { }
+    bad_hr(const char * msg) : std::runtime_error(msg) { }
 };
 struct throw_hr
 {
@@ -392,7 +388,7 @@ public:
 
 };};    // namespace
 
-#ifndef BASETYPES_NO_UNSAFECRTOVERLOAD // if on, no unsafe CRT overload functions
+#if 0 //ndef BASETYPES_NO_UNSAFECRTOVERLOAD // if on, no unsafe CRT overload functions
 
 // ----------------------------------------------------------------------------
 // overloads for "unsafe" CRT functions used in our code base
@@ -900,47 +896,6 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
 }
 
 };};    // namespace
-
-// ----------------------------------------------------------------------------
-// frequently missing Win32 functions
-// ----------------------------------------------------------------------------
-
-// strerror() for Win32 error codes
-static inline std::wstring FormatWin32Error (DWORD error)
-{
-    wchar_t buf[1024] = { 0 };
-    ::FormatMessageW (FORMAT_MESSAGE_FROM_SYSTEM, "", error, 0, buf, sizeof (buf)/sizeof (*buf) -1, NULL);
-    std::wstring res (buf);
-    // eliminate newlines (and spaces) from the end
-    size_t last = res.find_last_not_of (L" \t\r\n");
-    if (last != std::string::npos) res.erase (last +1, res.length());
-    return res;
-}
-
-// we always wanted this!
-#pragma warning (push)
-#pragma warning (disable: 6320) // Exception-filter expression is the constant EXCEPTION_EXECUTE_HANDLER
-#pragma warning (disable: 6322) // Empty _except block
-static inline void SetCurrentThreadName (const char* threadName)
-{   // from http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
-    ::Sleep(10);
-#pragma pack(push,8)
-   struct { DWORD dwType; LPCSTR szName; DWORD dwThreadID; DWORD dwFlags; } info = { 0x1000, threadName, (DWORD) -1, 0 };
-#pragma pack(pop)
-   __try { RaiseException (0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info); }
-   __except(EXCEPTION_EXECUTE_HANDLER) { }
-}
-#pragma warning (pop)
-
-// return a string as a CoTaskMemAlloc'ed memory object
-// Returns NULL if out of memory (we don't throw because we'd just catch it outside and convert to HRESULT anyway).
-//static inline LPWSTR CoTaskMemString (const wchar_t * s)
-//{
-//    size_t n = wcslen (s) + 1;  // number of chars to allocate and copy
-//    LPWSTR p = (LPWSTR) ::CoTaskMemAlloc (sizeof (*p) * n);
-//    if (p) for (size_t i = 0; i < n; i++) p[i] = s[i];
-//    return p;
-//}
 
 template<class S> static inline void ZeroStruct (S & s) { memset (&s, 0, sizeof (s)); }
 

@@ -581,7 +581,7 @@ namespace msra { namespace logging
 #pragma warning (disable : 4702)    // the 'return 0;' causes this in Release
     static int error (const char * fmt, ...)
     {
-#if 1   // special test code to determine the Windows error in case of a network error
+#if 0   // special test code to determine the Windows error in case of a network error
         DWORD winErr = GetLastError();
         try
         {
