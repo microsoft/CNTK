@@ -4,7 +4,8 @@
 // </copyright>
 //
 
-#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
@@ -15,6 +16,9 @@
 #include "basetypes.h"
 #include "fileutil.h"
 #include "message.h"
+#ifdef __unix__
+#include <unistd.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -103,12 +107,7 @@ template<class _T> FILE * fopenStdHandle (const _T * mode)
 {
     FILE * f = strchr (mode, 'r') ? stdin : stdout;
     if (strchr (mode, 'b') || strchr (mode, 't'))   // change binary mode
-    {
-        // switch to binary mode if not yet (in case it is stdin)
-        int rc = _setmode (_fileno (f), strchr (mode, 'b') ? _O_BINARY : _O_TEXT);
-        if (rc == -1)
-            ERROR ("error switching stream to binary mode: %s", strerror (errno));
-    }
+        fsetmode (f, strchr(mode, 'b') ? 'b' : 't');
     return f;
 }
 
@@ -146,19 +145,23 @@ FILE * fopenOrDie (const wstring & pathname, const wchar_t * mode)
 // set mode to binary or text (pass 'b' or 't')
 // ----------------------------------------------------------------------------
 
-void fsetmode (FILE * f, char type)
+#ifdef __unix__
+extern int fileno(FILE*);   // somehow got deprecated in C++11
+#endif
+
+void fsetmode(FILE * f, char type)
 {
     if (type != 'b' && type != 't')
     {
         ERROR ("fsetmode: invalid type '%c'");
     }
 #ifdef UNDER_CE // winCE and win32 have different return types for _fileno
-    FILE *fd = _fileno (f);   // note: no error check possible
+    FILE *fd = fileno (f);   // note: no error check possible
 #else
-    int fd = _fileno (f);   // note: no error check possible
+    int fd = fileno (f);   // note: no error check possible
 #endif
     int mode = type == 'b' ? _O_BINARY : _O_TEXT;
-    int rc = _setmode (fd, mode);
+    int rc = setmode (fd, mode);
     if (rc == -1)
     {
         ERROR ("error changing file mode: %s", strerror (errno));
@@ -373,9 +376,12 @@ void fsetpos (FILE * f, uint64_t reqpos)
 
 void unlinkOrDie (const std::string & pathname)
 {
-    if (_unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
+    if (unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
     ERROR ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
 }
+#ifndef _MSC_VER
+static int _wunlink (const wchar_t * p) { return unlink (msra::strfun::wcstombs (p).c_str()); }
+#endif
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
@@ -386,13 +392,11 @@ void unlinkOrDie (const std::wstring & pathname)
 // renameOrDie(): rename() with error handling
 // ----------------------------------------------------------------------------
 
-#ifndef UNDER_CE // CE only supports Unicode APIs
 void renameOrDie (const std::string & from, const std::string & to)
 {
     if (!MoveFileA (from.c_str(),to.c_str()))
     ERROR ("error renaming: %s", GetLastError());
 }
-#endif
 
 void renameOrDie (const std::wstring & from, const std::wstring & to)
 {
@@ -406,6 +410,7 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
 
 bool fexists (const wchar_t * pathname)
 {
+#ifdef _MSC_VER
     WIN32_FIND_DATAW findFileData;
     HANDLE hFind = FindFirstFileW (pathname, &findFileData);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -417,11 +422,15 @@ bool fexists (const wchar_t * pathname)
     {
         return false;
     }
+#else
+    auto_file_ptr f = _wfopen (pathname, L"r");
+    return f != nullptr;
+#endif
 }
 
-#ifndef UNDER_CE // CE only supports Unicode APIs
 bool fexists (const char * pathname)
 {
+#ifdef _MSC_VER
     WIN32_FIND_DATAA findFileData;
     HANDLE hFind = FindFirstFileA (pathname, &findFileData);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -433,8 +442,11 @@ bool fexists (const char * pathname)
     {
         return false;
     }
-}
+#else
+    auto_file_ptr f = fopen (pathname, "r");
+    return f != nullptr;
 #endif
+}
 
 // ----------------------------------------------------------------------------
 // funicode(): test if a file uses unicode by reading its BOM
@@ -1501,6 +1513,10 @@ static void mkdir (const wstring & path)
     ERROR ("make_intermediate_dirs: error creating intermediate directory %S", path.c_str());
 }
 
+#ifndef _MSC_VER
+wchar_t* wcstok_s(wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return wcstok (s, delim, ptr); }
+#endif
+
 // make subdir of a file including parents
 void msra::files::make_intermediate_dirs (const wstring & filepath)
 {
@@ -1516,7 +1532,8 @@ void msra::files::make_intermediate_dirs (const wstring & filepath)
         skip = 2;           // skip two levels (machine, share)
     }
     // make all constituents except the filename (to make a dir, include a trailing slash)
-    for (const wchar_t * p = wcstok (&buf[0], L"/\\"); p; p = wcstok (NULL, L"/\\"))
+    wchar_t * context = nullptr;
+    for (const wchar_t * p = wcstok_s (&buf[0], L"/\\", &context); p; p = wcstok_s (NULL, L"/\\", &context))
     {
         if (subpath != L"" && subpath != L"/" && subpath != L"\\" && skip == 0)
         {
