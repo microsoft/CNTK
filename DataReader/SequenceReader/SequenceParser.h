@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <fstream>
 #include <map>
+#include <stdint.h>
 
 using namespace std;
 
@@ -122,8 +123,8 @@ protected:
 
     // file positions/buffer
     FILE * m_pFile;
-    _int64 m_byteCounter;
-    _int64 m_fileSize;
+    int64_t m_byteCounter;
+    int64_t m_fileSize;
 
     BYTE * m_fileBuffer;
     size_t m_bufferStart;
@@ -445,8 +446,8 @@ public:
     }
 
 
-    _int64 GetFilePosition();
-    void SetFilePosition(_int64 position);
+    int64_t GetFilePosition();
+    void SetFilePosition(int64_t position);
 
     // HasMoreData - test if the current dataset have more data
     // returns - true if it does, false if not

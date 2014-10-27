@@ -282,7 +282,7 @@ void MandSTest(int count, int devId)
     delete[] data3;
 }
 
-int _tmain()
+int wmain()
 {
     ColumnSliceMultAndAddTest<float>(2048, 2048, 256, 0);
 

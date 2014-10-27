@@ -68,19 +68,15 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 
 #include <stdio.h>
 #include <string.h>     // include here because we redefine some names later
+#include <errno.h>
 #include <string>
 #include <vector>
 #include <cmath>        // for HUGE_VAL
-#include <tchar.h>
 #include <assert.h>
 using namespace std;
 #include <map>
 #include <stdexcept>
 #include <windows.h>    // for CRITICAL_SECTION
-#pragma push_macro("STRSAFE_NO_DEPRECATE")
-#define STRSAFE_NO_DEPRECATE    // deprecation managed elsewhere, not by strsafe
-#include <strsafe.h>    // for strbcpy() etc templates
-#pragma pop_macro("STRSAFE_NO_DEPRECATE")
 
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
@@ -93,6 +89,7 @@ using namespace std;
 #define strerror(x) "strerror error but can't report error number sorry!"
 #endif
 
+#if 0
 #ifndef __in // dummies for sal annotations if compiler does not support it
 #define __in
 #define __inout_z
@@ -108,6 +105,7 @@ using namespace std;
 
 #ifndef __override      // and some more non-std extensions required by Office
 #define __override virtual
+#endif
 #endif
 
 // disable warnings for which fixing would make code less readable
@@ -314,13 +312,13 @@ public:
 //  COM_function() || throw_hr ("message");
 //  while ((s->Read (p, n, &m) || throw_hr ("Read failure")) == S_OK) { ... }
 // is that cool or what?
-struct bad_hr : public std::exception
+struct bad_hr : public std::runtime_error
 {
     HRESULT hr;
-    bad_hr (HRESULT p_hr, const char * msg) : hr (p_hr), std::exception (msg) { }
+    bad_hr (HRESULT p_hr, const char * msg) : hr (p_hr), std::runtime_error (msg) { }
     // (only for use in || expression  --deprecated:)
-    bad_hr() : std::exception (NULL) { }
-    bad_hr (const char * msg) : std::exception (msg) { }
+    bad_hr() : std::runtime_error(NULL) { }
+    bad_hr(const char * msg) : std::runtime_error(msg) { }
 };
 struct throw_hr
 {
@@ -392,7 +390,7 @@ public:
 
 };};    // namespace
 
-#ifndef BASETYPES_NO_UNSAFECRTOVERLOAD // if on, no unsafe CRT overload functions
+#if 0 //ndef BASETYPES_NO_UNSAFECRTOVERLOAD // if on, no unsafe CRT overload functions
 
 // ----------------------------------------------------------------------------
 // overloads for "unsafe" CRT functions used in our code base
@@ -529,10 +527,10 @@ template<class _T> struct _strprintf : public std::basic_string<_T>
     }
 private:
     // helpers
-    inline size_t _cprintf (const wchar_t * format, va_list args) { return _vscwprintf (format, args); }
-    inline size_t _cprintf (const  char   * format, va_list args) { return _vscprintf  (format, args); }
-    inline const wchar_t * _sprintf (wchar_t * buf, size_t bufsiz, const wchar_t * format, va_list args) { vswprintf_s (buf, bufsiz, format, args); return buf; }
-    inline const  char   * _sprintf ( char   * buf, size_t bufsiz, const  char   * format, va_list args) { vsprintf_s  (buf, bufsiz, format, args); return buf; }
+    inline size_t _cprintf (const wchar_t * format, va_list args) { return vswprintf (nullptr, 0, format, args); }
+    inline size_t _cprintf (const  char   * format, va_list args) { return vsprintf  (nullptr, format, args); }
+    inline const wchar_t * _sprintf (wchar_t * buf, size_t bufsiz,  const wchar_t * format, va_list args) { vswprintf (buf, bufsiz, format, args); return buf; }
+    inline const  char   * _sprintf ( char   * buf, size_t /*bufsiz*/, const char * format, va_list args) { vsprintf  (buf, format, args); return buf; }
 };
 typedef strfun::_strprintf<char>    strprintf;  // char version
 typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
@@ -615,7 +613,8 @@ template<class _T> static inline std::basic_string<_T> join (const std::vector<s
 // parsing strings to numbers
 static inline int toint (const wchar_t * s)
 {
-    return _wtoi (s);   // ... TODO: check it
+    return (int)wcstol(s, 0, 10);
+    //return _wtoi (s);   // ... TODO: check it
 }
 static inline int toint (const char * s)
 {
@@ -698,6 +697,10 @@ public:
 // ----------------------------------------------------------------------------
 // wrappers for some basic types (files, handles, timer)
 // ----------------------------------------------------------------------------
+
+#ifndef _MSC_VER    // add some functions that are VS-only
+static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return fopen(msra::strfun::wcstombs(path).c_str(), msra::strfun::utf8(mode).c_str()); }
+#endif
 
 namespace msra { namespace basetypes {
 
@@ -901,47 +904,6 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
 
 };};    // namespace
 
-// ----------------------------------------------------------------------------
-// frequently missing Win32 functions
-// ----------------------------------------------------------------------------
-
-// strerror() for Win32 error codes
-static inline std::wstring FormatWin32Error (DWORD error)
-{
-    wchar_t buf[1024] = { 0 };
-    ::FormatMessageW (FORMAT_MESSAGE_FROM_SYSTEM, "", error, 0, buf, sizeof (buf)/sizeof (*buf) -1, NULL);
-    std::wstring res (buf);
-    // eliminate newlines (and spaces) from the end
-    size_t last = res.find_last_not_of (L" \t\r\n");
-    if (last != std::string::npos) res.erase (last +1, res.length());
-    return res;
-}
-
-// we always wanted this!
-#pragma warning (push)
-#pragma warning (disable: 6320) // Exception-filter expression is the constant EXCEPTION_EXECUTE_HANDLER
-#pragma warning (disable: 6322) // Empty _except block
-static inline void SetCurrentThreadName (const char* threadName)
-{   // from http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
-    ::Sleep(10);
-#pragma pack(push,8)
-   struct { DWORD dwType; LPCSTR szName; DWORD dwThreadID; DWORD dwFlags; } info = { 0x1000, threadName, (DWORD) -1, 0 };
-#pragma pack(pop)
-   __try { RaiseException (0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info); }
-   __except(EXCEPTION_EXECUTE_HANDLER) { }
-}
-#pragma warning (pop)
-
-// return a string as a CoTaskMemAlloc'ed memory object
-// Returns NULL if out of memory (we don't throw because we'd just catch it outside and convert to HRESULT anyway).
-//static inline LPWSTR CoTaskMemString (const wchar_t * s)
-//{
-//    size_t n = wcslen (s) + 1;  // number of chars to allocate and copy
-//    LPWSTR p = (LPWSTR) ::CoTaskMemAlloc (sizeof (*p) * n);
-//    if (p) for (size_t i = 0; i < n; i++) p[i] = s[i];
-//    return p;
-//}
-
 template<class S> static inline void ZeroStruct (S & s) { memset (&s, 0, sizeof (s)); }
 
 // ----------------------------------------------------------------------------
@@ -955,15 +917,14 @@ using namespace msra::basetypes;    // for compatibility
 #pragma warning (pop)
 
 // Error - throw an error after formatting a message
-static inline void Error( char * format, ... )
+static inline void Error (const char * format, ...)
 {
     va_list args;
-    char buffer[256];
+    char buffer[1024];
 
-    va_start( args, format );
-    vsprintf_s( buffer, format, args );
-    throw runtime_error(buffer);
+    va_start (args, format);
+    vsprintf (buffer, format, args);
+    throw runtime_error (buffer);
 };
-
 
 #endif    // _BASETYPES_
