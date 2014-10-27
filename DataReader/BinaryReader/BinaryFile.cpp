@@ -10,6 +10,7 @@
 #include "DataReader.h"
 #include "BinaryReader.h"
 #include <limits.h>
+#include <stdint.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -297,11 +298,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto viewPos = FindDataView(data);
         if (viewPos != m_views.end())
         {
-            _int64 offset = (byte*)data-(byte*)viewPos->view;
-            _int64 dataEnd = offset + size;
+            int64_t offset = (byte*)data-(byte*)viewPos->view;
+            int64_t dataEnd = offset + size;
 
             // if our end of data is beyond the size of the view, need to reallocate
-            if (dataEnd > (_int64)viewPos->size)
+            if (dataEnd > (int64_t)viewPos->size)
             {
                 // TODO: this view change only accomidates this request
                 size_t filePosition = viewPos->filePosition;
@@ -649,7 +650,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 continue;
             if (section->m_mappingType == mappingParent)
             {
-                __int64 offset = section->m_filePosition - filePosition;
+                int64_t offset = section->m_filePosition - filePosition;
                 if (offset < 0)
                     throw runtime_error("RemapHeader:Invalid mapping, children must follow parent in mapping space");
 
@@ -696,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Element Window is mapped separately so won't no need to remap
             if (m_mappingType !=  mappingElementWindow)
             {
-                _int64 offset = (byte*)view-(byte*)dataStart;
+                int64_t offset = (byte*)view-(byte*)dataStart;
                 m_sectionHeader = (SectionHeader*)((char*)m_sectionHeader+offset);
                 m_elementBuffer = (char*)m_sectionHeader + m_sectionHeader->sizeHeader;
                 RemapHeader(m_sectionHeader, m_filePosition);

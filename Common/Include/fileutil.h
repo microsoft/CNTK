@@ -236,6 +236,9 @@
 #include <map>
 #include <functional>
 #include <cctype>
+#include <errno.h>
+#include <stdint.h>
+#include <assert.h>
 
 using namespace std;
 
@@ -262,7 +265,6 @@ void fsetmode (FILE * f, char type);
 // ----------------------------------------------------------------------------
 
 void freadOrDie (void * ptr, size_t size, size_t count, FILE * f);
-void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f);
 
 template<class _T>
 void freadOrDie (_T & data, int num, FILE * f)    // template for vector<>
@@ -271,27 +273,15 @@ template<class _T>
 void freadOrDie (_T & data, size_t num, FILE * f)    // template for vector<>
 { data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
 
-template<class _T>
-void freadOrDie (_T & data, int num, const HANDLE f)    // template for vector<>
-{ data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
-template<class _T>
-void freadOrDie (_T & data, size_t num, const HANDLE f)    // template for vector<>
-{ data.resize (num); if (data.size() > 0) freadOrDie (&data[0], sizeof (data[0]), data.size(), f); }
-
 
 // ----------------------------------------------------------------------------
 // fwriteOrDie(): like fwrite() but terminate with err msg in case of error
 // ----------------------------------------------------------------------------
 
 void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f);
-void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f);
 
 template<class _T>
 void fwriteOrDie (const _T & data, FILE * f)    // template for vector<>
-{ if (data.size() > 0) fwriteOrDie (&data[0], sizeof (data[0]), data.size(), f); }
-
-template<class _T>
-void fwriteOrDie (const _T & data, const HANDLE f)    // template for vector<>
 { if (data.size() > 0) fwriteOrDie (&data[0], sizeof (data[0]), data.size(), f); }
 
 
@@ -320,7 +310,7 @@ void fflushOrDie (FILE * f);
 
 size_t filesize (const wchar_t * pathname);
 size_t filesize (FILE * f);
-__int64 filesize64 (const wchar_t * pathname);
+int64_t filesize64 (const wchar_t * pathname);
 
 // ----------------------------------------------------------------------------
 // fseekOrDie(),ftellOrDie(), fget/setpos(): seek functions with error handling
@@ -328,8 +318,8 @@ __int64 filesize64 (const wchar_t * pathname);
 
 size_t fseekOrDie (FILE * f, size_t offset, int mode = SEEK_SET);
 #define ftellOrDie _ftelli64
-unsigned __int64 fgetpos (FILE * f);
-void fsetpos (FILE * f, unsigned __int64 pos);
+uint64_t fgetpos (FILE * f);
+void fsetpos (FILE * f, uint64_t pos);
 
 // ----------------------------------------------------------------------------
 // unlinkOrDie(): unlink() with error handling
@@ -387,8 +377,6 @@ void fgetline (FILE * f, std::vector<wchar_t> & buf);
 
 const char * fgetstring (FILE * f, char * buf, int size);
 template<size_t n> const char * fgetstring (FILE * f, char (& buf)[n]) { return fgetstring (f, buf, n); }
-const char * fgetstring (const HANDLE f, char * buf, int size);
-template<size_t n> const char * fgetstring (const HANDLE f, char (& buf)[n]) { return fgetstring (f, buf, n); }
 const wchar_t * fgetstring (FILE * f, wchar_t * buf, int size);
 wstring fgetwstring (FILE * f);
 string fgetstring (FILE * f);
@@ -407,7 +395,6 @@ int fskipwNewline (FILE * f, bool skip = true);
 // ----------------------------------------------------------------------------
 
 void fputstring (FILE * f, const char *);
-void fputstring (const HANDLE f, const char * str);
 void fputstring (FILE * f, const std::string &);
 void fputstring (FILE * f, const wchar_t *);
 void fputstring (FILE * f, const std::wstring &);
@@ -423,7 +410,6 @@ string fgetTag (FILE * f);
 // ----------------------------------------------------------------------------
 
 void fcheckTag (FILE * f, const char * expectedTag);
-void fcheckTag (const HANDLE f, const char * expectedTag);
 void fcheckTag_ascii (FILE * f, const string & expectedTag);
 
 // ----------------------------------------------------------------------------
@@ -437,7 +423,6 @@ void fcompareTag (const string & readTag, const string & expectedTag);
 // ----------------------------------------------------------------------------
 
 void fputTag (FILE * f, const char * tag);
-void fputTag(const HANDLE f, const char * tag);
 
 // ----------------------------------------------------------------------------
 // fskipstring(): skip a 0-terminated string, such as a pad string
@@ -475,7 +460,6 @@ int fgetint24 (FILE * f);
 // ----------------------------------------------------------------------------
 
 int fgetint (FILE * f);
-int fgetint (const HANDLE f);
 int fgetint_bigendian (FILE * f);
 int fgetint_ascii (FILE * f);
 
@@ -483,7 +467,6 @@ int fgetint_ascii (FILE * f);
 // fgetlong(): read an long value
 // ----------------------------------------------------------------------------
 long fgetlong (FILE * f);
-long fgetlong (const HANDLE f);
 
 // ----------------------------------------------------------------------------
 // fgetfloat(): read a float value
@@ -498,20 +481,6 @@ float fgetfloat_ascii (FILE * f);
 // ----------------------------------------------------------------------------
 
 double fgetdouble (FILE * f);
-
-// ----------------------------------------------------------------------------
-// fgetwav(): read an entire .wav file
-// ----------------------------------------------------------------------------
-
-void fgetwav (FILE * f, std::vector<short> & wav, int & sampleRate);
-void fgetwav (const wstring & fn, std::vector<short> & wav, int & sampleRate);
-
-// ----------------------------------------------------------------------------
-// fputwav(): save data into a .wav file
-// ----------------------------------------------------------------------------
-
-void fputwav (FILE * f, const vector<short> & wav, int sampleRate, int nChannels = 1); 
-void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int nChannels = 1); 
 
 // ----------------------------------------------------------------------------
 // fputbyte(): write a byte value
@@ -536,14 +505,12 @@ void fputint24 (FILE * f, int v);
 // ----------------------------------------------------------------------------
 
 void fputint (FILE * f, int val);
-void fputint (const HANDLE f, int v);
 
 // ----------------------------------------------------------------------------
 // fputlong(): write an long value
 // ----------------------------------------------------------------------------
 
 void fputlong (FILE * f, long val);
-void fputlong (const HANDLE f, long v);
 
 // ----------------------------------------------------------------------------
 // fputfloat(): write a float value
@@ -565,12 +532,6 @@ void fput(FILE * f, T v)
     fwriteOrDie (&v, sizeof (v), 1, f);
 }
 
-template <typename T>
-void fput(const HANDLE f, T v)
-{
-    fwriteOrDie (&v, sizeof (v), 1, f);
-}
-
 
 // template versions of put/get functions for binary files
 template <typename T>
@@ -579,18 +540,10 @@ void fget(FILE * f, T& v)
     freadOrDie ((void *)&v, sizeof (v), 1, f);
 }
 
-template <typename T>
-long fget(const HANDLE f)
-{
-    T v;
-    freadOrDie (&v, sizeof (v), 1, f);
-    return v;
-}
-
 
 // GetFormatString - get the format string for a particular type
 template <typename T>
-wchar_t* GetFormatString(T /*t*/)
+const wchar_t* GetFormatString(T /*t*/)
 {
     // if this _ASSERT goes off it means that you are using a type that doesn't have
     // a read and/or write routine. 
@@ -605,58 +558,45 @@ wchar_t* GetFormatString(T /*t*/)
     //
     // if you are using wchar_t* or char* types, these use other methods because they require buffers to be passed
     // either use std::string and std::wstring, or use the WriteString() and ReadString() methods
-    _ASSERT(false);  // need a specialization
+    assert(false);  // need a specialization
     return NULL;
 }
 
 // GetFormatString - specalizations to get the format string for a particular type
-template <>             wchar_t* GetFormatString(char);
-template <>          wchar_t* GetFormatString(wchar_t);
-template <>            wchar_t* GetFormatString(short);
-template <>              wchar_t* GetFormatString(int);
-template <>             wchar_t* GetFormatString(long);
-template <>   wchar_t* GetFormatString(unsigned short);
-template <>     wchar_t* GetFormatString(unsigned int);
-template <>    wchar_t* GetFormatString(unsigned long);
-template <>            wchar_t* GetFormatString(float);
-template <>           wchar_t* GetFormatString(double);
-template <>           wchar_t* GetFormatString(size_t);
-template <>        wchar_t* GetFormatString(long long);
+template <>             const wchar_t* GetFormatString(char);
+template <>          const wchar_t* GetFormatString(wchar_t);
+template <>            const wchar_t* GetFormatString(short);
+template <>              const wchar_t* GetFormatString(int);
+template <>             const wchar_t* GetFormatString(long);
+template <>   const wchar_t* GetFormatString(unsigned short);
+template <>     const wchar_t* GetFormatString(unsigned int);
+template <>    const wchar_t* GetFormatString(unsigned long);
+template <>            const wchar_t* GetFormatString(float);
+template <>           const wchar_t* GetFormatString(double);
+template <>           const wchar_t* GetFormatString(size_t);
+template <>        const wchar_t* GetFormatString(long long);
 
-// GetFormatString - get the format string for a particular type
+// GetScanFormatString - get the format string for a particular type
 template <typename T>
-wchar_t* GetScanFormatString(T t)
+const wchar_t* GetScanFormatString(T t)
 {
-    // if this _ASSERT goes off it means that you are using a type that doesn't have
-    // a read and/or write routine. 
-    // If the type is a user defined class, you need to create some global functions that handles file in/out.
-    // for example: 
-    //File& operator>>(File& stream, MyClass& test);
-    //File& operator<<(File& stream, MyClass& test);
-    //
-    // in your class you will probably want to add these functions as friends so you can access any private members
-    // friend File& operator>>(File& stream, MyClass& test);
-    // friend File& operator<<(File& stream, MyClass& test);
-    //
-    // if you are using wchar_t* or char* types, these use other methods because they require buffers to be passed
-    // either use std::string and std::wstring, or use the WriteString() and ReadString() methods
-    _ASSERT(false);  // need a specialization
+    assert(false);  // need a specialization
     return NULL;
 }
 
-// GetFormatString - specalizations to get the format string for a particular type
-template <>             wchar_t* GetScanFormatString(char);
-template <>          wchar_t* GetScanFormatString(wchar_t);
-template <>            wchar_t* GetScanFormatString(short);
-template <>              wchar_t* GetScanFormatString(int);
-template <>             wchar_t* GetScanFormatString(long);
-template <>   wchar_t* GetScanFormatString(unsigned short);
-template <>     wchar_t* GetScanFormatString(unsigned int);
-template <>    wchar_t* GetScanFormatString(unsigned long);
-template <>            wchar_t* GetScanFormatString(float);
-template <>           wchar_t* GetScanFormatString(double);
-template <>           wchar_t* GetScanFormatString(size_t);
-template <>        wchar_t* GetScanFormatString(long long);
+// GetScanFormatString - specalizations to get the format string for a particular type
+template <>             const wchar_t* GetScanFormatString(char);
+template <>          const wchar_t* GetScanFormatString(wchar_t);
+template <>            const wchar_t* GetScanFormatString(short);
+template <>              const wchar_t* GetScanFormatString(int);
+template <>             const wchar_t* GetScanFormatString(long);
+template <>   const wchar_t* GetScanFormatString(unsigned short);
+template <>     const wchar_t* GetScanFormatString(unsigned int);
+template <>    const wchar_t* GetScanFormatString(unsigned long);
+template <>            const wchar_t* GetScanFormatString(float);
+template <>           const wchar_t* GetScanFormatString(double);
+template <>           const wchar_t* GetScanFormatString(size_t);
+template <>        const wchar_t* GetScanFormatString(long long);
 
 
 // ----------------------------------------------------------------------------
@@ -670,16 +610,16 @@ void fgetText(FILE * f, T& v)
         throw std::runtime_error("error reading value from file (invalid format)");
     else if (rc == EOF)
         throw std::runtime_error(std::string("error reading from file: ") + strerror(errno));
-    _ASSERT(rc == 1);
+    assert(rc == 1);
 }
 
 // version to try and get a string, and not throw exceptions if contents don't match
 template <typename T>
 int ftrygetText(FILE * f, T& v)
 {
-    wchar_t* formatString = GetScanFormatString<T>(v);
-    int rc = fwscanf_s(f, formatString, &v);
-    _ASSERT(rc == 1 || rc == 0);
+    const wchar_t* formatString = GetScanFormatString<T>(v);
+    int rc = fwscanf (f, formatString, &v);
+    assert(rc == 1 || rc == 0);
     return rc;
 }
 
@@ -697,7 +637,7 @@ void fgetText(FILE * f, wchar_t& v);
 template <typename T>
 void fputText(FILE * f, T v)
 {
-    wchar_t* formatString = GetFormatString(v);
+    const wchar_t* formatString = GetFormatString(v);
     int rc = fwprintf(f, formatString, v);
     if (rc == 0)
         throw std::runtime_error("error writing value to file, no values written");

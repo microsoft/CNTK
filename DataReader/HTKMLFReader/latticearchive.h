@@ -17,6 +17,7 @@
 #include "latticestorage.h"
 #include "simple_checked_arrays.h"
 #include "fileutil.h"
+#include <stdint.h>
 #include <vector>
 #include <string>
 #include <hash_map>
@@ -63,9 +64,9 @@ class lattice
     };
     header_v1_v2 info;                         // information about the lattice
     static const unsigned int NOEDGE = 0xffffff;    // 24 bits
-    //static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: __int64 required to allow going across 32-bit boundary
+    //static_assert (sizeof (nodeinfo) == 8, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     // ensure type size as these are expected to be of this size in the files we read
-    static_assert (sizeof (nodeinfo) == 2, "unexpected size of nodeeinfo"); // note: __int64 required to allow going across 32-bit boundary
+    static_assert (sizeof (nodeinfo) == 2, "unexpected size of nodeeinfo"); // note: int64_t required to allow going across 32-bit boundary
     static_assert (sizeof (edgeinfowithscores) == 16, "unexpected size of edgeinfowithscores");
     static_assert (sizeof (aligninfo) == 4, "unexpected size of aligninfo");
     std::vector<nodeinfo> nodes;
@@ -1068,9 +1069,9 @@ class archive
     // all lattices read so far
     struct latticeref
     {
-        unsigned __int64 offset : 48;
-        unsigned __int64 archiveindex : 16;
-        latticeref (unsigned __int64 offset, size_t archiveindex) : offset (offset), archiveindex (archiveindex) {}
+        uint64_t offset : 48;
+        uint64_t archiveindex : 16;
+        latticeref (uint64_t offset, size_t archiveindex) : offset (offset), archiveindex (archiveindex) {}
     };
     static_assert (sizeof (latticeref) == 8, "unexpected byte size of struct latticeref");
 
@@ -1130,7 +1131,7 @@ public:
             if (archiveindex == SIZE_MAX)
                 throw std::runtime_error ("open: invalid TOC line (empty archive pathname): " + std::string (line));
             char c;
-            unsigned __int64 offset;
+            uint64_t offset;
             if (sscanf_s (q, "[%I64u]%c", &offset, &c, sizeof (c)) != 1)
                 throw std::runtime_error ("open: invalid TOC line (bad [] expression): " + std::string (line));
             if (!toc.insert (make_pair (key, latticeref (offset, archiveindex))).second)

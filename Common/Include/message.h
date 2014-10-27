@@ -230,17 +230,17 @@ namespace msra { namespace logging
     // message_exception - exception thrown by this error module
     // -----------------------------------------------------------------------
 
-    class message_exception : public std::exception
+    class message_exception : public std::runtime_error
     {
         char buf[1024];         // local buffer for message
         const char * dup_what (const char * what)
         {
-            strcpy_s (buf, "message_exception:"); // security hint: safe overloads
-            strcat_s (buf, what);
+            strcpy (buf, "message_exception:");
+            strcat (buf, what);
             return &buf[0];
         }
     public:
-        message_exception (const char * what) : exception (dup_what (what))
+        message_exception (const char * what) : runtime_error (dup_what (what))
         {
         }
     };
@@ -374,13 +374,17 @@ namespace msra { namespace logging
 
     static inline std::string timeDateStamp (void)
     {
-        __time64_t localtime; _time64 (&localtime);       // get current time and date
-        struct tm now; _localtime64_s (&now, &localtime); // convert
+#ifdef _MSC_VER
+        __time64_t localtime; _time64 (&localtime);         // get current time and date
+        struct tm now = *_localtime64 (&localtime);         // convert
         char buf[20];
-        sprintf_s (buf, "%04d/%02d/%02d %02d:%02d:%02d",    // security hint: this is an overload
+        sprintf (buf, "%04d/%02d/%02d %02d:%02d:%02d",
                  now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
                  now.tm_hour, now.tm_min, now.tm_sec);
         return buf;
+#else
+        return "(now)"; // TODO: fix this for GCC builds
+#endif
     }
 
     // ------------------------------------------------------------------------
@@ -446,7 +450,7 @@ namespace msra { namespace logging
 
     static inline void __showbuf (const std::string & prefix, bool nl)
     {
-        ASSERT (strlen (G.buf) < sizeof (G.buf) / sizeof (*G.buf)); // security hint: safe overloads
+        ASSERT (strlen (G.buf) < sizeof (G.buf) / sizeof (*G.buf));
         std::string outtext = prefix + G.buf;
         if (nl) outtext += "\n";
 
@@ -526,7 +530,7 @@ namespace msra { namespace logging
         msra::basetypes::CAutoLock autoLock (G.lock);
         va_list arg_ptr;
         va_start (arg_ptr, fmt);
-        vsprintf_s (G.buf, fmt, arg_ptr); // security hint: this is an overload
+        vsprintf (G.buf, fmt, arg_ptr);
         __showbuf ("", true);
     }
 
@@ -537,7 +541,7 @@ namespace msra { namespace logging
         msra::basetypes::CAutoLock autoLock (G.lock);
         va_list arg_ptr;
         va_start (arg_ptr, fmt);
-        vsprintf_s (G.buf, fmt, arg_ptr); // security hint: this is an overload
+        vsprintf (G.buf, fmt, arg_ptr);
         __showbuf ("", false);
     }
 
@@ -553,7 +557,7 @@ namespace msra { namespace logging
         msra::basetypes::CAutoLock autoLock (G.lock);
         va_list arg_ptr;
         va_start (arg_ptr, fmt);
-        vsprintf_s (G.buf, fmt, arg_ptr); // security hint: this is an overload
+        vsprintf (G.buf, fmt, arg_ptr);
         __showbuf ("WARNING: ", true);
         __flush();
     }
@@ -581,12 +585,12 @@ namespace msra { namespace logging
 #pragma warning (disable : 4702)    // the 'return 0;' causes this in Release
     static int error (const char * fmt, ...)
     {
-#if 1   // special test code to determine the Windows error in case of a network error
+#if 0   // special test code to determine the Windows error in case of a network error
         DWORD winErr = GetLastError();
         try
         {
             msra::basetypes::CAutoLock autoLock (G.lock);
-            sprintf_s (G.buf, "%d (\"%S\")", winErr, FormatWin32Error(winErr).c_str());
+            sprintf (G.buf, "%d (\"%S\")", winErr, FormatWin32Error(winErr).c_str());
             if (!noLoggingReqd())
                 __showbuf ("Win32 error of subsequent error message: ", true);
         }
@@ -595,7 +599,7 @@ namespace msra { namespace logging
         msra::basetypes::CAutoLock autoLock (G.lock);
         va_list arg_ptr;
         va_start (arg_ptr, fmt);
-        vsprintf_s (G.buf, fmt, arg_ptr); // security hint: this is an overload
+        vsprintf (G.buf, fmt, arg_ptr);
         if (!noLoggingReqd())
         {   // if muted, we format the msg (for __throw_or_exit) but don't print it
             __showbuf ("ERROR: ", true);
@@ -632,8 +636,8 @@ namespace msra { namespace logging
         }
 
         // format msg for __throw_or_exit()
-        sprintf_s (G.buf, fmt, arg);  // security hint: this is an overload
-        strcat_s (G.buf, "\n");       // security hint: this is an overload
+        sprintf (G.buf, fmt, arg);
+        strcat (G.buf, "\n");
         __throw_or_exit();
         return 0;
     }

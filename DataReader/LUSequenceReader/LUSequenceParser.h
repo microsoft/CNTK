@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <fstream>
 #include <map>
+#include <stdint.h>
 #include "DataReader.h"
 
 using namespace std;
@@ -125,8 +126,8 @@ protected:
 
     // file positions/buffer
     FILE * m_pFile;
-    _int64 m_byteCounter;
-    _int64 m_fileSize;
+    int64_t m_byteCounter;
+    int64_t m_fileSize;
 
     BYTE * m_fileBuffer;
     size_t m_bufferStart;
