@@ -999,7 +999,7 @@ public:
 			const size_t windowend =   positionchunkwindows[epos-1].windowend();
 			for (size_t k = 0; k < windowbegin; k++)
 				releaserandomizedchunk (k);
-			for (size_t k = windowend; k < randomizedchunks.size(); k++)
+			for (size_t k = windowend; k < randomizedchunks[0].size(); k++)
 				releaserandomizedchunk (k);
 			for (size_t pos = spos; pos < epos; pos++)
 				readfromdisk |= requirerandomizedchunk (randomizedutterancerefs[pos].chunkindex, windowbegin, windowend); // (window range passed in for checking only)
