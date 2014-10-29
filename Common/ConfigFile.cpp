@@ -5,6 +5,9 @@
 //
 // ConfigFile.cpp : Defines the configuration file loader.
 //
+
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "File.h"
 #include "commandArgUtil.h"
 
@@ -15,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // argc - count of arguments
     // argv - array of argument parameters
     // config - config to return
-    std::string ConfigParameters::ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config)
+    std::string ConfigParameters::ParseCommandLine(int argc, wchar_t* argv[], ConfigParameters& config)
     {
         config.SetName(std::string("global"));
         
@@ -82,8 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 std::string filePaths = line.substr(includeKeywordSize, line.size() - includeKeywordSize);
                 if (filePaths.find(openBraceVar) != std::string::npos)
                 {
-                    Error("Variable usage (eg, \"$varName$\") not supported in \"include\" statements. " 
-                                              "Explicit path to config file must be provided");
+                    Error("Variable usage (eg, \"$varName$\") not supported in \"include\" statements. Explicit path to config file must be provided");
                 }
 
                 std::vector<std::string> filePathVec = msra::strfun::split (filePaths, "+");

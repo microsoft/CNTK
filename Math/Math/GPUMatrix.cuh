@@ -99,12 +99,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* BufferPointer() const {return m_pArray;}
 
         void Adagrad(GPUMatrix<ElemType>& gradients);
-
+		void RmsProp(GPUMatrix<ElemType>& gradients,
+			ElemType RMS_GAMMA,
+			ElemType RMS_WGT_INC,
+			ElemType RMS_WGT_MAX,
+			ElemType RMS_WGT_DEC,
+			ElemType RMS_WGT_MIN
+			);
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
-        ElemType& operator() (const size_t row, const size_t col) { throw std::exception("GPUMatrix doesn't support this"); }
-        const ElemType& operator() (const size_t row, const size_t col) const { throw std::exception("GPUMatrix doesn't support this"); }
+        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::exception("GPUMatrix doesn't support this"); }
+        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::exception("GPUMatrix doesn't support this"); }
         ElemType Get00Element() const;
 
         void SetValue(const ElemType v);
@@ -158,11 +164,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AddElementProductOf (const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
 
         GPUMatrix<ElemType>& AssignElementDivisionOf (const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
+        GPUMatrix<ElemType>& ElementDivideBy(const GPUMatrix<ElemType>& a);
 
         GPUMatrix<ElemType>& ColumnElementMultiplyWith(const GPUMatrix<ElemType>& a);
         GPUMatrix<ElemType>& RowElementMultiplyWith(const GPUMatrix<ElemType>& a);
 
-        GPUMatrix<ElemType>& ColumnElementDivideWith(const GPUMatrix<ElemType>& a);
+        GPUMatrix<ElemType>& ColumnElementDivideBy(const GPUMatrix<ElemType>& a);
+        GPUMatrix<ElemType>& RowElementDivideBy(const GPUMatrix<ElemType>& a);
 
         GPUMatrix<ElemType>& ElementInverse ();
         GPUMatrix<ElemType>& AssignElementInverseOf (const GPUMatrix<ElemType>& a);
@@ -241,6 +249,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>&  AssignRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         GPUMatrix<ElemType>&  AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+        GPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
+
+        GPUMatrix<ElemType>&  AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
 
         void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const;
         void VectorMin(GPUMatrix<ElemType>& mainndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;

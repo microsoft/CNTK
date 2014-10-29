@@ -129,8 +129,8 @@ void ColumnSliceMultAndAddTest(int n, int k, int m, short deviceID)
     t_startG = clock();
     for (int i=0; i<m; i++)
     {
-        Matrix<ElemType> & col_BG = BG.ColumnSlice(i,1);
-        Matrix<ElemType> & col_CG = CG.ColumnSlice(i,1);
+        Matrix<ElemType> col_BG = BG.ColumnSlice(i,1);
+        Matrix<ElemType> col_CG = CG.ColumnSlice(i,1);
         Matrix<ElemType>::MultiplyAndAdd(AG, false, col_BG, false, col_CG);
     }
     t_endG = clock();
@@ -282,7 +282,7 @@ void MandSTest(int count, int devId)
     delete[] data3;
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int wmain()
 {
     ColumnSliceMultAndAddTest<float>(2048, 2048, 256, 0);
 

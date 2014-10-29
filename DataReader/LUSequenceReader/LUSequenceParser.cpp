@@ -306,7 +306,7 @@ void LUSequenceParser<NumType, LabelType>::SetTraceLevel(int traceLevel)
 // NOTE: Current code is identical to float, don't know how to specialize with template parameter that only covers one parameter
 
 #ifdef STANDALONE
-int _tmain(int argc, _TCHAR* argv[])
+int wmain(int argc, wchar_t* argv[])
 {
     LUSequenceParser<double, int> parser;
     std::vector<double> values;
@@ -357,8 +357,8 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
         size_t iln = ptr->labelPos - prvat;
         stSentenceInfo stinfo;
         stinfo.sLen = iln;
-        stinfo.sBegin = prvat;
-        stinfo.sEnd = ptr->labelPos;
+        stinfo.sBegin = (int)prvat;
+        stinfo.sEnd = (int)ptr->labelPos;
         mSentenceIndex2SentenceInfo.push_back(stinfo); 
 
         prvat = ptr->labelPos;

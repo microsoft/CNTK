@@ -42,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
         ~GPUSparseMatrix();
     public:
-        void Resize(const size_t numRows, const size_t numCols, int size = 0);
+        void Resize(const size_t numRows, const size_t numCols, size_t size = 0);
         void Reset();
 
     public:
@@ -195,7 +195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //For these two, I should also add a version which would return GPUSparseMatrix, since Dense.*Sparse =Sparse.*Dense=Sparse
         static GPUMatrix<ElemType> ElementProductOf (const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
         static GPUMatrix<ElemType> ElementProductOf (const GPUMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);     
-        GPUSparseMatrix<ElemType>& AssignElementProductOf (const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);
+        //GPUSparseMatrix<ElemType>& AssignElementProductOf (const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b);
 
 
     public:

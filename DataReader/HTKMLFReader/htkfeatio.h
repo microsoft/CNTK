@@ -15,6 +15,7 @@
 #include <regex>
 #include <set>
 #include <hash_map>
+#include <stdint.h>
 
 namespace msra { namespace asr {
 
@@ -286,7 +287,7 @@ class htkfeatreader : protected htkfeatio
     size_t physicalframes;              // total number of frames in physical file
     //TODO make this nicer
     bool isidxformat;                    // support reading of features in idxformat as well (it's a hack, but different format's are not supported yet)
-    unsigned __int64 physicaldatastart; // byte offset of first data byte
+    uint64_t physicaldatastart; // byte offset of first data byte
     size_t vecbytesize;                 // size of one vector in bytes
 
     bool addEnergy;         // add in energy as data is read (will all have zero values)
@@ -450,7 +451,7 @@ private:
         }
 
         // done: swap it in
-        __int64 bytepos = fgetpos (f);
+        int64_t bytepos = fgetpos (f);
         setkind (kind, dim, H.sampperiod, ppath);       // this checks consistency
         this->physicalpath.swap (physpath);
         this->physicaldatastart = bytepos;
@@ -493,7 +494,7 @@ public:
             if (ppath.e >= physicalframes)
                 throw std::runtime_error (msra::strfun::strprintf ("open: end frame exceeds archive's total number of frames %d in '%S'", physicalframes, ppath.xpath.c_str()));
 
-            __int64 dataoffset = physicaldatastart + ppath.s * vecbytesize;
+            int64_t dataoffset = physicaldatastart + ppath.s * vecbytesize;
             fsetpos (f, dataoffset);    // we assume fsetpos(), which is our own, is smart to not flush the read buffer
             curframe = 0;
             numframes = ppath.e + 1 - ppath.s;

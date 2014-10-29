@@ -59,7 +59,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("SquareError node should never be in a loop.");
         }
@@ -106,7 +106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight);
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("SquareError node should never be in a loop.");
         }
@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("CrossEntropyWithSoftmax node should never be in a loop.");
         }
@@ -341,7 +341,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight);
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("CrossEntropyWithSoftmax node should never be in a loop.");
         }
@@ -518,7 +518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("CrossEntropy node should never be in a loop.");
         }
@@ -580,7 +580,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight);
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("CrossEntropy node should never be in a loop.");
         }
@@ -743,7 +743,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("MatrixL1Reg node should never be in a loop.");
         }
@@ -786,7 +786,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("MatrixL1Reg node should never be in a loop.");
         }
@@ -910,12 +910,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("MatrixL2RegNode node should never be in a loop.");
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& /*inputFunctionValues*/, const Matrix<ElemType>& functionValues)  
         {
             ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);
             inputGradientValues.AddWithScaleOf(v, gradientValues);
@@ -953,7 +953,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("MatrixL2RegNode node should never be in a loop.");
         }
@@ -1069,13 +1069,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
         {
             throw std::logic_error("ClassCrossEntropyWithSoftmax node should never be in a loop.");
         }
 
-        static void ComputeClassEntropyGradientOfInput(const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            const Matrix<ElemType>& inputFunctionValues2, const Matrix<ElemType>* clsInfo, const Matrix<ElemType>* idx2Cls, 
+        static void ComputeClassEntropyGradientOfInput(const Matrix<ElemType>& /*inputFunctionValues0*/, const Matrix<ElemType>& /*inputFunctionValues1*/,
+            const Matrix<ElemType>& inputFunctionValues2, const Matrix<ElemType>* /*clsInfo*/, const Matrix<ElemType>* /*idx2Cls*/,
             const Matrix<ElemType>& logSoftmax, Matrix<ElemType>& grd)  
         {
             logSoftmax.ClassEntropyError(logSoftmax);
@@ -1131,7 +1131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_ptrClsinfo, m_ptrIdx2Cls, m_logSoftmax);
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("ClassCrossEntropyWithSoftmax node should never be in a loop.");
         }

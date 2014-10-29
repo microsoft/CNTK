@@ -14,6 +14,7 @@
 #include "latticearchive.h"
 #include "msra_mgram.h" // for MLF reading for numer lattices
 #include <stdio.h>
+#include <stdint.h>
 #include <vector>
 #include <string>
 #include <set>
@@ -145,7 +146,7 @@ static size_t tryfind (const MAPTYPE & map, const KEYTYPE & key, VALTYPE deflt)
             latticeread = true;
 
             // write to archive
-            unsigned __int64 offset = fgetpos (f);
+            uint64_t offset = fgetpos (f);
             L.fwrite (f);
             fflushOrDie (f);
 
@@ -501,7 +502,7 @@ void lattice::dedup()
         if (f && ftoc)
         {
             // write to archive
-            unsigned __int64 offset = fgetpos (f);
+            uint64_t offset = fgetpos (f);
             L.fwrite (f);
             fflushOrDie (f);
             

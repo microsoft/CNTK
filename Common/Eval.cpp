@@ -6,6 +6,8 @@
 // Eval.cpp : Defines the exported functions for the DLL application.
 //
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "stdafx.h"
 #define EVAL_LOCAL
 #include "Eval.h"
@@ -21,7 +23,7 @@ template<> std::string GetEvalName(float) {std::string name = "GetEvalF"; return
 template<> std::string GetEvalName(double) {std::string name = "GetEvalD"; return name;}
 
 template<class ElemType>
-void Eval<ElemType>::Init(const std::string& config)
+void Eval<ElemType>::Init(const std::string& /*config*/)
 {
     throw std::logic_error("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead

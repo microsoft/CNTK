@@ -44,7 +44,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RmsProp
     };
     
-    typedef struct stGradientUpdateInfo{
+	// configuration parameters associated with RMSProp learning algorithm
+    typedef struct stRMSPropInfo{
+		double gamma;
+		double inc;
+		double dec;
+		double max;
+		double min;
+		stRMSPropInfo()
+		{
+			gamma = 0.99;
+			inc = 1.2;
+			dec = 0.75;
+			max = 10.0;
+			min = 0.1;
+		}
+	}RMSPropInfo;
+
+	typedef struct stGradientUpdateInfo{
         GradientsUpdateType mType;
         float mGaussianNoiseInjectStd;
         stGradientUpdateInfo()
@@ -123,6 +140,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gUpdateInfo.mType = gradUpdateType;
             gUpdateInfo.mGaussianNoiseInjectStd = (float)gaussianNoiseInjecStd;
             
+			// extract RMSProp parameters from config, if they exist. Default to reasonable values.
+			RMSPropInfo rpi;
+			rpi.dec = (double) configSGD("rms_wgt_dec","0.75");
+			rpi.inc = (double) configSGD("rms_wgt_inc","1.2");
+			rpi.min = (double) configSGD("rms_wgt_min","0.1");
+			rpi.max = (double) configSGD("rms_wgt_max","10.0");
+			rpi.gamma = (double) configSGD("rms_gamma","0.99");
+
             /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of 
             /// useAdagrad=true
             bool useAdagrad = configSGD("useAdagrad", "false");
@@ -144,9 +169,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB, gradientClippingWithTruncation, 
                 clippingThresholdPerSample,autoAdjustLRType, increaseLearnRateIfImproveMoreThan, learnRateIncreaseFactor, 
                 reduceLearnRateIfImproveLessThan, continueReduce, learnRateDecreaseFactor, dropoutRates,
-                loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
+                loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, (UINT16)traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, usePtask, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
-                trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading);
+                trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
+				rpi);
         }
 	
 		void setMomentum(float momentum)
@@ -164,11 +190,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const ElemType reduceLearnRateIfImproveLessThan=0, const bool continueReduce=false, const ElemType learnRateDecreaseFactor = 0.618f, floatargvector dropoutRates = floatargvector(L"0.0f"),
             const bool loadBestModel=true, const intargvector& numMiniBatch4LRSearch=intargvector(L"500"), const size_t numPrevLearnRates = 5, 
             const size_t numBestSearchEpoch = 1, const UINT16 traceLevel = 0,
-			const size_t numMBsToShowResult=10, const size_t maxTempMemSizeInSamplesForCNN = 0,
+            const size_t numMBsToShowResult = 10, const size_t maxTempMemSizeInSamplesForCNN = 0,
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
-            const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true)
+            const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
+			RMSPropInfo rpi = RMSPropInfo())
         {
+            numPrevLearnRates;
             m_mbSize=mbSize;
             m_epochSize=epochSize;
             if (m_epochSize == 0)
@@ -194,6 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numBestSearchEpoch=numBestSearchEpoch;
             m_maxTempMemSizeInSamplesForCNN=maxTempMemSizeInSamplesForCNN;
             m_gradType = gradUpdateType;
+			m_rpi = rpi;
             m_usePtask = usePtask;
             m_keepCheckPointFiles = keepCheckPointFiles;
 
@@ -376,8 +405,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             std::vector<ComputationNodePtr> & FeatureNodes = net.FeatureNodes();
             std::vector<ComputationNodePtr> & labelNodes = net.LabelNodes();
-            std::vector<ComputationNodePtr> & criterionNodes = GetTrainCriterionNodes(net);
-            std::vector<ComputationNodePtr> & evaluationNodes = GetEvalCriterionNodes(net);
+            std::vector<ComputationNodePtr> criterionNodes = GetTrainCriterionNodes(net);
+            std::vector<ComputationNodePtr> evaluationNodes = GetEvalCriterionNodes(net);
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<FeatureNodes.size(); i++)
@@ -395,8 +424,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t vSz = FeatureNodes[0]->FunctionValues().GetNumRows();
                 int deviceId = FeatureNodes[0]->FunctionValues().GetDeviceId();
-                inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, deviceId); 
-                inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, deviceId); 
+                inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, (short)deviceId); 
+                inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, (short)deviceId);
             }
 
 
@@ -517,6 +546,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (learnRatePerSample < m_minLearnRate)
                 {
                     fprintf(stderr,"Learn Rate Per Sample for Epoch[%lu] = %.8g is less than minLearnRate %.8g. Training stops.\n", i+1, learnRatePerSample, m_minLearnRate);
+                    if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
+                        net.SaveToFile(m_modelPath);
                     break;
                 }
 
@@ -706,14 +737,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::vector<ComputationNodePtr>& evaluationNodes,
             std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
             const std::list<ComputationNodePtr>& learnableNodes,
-            std::list<Matrix<ElemType>>& smoothedGradients, const bool learnRateInitialized, const ElemType largestPrevLearnRatePerSample)
+            std::list<Matrix<ElemType>>& smoothedGradients, const bool /*learnRateInitialized*/, const ElemType largestPrevLearnRatePerSample)
         {
             ElemType epochCriterion = std::numeric_limits<ElemType>::infinity(), prevCriterion = std::numeric_limits<ElemType>::infinity();
 			vector<ElemType> epochEvalErrors(evaluationNodes.size(),std::numeric_limits<ElemType>::infinity());
             //ElemType epochEvalError = std::numeric_limits<ElemType>::infinity();
             size_t totalSamplesSeen = 0;
             ElemType bestLearnRatePerSample = curLearnRate;
-            ElemType bestEpochCriterion = std::numeric_limits<ElemType>::infinity();
 
             size_t epochSize = m_numMiniBatch4LRSearch[epochNumber] * m_mbSize[epochNumber];
             if (m_epochSize != requestDataSize)
@@ -1071,7 +1101,7 @@ public:
 
             GradientsUpdateType adpType = sgd->GradUpdateType();
             ElemType noiseStd = sgd->GradientUpdateNoiseStd();
-            Matrix<ElemType> sgdUpdateNoise(functionValues.GetDeviceId());
+            Matrix<ElemType> sgdUpdateNoise((short)functionValues.GetDeviceId());
             if (noiseStd > 0)
             {
                 sgdUpdateNoise.SetValue(gradientValues);  /// get the gradient structure since gradient is sparse
@@ -1094,7 +1124,9 @@ public:
             }
             if (adpType == GradientsUpdateType::RmsProp)
             {
-                smoothedGradient.RmsProp(gradientValues);
+				// include L2 regularizer
+				Matrix<ElemType>::ScaleAndAdd((ElemType)0.001, functionValues, gradientValues);
+				smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma, (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max, (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample, gradientValues, functionValues);
             }
 
@@ -1320,7 +1352,8 @@ protected:
 
                 node->UpdateEvalTimeStamp();
                 net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
-                ElemType mbEvalCri = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+                //ElemType mbEvalCri =
+                criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
                 ElemType eGradErr = node->GradientValues()(irow, icol); 
 
                 ElemType ePos = eOrg + ElemType(EPSILON);
@@ -1346,7 +1379,7 @@ protected:
                 bool wrong = (_isnan(diff) || diff > threshold);
                 if (wrong)
 				{
-                    fprintf (stdout, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                    fprintf (stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
                     return false; 
 				}
             }
@@ -1354,7 +1387,7 @@ protected:
 			return true;
         }
 
-        void SetOtherInfo(ComputationNetwork<ElemType>& net , IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validSetDataReader, std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
+        void SetOtherInfo(ComputationNetwork<ElemType>& net , IDataReader<ElemType>* /*trainSetDataReader*/, IDataReader<ElemType>* /*validSetDataReader*/, std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
         {
             std::vector<ComputationNodePtr> criterionNodes = net.FinalCriterionNodes();
             std::vector<ComputationNodePtr> evaluationNodes = net.EvaluationNodes();
@@ -1420,6 +1453,8 @@ protected:
         ElemType m_minLearnRate;
 
         GradientUpdateInfo m_gradType;
+		RMSPropInfo m_rpi;
+
         bool m_usePtask;
 
         bool m_keepCheckPointFiles;

@@ -1315,18 +1315,17 @@ public:
         numrows = n; numcols = m;
         colstride = newcolstride;
         // touch the memory to ensure the page is created
-        const float nan = numeric_limits<float>::quiet_NaN();
         for (size_t offset = 0; offset < totalelem; offset += 4096 / sizeof (float))
             p[offset] = 0.0f; //nan;
         // clear padding elements (numrows <= i < colstride) to 0.0 for SSE optimization
         for (size_t j = 0; j < numcols; j++)
             for (size_t i = numrows; i < colstride; i++)
                 p[j * colstride + i] = 0.0f;
-#if 1   // for debugging: set all elements to NaN (if we fail to initialize a matrix, we will see NaNs popping up--no we don't... why not??)
+#if 1   // for debugging: set all elements to 0
         // We keep this code alive because allocations are supposed to be done at the start only.
         auto & us = *this;
         foreach_coord (i, j, us)
-            us(i,j) = 0.0f; //nan;
+            us(i,j) = 0.0f;
 #endif
     }
 

@@ -29,6 +29,8 @@
 #include <vld.h> // for memory leak detection
 #endif
 
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
+
 int msra::numa::node_override = -1;     // for numahelpers.h
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -433,8 +435,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		}
 
 		m_fileEvalSource = new msra::dbn::FileEvalSource(realDims,evalchunksize);
-
-		double htktimetoframe = 100000.0;           // default is 10ms 
 	}
 
 	
@@ -609,7 +609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	}
 
 	template<class ElemType>
-	void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+	void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples*/)
 	{
 		m_fileEvalSource->Reset();
 		m_fileEvalSource->SetMinibatchSize(mbSize);
@@ -671,8 +671,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			{
 			if (!(*m_mbiter))
 				return false;
-
-			const size_t mbstartframe = m_mbiter->currentmbstartframe();
 
 			// now, access all features and and labels by iterating over map of "matrices"
 			std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
@@ -774,10 +772,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 						if (m_convertLabelsToTargetsMultiIO[id])
 						{
-							size_t labelDim = m_labelToTargetMapMultiIO[id].size();
-							for (int i = 0; i < uids.size(); i++)
+                                                    size_t labelDim = m_labelToTargetMapMultiIO[id].size();
+                                                    for (int i = 0; i < uids.size(); i++)
 							{
-								assert(uids[i] < labelDim);
+								assert(uids[i] < labelDim); labelDim;
 								size_t labelId = uids[i];
 								for (int j = 0; j < dim; j++)
 								{
@@ -854,7 +852,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						{
 							// dereference matrix that corresponds to key (input/output name) and 
 							// populate based on whether its a feature or a label
-							Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+							//Matrix<ElemType>& data =
+                                                        *matrices[iter->first]; // can be features or labels
 
 							if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
 							{
@@ -931,7 +930,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						{
 							// dereference matrix that corresponds to key (input/output name) and 
 							// populate based on whether its a feature or a label
-							Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+							//Matrix<ElemType>& data =
+                                                        *matrices[iter->first]; // can be features or labels
 
 							if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
 							{
@@ -1001,7 +1001,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						{
 							// dereference matrix that corresponds to key (input/output name) and 
 							// populate based on whether its a feature or a label
-							Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+							//Matrix<ElemType>& data =
+                                                        *matrices[iter->first]; // can be features or labels
 
 							if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
 							{
@@ -1133,13 +1134,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				{
 					Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 					size_t id = m_featureNameToIdMap[iter->first];
-					size_t dim = m_featureNameToDimMap[iter->first];
+                                        size_t dim = m_featureNameToDimMap[iter->first];
 
 					const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
-					const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
 
 					// copy the features over to our array type
-					assert(feat.rows()==dim); // check feature dimension matches what's expected
+					assert(feat.rows()==dim); dim; // check feature dimension matches what's expected
 
 					if (m_featuresBufferMultiIO[id]==NULL)
 					{
@@ -1261,8 +1261,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				}
 			}
 			assert (actualmbsizeOri == m_mbiter->currentmbframes());
-			const size_t mbstartframe = m_mbiter->currentmbstartframe();
-
 
 			if (sizeof(ElemType) == sizeof(float))
 			{
@@ -1297,7 +1295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				size_t labelDim = m_labelToTargetMapMultiIO[id].size();
 				for (int k=0; k < actualmbsizeOri; k++)
 				{
-					assert(uids[k] < labelDim);
+					assert(uids[k] < labelDim); labelDim;
 					size_t labelId = uids[k];
 					for (int j = 0; j < dim; j++)
 					{
@@ -1332,7 +1330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	// GetLabelMapping - Gets the label mapping from integer to type in file 
 	// mappingTable - a map from numeric datatype to native label type stored as a string 
 	template<class ElemType>
-	const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& HTKMLFReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+	const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& HTKMLFReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
 	{
 		return m_idToLabelMap;
 	}
@@ -1341,7 +1339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	// labelMapping - mapping table from label values to IDs (must be 0-n)
 	// note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 	template<class ElemType>
-	void HTKMLFReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& labelMapping)
+	void HTKMLFReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& labelMapping)
 	{
 		m_idToLabelMap = labelMapping;
 	}
@@ -1410,7 +1408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	// recordStart - record to start reading from, defaults to zero (start of data)
 	// returns: true if data remains to be read, false if the end of data was reached
 	template<class ElemType>
-	bool HTKMLFReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
+	bool HTKMLFReader<ElemType>::GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/)
 	{
 		throw std::runtime_error("GetData not supported in HTKMLFReader");
 	}
@@ -1427,12 +1425,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		switch (endDataType)
 		{
 		case endDataNull:
-			assert(false);
-			break;
 		case endDataEpoch:
 		case endDataSet:
-			assert(false); // not support
-			break;
+            throw std::logic_error("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
+            break;
 		case endDataSentence:
 			if (m_truncated)
 				ret = m_sentenceEnd[0];

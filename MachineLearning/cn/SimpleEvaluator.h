@@ -195,7 +195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }        
 
         //returns error rate
-		ElemType EvaluateUnroll(IDataReader<ElemType>& dataReader, const size_t mbSize,  ElemType &evalSetCrossEntropy, const wchar_t* output=nullptr, const size_t testSize=requestDataSize)
+        ElemType EvaluateUnroll(IDataReader<ElemType>& dataReader, const size_t mbSize, ElemType &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
         {
 
             std::vector<ComputationNodePtr> FeatureNodes = m_net.FeatureNodes();
@@ -203,14 +203,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<ComputationNodePtr> criterionNodes = m_net.FinalCriterionNodes();
             std::vector<ComputationNodePtr> evaluationNodes = m_net.EvaluationNodes();
 			
-			if (criterionNodes.size()==0)
-			{
-				throw new runtime_error("No CrossEntropyWithSoftmax node found\n");
-			}
-			if (evaluationNodes.size()==0)
-			{
-				throw new runtime_error("No Evaluation node found\n");
-			}
+            if (criterionNodes.size()==0)
+            {
+                throw new runtime_error("No CrossEntropyWithSoftmax node found\n");
+            }
+            if (evaluationNodes.size()==0)
+            {
+                throw new runtime_error("No Evaluation node found\n");
+            }
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<FeatureNodes.size(); i++)
@@ -228,13 +228,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType epochEvalError = 0;
             ElemType epochCrossEntropy = 0;
             size_t totalEpochSamples = 0;
-			ElemType prevEpochEvalError = 0;
-			ElemType prevEpochCrossEntropy = 0;
+            ElemType prevEpochEvalError = 0;
+            ElemType prevEpochCrossEntropy = 0;
             size_t prevTotalEpochSamples = 0;
-			size_t prevStart = 1;
-			size_t numSamples =  0;
-			ElemType crossEntropy = 0;
-			ElemType evalError = 0;
+            size_t prevStart = 1;
+            size_t numSamples = 0;
+            ElemType crossEntropy = 0;
+            ElemType evalError = 0;
 			
             ofstream outputStream;
             if (output)
@@ -246,27 +246,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			size_t actualMBSize = 0;
             while (dataReader.GetMinibatch(inputMatrices))
             {
-				size_t nbrSamples = (size_t)(*inputMatrices[L"numberobs"])(0,0); 
+                size_t nbrSamples = (size_t)(*inputMatrices[L"numberobs"])(0, 0);
                 actualMBSize = nbrSamples;
 
                 for (int npos = 0; npos < nbrSamples ; npos++)
-			    {
-				    FeatureNodes[npos]->UpdateEvalTimeStamp();
-				    labelNodes[npos]->UpdateEvalTimeStamp();
+                {
+                    FeatureNodes[npos]->UpdateEvalTimeStamp();
+                    labelNodes[npos]->UpdateEvalTimeStamp();
 
                     m_net.Evaluate(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
 
                     m_net.Evaluate(evaluationNodes[npos]);
 
-				    ElemType mbCrossEntropy = criterionNodes[npos]->FunctionValues().Get00Element(); // criterionNode should be a scalar
-				    epochCrossEntropy += mbCrossEntropy;
+                    ElemType mbCrossEntropy = criterionNodes[npos]->FunctionValues().Get00Element(); // criterionNode should be a scalar
+                    epochCrossEntropy += mbCrossEntropy;
 
                     ElemType mbEvalError = evaluationNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-                
+
                     epochEvalError += mbEvalError;
                 }
 
-				totalEpochSamples += actualMBSize;
+                totalEpochSamples += actualMBSize;
 
                 if (outputStream.is_open())
                 {
@@ -282,43 +282,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-				numMBsRun++;
-				if (numMBsRun % m_numMBsToShowResult == 0)
-				{
-					numSamples = (totalEpochSamples-prevTotalEpochSamples);
-					crossEntropy = epochCrossEntropy - prevEpochCrossEntropy;
-					evalError = epochEvalError - prevEpochEvalError;
+                numMBsRun++;
+                if (numMBsRun % m_numMBsToShowResult == 0)
+                {
+                    numSamples = (totalEpochSamples - prevTotalEpochSamples);
+                    crossEntropy = epochCrossEntropy - prevEpochCrossEntropy;
+                    evalError = epochEvalError - prevEpochEvalError;
 
-    			    fprintf(stderr,"Minibatch[%lu-%lu]: Samples Evaluated = %lu    EvalErr Per Sample = %.8g    Loss Per Sample = %.8g\n", 
-						    prevStart, numMBsRun, numSamples, evalError/numSamples, crossEntropy/numSamples);
-    
-					prevTotalEpochSamples = totalEpochSamples;
-					prevEpochCrossEntropy = epochCrossEntropy;
-					prevEpochEvalError = epochEvalError;
-					prevStart = numMBsRun + 1;
-				}
+                    fprintf(stderr, "Minibatch[%lu-%lu]: Samples Evaluated = %lu    EvalErr Per Sample = %.8g    Loss Per Sample = %.8g\n",
+                            prevStart, numMBsRun, numSamples, evalError / numSamples, crossEntropy / numSamples);
+
+                    prevTotalEpochSamples = totalEpochSamples;
+                    prevEpochCrossEntropy = epochCrossEntropy;
+                    prevEpochEvalError = epochEvalError;
+                    prevStart = numMBsRun + 1;
+                }
 
             }
 
-			// show final grouping of output
-			numSamples =  totalEpochSamples-prevTotalEpochSamples;
+            // show final grouping of output
+            numSamples = totalEpochSamples - prevTotalEpochSamples;
             if (numSamples > 0)
             {
-			    crossEntropy = epochCrossEntropy - prevEpochCrossEntropy;
-			    evalError = epochEvalError - prevEpochEvalError;			
-                fprintf(stderr,"Minibatch[%lu-%lu]: Samples Evaluated = %lu    EvalErr Per Sample = %.8g    Loss Per Sample = %.8g\n", 
-				        prevStart, numMBsRun, numSamples, evalError/numSamples, crossEntropy/numSamples);
+                crossEntropy = epochCrossEntropy - prevEpochCrossEntropy;
+                evalError = epochEvalError - prevEpochEvalError;
+                fprintf(stderr, "Minibatch[%lu-%lu]: Samples Evaluated = %lu    EvalErr Per Sample = %.8g    Loss Per Sample = %.8g\n",
+                    prevStart, numMBsRun, numSamples, evalError / numSamples, crossEntropy / numSamples);
             }
 
             //final statistics
-			epochEvalError /= (ElemType)totalEpochSamples;
-			epochCrossEntropy /= (ElemType)totalEpochSamples;
-            fprintf(stderr,"Overall: Samples Evaluated = %lu   EvalErr Per Sample = %.8g   Loss Per Sample = %.8g\n", totalEpochSamples, epochEvalError,epochCrossEntropy);
+            epochEvalError /= (ElemType)totalEpochSamples;
+            epochCrossEntropy /= (ElemType)totalEpochSamples;
+            fprintf(stderr, "Overall: Samples Evaluated = %lu   EvalErr Per Sample = %.8g   Loss Per Sample = %.8g\n", totalEpochSamples, epochEvalError, epochCrossEntropy);
             if (outputStream.is_open())
             {
                 outputStream.close();
             }
-			evalSetCrossEntropy = epochCrossEntropy;
+            evalSetCrossEntropy = epochCrossEntropy;
             return epochEvalError;
         }
 
@@ -340,9 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNetwork<ElemType>& m_net;
         size_t m_numMBsToShowResult;
         UINT16 m_traceLevel;
+        void operator=(const SimpleEvaluator&); // (not assignable)
     };
-
-    template class SimpleEvaluator<float>; 
-    template class SimpleEvaluator<double>;
 
 }}}

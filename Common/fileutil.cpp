@@ -4,6 +4,8 @@
 // </copyright>
 //
 
+#define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
@@ -11,72 +13,84 @@
 #endif
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #endif
-#include <Windows.h>
 #include "basetypes.h"
 #include "fileutil.h"
 #include "message.h"
+#ifdef __unix__
+#include <unistd.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "windows.h"    // for FILETIME
+#include <stdint.h>
+#include <assert.h>
+#include "Windows.h"    // for FILETIME
 #include <algorithm>    // for std::find
+#include <limits.h>
 
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
 #include <fcntl.h>      // for _O_BINARY/TEXT - not needed for wince
 #include <io.h>         // for _setmode()
 #endif
 
+#define __out_z_cap(x)      // a fake SAL annotation; this may come in handy some day if we try static code analysis, so I don't want to delete it
+
 #include <errno.h>
 
 using namespace std;
 
-template <>             wchar_t* GetScanFormatString(char) {return L" %hc";}
-template <>          wchar_t* GetScanFormatString(wchar_t) {return L" %lc";}
-template <>            wchar_t* GetScanFormatString(short) {return L" %hi";}
-template <>              wchar_t* GetScanFormatString(int) {return L" %i";}
-template <>             wchar_t* GetScanFormatString(long) {return L" %li";}
-template <>   wchar_t* GetScanFormatString(unsigned short) {return L" %hu";}
-template <>     wchar_t* GetScanFormatString(unsigned int) {return L" %u";}
-template <>    wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
-template <>            wchar_t* GetScanFormatString(float) {return L" %g";}
-template <>           wchar_t* GetScanFormatString(double) {return L" %lg";}
-template <>           wchar_t* GetScanFormatString(size_t) {return L" %llu";}
-template <>        wchar_t* GetScanFormatString(long long) {return L" %lli";}
+template <>             const wchar_t* GetScanFormatString(char) {return L" %hc";}
+template <>          const wchar_t* GetScanFormatString(wchar_t) {return L" %lc";}
+template <>            const wchar_t* GetScanFormatString(short) {return L" %hi";}
+template <>              const wchar_t* GetScanFormatString(int) {return L" %i";}
+template <>             const wchar_t* GetScanFormatString(long) {return L" %li";}
+template <>   const wchar_t* GetScanFormatString(unsigned short) {return L" %hu";}
+template <>     const wchar_t* GetScanFormatString(unsigned int) {return L" %u";}
+template <>    const wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
+template <>            const wchar_t* GetScanFormatString(float) {return L" %g";}
+template <>           const wchar_t* GetScanFormatString(double) {return L" %lg";}
+#if (SIZE_MAX != UINT_MAX)      // on 32 bit platforms, the following will be flagged as a redefinition
+template <>           const wchar_t* GetScanFormatString(size_t) {return L" %llu";}
+#endif
+template <>        const wchar_t* GetScanFormatString(long long) {return L" %lli";}
 
-template <>             wchar_t* GetFormatString(char) {return L" %hc";}
-template <>          wchar_t* GetFormatString(wchar_t) {return L" %lc";}
-template <>            wchar_t* GetFormatString(short) {return L" %hi";}
-template <>              wchar_t* GetFormatString(int) {return L" %i";}
-template <>             wchar_t* GetFormatString(long) {return L" %li";}
-template <>   wchar_t* GetFormatString(unsigned short) {return L" %hu";}
-template <>     wchar_t* GetFormatString(unsigned int) {return L" %u";}
-template <>    wchar_t* GetFormatString(unsigned long) {return L" %lu";}
-template <>            wchar_t* GetFormatString(float) {return L" %.9g";}
-template <>           wchar_t* GetFormatString(double) {return L" %.17g";}
-template <>           wchar_t* GetFormatString(size_t) {return L" %llu";}
-template <>        wchar_t* GetFormatString(long long) {return L" %lli";}
+template <>             const wchar_t* GetFormatString(char) {return L" %hc";}
+template <>          const wchar_t* GetFormatString(wchar_t) {return L" %lc";}
+template <>            const wchar_t* GetFormatString(short) {return L" %hi";}
+template <>              const wchar_t* GetFormatString(int) {return L" %i";}
+template <>             const wchar_t* GetFormatString(long) {return L" %li";}
+template <>   const wchar_t* GetFormatString(unsigned short) {return L" %hu";}
+template <>     const wchar_t* GetFormatString(unsigned int) {return L" %u";}
+template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
+template <>            const wchar_t* GetFormatString(float) {return L" %.9g";}
+template <>           const wchar_t* GetFormatString(double) {return L" %.17g";}
+#if (SIZE_MAX != UINT_MAX)
+template <>           const wchar_t* GetFormatString(size_t) { return L" %llu"; }
+#endif
+template <>        const wchar_t* GetFormatString(long long) {return L" %lli";}
+
 // ----------------------------------------------------------------------------
 // fgetText() specializations for fwscanf differences: get a value from a text file
 // ----------------------------------------------------------------------------
 void fgetText(FILE * f, char& v)
 {
-    wchar_t* formatString = GetFormatString(v);
-    int rc = fwscanf_s(f, formatString, &v, 1);
+    const wchar_t* formatString = GetFormatString(v);
+    int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
         ERROR ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
         ERROR ("error reading from file: %s", strerror (errno));
-    ASSERT(rc == 1);
+    assert(rc == 1);
 }
 void fgetText(FILE * f, wchar_t& v)
 {
-    wchar_t* formatString = GetFormatString(v);
-    int rc = fwscanf_s(f, formatString, &v, 1);
+    const wchar_t* formatString = GetFormatString(v);
+    int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
         ERROR ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
         ERROR ("error reading from file: %s", strerror (errno));
-    ASSERT(rc == 1);
+    assert(rc == 1);
 }
 
 // ----------------------------------------------------------------------------
@@ -93,12 +107,7 @@ template<class _T> FILE * fopenStdHandle (const _T * mode)
 {
     FILE * f = strchr (mode, 'r') ? stdin : stdout;
     if (strchr (mode, 'b') || strchr (mode, 't'))   // change binary mode
-    {
-        // switch to binary mode if not yet (in case it is stdin)
-        int rc = _setmode (_fileno (f), strchr (mode, 'b') ? _O_BINARY : _O_TEXT);
-        if (rc == -1)
-            ERROR ("error switching stream to binary mode: %s", strerror (errno));
-    }
+        fsetmode (f, strchr(mode, 'b') ? 'b' : 't');
     return f;
 }
 
@@ -136,19 +145,23 @@ FILE * fopenOrDie (const wstring & pathname, const wchar_t * mode)
 // set mode to binary or text (pass 'b' or 't')
 // ----------------------------------------------------------------------------
 
-void fsetmode (FILE * f, char type)
+#ifdef __unix__
+extern int fileno(FILE*);   // somehow got deprecated in C++11
+#endif
+
+void fsetmode(FILE * f, char type)
 {
     if (type != 'b' && type != 't')
     {
         ERROR ("fsetmode: invalid type '%c'");
     }
 #ifdef UNDER_CE // winCE and win32 have different return types for _fileno
-    FILE *fd = _fileno (f);   // note: no error check possible
+    FILE *fd = fileno (f);   // note: no error check possible
 #else
-    int fd = _fileno (f);   // note: no error check possible
+    int fd = fileno (f);   // note: no error check possible
 #endif
     int mode = type == 'b' ? _O_BINARY : _O_TEXT;
-    int rc = _setmode (fd, mode);
+    int rc = setmode (fd, mode);
     if (rc == -1)
     {
         ERROR ("error changing file mode: %s", strerror (errno));
@@ -164,27 +177,12 @@ void freadOrDie (void * ptr, size_t size, size_t count, FILE * f)
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min (count, 15*1024*1024);  // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
+        size_t chunkn = min (count, (size_t)15*1024*1024);  // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
         size_t n = fread (ptr, size, chunkn, f);
         if (n != chunkn)
             ERROR ("error reading from file: %s", strerror (errno));
         count -= n;
         ptr = n * size + (char*) ptr;
-    }
-}
-
-void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f)
-{
-    // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
-    while (count > 0)
-    {
-        size_t chunkn = min (count * size, 15*1024*1024);  
-        DWORD n ;
-        ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
-        if (n != chunkn)
-            ERROR ("error number for reading from file: %s", GetLastError());
-        count -= (size_t) (n / size);
-        ptr = n + (char*) ptr;
     }
 }
 
@@ -208,32 +206,6 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
         }
         size_t n = fwrite ((const void *) p1, 1, wantWrite, f);
         if (n != wantWrite)
-        {
-            ERROR ("error writing to file (ptr=0x%08lx, size=%d,"
-                " count=%d, writing %d bytes after %d): %s",
-                ptr, size, count, (int) wantWrite,
-                (int) (size * count - totalBytes),
-                strerror (errno));
-        }
-        totalBytes -= wantWrite;
-        p1 += wantWrite;
-    }
-}
-
-void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f)
-{
-    const char * p1 = (const char *) ptr;
-    DWORD totalBytes = (DWORD) (size * count);
-    while (totalBytes > 0)
-    {
-        DWORD wantWrite = totalBytes;
-#define LIMIT (16*1024*1024)    // limit to 16 MB at a time
-        if (wantWrite > LIMIT)
-        {
-            wantWrite = LIMIT;
-        }
-        DWORD byteWritten = 0 ;
-        if (WriteFile(f, (const void *) p1, wantWrite, &byteWritten, NULL) == false)
         {
             ERROR ("error writing to file (ptr=0x%08lx, size=%d,"
                 " count=%d, writing %d bytes after %d): %s",
@@ -326,7 +298,7 @@ size_t filesize (const wchar_t * pathname)
 #ifndef UNDER_CE    // no 64-bit under winCE
 
 // filesize64(): determine size of the file in bytes (with pathname)
-__int64 filesize64 (const wchar_t * pathname)
+int64_t filesize64 (const wchar_t * pathname)
 {
     __stat64 fileinfo;
     if (_wstat64 (pathname,&fileinfo) == -1) 
@@ -355,7 +327,7 @@ size_t fseekOrDie (FILE * f, size_t offset, int mode)
     return curPos;
 }
 
-unsigned __int64 fgetpos (FILE * f)
+uint64_t fgetpos (FILE * f)
 {
     fpos_t post;
     int rc = ::fgetpos (f, &post);
@@ -364,14 +336,15 @@ unsigned __int64 fgetpos (FILE * f)
     return post;
 }
 
-void fsetpos (FILE * f, unsigned __int64 reqpos)
+void fsetpos (FILE * f, uint64_t reqpos)
 {
-    // ::fsetpos() flushes the read buffer. This conflicts with a situation where
+#ifdef _MSC_VER
+    // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
 
-    unsigned __int64 curpos = fgetpos (f);
-    unsigned __int64 cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
+    uint64_t curpos = fgetpos (f);
+    uint64_t cureob = curpos + f->_cnt; // UGH: we mess with an internal structure here
     while (reqpos >= curpos && reqpos < cureob)
     {
         // if we made it then do not call fsetpos()
@@ -388,6 +361,7 @@ void fsetpos (FILE * f, unsigned __int64 reqpos)
         if (curpos != fgetpos (f) || curpos + f->_cnt != cureob)
             break;                              // oops
     }
+#endif
 
     // actually perform the seek
     fpos_t post = reqpos;
@@ -402,9 +376,12 @@ void fsetpos (FILE * f, unsigned __int64 reqpos)
 
 void unlinkOrDie (const std::string & pathname)
 {
-    if (_unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
+    if (unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
     ERROR ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
 }
+#ifndef _MSC_VER
+static int _wunlink (const wchar_t * p) { return unlink (msra::strfun::wcstombs (p).c_str()); }
+#endif
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
@@ -415,13 +392,11 @@ void unlinkOrDie (const std::wstring & pathname)
 // renameOrDie(): rename() with error handling
 // ----------------------------------------------------------------------------
 
-#ifndef UNDER_CE // CE only supports Unicode APIs
 void renameOrDie (const std::string & from, const std::string & to)
 {
     if (!MoveFileA (from.c_str(),to.c_str()))
     ERROR ("error renaming: %s", GetLastError());
 }
-#endif
 
 void renameOrDie (const std::wstring & from, const std::wstring & to)
 {
@@ -435,6 +410,7 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
 
 bool fexists (const wchar_t * pathname)
 {
+#ifdef _MSC_VER
     WIN32_FIND_DATAW findFileData;
     HANDLE hFind = FindFirstFileW (pathname, &findFileData);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -446,11 +422,15 @@ bool fexists (const wchar_t * pathname)
     {
         return false;
     }
+#else
+    auto_file_ptr f = _wfopen (pathname, L"r");
+    return f != nullptr;
+#endif
 }
 
-#ifndef UNDER_CE // CE only supports Unicode APIs
 bool fexists (const char * pathname)
 {
+#ifdef _MSC_VER
     WIN32_FIND_DATAA findFileData;
     HANDLE hFind = FindFirstFileA (pathname, &findFileData);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -462,8 +442,11 @@ bool fexists (const char * pathname)
     {
         return false;
     }
-}
+#else
+    auto_file_ptr f = fopen (pathname, "r");
+    return f != nullptr;
 #endif
+}
 
 // ----------------------------------------------------------------------------
 // funicode(): test if a file uses unicode by reading its BOM
@@ -486,10 +469,15 @@ bool funicode (FILE * f)
 // Returns 'buf' (always). buf guaranteed to be 0-terminated.
 // ----------------------------------------------------------------------------
 
-static inline wchar_t * fgets (wchar_t * buf, int n, FILE * f) { return fgetws (buf, n, f); }
+// TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+static inline wchar_t * fgets(wchar_t * buf, int n, FILE * f) { return fgetws(buf, n, f); }
 static inline string _utf8 (const string & s) { return s; }
 static inline string _utf8 (const wstring & s) { return msra::strfun::utf8 (s); }
 static inline size_t strnlen (wchar_t * s, size_t n) { return wcsnlen (s, n); }
+
+#ifndef _MSC_VER        // strnlen is VS proprietary
+static inline size_t strnlen(const char * s, size_t /*n*/) { return strlen(s); }
+#endif
 
 #ifdef UNDER_CE     // strlen for char * not defined in winCE
 static inline size_t strnlen (const char *s, size_t n) { return std::find (s,s+n,'\0') - s; }
@@ -498,7 +486,8 @@ static inline size_t strnlen (const char *s, size_t n) { return std::find (s,s+n
 template<class CHAR>
 CHAR * fgetline (FILE * f, CHAR * buf, int size)
 {
-    CHAR * p = fgets (buf, size, f);
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    CHAR * p = fgets(buf, size, f);
     if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
@@ -513,7 +502,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (n >= (size_t) size -1)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
-		unsigned __int64 filepos = fgetpos(f); // (for error message only)
+		uint64_t filepos = fgetpos(f); // (for error message only)
 		ERROR("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
                filepos, size -1, _utf8 (example).c_str());
     }
@@ -598,14 +587,14 @@ std::wstring fgetlinew (FILE * f)
 }
 
 // STL string version avoiding most memory allocations
-void fgetline (FILE * f, std::string & s, ARRAY<char> & buf)
+void fgetline (FILE * f, std::string & s, std::vector<char> & buf)
 {
     buf.resize (1000000);    // enough? // KIT: increased to 1M to be safe
     const char * p = fgetline (f, &buf[0], (int) buf.size());
     s.assign (p);
 }
  
-void fgetline (FILE * f, std::wstring & s, ARRAY<wchar_t> & buf)
+void fgetline (FILE * f, std::wstring & s, std::vector<wchar_t> & buf)
 {
     buf.resize (1000000);    // enough? // KIT: increased to 1M to be safe
     const wchar_t * p = fgetline (f, &buf[0], (int) buf.size());
@@ -613,7 +602,7 @@ void fgetline (FILE * f, std::wstring & s, ARRAY<wchar_t> & buf)
 }
 
 // char buffer version
-void fgetline (FILE * f, ARRAY<char> & buf)
+void fgetline (FILE * f, std::vector<char> & buf)
 {
     const int BUF_SIZE = 1000000;    // enough? // KIT: increased to 1M to be safe
     buf.resize (BUF_SIZE);
@@ -621,7 +610,7 @@ void fgetline (FILE * f, ARRAY<char> & buf)
     buf.resize (strnlen (&buf[0], BUF_SIZE) +1); // SECURITY NOTE: string use has been reviewed
 }
 
-void fgetline (FILE * f, ARRAY<wchar_t> & buf)
+void fgetline (FILE * f, std::vector<wchar_t> & buf)
 {
     const int BUF_SIZE = 1000000;    // enough? // KIT: increased to 1M to be safe
     buf.resize (BUF_SIZE);
@@ -635,36 +624,17 @@ const char * fgetstring (FILE * f, __out_z_cap(size) char * buf, int size)
     int i;
     for (i = 0; ; i++)
     {
-    int c = fgetc (f);
-    if (c == EOF)
-        ERROR ("error reading string or missing 0: %s", strerror (errno));
-    if (c == 0) break;
-    if (i >= size -1)
-    {
-        ERROR ("input line too long (max. %d characters allowed)", size -1);
-    }
-    buf[i] = (char) c;
-    }
-    ASSERT (i < size);
-    buf[i] = 0;
-    return buf;
-}
-
-const char * fgetstring (const HANDLE f, __out_z_cap(size) char * buf, int size)
-{
-    int i;
-    for (i = 0; ; i++)
-    {
-        char c; 
-        freadOrDie((void*) &c, sizeof(char), 1, f);
-        if (c == (char) 0) break;
-        if (i >= size -1)
+        int c = fgetc(f);
+        if (c == EOF)
+            ERROR("error reading string or missing 0: %s", strerror(errno));
+        if (c == 0) break;
+        if (i >= size - 1)
         {
-            ERROR ("input line too long (max. %d characters allowed)", size -1);
+            ERROR("input line too long (max. %d characters allowed)", size - 1);
         }
-        buf[i] = (char) c;
+        buf[i] = (char)c;
     }
-    ASSERT (i < size);
+    assert (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -675,7 +645,7 @@ string fgetstring (FILE * f)
     string res;
     for (;;)
     {
-    char c = fgetc (f);
+    char c = (char)fgetc (f);
     if (c == EOF)
         ERROR ("error reading string or missing 0: %s", strerror (errno));
     if (c == 0) break;
@@ -690,17 +660,18 @@ const wchar_t * fgetstring (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
     int i;
     for (i = 0; ; i++)
     {
-    wint_t c = fgetwc (f);
-    if (c == WEOF)
-            ERROR ("error reading string or missing 0: %s", strerror (errno));
-    if (c == 0) break;
-    if (i >= size -1)
-    {
-        ERROR ("input line too long (max. %d wchar_tacters allowed)", size -1);
+        // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+        wint_t c = fgetwc(f);
+        if (c == WEOF)
+            ERROR("error reading string or missing 0: %s", strerror(errno));
+        if (c == 0) break;
+        if (i >= size - 1)
+        {
+            ERROR("input line too long (max. %d wchar_tacters allowed)", size - 1);
+        }
+        buf[i] = (wchar_t)c;
     }
-    buf[i] = (wchar_t) c;
-    }
-    ASSERT (i < size);
+    assert(i < size);
     buf[i] = 0;
     return buf;
 }
@@ -709,6 +680,7 @@ const wchar_t * fgetstring (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
 // read a 0-terminated wstring
 wstring fgetwstring (FILE * f)
 {
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     wstring res;
     for (;;)
     {
@@ -737,14 +709,15 @@ wstring fgetwstring (FILE * f)
 // read a 0-terminated wstring
 wstring fgetwstring (FILE * f)
 {
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     wstring res;
     for (;;)
     {
-    wint_t c = fgetwc (f);
-    if (c == WEOF)
-            ERROR ("error reading string or missing 0: %s", strerror (errno));
-    if (c == 0) break;
-        res.push_back ((wchar_t) c);
+        wint_t c = fgetwc(f);
+        if (c == WEOF)
+            ERROR("error reading string or missing 0: %s", strerror(errno));
+        if (c == 0) break;
+        res.push_back((wchar_t)c);
     }
     return res;
 }
@@ -757,25 +730,26 @@ bool fskipspace (FILE * f)
     {
         int c = fgetc (f);
         if (c == EOF)       // hit the end
-            {
-                if (ferror (f))
-                    ERROR ("error reading from file: %s", strerror (errno));
-                break;
-            }
+        {
+            if (ferror(f))
+                ERROR("error reading from file: %s", strerror(errno));
+            break;
+        }
         if (!isspace (c))    // end of space: undo getting that character
-            {
-                int rc = ungetc (c, f);
-                if (rc != c)
-                    ERROR ("error in ungetc(): %s", strerror (errno));
-                break;          
-            }
+        {
+            int rc = ungetc(c, f);
+            if (rc != c)
+                ERROR("error in ungetc(): %s", strerror(errno));
+            break;
+        }
     }
     return count>0;
 }
 
 bool fskipwspace (FILE * f)
 {
-    int count=0;
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    int count = 0;
     for (;;count++)
     {
         wint_t c = fgetwc (f);
@@ -836,6 +810,7 @@ int fskipNewline (FILE * f, bool skip)
 // skip - skip the end of line if true, otherwise leave the end of line (but eat any leading space)
 int fskipwNewline (FILE * f, bool skip)
 {
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
     wint_t c;
     bool found = false;
     // skip white space
@@ -889,7 +864,7 @@ const char * fgettoken (FILE * f, __out_z_cap(size) char * buf, int size)
         if (rc != c)
             ERROR ("error in ungetc(): %s", strerror (errno)); 
     }
-    ASSERT (i < size);
+    assert (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -903,7 +878,8 @@ string fgettoken (FILE * f)
 // read a space-terminated token
 const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
 {
-    fskipwspace (f);                         // skip leading space
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    fskipwspace(f);                         // skip leading space
     wint_t c = WEOF;
     int i;
     for (i = 0; ; i++)
@@ -922,7 +898,7 @@ const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
         if (rc != c)
             ERROR ("error in ungetwc(): %s", strerror (errno));
     }
-    ASSERT (i < size);
+    assert (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -930,7 +906,7 @@ const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
 wstring fgetwtoken (FILE * f)
 {
     wchar_t buf[80];
-    return fgettoken(f, buf, sizeof(buf)/sizeof(*buf));
+    return fgettoken(f, buf, sizeof(buf) / sizeof(*buf));
 }
 
 // ----------------------------------------------------------------------------
@@ -942,11 +918,6 @@ void fputstring (FILE * f, const char * str)
     fwriteOrDie ((void *) str, sizeof (*str), strnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
 }
 
-void fputstring (const HANDLE f, const char * str)
-{
-    fwriteOrDie ((void *) str, sizeof (*str), strnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
-}
-
 void fputstring (FILE * f, const std::string & str)
 {
     fputstring (f, str.c_str());
@@ -954,7 +925,8 @@ void fputstring (FILE * f, const std::string & str)
 
 void fputstring (FILE * f, const wchar_t * str)
 {
-    fwriteOrDie ((void *) str, sizeof (*str), wcsnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
+    fwriteOrDie((void *)str, sizeof (*str), wcsnlen(str, SIZE_MAX) + 1, f); // SECURITY NOTE: string use has been reviewed
 }
 
 void fputstring (FILE * f, const std::wstring & str)
@@ -992,14 +964,6 @@ std::string fgetTag (FILE * f)
     return std::string (tag);
 }
 
-std::string fgetTag (const HANDLE f)
-{
-    char tag[5];
-    freadOrDie (&tag[0], sizeof (tag[0]), 4, f);
-    tag[4] = 0;
-    return std::string (tag);
-}
-
 // ----------------------------------------------------------------------------
 // fcheckTag(): read a 4-byte tag & verify it; terminate if wrong tag
 // ----------------------------------------------------------------------------
@@ -1009,11 +973,6 @@ void fcheckTag (FILE * f, const char * expectedTag)
     fcompareTag (fgetTag (f), expectedTag);
 }
 
-
-void fcheckTag (const HANDLE f, const char * expectedTag)
-{
-    fcompareTag (fgetTag (f), expectedTag);
-}
 
 void fcheckTag_ascii (FILE * f, const string & expectedTag)
 {
@@ -1046,14 +1005,7 @@ void fcompareTag (const string & readTag, const string & expectedTag)
 void fputTag (FILE * f, const char * tag)
 {
     const int TAG_LEN = 4;
-    ASSERT (strnlen (tag, TAG_LEN + 1) == TAG_LEN);
-    fwriteOrDie ((void *) tag, sizeof (*tag), strnlen (tag, TAG_LEN), f);
-}
-
-void fputTag(const HANDLE f, const char * tag)
-{
-    const int TAG_LEN = 4;
-    ASSERT (strnlen (tag, TAG_LEN + 1) == TAG_LEN);
+    assert (strnlen (tag, TAG_LEN + 1) == TAG_LEN);
     fwriteOrDie ((void *) tag, sizeof (*tag), strnlen (tag, TAG_LEN), f);
 }
 
@@ -1066,7 +1018,7 @@ void fskipstring (FILE * f)
     char c;
     do
     {
-    freadOrDie (&c, sizeof (c), 1, f);
+        freadOrDie(&c, sizeof (c), 1, f);
     }
     while (c);
 }
@@ -1081,16 +1033,17 @@ void fpad (FILE * f, int n)
     int pos = ftell (f);
     if (pos == -1)
     {
-    ERROR ("error in ftell(): %s", strerror (errno));
+        ERROR ("error in ftell(): %s", strerror (errno));
     }
     // determine how many bytes are needed (at least 1 for the 0-terminator)
     // and create a dummy string of that length incl. terminator
     int len = n - (pos % n);
     const char dummyString[] = "MSR-Asia: JL+FS";
     size_t offset = sizeof(dummyString)/sizeof(dummyString[0]) - len;
-    ASSERT (offset >= 0);
+    assert (offset >= 0);
     fputstring (f, dummyString + offset);
 }
+
 // ----------------------------------------------------------------------------
 // fgetbyte(): read a byte value
 // ----------------------------------------------------------------------------
@@ -1127,7 +1080,7 @@ short fgetshort_bigendian (FILE * f)
 int fgetint24 (FILE * f)
 {
     int v;
-    ASSERT (sizeof (v) == 4);
+    assert (sizeof (v) == 4);
     freadOrDie (&v, sizeof (v) -1, 1, f);   // only read 3 lower-order bytes
     v <<= 8;                                // shift up (upper 8 bits uninit'ed)
     v >>= 8;                                // shift down 8 bits with sign-extend
@@ -1139,13 +1092,6 @@ int fgetint24 (FILE * f)
 // ----------------------------------------------------------------------------
 
 int fgetint (FILE * f)
-{
-    int v;
-    freadOrDie (&v, sizeof (v), 1, f);
-    return v;
-}
-
-int fgetint (const HANDLE f)
 {
     int v;
     freadOrDie (&v, sizeof (v), 1, f);
@@ -1189,14 +1135,6 @@ long fgetlong (FILE * f)
     return v;
 }
 
-long fgetlong (const HANDLE f)
-{
-    long v;
-    freadOrDie (&v, sizeof (v), 1, f);
-    return v;
-}
-
-
 // ----------------------------------------------------------------------------
 // fgetfloat(): read a float value
 // ----------------------------------------------------------------------------
@@ -1223,7 +1161,7 @@ float fgetfloat_ascii (FILE * f)
     ERROR ("error reading float value from file (invalid format): %s");
     else if (rc == EOF)
     ERROR ("error reading from file: %s", strerror (errno));
-    ASSERT (rc == 1);
+    assert (rc == 1);
     return val;
 }
 
@@ -1236,366 +1174,6 @@ double fgetdouble (FILE * f)
     double v;
     freadOrDie (&v, sizeof (v), 1, f);
     return v;
-}
-
-// ----------------------------------------------------------------------------
-// fgetwav(): read an entire .wav file
-// ----------------------------------------------------------------------------
-
-void WAVEHEADER::prepareRest (int sampleCount)
-{
-    FmtLength   = 16; 
-
-    wFormatTag      = 1;
-    nAvgBytesPerSec = nSamplesPerSec * nBlockAlign;
-
-    riffchar[0] = 'R';
-    riffchar[1] = 'I';
-    riffchar[2] = 'F';
-    riffchar[3] = 'F';
-    if (sampleCount != -1)
-    {
-        DataLength  = sampleCount * nBlockAlign;
-        RiffLength  = 36 + DataLength;
-    }
-    else
-    {
-        DataLength  = 0xffffffff;
-        RiffLength  = 0xffffffff;
-    }
-
-    wavechar[0] = 'W';
-    wavechar[1] = 'A';
-    wavechar[2] = 'V';
-    wavechar[3] = 'E';
-    wavechar[4] = 'f';
-    wavechar[5] = 'm';
-    wavechar[6] = 't';
-    wavechar[7] = ' ';
-
-    datachar[0] = 'd';
-    datachar[1] = 'a';
-    datachar[2] = 't';
-    datachar[3] = 'a';
-}
-
-void WAVEHEADER::prepare (unsigned int Fs, int Bits, int Channels, int SampleCount)
-{
-    nChannels       = (short) Channels; 
-    nSamplesPerSec  = Fs; 
-    nBlockAlign     = (short) (Channels * (Bits/8));
-    nAvgBytesPerSec = Fs * nBlockAlign;
-    wBitsPerSample  = (short) Bits;
-
-    prepareRest (SampleCount);
-}
-
-void WAVEHEADER::prepare (const WAVEFORMATEX & wfx, int sampleCount /* -1 for unknown */)
-{
-    nChannels       = wfx.nChannels;
-    nSamplesPerSec  = wfx.nSamplesPerSec;
-    nBlockAlign     = wfx.nBlockAlign;
-    wBitsPerSample  = wfx.wBitsPerSample;
-
-    prepareRest (sampleCount);
-}
-
-void WAVEHEADER::write (FILE * f)
-{
-    fputTag (f, "RIFF");
-    fputint (f, RiffLength);
-    fputTag (f, "WAVE");
-    fputTag (f, "fmt ");
-    fputint (f, FmtLength);
-    fputshort (f, wFormatTag);
-    fputshort (f, nChannels);
-    fputint (f, nSamplesPerSec);
-    fputint (f, nAvgBytesPerSec);
-    fputshort (f, nBlockAlign);
-    fputshort (f, wBitsPerSample);
-    ASSERT (FmtLength == 16);
-    ASSERT (wFormatTag == 1);
-    fputTag (f, "data");
-    fputint (f, DataLength);
-    fflushOrDie (f);
-}
-
-/*static*/ void WAVEHEADER::update (FILE * f)
-{
-    size_t curPos = _ftelli64 (f);
-    if (curPos == -1)
-    {
-    ERROR ("error determining file position: %s", strerror (errno));
-    }
-    unsigned int len = (unsigned int) filesize (f);
-    unsigned int RiffLength = len - 8;
-    unsigned int DataLength = RiffLength - 36;
-    fseekOrDie (f, 4, SEEK_SET);
-    fputint (f, RiffLength);
-    fseekOrDie (f, 40, SEEK_SET);
-    fputint (f, DataLength);
-    fseekOrDie (f, curPos, SEEK_SET);
-}
-
-unsigned int WAVEHEADER::read (FILE * f, signed short & wRealFormatTag, int & bytesPerSample)
-{
-    // read header
-    fcheckTag (f, "RIFF");
-    /*unsigned int riffLen = */ fgetint (f);
-    fcheckTag (f, "WAVE");
-    fcheckTag (f, "fmt ");
-    unsigned int fmtLen = fgetint (f);
-    wRealFormatTag = fgetshort (f);
-    if (wRealFormatTag == -2)   // MARecorder.exe [Ivan Tashev] puts a -2 for
-    {                           // 8-channel recordings (meaning unknown).
-        wRealFormatTag = 1;     // Workaround: pretend it is 1 (seems safe)
-    }
-    (wRealFormatTag == 1 || wRealFormatTag == 7)
-        || ERROR ("WAVEHEADER::read: wFormatTag=%d not supported for now", wRealFormatTag);
-    unsigned short wChannels = fgetshort (f);
-    unsigned long dwSamplesPerSec = fgetint (f);
-    unsigned int sampleRate = dwSamplesPerSec;
-    /*unsigned long dwAvgBytesPerSec = */ fgetint (f);
-    unsigned short wBlockAlign = fgetshort (f);
-    unsigned short wBitsPerSample = fgetshort (f);
-    (wBitsPerSample <= 16) || ERROR ("WAVEHEADER::read: invalid wBitsPerSample %d", wBitsPerSample);
-    bytesPerSample = wBitsPerSample / 8;
-    (wBlockAlign == wChannels * bytesPerSample)
-        || ERROR ("WAVEHEADER::read: wBlockAlign != wChannels*bytesPerSample not supported");
-    while (fmtLen > 16) // unused extra garbage in header
-    {
-        fgetbyte (f);
-        fmtLen--;
-    }
-    if (wRealFormatTag == 7)
-    {
-        (bytesPerSample == 1) || ERROR ("WAVEHEADER::read: invalid wBitsPerSample %d for mulaw", wBitsPerSample);
-        fcheckTag (f, "fact");
-        unsigned int factLen = fgetint (f);
-        while (factLen > 0)
-        {
-            fgetbyte (f);
-            factLen--;
-        }
-    }
-    fcheckTag (f, "data");
-    unsigned int dataLen = fgetint (f);
-    unsigned int numSamples = dataLen / wBlockAlign;
-
-    // prepare a nice wave header without junk (44 bytes, 16-bit PCM)
-    prepare (sampleRate, wBitsPerSample, wChannels, numSamples);
-
-    return numSamples;
-}
-
-static short toolULawToLinear(unsigned char p_ucULawByte)
-{
-    static short anExpLut[8] = { 0, 132, 396, 924, 1980, 4092, 8316, 16764 };
-    short nSign, nExponent, nMantissa, nSample;
-
-    p_ucULawByte=~p_ucULawByte;
-    nSign=(p_ucULawByte & 0x80);
-    nExponent=(p_ucULawByte >> 4) & 0x07;
-    nMantissa=p_ucULawByte & 0x0F;
-    nSample=anExpLut[nExponent]+(nMantissa<<(nExponent+3));
-    if(nSign != 0) 
-        nSample = -nSample;
-
-    return nSample;
-}
-
-// fgetwavraw(): only read data of .wav file. For multi-channel data, samples
-// are kept interleaved.
-static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
-{
-    int bytesPerSample = wavhd.wBitsPerSample / 8;  // (sample size on one channel)
-    wav.resize (wavhd.DataLength / bytesPerSample);
-    if (wavhd.wFormatTag == 7)    // mulaw
-    {
-        (wavhd.nChannels == 1) || ERROR ("fgetwav: wChannels=%d not supported for mulaw", wavhd.nChannels);
-        ARRAY<unsigned char> data;
-        int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
-        data.resize (numSamples);
-        freadOrDie (&data[0], sizeof (data[0]), numSamples, f);
-        for (int i = 0; i < numSamples; i++)
-        {
-            wav[i] = toolULawToLinear (data[i]);
-        }
-    }
-    else if (bytesPerSample == 2)
-    {   // note: we may be reading an interleaved multi-channel signal.
-        freadOrDie (&wav[0], sizeof (wav[0]), wav.size(), f);
-    }
-    // ... TODO: support 8 bit linear PCM samples (implement when needed; samples scaled to 'short')
-    else
-    {
-        ERROR ("bytesPerSample != 2 is not supported except mulaw format!\n");
-    }
-}
-
-// ----------------------------------------------------------------------------
-// fgetwav(): read an entire .wav file. Stereo is mapped to mono.
-// ----------------------------------------------------------------------------
-
-void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
-{
-    WAVEHEADER wavhd;           // will be filled in for 16-bit PCM!!
-    signed short wFormatTag;    // real format tag as found in data
-    int bytesPerSample;         // bytes per sample as found in data
-
-    unsigned int numSamples = wavhd.read (f, wFormatTag, bytesPerSample);
-    sampleRate = (int) wavhd.nSamplesPerSec;
-
-    if (wavhd.nChannels == 1)
-    {
-        fgetwavraw (f, wav, wavhd);
-    }
-    else if (wavhd.nChannels == 2)
-    {
-        //read raw data        
-        ARRAY<short> buf;
-        buf.resize(numSamples * 2);
-        fgetwavraw(f, buf, wavhd);
-        
-        //map to mono
-        wav.resize (numSamples);
-        const short * p = &buf[0];
-        for (int i = 0; i < (int) numSamples; i++)
-        {
-            int l = *p++;
-            int r = *p++;
-            int mono = ((l + r) + 1) >> 1;
-            wav[i] = (short) mono;
-        }
-    }
-    else
-    {
-        ERROR ("bytesPerSample/wChannels != 2 needs to be implemented");
-    }
-}
-
-void fgetwav (const wstring & fn, ARRAY<short> & wav, int & sampleRate)
-{
-    auto_file_ptr f = fopenOrDie (fn, L"rbS");
-    fgetwav (f, wav, sampleRate);
-}
-
-// ----------------------------------------------------------------------------
-// ... TODO:
-//  - rename this function!!
-//  - also change to read header itself and return sample rate and channels
-// fgetraw(): read data of multi-channel .wav file, and separate data of multiple channels. 
-//            For example, data[i][j]: i is channel index, 0 means the first 
-//            channel. j is sample index.
-// ----------------------------------------------------------------------------
-
-void fgetraw (FILE *f, ARRAY< ARRAY<short> > & data, const WAVEHEADER & wavhd)
-{
-    ARRAY<short> wavraw;
-    fgetwavraw (f, wavraw, wavhd);
-    data.resize (wavhd.nChannels);
-    int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
-    ASSERT (numSamples == (int) wavraw.size() / wavhd.nChannels);
-
-    for (int i = 0; i < wavhd.nChannels; i++)
-    {
-        data[i].resize (numSamples);
-
-        for (int j = 0; j < numSamples; j++)
-        {
-            data[i][j] = wavraw[wavhd.nChannels*j + i];
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-// fgetwfx(), fputwfx(): direct access to simple WAV headers
-// ----------------------------------------------------------------------------
-
-// read header and skip to first data byte; return #samples
-unsigned int fgetwfx (FILE * f, WAVEFORMATEX & wfx)
-{
-    // read header
-    fcheckTag (f, "RIFF");
-    /*unsigned int riffLen = */ fgetint (f);
-    fcheckTag (f, "WAVE");
-    fcheckTag (f, "fmt ");
-    wfx.cbSize = sizeof (wfx);
-    int fmtLen = fgetint (f);
-    wfx.wFormatTag = fgetshort (f);
-    if (wfx.wFormatTag == -2)   // MARecorder.exe [Ivan Tashev] puts a -2 for
-    {                           // 8-channel recordings (meaning unknown).
-        wfx.wFormatTag = 1;     // Workaround: pretend it is 1 (seems safe)
-    }
-    (wfx.wFormatTag == 1 || wfx.wFormatTag == 3 || wfx.wFormatTag == 7)
-        || ERROR ("WAVEHEADER::read: wFormatTag=%d not supported for now", wfx.wFormatTag);
-    wfx.nChannels = fgetshort (f);
-    wfx.nSamplesPerSec = fgetint (f);
-    wfx.nAvgBytesPerSec = fgetint (f);
-    wfx.nBlockAlign = fgetshort (f);
-    wfx.wBitsPerSample = fgetshort (f);
-    // unused extra garbage in header
-    for ( ; fmtLen > 16; fmtLen--) fgetbyte (f);
-    fcheckTag (f, "data");
-    unsigned int dataLen = fgetint (f);
-    unsigned int numSamples = dataLen / wfx.nBlockAlign;
-    return numSamples;
-}
-
-void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples)
-{
-    unsigned int DataLength = numSamples * wfx.nBlockAlign;
-    (DataLength / wfx.nBlockAlign == numSamples)
-        || ERROR ("fputwfx: data size exceeds WAV header 32-bit range");
-    unsigned int RiffLength = 36 + DataLength;
-    unsigned int FmtLength  = 16; 
-    // file header
-    ASSERT (wfx.cbSize == 0 || wfx.cbSize == FmtLength + 2);
-    fputTag (f, "RIFF");
-    fputint (f, RiffLength);
-    fputTag (f, "WAVE");
-    // 'fmt ' chunk (to hold wfx)
-    fputTag (f, "fmt ");
-    fputint (f, FmtLength);
-    fputshort (f, wfx.wFormatTag);
-    fputshort (f, wfx.nChannels);
-    fputint (f, wfx.nSamplesPerSec);
-    fputint (f, wfx.nAvgBytesPerSec);
-    fputshort (f, wfx.nBlockAlign);
-    fputshort (f, wfx.wBitsPerSample);
-    // data chunk
-    fputTag (f, "data");
-    fputint (f, DataLength);
-    fflushOrDie (f);
-}
-
-// ----------------------------------------------------------------------------
-// fputwav(): write an entire .wav file (16 bit PCM)
-// ----------------------------------------------------------------------------
-
-void fputwav (FILE * f, const vector<short> & wav, int sampleRate, int nChannels)
-{
-    f;wav;sampleRate;nChannels;
-    // construct WAVEFORMATEX
-    WAVEFORMATEX wfx;
-    wfx.cbSize = 16 + 2;  //fmt data + extra data
-    wfx.nAvgBytesPerSec = (DWORD)(sampleRate * nChannels * 2); //short: 2 bytes per sample
-    wfx.nBlockAlign = (WORD)nChannels * 2; //short: 2bytes per sample
-    wfx.nChannels = (WORD)nChannels;
-    wfx.nSamplesPerSec = sampleRate;
-    wfx.wBitsPerSample = 16;
-    wfx.wFormatTag = WAVE_FORMAT_PCM;
-    //putwfx
-    fputwfx (f, wfx, (unsigned int) wav.size());
-    // wrtie the data
-    fwriteOrDie (&wav[0], sizeof(wav[0]), wav.size(), f);
-}
-
-void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int nChannels)
-{
-    auto_file_ptr f = fopenOrDie (fn, L"wbS");
-    fputwav (f, wav, sampleRate, nChannels);
-    fflushOrDie (f);    // after this, fclose() (in destructor of f) cannot fail
 }
 
 // ----------------------------------------------------------------------------
@@ -1622,7 +1200,7 @@ void fputshort (FILE * f, short v)
 
 void fputint24 (FILE * f, int v)
 {
-    ASSERT (sizeof (v) == 4);
+    assert (sizeof (v) == 4);
     fwriteOrDie (&v, sizeof (v) -1, 1, f);  // write low-order 3 bytes
 }
 
@@ -1635,11 +1213,6 @@ void fputint (FILE * f, int v)
     fwriteOrDie (&v, sizeof (v), 1, f);
 }
 
-void fputint (const HANDLE f, int v)
-{
-    fwriteOrDie (&v, sizeof (v), 1, f);
-}
-
 // ----------------------------------------------------------------------------
 // fputlong(): write an long value
 // ----------------------------------------------------------------------------
@@ -1648,12 +1221,6 @@ void fputlong (FILE * f, long v)
 {
     fwriteOrDie (&v, sizeof (v), 1, f);
 }
-
-void fputlong (const HANDLE f, long v)
-{
-    fwriteOrDie (&v, sizeof (v), 1, f);
-}
-
 
 // ----------------------------------------------------------------------------
 // fputfloat(): write a float value
@@ -1677,7 +1244,7 @@ void fputdouble (FILE * f, double v)
 // fputfile(): write a binary block or a string as a file
 // ----------------------------------------------------------------------------
 
-void fputfile (const wstring & pathname, const ARRAY<char> & buffer)
+void fputfile (const wstring & pathname, const std::vector<char> & buffer)
 {
     FILE * f = fopenOrDie (pathname, L"wb");
     try
@@ -1735,7 +1302,7 @@ void fputfile (const wstring & pathname, const std::string & string)
 // fgetfile(): load a file as a binary block
 // ----------------------------------------------------------------------------
 
-void fgetfile (const wstring & pathname, ARRAY<char> & buffer)
+void fgetfile (const wstring & pathname, std::vector<char> & buffer)
 {
     FILE * f = fopenOrDie (pathname, L"rb");
     size_t len = filesize (f);
@@ -1747,11 +1314,11 @@ void fgetfile (const wstring & pathname, ARRAY<char> & buffer)
     fclose (f);
 }
 
-void fgetfile (FILE * f, ARRAY<char> & buffer)
+void fgetfile (FILE * f, std::vector<char> & buffer)
 {   // this version reads until eof
     buffer.resize (0);
     buffer.reserve (1000000);   // avoid too many reallocations
-    ARRAY<char> inbuf;
+    std::vector<char> inbuf;
     inbuf.resize (65536);         // read in chunks of this size
     while (!feof (f))           // read until eof
     {
@@ -1778,8 +1345,7 @@ static size_t fgetfilechars (const std::wstring & path, vector<char> & buffer)
 
 template<class LINES> static void strtoklines (char * s, LINES & lines)
 {
-    char * context = nullptr;
-    for (char * p = strtok_s (s, "\r\n", &context); p; p = strtok_s (NULL, "\r\n", &context))
+    for (char * p = strtok (s, "\r\n"); p; p = strtok (NULL, "\r\n"))
         lines.push_back (p);
 }
 
@@ -1842,6 +1408,7 @@ void setfiletime (const wstring & path, const FILETIME & time)
     }
 }
 
+#if 0
 // ----------------------------------------------------------------------------
 // expand_wildcards -- wildcard expansion of a path, including directories.
 // ----------------------------------------------------------------------------
@@ -1916,12 +1483,20 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 {
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
-        ERROR ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error (::GetLastError()).c_str());
+        ERROR("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error(::GetLastError()).c_str());
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // make_intermediate_dirs() -- make all intermediate dirs on a path
 // ----------------------------------------------------------------------------
+
+#ifndef _MSC_VER    // _wmkdir() is VS proprietary
+static int _wmkdir (const wchar_t * p)
+{
+    return mkdir (msra::strfun::wcstombs (p).c_str(), 0777/*correct?*/);
+}
+#endif
 
 static void mkdir (const wstring & path)
 {
@@ -1938,12 +1513,16 @@ static void mkdir (const wstring & path)
     ERROR ("make_intermediate_dirs: error creating intermediate directory %S", path.c_str());
 }
 
+#ifndef _MSC_VER
+wchar_t* wcstok_s(wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return wcstok (s, delim, ptr); }
+#endif
+
 // make subdir of a file including parents
 void msra::files::make_intermediate_dirs (const wstring & filepath)
 {
     vector<wchar_t> buf;
     buf.resize (filepath.length() +1, 0);
-    wcscpy_s (&buf[0], buf.size(), filepath.c_str());
+    wcscpy (&buf[0], filepath.c_str());
     wstring subpath;
     int skip = 0;
     // if share (\\) then the first two levels (machine, share name) cannot be made
@@ -1953,7 +1532,8 @@ void msra::files::make_intermediate_dirs (const wstring & filepath)
         skip = 2;           // skip two levels (machine, share)
     }
     // make all constituents except the filename (to make a dir, include a trailing slash)
-    for (const wchar_t * p = wcstok (&buf[0], L"/\\"); p; p = wcstok (NULL, L"/\\"))
+    wchar_t * context = nullptr;
+    for (const wchar_t * p = wcstok_s (&buf[0], L"/\\", &context); p; p = wcstok_s (NULL, L"/\\", &context))
     {
         if (subpath != L"" && subpath != L"/" && subpath != L"\\" && skip == 0)
         {

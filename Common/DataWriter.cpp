@@ -20,7 +20,7 @@ template<> std::string GetWriterName(float) {std::string name = "GetWriterF"; re
 template<> std::string GetWriterName(double) {std::string name = "GetWriterD"; return name;}
 
 template<class ElemType>
-void DataWriter<ElemType>::Init(const ConfigParameters& config)
+void DataWriter<ElemType>::Init(const ConfigParameters& /*config*/)
 {
     Error("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
