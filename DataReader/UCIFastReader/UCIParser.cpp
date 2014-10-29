@@ -9,6 +9,7 @@
 #include "stdafx.h"
 #include "UCIParser.h"
 #include <stdexcept>
+#include <stdint.h>
 
 
 // SetState for a particular value
@@ -374,9 +375,9 @@ void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeat
 // GetFilePosition - Get the current file position in the text file
 // returns current position in the file
 template <typename NumType, typename LabelType>
-_int64 UCIParser<NumType, LabelType>::GetFilePosition()
+int64_t UCIParser<NumType, LabelType>::GetFilePosition()
 {
-    _int64 position = _ftelli64(m_pFile);
+    int64_t position = _ftelli64(m_pFile);
     if (position == -1L)
         throw new std::runtime_error("UCIParser::GetFilePosition - error retrieving file position in file");
     return position;
@@ -387,7 +388,7 @@ _int64 UCIParser<NumType, LabelType>::GetFilePosition()
 // it is recommneded that only return values from GetFilePosition() known to be the start of a line
 // and zero be passed to this function
 template <typename NumType, typename LabelType>
-void UCIParser<NumType, LabelType>::SetFilePosition(_int64 position)
+void UCIParser<NumType, LabelType>::SetFilePosition(int64_t position)
 {
     int rc = _fseeki64(m_pFile, position, SEEK_SET);
     if (rc)
@@ -517,8 +518,6 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
         // only do a test on a state transition
         if (m_current_state != nextState)
         {
-            size_t elementsProcessed = m_elementsConvertedThisLine;
-
             // System.Diagnostics.Debug.WriteLine("Current state = " + m_current_state + ", next state = " + nextState);
 
             // if the nextState is a label, we don't want to do any number processing, it's a number prefixed string
@@ -655,7 +654,7 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void UCIParser<float, std::string>::StoreLabel(float finalResult)
+void UCIParser<float, std::string>::StoreLabel(float /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
@@ -695,7 +694,7 @@ void UCIParser<float, std::string>::StoreLastLabel()
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void UCIParser<double, std::string>::StoreLabel(double finalResult)
+void UCIParser<double, std::string>::StoreLabel(double /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
@@ -732,7 +731,7 @@ void UCIParser<double, std::string>::StoreLastLabel()
 }
 
 #ifdef STANDALONE
-int _tmain(int argc, _TCHAR* argv[])
+int wmain(int argc, wchar_t* argv[])
 {
     UCIParser<double, int> parser;
     std::vector<double> values;

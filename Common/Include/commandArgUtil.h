@@ -9,6 +9,7 @@
 #include <string>
 #include <map>
 #include <stdexcept>
+#include <stdint.h>
 
 using namespace std;
 
@@ -20,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define OPENBRACES "[{(\""
 #define CLOSINGBRACES "]})\""
 
-    static const std::string::size_type npos = -1;
+    static const std::string::size_type npos = (std::string::size_type )-1;
 
     // These are the constants associated with the "ResolveVariables" method.
     static const std::string openBraceVar = "$";
@@ -155,26 +156,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::runtime_error ("ConfigValue (unsigned int): integer argument expected");
             return ival;
         }
-        operator __int64 () const
+        operator int64_t () const
         {
             char * ep;          // will be set to point to first character that failed parsing
-            __int64 value = _strtoui64 (c_str(), &ep, 10);
+            int64_t value = _strtoui64 (c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (__int64): invalid input string");
+                throw std::runtime_error ("ConfigValue (int64_t): invalid input string");
             return value;
         }
-        operator unsigned __int64 () const
+        operator uint64_t () const
         {
             char * ep;          // will be set to point to first character that failed parsing
-            unsigned __int64 value = _strtoui64 (c_str(), &ep, 10);
+            uint64_t value = _strtoui64 (c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (unsigned __int64): invalid input string");
+                throw std::runtime_error ("ConfigValue (uint64_t): invalid input string");
             return value;
         }
-        // size_t is the same as unsigned __int64()
+        // size_t is the same as uint64_t()
         //operator size_t () const
         //{
-        //    unsigned __int64 val = (unsigned __int64) *this;
+        //    uint64_t val = (uint64_t) *this;
         //    size_t ival = (size_t) val;
         //    if (val != ival)
         //        throw std::runtime_error ("ConfigValue (size_t): integer argument expected");
@@ -301,8 +302,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // pos - postion to start parsing at
         void Parse(const std::string& stringParse, std::string::size_type pos=0)
         {
-            char *token = NULL;
-            char *next_token = NULL;
             // list of possible custom separators
             const std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
             std::string seps = ",\r\n";   // default separators
@@ -460,7 +459,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // If this is not the case for a particular variable (stored in a class or something), you must call ClearParent() to disconnect it from it's parents before they are freed.
     // usage: This class is intended to be used as local variables where the "parent" parameters have lifetimes longer than the "child" parameters
     // for example:
-    // int _tmain(int argc, _TCHAR* argv[]) {
+    // int wmain(int argc, wchar_t* argv[]) {
     //    ConfigParameters config = ConfigParameters::ParseCommandLine(argc, argv);
     //    A(config);
     // }
@@ -506,7 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return *this;
         }
         // hide new so only stack allocated
-        void * operator new(size_t size) {}
+        void * operator new(size_t /*size*/) {}
     public:
         // explicit copy function. Only to be used when a copy must be made.
         // this also clears out the parent pointer, so only local configs can be used
@@ -814,7 +813,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return m_configName.substr(lastColon+1);
             return std::string();   // empty string
         }
-        static std::string ParseCommandLine(int argc, _TCHAR* argv[], ConfigParameters& config);
+        static std::string ParseCommandLine(int argc, wchar_t* argv[], ConfigParameters& config);
         // dump for debugging purposes
         void dump() const
         {

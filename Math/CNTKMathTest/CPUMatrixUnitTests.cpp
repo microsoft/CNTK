@@ -592,5 +592,51 @@ namespace CNTKMathTest
             Assert::IsTrue(M3.IsEqualTo(M0, 0.0001)); 
         }
 
+        TEST_METHOD(CPUAssignRepeatOf)
+        {
+            Matrix M0(2, 3);
+            M0(0, 0) = 1; M0(0, 1) = 6; M0(0, 2) = 11;
+            M0(1, 0) = 2; M0(1, 1) = 7; M0(1, 2) = 12;
+
+            Matrix M1;
+            M1.AssignRepeatOf(M0, 1, 1);
+            Assert::IsTrue(M1.IsEqualTo(M0, 0.0001));
+
+            Matrix M3(6, 6);
+            M3(0, 0) = 1; M3(0, 1) = 6; M3(0, 2) = 11; M3(0, 3) = 1; M3(0, 4) = 6; M3(0, 5) = 11;
+            M3(1, 0) = 2; M3(1, 1) = 7; M3(1, 2) = 12; M3(1, 3) = 2; M3(1, 4) = 7; M3(1, 5) = 12;
+            M3(2, 0) = 1; M3(2, 1) = 6; M3(2, 2) = 11; M3(2, 3) = 1; M3(2, 4) = 6; M3(2, 5) = 11;
+            M3(3, 0) = 2; M3(3, 1) = 7; M3(3, 2) = 12; M3(3, 3) = 2; M3(3, 4) = 7; M3(3, 5) = 12;
+            M3(4, 0) = 1; M3(4, 1) = 6; M3(4, 2) = 11; M3(4, 3) = 1; M3(4, 4) = 6; M3(4, 5) = 11;
+            M3(5, 0) = 2; M3(5, 1) = 7; M3(5, 2) = 12; M3(5, 3) = 2; M3(5, 4) = 7; M3(5, 5) = 12;
+
+            M1.AssignRepeatOf(M0, 3, 2);
+            Assert::IsTrue(M1.IsEqualTo(M3, 0.0001));
+        }
+
+        TEST_METHOD(CPURowElementOperations)
+        {
+            Matrix M0 = Matrix::RandomUniform(20, 28, -1, 1);
+            Matrix M1 = Matrix::RandomUniform(1, 28, 1, 2);
+
+            Matrix M3;
+            M3.SetValue(M0);
+            M3.RowElementMultiplyWith(M1);
+            M3.RowElementDivideBy(M1);
+
+            Assert::IsTrue(M0.IsEqualTo(M3, 0.0001));
+        }
+        TEST_METHOD(CPUColumnElementOperations)
+        {
+            Matrix M0 = Matrix::RandomUniform(20, 28, -1, 1);
+            Matrix M1 = Matrix::RandomUniform(20, 1, 1, 2);
+
+            Matrix M3;
+            M3.SetValue(M0);
+            M3.ColumnElementMultiplyWith(M1);
+            M3.ColumnElementDivideBy(M1);
+
+            Assert::IsTrue(M0.IsEqualTo(M3, 0.0001));
+        }
     };
 }

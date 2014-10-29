@@ -93,13 +93,13 @@ public:
     // FindSymbol - Search the engines symbol table for a fully quantified symbol
     // symbol - name of the symbol
     // returns - pointer to the matching EvalValue for that node, of NULL if not found
-    virtual void* FindSymbol(const wstring& symbol)
+    virtual void* FindSymbol(const wstring& /*symbol*/)
     {
         return NULL;
     }
     // ProcessOptionalParameters - Process the optional parameters of a node
     // node to process
-    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node)
+    virtual void ProcessOptionalParameters(NDLNode<ElemType>* /*node*/)
     {
         return;
     }
@@ -195,10 +195,9 @@ private:
 	// copy constructor, creates a new disconnected copy of this node for macro expansion
 	NDLNode(const NDLNode& copyMe);
 
-    NDLNode& operator=(NDLNode& copyMe)  //this is just a place holder implementation which is not functioning but prevent callers to use it.
+    NDLNode& operator=(NDLNode& /*copyMe*/)  //this is just a place holder implementation which is not functioning but prevent callers to use it.
     {            
         throw std::logic_error("'NDLNode& operator=(NDLNode& copyMe)' should never be called.");
-        return (*this);
     } 
 
     // generate a generic symbol name for a node
@@ -367,9 +366,6 @@ public:
     }
 };
 
-template class NDLNode<float>; 
-template class NDLNode<double>;
-
 template <typename ElemType>
 class NDLScript: public ConfigParser
 {
@@ -432,6 +428,16 @@ public:
         {
             // we are adding parameters that will be replaced by actual values later
             ConfigValue param = *iter;
+
+            // check to make sure this parameter name is not a reserved word
+            std::string functionName = param;
+            // check for function name, a function may have two valid names
+            // in which case 'functionName' will get the default node name returned
+            if (CheckFunction<ElemType>(functionName))
+            {
+                Error("NDLScript: Macro %s includes a parameter %s, which is also the name of a function. Parameter names may not be the same as function names.", macroName.c_str(), param.c_str());
+            }
+
             NDLNode<ElemType>* paramNode = new NDLNode<ElemType>(param, param, this, ndlTypeParameter);
             // add to node parameters
             ndlNode->InsertParam(paramNode);
@@ -699,8 +705,8 @@ public:
         }
 
         std::string functionName = name;
-        // check for function name, a substring at the beginning of the function name will work
-        // in which case 'functionName' will get the full node name returned
+        // check for function name, a function may have two valid names
+        // in which case 'functionName' will get the default node name returned
         if (CheckFunction<ElemType>(functionName))
         {
             NDLNode<ElemType>* ndlNode = new NDLNode<ElemType>("", functionName, this, ndlTypeFunction);

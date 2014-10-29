@@ -32,7 +32,7 @@ namespace CNTKMathTest
         TEST_METHOD(CPUMatrixFileWriteAndRead)
         {
             //Test CPUMatrix
-            CPUMatrix<float> M = CPUMatrix<float>::RandomUniform(43, 10, -26.3, 30.2);
+            CPUMatrix<float> M = CPUMatrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
             CPUMatrix<float> Mcopy=M;
             std::wstring filename(L"MCPU.txt");            
             File file(filename,fileOptionsText|fileOptionsReadWrite);            
@@ -40,13 +40,13 @@ namespace CNTKMathTest
             CPUMatrix<float> M1;
             file.SetPosition(0);
             file>>M1;            
-            Assert::IsTrue(Mcopy.IsEqualTo(M1,0.00001));
+            Assert::IsTrue(Mcopy.IsEqualTo(M1,0.00001f));
         }
         
         TEST_METHOD(GPUMatrixFileWriteAndRead)
         {
             //Test GPUMatrix
-            GPUMatrix<float> MG = GPUMatrix<float>::RandomUniform(43, 10, -26.3, 30.2);
+            GPUMatrix<float> MG = GPUMatrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
             GPUMatrix<float> McopyG=MG;
             std::wstring filenameGPU(L"MGPU.txt");            
             File fileGPU(filenameGPU,fileOptionsText|fileOptionsReadWrite);            
@@ -54,13 +54,13 @@ namespace CNTKMathTest
             GPUMatrix<float> M1G;
             fileGPU.SetPosition(0);
             fileGPU>>M1G;            
-            Assert::IsTrue(McopyG.IsEqualTo(M1G,0.00001));
+            Assert::IsTrue(McopyG.IsEqualTo(M1G,0.00001f));
         }
 
         TEST_METHOD(MatrixFileWriteAndRead)
         {
             //Test Matrix in Dense mode
-            Matrix<float> M = Matrix<float>::RandomUniform(43, 10, -26.3, 30.2);
+            Matrix<float> M = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
             Matrix<float> Mcopy=M;
             std::wstring filename(L"M.txt");            
             File file(filename,fileOptionsText|fileOptionsReadWrite);            
@@ -68,11 +68,12 @@ namespace CNTKMathTest
             Matrix<float> M1;
             file.SetPosition(0);
             file>>M1; 
-            float x=M1(0,0);
-            Assert::IsTrue(M1.IsEqualTo(Mcopy,0.00001));
+            //float x=
+            M1(0,0);
+            Assert::IsTrue(M1.IsEqualTo(Mcopy,0.00001f));
 
             //Test Matrix in Sparse mode
-            Matrix<float> MS = Matrix<float>::RandomUniform(43, 10, -26.3, 30.2);
+            Matrix<float> MS = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
             Matrix<float> MScopy=MS;
             MS.SwitchToMatrixType(MatrixType::SPARSE);            
             std::wstring filenameS(L"MS.txt");            
@@ -82,7 +83,7 @@ namespace CNTKMathTest
             fileS.SetPosition(0);
             fileS>>M1S; 
             Assert::IsTrue(MatrixType::SPARSE==M1S.GetMatrixType());            
-            Assert::IsTrue(M1S.IsEqualTo(MScopy,0.00001));
+            Assert::IsTrue(M1S.IsEqualTo(MScopy,0.00001f));
         }
     };
 }

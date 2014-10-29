@@ -221,7 +221,6 @@ public:
             waitthreadchanged();
             readfromdisk = true;    // we had to wait --use to indicate that we needed to read data (does not really matter...)
         }
-        return readfromdisk;
 #else
         return source.getbatch (globalts, framesrequested, feat, uids, transcripts, lattices);
 #endif

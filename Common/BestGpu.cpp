@@ -4,6 +4,8 @@
 // </copyright>
 //
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 // CUDA-C includes
 #include <cuda.h>
 #include <windows.h>
@@ -48,19 +50,19 @@ extern "C" INT_PTR WINAPI DelayLoadNofify(
 		}
 	}
     // check for failed GetProc, old version of the driver
-	if (dliNotify == dliFailGetProc && !strcmp(pdli->szDll, "nvml.dll"))
+    if (dliNotify == dliFailGetProc && !strcmp(pdli->szDll, "nvml.dll"))
     {
         char name[256];
-        int len = strlen(pdli->dlp.szProcName);
+        size_t len = strlen(pdli->dlp.szProcName);
         strcpy_s(name, pdli->dlp.szProcName);
         // if the version 2 APIs are not supported, truncate "_v2"
-        if (name[len-1] == '2')
+        if (len>3 && name[len-1] == '2')
             name[len-3] = 0;
         FARPROC pfnRet = ::GetProcAddress(pdli->hmodCur, name);
         return (INT_PTR)pfnRet;
     }
 
-	return NULL;
+    return NULL;
 }
 
 ExternC
@@ -135,18 +137,18 @@ short DeviceFromConfig(const ConfigParameters& config)
     if (!_stricmp(val.c_str(), "Auto"))
     {
         std::vector<int> devices = g_bestGpu->GetDevices(1);
-        deviceId = devices[0];
+        deviceId = (short)devices[0];
     }
     else if (!_stricmp(val.c_str(), "All"))
     {
         std::vector<int> devices = g_bestGpu->GetDevices(BestGpu::AllDevices);
-        deviceId = devices[0];
+        deviceId = (short)devices[0];
     }
     else if (val.size() == 2 && val[0] == '*' && isdigit(val[1]))
     {
         int number = (int)(val[1] - '0');
         std::vector<int> devices = g_bestGpu->GetDevices(number);
-        deviceId = devices[0];
+        deviceId = (short)devices[0];
     }
     else
     {
@@ -160,7 +162,7 @@ short DeviceFromConfig(const ConfigParameters& config)
             argvector<int> allowed = arr;
             g_bestGpu->SetAllowedDevices(allowed);
             std::vector<int> devices = g_bestGpu->GetDevices();
-            deviceId = devices[0];
+            deviceId = (short)devices[0];
         }
     }
     return deviceId;
@@ -196,7 +198,8 @@ void BestGpu::Init()
 		return;
 
 	//get the count of objects
-	cudaError_t err = cudaGetDeviceCount(&m_deviceCount);
+	//cudaError_t err =
+        cudaGetDeviceCount(&m_deviceCount);
 
 	ProcessorData pdEmpty = { 0 };
 	for (int i = 0; i < m_deviceCount; i++)
@@ -363,23 +366,23 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
         for (int i = 0; i < best.size(); i++)
         {
             // look for a better score
-		    if (score > scores[i])
-		    {
+            if (score > scores[i])
+            {
                 // make room for this score in the correct location (insertion sort)
-                for (int j=best.size()-1; j > i; --j)
+                for (int j=(int)best.size()-1; j > i; --j)
                 {
                     scores[j] = scores[j-1];
                     best[j] = best[j-1];
                 }
-			    scores[i] = score;
-			    best[i] = pd->deviceId;
+                scores[i] = score;
+                best[i] = pd->deviceId;
                 break;
-		    }
+            }
         }
 	}
 
     // now get rid of any extra empty slots and disallowed devices
-    for (int j=best.size()-1; j > 0; --j)
+    for (int j=(int)best.size()-1; j > 0; --j)
     {
         // if this device is not allowed, or never was set remove it
         if (best[j] == -1)
@@ -390,7 +393,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 
     // save off the last values for future requeries
     m_lastFlags = bestFlags;
-    m_lastCount = best.size();
+    m_lastCount = (int)best.size();
 
     // if we eliminated all GPUs, use CPU
     if (best.size() == 0)
@@ -432,7 +435,7 @@ void BestGpu::QueryNvmlData()
 		ProcessorData* curPd = NULL;
 		for (ProcessorData* pd : m_procData)
 		{
-			if (pd->deviceProp.pciBusID == pci.bus)
+			if (pd->deviceProp.pciBusID == (int)pci.bus)
 			{
 				curPd = pd;
 				break;

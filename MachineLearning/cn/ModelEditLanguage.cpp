@@ -5,6 +5,9 @@
 //
 // NetworkDescriptionLanguage.cpp : Code used to interpret the Network Description Language.
 //
+
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "ModelEditLanguage.h"
 #include <map>
 
@@ -103,7 +106,6 @@ template <typename ElemType>
 void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigParamList& params)
 {
     std::string name = p_name;
-    bool ret = false;
     if (EqualInsensitive(name, "CreateModel"))  //create a blank model
     {
         size_t numFixedParams = 0, numOptionalParams = 0;
@@ -324,7 +326,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             std::wstring nodeName = node->NodeName();
             std::wstring toNodeName = name.second;
 
-            ComputationNode<ElemType>* nodeOut = netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName,toNodeName,CopyNodeFlags::copyNodeChildren);
+            netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName,toNodeName,CopyNodeFlags::copyNodeChildren);
         }
     }
     else if (EqualInsensitive(name, "SetNodeInput", "SetInput"))

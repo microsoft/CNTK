@@ -113,7 +113,6 @@ static inline void * malloc (size_t n, size_t align)
     if (VirtualAllocExNuma == (VirtualAllocExNuma_t)-1)
     {
         VirtualAllocExNuma = (VirtualAllocExNuma_t) GetProcAddress (GetModuleHandle ( TEXT ("kernel32.dll")), "VirtualAllocExNuma");
-        fprintf (stderr, "VirtualAllocExNuma = %x\n", VirtualAllocExNuma);
     }
 
     // if we have the function then do a NUMA-aware allocation

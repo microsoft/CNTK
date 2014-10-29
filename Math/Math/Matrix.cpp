@@ -4,11 +4,14 @@
 // </copyright>
 //
 #include "stdafx.h"
+#include "basetypes.h"
+#include "fileutil.h"
 #include "Matrix.h"
 #include <assert.h>
 
-#include "basetypes.h"
-#include "fileutil.h"
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
+#pragma warning (disable: 4239) // nonstandard extension; triggered by this pattern: "auto& second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;"
+#pragma warning (disable: 4702) // unreachable code; triggered for unknown reasons
 
 //before calling the following macro the current matrix location and matrix type on MatrixPointerToCheck must have been set correctly
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
@@ -337,7 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int origCopyFromDeviceId = deepCopyFrom.GetDeviceId();
 
         if (deviceId == AUTOPLACEMATRIX)  //use copyFrom's device if we have choice
-            deviceId = origCopyFromDeviceId;
+            deviceId = (short)origCopyFromDeviceId;
 
         Init(deviceId);  //will set m_preferredDeviceId
 
@@ -372,7 +375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)  
     {
-        Init(moveFrom.GetDeviceId());
+        Init((short)moveFrom.GetDeviceId());
 
         DISPATCH_MATRIX_ON_FLAG(&moveFrom,
             this,
@@ -497,13 +500,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (GetMatrixType() == MatrixType::DENSE)
         { 
-                for (int i = this->GetNumCols()-1; i >= -numShift; i--)
+                for (size_t i = this->GetNumCols()-1; i >= -numShift; i--)
                 {
                     Matrix<ElemType> inp = this->ColumnSlice(i + numShift, 1);
                     Matrix<ElemType> out = this->ColumnSlice(i, 1) ; 
                     out = inp;
                 }
-                for (int i = 0; i < min(this->GetNumCols(), -numShift); i++)
+                for (size_t i = 0; i < min(this->GetNumCols(), -numShift); i++)
                     this->ColumnSlice(i, 1).SetValue(0);
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
@@ -577,7 +580,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {            
         int devId = GetDeviceId();
 
-        Matrix<ElemType> slice(matrixFlagDontOwnBuffer, devId); //
+        Matrix<ElemType> slice(matrixFlagDontOwnBuffer, (short)devId); //
 
         slice.m_preferredDeviceId = m_preferredDeviceId;
 
@@ -632,19 +635,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const ElemType val, size_t startColumn, size_t numCols)
-    {            
-        DISPATCH_MATRIX_ON_FLAG(this,
-            this,
-            m_CPUMatrix->AssignColumnSlice(val, startColumn, numCols), 
-            m_GPUMatrix->AssignColumnSlice(val, startColumn, numCols), 
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED
-            );
-
-        return *this;
-    }
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE
@@ -784,7 +774,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("Transpose: Matrix is empty.");
 
-        Matrix<ElemType> c(this->GetNumCols(),this->GetNumRows(),this->GetDeviceId());
+        Matrix<ElemType> c(this->GetNumCols(), this->GetNumRows(), (short)this->GetDeviceId());
         c.AssignTransposeOf(*this);
         return c;
     }
@@ -1108,15 +1098,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients)
+    void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
+		ElemType RMS_GAMMA,
+		ElemType RMS_WGT_INC,
+		ElemType RMS_WGT_MAX,
+		ElemType RMS_WGT_DEC,
+		ElemType RMS_WGT_MIN
+		)
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &gradients,
-            m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix); SetDataLocation(CPU), 
+            m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(CPU), 
+            m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(GPU),
             NOT_IMPLEMENTED, 
-            m_CPUSparseMatrix->RmsProp(*this->m_CPUMatrix); SetDataLocation(CPU), 
             NOT_IMPLEMENTED
             );
     }
@@ -1235,6 +1231,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
+
+        return *this;
     }
 
 
@@ -1347,9 +1345,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    //for each column of a, we add all rows of a to this starting from startIndex
+    //for the row slice of this starting from startIndex we add a to it.
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        DecideAndMoveToRightDevice(*this, a);
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AddToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            this->m_GPUMatrix->AddToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
+    //for each column of this, we add row slice of a starting from startIndex
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
         DecideAndMoveToRightDevice(*this, a);
 
@@ -1359,8 +1378,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AddToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows), 
-            this->m_GPUMatrix->AddToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows), 
+            this->m_CPUMatrix->AddWithRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            this->m_GPUMatrix->AddWithRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1368,6 +1387,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    Matrix<ElemType>&  Matrix<ElemType>::AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
+    {
+        DecideAndMoveToRightDevice(*this, a);
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AssignRepeatOf(*a.m_CPUMatrix, numRowRepeats, numColRepeats),
+            this->m_GPUMatrix->AssignRepeatOf(*a.m_GPUMatrix, numRowRepeats, numColRepeats),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
 
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignDifferenceOf(const ElemType alpha, const Matrix<ElemType>& a)
@@ -1463,7 +1501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::operator* (ElemType alpha) const
     {
-        Matrix<ElemType> c(GetNumRows(), GetNumCols(),this->m_preferredDeviceId);
+        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (short)this->m_preferredDeviceId);
         Scale(alpha, *this, c);
         return c;
     }
@@ -1521,7 +1559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {        
         if (GetNumElements() == 1)
         {
-            Matrix<ElemType> c(a.GetPreferredDeviceId());
+            Matrix<ElemType> c((short)a.GetPreferredDeviceId());
 
             DISPATCH_MATRIX_ON_FLAG(this,
                 nullptr,
@@ -1535,7 +1573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (a.GetNumElements() == 1)
         {
-            Matrix<ElemType> c(GetPreferredDeviceId());
+            Matrix<ElemType> c((short)GetPreferredDeviceId());
 
             DISPATCH_MATRIX_ON_FLAG(&a,
                 nullptr,
@@ -1549,7 +1587,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            Matrix<ElemType> c(this->GetNumRows(),a.GetNumCols(), GetPreferredDeviceId());
+            Matrix<ElemType> c(this->GetNumRows(), a.GetNumCols(), (short)GetPreferredDeviceId());
             Multiply(*this, a, c);
             return c;
         }
@@ -1581,7 +1619,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::operator^ (ElemType alpha) const
     {
-        Matrix<ElemType> c(GetNumRows(), GetNumCols(), GetDeviceId());        
+        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (short)GetDeviceId());
         ElementWisePower(alpha, *this, c);
         return c;
     }
@@ -1599,6 +1637,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::ElementMultiplyWith (const Matrix<ElemType>& a)
     {
         return AssignElementProductOf(*this, a);
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::ElementDivideBy(const Matrix<ElemType>& a)
+    {
+        return AssignElementDivisionOf(*this, a);
     }
 
     //[this]=a .* b
@@ -1720,7 +1764,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty() || IsEmpty())
             throw std::logic_error("RowElementMultiplyWith: Matrix is empty.");
 
-        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
+        if (!(a.GetNumCols() == GetNumCols() && a.GetNumRows() == 1))
             throw std::invalid_argument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
         //WARNING: a and this must have same type
@@ -1740,15 +1784,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-
     template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::ColumnElementDivideWith(const Matrix<ElemType>& a)
+    Matrix<ElemType>& Matrix<ElemType>::RowElementDivideBy(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("ColumnElementDivideWith: Matrix is empty.");
+            throw std::logic_error("RowElementDivideBy: Matrix is empty.");
+
+        if (!(a.GetNumCols() == GetNumCols() && a.GetNumRows() == 1))
+            throw std::invalid_argument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        SwitchToMatrixType(a.GetMatrixType());
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->RowElementDivideBy(*a.m_CPUMatrix),
+            this->m_GPUMatrix->RowElementDivideBy(*a.m_GPUMatrix),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::ColumnElementDivideBy(const Matrix<ElemType>& a)
+    {
+        if (a.IsEmpty() || IsEmpty())
+            throw std::logic_error("ColumnElementDivideBy: Matrix is empty.");
 
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
-            throw std::invalid_argument("ColumnElementDivideWith: The input matrix should be a col vector and match [this]'s rows.");
+            throw std::invalid_argument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
         DecideAndMoveToRightDevice(*this, a);
         //WARNING: a and this must have same type
@@ -1759,8 +1829,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
-            this->m_CPUMatrix->ColumnElementDivideWith(*a.m_CPUMatrix), 
-            this->m_GPUMatrix->ColumnElementDivideWith(*a.m_GPUMatrix), 
+            this->m_CPUMatrix->ColumnElementDivideBy(*a.m_CPUMatrix), 
+            this->m_GPUMatrix->ColumnElementDivideBy(*a.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3319,7 +3389,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else //GPU operations
         {     
-            MatrixType type = DENSE;
             if (a.m_matrixType==b.m_matrixType && b.m_matrixType==c.m_matrixType && a.m_matrixType==MatrixType::DENSE) //All dense
             {
                 GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha,*a.m_GPUMatrix,transposeA,*b.m_GPUMatrix,transposeB,beta,*c.m_GPUMatrix);
@@ -3348,7 +3417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else
                     {   
-                        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),c.GetDeviceId());
+                        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),(short)c.GetDeviceId());
                         GPUSparseMatrix<ElemType>::Multiply(first,second,*tmp.m_GPUMatrix);
                         c=tmp+c*beta;                               
                     }
@@ -3804,20 +3873,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
             DISPATCH_MATRIX_ON_FLAG(&a,
                 nullptr,
-                return CPUMatrix<ElemType>::AreEqual(*a.m_CPUMatrix, *b.m_CPUMatrix, threshold), 
-                return GPUMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUMatrix, threshold), 
-                NOT_IMPLEMENTED, 
-                GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, threshold)
+                return CPUMatrix<ElemType>::AreEqual(*a.m_CPUMatrix, *b.m_CPUMatrix, threshold),
+                return GPUMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUMatrix, threshold),
+                NOT_IMPLEMENTED; return false ,
+                return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, threshold)
                 );                
             }
             else
             {
             DISPATCH_MATRIX_ON_FLAG(&a,
                 nullptr,
-                NOT_IMPLEMENTED, 
-                GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUSparseMatrix, threshold),
-                NOT_IMPLEMENTED, 
-                GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, threshold)
+                NOT_IMPLEMENTED; return false,
+                return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUSparseMatrix, threshold),
+                NOT_IMPLEMENTED; return false,
+                return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, threshold)
                 );                
         }
         
@@ -3864,13 +3933,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     short Matrix<ElemType>::GetBestGPUDeviceId()
     { 
-        return GPUMatrix<ElemType>::GetBestGPUDeviceId();
+        return (short)GPUMatrix<ElemType>::GetBestGPUDeviceId();
     }
 
     template<class ElemType>
     ElemType Matrix<ElemType>::Exp10(ElemType num)
-    { 
-        return exp(num*2.302585093);
+    {
+        return (ElemType)exp(num*2.302585093);
     }
 
     template<class ElemType>
@@ -3895,12 +3964,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		diff = y - x;
 		if (diff < MINLOGEXP)
 		{
-			return (x < LSMALL) ? LZERO : x;
+			return (ElemType) ((x < LSMALL) ? LZERO : x);
 		}
 		else
 		{
 			z = exp(diff);
-			return x + log(1.0 + z);
+                        return (ElemType) (x + log(1.0 + z));
 		}
 	}
 

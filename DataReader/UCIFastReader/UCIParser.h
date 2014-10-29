@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <assert.h>
+#include <stdint.h>
 
 // UCI label location types
 enum LabelMode
@@ -87,8 +88,8 @@ private:
 
     // file positions/buffer
     FILE * m_pFile;
-    _int64 m_byteCounter;
-    _int64 m_fileSize;
+    int64_t m_byteCounter;
+    int64_t m_fileSize;
 
     BYTE * m_fileBuffer;
     size_t m_bufferStart;
@@ -176,8 +177,8 @@ public:
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     long Parse(size_t recordsRequested, std::vector<NumType> *numbers, std::vector<LabelType> *labels=NULL);
 
-    _int64 GetFilePosition();
-    void SetFilePosition(_int64 position);
+    int64_t GetFilePosition();
+    void SetFilePosition(int64_t position);
 
     // HasMoreData - test if the current dataset have more data
     // returns - true if it does, false if not

@@ -39,14 +39,6 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
     GetReader(preader);
 }
 
-// Destroy - cleanup and remove this class
-// NOTE: this destroys the object, and it can't be used past this point
-template<class ElemType>
-void DataReader<ElemType>::Destroy()
-{
-    delete m_dataReader;
-    m_dataReader = NULL;
-}
 
 // Init - Reader Initialize for multiple data sets
 // config - [in] configuration parameters for the datareader
@@ -55,6 +47,21 @@ void DataReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
     m_dataReader = new HTKMLFReader<ElemType>();
     m_dataReader->Init(readerConfig);
+}
+
+template<class ElemType>
+void DataReader<ElemType>::GetDataReader(const ConfigParameters& /*config*/)
+{
+    NOT_IMPLEMENTED;
+}
+
+// Destroy - cleanup and remove this class
+// NOTE: this destroys the object, and it can't be used past this point
+template<class ElemType>
+void DataReader<ElemType>::Destroy()
+{
+    delete m_dataReader;
+    m_dataReader = NULL;
 }
 
 // DataReader Constructor

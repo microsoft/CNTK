@@ -12,6 +12,7 @@
 #pragma once
 #include <string>       // for the error message in checkoverflow() only
 #include <stdexcept>
+#include <stdint.h>
 
 #undef INITIAL_STRANGE              // [v-hansu] intialize structs to strange values
 #define PARALLEL_SIL                // [v-hansu] process sil on CUDA, used in other files, please search this
@@ -31,9 +32,9 @@ static void checkoverflow (size_t fieldval, size_t targetval, const char * field
 
 struct nodeinfo
 {
-    //unsigned __int64 firstinedge : 24;  // index of first incoming edge
-    //unsigned __int64 firstoutedge : 24; // index of first outgoing edge
-    //unsigned __int64 t : 16;            // time associated with this
+    //uint64_t firstinedge : 24;  // index of first incoming edge
+    //uint64_t firstoutedge : 24; // index of first outgoing edge
+    //uint64_t t : 16;            // time associated with this
     unsigned short t;            // time associated with this
     nodeinfo (size_t pt) : t ((unsigned short) pt)   //, firstinedge (NOEDGE), firstoutedge (NOEDGE)
     {
@@ -51,11 +52,11 @@ struct nodeinfo
 // V2 format: a and l are stored in separate vectors
 struct edgeinfo
 {
-    unsigned __int64 S : 19;            // start node
-    unsigned __int64 unused : 1;        // (for future use)
-    unsigned __int64 E : 19;            // end node
-    unsigned __int64 implysp : 1;       // 1--alignment ends with a /sp/ that is not stored
-    unsigned __int64 firstalign : 24;   // index into align for first entry; end is firstalign of next edge
+    uint64_t S : 19;            // start node
+    uint64_t unused : 1;        // (for future use)
+    uint64_t E : 19;            // end node
+    uint64_t implysp : 1;       // 1--alignment ends with a /sp/ that is not stored
+    uint64_t firstalign : 24;   // index into align for first entry; end is firstalign of next edge
     edgeinfo (size_t pS, size_t pE, size_t pfirstalign) : S (pS), E (pE), firstalign (pfirstalign), unused (0), implysp (0)
     {
         checkoverflow (S, pS, "edgeinfowithscores::S");
@@ -65,11 +66,11 @@ struct edgeinfo
     edgeinfo()  // [v-hansu] initialize to impossible values
     {
 #ifdef INITIAL_STRANGE
-        S = unsigned __int64 (-1);
-        unused = unsigned __int64 (-1);
-        E = unsigned __int64 (-1);
-        implysp = unsigned __int64 (-1);
-        firstalign = unsigned __int64 (-1);
+        S = uint64_t (-1);
+        unused = uint64_t (-1);
+        E = uint64_t (-1);
+        implysp = uint64_t (-1);
+        firstalign = uint64_t (-1);
 #endif
     }
 };

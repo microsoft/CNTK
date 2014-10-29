@@ -3,12 +3,16 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#include <string>
+
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "basetypes.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
 #include "fileutil.h"
 #include "message.h"
 #include "File.h"
+#include <string>
+#include <stdint.h>
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
@@ -165,7 +169,7 @@ File& File::operator<<(FileMarker marker)
 // count - [in] the number of elements in the list
 File& File::PutMarker(FileMarker marker, size_t count)
 {
-    assert(marker == fileMarkerBeginList); // only beginning of list supported for count  markers
+    assert(marker == fileMarkerBeginList); marker; // only beginning of list supported for count  markers
     *this << count;
     return *this;
 }
@@ -176,7 +180,7 @@ File& File::PutMarker(FileMarker marker, const std::string& section)
 {
     File& file = *this;
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
     file << section;
     return file;
 }
@@ -187,7 +191,7 @@ File& File::PutMarker(FileMarker marker, const std::wstring& section)
 {
     File& file = *this;
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
     file << section;
     return file;
 }
@@ -224,7 +228,7 @@ File& File::operator>>(std::string& val)
 // reset - reset the read pointer
 void File::ReadChars(std::string& val, size_t cnt, bool reset)
 {
-    size_t pos;
+    size_t pos = 0; // (initialize to keep compiler happy)
     if (reset)
         pos = GetPosition();
     val.resize(cnt);
@@ -241,7 +245,7 @@ void File::ReadChars(std::string& val, size_t cnt, bool reset)
 // reset - reset the read pointer
 void File::ReadChars(std::wstring& val, size_t cnt, bool reset)
 {
-    size_t pos;
+    size_t pos = 0; // (initialize to keep compiler happy)
     if (reset)
         pos = GetPosition();
     val.resize(cnt);
@@ -260,12 +264,12 @@ void File::WriteString(const char* str, int size)
     attempt([&]{
         if (size > 0)
         {
-            fwprintf_s(m_file, L" %.*hs", size, str);
+            fwprintf(m_file, L" %.*hs", size, str);
         }
         else
         {
             if (IsTextBased())
-                fwprintf_s(m_file, L" %hs", str);
+                fwprintf(m_file, L" %hs", str);
             else
                 fputstring (m_file, str);
         }
@@ -312,12 +316,12 @@ void File::WriteString(const wchar_t* str, int size)
 #endif
         if (size > 0)
         {
-            fwprintf_s(m_file, L" %.*ls", size, str);
+            fwprintf(m_file, L" %.*ls", size, str);
         }
         else
         {
             if (IsTextBased())
-                fwprintf_s(m_file, L" %ls", str);
+                fwprintf(m_file, L" %ls", str);
             else
                 fputstring (m_file, str);
         }
@@ -343,7 +347,7 @@ void File::ReadString(wchar_t* str, int size)
 bool File::IsUnicodeBOM(bool skip)
 {
     File& file = *this;
-    unsigned __int64 pos = GetPosition();
+    uint64_t pos = GetPosition();
     // if we aren't at the beginning of the file, it can't be the byte order mark
     if (pos != 0)
         return false;
@@ -489,7 +493,6 @@ File& File::operator>>(FileMarker marker)
 // must use GetMarker methods for those that require parameters
 bool File::IsMarker(FileMarker marker, bool skip)
 {
-    File& file = *this;
     bool retval = false;
     switch(marker)
     {
@@ -529,7 +532,7 @@ bool File::IsMarker(FileMarker marker, bool skip)
 // count - [out] returns the number of elements in the list
 File& File::GetMarker(FileMarker marker, size_t& count)
 {
-    assert(marker == fileMarkerBeginList); // only beginning of list supported for count file markers
+    assert(marker == fileMarkerBeginList); marker; // only beginning of list supported for count file markers
     // use text based try, so it can fail without an exception
     if (IsTextBased())
         ftrygetText(m_file, count);
@@ -543,7 +546,7 @@ File& File::GetMarker(FileMarker marker, size_t& count)
 File& File::GetMarker(FileMarker marker, const std::string& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
     string str;
     *this >> str;
     if (str != section)
@@ -558,7 +561,7 @@ File& File::GetMarker(FileMarker marker, const std::string& section)
 File& File::GetMarker(FileMarker marker, const std::wstring& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
     wstring str;
     *this >> str;
     if (str != section)
@@ -573,7 +576,7 @@ File& File::GetMarker(FileMarker marker, const std::wstring& section)
 bool File::TryGetMarker(FileMarker marker, const std::wstring& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
     size_t pos = GetPosition();
     std::wstring str;
     try
@@ -595,7 +598,7 @@ bool File::TryGetMarker(FileMarker marker, const std::wstring& section)
 bool File::TryGetMarker(FileMarker marker, const std::string& section)
 {
     // only the section markers take a string parameter
-    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
+    assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection); marker;
     size_t pos = GetPosition();
     std::string str;
     try
@@ -613,14 +616,14 @@ bool File::TryGetMarker(FileMarker marker, const std::string& section)
 }
 
 // GetPosition - Get position in a file
-unsigned _int64 File::GetPosition()
+uint64_t File::GetPosition()
 {
     return fgetpos(m_file);
 }
 
 // Set the position in the file
 // pos - position in the file
-void File::SetPosition(unsigned _int64 pos)
+void File::SetPosition(uint64_t pos)
 {
     fsetpos (m_file, pos);
 }

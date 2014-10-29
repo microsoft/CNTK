@@ -5,9 +5,9 @@
 //
 #pragma once
 
+#include "basetypes.h"
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
-#include "basetypes.h"
 #include <string>
 #include "commandArgUtil.h"
 #include "matrix.h"
@@ -354,9 +354,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             File fstream(dbnModelFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
-            CheckDbnTag(fstream,"DBN\n") || ERROR("Error reading DBN file - did not find expected tag DBN\n");
+            if (!CheckDbnTag(fstream,"DBN\n"))
+                throw std::runtime_error("Error reading DBN file - did not find expected tag DBN\n");
             fstream >> comment;
-            CheckDbnTag(fstream,"BDBN") || ERROR("Error reading DBN file - did not find expected tag BDBN\n");
+            if (!CheckDbnTag(fstream,"BDBN"))
+                throw std::runtime_error("Error reading DBN file - did not find expected tag BDBN\n");
             fstream >> version >> numLayers;
 
             Matrix<ElemType> globalMean = ReadMatrixFromDbnFile(fstream,std::string("gmean"));
@@ -371,7 +373,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 globalStdDev(i,0)=(ElemType)1.0/(const ElemType)globalStdDev(i,0);          
             globalStdDev.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
         
-            CheckDbnTag(fstream,"BNET") || ERROR("Error reading DBN file - did not find expected tag BNET\n");
+            if (!CheckDbnTag(fstream,"BNET"))
+                throw std::runtime_error("Error reading DBN file - did not find expected tag BNET\n");
         
             for (i=0;i<numLayers;i++) //0th index is for input layer, 
             {    
@@ -382,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> A = ReadMatrixFromDbnFile(fstream,std::string("b"));
                 if (wts.GetNumRows()!=m_layerSizes[i+1] || wts.GetNumCols()!=m_layerSizes[i])
                 {
-                    ERROR("error reading DBN file: mismatch in layer size between dbn file and config specification!\n");
+                    throw std::runtime_error("error reading DBN file: mismatch in layer size between dbn file and config specification!\n");
                 }
                 if (i==0)
                 {
@@ -452,7 +455,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 input = output;
             }
 
-            CheckDbnTag(fstream,"ENET") || ERROR("Error reading DBN file - did not find expected tag ENET\n");
+            if (!CheckDbnTag(fstream,"ENET"))
+                throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
             size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
             label = m_net->Input(outputLayerSize, mbSize, L"labels");
 
@@ -514,7 +518,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_net->OutputNodes().push_back(output);
             }
 
-            CheckDbnTag(fstream,"EDBN") || ERROR("Error reading DBN file - did not find expected tag ENET\n");
+            if (!CheckDbnTag(fstream,"EDBN"))
+                throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
             return *m_net;
         }
 
@@ -598,7 +603,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             int numRows,numCols;
             std::string name;
-            CheckDbnTag(fstream,"BMAT") || ERROR("Error reading DBN file - did not find expected tag BMAT\n");
+            if (!CheckDbnTag(fstream,"BMAT"))
+                throw std::runtime_error("Error reading DBN file - did not find expected tag BMAT\n");
             //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "BMAT");
             fstream >> name >> numRows >> numCols;
             if (name != expectedName)
@@ -617,7 +623,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> mat(numRows, numCols, m_deviceId);
 
             // dbn operates on row vectors not column vectors. x*W + b, so need to read in as W'
-            ElemType* d_array = new ElemType[numRows*numCols];
+            //ElemType* d_array = new ElemType[numRows*numCols];
             float tmp;
             for (long i=0;i<numRows;i++)
                 for (long j=0;j<numCols;j++)
@@ -626,7 +632,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     mat(i,j)=tmp;
                 //d_array[i] = (ElemType)tmp;                
                 }
-            CheckDbnTag(fstream,"EMAT") || ERROR("Error reading DBN file - did not find expected tag EMAT\n");
+            if (!CheckDbnTag(fstream,"EMAT"))
+                throw std::runtime_error("Error reading DBN file - did not find expected tag EMAT\n");
             //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "EMAT");
 
             return mat;
@@ -685,8 +692,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_lookupTableOrder;
         int m_labelEmbeddingSize;
     };
-
-    template class SimpleNetworkBuilder<float>; 
-    template class SimpleNetworkBuilder<double>;
 
 }}}

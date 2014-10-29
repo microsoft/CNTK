@@ -5,12 +5,10 @@
 
 #pragma once
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 #include "targetver.h"
 #include "windows.h"
 #include <stdio.h>
-#include <tchar.h>
 #include <math.h>
-
-
 
 // TODO: reference additional headers your program requires here
