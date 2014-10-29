@@ -2879,7 +2879,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
         {
-            functionValues.AssignProductOf(input0, false, input1, false);
+            functionValues.AssignProductOf(input0.Get00Element(), input1);
 #if NANCHECK
             functionValues.HasNan("Scale");
 #endif
