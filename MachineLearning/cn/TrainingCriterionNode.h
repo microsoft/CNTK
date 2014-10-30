@@ -752,7 +752,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             gradientOfL1Norm.AssignSignOf(inputFunctionValues);
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfL1Norm); 
+            inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), gradientOfL1Norm);
         }
 
         // GetTaskDescriptor - Get a task descriptor for this node
