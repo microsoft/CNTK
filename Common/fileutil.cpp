@@ -51,9 +51,7 @@ template <>     const wchar_t* GetScanFormatString(unsigned int) {return L" %u";
 template <>    const wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
 template <>            const wchar_t* GetScanFormatString(float) {return L" %g";}
 template <>           const wchar_t* GetScanFormatString(double) {return L" %lg";}
-#if (SIZE_MAX != UINT_MAX)      // on 32 bit platforms, the following will be flagged as a redefinition
 template <>           const wchar_t* GetScanFormatString(size_t) {return L" %llu";}
-#endif
 template <>        const wchar_t* GetScanFormatString(long long) {return L" %lli";}
 
 template <>             const wchar_t* GetFormatString(char) {return L" %hc";}
@@ -66,9 +64,7 @@ template <>     const wchar_t* GetFormatString(unsigned int) {return L" %u";}
 template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
 template <>            const wchar_t* GetFormatString(float) {return L" %.9g";}
 template <>           const wchar_t* GetFormatString(double) {return L" %.17g";}
-#if (SIZE_MAX != UINT_MAX)
 template <>           const wchar_t* GetFormatString(size_t) { return L" %llu"; }
-#endif
 template <>        const wchar_t* GetFormatString(long long) {return L" %lli";}
 
 // ----------------------------------------------------------------------------
@@ -1559,10 +1555,16 @@ bool msra::files::fuptodate (const wstring & target, const wstring & input, bool
     if (!getfiletime (target, targettime)) return false;        // target missing: need to update
     FILETIME inputtime;
     if (!getfiletime (input, inputtime)) return !inputrequired; // input missing: if required, pretend to be out of date as to force caller to fail
+#if 1   // formerly called IsResultFileUpdateToDate()
+    // up to date if target has higher time stamp
+    return (targettime.dwHighDateTime > inputtime.dwHighDateTime) ||
+        (targettime.dwHighDateTime == inputtime.dwHighDateTime && targettime.dwLowDateTime >= inputtime.dwLowDateTime);
+#else
     ULARGE_INTEGER targett, inputt;
     memcpy (&targett, &targettime, sizeof (targett));
     memcpy (&inputt,  &inputtime, sizeof (inputt));
     return !(targett.QuadPart < inputt.QuadPart);               // up to date if target not older than input
+#endif
 }
 
 /// separate string by separator
