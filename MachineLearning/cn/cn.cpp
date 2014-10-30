@@ -177,12 +177,11 @@ void DoCrossValidate(const ConfigParameters& config)
     {
         wstring cvModelPath = msra::strfun::wstrprintf (L"%ws.%lld", modelPath.c_str(), i);
 
-        FILETIME resultFileTime;
-        if (!getfiletime (cvModelPath, resultFileTime)) 
+        if (!fexists (cvModelPath)) 
         {
             fprintf(stderr, "model %ws does not exist.\n", cvModelPath.c_str());
-            if (finalModelEvaluated || !getfiletime (modelPath, resultFileTime)) 
-                continue; //file missing
+            if (finalModelEvaluated || !fexists (modelPath))
+                continue; // file missing
             else 
             {
                 cvModelPath = modelPath;

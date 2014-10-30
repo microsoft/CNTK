@@ -669,15 +669,6 @@ namespace msra { namespace files {
 };};
 
 // ----------------------------------------------------------------------------
-// getfiletime(), setfiletime(): access modification time
-// ----------------------------------------------------------------------------
-
-// Note: we use struct _FILETIME instead of FILETIME to avoid having to include Windows.h, for increased portability.
-// As a next step, we shall make these two functions local to fileutil.cpp, and move all code that uses it in there as well.
-bool getfiletime (const std::wstring & path, struct _FILETIME & time);
-void setfiletime (const std::wstring & path, const struct _FILETIME & time);
-
-// ----------------------------------------------------------------------------
 // expand_wildcards() -- expand a path with wildcards (also intermediate ones)
 // ----------------------------------------------------------------------------
 
