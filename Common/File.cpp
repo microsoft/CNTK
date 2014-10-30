@@ -12,6 +12,7 @@
 #include "File.h"
 #include <string>
 #include <stdint.h>
+#include <locale>
 #ifdef _WIN32
 #include <Windows.h>
 #endif
