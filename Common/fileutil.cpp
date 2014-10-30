@@ -24,7 +24,9 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <assert.h>
+#ifdef _WIN32
 #include "Windows.h"    // for FILETIME
+#endif
 #include <algorithm>    // for std::find
 #include <limits.h>
 

@@ -73,12 +73,14 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <vector>
 #include <cmath>        // for HUGE_VAL
 #include <assert.h>
-using namespace std;
+#include <stdarg.h>
 #include <map>
 #include <stdexcept>
 #ifdef _MSC_VER
 #include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
 #endif
+
+using namespace std;
 
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
@@ -890,6 +892,7 @@ template<class V> static inline void byteswap (V & v)  throw()
         bytereverse (v[i]);
 }
 
+#if 0
 // execute a block with retry
 // Block must be restartable.
 // Use this when writing small files to those unreliable Windows servers.
@@ -913,6 +916,7 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
         }
     }
 }
+#endif
 
 };};    // namespace
 

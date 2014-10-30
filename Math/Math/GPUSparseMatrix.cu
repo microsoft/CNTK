@@ -1054,7 +1054,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (cSize >= rowBufferRequired && c.NzLocation() != NULL && canReuseBuffer)
         {
             // determine the final location if we reuse the buffer
-            csrRowPtrC = (int*)((byte*)c.NzLocation() + nzBufSize);
+            csrRowPtrC = (int*)((char*)c.NzLocation() + nzBufSize);
         }
         else
         {
@@ -2151,7 +2151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // What we would like to do here, is transfer to CPUSparse and save, do that when the format is the same
-        byte* hostBuffer = new byte[us.BufferSize()];
+        char* hostBuffer = new char[us.BufferSize()];       // TODO: use std::shared_ptr
         GPUSparseMatrix<ElemType> hostSide(us.GetNumRows(), us.GetNumCols(), us.NzCount(), (ElemType*)hostBuffer, us.GetFormat());
         CUDACALL(cudaMemcpy(hostBuffer, us.NzLocation(),us.BufferSize(),cudaMemcpyDeviceToHost));
 
