@@ -107,7 +107,6 @@
     <ClInclude Include="..\..\Common\Include\Eval.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\..\Common\Include\message.h" />
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
     <ClInclude Include="stdafx.h" />

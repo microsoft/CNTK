@@ -105,7 +105,6 @@
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
-    <ClInclude Include="..\..\Common\Include\message.h" />
     <ClInclude Include="LUSequenceWriter.h" />
     <ClInclude Include="minibatchsourcehelpers.h" />
     <ClInclude Include="stdafx.h" />
