@@ -160,7 +160,7 @@ public:
                 else
                 {
                     if (ndlNode->GetType() != ndlTypeConstant)
-                        Error("Matching NDL name found for %s, but no corresponding computation node found\n", symbol);
+                        RuntimeError("Matching NDL name found for %s, but no corresponding computation node found\n", symbol);
                     // probably a constant node, so make the ComputationNode that is equivalent
                     ComputationNode<ElemType>* nodePtr = cn->CreateLearnableParameter(name, 1, 1);
                     ndlNode->SetEvalValue(nodePtr);
@@ -170,7 +170,7 @@ public:
             }
         }
         if (nodes.empty())
-            Error("FindSymbols could not find a symbol for %s\n", symbol);
+            RuntimeError("FindSymbols could not find a symbol for %s\n", symbol);
         return nodes;
     }
 
@@ -207,7 +207,7 @@ public:
         vector<ComputationNode<ElemType>*> nodes = netNdlIn->cn->GetNodesFromName(name);
 
         if (!nodes.size()) //found
-            Error("GenerateNames: Node name does not exist %ls.", name.c_str());
+            RuntimeError("GenerateNames: Node name does not exist %ls.", name.c_str());
 
         size_t firstStartOut, firstCountOut, secondStartOut, secondCountOut;
         netNdlOut = ParseName(symbolOut, firstStartOut, firstCountOut, secondStartOut, secondCountOut);
@@ -236,7 +236,7 @@ public:
         // make sure the patterns are the same
         if (!(singleInputMultiOutput || ((!firstCount == !firstCountOut) && (!secondCount == !secondCountOut))))
         {
-            Error("The input symbols and output symbols must match, when the input matches has more than one element. %s = %s not allowed", symbolOut.c_str(), symbolIn.c_str());
+            RuntimeError("The input symbols and output symbols must match, when the input matches has more than one element. %s = %s not allowed", symbolOut.c_str(), symbolIn.c_str());
         }
 
         // get the first and last "unchanged" portions
@@ -254,7 +254,7 @@ public:
 
             // make sure that there are some nodes to copy to
             if (nodesOut.size() == 0)
-                Error("Setting a single input to multiple outputs requires the multiple outputs to exist. In %ls = %ls, %ls does not match any nodes.", nameOut.c_str(), name.c_str(), nameOut.c_str());
+                RuntimeError("Setting a single input to multiple outputs requires the multiple outputs to exist. In %ls = %ls, %ls does not match any nodes.", nameOut.c_str(), name.c_str(), nameOut.c_str());
 
             // this is the *.W = L2.W case
             // We want to find all the destination existing matches and then assign the in node to all of them
@@ -397,7 +397,7 @@ public:
     {
         auto found = m_mapNameToNetNdl.find(modelName);
         if (found == m_mapNameToNetNdl.end())
-            Error("Model %s does not exist. Cannot set it to default.", modelName);
+            RuntimeError("Model %s does not exist. Cannot set it to default.", modelName);
         else
             m_netNdlDefault = &found->second;
     }
@@ -417,7 +417,7 @@ public:
                 }
                 else
                 {
-                    Error("Invalid optional parameter %s, valid optional parameters: includeData=(false|true)", propName.c_str());
+                    RuntimeError("Invalid optional parameter %s, valid optional parameters: includeData=(false|true)", propName.c_str());
                 }
             }
         }        
@@ -441,12 +441,12 @@ public:
                     }
                     else
                     {
-                        Error("Invalid optional parameter value %s, valid values are: format=(cntk)", value.c_str());
+                        RuntimeError("Invalid optional parameter value %s, valid values are: format=(cntk)", value.c_str());
                     }
                 }
                 else
                 {
-                    Error("Invalid optional parameter %s, valid optional parameters: format=(cntk)", propName.c_str());
+                    RuntimeError("Invalid optional parameter %s, valid optional parameters: format=(cntk)", propName.c_str());
                 }
             }
         }        
@@ -466,12 +466,12 @@ public:
                 {
                     if (value.empty())
                     {
-                        Error("Invalid optional parameter value <empty>, a section name must be specified: section=(sectionName)");
+                        RuntimeError("Invalid optional parameter value <empty>, a section name must be specified: section=(sectionName)");
                     }
                 }
                 else
                 {
-                    Error("Invalid optional parameter %s, valid optional parameters: section=(sectionName)", propName.c_str());
+                    RuntimeError("Invalid optional parameter %s, valid optional parameters: section=(sectionName)", propName.c_str());
                 }
             }
         }        
@@ -501,12 +501,12 @@ public:
                     }
                     else
                     {
-                        Error("Invalid optional parameter value %s in CopyNode(), valid values are copyFlag=(all|value)", value.c_str());
+                        RuntimeError("Invalid optional parameter value %s in CopyNode(), valid values are copyFlag=(all|value)", value.c_str());
                     }
                 }
                 else
                 {
-                    Error("Invalid optional parameter to Copy, %s\n valid optional parameters: copyFlag=(all|value)", propName.c_str());
+                    RuntimeError("Invalid optional parameter to Copy, %s\n valid optional parameters: copyFlag=(all|value)", propName.c_str());
                 }
             }
         }
@@ -556,7 +556,7 @@ public:
     {
         auto paramStart = token.find_first_of(OPENBRACES);
         if (paramStart == npos)
-            Error("Invalid macro/function call can not be parsed: %s\n", token.c_str());
+            RuntimeError("Invalid macro/function call can not be parsed: %s\n", token.c_str());
         nameFunction = token.substr(0, paramStart);
         Trim(nameFunction);
         params = token.substr(paramStart);
@@ -625,7 +625,7 @@ public:
         {
             size_t tokenStartNew = keyEnd+1;
             if (!(tokenStartNew < tokenEnd))
-                Error("Equal at the end of line not allowed");
+                RuntimeError("Equal at the end of line not allowed");
             std::string rightValue = stringParse.substr(tokenStartNew,tokenEnd-tokenStartNew);
             Trim(rightValue);
 
@@ -634,7 +634,7 @@ public:
             if (foundBrace == npos)
             {
                 if (!m_netNdlDefault)
-                    Error("NDL Command cannot be executed until default model is established, cannot set '%s' without a default mode\n Try calling SetDefaultModel(model) before any NDL statement are embedded\n", key.c_str());
+                    RuntimeError("NDL Command cannot be executed until default model is established, cannot set '%s' without a default mode\n Try calling SetDefaultModel(model) before any NDL statement are embedded\n", key.c_str());
                 HandleNDLInline(stringParse, tokenStart, tokenEnd);
             }
             else //createModel, loadModel, or loadNDL
@@ -668,7 +668,7 @@ public:
                     else
                     {  // not a MEL command, so pass it on to NDL
                         if (!m_netNdlDefault)
-                            Error("NDL Command cannot be executed until default model is established, cannot set '%s' without a default mode\n Try calling SetDefaultModel(model) before any NDL statement are embedded\n", key.c_str());
+                            RuntimeError("NDL Command cannot be executed until default model is established, cannot set '%s' without a default mode\n Try calling SetDefaultModel(model) before any NDL statement are embedded\n", key.c_str());
                         HandleNDLInline(stringParse, tokenStart, tokenEnd);
                     }
                 }
@@ -680,7 +680,7 @@ public:
         {
             std::string value = stringParse.substr(tokenStart,tokenEnd-tokenStart);
             if (keyEnd > tokenEnd)
-                Error("Invalid line, expecting function call, %s", value);
+                RuntimeError("Invalid line, expecting function call, %s", value);
             std::string functionName;
             std::string paramList;
             // Function(x,y,z) - function with no return

@@ -9,7 +9,6 @@
 #pragma once
 
 #include "basetypes.h"
-#include "message.h"        // for logging and throwing
 #include "fileutil.h"       // for opening/reading the ARPA file
 #include <vector>
 #include <string>
@@ -173,7 +172,7 @@ public:
             fgetstring (f, buf);
             int id = (*this)[buf];
             if (id != k)
-                throw logic_error ("plsa: sequence error while reading vocabulary");
+                RuntimeError ("plsa: sequence error while reading vocabulary");
         }
     }
 };
@@ -1027,7 +1026,7 @@ public:
         const double log10 = log (10.0);
         for (int m = 1; m <= M; m++)
         {
-            MESSAGE_NOLF ("estimate: writing %d %d-grams..", map.size (m), m);
+            fprintf (stderr, "estimate: writing %d %d-grams..", map.size (m), m);
             int step = (int) logP.size (m) / 100;
             if (step == 0) step = 1;
             int numMGramsWritten = 0;
@@ -1061,13 +1060,13 @@ public:
                 // progress
                 if (numMGramsWritten % step == 0)
                 {
-                    MESSAGE_NOLF (".");
+                    fprintf (stderr, ".");
                 }
                 numMGramsWritten++;
             }
             fflushOrDie (outf);
             ASSERT (numMGramsWritten == map.size (m));
-            MESSAGE ("");
+            fprintf (stderr, "\n");
         }
 
         fprintfOrDie (outf, "\n\\end\\\n");
@@ -1126,7 +1125,7 @@ public:
     {
         int lineNo = 0;
         msra::basetypes::auto_file_ptr f = fopenOrDie (pathname, L"rbS");
-        MESSAGE_NOLF ("read: reading %S", pathname.c_str());
+        fprintf (stderr, "read: reading %S", pathname.c_str());
         filename = pathname;            // (keep this info for debugging)
 
         // --- read header information
@@ -1154,7 +1153,7 @@ public:
 
         M = (int) dims.size() -1;
         if (M == 0)
-            ERROR ("read: mal-formed LM file, no dimension information (%d): %S", lineNo, pathname.c_str());
+            RuntimeError ("read: mal-formed LM file, no dimension information (%d): %S", lineNo, pathname.c_str());
         int fileM = M;
         if (M > maxM)
             M = maxM;
@@ -1188,7 +1187,7 @@ public:
                 lineNo++, fgetline (f, buf);
 
             if (sscanf (buf, "\\%d-grams:", &n) != 1 || n != m)
-                ERROR ("read: mal-formed LM file, bad section header (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, bad section header (%d): %S", lineNo, pathname.c_str());
             lineNo++, fgetline (f, buf);
 
             std::vector<int> mgram (m +1, -1);      // current mgram being read ([0]=dummy)
@@ -1207,7 +1206,7 @@ public:
                 // -- parse the line
                 tokens = &buf[0];
                 if ((int) tokens.size() != ((m < fileM) ? m + 2 : m + 1))
-                    ERROR ("read: mal-formed LM file, incorrect number of tokens (%d): %S", lineNo, pathname.c_str());
+                    RuntimeError ("read: mal-formed LM file, incorrect number of tokens (%d): %S", lineNo, pathname.c_str());
                 double scoreVal = atof (tokens[0]);     // ... use sscanf() instead for error checking?
                 double thisLogP = scoreVal * ln10xLMF;  // convert to natural log
 
@@ -1239,7 +1238,7 @@ public:
                         {
                             id = symbolToId (tok);
                             if (id == -1)
-                                ERROR ("read: mal-formed LM file, m-gram contains unknown word (%d): %S", lineNo, pathname.c_str());
+                                RuntimeError ("read: mal-formed LM file, m-gram contains unknown word (%d): %S", lineNo, pathname.c_str());
                         }
                     }
                     mgram[n] = id;          // that's our id
@@ -1289,9 +1288,9 @@ skipMGram:
                 }
             }
 
-            MESSAGE_NOLF (", %d %d-grams", map.size (m), m);
+            fprintf (stderr, ", %d %d-grams", map.size (m), m);
         }
-        MESSAGE ("");
+        fprintf (stderr, "\n");
 
         // check end tag
         if (M == fileM)
@@ -1299,7 +1298,7 @@ skipMGram:
             while (buf[0] == 0 && !feof (f))
                 lineNo++, fgetline (f, buf);
             if (strcmp (buf, "\\end\\") != 0)
-                ERROR ("read: mal-formed LM file, no \\end\\ tag (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, no \\end\\ tag (%d): %S", lineNo, pathname.c_str());
         }
 
         // update zerogram score by one appropriate for OOVs
@@ -1534,7 +1533,7 @@ protected:
             if (seenMass > 1.0)
             {
                 if (seenMass > 1.0001)      // (a minor round-off error is acceptable)
-                    WARNING ("estimate: seen mass > 1.0: %8.5f --oops??", seenMass);
+                    fprintf (stderr, "estimate: seen mass > 1.0: %8.5f --oops??\n", seenMass);
                 seenMass = 1.0;             // oops?
             }
 
@@ -1543,7 +1542,7 @@ protected:
             if (coveredBackoffMass > 1.0)
             {
                 if (coveredBackoffMass > 1.0001)    // 1.0 for unigrams, sometimes flags this
-                    WARNING ("estimate: unseen backoff mass < 0: %8.5f --oops??", 1.0 - coveredBackoffMass);
+                    fprintf (stderr, "estimate: unseen backoff mass < 0: %8.5f --oops??\n", 1.0 - coveredBackoffMass);
                 coveredBackoffMass = 1.0;    // oops?
             }
 
@@ -1640,11 +1639,11 @@ public:
         {// first time initial
             minObs.resize(M, 0);
             if (M > 2) minObs[2] = 2; // GangLi: prune trigram if Obs < 2, this is default value
-            MESSAGE("Set miniObs to 0 0 2.");
+            fprintf (stderr, "Set miniObs to 0 0 2.\n");
         }
         else
         {
-            MESSAGE("Not reset miniObs because it has already been set.");
+            fprintf (stderr, "Not reset miniObs because it has already been set.\n");
         }
 
         for (int m = 1; m <= M; m++) counts.reserve (m, 1000000);   // something to start with
@@ -1654,7 +1653,7 @@ public:
     void setMinObs(const std::vector<unsigned int> & setMinObs)
     {
         if (minObs.size() != setMinObs.size())
-            ERROR("In setMinObs: setMinObs size (%d) is not for %d-gram.", setMinObs.size(), minObs.size());
+            RuntimeError("In setMinObs: setMinObs size (%d) is not for %d-gram.", setMinObs.size(), minObs.size());
         minObs = setMinObs;
     }
 
@@ -1688,7 +1687,7 @@ protected:
         mcounts.push_back (mgram_map::coord(), ntoks);  // zerogram count
         std::vector<int> keybuf (M+1);
         // do one order after another (to save memory)
-        MESSAGE_NOLF ("merge: adding %d tokens...", ntoks);
+        fprintf (stderr, "merge: adding %d tokens...", ntoks);
         for (int m = 1; m <= M; m++)
         {
             mgram_map::cache_t mmapCache;
@@ -1770,7 +1769,7 @@ protected:
                     mcounts.push_back (mmap.create (newkey, mmapCache), count); // store 'count' under 'key'
                 }
             }
-            MESSAGE_NOLF (" %d %d-grams", mcounts.size (m), m);
+            fprintf (stderr, " %d %d-grams", mcounts.size (m), m);
         }
 
         // remove used up tokens from the buffer
@@ -1788,7 +1787,7 @@ protected:
         map.swap (mmap);
         counts.swap (mcounts);
 
-        MESSAGE ("");
+        fprintf (stderr, "\n");
 
         // destructor will delete previous counts and map (now in mcount/mmap)
     }
@@ -1889,7 +1888,7 @@ protected:
                 int id = dropId == -1 ? userSymMap[p] : constSymMap[p];
                 ids.push_back (id);
 
-                if (totalTokens++ % 100000 == 0) MESSAGE_NOLF (".");
+                if (totalTokens++ % 100000 == 0) fprintf (stderr, ".");
             }
             ids.push_back (endId);
             totalTokens += 2;
@@ -1928,7 +1927,7 @@ public:
         int dropId = filterVocabulary ? unkId != -1 ? unkId : userSymMap.size() : -1;
 
         if (filterVocabulary)
-            ERROR ("CMGramLMEstimator::read() not tested for filterVocabulary==true");
+            RuntimeError ("CMGramLMEstimator::read() not tested for filterVocabulary==true");
 
         // reset adaptation
         adapt (NULL, maxM);         // pass dimension here
@@ -1947,14 +1946,14 @@ public:
                 string thispath = fgetline (f);
                 if (thispath.empty() || thispath[0] == '#') continue;   // comment
                 msra::basetypes::auto_file_ptr thisf = fopenOrDie (thispath, "rbS");
-                MESSAGE_NOLF ("read: ingesting training text from %s ..", thispath.c_str());
+                fprintf (stderr, "read: ingesting training text from %s ..", thispath.c_str());
                 int numTokens = read (thisf, userSymMap, startId, endId, dropId);
-                MESSAGE ("%d tokens", numTokens);
+                fprintf (stderr, "%d tokens\n", numTokens);
             }
         }
         else if (!tag.empty() && tag[0] == '#')
         {
-            ERROR ("read: unknown tag '%s'", tag.c_str());
+            RuntimeError ("read: unknown tag '%s'", tag.c_str());
         }
         else    // no tag: just load the file directly
         {
@@ -2028,7 +2027,7 @@ public:
         while (M > 0 && counts.size (M) == 0) resize (M-1);
 
         for (int m = 1; m <= M; m++)
-            MESSAGE ("estimate: read %d %d-grams", counts.size (m), m);
+            fprintf (stderr, "estimate: read %d %d-grams\n", counts.size (m), m);
 
         // === Kneser-Ney smoothing
         // This is a strange algorithm.
@@ -2043,14 +2042,14 @@ public:
         mgram_data<unsigned int> KNTotalCounts; // [shifted, shortened m-gram] (*,v,*)
         if (M >= 2)
         {
-            MESSAGE ("estimate: allocating Kneser-Ney counts...");
+            fprintf (stderr, "estimate: allocating Kneser-Ney counts...\n");
 
             KNCounts.init (M-1);
             for (int m = 0; m <= M-1; m++) KNCounts.assign (m, counts.size (m), 0);
             KNTotalCounts.init (M-2);
             for (int m = 0; m <= M-2; m++) KNTotalCounts.assign (m, counts.size (m), 0);
 
-            MESSAGE ("estimate: computing Kneser-Ney counts...");
+            fprintf (stderr, "estimate: computing Kneser-Ney counts...\n");
 
             // loop over all m-grams to determine KN counts
             for (mgram_map::deep_iterator iter (map); iter; ++iter)
@@ -2082,7 +2081,7 @@ public:
         std::vector<double> d1 (M+1, 0.0);
         std::vector<double> d2 (M+1, 0.0);
         std::vector<double> d3 (M+1, 0.0);
-        MESSAGE_NOLF ("estimate: discounting values:");
+        fprintf (stderr, "estimate: discounting values:");
 
         {
             // actually estimate discounting values
@@ -2122,11 +2121,11 @@ public:
             {
                 if (n1[m] == 0) throw runtime_error (msra::strfun::strprintf ("estimate: error estimating discounting values: n1[%d] == 0", m));
                 if (n2[m] == 0) throw runtime_error (msra::strfun::strprintf ("estimate: error estimating discounting values: n2[%d] == 0", m));
-                //if (n3[m] == 0) ERROR ("estimate: error estimating discounting values: n3[%d] == 0", m);
+                //if (n3[m] == 0) RuntimeError ("estimate: error estimating discounting values: n3[%d] == 0", m);
                 double Y = n1[m] / (n1[m] + 2.0 * n2[m]);
                 if (n3[m] ==0 || n4[m] == 0)
                 {
-                    WARNING ("estimate: n3[%d] or n4[%d] is 0, falling back to unmodified discounting", m, m);
+                    fprintf (stderr, "estimate: n3[%d] or n4[%d] is 0, falling back to unmodified discounting\n", m, m);
                     d1[m] = Y;
                     d2[m] = Y;
                     d3[m] = Y;
@@ -2138,16 +2137,16 @@ public:
                     d3[m] = 3.0 - 4.0 * Y * n4[m] / n3[m];
                 }
                 // ... can these be negative??
-                MESSAGE_NOLF (" (%.3f, %.3f, %.3f)", d1[m], d2[m], d3[m]);
+                fprintf (stderr, " (%.3f, %.3f, %.3f)", d1[m], d2[m], d3[m]);
             }
-            MESSAGE ("");
+            fprintf (stderr, "\n");
         }
 
         // === threshold against minimum counts (set counts to 0)
         // this is done to save memory, but it has no impact on the seen probabilities
         // ...well, it does, as pruned mass get pushed to back-off distribution... ugh!
 
-        MESSAGE ("estimate: pruning against minimum counts...");
+        fprintf (stderr, "estimate: pruning against minimum counts...\n");
 
         // prune unigrams first (unigram cut-off can be higher than m-gram cut-offs,
         // as a means to decimate the vocabulary)
@@ -2161,7 +2160,7 @@ public:
             dropWord[wid] = true;       // will throw out all related m-grams
             removedWords++;
         }
-        MESSAGE ("estimate: removing %d too rare vocabulary entries", removedWords);
+        fprintf (stderr, "estimate: removing %d too rare vocabulary entries\n", removedWords);
 
         // now prune m-grams against count cut-off
 
@@ -2189,7 +2188,7 @@ public:
                 if (m < M) histCoord[m] = iter;
                 mgram_map::coord j = histCoord[m-1];    // parent
                 if (counts[j] == 0)
-                    ERROR ("estimate: invalid pruning: a parent m-gram got pruned away");
+                    RuntimeError ("estimate: invalid pruning: a parent m-gram got pruned away");
                     //throw runtime_error ("estimate: invalid pruning: a parent m-gram got pruned away");
                 numMGrams[m]++;
             }
@@ -2197,7 +2196,7 @@ public:
 
         for (int m = 1; m <= M; m++)
         {
-            MESSAGE ("estimate: %d-grams after pruning: %d out of %d (%.1f%%)", m,
+            fprintf (stderr, "estimate: %d-grams after pruning: %d out of %d (%.1f%%)\n", m,
                      numMGrams[m], counts.size (m),
                      100.0 * numMGrams[m] / max (counts.size (m), 1));
         }
@@ -2212,7 +2211,7 @@ public:
 
         // === estimate M-gram
 
-        MESSAGE ("estimate: estimating probabilities...");
+        fprintf (stderr, "estimate: estimating probabilities...\n");
 
         // dimension the m-gram store
         mgram_data<float> P (M);            // [M+1][i] probabilities
@@ -2231,7 +2230,7 @@ public:
         P.push_back (mgram_map::coord(), 0.0f); // will be updated later
         for (int m = 1; m <= M; m++)
         {
-            MESSAGE ("estimate: estimating %d %d-gram probabilities...", numMGrams[m], m);
+            fprintf (stderr, "estimate: estimating %d %d-gram probabilities...\n", numMGrams[m], m);
 
             // loop over all m-grams of level 'm'
             msra::basetypes::fixed_vector<mgram_map::coord> histCoord (m);
@@ -2270,7 +2269,7 @@ public:
                     {
                         count = KNCounts[iter];             // (u,v,w) -> count (*,v,w)
                         if (count == 0)                     // must exist
-                            ERROR ("estimate: malformed data: back-off value not found (numerator)");
+                            RuntimeError ("estimate: malformed data: back-off value not found (numerator)");
 
                         const mgram_map::key key_h = key.pop_w();
                         mgram_map::foundcoord c_h = map[key_h];
@@ -2278,7 +2277,7 @@ public:
                             throw runtime_error ("estimate: invalid shortened KN history");
                         histCount = KNTotalCounts[c_h];     // (u,v,w) -> count (*,v,*)
                         if (histCount == 0)                 // must exist
-                            ERROR ("estimate: malformed data: back-off value not found (denominator)");
+                            RuntimeError ("estimate: malformed data: back-off value not found (denominator)");
                         ASSERT (histCount >= count);
                     }
                 }
@@ -2323,7 +2322,7 @@ public:
                     throw runtime_error ("estimate: negative discounted count value");
 
                 if (histCount == 0)
-                    ERROR ("estimate: unexpected 0 denominator");
+                    RuntimeError ("estimate: unexpected 0 denominator");
                 double dP = dcount / histCount;
                 // and this is the discounted probability value
                 {
@@ -2339,7 +2338,7 @@ skippruned:;    // m-gram was pruned
             }
         }
         // the distributions are not normalized --discount mass is missing
-        MESSAGE ("estimate: freeing memory for counts...");
+        fprintf (stderr, "estimate: freeing memory for counts...\n");
         KNCounts.clear();       // free some memory
         KNTotalCounts.clear();
 
@@ -2372,7 +2371,7 @@ skippruned:;    // m-gram was pruned
         if (missingUnigramMass > 0.0)
         {
             float missingUnigramProb = (float) (missingUnigramMass * P[mgram_map::coord()]);
-            MESSAGE ("estimate: distributing missing unigram mass of %.2f to %d unigrams",
+            fprintf (stderr, "estimate: distributing missing unigram mass of %.2f to %d unigrams\n",
                      missingUnigramMass, vocabSize);
             for (mgram_map::iterator iter (map, 1); iter; ++iter)
             {
@@ -2383,7 +2382,7 @@ skippruned:;    // m-gram was pruned
 
         // --- M-gram sections --back-off weights
 
-        MESSAGE ("estimate: determining back-off weights...");
+        fprintf (stderr, "estimate: determining back-off weights...\n");
         computeBackoff (map, M, P, logB, false);
         // now the LM is normalized assuming the ARPA back-off computation
 
@@ -2412,9 +2411,9 @@ skippruned:;    // m-gram was pruned
         // desired OOV score.
         updateOOVScore();
 
-        MESSAGE_NOLF ("estimate: done");
-        for (int m = 1; m <= M; m++) MESSAGE_NOLF (", %d %d-grams", logP.size (m), m);
-        MESSAGE ("");
+        fprintf (stderr, "estimate: done");
+        for (int m = 1; m <= M; m++) fprintf (stderr, ", %d %d-grams", logP.size (m), m);
+        fprintf (stderr, "\n");
     }
 };
 
@@ -2509,10 +2508,10 @@ skipMGram:
     template<class SYMMAP>
     static void write (const ILM & lm, int M, FILE * outf, const SYMMAP & symbols)
     {
-        MESSAGE ("write: cloning...");
+        fprintf (stderr, "write: cloning...\n");
         CMGramLMClone outlm;
         outlm.clone (lm, M);
-        MESSAGE ("write: saving...");
+        fprintf (stderr, "write: saving...\n");
         ((const CMGramLM&) outlm).write (outf, symbols);
     }
 
@@ -2808,7 +2807,7 @@ public:
     {
         int lineNo = 0;
         msra::basetypes::auto_file_ptr f = fopenOrDie (pathname, L"rbS");
-        MESSAGE_NOLF ("read: reading %S", pathname.c_str());
+        fprintf (stderr, "read: reading %S", pathname.c_str());
         filename = pathname;            // (keep this info for debugging)
 
         // --- read header information
@@ -2836,7 +2835,7 @@ public:
 
         M = (int) dims.size() -1;
         if (M == 0)
-            ERROR ("read: mal-formed LM file, no dimension information (%d): %S", lineNo, pathname.c_str());
+            RuntimeError ("read: mal-formed LM file, no dimension information (%d): %S", lineNo, pathname.c_str());
         int fileM = M;
         if (M > maxM)
             M = maxM;
@@ -2866,7 +2865,7 @@ public:
                 lineNo++, fgetline (f, buf);
 
             if (sscanf (buf, "\\%d-grams:", &n) != 1 || n != m)
-                ERROR ("read: mal-formed LM file, bad section header (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, bad section header (%d): %S", lineNo, pathname.c_str());
             lineNo++, fgetline (f, buf);
 
             std::vector<int> mgram (m +1);          // current mgram being read
@@ -2888,7 +2887,7 @@ public:
                 const char * delim = " \t\n\r";
                 const char * score = strtok (&buf[0], delim);
                 if (score == NULL || score[0] == 0) // not checking whether it is numeric
-                    ERROR ("read: mal-formed LM file, no score (%d): %S", lineNo, pathname.c_str());
+                    RuntimeError ("read: mal-formed LM file, no score (%d): %S", lineNo, pathname.c_str());
                 double scoreVal = atof (score);
                 double logP = scoreVal * ln10xLMF;  // convert to natural log
 
@@ -2897,7 +2896,7 @@ public:
                 {
                     /*const*/ char * tok = strtok (NULL, delim);
                     if (tok == NULL)
-                        ERROR ("read: mal-formed LM file, not enough words in mgram (%d): %S", lineNo, pathname.c_str());
+                        RuntimeError ("read: mal-formed LM file, not enough words in mgram (%d): %S", lineNo, pathname.c_str());
                     // map to id
                     int id;
                     if (m == 1)     // unigram: build vocab table
@@ -2922,7 +2921,7 @@ public:
                         {
                             id = symbolToId (tok);
                             if (id == -1)
-                                ERROR ("read: mal-formed LM file, m-gram contains unknown word (%d): %S", lineNo, pathname.c_str());
+                                RuntimeError ("read: mal-formed LM file, m-gram contains unknown word (%d): %S", lineNo, pathname.c_str());
                         }
                     }
                     mgram[n] = id;          // that's our id
@@ -2934,7 +2933,7 @@ public:
                 {
                     const char * bo = strtok (NULL, delim);
                     if (score == NULL || score[0] == 0) // not checking whether it is numeric
-                        ERROR ("read: mal-formed LM file, no score (%d): %S", lineNo, pathname.c_str());
+                        RuntimeError ("read: mal-formed LM file, no score (%d): %S", lineNo, pathname.c_str());
                     double boVal = atof (bo);
                     logB = boVal * ln10xLMF;        // convert to natural log
                 }
@@ -2956,7 +2955,7 @@ public:
                         continue;
 
                     if (prevValid && mgram[n] < prevmgram[n])
-                        ERROR ("read: mal-formed LM file, m-gram out of order (%d): %S", lineNo, pathname.c_str());
+                        RuntimeError ("read: mal-formed LM file, m-gram out of order (%d): %S", lineNo, pathname.c_str());
 
                     // a history token differs from previous mgram. That history must exist.
                     const std::vector<LMSCORE> & entries_n = entries[n];
@@ -2965,14 +2964,14 @@ public:
                     int end = refs_h[histEntry[n -1] +1].firstEntry;
                     int i = findEntry (entries_n, beg, end, mgram[n]);
                     if (i == -1)    // unknown history: fall back
-                        ERROR ("read: mal-formed LM file, m-gram history not defined (%d): %S", lineNo, pathname.c_str());
+                        RuntimeError ("read: mal-formed LM file, m-gram history not defined (%d): %S", lineNo, pathname.c_str());
                     // found it: narrow down search range
                     histEntry[n] = i;
                     prevValid = false;
                 }
 
                 if (prevValid && mgram[m] <= prevmgram[m])
-                    ERROR ("read: mal-formed LM file, m-gram out of order (%d): %S", lineNo, pathname.c_str());
+                    RuntimeError ("read: mal-formed LM file, m-gram out of order (%d): %S", lineNo, pathname.c_str());
 
                 if (m < M)              // create history entry
                     refs[m].push_back (LMHIST (0, logB));
@@ -3015,9 +3014,9 @@ skipMGram:
                 }
             }
 
-            MESSAGE_NOLF (", %d %d-grams", entries[m].size(), m);
+            fprintf (stderr, ", %d %d-grams", entries[m].size(), m);
         }
-        MESSAGE ("");
+        fprintf (stderr, "\n");
 
         // check end tag
         if (M == fileM)
@@ -3025,7 +3024,7 @@ skipMGram:
             while (buf[0] == 0 && !feof (f))
                 lineNo++, fgetline (f, buf);
             if (strcmp (buf, "\\end\\") != 0)
-                ERROR ("read: mal-formed LM file, no \\end\\ tag (%d): %S", lineNo, pathname.c_str());
+                RuntimeError ("read: mal-formed LM file, no \\end\\ tag (%d): %S", lineNo, pathname.c_str());
         }
 
         // update zerogram score
@@ -3107,7 +3106,7 @@ public:
             if (logP <= -1e20)
             {
 #if 0           // should really not happen
-                MESSAGE ("skipping poor-scoring %s (%.2f)", symMap[buf[i]], logP);
+                fprintf (stderr, "skipping poor-scoring %s (%.2f)\n", symMap[buf[i]], logP);
 #endif
                 numOOVTokens++;
                 continue;
@@ -3134,14 +3133,14 @@ public:
                 strcat (seq, "_");
                 strcat (seq, symMap[buf[i1]]);
             }
-            MESSAGE ("=%-22s\t%6.2f\t%s\t%s %s", seq+1, logP, pbuf +1, smseenhist, smseen);
+            fprintf (stderr, "=%-22s\t%6.2f\t%s\t%s %s\n", seq+1, logP, pbuf +1, smseenhist, smseen);
 #else
             symMap;
 #endif
 #if 0       // testing of optimization
             double logP1 = lm.score_unoptimized (&buf[0], i +1); // use full history
             if (fabs (logP - logP1) > 1e-3)
-                ERROR ("bug in optimized score()");
+                RuntimeError ("bug in optimized score()");
 #endif
             logPAcc += logP;
             numTokensAcc++;

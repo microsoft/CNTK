@@ -341,7 +341,7 @@ int64_t SequenceParser<NumType, LabelType>::GetFilePosition()
 {
     int64_t position = _ftelli64(m_pFile);
     if (position == -1L)
-        Error("SequenceParser::GetFilePosition - error retrieving file position in file");
+        RuntimeError("SequenceParser::GetFilePosition - error retrieving file position in file");
     return position;
 }
 
@@ -354,7 +354,7 @@ void SequenceParser<NumType, LabelType>::SetFilePosition(int64_t position)
 {
     int rc = _fseeki64(m_pFile, position, SEEK_SET);
     if (rc)
-        Error("SequenceParser::SetFilePosition - error seeking in file");
+        RuntimeError("SequenceParser::SetFilePosition - error seeking in file");
 
     // setup state machine to start at this position
     PrepareStartPosition(position);
@@ -407,7 +407,7 @@ size_t SequenceParser<NumType, LabelType>::UpdateBuffer()
     size_t bytesToRead = min(m_bufferSize, m_fileSize-m_bufferStart)-saveBytes;
     size_t bytesRead = fread(m_fileBuffer+saveBytes, 1, bytesToRead, m_pFile);
     if (bytesRead == 0 && ferror(m_pFile))
-        Error("SequenceParser::UpdateBuffer - error reading file");
+        RuntimeError("SequenceParser::UpdateBuffer - error reading file");
     return bytesRead;
 }
 

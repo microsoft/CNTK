@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				valid = (outputType == ndlTypeArray || outputType == ndlTypeFunction || outputType == ndlTypeMacroCall);
 			}
 			if (!valid)
-				Error("Invalid network node definition for '%s', nonexistant or wrong type", symbolName.c_str());
+                            RuntimeError("Invalid network node definition for '%s', nonexistant or wrong type", symbolName.c_str());
 			if (nodeArray)
 			{
 				vector<NDLNode<ElemType>*> nodes;
@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // if no evaluation value exists throw an error
                     if (cnNode == nullptr)
                     {
-						Error("Invalid node '%s' as an output node, nonexistant or wrong type", nodes[i]->GetName().c_str());
+                        RuntimeError("Invalid node '%s' as an output node, nonexistant or wrong type", nodes[i]->GetName().c_str());
                     }
 
                     // see if it's already in the collection

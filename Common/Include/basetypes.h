@@ -122,12 +122,7 @@ using namespace std;
 #define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
 #define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
 #ifndef ASSERT
-#ifdef _CHECKED // basetypes.h expects this function to be defined (it is in message.h)
-extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp);
-#define ASSERT(exp) ((exp)||(_CHECKED_ASSERT_error(__FILE__,__LINE__,#exp),0))
-#else
 #define ASSERT assert
-#endif
 #endif
 
 // ----------------------------------------------------------------------------
@@ -933,15 +928,26 @@ using namespace msra::basetypes;    // for compatibility
 
 #pragma warning (pop)
 
-// Error - throw an error after formatting a message
-static inline void Error (const char * format, ...)
+// RuntimeError - throw a std::runtime_error with a formatted error string
+static inline void RuntimeError (const char * format, ...)
 {
     va_list args;
     char buffer[1024];
 
     va_start (args, format);
     vsprintf (buffer, format, args);
-    throw runtime_error (buffer);
+    throw std::runtime_error(buffer);
+};
+
+// LogicError - throw a std::logic_error with a formatted error string
+static inline void LogicError(const char * format, ...)
+{
+    va_list args;
+    char buffer[1024];
+
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    throw std::logic_error(buffer);
 };
 
 #endif    // _BASETYPES_
