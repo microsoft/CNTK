@@ -229,8 +229,6 @@
 #define _FILEUTIL_
 
 #include <stdio.h>
-#include <windows.h>    // for mmreg.h and FILETIME   --TODO: we should be able to remove this (for portability; currently CUDA chokes)
-#include <mmreg.h>
 #include <algorithm>    // for std::find
 #include <vector>
 #include <map>
@@ -701,6 +699,7 @@ namespace msra { namespace files {
     bool fuptodate (const wstring & target, const wstring & input, bool inputrequired = true);
 };};
 
+#if 0
 // ----------------------------------------------------------------------------
 // simple support for WAV file I/O
 // ----------------------------------------------------------------------------
@@ -740,6 +739,7 @@ void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples);
 //            channel. j is sample index.
 // ----------------------------------------------------------------------------
 void fgetraw (FILE *f,std::vector< std::vector<short> > & data,const WAVEHEADER & wavhd);
+#endif
 
 // ----------------------------------------------------------------------------
 // temp functions -- clean these up

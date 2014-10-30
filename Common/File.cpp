@@ -12,6 +12,12 @@
 #include "File.h"
 #include <string>
 #include <stdint.h>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+#ifdef __unix__
+#include <unistd.h>
+#endif
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
@@ -620,4 +626,5 @@ void File::SetPosition(uint64_t pos)
 {
     fsetpos (m_file, pos);
 }
+
 }}}
