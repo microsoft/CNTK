@@ -7,6 +7,8 @@
 #include "CppUnitTest.h"
 #include "..\Math\Matrix.h"
 
+#pragma warning (disable: 4244 4245 4305)       // conversions and truncations; we don't care in this test project
+
 #define epsilon 0.000001
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 

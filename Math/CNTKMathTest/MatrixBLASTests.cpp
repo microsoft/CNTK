@@ -7,6 +7,8 @@
 #include "CppUnitTest.h"
 #include "..\Math\Matrix.h"
 
+#pragma warning (disable: 4244 4245 4305)       // conversions and truncations; we don't care in this test project
+
 #define epsilon 0.000001
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 
@@ -137,7 +139,7 @@ namespace CNTKMathTest
             {
                 float x = C2(i,j);
                 float y = (alpha*A2(i,0)+beta*B2(i,j));
-                Assert::IsTrue(fabsf(C2(i,j)-(alpha*A2(i,0)+beta*B2(i,j)))<precision);    
+                Assert::IsTrue(fabsf(x-y)<precision);    
             }        
         }
 
@@ -177,7 +179,7 @@ namespace CNTKMathTest
             {
                 float x = C2(i,j);
                 float y = (alpha*A2(i,0)+beta*B2(i,j));
-                Assert::IsTrue(fabsf(C2(i,j)-(alpha*A2(i,0)+beta*B2(i,j)))<precision);    
+                Assert::IsTrue(fabsf(x-y)<precision);    
             }        
         }
 

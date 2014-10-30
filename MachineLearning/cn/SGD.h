@@ -1265,6 +1265,7 @@ protected:
         }
 
         //up to date if resultFile is older than srcFile or missing
+        // TODO: move this to fileutil.h to allow for portable implementation
         bool IsResultFileUpdateToDate (const wstring & resultFile, const wstring & srcFile, const bool IsSrcFileNeeded)
         {
             FILETIME resultFileTime;

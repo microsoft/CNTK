@@ -12,6 +12,8 @@
 #define epsilon 0.00001
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 
+#pragma warning (disable: 4244 4245 4305)       // conversions and truncations; we don't care in this test project
+
 #define DEBUG_FLAG 1
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace Microsoft::MSR::CNTK;
