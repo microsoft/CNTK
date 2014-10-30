@@ -229,7 +229,7 @@
 #define _FILEUTIL_
 
 #include <stdio.h>
-#include <windows.h>    // for mmreg.h and FILETIME
+#include <windows.h>    // for mmreg.h and FILETIME   --TODO: we should be able to remove this (for portability; currently CUDA chokes)
 #include <mmreg.h>
 #include <algorithm>    // for std::find
 #include <vector>
@@ -674,8 +674,10 @@ namespace msra { namespace files {
 // getfiletime(), setfiletime(): access modification time
 // ----------------------------------------------------------------------------
 
-bool getfiletime (const std::wstring & path, FILETIME & time);
-void setfiletime (const std::wstring & path, const FILETIME & time);
+// Note: we use struct _FILETIME instead of FILETIME to avoid having to include Windows.h, for increased portability.
+// As a next step, we shall make these two functions local to fileutil.cpp, and move all code that uses it in there as well.
+bool getfiletime (const std::wstring & path, struct _FILETIME & time);
+void setfiletime (const std::wstring & path, const struct _FILETIME & time);
 
 // ----------------------------------------------------------------------------
 // expand_wildcards() -- expand a path with wildcards (also intermediate ones)

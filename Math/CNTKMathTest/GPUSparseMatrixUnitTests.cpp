@@ -13,6 +13,8 @@
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace Microsoft::MSR::CNTK;
 
+#pragma warning (disable: 4244 4245 4305)       // conversions and truncations; we don't care in this test project
+
 #define ID_2C(i,j,ld) (((i)*(ld))+(j)) // 0 based indexing
 
 namespace CNTKMathTest
@@ -163,7 +165,7 @@ namespace CNTKMathTest
             GPUSparseMatrix<float> ATs = A.Transpose();
             GPUMatrix<float> ATd = ATs.CopyToDenseMatrix();
 
-            float* arrTd = ATd.CopyToArray();
+            float* arrTd = ATd.CopyToArray(); arrTd;
 
             float arrA_times_AT[19] = {17,8,5,0,8,13,0,27,5,0,138,48,0,27,48,117}; 
             GPUMatrix<float> Cet(4,4,arrA_times_AT,matrixFlagNormal);
@@ -176,7 +178,7 @@ namespace CNTKMathTest
             GPUMatrix<float> Cres1(5,5);
             GPUSparseMatrix<float>::Multiply(ATd,A,Cres1);  //Dense times sparse
 
-            float* arr = Cres1.CopyToArray();
+            float* arr = Cres1.CopyToArray(); arr;
 
             Assert::IsTrue(Cres1.IsEqualTo(Cet1));
 

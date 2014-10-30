@@ -76,7 +76,9 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 using namespace std;
 #include <map>
 #include <stdexcept>
-#include <windows.h>    // for CRITICAL_SECTION
+#ifdef _MSC_VER
+#include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
+#endif
 
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
@@ -272,7 +274,6 @@ template<class _T> inline void swap (fixed_vector<_T> & L, fixed_vector<_T> & R)
 // TODO: get rid of these
 typedef std::string STRING;
 typedef std::wstring WSTRING;
-typedef std::basic_string<TCHAR> TSTRING;    // wide/narrow character string
 
 // derive from this for noncopyable classes (will get you private unimplemented copy constructors)
 // ... TODO: change all of basetypes classes/structs to use this
@@ -285,15 +286,25 @@ public:
 };
 
 // class CCritSec and CAutoLock -- simple critical section handling
+// TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
 class CCritSec
 {
     CCritSec (const CCritSec &); CCritSec & operator= (const CCritSec &);
+#ifdef _MSC_VER
     CRITICAL_SECTION m_CritSec;
+#endif
 public:
+#ifdef _MSC_VER
     CCritSec() { InitializeCriticalSection(&m_CritSec); };
     ~CCritSec() { DeleteCriticalSection(&m_CritSec); };
     void Lock() { EnterCriticalSection(&m_CritSec); };
     void Unlock() { LeaveCriticalSection(&m_CritSec); };
+#else   // POSIX  --TODO: need to figure this out
+    CCritSec() { };
+    ~CCritSec() { };;
+    void Lock() { };
+    void Unlock() { };
+#endif
 };
 
 // locks a critical section, and unlocks it automatically
@@ -307,6 +318,7 @@ public:
     ~CAutoLock() { m_rLock.Unlock(); };
 };
 
+#if 0
 // an efficient way to write COM code
 // usage examples:
 //  COM_function() || throw_hr ("message");
@@ -387,6 +399,7 @@ public:
     operator void * () { return TlsGetValue (tlsSlot); }
     void *operator = (void *val) { if (!TlsSetValue (tlsSlot,val)) throw std::runtime_error ("tls: TlsSetValue failed"); return val; }
 };
+#endif
 
 };};    // namespace
 
@@ -731,6 +744,7 @@ public:
 };
 inline int fclose (auto_file_ptr & af) { return af.fclose(); }
 
+#ifdef _MSC_VER
 // auto-closing container for Win32 handles.
 // Pass close function if not CloseHandle(), e.g.
 // auto_handle h (FindFirstFile(...), FindClose);
@@ -747,6 +761,7 @@ public:
     operator _H () const { return h; }
 };
 typedef auto_handle_t<HANDLE> auto_handle;
+#endif
 
 // like auto_ptr but calls freeFunc_p (type free_func_t) instead of delete to clean up
 // minor difference - wrapped object is T, not T *, so to wrap a 
@@ -768,6 +783,7 @@ public:
     T detach () { T tmp = it; it = 0; return tmp; } // release ownership of object
 };
 
+#if 0
 // simple timer
 // auto_timer timer; run(); double seconds = timer; // now can abandon the object
 class auto_timer
@@ -793,6 +809,7 @@ public:
         fprintf (stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0/*to ms*/);
     }
 };
+#endif
 
 };};
 
