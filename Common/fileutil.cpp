@@ -16,7 +16,6 @@
 #endif
 #include "basetypes.h"
 #include "fileutil.h"
-#include "message.h"
 #ifdef __unix__
 #include <unistd.h>
 #endif
@@ -78,9 +77,9 @@ void fgetText(FILE * f, char& v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
-        ERROR ("error reading value from file (invalid format): %s", formatString);
+        RuntimeError ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
-        ERROR ("error reading from file: %s", strerror (errno));
+        RuntimeError ("error reading from file: %s", strerror (errno));
     assert(rc == 1);
 }
 void fgetText(FILE * f, wchar_t& v)
@@ -88,9 +87,9 @@ void fgetText(FILE * f, wchar_t& v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwscanf(f, formatString, &v);
     if (rc == 0)
-        ERROR ("error reading value from file (invalid format): %s", formatString);
+        RuntimeError ("error reading value from file (invalid format): %s", formatString);
     else if (rc == EOF)
-        ERROR ("error reading from file: %s", strerror (errno));
+        RuntimeError ("error reading from file: %s", strerror (errno));
     assert(rc == 1);
 }
 
@@ -117,7 +116,7 @@ FILE * fopenOrDie (const string & pathname, const char * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : fopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-        ERROR ("error opening file '%s': %s", pathname.c_str(), strerror (errno));
+        RuntimeError ("error opening file '%s': %s", pathname.c_str(), strerror (errno));
         return NULL;    // keep OACR happy
     }
     if (strchr (mode, 'S'))
@@ -132,7 +131,7 @@ FILE * fopenOrDie (const wstring & pathname, const wchar_t * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : _wfopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-        ERROR ("error opening file '%S': %s", pathname.c_str(), strerror (errno));
+        RuntimeError ("error opening file '%S': %s", pathname.c_str(), strerror (errno));
         return NULL;    // keep OACR happy
     }
     if (strchr (mode, 'S'))
@@ -154,7 +153,7 @@ void fsetmode(FILE * f, char type)
 {
     if (type != 'b' && type != 't')
     {
-        ERROR ("fsetmode: invalid type '%c'");
+        RuntimeError ("fsetmode: invalid type '%c'", type);
     }
 #ifdef UNDER_CE // winCE and win32 have different return types for _fileno
     FILE *fd = fileno (f);   // note: no error check possible
@@ -165,7 +164,7 @@ void fsetmode(FILE * f, char type)
     int rc = setmode (fd, mode);
     if (rc == -1)
     {
-        ERROR ("error changing file mode: %s", strerror (errno));
+        RuntimeError ("error changing file mode: %s", strerror (errno));
     }
 }
 
@@ -181,7 +180,7 @@ void freadOrDie (void * ptr, size_t size, size_t count, FILE * f)
         size_t chunkn = min (count, (size_t)15*1024*1024);  // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
         size_t n = fread (ptr, size, chunkn, f);
         if (n != chunkn)
-            ERROR ("error reading from file: %s", strerror (errno));
+            RuntimeError ("error reading from file: %s", strerror (errno));
         count -= n;
         ptr = n * size + (char*) ptr;
     }
@@ -208,7 +207,7 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
         size_t n = fwrite ((const void *) p1, 1, wantWrite, f);
         if (n != wantWrite)
         {
-            ERROR ("error writing to file (ptr=0x%08lx, size=%d,"
+            RuntimeError ("error writing to file (ptr=0x%08lx, size=%d,"
                 " count=%d, writing %d bytes after %d): %s",
                 ptr, size, count, (int) wantWrite,
                 (int) (size * count - totalBytes),
@@ -233,7 +232,7 @@ void fprintfOrDie (FILE * f, const char * fmt, ...)
     int rc = vfprintf (f, fmt, arg_ptr);
     if (rc < 0)
     {
-        ERROR ("error writing to file: %s", strerror (errno));
+        RuntimeError ("error writing to file: %s", strerror (errno));
     }
 }
 #pragma warning(pop)
@@ -247,7 +246,7 @@ void fflushOrDie (FILE * f)
     int rc = fflush (f);
     if (rc != 0)
     {
-        ERROR ("error flushing to file: %s", strerror (errno));
+        RuntimeError ("error flushing to file: %s", strerror (errno));
     }
 }
 
@@ -259,22 +258,22 @@ size_t filesize (FILE * f)
     size_t curPos = _ftelli64(f);
     if (curPos == -1L)
     {
-        ERROR ("error determining file position: %s", strerror (errno));
+        RuntimeError ("error determining file position: %s", strerror (errno));
     }
     int rc = _fseeki64 (f, 0, SEEK_END);
     if (rc != 0)
     {
-        ERROR ("error seeking to end of file: %s", strerror (errno));
+        RuntimeError ("error seeking to end of file: %s", strerror (errno));
     }
     size_t len = _ftelli64 (f);
     if (len == -1L)
     {
-        ERROR ("error determining file position: %s", strerror (errno));
+        RuntimeError ("error determining file position: %s", strerror (errno));
     }
     rc = _fseeki64 (f, curPos, SEEK_SET);
     if (rc != 0)
     {
-        ERROR ("error resetting file position: %s", strerror (errno));
+        RuntimeError ("error resetting file position: %s", strerror (errno));
     }
     return len;
 }
@@ -318,12 +317,12 @@ size_t fseekOrDie (FILE * f, size_t offset, int mode)
     size_t curPos = _ftelli64 (f);
     if (curPos == -1L)
     {
-    ERROR ("error seeking: %s", strerror (errno));
+    RuntimeError ("error seeking: %s", strerror (errno));
     }
     int rc = _fseeki64 (f, offset, mode);
     if (rc != 0)
     {
-    ERROR ("error seeking: %s", strerror (errno));
+    RuntimeError ("error seeking: %s", strerror (errno));
     }
     return curPos;
 }
@@ -333,7 +332,7 @@ uint64_t fgetpos (FILE * f)
     fpos_t post;
     int rc = ::fgetpos (f, &post);
     if (rc != 0)
-        ERROR ("error getting file position: %s", strerror (errno));
+        RuntimeError ("error getting file position: %s", strerror (errno));
     return post;
 }
 
@@ -368,7 +367,7 @@ void fsetpos (FILE * f, uint64_t reqpos)
     fpos_t post = reqpos;
     int rc = ::fsetpos (f, &post);
     if (rc != 0)
-        ERROR ("error setting file position: %s", strerror (errno));
+        RuntimeError ("error setting file position: %s", strerror (errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -378,7 +377,7 @@ void fsetpos (FILE * f, uint64_t reqpos)
 void unlinkOrDie (const std::string & pathname)
 {
     if (unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
-    ERROR ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
+    RuntimeError ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
 }
 #ifndef _MSC_VER
 static int _wunlink (const wchar_t * p) { return unlink (msra::strfun::wcstombs (p).c_str()); }
@@ -386,7 +385,7 @@ static int _wunlink (const wchar_t * p) { return unlink (msra::strfun::wcstombs 
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
-    ERROR ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
+    RuntimeError ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -396,13 +395,13 @@ void unlinkOrDie (const std::wstring & pathname)
 void renameOrDie (const std::string & from, const std::string & to)
 {
     if (!MoveFileA (from.c_str(),to.c_str()))
-    ERROR ("error renaming: %s", GetLastError());
+    RuntimeError ("error renaming: %s", GetLastError());
 }
 
 void renameOrDie (const std::wstring & from, const std::wstring & to)
 {
     if (!MoveFileW (from.c_str(),to.c_str()))
-    ERROR ("error renaming: %s", GetLastError());
+    RuntimeError ("error renaming: %s", GetLastError());
 }
 
 // ----------------------------------------------------------------------------
@@ -492,7 +491,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
-            ERROR ("error reading line: %s", strerror (errno));
+            RuntimeError ("error reading line: %s", strerror (errno));
         buf[0] = 0;
         return buf;
     }
@@ -504,7 +503,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
 		uint64_t filepos = fgetpos(f); // (for error message only)
-		ERROR("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
+		RuntimeError ("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
                filepos, size -1, _utf8 (example).c_str());
     }
 
@@ -536,7 +535,7 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
     if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
-            ERROR ("error reading line: %s", strerror (errno));
+            RuntimeError ("error reading line: %s", strerror (errno));
         buf[0] = 0;
         return buf;
     }
@@ -547,7 +546,7 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
     if (n >= (size_t) size -1)
     {
         wstring example (buf, min (n, 100));
-        ERROR ("input line too long at file offset %U64d (max. %d characters allowed) [%S ...]",
+        RuntimeError ("input line too long at file offset %U64d (max. %d characters allowed) [%S ...]",
                fgetpos (f), size -1, example.c_str());
     }
 
@@ -627,12 +626,10 @@ const char * fgetstring (FILE * f, __out_z_cap(size) char * buf, int size)
     {
         int c = fgetc(f);
         if (c == EOF)
-            ERROR("error reading string or missing 0: %s", strerror(errno));
+            RuntimeError ("error reading string or missing 0: %s", strerror(errno));
         if (c == 0) break;
         if (i >= size - 1)
-        {
-            ERROR("input line too long (max. %d characters allowed)", size - 1);
-        }
+            RuntimeError ("input line too long (max. %d characters allowed)", size - 1);
         buf[i] = (char)c;
     }
     assert (i < size);
@@ -648,7 +645,7 @@ string fgetstring (FILE * f)
     {
     char c = (char)fgetc (f);
     if (c == EOF)
-        ERROR ("error reading string or missing 0: %s", strerror (errno));
+        RuntimeError ("error reading string or missing 0: %s", strerror (errno));
     if (c == 0) break;
         res.push_back (c);
     }
@@ -664,11 +661,11 @@ const wchar_t * fgetstring (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
         // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
         wint_t c = fgetwc(f);
         if (c == WEOF)
-            ERROR("error reading string or missing 0: %s", strerror(errno));
+            RuntimeError ("error reading string or missing 0: %s", strerror(errno));
         if (c == 0) break;
         if (i >= size - 1)
         {
-            ERROR("input line too long (max. %d wchar_tacters allowed)", size - 1);
+            RuntimeError ("input line too long (max. %d wchar_tacters allowed)", size - 1);
         }
         buf[i] = (wchar_t)c;
     }
@@ -699,7 +696,7 @@ wstring fgetwstring (FILE * f)
         // note the order below works only for little endian
         wint_t c = (wint_t)((c2 << 8) | c1);
         if (c == WEOF)
-            ERROR ("error reading string or missing 0: %s", strerror (errno));
+            RuntimeError ("error reading string or missing 0: %s", strerror (errno));
         if (c == 0) break;
            res.push_back ((wchar_t) c);
     }
@@ -716,7 +713,7 @@ wstring fgetwstring (FILE * f)
     {
         wint_t c = fgetwc(f);
         if (c == WEOF)
-            ERROR("error reading string or missing 0: %s", strerror(errno));
+            RuntimeError ("error reading string or missing 0: %s", strerror(errno));
         if (c == 0) break;
         res.push_back((wchar_t)c);
     }
@@ -733,14 +730,14 @@ bool fskipspace (FILE * f)
         if (c == EOF)       // hit the end
         {
             if (ferror(f))
-                ERROR("error reading from file: %s", strerror(errno));
+                RuntimeError ("error reading from file: %s", strerror(errno));
             break;
         }
         if (!isspace (c))    // end of space: undo getting that character
         {
             int rc = ungetc(c, f);
             if (rc != c)
-                ERROR("error in ungetc(): %s", strerror(errno));
+                RuntimeError ("error in ungetc(): %s", strerror(errno));
             break;
         }
     }
@@ -757,14 +754,14 @@ bool fskipwspace (FILE * f)
         if (c == WEOF)       // hit the end
             {
                 if (ferror (f))
-                    ERROR ("error reading from file: %s", strerror (errno));
+                    RuntimeError ("error reading from file: %s", strerror (errno));
                 break;
             }
         if (!iswspace (c))    // end of space: undo getting that character
             {
                 wint_t rc = ungetwc (c, f);
                 if (rc != c)
-                    ERROR ("error in ungetc(): %s", strerror (errno));
+                    RuntimeError ("error in ungetc(): %s", strerror (errno));
                 break;
             }
     }
@@ -800,7 +797,7 @@ int fskipNewline (FILE * f, bool skip)
             return found?(int)true:EOF;
         int rc = ungetc (c, f);
         if (rc != c)
-            ERROR ("error in ungetc(): %s", strerror (errno));
+            RuntimeError ("error in ungetc(): %s", strerror (errno));
         return (int)found;
     }
     // if we get here we saw a newline
@@ -835,7 +832,7 @@ int fskipwNewline (FILE * f, bool skip)
             return found?(int)true:EOF;
         wint_t rc = ungetwc (c, f);
         if (rc != c)
-            ERROR ("error in ungetwc(): %s", strerror (errno));
+            RuntimeError ("error in ungetwc(): %s", strerror (errno));
         return (int)found;
     }
     // if we get here we saw a double newline
@@ -855,7 +852,7 @@ const char * fgettoken (FILE * f, __out_z_cap(size) char * buf, int size)
         if (c == EOF) break;
         if (isspace (c)) break;
         if (i >= size -1)
-            ERROR ("input token too long (max. %d characters allowed)", size -1);
+            RuntimeError ("input token too long (max. %d characters allowed)", size -1);
         buf[i] = (char) c;
     }
     // ... TODO: while (IsWhiteSpace (c)) c = fgetc (f);      // skip trailing space
@@ -863,7 +860,7 @@ const char * fgettoken (FILE * f, __out_z_cap(size) char * buf, int size)
     {
         int rc = ungetc (c, f);
         if (rc != c)
-            ERROR ("error in ungetc(): %s", strerror (errno)); 
+            RuntimeError ("error in ungetc(): %s", strerror (errno)); 
     }
     assert (i < size);
     buf[i] = 0;
@@ -889,7 +886,7 @@ const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
         if (c == WEOF) break;
         if (iswspace (c)) break;
         if (i >= size -1)
-            ERROR ("input token too long (max. %d wchar_tacters allowed)", size -1);
+            RuntimeError ("input token too long (max. %d wchar_tacters allowed)", size -1);
         buf[i] = (wchar_t) c;
     }
     // ... TODO: while (IsWhiteSpace (c)) c = fgetc (f);      // skip trailing space
@@ -897,7 +894,7 @@ const wchar_t * fgettoken (FILE * f, __out_z_cap(size) wchar_t * buf, int size)
     {
         int rc = ungetwc (c, f);
         if (rc != c)
-            ERROR ("error in ungetwc(): %s", strerror (errno));
+            RuntimeError ("error in ungetwc(): %s", strerror (errno));
     }
     assert (i < size);
     buf[i] = 0;
@@ -982,7 +979,7 @@ void fcheckTag_ascii (FILE * f, const string & expectedTag)
     fgettoken (f, buf, sizeof(buf)/sizeof(*buf));
     if (expectedTag != buf)
     {
-        ERROR ("invalid tag '%s' found; expected '%s'", buf, expectedTag.c_str());
+        RuntimeError ("invalid tag '%s' found; expected '%s'", buf, expectedTag.c_str());
     }
 }
 
@@ -994,7 +991,7 @@ void fcompareTag (const string & readTag, const string & expectedTag)
 {
     if (readTag != expectedTag)
     {
-        ERROR ("invalid tag '%s' found; expected '%s'", 
+        RuntimeError ("invalid tag '%s' found; expected '%s'", 
                readTag.c_str(), expectedTag.c_str());
     }
 }
@@ -1034,7 +1031,7 @@ void fpad (FILE * f, int n)
     int pos = ftell (f);
     if (pos == -1)
     {
-        ERROR ("error in ftell(): %s", strerror (errno));
+        RuntimeError ("error in ftell(): %s", strerror (errno));
     }
     // determine how many bytes are needed (at least 1 for the 0-terminator)
     // and create a dummy string of that length incl. terminator
@@ -1120,7 +1117,7 @@ int fgetint_ascii (FILE * f)
     int rc = ungetc (c, f);
     if (rc != c)
     {
-    ERROR ("error in ungetc(): %s", strerror (errno));
+    RuntimeError ("error in ungetc(): %s", strerror (errno));
     }
     return res;
 }
@@ -1159,9 +1156,9 @@ float fgetfloat_ascii (FILE * f)
     fskipspace (f);
     int rc = fscanf (f, "%f", &val); // security hint: safe overloads
     if (rc == 0)
-    ERROR ("error reading float value from file (invalid format): %s");
+    RuntimeError ("error reading float value from file (invalid format): %s");
     else if (rc == EOF)
-    ERROR ("error reading from file: %s", strerror (errno));
+    RuntimeError ("error reading from file: %s", strerror (errno));
     assert (rc == 1);
     return val;
 }
@@ -1326,7 +1323,7 @@ void fgetfile (FILE * f, std::vector<char> & buffer)
         size_t n = fread (&inbuf[0], sizeof (inbuf[0]), inbuf.size(), f);
         if (ferror (f))
         {
-            ERROR ("fgetfile: error reading from file: %s", strerror (errno));
+            RuntimeError ("fgetfile: error reading from file: %s", strerror (errno));
         }
         buffer.insert (buffer.end(), inbuf.begin(), inbuf.begin() + n);
     }
@@ -1400,12 +1397,12 @@ void setfiletime (const wstring & path, const FILETIME & time)
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
     if (h == INVALID_HANDLE_VALUE)
     {
-        ERROR ("setfiletime: error opening file: %d", GetLastError());
+        RuntimeError ("setfiletime: error opening file: %d", GetLastError());
     }
     BOOL rc = SetFileTime (h, NULL, NULL, &time);
     if (!rc)
     {
-        ERROR ("setfiletime: error setting file time information: %d", GetLastError());
+        RuntimeError ("setfiletime: error setting file time information: %d", GetLastError());
     }
 }
 
@@ -1484,7 +1481,7 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 {
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
-        ERROR("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error(::GetLastError()).c_str());
+        RuntimeError ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error(::GetLastError()).c_str());
 }
 #endif
 
@@ -1511,7 +1508,7 @@ static void mkdir (const wstring & path)
         if (att != INVALID_FILE_ATTRIBUTES || (att & FILE_ATTRIBUTE_DIRECTORY) != 0)
             return; // ok
     }
-    ERROR ("make_intermediate_dirs: error creating intermediate directory %S", path.c_str());
+    RuntimeError ("make_intermediate_dirs: error creating intermediate directory %S", path.c_str());
 }
 
 #ifndef _MSC_VER

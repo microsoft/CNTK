@@ -22,7 +22,7 @@ template<> std::string GetWriterName(double) {std::string name = "GetWriterD"; r
 template<class ElemType>
 void DataWriter<ElemType>::Init(const ConfigParameters& /*config*/)
 {
-    Error("Init shouldn't be called, use constructor");
+    RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
 }
 
@@ -68,7 +68,7 @@ void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& config)
     {
         std::string message = "Writer not found: ";
         message += msra::strfun::utf8(m_dllName);
-        Error((char*)message.c_str());
+        RuntimeError((char*)message.c_str());
     }
 
     // create a variable of each type just to call the proper templated version

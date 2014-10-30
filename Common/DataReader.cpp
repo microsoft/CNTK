@@ -22,7 +22,7 @@ template<> std::string GetReaderName(double) {std::string name = "GetReaderD"; r
 template<class ElemType>
 void DataReader<ElemType>::Init(const ConfigParameters& /*config*/)
 {
-    Error("Init shouldn't be called, use constructor");
+    RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
 }
 
@@ -54,7 +54,7 @@ void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
     {
         std::string message = "Reader not found: ";
         message += msra::strfun::utf8(m_dllName);
-        Error((char*) message.c_str());
+        RuntimeError((char*) message.c_str());
     }
 
     // create a variable of each type just to call the proper templated version

@@ -178,7 +178,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     if ((m_sequence.size() == 1 ? epochSample : epochSample - m_sequence[m_sequence.size()-2]) > m_mbSize)
                     {
                         fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
-                        Error("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+                        RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
                     }
 
                     if (!_strcmpi(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
@@ -198,25 +198,25 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 }
                 else
                 {
-                    Error("Input label expected to be a category label");
+                    RuntimeError("Input label expected to be a category label");
                 }
 
                 // if we have potential features
                 if (m_featureDim > 0)
                 {
-                    Error("to-do. Assume sparse input feature. need to change the code from dense matrix");
+                    RuntimeError("to-do. Assume sparse input feature. need to change the code from dense matrix");
                     // move the position up to the start of the additional features section
 /*                    pos += labelIn.dim;
                     assert(pos + m_featureDim == m_featureData.size());
                     // this has to be an even number, a pair of index and value
                     if  ((spos.numberPos&1) != 0)
-                        Error("Features must be specified in pairs (index:value). Invalid features for label '%s'\n", labelValue);
+                        RuntimeError("Features must be specified in pairs (index:value). Invalid features for label '%s'\n", labelValue);
                 
                     while (feature < spos.numberPos)
                     {
                         int index = (int)featureTemp[feature++];
                         if (index < 0 || index >= m_featureDim)
-                            Error("Invalid feature index: %d for label '%s', feature max dimension = %lld\n", index, labelValue, m_featureDim);
+                            RuntimeError("Invalid feature index: %d for label '%s', feature max dimension = %lld\n", index, labelValue, m_featureDim);
 
                         ElemType value = featureTemp[feature++];
                         m_featureData[pos+index] = value;
@@ -240,7 +240,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 }
                 else
                 {
-                    Error("Invalid output label type, expected Category, or Next Word");
+                    RuntimeError("Invalid output label type, expected Category, or Next Word");
                 }
 
                 // get the ID from the label
@@ -260,11 +260,11 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 int jEnd = (int) m_labelIdData.size() - 1; 
                 LabelIdType index ;
                 if (CheckIdFromLabel(labelInfo.endSequence, labelInfo, index) == false)
-                    Error("cannot find sentence begining label");
+                    RuntimeError("cannot find sentence begining label");
 
                 if (m_labelIdData[jEnd] != index )
                      /// for language model, the first word/letter has to be <s>
-                    Error("SequenceReader: the last letter/word of a batch has to be the sentence ending symbol");
+                    RuntimeError("SequenceReader: the last letter/word of a batch has to be the sentence ending symbol");
             }
 
         }
@@ -436,7 +436,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
     }
     else
-        Error("two label definitions (in and out) required for Sequence Reader");
+        RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
@@ -616,7 +616,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*fla
 
     if (vin == nullptr)
     {
-        Error("cannot open word class file");
+        RuntimeError("cannot open word class file");
     }
     for (int a = 0; a < nwords; a++)
     {
@@ -948,7 +948,7 @@ bool SequenceReader<ElemType>::SentenceEnd()
     {
         LabelIdType index ;
         if (CheckIdFromLabel(labelInfo.endSequence, labelInfo, index) == false)
-            Error("cannot find sentence begining label");
+            RuntimeError("cannot find sentence begining label");
 
         if (m_labelIdData[jEnd] == index )
             return true; 
@@ -1088,7 +1088,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     }
 
     if (actualmbsize > m_mbSize){
-        Error("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
+        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
     }
 
     // hit the end of the dataset, 
@@ -1184,7 +1184,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         }
     }catch(...)
     {
-        Error("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
+        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
     }
 
     try
@@ -1208,7 +1208,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         }
     }catch(...)
     {
-        Error("cannot find matrices for %s", m_labelsName[labelInfoOut]);
+        RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut]);
     }
 
     // we read some records, so process them
@@ -1232,7 +1232,7 @@ void SequenceReader<ElemType>::OrganizeClass()
 
     for (i=0; i<class_size; i++) {
         if (class_cn[i] == 0) {
-            Error ("ERROR: class is empty");
+            RuntimeError ("class is empty");
         }
     }
 }
@@ -1259,7 +1259,7 @@ void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName
 {
     if (m_cachingReader)
     {
-        Error("Cannot set mapping table when the caching reader is being used");
+        RuntimeError("Cannot set mapping table when the caching reader is being used");
     }
     LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
 
@@ -1283,7 +1283,7 @@ template<class ElemType>
 bool SequenceReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
 {
     if (!m_cachingReader)
-        Error("GetData not supported in SequenceReader");
+        RuntimeError("GetData not supported in SequenceReader");
     return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
 }
 
@@ -1324,7 +1324,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
     }
     else
-        Error("two label definitions (in and out) required for Sequence Reader");
+        RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
@@ -1681,7 +1681,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
             }
             else
             {
-                Error("Input label expected to be a category label");
+                RuntimeError("Input label expected to be a category label");
             }
 
             // now get the output label
@@ -1700,7 +1700,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
             }
             else
             {
-                Error("Invalid output label type, expected Category, or Next Word");
+                RuntimeError("Invalid output label type, expected Category, or Next Word");
             }
 
             // get the ID from the label
@@ -1747,7 +1747,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     // figure out the size of the next sequence
     actualmbsize = m_labelIdData.size() ; 
     if (actualmbsize > m_mbSize * mToProcess.size()){
-        Error("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
+        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
     }
 
     // now get the labels
@@ -1834,7 +1834,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         }
     }catch(...)
     {
-        Error("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
+        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
     }
 
     // we read some records, so process them

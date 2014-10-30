@@ -16,7 +16,6 @@
 
 #include "basetypes.h"
 #include "fileutil.h"
-#include "message.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -50,7 +49,7 @@ template<class _T> FILE * fopenStdHandle (const _T * mode)
         // switch to binary mode if not yet (in case it is stdin)
         int rc = _setmode (_fileno (f), strchr (mode, 'b') ? _O_BINARY : _O_TEXT);
         if (rc == -1)
-            ERROR ("error switching stream to binary mode: %s", strerror (errno));
+            RuntimeError ("error switching stream to binary mode: %s", strerror (errno));
     }
     return f;
 }
@@ -60,7 +59,7 @@ FILE * fopenOrDie (const STRING & pathname, const char * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : fopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-    ERROR ("error opening file '%s': %s", pathname.c_str(), strerror (errno));
+    RuntimeError ("error opening file '%s': %s", pathname.c_str(), strerror (errno));
         return NULL;    // keep OACR happy
     }
     if (strchr (mode, 'S'))
@@ -75,7 +74,7 @@ FILE * fopenOrDie (const WSTRING & pathname, const wchar_t * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : _wfopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-        ERROR ("error opening file '%S': %s", pathname.c_str(), strerror (errno));
+        RuntimeError ("error opening file '%S': %s", pathname.c_str(), strerror (errno));
         return NULL;    // keep OACR happy
     }
     if (strchr (mode, 'S'))
@@ -93,7 +92,7 @@ void fsetmode (FILE * f, char type)
 {
     if (type != 'b' && type != 't')
     {
-        ERROR ("fsetmode: invalid type '%c'");
+        RuntimeError ("fsetmode: invalid type '%c'");
     }
 #ifdef UNDER_CE // winCE and win32 have different return types for _fileno
     FILE *fd = _fileno (f);   // note: no error check possible
@@ -104,7 +103,7 @@ void fsetmode (FILE * f, char type)
     int rc = _setmode (fd, mode);
     if (rc == -1)
     {
-    ERROR ("error changing file mode: %s", strerror (errno));
+    RuntimeError ("error changing file mode: %s", strerror (errno));
     }
 }
 
@@ -120,7 +119,7 @@ void freadOrDie (void * ptr, size_t size, size_t count, FILE * f)
         size_t chunkn = min (count, 15*1024*1024);  // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
         size_t n = fread (ptr, size, chunkn, f);
         if (n != chunkn)
-            ERROR ("error reading from file: %s", strerror (errno));
+            RuntimeError ("error reading from file: %s", strerror (errno));
         count -= n;
         ptr = n * size + (char*) ptr;
     }
@@ -135,7 +134,7 @@ void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f)
         DWORD n ;
         ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
         if (n != chunkn)
-            ERROR ("error number for reading from file: %s", GetLastError());
+            RuntimeError ("error number for reading from file: %s", GetLastError());
         count -= (size_t) (n / size);
         ptr = n + (char*) ptr;
     }
@@ -162,7 +161,7 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
         size_t n = fwrite ((const void *) p1, 1, wantWrite, f);
         if (n != wantWrite)
         {
-            ERROR ("error writing to file (ptr=0x%08lx, size=%d,"
+            RuntimeError ("error writing to file (ptr=0x%08lx, size=%d,"
                 " count=%d, writing %d bytes after %d): %s",
                 ptr, size, count, (int) wantWrite,
                 (int) (size * count - totalBytes),
@@ -188,7 +187,7 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f)
         DWORD byteWritten = 0 ;
         if (WriteFile(f, (const void *) p1, wantWrite, &byteWritten, NULL) == false)
         {
-            ERROR ("error writing to file (ptr=0x%08lx, size=%d,"
+            RuntimeError ("error writing to file (ptr=0x%08lx, size=%d,"
                 " count=%d, writing %d bytes after %d): %s",
                 ptr, size, count, (int) wantWrite,
                 (int) (size * count - totalBytes),
@@ -213,7 +212,7 @@ void fprintfOrDie (FILE * f, const char * fmt, ...)
     int rc = vfprintf (f, fmt, arg_ptr);
     if (rc < 0)
     {
-        ERROR ("error writing to file: %s", strerror (errno));
+        RuntimeError ("error writing to file: %s", strerror (errno));
     }
 }
 #pragma warning(pop)
@@ -227,7 +226,7 @@ void fflushOrDie (FILE * f)
     int rc = fflush (f);
     if (rc != 0)
     {
-    ERROR ("error flushing to file: %s", strerror (errno));
+    RuntimeError ("error flushing to file: %s", strerror (errno));
     }
 }
 
@@ -240,22 +239,22 @@ size_t filesize (FILE * f)
     long curPos = ftell (f);
     if (curPos == -1L)
     {
-    ERROR ("error determining file position: %s", strerror (errno));
+    RuntimeError ("error determining file position: %s", strerror (errno));
     }
     int rc = fseek (f, 0, SEEK_END);
     if (rc != 0)
     {
-    ERROR ("error seeking to end of file: %s", strerror (errno));
+    RuntimeError ("error seeking to end of file: %s", strerror (errno));
     }
     long len = ftell (f);
     if (len == -1L)
     {
-    ERROR ("error determining file position: %s", strerror (errno));
+    RuntimeError ("error determining file position: %s", strerror (errno));
     }
     rc = fseek (f, curPos, SEEK_SET);
     if (rc != 0)
     {
-    ERROR ("error resetting file position: %s", strerror (errno));
+    RuntimeError ("error resetting file position: %s", strerror (errno));
     }
     return (size_t) len;
 }
@@ -299,12 +298,12 @@ long fseekOrDie (FILE * f, long offset, int mode)
     long curPos = ftell (f);
     if (curPos == -1L)
     {
-    ERROR ("error seeking: %s", strerror (errno));
+    RuntimeError ("error seeking: %s", strerror (errno));
     }
     int rc = fseek (f, offset, mode);
     if (rc != 0)
     {
-    ERROR ("error seeking: %s", strerror (errno));
+    RuntimeError ("error seeking: %s", strerror (errno));
     }
     return curPos;
 }
@@ -314,7 +313,7 @@ uint64_t fgetpos (FILE * f)
     fpos_t post;
     int rc = ::fgetpos (f, &post);
     if (rc != 0)
-        ERROR ("error getting file position: %s", strerror (errno));
+        RuntimeError ("error getting file position: %s", strerror (errno));
     return post;
 }
 
@@ -347,7 +346,7 @@ void fsetpos (FILE * f, uint64_t reqpos)
     fpos_t post = reqpos;
     int rc = ::fsetpos (f, &post);
     if (rc != 0)
-        ERROR ("error setting file position: %s", strerror (errno));
+        RuntimeError ("error setting file position: %s", strerror (errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -357,12 +356,12 @@ void fsetpos (FILE * f, uint64_t reqpos)
 void unlinkOrDie (const std::string & pathname)
 {
     if (_unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
-    ERROR ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
+    RuntimeError ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
 }
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
-    ERROR ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
+    RuntimeError ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -373,14 +372,14 @@ void unlinkOrDie (const std::wstring & pathname)
 void renameOrDie (const std::string & from, const std::string & to)
 {
     if (!MoveFileA (from.c_str(),to.c_str()))
-    ERROR ("error renaming: %s", GetLastError());
+    RuntimeError ("error renaming: %s", GetLastError());
 }
 #endif
 
 void renameOrDie (const std::wstring & from, const std::wstring & to)
 {
     if (!MoveFileW (from.c_str(),to.c_str()))
-    ERROR ("error renaming: %s", GetLastError());
+    RuntimeError ("error renaming: %s", GetLastError());
 }
 
 // ----------------------------------------------------------------------------
@@ -458,7 +457,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
-            ERROR ("error reading line: %s", strerror (errno));
+            RuntimeError ("error reading line: %s", strerror (errno));
         buf[0] = 0;
         return buf;
     }
@@ -469,7 +468,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (n >= (size_t) size -1)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
-        ERROR ("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
+        RuntimeError ("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
                filepos, size -1, _utf8 (example).c_str());
     }
 
@@ -501,7 +500,7 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
     if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
-            ERROR ("error reading line: %s", strerror (errno));
+            RuntimeError ("error reading line: %s", strerror (errno));
         buf[0] = 0;
         return buf;
     }
@@ -512,7 +511,7 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
     if (n >= (size_t) size -1)
     {
         wstring example (buf, min (n, 100));
-        ERROR ("input line too long at file offset %U64d (max. %d characters allowed) [%S ...]",
+        RuntimeError ("input line too long at file offset %U64d (max. %d characters allowed) [%S ...]",
                fgetpos (f), size -1, example.c_str());
     }
 
@@ -592,11 +591,11 @@ const char * fgetstring (FILE * f, __out_z_cap(size) char * buf, int size)
     {
     int c = fgetc (f);
     if (c == EOF)
-            ERROR ("error reading string or missing 0: %s", strerror (errno));
+            RuntimeError ("error reading string or missing 0: %s", strerror (errno));
     if (c == 0) break;
     if (i >= size -1)
     {
-        ERROR ("input line too long (max. %d characters allowed)", size -1);
+        RuntimeError ("input line too long (max. %d characters allowed)", size -1);
     }
     buf[i] = (char) c;
     }
@@ -615,7 +614,7 @@ const char * fgetstring (const HANDLE f, __out_z_cap(size) char * buf, int size)
         if (c == (char) 0) break;
         if (i >= size -1)
         {
-            ERROR ("input line too long (max. %d characters allowed)", size -1);
+            RuntimeError ("input line too long (max. %d characters allowed)", size -1);
         }
         buf[i] = (char) c;
     }
@@ -632,7 +631,7 @@ wstring fgetwstring (FILE * f)
     {
     int c = fgetwc (f);
     if (c == EOF)
-            ERROR ("error reading string or missing 0: %s", strerror (errno));
+            RuntimeError ("error reading string or missing 0: %s", strerror (errno));
     if (c == 0) break;
         res.push_back ((wchar_t) c);
     }
@@ -647,14 +646,14 @@ void fskipspace (FILE * f)
     if (c == EOF)       // hit the end
         {
             if (ferror (f))
-                ERROR ("error reading from file: %s", strerror (errno));
+                RuntimeError ("error reading from file: %s", strerror (errno));
             break;
         }
     if (!isspace (c))    // end of space: undo getting that character
         {
             int rc = ungetc (c, f);
             if (rc != c)
-                ERROR ("error in ungetc(): %s", strerror (errno));
+                RuntimeError ("error in ungetc(): %s", strerror (errno));
             break;
         }
     }
@@ -679,7 +678,7 @@ void fskipNewline (FILE * f)
 
     if (c != '\n')
     {
-    ERROR ("unexpected garbage at end of line");
+    RuntimeError ("unexpected garbage at end of line");
     }
 }
 
@@ -696,7 +695,7 @@ const char * fgettoken (FILE * f, __out_z_cap(size) char * buf, int size)
     if (c == EOF) break;
     if (isspace (c)) break;
     if (i >= size -1)
-        ERROR ("input token too long (max. %d characters allowed)", size -1);
+        RuntimeError ("input token too long (max. %d characters allowed)", size -1);
     buf[i] = (char) c;
     }
     // ... TODO: while (isspace (c)) c = fgetc (f);      // skip trailing space
@@ -704,7 +703,7 @@ const char * fgettoken (FILE * f, __out_z_cap(size) char * buf, int size)
     {
     int rc = ungetc (c, f);
     if (rc != c)
-        ERROR ("error in ungetc(): %s", strerror (errno));
+        RuntimeError ("error in ungetc(): %s", strerror (errno));
     }
     ASSERT (i < size);
     buf[i] = 0;
@@ -789,7 +788,7 @@ void fcheckTag_ascii (FILE * f, const STRING & expectedTag)
     fgettoken (f, buf, sizeof(buf)/sizeof(*buf));
     if (expectedTag != buf)
     {
-        ERROR ("invalid tag '%s' found; expected '%s'", buf, expectedTag.c_str());
+        RuntimeError ("invalid tag '%s' found; expected '%s'", buf, expectedTag.c_str());
     }
 }
 
@@ -801,7 +800,7 @@ void fcompareTag (const STRING & readTag, const STRING & expectedTag)
 {
     if (readTag != expectedTag)
     {
-        ERROR ("invalid tag '%s' found; expected '%s'", 
+        RuntimeError ("invalid tag '%s' found; expected '%s'", 
                readTag.c_str(), expectedTag.c_str());
     }
 }
@@ -848,7 +847,7 @@ void fpad (FILE * f, int n)
     int pos = ftell (f);
     if (pos == -1)
     {
-    ERROR ("error in ftell(): %s", strerror (errno));
+    RuntimeError ("error in ftell(): %s", strerror (errno));
     }
     // determine how many bytes are needed (at least 1 for the 0-terminator)
     // and create a dummy string of that length incl. terminator
@@ -940,7 +939,7 @@ int fgetint_ascii (FILE * f)
     int rc = ungetc (c, f);
     if (rc != c)
     {
-    ERROR ("error in ungetc(): %s", strerror (errno));
+    RuntimeError ("error in ungetc(): %s", strerror (errno));
     }
     return res;
 }
@@ -968,9 +967,9 @@ float fgetfloat_ascii (FILE * f)
     fskipspace (f);
     int rc = fscanf (f, "%f", &val); // security hint: safe overloads
     if (rc == 0)
-    ERROR ("error reading float value from file (invalid format): %s");
+    RuntimeError ("error reading float value from file (invalid format): %s");
     else if (rc == EOF)
-    ERROR ("error reading from file: %s", strerror (errno));
+    RuntimeError ("error reading from file: %s", strerror (errno));
     ASSERT (rc == 1);
     return val;
 }
@@ -1073,7 +1072,7 @@ void WAVEHEADER::write (FILE * f)
     long curPos = ftell (f);
     if (curPos == -1L)
     {
-    ERROR ("error determining file position: %s", strerror (errno));
+    RuntimeError ("error determining file position: %s", strerror (errno));
     }
     unsigned int len = (unsigned int) filesize (f);
     unsigned int RiffLength = len - 8;
@@ -1085,6 +1084,7 @@ void WAVEHEADER::write (FILE * f)
     fseekOrDie (f, curPos, SEEK_SET);
 }
 
+#if 0
 unsigned int WAVEHEADER::read (FILE * f, signed short & wRealFormatTag, int & bytesPerSample)
 {
     // read header
@@ -1099,17 +1099,17 @@ unsigned int WAVEHEADER::read (FILE * f, signed short & wRealFormatTag, int & by
         wRealFormatTag = 1;     // Workaround: pretend it is 1 (seems safe)
     }
     (wRealFormatTag == 1 || wRealFormatTag == 7)
-        || ERROR ("WAVEHEADER::read: wFormatTag=%d not supported for now", wRealFormatTag);
+        || RuntimeError ("WAVEHEADER::read: wFormatTag=%d not supported for now", wRealFormatTag);
     unsigned short wChannels = fgetshort (f);
     unsigned long dwSamplesPerSec = fgetint (f);
     unsigned int sampleRate = dwSamplesPerSec;
     /*unsigned long dwAvgBytesPerSec = */ fgetint (f);
     unsigned short wBlockAlign = fgetshort (f);
     unsigned short wBitsPerSample = fgetshort (f);
-    (wBitsPerSample <= 16) || ERROR ("WAVEHEADER::read: invalid wBitsPerSample %d", wBitsPerSample);
+    (wBitsPerSample <= 16) || RuntimeError ("WAVEHEADER::read: invalid wBitsPerSample %d", wBitsPerSample);
     bytesPerSample = wBitsPerSample / 8;
     (wBlockAlign == wChannels * bytesPerSample)
-        || ERROR ("WAVEHEADER::read: wBlockAlign != wChannels*bytesPerSample not supported");
+        || RuntimeError ("WAVEHEADER::read: wBlockAlign != wChannels*bytesPerSample not supported");
     while (fmtLen > 16) // unused extra garbage in header
     {
         fgetbyte (f);
@@ -1117,7 +1117,7 @@ unsigned int WAVEHEADER::read (FILE * f, signed short & wRealFormatTag, int & by
     }
     if (wRealFormatTag == 7)
     {
-        (bytesPerSample == 1) || ERROR ("WAVEHEADER::read: invalid wBitsPerSample %d for mulaw", wBitsPerSample);
+        (bytesPerSample == 1) || RuntimeError ("WAVEHEADER::read: invalid wBitsPerSample %d for mulaw", wBitsPerSample);
         fcheckTag (f, "fact");
         unsigned int factLen = fgetint (f);
         while (factLen > 0)
@@ -1160,7 +1160,7 @@ static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
     wav.resize (wavhd.DataLength / bytesPerSample);
     if (wavhd.wFormatTag == 7)    // mulaw
     {
-        (wavhd.nChannels == 1) || ERROR ("fgetwav: wChannels=%d not supported for mulaw", wavhd.nChannels);
+        (wavhd.nChannels == 1) || RuntimeError ("fgetwav: wChannels=%d not supported for mulaw", wavhd.nChannels);
         ARRAY<unsigned char> data;
         int numSamples = wavhd.DataLength/wavhd.nBlockAlign;
         data.resize (numSamples);
@@ -1177,7 +1177,7 @@ static void fgetwavraw(FILE * f, ARRAY<short> & wav, const WAVEHEADER & wavhd)
     // ... TODO: support 8 bit linear PCM samples (implement when needed; samples scaled to 'short')
     else
     {
-        ERROR ("bytesPerSample != 2 is not supported except mulaw format!\n");
+        RuntimeError ("bytesPerSample != 2 is not supported except mulaw format!\n");
     }
 }
 
@@ -1218,7 +1218,7 @@ void fgetwav (FILE * f, ARRAY<short> & wav, int & sampleRate)
     }
     else
     {
-        ERROR ("bytesPerSample/wChannels != 2 needs to be implemented");
+        RuntimeError ("bytesPerSample/wChannels != 2 needs to be implemented");
     }
 }
 
@@ -1276,7 +1276,7 @@ unsigned int fgetwfx (FILE * f, WAVEFORMATEX & wfx)
         wfx.wFormatTag = 1;     // Workaround: pretend it is 1 (seems safe)
     }
     (wfx.wFormatTag == 1 || wfx.wFormatTag == 3 || wfx.wFormatTag == 7)
-        || ERROR ("WAVEHEADER::read: wFormatTag=%d not supported for now", wfx.wFormatTag);
+        || RuntimeError ("WAVEHEADER::read: wFormatTag=%d not supported for now", wfx.wFormatTag);
     wfx.nChannels = fgetshort (f);
     wfx.nSamplesPerSec = fgetint (f);
     wfx.nAvgBytesPerSec = fgetint (f);
@@ -1294,7 +1294,7 @@ void fputwfx (FILE *f, const WAVEFORMATEX & wfx, unsigned int numSamples)
 {
     unsigned int DataLength = numSamples * wfx.nBlockAlign;
     (DataLength / wfx.nBlockAlign == numSamples)
-        || ERROR ("fputwfx: data size exceeds WAV header 32-bit range");
+        || RuntimeError ("fputwfx: data size exceeds WAV header 32-bit range");
     unsigned int RiffLength = 36 + DataLength;
     unsigned int FmtLength  = 16; 
     // file header
@@ -1345,6 +1345,7 @@ void fputwav (const wstring & fn, const vector<short> & wav, int sampleRate, int
     fputwav (f, wav, sampleRate, nChannels);
     fflushOrDie (f);    // after this, fclose() (in destructor of f) cannot fail
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // fputbyte(): write a byte value
@@ -1491,7 +1492,7 @@ void fgetfile (FILE * f, ARRAY<char> & buffer)
         size_t n = fread (&inbuf[0], sizeof (inbuf[0]), inbuf.size(), f);
         if (ferror (f))
         {
-            ERROR ("fgetfile: error reading from file: %s", strerror (errno));
+            RuntimeError ("fgetfile: error reading from file: %s", strerror (errno));
         }
         buffer.insert (buffer.end(), inbuf.begin(), inbuf.begin() + n);
     }
@@ -1566,12 +1567,12 @@ void setfiletime (const wstring & path, const FILETIME & time)
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
     if (h == INVALID_HANDLE_VALUE)
     {
-        ERROR ("setfiletime: error opening file: %d", GetLastError());
+        RuntimeError ("setfiletime: error opening file: %d", GetLastError());
     }
     BOOL rc = SetFileTime (h, NULL, NULL, &time);
     if (!rc)
     {
-        ERROR ("setfiletime: error setting file time information: %d", GetLastError());
+        RuntimeError ("setfiletime: error setting file time information: %d", GetLastError());
     }
 }
 
@@ -1649,7 +1650,7 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 {
     BOOL rc = ExpandWildcards (path, paths);
     if (!rc)
-        ERROR ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error (::GetLastError()).c_str());
+        RuntimeError ("error in expanding wild cards '%S': %S", path.c_str(), FormatWin32Error (::GetLastError()).c_str());
 }
 
 // ----------------------------------------------------------------------------
@@ -1668,7 +1669,7 @@ static void mkdir (const wstring & path)
         if (att != INVALID_FILE_ATTRIBUTES || (att & FILE_ATTRIBUTE_DIRECTORY) != 0)
             return; // ok
     }
-    ERROR ("make_intermediate_dirs: error creating intermediate directory %S", path.c_str());
+    RuntimeError ("make_intermediate_dirs: error creating intermediate directory %S", path.c_str());
 }
 
 // make subdir of a file including parents

@@ -522,7 +522,7 @@ public:
         if (mFile) fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
-            Error("cannot open file %s", fileName);
+            RuntimeError("cannot open file %s", fileName);
     }
 
     void ParseReset()

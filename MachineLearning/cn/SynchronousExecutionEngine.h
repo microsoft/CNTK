@@ -67,7 +67,7 @@ public:
         if (InputValue<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                Error("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType);
 
             if (pass == ndlPassInitial)
             {
@@ -86,7 +86,7 @@ public:
         else if (SparseInputValue<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                Error("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType);
 
             if (pass == ndlPassInitial)
             {
@@ -105,7 +105,7 @@ public:
         else if (cnNodeType == L"ImageInput")
         {
             if (parameter.size() < 3 || parameter.size() > 4)
-                Error("%ws should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType);
+                RuntimeError("%ws should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType);
 
             if (pass == ndlPassInitial)
             {
@@ -122,7 +122,7 @@ public:
         else if (LearnableParameter<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                Error("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType);
 
             if (pass == ndlPassInitial)
             {
@@ -155,22 +155,22 @@ public:
                 {
                     std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
                     if (initFromFilePath == "")
-                        Error("initFromFilePath must be set when using \"fromFile\" initialization method");
+                        RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
                     if(initFromFilePath[0] == '\"' && initFromFilePath[initFromFilePath.size()-1] == '\"')
                         // remove the opening and closing double quotes
                         initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size()-2);
                     if(!fexists(initFromFilePath))
-                        Error("File pointed to by initFromFilePath does not exist: %s", initFromFilePath);
+                        RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath);
                     m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
                 }
                 else
-                    Error("init must be one of the values of [uniform|gaussian|fixedvalue]");
+                    RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
             }
         }
         else if (SparseLearnableParameter<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                Error("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType);
 
             if (pass == ndlPassInitial)
             {
@@ -203,22 +203,22 @@ public:
                 {
                     std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
                     if (initFromFilePath == "")
-                        Error("initFromFilePath must be set when using \"fromFile\" initialization method");
+                        RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
                     if(initFromFilePath[0] == '\"' && initFromFilePath[initFromFilePath.size()-1] == '\"')
                         // remove the opening and closing double quotes
                         initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size()-2);
                     if(!fexists(initFromFilePath))
-                        Error("File pointed to by initFromFilePath does not exist: %s", initFromFilePath);
+                        RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath);
                     m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
                 }
                 else
-                    Error("init must be one of the values of [uniform|gaussian|fixedvalue]");
+                    RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
             }
         }
         else if (cnNodeType == L"Constant")
         {
             if (parameter.size() != 1)
-                Error("Constant should have 1 fixed parameter [val] and two optional parameters [rows=[1|yourvalue], cols=[1|yourvalue]].");
+                RuntimeError("Constant should have 1 fixed parameter [val] and two optional parameters [rows=[1|yourvalue], cols=[1|yourvalue]].");
 
             if (pass == ndlPassInitial)
             {
@@ -281,7 +281,7 @@ public:
         else if (cnNodeType == ConvolutionNode<ElemType>::TypeName())
         {
             if (parameter.size() != 7)
-                Error("%ws should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue]].", cnNodeType);
+                RuntimeError("%ws should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue]].", cnNodeType);
 
             // setup the parameter position of children so we can hook them up later
             nodeParamCount = 2;
@@ -314,7 +314,7 @@ public:
         else if (cnNodeType == MaxPoolingNode<ElemType>::TypeName())
         {
             if (parameter.size() != 5)
-                Error("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
+                RuntimeError("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
 
             // setup the parameter position of children so we can hook them up later
             nodeParamCount = 1;
@@ -341,7 +341,7 @@ public:
         else if (cnNodeType == AveragePoolingNode<ElemType>::TypeName())
         {
             if (parameter.size() != 5)
-                Error("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
+                RuntimeError("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
 
             // setup the parameter position of children so we can hook them up later
             nodeParamCount = 1;
@@ -405,7 +405,7 @@ public:
                 break;
             default:
                 if (nodeParamCount > 0)
-                    Error("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());
+                    RuntimeError("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());
                 break;
             }
 
@@ -461,7 +461,7 @@ public:
 				std::size_t firstDotPos = name.find_first_of(".");
 				if (firstDotPos == std::string::npos)
 				{
-					Error("Logic Error: nodeParam of type \"ndlTypeDotParameter\" doesn't have a dot in its name: %s", name.c_str());
+					LogicError("nodeParam of type \"ndlTypeDotParameter\" doesn't have a dot in its name: %s", name.c_str());
 				}
 
 				std::string nameBeforeDot = name.substr(0, firstDotPos);
@@ -504,7 +504,7 @@ public:
 			// if we still didn't get a value, throw an error
 			if (nodeParam->GetEvalValue() == nullptr)
 			{
-				Error("Logic Error: Dot name could not be resolved '%s': should have a node named '%ls' in computational network\n", nodeParam->GetName().c_str(), name.c_str());
+				LogicError("Dot name could not be resolved '%s': should have a node named '%ls' in computational network\n", nodeParam->GetName().c_str(), name.c_str());
 			}
 		}
 		return nodeParam;
@@ -525,7 +525,7 @@ public:
         if (script == NULL)
         {
             std::wstring name = baseName + L"." + msra::strfun::utf16(node->GetName());
-            Error("Logic Error: no script for a parameter node in call to %ls\n", name.c_str());
+            LogicError("no script for a parameter node in call to %ls\n", name.c_str());
         }
 
         // evaluate the parameter if we haven't yet, or if we are in the resolve pass (need to set the inputs)
@@ -567,7 +567,7 @@ public:
 					}
 					else
 					{
-						Error("Parameter name could not be resolved '%s'\n", name.c_str());
+						RuntimeError("Parameter name could not be resolved '%s'\n", name.c_str());
 					}
 				}
 			}
@@ -590,7 +590,7 @@ public:
         default:
             {
                 std::wstring name = baseName + L"." + msra::strfun::utf16(node->GetName());
-                Error("Invalid parameter (macro definitions and arrays not allowed), see call to %ls\n", name.c_str());
+                RuntimeError("Invalid parameter (macro definitions and arrays not allowed), see call to %ls\n", name.c_str());
             }
             break;
         }

@@ -45,7 +45,7 @@ public:
             {
                 // record count must be the same for all the data
                 if (recordCount != m_recordCount)
-                    Error("Error: Record Count of %ls (%lux%lu) does not match the record count of previous entries (%lu).", val.c_str(), rows, recordCount, m_recordCount);
+                    RuntimeError("Record Count of %ls (%lux%lu) does not match the record count of previous entries (%lu).", val.c_str(), rows, recordCount, m_recordCount);
             }
             else
             {
@@ -136,7 +136,7 @@ public:
             // allocate the matrix if we don't have one yet
             if (iterIn == matrices.end())
             {
-                Error("No matrix data found for key '%ls', cannot continue", val.c_str());
+                RuntimeError("No matrix data found for key '%ls', cannot continue", val.c_str());
             }
 
             Matrix<ElemType>* matrix = iterIn->second;

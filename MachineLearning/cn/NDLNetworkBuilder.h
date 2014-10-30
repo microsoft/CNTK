@@ -85,7 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     std::string name = config("load");
                     if (!config.Exists(name))
-                        Error("the configuration parameter 'load=%s' doesn't specify another section in this configuration file.\n"
+                        RuntimeError("the configuration parameter 'load=%s' doesn't specify another section in this configuration file.\n"
                               "No 'networkDescription' variable was defined if specifying a separate file was desired.\n ", name.c_str());
 
                     newConfig.Insert(name, config(name));
@@ -93,11 +93,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (!config.Exists("run"))
-                    Error("In NDLNetworkBuilder section either a 'networkDescription=filename' or 'run=sectionName' must exist.");
+                    RuntimeError("In NDLNetworkBuilder section either a 'networkDescription=filename' or 'run=sectionName' must exist.");
                 
                 std::string name = config("run");
                 if (!config.Exists(name))
-                    Error("the configuration parameter 'run=%s' doesn't specify another section in this configuration file.\n"
+                    RuntimeError("the configuration parameter 'run=%s' doesn't specify another section in this configuration file.\n"
                           "No 'networkDescription' variable was defined if specifying a separate file was desired.\n ", name.c_str());
                 
                 newConfig.Insert(name, config(name));
@@ -107,7 +107,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 std::string networkConfigString = networkConfig;
                 if (networkConfigString.find_first_of("+") != std::string::npos)
-                    Error("\"+\" not allowed in \"networkDescription\" value.  Multiple files cannot be specified via \"networkDescription\" parameter. "
+                    RuntimeError("\"+\" not allowed in \"networkDescription\" value.  Multiple files cannot be specified via \"networkDescription\" parameter. "
                           "In order to load multiple NDL files (eg, for loading several files of macros), use the \"ndlMacros\" parameter.");
 
                 // find the "run" and "load" keys and add them

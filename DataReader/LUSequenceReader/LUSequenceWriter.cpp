@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		ConfigArray outputNames = writerConfig("outputNodeNames","");
 		if (outputNames.size()<1)
-			Error("writer needs at least one outputNodeName specified in config");
+			RuntimeError("writer needs at least one outputNodeName specified in config");
 
 
 		foreach_index(i, outputNames) // inputNames should map to node names
@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (vin == nullptr)
         {
-            Error("cannot open word class file");
+            RuntimeError("cannot open word class file");
         }
         b = 0;
         while (!feof(vin)){
@@ -128,7 +128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             string str(outputFile.begin(), outputFile.end());
             ofs = fopen(str.c_str(), "wt");
             if (ofs == nullptr)
-                Error("Cannot open open %s for writing", str.c_str());
+                RuntimeError("Cannot open open %s for writing", str.c_str());
             outputFileIds[outputFile] = ofs;
             fp = ofs;
         }
