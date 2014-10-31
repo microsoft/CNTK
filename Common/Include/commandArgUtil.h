@@ -108,25 +108,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return value;
         }
         operator float () const { return (float) (double) *this; }
-        operator long () const
+    private:
+        long tolong() const
         {
             char * ep;          // will be set to point to first character that failed parsing
-            long value = strtol (c_str(), &ep, 10);
+            long value = strtol(c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (long): invalid input string");
+                throw std::runtime_error("ConfigValue (long): invalid input string");
             return value;
         }
-        operator unsigned long () const
+        unsigned long toulong() const
         {
             char * ep;          // will be set to point to first character that failed parsing
-            unsigned long value = strtoul (c_str(), &ep, 10);
+            unsigned long value = strtoul(c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (unsigned long): invalid input string");
+                throw std::runtime_error("ConfigValue (unsigned long): invalid input string");
             return value;
         }
+    public:
+        operator long() const { return tolong();  }
+        operator unsigned long() const { return toulong(); }
         operator short () const
         {
-            long val = (long) *this;
+            long val = tolong();
             short ival = (short) val;
             if (val != ival)
                 throw std::runtime_error ("ConfigValue (short): integer argument expected");
@@ -134,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         operator unsigned short () const
         {
-            unsigned long val = (unsigned long) *this;
+            unsigned long val = toulong();
             unsigned short ival = (unsigned short) val;
             if (val != ival)
                 throw std::runtime_error ("ConfigValue (unsigned short): integer argument expected");
@@ -142,7 +146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         operator int () const
         {
-            long val = (long) *this;
+            long val = tolong();
             int ival = (int) val;
             if (val != ival)
                 throw std::runtime_error ("ConfigValue (int): integer argument expected");
@@ -150,7 +154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         operator unsigned int () const
         {
-            unsigned long val = (unsigned long) *this;
+            unsigned long val = toulong();
             unsigned int ival = (unsigned int) val;
             if (val != ival)
                 throw std::runtime_error ("ConfigValue (unsigned int): integer argument expected");
@@ -159,7 +163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         operator int64_t () const
         {
             char * ep;          // will be set to point to first character that failed parsing
-            int64_t value = _strtoui64 (c_str(), &ep, 10);
+            int64_t value = _strtoi64 (c_str(), &ep, 10);
             if (empty() || *ep != 0)
                 throw std::runtime_error ("ConfigValue (int64_t): invalid input string");
             return value;
