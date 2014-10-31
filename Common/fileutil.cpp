@@ -7,6 +7,7 @@
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 #pragma warning (disable: 4996)     // ^^ this does not seem to work--TODO: make it work
+#define _FILE_OFFSET_BITS = 64      // for ftell64() in Linux
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
@@ -17,6 +18,8 @@
 #include "basetypes.h"
 #include "fileutil.h"
 #ifdef __unix__
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 #include <stdio.h>
@@ -48,7 +51,7 @@ template <>              const wchar_t* GetScanFormatString(int) {return L" %i";
 template <>             const wchar_t* GetScanFormatString(long) {return L" %li";}
 template <>   const wchar_t* GetScanFormatString(unsigned short) {return L" %hu";}
 template <>     const wchar_t* GetScanFormatString(unsigned int) {return L" %u";}
-template <>    const wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
+//template <>    const wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
 template <>            const wchar_t* GetScanFormatString(float) {return L" %g";}
 template <>           const wchar_t* GetScanFormatString(double) {return L" %lg";}
 template <>           const wchar_t* GetScanFormatString(size_t) {return L" %llu";}
@@ -61,7 +64,7 @@ template <>              const wchar_t* GetFormatString(int) {return L" %i";}
 template <>             const wchar_t* GetFormatString(long) {return L" %li";}
 template <>   const wchar_t* GetFormatString(unsigned short) {return L" %hu";}
 template <>     const wchar_t* GetFormatString(unsigned int) {return L" %u";}
-template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
+//template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
 template <>            const wchar_t* GetFormatString(float) {return L" %.9g";}
 template <>           const wchar_t* GetFormatString(double) {return L" %.17g";}
 template <>           const wchar_t* GetFormatString(size_t) { return L" %llu"; }
@@ -253,6 +256,7 @@ void fflushOrDie (FILE * f)
 // ----------------------------------------------------------------------------
 size_t filesize (FILE * f)
 {
+#ifdef _WIN32
     size_t curPos = _ftelli64(f);
     if (curPos == -1L)
     {
@@ -260,20 +264,22 @@ size_t filesize (FILE * f)
     }
     int rc = _fseeki64 (f, 0, SEEK_END);
     if (rc != 0)
-    {
         RuntimeError ("error seeking to end of file: %s", strerror (errno));
-    }
     size_t len = _ftelli64 (f);
     if (len == -1L)
-    {
         RuntimeError ("error determining file position: %s", strerror (errno));
-    }
     rc = _fseeki64 (f, curPos, SEEK_SET);
     if (rc != 0)
-    {
         RuntimeError ("error resetting file position: %s", strerror (errno));
-    }
     return len;
+#else   // TODO: test this
+    struct stat stat_buf;
+    int rc = fstat(fileno(f), &stat_buf);
+    if (rc != 0)
+        RuntimeError("error determining length of file: %s", strerror(errno));
+    static_assert (sizeof(stat_buf.st_size)>=sizeof(uint64_t), "struct stat not compiled for 64-bit mode");
+    return stat_buf.st_size;
+#endif
 }
 
 // filesize(): determine size of the file in bytes (with pathname)
@@ -298,32 +304,21 @@ size_t filesize (const wchar_t * pathname)
 // filesize64(): determine size of the file in bytes (with pathname)
 int64_t filesize64 (const wchar_t * pathname)
 {
+#ifdef _WIN32
     struct _stat64 fileinfo;
     if (_wstat64 (pathname,&fileinfo) == -1) 
         return 0;
     else
         return fileinfo.st_size;
+#else
+    return filesize (pathname);
+#endif
 }
 #endif
 
 // ----------------------------------------------------------------------------
-// fseekOrDie(),ftellOrDie(), fget/setpos(): seek functions with error handling
+// fget/setpos(): seek functions with error handling
 // ----------------------------------------------------------------------------
-
-size_t fseekOrDie (FILE * f, size_t offset, int mode)
-{
-    size_t curPos = _ftelli64 (f);
-    if (curPos == -1L)
-    {
-    RuntimeError ("error seeking: %s", strerror (errno));
-    }
-    int rc = _fseeki64 (f, offset, mode);
-    if (rc != 0)
-    {
-    RuntimeError ("error seeking: %s", strerror (errno));
-    }
-    return curPos;
-}
 
 uint64_t fgetpos (FILE * f)
 {
@@ -392,14 +387,23 @@ void unlinkOrDie (const std::wstring & pathname)
 
 void renameOrDie (const std::string & from, const std::string & to)
 {
+#ifdef _WIN32
     if (!MoveFileA (from.c_str(),to.c_str()))
-    RuntimeError ("error renaming: %s", GetLastError());
+        RuntimeError("error renaming: %s", GetLastError());
+#else   // TODO: test this
+    if (!rename (from.c_str(), to.c_str()))
+        RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
+#endif
 }
 
 void renameOrDie (const std::wstring & from, const std::wstring & to)
 {
-    if (!MoveFileW (from.c_str(),to.c_str()))
+#ifdef _WIN32
+    if (!MoveFileW(from.c_str(), to.c_str()))
     RuntimeError ("error renaming: %s", GetLastError());
+#else
+    renameOrDie (msra::strfun::utf8(from), msra::strfun::utf8(to));
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -421,7 +425,7 @@ bool fexists (const wchar_t * pathname)
         return false;
     }
 #else
-    auto_file_ptr f = _wfopen (pathname, L"r");
+    auto_file_ptr f (_wfopen (pathname, L"r"));
     return f != nullptr;
 #endif
 }
@@ -441,7 +445,7 @@ bool fexists (const char * pathname)
         return false;
     }
 #else
-    auto_file_ptr f = fopen (pathname, "r");
+    auto_file_ptr f (fopen (pathname, "r"));
     return f != nullptr;
 #endif
 }
@@ -1331,7 +1335,7 @@ void fgetfile (FILE * f, std::vector<char> & buffer)
 // load it into RAM in one huge chunk
 static size_t fgetfilechars (const std::wstring & path, vector<char> & buffer)
 {
-    auto_file_ptr f = fopenOrDie (path, L"rb");
+    auto_file_ptr f (fopenOrDie (path, L"rb"));
     size_t len = filesize (f);
     buffer.reserve (len +1);
     freadOrDie (buffer, len, f);
@@ -1373,21 +1377,20 @@ vector<char*> msra::files::fgetfilelines (const wstring & path, vector<char> & b
 // getfiletime(): access modification time
 // ----------------------------------------------------------------------------
 
+#ifndef _FILETIME_
+//typedef struct _FILETIME { DWORD dwLowDateTime; DWORD dwHighDateTime; };    // from minwindef.h
+typedef time_t FILETIME;
+#else
+bool operator>= (const FILETIME & targettime, const FILETIME & inputtime)   // for use in fuptodate()
+{
+    return (targettime.dwHighDateTime > inputtime.dwHighDateTime) ||
+        (targettime.dwHighDateTime == inputtime.dwHighDateTime && targettime.dwLowDateTime >= inputtime.dwLowDateTime);
+}
+#endif
+
 bool getfiletime (const wstring & path, FILETIME & time)
 {   // return file modification time, false if cannot be determined
-#if 1
-    struct _stat buf;
-    int result;
-
-    // Get data associated with "crt_stat.c": 
-    result = _wstat(path.c_str(), &buf);
-    // Check if statistics are valid: 
-    if (result != 0)
-        return false;
-
-    (*(time_t*)(&time)) = buf.st_mtime;
-    return true;
-#else   // old version, delete once above is tested
+#ifdef _WIN32
     WIN32_FIND_DATAW findFileData;
     auto_handle hFind (FindFirstFileW (path.c_str(), &findFileData), ::FindClose);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -1396,9 +1399,19 @@ bool getfiletime (const wstring & path, FILETIME & time)
         return true;
     }
     else
-    {
         return false;
-    }
+#else   // TODO: test this; e.g. does st_mtime have the desired resolution?
+    struct stat buf;
+    int result;
+
+    // Get data associated with "crt_stat.c": 
+    result = stat(msra::strfun::wcstombs(path).c_str(), &buf);
+    // Check if statistics are valid: 
+    if (result != 0)
+        return false;
+
+    time = buf.st_mtime;
+    return true;
 #endif
 }
 
@@ -1515,14 +1528,15 @@ static void mkdir (const wstring & path)
     int rc = _wmkdir (path.c_str());
     if (rc >= 0 || errno == EEXIST)
         return;     // no error or already existing --ok
+#ifdef _WIN32       // bug in _wmkdir(): returns access_denied if folder exists but read-only --check existence
     if (errno == EACCES)
     {
-        // bug in _wmkdir(): returns access_denied if folder exists but read-only --check existence
         DWORD att = ::GetFileAttributesW (path.c_str());
         if (att != INVALID_FILE_ATTRIBUTES || (att & FILE_ATTRIBUTE_DIRECTORY) != 0)
             return; // ok
     }
-    RuntimeError ("make_intermediate_dirs: error creating intermediate directory %S", path.c_str());
+#endif
+    RuntimeError ("mkdir: error creating intermediate directory %S", path.c_str());
 }
 
 #ifndef _MSC_VER
@@ -1571,16 +1585,8 @@ bool msra::files::fuptodate (const wstring & target, const wstring & input, bool
     if (!getfiletime (target, targettime)) return false;        // target missing: need to update
     FILETIME inputtime;
     if (!getfiletime (input, inputtime)) return !inputrequired; // input missing: if required, pretend to be out of date as to force caller to fail
-#if 1   // formerly called IsResultFileUpdateToDate()
     // up to date if target has higher time stamp
-    return (targettime.dwHighDateTime > inputtime.dwHighDateTime) ||
-        (targettime.dwHighDateTime == inputtime.dwHighDateTime && targettime.dwLowDateTime >= inputtime.dwLowDateTime);
-#else
-    ULARGE_INTEGER targett, inputt;
-    memcpy (&targett, &targettime, sizeof (targett));
-    memcpy (&inputt,  &inputtime, sizeof (inputt));
-    return !(targett.QuadPart < inputt.QuadPart);               // up to date if target not older than input
-#endif
+    return targettime >= inputtime; // note: uses an overload for WIN32 FILETIME (in Linux, FILETIME=time_t=size_t)
 }
 
 /// separate string by separator

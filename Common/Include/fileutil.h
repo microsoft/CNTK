@@ -98,11 +98,9 @@ size_t filesize (FILE * f);
 int64_t filesize64 (const wchar_t * pathname);
 
 // ----------------------------------------------------------------------------
-// fseekOrDie(),ftellOrDie(), fget/setpos(): seek functions with error handling
+// fget/setpos(): seek functions with error handling
 // ----------------------------------------------------------------------------
 
-size_t fseekOrDie (FILE * f, size_t offset, int mode = SEEK_SET);
-#define ftellOrDie _ftelli64
 uint64_t fgetpos (FILE * f);
 void fsetpos (FILE * f, uint64_t pos);
 
