@@ -86,6 +86,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
 #endif
 #if __unix__
+#include <strings.h>
 #include <chrono>
 #include <thread>
 #endif
@@ -143,9 +144,12 @@ msra::strfun::cstring charpath (const std::wstring & p)
     return msra::strfun::cstring (&buf[0]);
 #endif
 }
-static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return fopen(charpath(path), charpath(mode)); }
+static inline FILE* _wfopen (const wchar_t * path, const wchar_t * mode) { return fopen(charpath(path), charpath(mode)); }
 // --- basic string functions
-static inline wchar_t* wcstok_s(wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return ::wcstok(s, delim, ptr); }
+static inline wchar_t* wcstok_s (wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return ::wcstok(s, delim, ptr); }
+static inline int _stricmp (const char * a, const char * b) { return ::strcasecmp (a, b); }
+static inline int _strnicmp (const char * a, const char * b, wchar_t n) { return ::strncasecmp (a, b, n); }
+static inline int _wcsicmp (const wchar_t * a, const wchar_t * b) { return ::wcscasecmp (a, b); }
 // -- other
 static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
 #endif
