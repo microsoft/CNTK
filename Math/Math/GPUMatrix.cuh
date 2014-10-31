@@ -17,7 +17,7 @@ typedef struct cublasContext *cublasHandle_t;
 struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 
-#ifndef	LINUX
+#ifdef _WIN32
 #ifndef	MATH_API
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
@@ -25,7 +25,7 @@ typedef struct CUstream_st *cudaStream_t;
 #define MATH_API __declspec(dllimport)
 #endif
 #endif	/* MATH_API */
-#else	/* LINUX  */
+#else	// no DLLs in Linux
 #define MATH_API 
 #endif
 
@@ -51,12 +51,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:        
         DeviceBoundNumber() {m_data=NULL;};        
         DeviceBoundNumber(const DeviceBoundNumber<ElemType> &deepCopy);
-#ifndef	LINUX
         DeviceBoundNumber(DeviceBoundNumber<ElemType> &&shallowCopy);
-#endif
         ~DeviceBoundNumber();
         int GetDeviceId() const {return m_computeDevice;}
-        ElemType* ExposePointer2Value() const {return this->m_data;}
+        ElemType* ExposePointer2Value() const {return m_data;}
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
     };
@@ -84,10 +82,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal,int deviceId=0);        
         GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom);    
         GPUMatrix<ElemType>& operator=(const GPUMatrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
-#ifndef	LINUX
         GPUMatrix(GPUMatrix<ElemType>&& moveFrom);
         GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom);  //move assignment operator, shallow copy
-#endif	/* LINUX */
         ~GPUMatrix(void);       
 
         static int GetBestGPUDeviceId();  
@@ -105,17 +101,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
-        size_t BufferSize() const {return this->m_numRows*this->m_numCols*sizeof(ElemType);}
-        ElemType* BufferPointer() const {return this->m_pArray;}
+        size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
+        ElemType* BufferPointer() const {return m_pArray;}
 
         void Adagrad(GPUMatrix<ElemType>& gradients);
-		void RmsProp(GPUMatrix<ElemType>& gradients,
-			ElemType RMS_GAMMA,
-			ElemType RMS_WGT_INC,
-			ElemType RMS_WGT_MAX,
-			ElemType RMS_WGT_DEC,
-			ElemType RMS_WGT_MIN
-			);
+        void RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN);
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 

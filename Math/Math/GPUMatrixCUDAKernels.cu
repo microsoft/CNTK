@@ -3,7 +3,9 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
 #ifndef CPU_ONLY
+
 #include <float.h>
 #include <cuda_runtime.h>
 #include "CommonMatrix.h"
@@ -20,11 +22,7 @@
 #define LSMALL -0.5E10
 
 // Predefine this for later.
-#ifndef LINUX
 static __inline__ __device__ double atomicAdd(double* address, double val);
-#else
-static  __device__ double atomicAdd(double* address, double val);
-#endif
 
 //CUDA Kernels code
 template<class ElemType>
@@ -2634,11 +2632,7 @@ __global__ void _normalGrad(
     }
 }
 
-#ifndef	LINUX
 static __inline__ __device__ double atomicAdd(double* address, double val)
-#else
-static  __device__ double atomicAdd(double* address, double val)
-#endif
 {
     unsigned long long int* address_as_ull = (unsigned long long int*)address;
     unsigned long long int old = *address_as_ull, assumed;
@@ -3237,4 +3231,4 @@ d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((
 }
 */
 
-#endif /*!CPU_ONLY*/
+#endif // !CPU_ONLY

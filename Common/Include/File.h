@@ -123,7 +123,7 @@ public:
     template <typename T>
     File& operator<<(T val)
     {
-#ifndef	LINUX
+#ifndef	__CUDACC__      // TODO: CUDA compiler blows up, fix this
         attempt([=]()
 #endif
         {
@@ -132,7 +132,7 @@ public:
             else
                 fput(m_file, val);
         }
-#ifndef	LINUX
+#ifndef	__CUDACC__
         );
 #endif
         return *this;
@@ -161,7 +161,7 @@ public:
     template <typename T>
     File& operator>>(T& val)
     {
-#ifndef	LINUX
+#ifndef	__CUDACC__      // TODO: CUDA compiler blows up, fix this
         attempt([&]()
 #endif
         {
@@ -170,7 +170,7 @@ public:
             else
                 fget(m_file, val);
         }
-#ifndef	LINUX
+#ifndef	__CUDACC__
         );
 #endif
         return *this;

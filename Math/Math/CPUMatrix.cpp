@@ -19,18 +19,14 @@
 #include <chrono>
 #include <exception>
 
-#ifndef	 LINUX
+#ifdef	 _WIN32
 #include <Windows.h>
-#define Linux(x)
 #else
-#define Linux(x) x
-
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
-
 #include <cfloat> 
-#endif	/* LINUX */
+#endif
 
 #ifdef LEAKDETECT
 #include <vld.h>
@@ -97,14 +93,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::ZeroInit()
     {
-        this->m_computeDevice = CPUDEVICE;
-        this->m_pArray = nullptr;
-        this->m_numRows = 0;
-        this->m_numCols = 0;
-        this->m_elemSizeAllocated = 0;
-        this->m_matrixName=NULL;
-        this->m_format = matrixFormatDense; 
-        this->m_externalBuffer = false;
+        m_computeDevice = CPUDEVICE;
+        m_pArray = nullptr;
+        m_numRows = 0;
+        m_numCols = 0;
+        m_elemSizeAllocated = 0;
+        m_matrixName=NULL;
+        m_format = matrixFormatDense; 
+        m_externalBuffer = false;
     }  
 
     template<class ElemType>
@@ -126,13 +122,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ZeroInit();
 
-        this->m_numRows = numRows;
-        this->m_numCols = numCols;
-        this->m_elemSizeAllocated = this->GetNumElements();
+        m_numRows = numRows;
+        m_numCols = numCols;
+        m_elemSizeAllocated = GetNumElements();
 
-        if (this->m_elemSizeAllocated != 0)
+        if (m_elemSizeAllocated != 0)
         {
-            this->m_pArray = new ElemType[this->m_elemSizeAllocated];
+            m_pArray = new ElemType[m_elemSizeAllocated];
             SetValue(0);
         }
     }
@@ -151,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ZeroInit();
         if (!deepCopyFrom.IsEmpty()) 
             SetValue(deepCopyFrom);
-        this->SetMatrixName(deepCopyFrom.m_matrixName);
+        SetMatrixName(deepCopyFrom.m_matrixName);
     }
 
     //assignment operator, deep copy
@@ -161,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Clear();
         if (!deepCopyFrom.IsEmpty()) 
             SetValue(deepCopyFrom);
-        this->SetMatrixName(deepCopyFrom.m_matrixName);
+        SetMatrixName(deepCopyFrom.m_matrixName);
         return *this;
     }
 
@@ -170,14 +166,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)  
     {
-        this->m_computeDevice = moveFrom.m_computeDevice;
-        this->m_numRows = moveFrom.m_numRows;
-        this->m_numCols = moveFrom.m_numCols;
-        this->m_elemSizeAllocated =  moveFrom.m_elemSizeAllocated;
-        this->m_pArray = moveFrom.m_pArray;  //shallow copy the pointer
-        this->m_matrixName = moveFrom.m_matrixName;
-        this->m_format = moveFrom.m_format;
-        this->m_externalBuffer = moveFrom.m_externalBuffer;
+        m_computeDevice = moveFrom.m_computeDevice;
+        m_numRows = moveFrom.m_numRows;
+        m_numCols = moveFrom.m_numCols;
+        m_elemSizeAllocated =  moveFrom.m_elemSizeAllocated;
+        m_pArray = moveFrom.m_pArray;  //shallow copy the pointer
+        m_matrixName = moveFrom.m_matrixName;
+        m_format = moveFrom.m_format;
+        m_externalBuffer = moveFrom.m_externalBuffer;
         //release the pointer from the source object so that the destructor won't release it twice
         moveFrom.ZeroInit();
     }
@@ -188,16 +184,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this != &moveFrom)
         {
-            if (this->OwnBuffer() && this->m_pArray != nullptr)
-                delete[] this->m_pArray;  //always delete the data pointer since we will use the pointer from moveFrom
+            if (OwnBuffer() && m_pArray != nullptr)
+                delete[] m_pArray;  //always delete the data pointer since we will use the pointer from moveFrom
 
-            this->m_computeDevice = moveFrom.m_computeDevice;
-            this->m_numRows = moveFrom.m_numRows;
-            this->m_numCols = moveFrom.m_numCols;
-            this->m_elemSizeAllocated =  moveFrom.m_elemSizeAllocated;
-            this->m_pArray = moveFrom.m_pArray;
-            this->m_format = moveFrom.m_format;
-            this->m_externalBuffer = moveFrom.m_externalBuffer;
+            m_computeDevice = moveFrom.m_computeDevice;
+            m_numRows = moveFrom.m_numRows;
+            m_numCols = moveFrom.m_numCols;
+            m_elemSizeAllocated =  moveFrom.m_elemSizeAllocated;
+            m_pArray = moveFrom.m_pArray;
+            m_format = moveFrom.m_format;
+            m_externalBuffer = moveFrom.m_externalBuffer;
 
             //release the pointer from the source object so that the destructor won't release it twice
             moveFrom.ZeroInit();
@@ -214,11 +210,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::Clear()
     {
-        if (this->m_pArray!=nullptr && this->OwnBuffer())
+        if (m_pArray!=nullptr && OwnBuffer())
         {
-            delete [] this->m_pArray;
-            this->m_pArray = nullptr;
-            this->m_elemSizeAllocated = 0;
+            delete [] m_pArray;
+            m_pArray = nullptr;
+            m_elemSizeAllocated = 0;
         }
         BaseMatrix<ElemType>::Clear();
 
@@ -235,17 +231,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (numCols == 0)
             throw std::logic_error("The slice cannot have 0 columns.");
 
-        if (startColumn + numCols > this->m_numCols)
+        if (startColumn + numCols > m_numCols)
             throw std::logic_error("The slice is out of range of the source matrix.");
             
         CPUMatrix<ElemType> slice;
 
         slice.m_externalBuffer = true;  //memory of a slice is managed externally.
-        slice.m_numRows = this->m_numRows;
+        slice.m_numRows = m_numRows;
         slice.m_numCols = numCols;
         slice.m_elemSizeAllocated =  slice.GetNumElements();
-        slice.m_pArray = this->m_pArray + startColumn * this->m_numRows;
-        slice.m_format = this->m_format;
+        slice.m_pArray = m_pArray + startColumn * m_numRows;
+        slice.m_format = m_format;
 
         return slice;
     }
@@ -256,16 +252,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (numCols == 0)
             throw std::logic_error("The slice cannot have 0 columns.");
 
-        if (startColumn + numCols > this->m_numCols)
+        if (startColumn + numCols > m_numCols)
             throw std::logic_error("The slice is out of range of the source matrix.");
         
         Clear();
 
-        this->SetOwnBuffer(false);  //memory of a slice is managed externally.
-        this->m_numRows = fromMatrix.m_numRows;
-        this->m_numCols = numCols;
-        this->m_elemSizeAllocated =  this->GetNumElements();
-        this->m_pArray = this->m_pArray + startColumn *this->m_numRows;
+        SetOwnBuffer(false);  //memory of a slice is managed externally.
+        m_numRows = fromMatrix.m_numRows;
+        m_numCols = numCols;
+        m_elemSizeAllocated =  GetNumElements();
+        m_pArray = m_pArray + startColumn *m_numRows;
 
         return *this;
     }
@@ -290,7 +286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (long j=0; j<n; j++)
         {
             //memory copy might be faster?
-            memcpy(this->m_pArray + j*numRows, a.m_pArray + j*k + startIndex, sizeof(ElemType) * numRows);
+            memcpy(m_pArray + j*numRows, a.m_pArray + j*k + startIndex, sizeof(ElemType) * numRows);
 
             ////four-way unrolling
             //for (long i=0, startRow = startIndex; i<(m & ~3); i+=4, startRow+=4)
@@ -320,10 +316,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.GetNumRows() != numRows)
             throw std::logic_error("AddToRowSliceValuesOf: a.GetNumRows() != numRows.");
 
-        if (startIndex + numRows > this->GetNumRows())
+        if (startIndex + numRows > GetNumRows())
             throw std::logic_error("AddToRowSliceValuesOf: startIndex + numRows exceeds GetNumRows().");
 
-        if (a.GetNumCols() != this->GetNumCols())
+        if (a.GetNumCols() != GetNumCols())
             throw std::logic_error("AddToRowSliceValuesOf: columns does not match.");
 
         long n=(long)a.GetNumCols(), m=(long)numRows;
@@ -359,7 +355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AddWithRowSliceValuesOf: input matrix a is empty.");
 
         if (GetNumRows() != numRows)
-            throw std::logic_error("AddWithRowSliceValuesOf: this->GetNumRows() != numRows.");
+            throw std::logic_error("AddWithRowSliceValuesOf: GetNumRows() != numRows.");
 
         if (startIndex + numRows > a.GetNumRows())
             throw std::logic_error("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
@@ -439,7 +435,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::Transpose()
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("Transpose: Matrix is empty.");
 
         CPUMatrix<ElemType> c;
@@ -485,29 +481,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetValue(const ElemType v)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetValue: Matrix is empty.");
 
         if (v == 0)
         {
-            memset(this->m_pArray, 0, sizeof(ElemType) * this->GetNumElements());
+            memset(m_pArray, 0, sizeof(ElemType) * GetNumElements());
         }
         else
         {     
-            long m=(long)this->GetNumElements();
+            long m=(long)GetNumElements();
 #pragma omp parallel for     
             //four-way unrolling
             for (long i=0; i<(m & ~3); i+=4)
             {
-                this->m_pArray[i] = v;
-                this->m_pArray[i+1] = v;
-                this->m_pArray[i+2] = v;
-                this->m_pArray[i+3] = v;
+                m_pArray[i] = v;
+                m_pArray[i+1] = v;
+                m_pArray[i+2] = v;
+                m_pArray[i+3] = v;
             }
             //handle remaining stuffs
             for (long i=m & ~3; i<m; i++)
             {
-                this->m_pArray[i] = v;
+                m_pArray[i] = v;
             }
         }
     }
@@ -515,13 +511,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetColumn(const ElemType* colPointer, size_t j)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetColumn: Matrix is empty.");
         if (colPointer==NULL)
             return;
 
         auto& us = *this; 
-        long m=(long)this->GetNumRows();
+        long m=(long)GetNumRows();
 #pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
@@ -542,11 +538,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetColumn(const ElemType val, size_t j)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetColumn: Matrix is empty.");
 
         auto& us = *this; 
-        long m=(long)this->GetNumRows();
+        long m=(long)GetNumRows();
 #pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
@@ -566,12 +562,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetColumn(const CPUMatrix<ElemType>& valMat, size_t j)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetColumn: Matrix is empty.");
-        assert(valMat.GetNumRows() == this->GetNumRows() && valMat.GetNumCols() == 1) ;
+        assert(valMat.GetNumRows() == GetNumRows() && valMat.GetNumCols() == 1) ;
 
         auto& us = *this; 
-        long m=(long)this->GetNumRows();
+        long m=(long)GetNumRows();
 #pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
@@ -597,7 +593,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Resize(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols());
         size_t cpSize = deepCopyFrom.GetNumElements();
         if (cpSize != 0)
-            memcpy(this->m_pArray, deepCopyFrom.m_pArray, cpSize*sizeof(ElemType));
+            memcpy(m_pArray, deepCopyFrom.m_pArray, cpSize*sizeof(ElemType));
     }
 
     template<class ElemType>
@@ -606,30 +602,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (pArray == nullptr)
             throw std::invalid_argument("Invalid pArray.");
 
-        this->m_format = matrixFormatDense;
-        this->m_computeDevice = CPUDEVICE;
+        m_format = matrixFormatDense;
+        m_computeDevice = CPUDEVICE;
 
         // if it's externally managed, then populate the structure
         if (matrixFlags&matrixFlagDontOwnBuffer)
         {
-            if (this->m_pArray != nullptr)
-                delete [] this->m_pArray;
+            if (m_pArray != nullptr)
+                delete [] m_pArray;
 
-            this->m_pArray = pArray;
-            this->m_numRows = numRows;
-            this->m_numCols = numCols;
+            m_pArray = pArray;
+            m_numRows = numRows;
+            m_numCols = numCols;
             // free previous array allocation if any before overwriting
-            if (this->m_pArray != nullptr)
-                delete[] this->m_pArray;
-            this->m_pArray = pArray;
-            this->m_elemSizeAllocated = this->GetNumElements();
-            this->m_externalBuffer = true;
+            if (m_pArray != nullptr)
+                delete[] m_pArray;
+            m_pArray = pArray;
+            m_elemSizeAllocated = GetNumElements();
+            m_externalBuffer = true;
         }
         else
         {
             Resize(numRows, numCols);
 
-            if (this->IsEmpty())
+            if (IsEmpty())
             {
                 throw std::invalid_argument("NumRows or NumCols is 0. Nothing to copy");
             }
@@ -637,7 +633,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!(matrixFlags&matrixFormatRowMajor))  //compatible to internal structure
                 {
-                    memcpy(this->m_pArray, pArray, this->GetNumElements()*sizeof(ElemType));
+                    memcpy(m_pArray, pArray, GetNumElements()*sizeof(ElemType));
                 }
                 else //need to transpose
                 {
@@ -648,9 +644,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         foreach_column(j, us)
                         {
     #ifndef USE_MKL
-                            dcopy((int)numRows, reinterpret_cast <double*>(pArray+j), (int)numCols, reinterpret_cast <double*>(this->m_pArray + LocateColumn(j)), 1);
+                            dcopy((int)numRows, reinterpret_cast <double*>(pArray+j), (int)numCols, reinterpret_cast <double*>(m_pArray + LocateColumn(j)), 1);
     #else
-						    cblas_dcopy ((int)numRows, reinterpret_cast <double*>(pArray+j), (int)numCols, reinterpret_cast <double*>(this->m_pArray + LocateColumn(j)), 1);
+						    cblas_dcopy ((int)numRows, reinterpret_cast <double*>(pArray+j), (int)numCols, reinterpret_cast <double*>(m_pArray + LocateColumn(j)), 1);
     #endif
                         }
                     }
@@ -662,9 +658,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
     #pragma warning (suppress: 4244)
     #ifndef USE_MKL
-                                scopy((int)numRows, reinterpret_cast <float*>(pArray+j), (int)numCols, reinterpret_cast <float*>(this->m_pArray + LocateColumn(j)), 1);
+                                scopy((int)numRows, reinterpret_cast <float*>(pArray+j), (int)numCols, reinterpret_cast <float*>(m_pArray + LocateColumn(j)), 1);
     #else
-							    cblas_scopy ((int)numRows, reinterpret_cast <float*>(pArray+j), (int)numCols, reinterpret_cast <float*>(this->m_pArray + LocateColumn(j)), 1);
+							    cblas_scopy ((int)numRows, reinterpret_cast <float*>(pArray+j), (int)numCols, reinterpret_cast <float*>(m_pArray + LocateColumn(j)), 1);
     #endif
                             }
                         }
@@ -677,14 +673,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetDiagonalValue: Matrix is empty.");
 
-        if (this->GetNumRows() != this->GetNumCols())
+        if (GetNumRows() != GetNumCols())
             throw std::logic_error("SetDiagonalValue: NumRows and NumCols do not agree.");
 
         auto& us = *this;
-        long m=(long)this->GetNumRows();
+        long m=(long)GetNumRows();
 #pragma omp parallel for     
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
@@ -704,10 +700,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetDiagonalValue(CPUMatrix<ElemType>& vector)
     {
-        if (this->IsEmpty() || vector.IsEmpty())
+        if (IsEmpty() || vector.IsEmpty())
             throw std::logic_error("SetDiagonalValue: Matrix is empty.");
 
-        if (this->GetNumRows() != this->GetNumCols())
+        if (GetNumRows() != GetNumCols())
             throw std::logic_error("SetDiagonalValue: NumRows and NumCols do not agree.");
 
         if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
@@ -715,13 +711,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (vector.GetNumElements() == 1) //reduce to simple form
             SetDiagonalValue(vector(0,0));
-        else if (vector.GetNumRows() != this->GetNumRows())
+        else if (vector.GetNumRows() != GetNumRows())
             throw std::logic_error("SetDiagonalValue: input vector's dimension does not agree with [this].");
         else
         {
             auto& us = *this;
 
-            long m=(long)this->GetNumRows();
+            long m=(long)GetNumRows();
             if (vector.GetNumRows() == 1) //row vector
             {
 #pragma omp parallel for     
@@ -762,7 +758,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
 #ifdef _MSC_VER	// TODO: check if available under GCC/Linux
@@ -773,19 +769,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         std::uniform_real_distribution<ElemType> r(low, high);
 
-        long m=(long)this->GetNumElements();
+        long m=(long)GetNumElements();
         //four-way unrolling
         for (long i=0; i<(m & ~3); i+=4)
         {
-            this->m_pArray[i] = r(generator);
-            this->m_pArray[i+1] = r(generator);
-            this->m_pArray[i+2] = r(generator);
-            this->m_pArray[i+3] = r(generator);
+            m_pArray[i] = r(generator);
+            m_pArray[i+1] = r(generator);
+            m_pArray[i+2] = r(generator);
+            m_pArray[i+3] = r(generator);
         }
         //handle remaining stuffs
         for (long i=m & ~3; i<m; i++)
         {
-            this->m_pArray[i] = r(generator);
+            m_pArray[i] = r(generator);
         }
 
     }
@@ -796,16 +792,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (sigma <= 0) 
             throw std::invalid_argument("SetUniformRandomValue: sigma must be a positive value.");
 
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-#ifndef LINUX
-        std::ranlux64_base_01 generator;   
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
 #else
         std::default_random_engine generator (seed);
-#endif	/* LINUX */
+#endif
         std::normal_distribution<ElemType> r(mean, sigma);
         //#pragma omp parallel for   //is it thread safe?
         foreach_coord(i,j,us)
@@ -820,19 +816,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (sigma <= 0) 
             throw std::invalid_argument("SetUniformRandomValue: sigma must be a positive value.");
 
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-#ifndef LINUX
-        std::ranlux64_base_01 generator;   
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
 #else
         std::default_random_engine generator (seed);
-#endif	/* LINUX */
+#endif
         std::normal_distribution<ElemType> r(mean, sigma);
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
         for (long j=0; j<n; j++)
         {
             //four-way unrolling
@@ -857,19 +853,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-#ifndef LINUX
-        std::ranlux64_base_01 generator;   
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
 #else
         std::default_random_engine generator (seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-#endif	/* LINUX */
+#endif
         std::uniform_real_distribution<ElemType> r(0, 1);
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
         ElemType v;
         for (long j=0; j<n; j++)
         {
@@ -897,16 +893,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
         {
-            this->Resize(gradients.GetNumRows(), gradients.GetNumCols());
-            this->SetValue(0.0);
+            Resize(gradients.GetNumRows(), gradients.GetNumCols());
+            SetValue(0.0);
         }
 
-        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols());
+        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols());
 
-        ElemType *a=this->m_pArray, *d_v=gradients.m_pArray;
-        size_t n = this->GetNumElements();
+        ElemType *a=m_pArray, *d_v=gradients.m_pArray;
+        size_t n = GetNumElements();
         long nLoop = (long)n - n%4;
 
         const ElemType floor = 1e-16f;
@@ -950,10 +946,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t n = gradients.GetNumElements();
 		ElemType *curr_grad=gradients.m_pArray;
 
-        if (this->IsEmpty() || this->GetNumCols() < gradients.GetNumCols() * 3)
+        if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
         {
-            this->Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
-            this->SetValue(0.0);
+            Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+            SetValue(0.0);
 
 			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
 			ElemType *steps=m_pArray+2*n; // current step size
@@ -971,7 +967,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		ElemType *signs=m_pArray+n; // sign of previous gradient
 		ElemType *steps=m_pArray+2*n; // current step size
 
-        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols() * 3);
+        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
 
 		ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
 		//int upd[] = {
@@ -1025,40 +1021,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
     {
-        assert (numRows*numCols == this->GetNumElements());
-        if (numRows*numCols != this->GetNumElements())
+        assert (numRows*numCols == GetNumElements());
+        if (numRows*numCols != GetNumElements())
             throw std::invalid_argument("Reshape: total number of elements does not match.");
 
-        this->m_numRows = numRows;
-        this->m_numCols = numCols;
+        m_numRows = numRows;
+        m_numCols = numCols;
     }
 
     //if growONly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink)
     template<class ElemType>
     void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
     {
-        this->m_numRows = numRows;
-        this->m_numCols = numCols;
+        m_numRows = numRows;
+        m_numCols = numCols;
 
-        size_t numElements = this->GetNumElements();
-        if (numElements > this->m_elemSizeAllocated || (!growOnly && (numElements != this->m_elemSizeAllocated)))
+        size_t numElements = GetNumElements();
+        if (numElements > m_elemSizeAllocated || (!growOnly && (numElements != m_elemSizeAllocated)))
         {
-            if (this->OwnBuffer() && this->m_pArray)
+            if (OwnBuffer() && m_pArray)
             {
-                delete[] this->m_pArray; //delete and reallocate
-                this->m_pArray = nullptr;
+                delete[] m_pArray; //delete and reallocate
+                m_pArray = nullptr;
             }
-            if (this->IsEmpty())
+            if (IsEmpty())
             {
-                this->m_elemSizeAllocated = 0;
-                this->m_pArray = nullptr;
+                m_elemSizeAllocated = 0;
+                m_pArray = nullptr;
             }
             else
             {
-                if (!this->OwnBuffer())
+                if (!OwnBuffer())
                     throw runtime_error("Resizing an matrix you don't own is not supported.");
-                this->m_elemSizeAllocated = numElements;
-                this->m_pArray = new ElemType[this->m_elemSizeAllocated];
+                m_elemSizeAllocated = numElements;
+                m_pArray = new ElemType[m_elemSizeAllocated];
                 SetValue(0);
             }
         }
@@ -1068,11 +1064,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType* CPUMatrix<ElemType>::CopyToArray() const
     {
-        size_t numElements = this->GetNumElements();
+        size_t numElements = GetNumElements();
         if (numElements != 0)
         {
             ElemType* arrayCopyTo = new ElemType[numElements];                    
-            memcpy(arrayCopyTo, this->m_pArray, sizeof(ElemType)*numElements);
+            memcpy(arrayCopyTo, m_pArray, sizeof(ElemType)*numElements);
             return arrayCopyTo;
         }
         else
@@ -1086,7 +1082,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     size_t  CPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const
     {
-        size_t numElements = this->GetNumElements();
+        size_t numElements = GetNumElements();
 
         if (numElements > currentArraySize)
         {
@@ -1097,7 +1093,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (numElements != 0)
         {
-            memcpy(arrayCopyTo, this->m_pArray, sizeof(ElemType)*numElements);
+            memcpy(arrayCopyTo, m_pArray, sizeof(ElemType)*numElements);
         }
 
         return numElements;
@@ -1106,15 +1102,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     inline size_t CPUMatrix<ElemType>::LocateElement (const size_t row, const size_t col) const 
     { 
-        assert (row < this->m_numRows && col < this->m_numCols); 
-        return col * this->m_numRows  + row;  // matrix in column-wise storage
+        assert (row < m_numRows && col < m_numCols); 
+        return col * m_numRows  + row;  // matrix in column-wise storage
     }  
 
     template<class ElemType>
     size_t CPUMatrix<ElemType>::LocateColumn (const size_t col) const 
     { 
-        assert (col < this->m_numCols); 
-        return col * this->m_numRows;  // matrix in column-wise storage
+        assert (col < m_numCols); 
+        return col * m_numRows;  // matrix in column-wise storage
     }  
 
 #pragma endregion Basic Operators
@@ -1130,7 +1126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::operator+ (ElemType alpha) const
     {
-        CPUMatrix<ElemType> c(this->GetNumRows(), this->GetNumCols());
+        CPUMatrix<ElemType> c(GetNumRows(), GetNumCols());
         c.AssignSumOf(alpha, *this);
         return c;
     }
@@ -1145,7 +1141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1189,7 +1185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::operator+ (const CPUMatrix<ElemType>& a) const
     {
-        if (this->GetNumElements() == 1)
+        if (GetNumElements() == 1)
         {
             CPUMatrix<ElemType> c(a);
             c += (*this)(0,0);
@@ -1234,7 +1230,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::operator- (ElemType alpha) const
     {
-        CPUMatrix<ElemType> c(this->GetNumRows(), this->GetNumCols());
+        CPUMatrix<ElemType> c(GetNumRows(), GetNumCols());
         c.AssignDifferenceOf(*this, alpha);
         return c;
     }
@@ -1249,7 +1245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1281,7 +1277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1346,7 +1342,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::operator* (ElemType alpha) const
     {
-        CPUMatrix<ElemType> c(this->GetNumRows(), this->GetNumCols());
+        CPUMatrix<ElemType> c(GetNumRows(), GetNumCols());
         Scale(alpha, *this, c);
         return c;
     }
@@ -1384,7 +1380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType> CPUMatrix<ElemType>::operator* (const CPUMatrix<ElemType>& a) const
     {
         auto& us = *this;
-        if (this->GetNumElements() == 1)
+        if (GetNumElements() == 1)
         {
             CPUMatrix<ElemType> c;
             c.AssignProductOf(us(0,0), a);
@@ -1430,7 +1426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::operator^ (ElemType alpha) const
     {
-        CPUMatrix<ElemType> c(this->GetNumRows(), this->GetNumCols());
+        CPUMatrix<ElemType> c(GetNumRows(), GetNumCols());
         ElementWisePower(alpha, *this, c);
         return c;
     }
@@ -1472,7 +1468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1504,12 +1500,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
             throw std::invalid_argument("AddElementProductOf : The input matrix dimensions do not match.");
 
-        if (!(a.GetNumRows() == this->GetNumRows() && a.GetNumCols() == this->GetNumCols()))
+        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == GetNumCols()))
             throw std::invalid_argument("AddElementProductOf : The input matrix dimensions do not match [this].");
 
         auto& us=*this;
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1567,16 +1563,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementMultiplyWith(const CPUMatrix<ElemType>& a)
     {
-        if (a.IsEmpty() || this->IsEmpty())
+        if (a.IsEmpty() || IsEmpty())
             throw std::logic_error("ColumnElementMultiplyWith: Matrix is empty.");
 
-        assert (a.GetNumRows() == this->GetNumRows() && a.GetNumCols() == 1);
-        if (!(a.GetNumRows() == this->GetNumRows() && a.GetNumCols() == 1))
+        assert (a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
+        if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
             throw std::invalid_argument("ColumnElementMultiplyWith: The input matrix should be a col vector and match [this]'s rows.");
 
         auto& us=*this;
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1602,16 +1598,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementMultiplyWith(const CPUMatrix<ElemType>& a)
     {
-        if (a.IsEmpty() || this->IsEmpty())
+        if (a.IsEmpty() || IsEmpty())
             throw std::logic_error("RowElementMultiplyWith: Matrix is empty.");
 
-        assert (a.GetNumRows() == 1 && a.GetNumCols() == this->GetNumCols());
-        if (!(a.GetNumRows() == 1 && a.GetNumCols() == this->GetNumCols()))
+        assert (a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
+        if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
             throw std::invalid_argument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
         auto& us=*this;
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1788,7 +1784,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1827,7 +1823,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1875,7 +1871,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -1976,7 +1972,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -2016,7 +2012,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -2056,7 +2052,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -2204,12 +2200,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
 
         auto& us=*this;
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -2242,14 +2238,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
 
         auto& us=*this;
         ElemType locThresholdPos = abs(threshold);
         ElemType locTHresholdNeg = -locThresholdPos; 
 
-        long m=(long)this->GetNumRows(), n=(long)this->GetNumCols();
+        long m=(long)GetNumRows(), n=(long)GetNumCols();
 #pragma omp parallel for     
         for (long j=0; j<n; j++)
         {
@@ -2316,7 +2312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncateTop (const ElemType threshold)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("InplaceTruncateTop: Matrix is empty.");
 
         auto& us=*this;
@@ -2360,7 +2356,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetToZeroIfAbsLessThan (const ElemType threshold)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SetToZeroIfAbsLessThan: Matrix is empty.");
 
         auto& us=*this;
@@ -2379,24 +2375,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::SumOfAbsElements () const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SumOfAbsElements: Matrix is empty.");
 
         if (sizeof(ElemType) == sizeof(double))
         {
 #ifndef USE_MKL
-            return (ElemType)dasum((int)this->GetNumElements(), reinterpret_cast <double*>(this->m_pArray), 1);
+            return (ElemType)dasum((int)GetNumElements(), reinterpret_cast <double*>(m_pArray), 1);
 #else  
-			return (ElemType)cblas_dasum((int)this->GetNumElements(), reinterpret_cast <double*>(this->m_pArray), 1);
+			return (ElemType)cblas_dasum((int)GetNumElements(), reinterpret_cast <double*>(m_pArray), 1);
 #endif
 		}
         else
         {
 #pragma warning (suppress: 4244)
 #ifndef USE_MKL
-            return sasum((int)this->GetNumElements(), reinterpret_cast <float*>(this->m_pArray), 1);
+            return sasum((int)GetNumElements(), reinterpret_cast <float*>(m_pArray), 1);
 #else
-			return cblas_sasum ((int)this->GetNumElements(), reinterpret_cast <float*>(m_pArray), 1);
+			return cblas_sasum ((int)GetNumElements(), reinterpret_cast <float*>(m_pArray), 1);
 #endif
         }
     }
@@ -2405,7 +2401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::SumOfElements () const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("SumOfElements: Matrix is empty.");
 
         ElemType sum=0;
@@ -2415,12 +2411,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma omp parallel for reduction(+:sum)
         for (long i=0; i<(m & ~3); i+=4)
         {
-            sum += this->m_pArray[i] + this->m_pArray[i+1] + this->m_pArray[i+2] + this->m_pArray[i+3] ;
+            sum += m_pArray[i] + m_pArray[i+1] + m_pArray[i+2] + m_pArray[i+3] ;
         }
         //handle remaining stuffs
         for (long i=m & ~3; i<m; i++)
         {
-            sum += this->m_pArray[i];
+            sum += m_pArray[i];
         }
       
         return sum;
@@ -2449,7 +2445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWise) const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("VectorNormInf: Matrix is empty.");
 
         auto& us=*this;
@@ -2507,7 +2503,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWise) const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("VectorNorm2: Matrix is empty.");
 
         auto& us=*this;
@@ -2590,7 +2586,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::VectorNormInf(CPUMatrix<ElemType>& c, const bool isColWise) const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("VectorNormInf: Matrix is empty.");
 
         auto& us=*this;
@@ -2707,7 +2703,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw invalid_argument("AddColumnReshapeProductOf: number of rows in a should be multiples of that in b.");
 
         long rowsC = rowsA / rowsB;
-        if (rowsC != this->GetNumRows() || cols != this->GetNumCols())
+        if (rowsC != GetNumRows() || cols != GetNumCols())
             throw invalid_argument("AddColumnReshapeProductOf: This matrix does not have the right size.");
 
         auto & us = *this;
@@ -2773,23 +2769,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::FrobeniusNorm() const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("FrobeniusNorm: Matrix is empty.");
 
         ElemType v = 0;
 
-        long m=(long)this->GetNumElements();
+        long m=(long)GetNumElements();
 
         //four-way unrolling
 #pragma omp parallel for reduction(+:v)
         for (long i=0; i<(m & ~3); i+=4)
         {
-            v += this->m_pArray[i] * this->m_pArray[i] +  this->m_pArray[i+1] * this->m_pArray[i+1] +  this->m_pArray[i+2] * this->m_pArray[i+2] +  this->m_pArray[i+3] * this->m_pArray[i+3]; 
+            v += m_pArray[i] * m_pArray[i] +  m_pArray[i+1] * m_pArray[i+1] +  m_pArray[i+2] * m_pArray[i+2] +  m_pArray[i+3] * m_pArray[i+3]; 
         }
         //handle remaining stuffs
         for (long i=m & ~3; i<m; i++)
         {
-            v += this->m_pArray[i] * this->m_pArray[i];
+            v += m_pArray[i] * m_pArray[i];
         }
 
         return sqrt(v);
@@ -2811,7 +2807,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::MatrixNormInf() const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("MatrixNormInf: Matrix is empty.");
 
         auto& us=*this;
@@ -2831,7 +2827,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::MatrixNorm0() const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("MatrixNorm0: Matrix is empty.");
 
         auto& us=*this;
@@ -2854,7 +2850,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::MatrixNorm1() const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("MatrixNorm1: Matrix is empty.");
 
         auto& us=*this;
@@ -2917,12 +2913,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise) const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("VectorMax: Matrix is empty.");
 
         auto& us=*this;
-        const int m = (int)this->GetNumRows();
-        const int n = (int)this->GetNumCols();
+        const int m = (int)GetNumRows();
+        const int n = (int)GetNumCols();
 
         assert (m>0 && n>0); //converting from size_t to int may cause overflow
 
@@ -2976,12 +2972,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::VectorMin(CPUMatrix<ElemType>& minIndexes, CPUMatrix<ElemType>& minValues, const bool isColWise) const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("VectorMin: Matrix is empty.");
 
         auto& us=*this;
-        const int m = (int)this->GetNumRows();
-        const int n = (int)this->GetNumCols();
+        const int m = (int)GetNumRows();
+        const int n = (int)GetNumCols();
 
         assert (m>0 && n>0); //converting from size_t to int may cause overflow
 
@@ -3059,16 +3055,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
             throw std::logic_error("Print: Matrix is empty.");
 
-        if (rowEnd >= this->GetNumRows() || colEnd >= this->GetNumCols())
+        if (rowEnd >= GetNumRows() || colEnd >= GetNumCols())
             throw std::invalid_argument("Index out of range.");
 
         if (matrixName != nullptr)
-            fprintf (stderr, "\n###### %s (%lu, %lu) ######\n", matrixName, this->GetNumRows(), this->GetNumCols());
+            fprintf (stderr, "\n###### %s (%lu, %lu) ######\n", matrixName, GetNumRows(), GetNumCols());
         else
-            fprintf (stderr, "\n###### Unnamed Matrix (%lu, %lu) ######\n", this->GetNumRows(), this->GetNumCols());
+            fprintf (stderr, "\n###### Unnamed Matrix (%lu, %lu) ######\n", GetNumRows(), GetNumCols());
 
         fprintf (stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowStart, rowEnd, colStart, colEnd);
 
@@ -3084,7 +3080,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
     {
-        Print(matrixName, 0, this->GetNumRows()-1, 0, this->GetNumCols()-1);
+        Print(matrixName, 0, GetNumRows()-1, 0, GetNumCols()-1);
     }
 
     // file I/O
@@ -3964,11 +3960,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             throw std::logic_error("Scale:  Input matrix a is empty.");
         if (alpha.GetNumElements()!=1)
-#ifndef	LINUX
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
             throw std::exception("Matrix alpha must be 1x1");
 #else
             throw std::exception();
-#endif	/* LINUX */
+#endif
         CPUMatrix<ElemType>::Scale(alpha(0,0),a);
     }
 

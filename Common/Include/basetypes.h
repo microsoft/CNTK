@@ -7,20 +7,6 @@
 #ifndef _BASETYPES_
 #define _BASETYPES_
 
-#ifdef	LINUX
-typedef char16_t TCHAR;
-#include <stdarg.h>
-#define	vsprintf_s vsprintf		/* Not sure this is right... Malcolm */
-#include <chrono>
-#include <thread>
-#include <cstdlib> 
-#include <cerrno>
-#define Linux(a) a
-#else
-#include <tchar.h>
-#endif	/* LINUX */
-#include <cmath>        // for HUGE_VAL  // Remove for a test by Malcolm because of double isnan definition...
-
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
 #undef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
@@ -91,10 +77,16 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <stdarg.h>
 #include <map>
 #include <stdexcept>
-#include <locale>         // std::wstring_convert
-#include <codecvt>        // std::codecvt_utf8
+#include <locale>       // std::wstring_convert
 #ifdef _MSC_VER
+#include <codecvt>      // std::codecvt_utf8
+#endif
+#ifdef _WIN32
 #include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
+#endif
+#if __unix__
+#include <chrono>
+#include <thread>
 #endif
 
 using namespace std;
@@ -118,7 +110,6 @@ using namespace std;
 #define __inout_cap(x)
 #define __inout_cap_c(x)
 #endif
-#endif	// LINUX 
 #ifndef __out_z_cap    // non-VS2005 annotations
 #define __out_cap(x)
 #define __out_z_cap(x)
@@ -300,36 +291,23 @@ public:
     noncopyable(){}
 };
 
-
-#ifdef	LINUX
+// class CCritSec and CAutoLock -- simple critical section handling
+#ifndef	_WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
 #define	CRITICAL_SECTION 	int
 void InitializeCriticalSection(int *) {}
 void DeleteCriticalSection(int *) {}
 void EnterCriticalSection(int *) {}
 void LeaveCriticalSection(int *) {}
-
 #endif
-
-// class CCritSec and CAutoLock -- simple critical section handling
-// TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
 class CCritSec
 {
     CCritSec (const CCritSec &); CCritSec & operator= (const CCritSec &);
-#ifdef _MSC_VER
     CRITICAL_SECTION m_CritSec;
-#endif
 public:
-#ifdef _MSC_VER
     CCritSec() { InitializeCriticalSection(&m_CritSec); };
     ~CCritSec() { DeleteCriticalSection(&m_CritSec); };
     void Lock() { EnterCriticalSection(&m_CritSec); };
     void Unlock() { LeaveCriticalSection(&m_CritSec); };
-#else   // POSIX  --TODO: need to figure this out
-    CCritSec() { };
-    ~CCritSec() { };;
-    void Lock() { };
-    void Unlock() { };
-#endif
 };
 
 
@@ -426,8 +404,6 @@ public:
     void *operator = (void *val) { if (!TlsSetValue (tlsSlot,val)) throw std::runtime_error ("tls: TlsSetValue failed"); return val; }
 };
 #endif
-
-#endif	/* LINUX */
 
 };};    // namespace
 
@@ -583,13 +559,12 @@ typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 #endif
 
 // string-encoding conversion functions
-#ifdef _WIN32
 struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
 {
- //TODO: confirm it builds on VS2013
-       std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cv;
-        (*(std::string*)this) = cv.to_bytes(p);
-#ifdef	MALCOLM
+#if 1
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cv;
+    (*(std::string*)this) = cv.to_bytes(p);
+#else   // old version, delete once we know it works
     size_t len = p.length();
     if (len == 0) { return;}    // empty string
     msra::basetypes::fixed_vector<char> buf (3 * len + 1);   // max: 1 wchar => up to 3 mb chars
@@ -599,14 +574,14 @@ struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
                                   &buf[0], (int) buf.size(), NULL, NULL);
     if (rc == 0) throw std::runtime_error ("WideCharToMultiByte");
     (*(std::string*)this) = &buf[0];
-#endif	/* Malcolm */
+#endif
 }};
 struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
 {
+#if 1
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cv;
     (*(std::wstring*)this) = cv.from_bytes(p);
-
-#ifdef OLD
+#else   // old version, delete once we know it works
     size_t len = p.length();
     if (len == 0) { return;}    // empty string
     msra::basetypes::fixed_vector<wchar_t> buf (len + 1);
@@ -617,29 +592,8 @@ struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
     if (rc == 0) throw std::runtime_error("MultiByteToWideChar");
     ASSERT(rc < buf.size());
     (*(std::wstring*)this) = &buf[0];
-#endif	/* Malcolm */
-}};
-#else       // TODO: complete this once we are building on actual Linux, currently using default locale instead of UTF-8 locale
-static inline std::string utf8(const std::wstring & p)  // output: UTF-8
-{
-    size_t len = p.length();
-    msra::basetypes::fixed_vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    std::fill(buf.begin(), buf.end(), 0);
-    // BUGBUG: We need to set the locale, so for now this only works for plain ASCII
-    ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
-    return std::string(&buf[0]);
-}
-static inline std::wstring utf16(const std::string & p)  // input: UTF-8
-{
-    size_t len = p.length();
-    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
-    std::fill(buf.begin(), buf.end(), (wchar_t)0);
-    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
-    // BUGBUG: We need to set the locale, so for now this only works for plain ASCII
-    ::mbstowcs(&buf[0], p.c_str(), len + 1);
-    return std::wstring(&buf[0]);
-}
 #endif
+}};
 
 #pragma warning(push)
 #pragma warning(disable : 4996) // Reviewed by Yusheng Li, March 14, 2006. depr. fn (wcstombs, mbstowcs)
@@ -647,16 +601,18 @@ static inline std::string wcstombs (const std::wstring & p)  // output: MBCS
 {
     size_t len = p.length();
     msra::basetypes::fixed_vector<char> buf (2 * len + 1); // max: 1 wchar => 2 mb chars
-#ifdef	MALCOLM
     std::fill (buf.begin (), buf.end (), 0);
     ::wcstombs (&buf[0], p.c_str(), 2 * len + 1);
-#endif	/* Malcolm */
     return std::string (&buf[0]);
 }
 static inline std::wstring mbstowcs (const std::string & p)  // input: MBCS
 {
-	std::wstring ret = utf16(p);
-    return ret;
+    size_t len = p.length();
+    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
+    std::fill(buf.begin(), buf.end(), (wchar_t)0);
+    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    ::mbstowcs(&buf[0], p.c_str(), len + 1);
+    return std::wstring(&buf[0]);
 }
 #pragma warning(pop)
 
@@ -797,7 +753,7 @@ public:
     auto_file_ptr() : f (NULL) { }
     ~auto_file_ptr() { close(); }
     auto_file_ptr (const char * path, const char * mode) { f = fopen (path, mode); if (f == NULL) openfailed (path); }
-    auto_file_ptr (const wchar_t * wpath, const char * mode) {string path = msra::strfun::utf8(wpath); f = fopen (path.c_str(), mode); if (f == NULL) openfailed (path); }
+    auto_file_ptr (const wchar_t * wpath, const char * mode) { f = _wfopen (wpath, msra::strfun::utf16 (mode).c_str()); if (f == NULL) openfailed (msra::strfun::utf8 (wpath)); }
     FILE * operator= (FILE * other) { close(); f = other; return f; }
     auto_file_ptr (FILE * other) : f (other) { }
     operator FILE * () const { return f; }
@@ -825,7 +781,6 @@ public:
 typedef auto_handle_t<HANDLE> auto_handle;
 #endif
 
-#ifdef	MALCOLM
 // like auto_ptr but calls freeFunc_p (type free_func_t) instead of delete to clean up
 // minor difference - wrapped object is T, not T *, so to wrap a 
 // T *, use auto_clean<T *>
@@ -845,7 +800,6 @@ public:
     operator const T () const { return it; }
     T detach () { T tmp = it; it = 0; return tmp; } // release ownership of object
 };
-#endif	/* MALCOLM */
 
 #if 0
 // simple timer
@@ -888,23 +842,12 @@ namespace msra { namespace files {
 
 class textreader
 {
-#ifndef	LINUX
     msra::basetypes::auto_file_ptr f;
-#else
-    FILE *f;
-#endif	/* LINUX */
     std::vector<char> buf;  // read buffer (will only grow, never shrink)
     int ch;                 // next character (we need to read ahead by one...)
     char getch() { char prevch = (char) ch; ch = fgetc (f); return prevch; }
 public:
-#ifndef	LINUX
     textreader (const std::wstring & path) : f (path.c_str(), "rb") { buf.reserve (10000); ch = fgetc (f); }
-#else
-    textreader (const std::wstring & path) {
-        f = fopen((char *)path.c_str(), "rb");
-        ch = fgetc(f);				/* I Think this is right ... Malcolm */
-    }
-#endif	/* LINUX */
     operator bool() const { return ch != EOF; } // true if still a line to read
     std::string getline()                       // get and consume the next line
     {
