@@ -119,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, int size)
+    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t size)
     {}
 
     //Reset matrix so it can be reused
@@ -1085,6 +1085,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+#if 0
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSoftmax (const bool isColWise)
     {
@@ -1096,6 +1097,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return *this;
     }
+#endif
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt()
@@ -1426,8 +1428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample, 
                                             const bool zeroPadding) const
     {
-        GPUMatrix<ElemType> mat;
-        return mat;
+        return inputSubBatch;
     }
 
     template<class ElemType>
@@ -1651,7 +1652,7 @@ int GPUWatcher::GetGPUIdWithTheMostFreeMemory()
 }
 
 
-size_t GPUWatcher::GetFreeMemoryOnCUDADevice(int devId)
+size_t GPUWatcher::GetFreeMemoryOnCUDADevice(int /*devId*/)
 {
     return 0;
 }

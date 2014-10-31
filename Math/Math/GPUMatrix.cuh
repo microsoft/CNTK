@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <limits.h>     // for ULONG_MAX
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
