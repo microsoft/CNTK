@@ -23,6 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     {
+        typedef BaseMatrix<ElemType> B; using B::m_elemSizeAllocated;   // easier access to base members
 
     private:
         void ZeroInit();
