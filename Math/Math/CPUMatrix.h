@@ -43,6 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     {
+        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // easier access to base members
     public:
         CPUMatrix();
         CPUMatrix(FILE* f, const char * matrixName); //matrixName is used to verify that correct matrix is read.

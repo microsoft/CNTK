@@ -62,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     {
+        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // easier access to base members
     public:
         static const int MaxGpus = 8;  // support up to 8 GPUs
     private:
