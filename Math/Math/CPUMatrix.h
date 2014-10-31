@@ -43,7 +43,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     {
-        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // easier access to base members
+        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray; using B::m_computeDevice; using B::m_elemSizeAllocated;
+        using B::m_externalBuffer; using B::m_format; using B::m_matrixName;        // without this, base members would require to use thi-> in GCC
     public:
         CPUMatrix();
         CPUMatrix(FILE* f, const char * matrixName); //matrixName is used to verify that correct matrix is read.
@@ -57,7 +58,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ~CPUMatrix();
 
     public:
-        size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
+        using B::OwnBuffer; using B::GetNumElements; using B::IsEmpty; using B::GetNumRows; using B::GetNumCols; using B::SetOwnBuffer; using B::SetMatrixName;
+
+        size_t BufferSize() const { return m_numRows*m_numCols*sizeof(ElemType); }
         ElemType* BufferPointer() const {return m_pArray;}
 
         CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;

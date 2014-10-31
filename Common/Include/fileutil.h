@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <assert.h>
+#include <string.h>     // for strerror()
 
 using namespace std;
 

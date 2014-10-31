@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API GPUSparseMatrix : public BaseMatrix<ElemType>
     {
-        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray; using B::m_elemSizeAllocated; using B::m_nz; using B::m_format;   // easier access to base members
+        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray; using B::m_elemSizeAllocated; using B::m_nz; using B::m_format;   // without this, base members would require to use thi-> in GCC
     private:
         void ZeroInit();
         void Init();
