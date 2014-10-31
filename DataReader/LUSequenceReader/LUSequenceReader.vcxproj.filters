@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="LUSequenceWriter.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="LUSequenceReader.cpp" />
+    <ClCompile Include="LUSequenceParser.cpp" />
+    <ClCompile Include="..\..\Common\ConfigFile.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="DataWriter.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\fileutil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\File.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LUSequenceWriter.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="LUSequenceReader.h" />
+    <ClInclude Include="LUSequenceParser.h" />
+    <ClInclude Include="..\..\Common\Include\basetypes.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataReader.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataWriter.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\File.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="minibatchsourcehelpers.h">
+      <Filter>Duplicates to remove</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="SequenceTest.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{75463cd7-3094-4900-8dae-5b6835c23fc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{85d2fa50-2b95-4ec7-8f2c-c5c0b1cb493e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Duplicates to remove">
+      <UniqueIdentifier>{10f819fb-8861-4607-9389-60ca80f968c2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

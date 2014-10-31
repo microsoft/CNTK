@@ -124,7 +124,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Delayimp.lib;nvml.lib;cudart.lib;cntkMath.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>CNTKMath.dll;nvml.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMath.dll;nvml.dll;nvcuda.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -186,7 +186,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Delayimp.lib;nvml.lib;cudart.lib;cntkMath.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>CNTKMath.dll;nvml.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMath.dll;nvml.dll;nvcuda.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>copy $(SolutionDir)..\Common\PTask\bin\*.dll $(TargetDir)</Command>
@@ -225,6 +225,8 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\..\Common\Include\commandArgUtil.h" />
+    <ClInclude Include="..\..\Common\Include\DataReader.h" />
+    <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\nvml.h" />

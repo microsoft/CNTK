@@ -17,7 +17,17 @@
 #include "CPUMatrix.h"
 #include <random>
 #include <chrono>
+#include <exception>
+
+#ifdef	 _WIN32
 #include <Windows.h>
+#else
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+#include <cfloat> 
+#endif
+
 #ifdef LEAKDETECT
 #include <vld.h>
 #endif
@@ -345,7 +355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AddWithRowSliceValuesOf: input matrix a is empty.");
 
         if (GetNumRows() != numRows)
-            throw std::logic_error("AddWithRowSliceValuesOf: this->GetNumRows() != numRows.");
+            throw std::logic_error("AddWithRowSliceValuesOf: GetNumRows() != numRows.");
 
         if (startIndex + numRows > a.GetNumRows())
             throw std::logic_error("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
@@ -554,7 +564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (IsEmpty())
             throw std::logic_error("SetColumn: Matrix is empty.");
-        assert(valMat.GetNumRows() == this->GetNumRows() && valMat.GetNumCols() == 1) ;
+        assert(valMat.GetNumRows() == GetNumRows() && valMat.GetNumCols() == 1) ;
 
         auto& us = *this; 
         long m=(long)GetNumRows();
@@ -751,8 +761,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
         std::ranlux64_base_01 generator;   
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed);
+#endif
         std::uniform_real_distribution<ElemType> r(low, high);
 
         long m=(long)GetNumElements();
@@ -782,8 +796,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-        std::ranlux64_base_01 generator;    
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed);
+#endif
         std::normal_distribution<ElemType> r(mean, sigma);
         //#pragma omp parallel for   //is it thread safe?
         foreach_coord(i,j,us)
@@ -802,8 +820,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-        std::ranlux64_base_01 generator;    
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed);
+#endif
         std::normal_distribution<ElemType> r(mean, sigma);
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
@@ -825,17 +847,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
     
+
     //maskRate: percentage of values masked out (similar to dropout rate)
     //scaleValue: which scale value to set to the left ones (unmasked items).
     template<class ElemType>
-    void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed=USE_TIME_BASED_SEED)
+    void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
     {
         if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-        std::ranlux64_base_01 generator;   
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#else
+        std::default_random_engine generator (seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+#endif
         std::uniform_real_distribution<ElemType> r(0, 1);
 
         long m=(long)GetNumRows(), n=(long)GetNumCols();
@@ -866,13 +893,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients)
     {
-        if (this->IsEmpty())
+        if (IsEmpty())
         {
-            this->Resize(gradients.GetNumRows(), gradients.GetNumCols());
-            this->SetValue(0.0);
+            Resize(gradients.GetNumRows(), gradients.GetNumCols());
+            SetValue(0.0);
         }
 
-        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols());
+        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols());
 
         ElemType *a=m_pArray, *d_v=gradients.m_pArray;
         size_t n = GetNumElements();
@@ -919,10 +946,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t n = gradients.GetNumElements();
 		ElemType *curr_grad=gradients.m_pArray;
 
-        if (this->IsEmpty() || this->GetNumCols() < gradients.GetNumCols() * 3)
+        if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
         {
-            this->Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
-            this->SetValue(0.0);
+            Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+            SetValue(0.0);
 
 			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
 			ElemType *steps=m_pArray+2*n; // current step size
@@ -940,7 +967,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		ElemType *signs=m_pArray+n; // sign of previous gradient
 		ElemType *steps=m_pArray+2*n; // current step size
 
-        assert(this->GetNumRows() == gradients.GetNumRows() && this->GetNumCols() == gradients.GetNumCols() * 3);
+        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
 
 		ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
 		//int upd[] = {
@@ -3933,7 +3960,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             throw std::logic_error("Scale:  Input matrix a is empty.");
         if (alpha.GetNumElements()!=1)
+#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
             throw std::exception("Matrix alpha must be 1x1");
+#else
+            throw std::exception();
+#endif
         CPUMatrix<ElemType>::Scale(alpha(0,0),a);
     }
 

@@ -287,7 +287,7 @@ public:
         if (!node || node->GetType() != ndlTypeConstant)
         {
             std::string name = node->GetName();
-            Error("Scalar expected, '%s' must be a constant or variable that resolves to a constant\n", name.c_str());
+            RuntimeError("Scalar expected, '%s' must be a constant or variable that resolves to a constant\n", name.c_str());
         }
         return node->GetValue();
     }
@@ -307,7 +307,7 @@ public:
         // make sure the actual parameters and expected parameters match
         if (m_parameters.size() < m_paramMacro.size())
         {
-            Error("Parameter mismatch, %d parameters provided, %d expected in call to %s\n",
+            RuntimeError("Parameter mismatch, %d parameters provided, %d expected in call to %s\n",
                 m_parameters.size(),m_paramMacro.size(),m_value.c_str());
         }
 
@@ -326,7 +326,7 @@ public:
             else if (nodeParam->GetType() == ndlTypeOptionalParameter)
             {
                 if (i < m_paramMacro.size())
-                    Error("Parameter mismatch, parameter %d is an optional parameter, but should be a required parameter\n",i);
+                    RuntimeError("Parameter mismatch, parameter %d is an optional parameter, but should be a required parameter\n",i);
                 // if no symbol yet, add it
                 if (!m_script->ExistsSymbol(paramName))
                 {
@@ -420,7 +420,7 @@ public:
         m_scriptString = configValue;
         NDLNode<ElemType>* ndlNode = s_global.CheckName(macroName, true);
         if (ndlNode == NULL)
-            Error("Invalid macro definition, %s not found", macroName.c_str());
+            RuntimeError("Invalid macro definition, %s not found", macroName.c_str());
 
         // get and parse the parameters
         ConfigArray parameters = ndlNode->GetParamMacro();
@@ -435,7 +435,7 @@ public:
             // in which case 'functionName' will get the default node name returned
             if (CheckFunction<ElemType>(functionName))
             {
-                Error("NDLScript: Macro %s includes a parameter %s, which is also the name of a function. Parameter names may not be the same as function names.", macroName.c_str(), param.c_str());
+                RuntimeError("NDLScript: Macro %s includes a parameter %s, which is also the name of a function. Parameter names may not be the same as function names.", macroName.c_str(), param.c_str());
             }
 
             NDLNode<ElemType>* paramNode = new NDLNode<ElemType>(param, param, this, ndlTypeParameter);
@@ -549,7 +549,7 @@ public:
             if (script != NULL)
             {
                 if (node->GetType() != ndlTypeMacroCall || script == NULL)
-                    Error("Symbol name not valid, %s is not a macro, so %s cannot be interpretted",search.c_str(),symbol.c_str() );
+                    RuntimeError("Symbol name not valid, %s is not a macro, so %s cannot be interpretted",search.c_str(),symbol.c_str() );
                 return script->FindSymbol(symbol.substr(firstDot+1), searchForDotNames);
             }
         }
@@ -598,7 +598,7 @@ public:
 			if (nodeFound->GetType() != ndlTypeUndetermined && nodeFound->GetType() != ndlTypeParameter)
             {
                 std::string value = found->second->GetValue();
-                Error("Symbol '%s' currently assigned to '%s' reassigning to a different value not allowed\n", symbol.c_str(), value.c_str());
+                RuntimeError("Symbol '%s' currently assigned to '%s' reassigning to a different value not allowed\n", symbol.c_str(), value.c_str());
             }
         }
         m_symbols[symbol] = node;
@@ -612,7 +612,7 @@ public:
         auto found = m_symbols.find(symbol);
         if (found == m_symbols.end())
         {
-            Error("Symbol '%s' currently does not exist, attempting to assigned value '%s' AssignSymbol() requires existing symbol\n", symbol.c_str(), node->GetValue());
+            RuntimeError("Symbol '%s' currently does not exist, attempting to assigned value '%s' AssignSymbol() requires existing symbol\n", symbol.c_str(), node->GetValue());
         }
         m_symbols[symbol] = node;
     }
@@ -726,7 +726,7 @@ public:
     {
         auto paramStart = token.find_first_of(OPENBRACES);
         if (paramStart == npos)
-            Error("Invalid macro/function call can not be parsed: %s\n", token.c_str());
+            RuntimeError("Invalid macro/function call can not be parsed: %s\n", token.c_str());
         nameFunction = token.substr(0, paramStart);
         Trim(nameFunction);
         params = token.substr(paramStart);
@@ -763,7 +763,7 @@ public:
             }
             if (paramNode == NULL)
             {
-                Error("variable name '%s' not found, must be previously defined\n", param.c_str());
+                RuntimeError("variable name '%s' not found, must be previously defined\n", param.c_str());
             }
             else
             {
@@ -832,7 +832,7 @@ public:
         std::string nameFunction, params;
         NDLNode<ElemType>* ndlNode = CallStringParse(token, nameFunction, params);
         if (ndlNode)
-            Error("function '%s' already defined\n", nameFunction.c_str());
+            RuntimeError("function '%s' already defined\n", nameFunction.c_str());
         ndlNode = new NDLNode<ElemType>(nameFunction, params, &s_global, ndlTypeMacro);
 
         // now set the variables/parameters which will be parsed when the body shows up
@@ -854,7 +854,7 @@ public:
         NDLNode<ElemType>* ndlNode = CallStringParse(token, nameFunction, params);
 
         if (ndlNode == NULL)
-            Error("Undefined function or macro '%s' in %s\n", nameFunction.c_str(), token.c_str());
+            RuntimeError("Undefined function or macro '%s' in %s\n", nameFunction.c_str(), token.c_str());
 
         // now setup the variables/parameters
         ConfigValue value = ConfigValue(params, nameFunction);
@@ -890,7 +890,7 @@ public:
                 oneLineDefinition = true;
                 tokenStart = stringParse.find_first_not_of(" \t", tokenStart+1);
                 if (tokenStart == npos)
-                    Error("Body of Macro missing");
+                    RuntimeError("Body of Macro missing");
             }
 
             NDLScript<ElemType>* script = new NDLScript<ElemType>(ConfigValue(stringParse.substr(tokenStart, tokenEnd-tokenStart), macroNode->GetName()), macroNode->GetName(), oneLineDefinition);
@@ -908,7 +908,7 @@ public:
         {
             keyEnd = stringParse.find_first_of(OPENBRACES, tokenStart);
             if (keyEnd == npos || keyEnd >= tokenEnd)
-                Error("Invalid statement, does not contain an '=' sign: %s\n", stringParse.substr(tokenStart, tokenEnd-tokenStart).c_str());
+                RuntimeError("Invalid statement, does not contain an '=' sign: %s\n", stringParse.substr(tokenStart, tokenEnd-tokenStart).c_str());
             m_macroNode = ParseDefinition(stringParse.substr(tokenStart, tokenEnd-tokenStart));
             // the body of the macro will come through next time
             return tokenEnd;
@@ -930,7 +930,7 @@ public:
             // check to make sure variable name isn't a valid function name as well
             string strTemp = key;
             if (CheckFunction<ElemType>(strTemp))
-                Error("variable %s is invalid, it is reserved because it is also the name of a function", key.c_str());
+                RuntimeError("variable %s is invalid, it is reserved because it is also the name of a function", key.c_str());
 
             tokenStart = keyEnd;
             if (stringParse[keyEnd] == '=')

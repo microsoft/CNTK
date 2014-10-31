@@ -8,6 +8,7 @@
 
 #include "stdafx.h"
 #define DATAREADER_LOCAL
+#include "basetypes.h"
 #include "DataReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -22,7 +23,7 @@ template<> std::string GetReaderName(double) {std::string name = "GetReaderD"; r
 template<class ElemType>
 void DataReader<ElemType>::Init(const ConfigParameters& /*config*/)
 {
-    Error("Init shouldn't be called, use constructor");
+    RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
 }
 
@@ -43,23 +44,12 @@ void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
     typedef void (*GetReaderProc)(IDataReader<ElemType>** preader);
 
     // initialize just in case
-    m_hModule = NULL;
     m_dataReader = NULL;
 
     // get the name for the reader we want to use, default to UCIFastReader
-    m_dllName = msra::strfun::utf16(config("readerType", "UCIFastReader"));
-    m_dllName += L".dll";
-    m_hModule = LoadLibrary(m_dllName.c_str());
-    if (m_hModule == NULL)
-    {
-        std::string message = "Reader not found: ";
-        message += msra::strfun::utf8(m_dllName);
-        Error((char*) message.c_str());
-    }
-
     // create a variable of each type just to call the proper templated version
     ElemType elemType = ElemType();
-    GetReaderProc getReaderProc = (GetReaderProc)GetProcAddress(m_hModule, GetReaderName(elemType).c_str());
+    GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName(elemType).c_str());
     getReaderProc(&m_dataReader);
 }
 
@@ -85,11 +75,6 @@ DataReader<ElemType>::~DataReader()
     {
         m_dataReader->Destroy();
         m_dataReader = NULL;
-    }
-    if (m_hModule != NULL)
-    {
-        FreeLibrary(m_hModule);
-        m_hModule = NULL;
     }
 }
 

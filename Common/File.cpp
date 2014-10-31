@@ -9,10 +9,16 @@
 #include "basetypes.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
 #include "fileutil.h"
-#include "message.h"
 #include "File.h"
 #include <string>
 #include <stdint.h>
+#include <locale>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+#ifdef __unix__
+#include <unistd.h>
+#endif
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
@@ -77,7 +83,7 @@ void File::goToDelimiter(int delim)
         ch=fgetc(m_file);
         if (feof(m_file)) {
             printf("Unexpected end of file\n");
-             throw std::logic_error("Unexpected end of file\n");
+            throw std::logic_error("Unexpected end of file\n");
         }
     }
 }
@@ -461,9 +467,7 @@ File& File::operator>>(FileMarker marker)
         break;
     case fileMarkerEndFile: // end of file marker, should we throw if it's not the end of the file?
         if (!IsEOF())
-        {
-            ERROR("fileMarkerEndFile not found");
-        }
+            throw std::runtime_error("fileMarkerEndFile not found");
         break;
     case fileMarkerBeginList: // Beginning of list marker
         // no marker written unless an list with a count header
@@ -477,7 +481,7 @@ File& File::operator>>(FileMarker marker)
         {
             int found = EndOfLineOrEOF(true);
             if (found != (int)true) // EOF can also be returned
-                ERROR("Newline not found");
+                throw std::runtime_error("Newline not found");
         }
         break;
     case fileMarkerBeginSection: // beginning of section
@@ -550,9 +554,7 @@ File& File::GetMarker(FileMarker marker, const std::string& section)
     string str;
     *this >> str;
     if (str != section)
-    {
-        ERROR("section name mismatch %s != %s", str.c_str(), section.c_str());
-    }
+        throw std::runtime_error(std::string("section name mismatch ") + str + " != " + section);
     return *this;
 }
 
@@ -565,9 +567,7 @@ File& File::GetMarker(FileMarker marker, const std::wstring& section)
     wstring str;
     *this >> str;
     if (str != section)
-    {
-        ERROR("section name mismatch %ls != %ls", str.c_str(), section.c_str());
-    }
+        throw std::runtime_error(std::string("section name mismatch ") + msra::strfun::utf8(str) + " != " + msra::strfun::utf8(section));
     return *this;
 }
 
@@ -627,4 +627,5 @@ void File::SetPosition(uint64_t pos)
 {
     fsetpos (m_file, pos);
 }
+
 }}}

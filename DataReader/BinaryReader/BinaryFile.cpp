@@ -432,7 +432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_name;
 
         // if name is not set yet, get it from the description header
-        msra::strfun::utf16 nameDescription(m_sectionHeader->nameDescription);
+        std::wstring nameDescription (msra::strfun::utf16(m_sectionHeader->nameDescription));
         auto firstColon = nameDescription.find_first_of(L':');
         if (firstColon != npos && nameDescription.size() >= firstColon)
         {

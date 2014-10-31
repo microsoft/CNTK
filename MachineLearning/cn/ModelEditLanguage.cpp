@@ -110,7 +110,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 0, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: CreateModel(). newly created model always becomes the new default.");
+            RuntimeError("Invalid number of parameters. Valid parameters: CreateModel(). newly created model always becomes the new default.");
 
         ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn);
@@ -119,7 +119,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 1, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: CreateModelWithName(modelName). newly created model always becomes the new default.");
+            RuntimeError("Invalid number of parameters. Valid parameters: CreateModelWithName(modelName). newly created model always becomes the new default.");
 
         ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
@@ -128,7 +128,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 1, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: LoadModel(modelFileName, [format=cntk]). newly loaded model always becomes the new default.");
+            RuntimeError("Invalid number of parameters. Valid parameters: LoadModel(modelFileName, [format=cntk]). newly loaded model always becomes the new default.");
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
@@ -140,7 +140,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: LoadModelWithName(modelName, modelFileName, [format=cntk]). newly loaded model always becomes the new default.");
+            RuntimeError("Invalid number of parameters. Valid parameters: LoadModelWithName(modelName, modelFileName, [format=cntk]). newly loaded model always becomes the new default.");
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
@@ -152,7 +152,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: LoadNDLSnippet(modelName, ndlsnippet).");
+            RuntimeError("Invalid number of parameters. Valid parameters: LoadNDLSnippet(modelName, ndlsnippet).");
 
         string modelName = params[0];
         wstring ndlSnippetFileName = params[1];
@@ -167,7 +167,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             if (!ndlScript.Exists(section))
             {
-                Error("Section %s specified in optional parameter was not found in the %ls file\n", section.c_str(), ndlSnippetFileName.c_str());
+                RuntimeError("Section %s specified in optional parameter was not found in the %ls file\n", section.c_str(), ndlSnippetFileName.c_str());
             }
             ConfigValue ndlSnippet = ndlScript(section);
             EvaluateNDLSnippet(ndlSnippet, cn);
@@ -183,7 +183,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 1, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: SaveDefaultModel(modelFileName, [format=cntk]).");
+            RuntimeError("Invalid number of parameters. Valid parameters: SaveDefaultModel(modelFileName, [format=cntk]).");
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
@@ -191,7 +191,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         ComputationNetwork<ElemType>* cn = m_netNdlDefault->cn;
         if (cn == NULL)
-            Error("SaveDefaultModel can only be called after a default name exists (i.e., at least one model is loaded.)");
+            RuntimeError("SaveDefaultModel can only be called after a default name exists (i.e., at least one model is loaded.)");
 
         // validate the network before we save it out
         ProcessNDLScript(m_netNdlDefault, ndlPassAll, true);
@@ -202,7 +202,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: SaveModel(modelName, modelFileName, [format=cntk]).");
+            RuntimeError("Invalid number of parameters. Valid parameters: SaveModel(modelName, modelFileName, [format=cntk]).");
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
@@ -211,7 +211,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         NetNdl<ElemType>* netNdl = &m_mapNameToNetNdl[modelName];
         if (netNdl->cn == NULL)
-            Error("SaveModel can only be called after a network has been setup, no active model named %ls.", modelName.c_str());
+            RuntimeError("SaveModel can only be called after a network has been setup, no active model named %ls.", modelName.c_str());
 
         // validate and finish the second pass through NDL if any in-line NDL was defined
         ProcessNDLScript(netNdl, ndlPassAll, true);
@@ -221,7 +221,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 1, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: SetDefaultModel(modelName)");
+            RuntimeError("Invalid number of parameters. Valid parameters: SetDefaultModel(modelName)");
 
         SetExistingModelAsDefault(params[0]);
     }
@@ -248,7 +248,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: DumpNetwork(modelName, fileName, [includeData=false|true])");
+            RuntimeError("Invalid number of parameters. Valid parameters: DumpNetwork(modelName, fileName, [includeData=false|true])");
 
         bool includeData = GetOptionalIncludeDataValue(params, numFixedParams);
 
@@ -257,7 +257,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         auto found = m_mapNameToNetNdl.find(modelName);
         if (found == m_mapNameToNetNdl.end())
-            Error("Model %s does not exist. Cannot dump non-existant model.", modelName);
+            RuntimeError("Model %s does not exist. Cannot dump non-existant model.", modelName);
         else
         {
             NetNdl<ElemType>* netNdl = &found->second;
@@ -269,7 +269,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters: DumpNode(nodeName, fileName, [includeData=false|true])");
+            RuntimeError("Invalid number of parameters. Valid parameters: DumpNode(nodeName, fileName, [includeData=false|true])");
 
         bool includeData = GetOptionalIncludeDataValue(params, numFixedParams);
 
@@ -284,7 +284,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters are: CopyNode(fromNode, toNode, [copy=all|value])");
+            RuntimeError("Invalid number of parameters. Valid parameters are: CopyNode(fromNode, toNode, [copy=all|value])");
 
         CopyNodeFlags copyFlags = GetOptionalCopyNodeFlags(params, numFixedParams);
 
@@ -296,7 +296,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 3, numOptionalParams = 1;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters are: CopySubTree(fromNode, toNetwork, toNodeNamePrefix, [copy=all|value])");
+            RuntimeError("Invalid number of parameters. Valid parameters are: CopySubTree(fromNode, toNetwork, toNodeNamePrefix, [copy=all|value])");
 
         CopyNodeFlags copyFlags = GetOptionalCopyNodeFlags(params, numFixedParams);
 
@@ -309,7 +309,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters are: CopyNodeInputs(fromNode, toNode)");
+            RuntimeError("Invalid number of parameters. Valid parameters are: CopyNodeInputs(fromNode, toNode)");
 
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
@@ -317,7 +317,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         vector<GenNameValue> names = GenerateNames(params[0], params[1], netNdlFrom, netNdlTo);
 
         if (netNdlFrom != netNdlTo)
-            Error("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0], params[1]);
+            RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0], params[1]);
 
         ProcessNDLScript(netNdlFrom, ndlPassAll);
         for (GenNameValue name : names)
@@ -333,7 +333,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 3, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters are: SetNodeInput(toNode, inputID(0-based), inputNodeName)");
+            RuntimeError("Invalid number of parameters. Valid parameters are: SetNodeInput(toNode, inputID(0-based), inputNodeName)");
 
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
@@ -343,12 +343,12 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         int inputNum = params[1];
 
         if (netNdlTo != netNdlFrom)
-            Error("SetNodeInput() requires two symbols from the same network, %s and %s belong to different networks", params[0], params[2]);
+            RuntimeError("SetNodeInput() requires two symbols from the same network, %s and %s belong to different networks", params[0], params[2]);
 
         if (nodeFrom.size() != 1)
-            Error("SetNodeInput() must have a single value input, %s doesn't represent one item",params[0]);
+            RuntimeError("SetNodeInput() must have a single value input, %s doesn't represent one item",params[0]);
         if (nodeTo.size() < 1)
-            Error("SetNodeInput() must have at least one target, %s doesn't represent any items",params[2]);
+            RuntimeError("SetNodeInput() must have at least one target, %s doesn't represent any items",params[2]);
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
         ProcessNDLScript(netNdlFrom, ndlPassResolve); 
@@ -360,13 +360,13 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     else if (EqualInsensitive(name, "SetNodeInputs", "SetInputs"))
     {
         if (params.size() > 4 || params.size() < 2)
-            Error("Invalid number of parameters. Valid parameters are: SetNodeInputs(toNode, inputNodeName1, [inputNodeName2, inputNodeName3])");
+            RuntimeError("Invalid number of parameters. Valid parameters are: SetNodeInputs(toNode, inputNodeName1, [inputNodeName2, inputNodeName3])");
 
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
         vector<ComputationNode<ElemType>*> nodeTo = FindSymbols(params[0], netNdlTo);
         if (nodeTo.size() != 1)
-            Error("SetNodeInputs() must have exactly one target, %s doesn't represent any node.",params[0]);
+            RuntimeError("SetNodeInputs() must have exactly one target, %s doesn't represent any node.",params[0]);
         
         vector<ComputationNode<ElemType>*> inputNodes;
         inputNodes.resize(params.size()-1);
@@ -380,10 +380,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             vector<ComputationNode<ElemType>*> nodeFrom = FindSymbols(params[i], netNdlFrom);
 
             if (netNdlTo != netNdlFrom)
-                Error("SetNodeInputs() requires all symbols from the same network, %s and %s belong to different networks", params[0], params[i]);
+                RuntimeError("SetNodeInputs() requires all symbols from the same network, %s and %s belong to different networks", params[0], params[i]);
 
             if (nodeFrom.size() != 1)
-                Error("SetNodeInputs() each input node should be translated to one node name. %s is translated to multiple node names.",  params[i]);
+                RuntimeError("SetNodeInputs() each input node should be translated to one node name. %s is translated to multiple node names.",  params[i]);
 
             inputNodes[i-1] = nodeFrom[0];
         }
@@ -395,12 +395,12 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         else if (inputNodes.size() == 3)
             nodeTo[0]->AttachInputs(inputNodes[0], inputNodes[1], inputNodes[2]);
         else
-            Error("SetNodeInputs(): You specified more than 3 input nodes.");
+            RuntimeError("SetNodeInputs(): You specified more than 3 input nodes.");
     }
     else if (EqualInsensitive(name, "SetProperty"))
     {
         if (params.size() != 3)
-            Error("Invalid number of parameters: Valid parameters are: SetProperty(toNode, propertyName, propertyValue)");
+            RuntimeError("Invalid number of parameters: Valid parameters are: SetProperty(toNode, propertyName, propertyValue)");
         
         std::string propName = params[1];
         MELProperty prop=melPropNull;
@@ -434,7 +434,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         }
         else
         {
-            Error("Invalid property, %s, is not supported", propName);
+            RuntimeError("Invalid property, %s, is not supported", propName);
         }
 
         // get the nodes
@@ -491,7 +491,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 }
                 default:
                 {
-                    Error("Invalid property, %s, is not supported", propName);
+                    RuntimeError("Invalid property, %s, is not supported", propName);
                     break;
                 }
             }
@@ -501,7 +501,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 3, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters are: SetPropertyForSubTree(rootNodeName, propertyName, propertyValue)");
+            RuntimeError("Invalid number of parameters. Valid parameters are: SetPropertyForSubTree(rootNodeName, propertyName, propertyValue)");
         
         std::string propName = params[1];
         MELProperty prop=melPropNull;
@@ -511,7 +511,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         }
         else
         {
-            Error("Invalid property, %s, is not supported", propName);
+            RuntimeError("Invalid property, %s, is not supported", propName);
         }
 
         // get the nodes
@@ -533,7 +533,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 }
                 default:
                 {
-                    Error("Invalid property, %s, is not supported", propName);
+                    RuntimeError("Invalid property, %s, is not supported", propName);
                     break;
                 }
             }
@@ -558,7 +558,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             }
 
             if (nodes.size() < 1)
-                Error("Delete must have at least one target, %s doesn't represent any items",params[i]);
+                RuntimeError("Delete must have at least one target, %s doesn't represent any items",params[i]);
             for (ComputationNode<ElemType>* node : nodes)
             {
                 netNdl->cn->DeleteNode(node->NodeName());
@@ -569,7 +569,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     {
         size_t numFixedParams = 2, numOptionalParams = 0;
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
-            Error("Invalid number of parameters. Valid parameters are Rename(oldNodeName, newNodeName)");
+            RuntimeError("Invalid number of parameters. Valid parameters are Rename(oldNodeName, newNodeName)");
 
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
@@ -577,7 +577,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         vector<GenNameValue> nodeNames = GenerateNames(params[0], params[1], netNdlFrom, netNdlTo);
 
         if (netNdlFrom != netNdlTo)
-            Error("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0], params[1]);
+            RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0], params[1]);
 
         // process everything in case these nodes may have tags on them
         ProcessNDLScript(netNdlFrom, ndlPassAll);
@@ -591,7 +591,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
     }
     else
     {
-        Error("Unknown Editor function %s", name.c_str());
+        RuntimeError("Unknown Editor function %s", name.c_str());
     }
 }
 

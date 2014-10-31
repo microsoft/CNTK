@@ -272,7 +272,7 @@ size_t LUSequenceParser<NumType, LabelType>::UpdateBuffer()
     size_t bytesToRead = min(m_bufferSize, m_fileSize-m_bufferStart)-saveBytes;
     size_t bytesRead = fread(m_fileBuffer+saveBytes, 1, bytesToRead, m_pFile);
     if (bytesRead == 0 && ferror(m_pFile))
-        Error("LUSequenceParser::UpdateBuffer - error reading file");
+        RuntimeError("LUSequenceParser::UpdateBuffer - error reading file");
     return bytesRead;
 }
 

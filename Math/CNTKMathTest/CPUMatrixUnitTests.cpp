@@ -24,14 +24,13 @@ namespace CNTKMathTest
         static void DebugPrint(FILE* gpuDebugFile, Matrix M, const char* str, const bool colwiseVec = true)
         {
             fprintf(gpuDebugFile, "\n %s\n", str);
-            const int matNumRow = M.GetNumRows();
-            const int matNumCol = M.GetNumCols();
-            const int elemNum = M.GetNumElements();
+            const size_t matNumCol = M.GetNumCols();
+            const size_t elemNum = M.GetNumElements();
             Matrix M1 = M.Transpose();
             double* pArray = M1.GetArray();
             if (colwiseVec)
             {
-                for (int i = 0; i < elemNum; i++)
+                for (size_t i = 0; i < elemNum; i++)
                 {
 
                     fprintf(gpuDebugFile, "%3d ", (int)pArray[i]);
@@ -39,6 +38,7 @@ namespace CNTKMathTest
                         fprintf(gpuDebugFile, "\n");
                 }
             }
+            //const size_t matNumRow = M.GetNumRows();
             //for (int i = 0; i < matNumRow; i++)
             //{
             //    for (int j = 0; j < matNumCol; j++)

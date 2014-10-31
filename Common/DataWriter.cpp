@@ -22,7 +22,7 @@ template<> std::string GetWriterName(double) {std::string name = "GetWriterD"; r
 template<class ElemType>
 void DataWriter<ElemType>::Init(const ConfigParameters& /*config*/)
 {
-    Error("Init shouldn't be called, use constructor");
+    RuntimeError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
 }
 
@@ -43,37 +43,25 @@ void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& config)
     typedef void (*GetWriterProc)(IDataWriter<ElemType>** pwriter);
 
     // initialize just in case
-    m_hModule = NULL;
     m_dataWriter = NULL;
 
     // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
-	string writerType = config("writerType","BinaryReader");
-	if (writerType == "HTKMLFWriter" || writerType == "HTKMLFReader") 
-	{
-		writerType = "HTKMLFReader";
-	}
-	else if (writerType == "BinaryWriter" || writerType == "BinaryReader") 
-	{
-		writerType = "BinaryReader";
-	}
+    string writerType = config("writerType", "BinaryReader");
+    if (writerType == "HTKMLFWriter" || writerType == "HTKMLFReader")
+    {
+        writerType = "HTKMLFReader";
+    }
+    else if (writerType == "BinaryWriter" || writerType == "BinaryReader")
+    {
+        writerType = "BinaryReader";
+    }
     else if (writerType == "LUSequenceWriter" || writerType == "LUSequenceReader")
     {
         writerType = "LUSequenceReader";
     }
 
-    m_dllName = msra::strfun::utf16(writerType);
-    m_dllName += L".dll";
-    m_hModule = LoadLibrary(m_dllName.c_str());
-    if (m_hModule == NULL)
-    {
-        std::string message = "Writer not found: ";
-        message += msra::strfun::utf8(m_dllName);
-        Error((char*)message.c_str());
-    }
-
-    // create a variable of each type just to call the proper templated version
     ElemType elemType = ElemType();
-    GetWriterProc getWriterProc = (GetWriterProc)GetProcAddress(m_hModule, GetWriterName(elemType).c_str());
+    GetWriterProc getWriterProc = (GetWriterProc)Plugin::Load(writerType, GetWriterName(elemType).c_str());
     getWriterProc(&m_dataWriter);
 }
 
@@ -96,11 +84,6 @@ DataWriter<ElemType>::~DataWriter()
     {
         m_dataWriter->Destroy();
         m_dataWriter = NULL;
-    }
-    if (m_hModule != NULL)
-    {
-        FreeLibrary(m_hModule);
-        m_hModule = NULL;
     }
 }
 
