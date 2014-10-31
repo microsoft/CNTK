@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="GPUSparseMatrix.cu" />
+    <CudaCompile Include="GPUWatcher.cu" />
+    <CudaCompile Include="GPUMatrix.cu" />
+    <CudaCompile Include="GPUMatrixCUDAKernels.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CPUSparseMatrix.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="CPUMatrix.cpp" />
+    <ClCompile Include="Matrix.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="..\..\Common\File.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\fileutil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CommonMatrix.h" />
+    <ClInclude Include="CPUMatrix.h" />
+    <ClInclude Include="CPUSparseMatrix.h" />
+    <ClInclude Include="Helpers.h" />
+    <ClInclude Include="Matrix.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="..\..\Common\Include\File.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\basetypes.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="GPUWatcher.cuh" />
+    <None Include="GPUSparseMatrix.cuh" />
+    <None Include="GPUMatrix.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{4d07e945-74fb-48fa-aa63-23f3a7763789}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{51b468dd-7e8a-4be8-ae6f-5e3f3d752b88}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="DataReader.cpp" />
+    <ClCompile Include="DataWriter.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="HTKMLFReader.cpp" />
+    <ClCompile Include="HTKMLFWriter.cpp" />
+    <ClCompile Include="latticearchive.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="fileutil.cpp">
+      <Filter>Duplicates to remove</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="biggrowablevectors.h" />
+    <ClInclude Include="chunkevalsource.h" />
+    <ClInclude Include="htkfeatio.h" />
+    <ClInclude Include="HTKMLFReader.h" />
+    <ClInclude Include="HTKMLFWriter.h" />
+    <ClInclude Include="latticearchive.h" />
+    <ClInclude Include="latticestorage.h" />
+    <ClInclude Include="minibatchiterator.h" />
+    <ClInclude Include="minibatchsourcehelpers.h" />
+    <ClInclude Include="msra_mgram.h" />
+    <ClInclude Include="numahelpers.h" />
+    <ClInclude Include="pplhelpers.h" />
+    <ClInclude Include="readaheadsource.h" />
+    <ClInclude Include="rollingwindowsource.h" />
+    <ClInclude Include="simplesenonehmm.h" />
+    <ClInclude Include="simplethread.h" />
+    <ClInclude Include="simple_checked_arrays.h" />
+    <ClInclude Include="ssefloat4.h" />
+    <ClInclude Include="ssematrix.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="utterancesource.h" />
+    <ClInclude Include="utterancesourcemulti.h" />
+    <ClInclude Include="basetypes.h">
+      <Filter>Duplicates to remove</Filter>
+    </ClInclude>
+    <ClInclude Include="fileutil.h">
+      <Filter>Duplicates to remove</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataReader.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataWriter.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Duplicates to remove">
+      <UniqueIdentifier>{9a77edee-47ee-45ec-9b35-d22cc73ea64e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{5e80057c-a54a-4d57-a856-dc1d23a63aea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{812d1247-04eb-4693-a0d2-5399a94e6235}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
