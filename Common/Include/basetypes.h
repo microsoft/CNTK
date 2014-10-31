@@ -78,6 +78,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <map>
 #include <stdexcept>
 #include <locale>       // std::wstring_convert
+#include <string>
 #ifdef _MSC_VER
 #include <codecvt>      // std::codecvt_utf8
 #endif
@@ -112,10 +113,10 @@ using namespace std;
 
 namespace msra { namespace strfun {
     // a class that can return a std::string with auto-convert into a const char*
-    template<typename C> struct basic_cstring : std::basic_string<C>
+    template<typename C> struct basic_cstring : public std::basic_string<C>
     {
-        template<typename S> basic_cstring (S p) : basic_string (p) { }
-        operator const char * () const { return c_str(); }
+        template<typename S> basic_cstring (S p) : std::basic_string<C> (p) { }
+        operator const C * () const { return this->c_str(); }
     };
     typedef basic_cstring<char> cstring;
     typedef basic_cstring<wchar_t> wcstring;
@@ -145,6 +146,8 @@ msra::strfun::cstring charpath (const std::wstring & p)
 static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return fopen(charpath(path), charpath(mode)); }
 // --- basic string functions
 static inline wchar_t* wcstok_s(wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return ::wcstok(s, delim, ptr); }
+// -- other
+static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
 #endif
 
 // ----------------------------------------------------------------------------
@@ -926,12 +929,7 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
             if (attempt >= retries)
                 throw;      // failed N times --give up and rethrow the error
             fprintf (stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt+1, retries);
-#ifndef	LINUX
             ::Sleep (1000); // wait a little, then try again
-#else
-            std::chrono::milliseconds dura(1000);
-            std::this_thread::sleep_for(dura);
-#endif	/* LINUX */
         }
     }
 }

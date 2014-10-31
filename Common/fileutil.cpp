@@ -44,6 +44,15 @@
 
 using namespace std;
 
+// ----------------------------------------------------------------------------
+// some mappings for non-Windows builds
+// ----------------------------------------------------------------------------
+
+#ifndef _MSC_VER    // add some functions that are VS-only
+static int _wunlink (const wchar_t * p) { return unlink (charpath (p)); }
+static int _wmkdir (const wchar_t * p) { return mkdir (charpath (p), 0777/*correct?*/); }
+#endif
+
 template <>             const wchar_t* GetScanFormatString(char) {return L" %hc";}
 template <>          const wchar_t* GetScanFormatString(wchar_t) {return L" %lc";}
 template <>            const wchar_t* GetScanFormatString(short) {return L" %hi";}
@@ -372,9 +381,6 @@ void unlinkOrDie (const std::string & pathname)
     if (unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
     RuntimeError ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
 }
-#ifndef _MSC_VER
-static int _wunlink (const wchar_t * p) { return unlink (msra::strfun::wcstombs (p).c_str()); }
-#endif
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
@@ -1401,7 +1407,7 @@ bool getfiletime (const wstring & path, FILETIME & time)
     int result;
 
     // Get data associated with "crt_stat.c": 
-    result = stat(msra::strfun::wcstombs(path).c_str(), &buf);
+    result = stat(charpath(path), &buf);
     // Check if statistics are valid: 
     if (result != 0)
         return false;
@@ -1511,13 +1517,6 @@ void expand_wildcards (const wstring & path, vector<wstring> & paths)
 // ----------------------------------------------------------------------------
 // make_intermediate_dirs() -- make all intermediate dirs on a path
 // ----------------------------------------------------------------------------
-
-#ifndef _MSC_VER    // _wmkdir() is VS proprietary
-static int _wmkdir (const wchar_t * p)
-{
-    return mkdir (msra::strfun::wcstombs (p).c_str(), 0777/*correct?*/);
-}
-#endif
 
 static void mkdir (const wstring & path)
 {
