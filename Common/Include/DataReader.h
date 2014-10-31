@@ -18,9 +18,10 @@
 #else
 #define DATAREADER_API __declspec(dllimport)
 #endif
-#include "matrix.h"
+#include "Matrix.h"
 #include <map>
 #include <string>
+#include "basetypes.h"
 #include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -56,8 +57,7 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;
     virtual bool DataEnd(EndDataType endDataType) = 0;
-	virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd)=0;
-
+    virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd) = 0;
 };
 
 // GetReader - get a reader type from the DLL
@@ -72,12 +72,10 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataReader : public IDataReader<ElemType>
+class DataReader : public IDataReader<ElemType>, public Plugin
 {
 private:
-    IDataReader *m_dataReader;  // reader
-    HMODULE m_hModule;  // module handle for the reader DLL
-    std::wstring m_dllName; // name of the reader DLL
+    IDataReader<ElemType> *m_dataReader;  // reader
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader

@@ -977,4 +977,40 @@ static inline bool LogicError(const char * format, ...)
     throw std::logic_error(buffer);
 };
 
+// ----------------------------------------------------------------------------
+// dynamic loading of modules
+// ----------------------------------------------------------------------------
+
+#ifdef _WIN32
+class Plugin
+{
+    HMODULE m_hModule;      // module handle for the writer DLL
+    std::wstring m_dllName; // name of the writer DLL
+public:
+    Plugin() { m_hModule = NULL; }
+    FARPROC Load(const std::string & plugin, const std::string & proc)
+    {
+        m_dllName = msra::strfun::utf16(plugin);
+        m_dllName += L".dll";
+        m_hModule = LoadLibrary(m_dllName.c_str());
+        if (m_hModule == NULL)
+            RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName));
+
+        // create a variable of each type just to call the proper templated version
+        return GetProcAddress(m_hModule, proc.c_str());
+    }
+    ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
+};
+#else
+class Plugin
+{
+public:
+    void * Load(const std::string & plugin, const std::string & proc)
+    {
+        RuntimeError("Plugins not implemented on Linux yet");
+        return NULL;
+    }
+};
+#endif
+
 #endif    // _BASETYPES_

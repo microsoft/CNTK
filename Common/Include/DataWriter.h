@@ -18,9 +18,10 @@
 #else
 #define DATAWRITER_API __declspec(dllimport)
 #endif
-#include "matrix.h"
+#include "Matrix.h"
 #include <map>
 #include <string>
+#include "basetypes.h"
 #include "commandArgUtil.h"
 
 
@@ -68,12 +69,10 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
 // interface for clients of the Data Writer
 // mirrors the IDataWriter interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataWriter : public IDataWriter<ElemType>
+class DataWriter : public IDataWriter<ElemType>, public Plugin
 {
 private:
     IDataWriter<ElemType> *m_dataWriter;  // writer
-    HMODULE m_hModule;  // module handle for the writer DLL
-    std::wstring m_dllName; // name of the writer DLL
 
     // Init - Writer Initialize for multiple data sets
     // config - [in] configuration parameters for the datawriter
