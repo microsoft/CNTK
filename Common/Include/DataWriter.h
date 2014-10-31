@@ -52,7 +52,7 @@ public:
     virtual void Destroy() = 0;
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;
+    virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
 };
 
 
@@ -71,7 +71,7 @@ template<class ElemType>
 class DataWriter : public IDataWriter<ElemType>
 {
 private:
-    IDataWriter *m_dataWriter;  // writer
+    IDataWriter<ElemType> *m_dataWriter;  // writer
     HMODULE m_hModule;  // module handle for the writer DLL
     std::wstring m_dllName; // name of the writer DLL
 
@@ -146,7 +146,7 @@ public:
     // SaveMapping - save a map into the file
     // saveId - name of the section to save into (section:subsection format)
     // labelMapping - map we are saving to the file
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping);
+    virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
 };
 
 }}}
