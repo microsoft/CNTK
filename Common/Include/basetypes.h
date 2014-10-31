@@ -150,6 +150,8 @@ static inline wchar_t* wcstok_s (wchar_t* s, const wchar_t* delim, wchar_t** ptr
 static inline int _stricmp (const char * a, const char * b) { return ::strcasecmp (a, b); }
 static inline int _strnicmp (const char * a, const char * b, wchar_t n) { return ::strncasecmp (a, b, n); }
 static inline int _wcsicmp (const wchar_t * a, const wchar_t * b) { return ::wcscasecmp (a, b); }
+static inline int64_t _strtoi64 (const char * s, char ** ep, int r) { return strtoll (s, ep, r); }      // TODO: check if correct
+static inline uint64_t _strtoui64 (const char * s, char ** ep, int r) { return strtoull (s, ep, r); }   // TODO: correct for size_t?
 // -- other
 static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
 #endif
