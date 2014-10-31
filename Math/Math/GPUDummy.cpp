@@ -4,6 +4,8 @@
 // </copyright>
 //
 
+#include "stdafx.h"
+
 #ifdef CPUONLY
 
 #include "GPUMatrix.cuh"
