@@ -3,232 +3,19 @@
 //
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 //
-// $Log: /Speech_To_Speech_Translation/dbn/dbn/fileutil.h $
-// 
-// 71    1/03/13 8:53p Kaisheny
-// Asynchronous SGD using data pipe.
-// 
-// 70    9/30/12 10:46a Fseide
-// new optional parameter to fuptodate()--caller can now choose whether a
-// missing input file, with target file present, will cause a failure or
-// considers the target up-to-date
-// 
-// 69    11/09/11 10:01 Fseide
-// added a new overload for fgetfilelines() that returns an array of char*
-// instead of strings, to avoid mem alloc
-// 
-// 68    6/10/11 9:50 Fseide
-// (fixed a missing 'inline')
-// 
-// 67    6/10/11 9:49 Fseide
-// new function fgetfilelines() for reading text files
-// 
-// 66    6/09/11 15:18 Fseide
-// added overloads to fexists() that accept STL strings
-// 
-// 65    3/07/11 12:13 Fseide
-// actually implemented unlinkOrDie() (was a dummy)
-// 
-// 64    11/17/10 15:00 Fseide
-// new function fuptodate();
-// make_intermediate_dirs() moved to namespace msra::files (all new
-// functions should be put in there)
-// 
-// 63    11/15/10 7:04p Fseide
-// added an overload for freadOrDie (vector) that takes size as a size_t
-// instead of an int, to pleasr the x64 compiler
-// 
-// 62    11/08/10 17:07 Fseide
-// new function make_intermediate_dirs()
-// 
-// 61    11/08/10 11:43 Fseide
-// (minor cleanup)
-// 
-// 60    2/05/09 19:06 Fseide
-// fgetline() now returns a non-const pointer, because user may want to
-// post-process the line, and the returned value is a user-specified
-// buffer anyway
-// 
-// 59    1/16/09 17:34 Fseide
-// relpath() and splitpath() moved to fileutil.h
-// 
-// 58    1/16/09 8:59 Fseide
-// exported fskipspace()
-// 
-// 57    1/15/09 7:38 Fseide
-// some magic to unify fgetstring() for char and wchar_t to a single
-// template function
-// 
-// 56    1/15/09 7:26 Fseide
-// corrected the #include order of basetypes.h
-// 
-// 55    1/14/09 19:26 Fseide
-// new functions fsetpos() and fgetpos();
-// new fixed-buffer size overload for fgetstring() and fgettoken()
-// 
-// 54    1/08/09 16:14 Fseide
-// fopenOrDie() now supports "-" as the pathname, referring to stdin or
-// stdout
-// 
-// 53    1/08/09 15:32 Fseide
-// new funtion expand_wildcards()
-// 
-// 52    1/05/09 8:44 Fseide
-// (added comments)
-// 
-// 51    11/11/08 6:04p Qiluo
-// recover the old fputstring functions
-// 
-// 50    10/31/08 5:09p Qiluo
-// remove banned APIs
-// 
-// 49    7/17/08 7:22p V-spwang
-// undid changes - back to version 47
-// 
-// 47    6/24/08 19:03 Fseide
-// added fgetwstring() and fputstring() for wstrings;
-// added templates for freadOrDie() and fwriteOrDie() for STL vectors
-// 
-// 46    6/18/08 11:41 Fseide
-// added #pragma once
-// 
-// 45    08-05-29 18:18 Llu
-// fix the interface of fputwav
-// 
-// 44    08-05-29 13:54 Llu
-// add fputwav revise fgetwav using stl instead of short *
-// 
-// 43    11/27/06 11:40 Fseide
-// new methods fgetwfx() and fputwfx() for direct access to simple PCM WAV
-// files
-// 
-// 42    10/14/06 18:31 Fseide
-// added char* version of fexists()
-// 
-// 41    5/22/06 9:34 Fseide
-// (experimental auto_file class checked in)
-// 
-// 40    5/14/06 19:59 Fseide
-// new function fsetmode()
-// 
-// 39    3/29/06 15:36 Fseide
-// changed to reading entire file instead of line-by-line, not changing
-// newlines anymore
-// 
-// 38    2/21/06 12:39p Kit
-// Added filesize64 function
-// 
-// 37    1/09/06 7:12p Rogeryu
-// wide version of fgetline
-// 
-// 36    12/19/05 21:52 Fseide
-// fputfile() added in 8-bit string version
-// 
-// 35    12/15/05 20:25 Fseide
-// added getfiletime(), setfiletime(), and fputfile() for strings
-// 
-// 34    9/27/05 12:22 Fseide
-// added wstring version of renameOrDie()
-// 
-// 33    9/22/05 12:26 Fseide
-// new method fexists()
-// 
-// 32    9/15/05 11:33 Fseide
-// new version of fgetline() that avoids buffer allocations, since this
-// seems very expensive esp. when reading a file line by line with
-// fgetline()
-// 
-// 31    9/05/05 4:57p F-xyzhao
-// added #include <windows.h> for #include <mmreg.h> -- ugh
-// 
-// 30    9/05/05 11:00 Fseide
-// new method renameOrDie()
-// 
-// 29    8/24/05 5:45p Kjchen
-// merge changes in OneNote
-// 
-// 28    8/19/05 17:56 Fseide
-// extended WAVEHEADER with write() and update()
-// 
-// 27    8/13/05 15:37 Fseide
-// added new version of fgetline that takes a buffer
-// 
-// 26    7/26/05 18:54 Fseide
-// new functions fgetint24() and fputint24()
-// 
-// 25    2/12/05 15:21 Fseide
-// fgetdouble() and fputdouble() added
-// 
-// 24    2/05/05 12:38 Fseide
-// new methods fputfile(), fgetfile();
-// new overload for filesize()
-// 
-// 23    2/03/05 22:34 Fseide
-// added new version of fgetline() that returns an STL string
-// 
-// 22    5/31/04 10:06 Fseide
-// new methods fseekOrDie(), ftellOrDie(), unlinkOrDie(), renameOrDie()
-// 
-// 21    3/19/04 4:01p Fseide
-// fwriteOrDie(): first argument changed to const
-// 
-// 20    2/27/04 10:04a V-xlshi
-// 
-// 19    2/19/04 3:45p V-xlshi
-// fgetraw function is added.
-// 
-// 18    2/19/04 1:49p V-xlshi
-// 
-// 17    2/03/04 8:17p V-xlshi
-// 
-// 16    2/03/04 6:20p V-xlshi
-// WAVEHEADER.prepare() added
-// 
-// 15    2/03/04 5:58p V-xlshi
-// WAVEHEADER structure added
-// 
-// 14    8/15/03 15:40 Fseide
-// new method filesize()
-// 
-// 13    8/13/03 21:06 Fseide
-// new function fputbyte()
-// 
-// 12    8/13/03 15:37 Fseide
-// prototype of fOpenOrDie() Unicode version changed
-// 
-// 11    8/07/03 22:04 Fseide
-// fprintfOrDie() now really dies in case of error
-// 
-// 10    03-07-30 12:06 I-rogery
-// enable both unicode and non-unicode version
-// 
-// 9     7/25/03 6:07p Fseide
-// new functions fgetbyte() and fgetwav()
-// 
-// 8     7/03/02 9:25p Fseide
-// fcompareTag() now uses string type for both of its arguments (before,
-// it used const char * for one of them)
-// 
-// 7     6/10/02 3:14p Fseide
-// new functions fgettoken(), fgetfloat_ascii(), fskipNewline()
-// 
-// 6     6/07/02 7:26p Fseide
-// new functions fcheckTag_ascii() and fgetint_ascii()
-// 
-// 5     4/15/02 1:12p Fseide
-// void fputstring (FILE * f, const TSTRING & str) and fpad() added
-// 
-// 4     4/03/02 3:58p Fseide
-// VSS keyword and copyright added
-//
-// F. Seide 5 Mar 2002
-//
-
 #pragma once
 #ifndef _FILEUTIL_
 #define _FILEUTIL_
 
 #include <stdio.h>
+#ifdef	_WIN32
+#define isfinite(x) _finite(x)
+#define isnan(x) _isnan(x)
+#endif
+#ifdef __unix__
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
 #include <algorithm>    // for std::find
 #include <vector>
 #include <map>
@@ -694,6 +481,29 @@ namespace msra { namespace files {
 // ----------------------------------------------------------------------------
 // simple support for WAV file I/O
 // ----------------------------------------------------------------------------
+
+// define the header if we haven't seen it yet
+#ifndef _WAVEFORMATEX_
+#define _WAVEFORMATEX_
+
+/*
+ *  extended waveform format structure used for all non-PCM formats. this
+ *  structure is common to all non-PCM formats.
+ */
+typedef unsigned short WORD;  // in case not defined yet (i.e. linux)
+typedef struct tWAVEFORMATEX
+{
+    WORD        wFormatTag;         /* format type */
+    WORD        nChannels;          /* number of channels (i.e. mono, stereo...) */
+    DWORD       nSamplesPerSec;     /* sample rate */
+    DWORD       nAvgBytesPerSec;    /* for buffer estimation */
+    WORD        nBlockAlign;        /* block size of data */
+    WORD        wBitsPerSample;     /* number of bits per sample of mono data */
+    WORD        cbSize;             /* the count in bytes of the size of */
+                                    /* extra information (after cbSize) */
+} WAVEFORMATEX, *PWAVEFORMATEX;
+
+#endif /* _WAVEFORMATEX_ */
 
 typedef struct wavehder{
     char          riffchar[4];

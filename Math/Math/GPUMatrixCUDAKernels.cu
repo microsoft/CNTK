@@ -3,6 +3,9 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
+#ifndef CPU_ONLY
+
 #include <float.h>
 #include <cuda_runtime.h>
 #include "CommonMatrix.h"
@@ -17,6 +20,9 @@
 #define LZERO  -10e10
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
+
+// Predefine this for later.
+static __inline__ __device__ double atomicAdd(double* address, double val);
 
 //CUDA Kernels code
 template<class ElemType>
@@ -3224,3 +3230,5 @@ d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((
 }
 }
 */
+
+#endif // !CPU_ONLY
