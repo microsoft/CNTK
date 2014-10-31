@@ -10,7 +10,7 @@
 #include <map>
 #include <unordered_map>
 
-#ifndef	LINUX
+#ifdef _WIN32
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
 
-        size_t BufferSize() const {return this->m_elemSizeAllocated*sizeof(ElemType);}
+        size_t BufferSize() const {return m_elemSizeAllocated*sizeof(ElemType);}
         ElemType* BufferPointer() const;
 
         void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/) { NOT_IMPLEMENTED; }

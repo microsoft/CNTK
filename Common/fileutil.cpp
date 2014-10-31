@@ -1370,26 +1370,24 @@ vector<char*> msra::files::fgetfilelines (const wstring & path, vector<char> & b
 }
 
 // ----------------------------------------------------------------------------
-// getfiletime(), setfiletime(): access modification time
+// getfiletime(): access modification time
 // ----------------------------------------------------------------------------
 
 bool getfiletime (const wstring & path, FILETIME & time)
 {   // return file modification time, false if cannot be determined
-	struct _stat buf;
-	int result;
+#if 1
+    struct _stat buf;
+    int result;
 
-	// Get data associated with "crt_stat.c": 
-	result = _wstat(path.c_str(), &buf);
-	// Check if statistics are valid: 
-	if( result != 0 )
-	{
-		return false;
-	}
+    // Get data associated with "crt_stat.c": 
+    result = _wstat(path.c_str(), &buf);
+    // Check if statistics are valid: 
+    if (result != 0)
+        return false;
 
-	(*(time_t*)(&time))= buf.st_mtime;
-	return true;
-
-#ifdef OLD
+    (*(time_t*)(&time)) = buf.st_mtime;
+    return true;
+#else   // old version, delete once above is tested
     WIN32_FIND_DATAW findFileData;
     auto_handle hFind (FindFirstFileW (path.c_str(), &findFileData), ::FindClose);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -1404,11 +1402,9 @@ bool getfiletime (const wstring & path, FILETIME & time)
 #endif
 }
 
+#if 0
 void setfiletime (const wstring & path, const FILETIME & time)
 {   // update the file modification time of an existing file
-#ifdef LINUX
-	throw new logic_error("setfiletime has not been converted to linux yet...");
-#else
     auto_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
                                 FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
@@ -1421,8 +1417,8 @@ void setfiletime (const wstring & path, const FILETIME & time)
     {
         RuntimeError ("setfiletime: error setting file time information: %d", GetLastError());
     }
-#endif
 }
+#endif
 
 #if 0
 // ----------------------------------------------------------------------------

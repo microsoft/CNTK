@@ -203,7 +203,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 m_GPUSparseMatrix = (GPUSparseMatrix<ElemType>*)baseMatrix;
                 SetDataLocation(GPU, SPARSE);
-        }
+            }
         }
         else
         {
@@ -216,8 +216,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 m_GPUMatrix = (GPUMatrix<ElemType>*)baseMatrix;
                 SetDataLocation(GPU, DENSE);
+            }
         }
-    }
         m_baseMatrix = baseMatrix;
         m_baseMatrix->SetArray(pArray);
     }
@@ -288,15 +288,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_preferredDeviceId == CPUDEVICE)
             {
-				m_CPUMatrix = new CPUMatrix<ElemType>(numRows,numCols);
+                m_CPUMatrix = new CPUMatrix<ElemType>(numRows, numCols);
                 SetDataLocation(CPU, DENSE);
-			}
-			else
-			{
-					m_GPUMatrix = new GPUMatrix<ElemType>(numRows,numCols,m_preferredDeviceId);
-					SetDataLocation(GPU, DENSE);
-			}
-		}
+            }
+            else
+            {
+                m_GPUMatrix = new GPUMatrix<ElemType>(numRows, numCols, m_preferredDeviceId);
+                SetDataLocation(GPU, DENSE);
+            }
+        }
     }
 
     template<class ElemType>
@@ -526,11 +526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else 
         {
-#ifndef LINUX
-            throw std::exception("Unknown matrix type");
-#else
-            throw std::exception();
-#endif	/* LINUX */
+            throw std::runtime_error("Unknown matrix type");
         }
     }
      
@@ -617,15 +613,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
         {
-                NOT_IMPLEMENTED;
+            NOT_IMPLEMENTED;
         }
         else 
         {
-#ifndef	LINUX
-            throw std::exception("Unknown matrix type");
-#else
-            throw std::exception();
-#endif	/* LINUX */
+            throw std::runtime_error("Unknown matrix type");
         }
 
         return slice;
@@ -838,10 +830,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->SetValue(*db_number.ExposePointer2Value()), 
-            if (GetDeviceId()!=db_number.GetDeviceId()) 
-            {
+            if (GetDeviceId()!=db_number.GetDeviceId())
                 throw std::runtime_error("Matrix and device bound number must be on the same device");
-            }
             m_GPUMatrix->SetValue(db_number.ExposePointer2Value()), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
@@ -3431,9 +3421,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else 
                 {
                     GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
-                    GPUMatrix<ElemType> & first= firstDummy;				// By Malcolm.. gcc doesn't support auto like original
+                    GPUMatrix<ElemType> & first= firstDummy;				// GCC does not support mixing refs and non-refs
                     GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
-                    GPUSparseMatrix<ElemType> & second = secondDummy;			// By Malcolm.. gcc doesn't support auto like original
+                    GPUSparseMatrix<ElemType> & second = secondDummy;
                     if (beta==0)
                     {
                         GPUSparseMatrix<ElemType>::Multiply(first,second,*c.m_GPUMatrix);

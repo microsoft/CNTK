@@ -71,5 +71,7 @@ public:
     std::vector<int> GetDevices(int number=AllDevices, BestGpuFlags flags=bestGpuNormal); // get multiple devices
 };
 extern BestGpu* g_bestGpu;
+
 #endif
+
 }}}

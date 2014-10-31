@@ -3,6 +3,9 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
+#ifdef CPUONLY
+
 #include "GPUMatrix.cuh"
 #include "GPUSparseMatrix.cuh"
 
@@ -1661,7 +1664,4 @@ GPUWatcher::~GPUWatcher(void)
 {
 }
 
-
-
-
-
+#endif  // CPUONLY

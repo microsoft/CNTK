@@ -27,11 +27,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void performInplaceFunction(int kind);
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void Clear();
-#ifndef	LINUX
         void PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t (int* csrRowPtrC)> func);
-#else
-        void PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, size_t (*func)(int *csRowPtrC));
-#endif	
         size_t ElemCountFromBufferSize(size_t totalBufferSize);
         void PrepareDevice(short deviceId=-1) const;
 
@@ -56,22 +52,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // in memory format is always in the following order:
         // Non-zero data elements, Full index locations, compressed index locations
         // In CSR row data is compressed, in CSC col data is compressed
-        const ElemType* NzLocation() const {return this->m_pArray;}
-        ElemType* NzLocation() {return this->m_pArray;}
-        size_t NzCount() const {return this->m_nz;}
-        size_t NzSize() const {return sizeof(ElemType)*this->m_nz;} // actual number of element bytes in use
-        int* IndexLocation() const {return (int*)(this->m_pArray+this->m_elemSizeAllocated);}
-        size_t IndexSize() const {return sizeof(int)*this->m_nz;} // actual number of index bytes in use
-        int* CompressedIndexLocation() const {return IndexLocation() + this->m_elemSizeAllocated;}
+        const ElemType* NzLocation() const {return m_pArray;}
+        ElemType* NzLocation() {return m_pArray;}
+        size_t NzCount() const {return m_nz;}
+        size_t NzSize() const {return sizeof(ElemType)*m_nz;} // actual number of element bytes in use
+        int* IndexLocation() const {return (int*)(m_pArray+m_elemSizeAllocated);}
+        size_t IndexSize() const {return sizeof(int)*m_nz;} // actual number of index bytes in use
+        int* CompressedIndexLocation() const {return IndexLocation() + m_elemSizeAllocated;}
         size_t CompressedIndexCount() const 
         {
-            if (this->m_format&matrixFormatCompressed)
+            if (m_format&matrixFormatCompressed)
             {
-                size_t cnt = (this->m_format&matrixFormatRowMajor)?this->m_numRows:this->m_numCols;
+                size_t cnt = (m_format&matrixFormatRowMajor)?m_numRows:m_numCols;
                 if (cnt) cnt++; // add an extra element on the end for the "max" value
                 return cnt;
             }
-            return this->m_nz; // COO format
+            return m_nz; // COO format
         }
         // get size for compressed index
         size_t CompressedIndexSize() const {return (CompressedIndexCount())*sizeof(int);}
@@ -79,10 +75,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* BufferPointer() const;
 
         // the column and row locations will swap based on what format we are in. Full index always follows the data array
-        int* RowLocation() const {return (this->m_format&matrixFormatRowMajor)?CompressedIndexLocation():IndexLocation();}
-        size_t RowSize() const {return (this->m_format&matrixFormatRowMajor)?CompressedIndexSize():IndexSize();} 
-        int* ColLocation() const {return (this->m_format&matrixFormatRowMajor)?IndexLocation():CompressedIndexLocation();}
-        size_t ColSize() const {return (this->m_format&matrixFormatRowMajor)?IndexSize():CompressedIndexSize();} // actual number of row bytes in use
+        int* RowLocation() const {return (m_format&matrixFormatRowMajor)?CompressedIndexLocation():IndexLocation();}
+        size_t RowSize() const {return (m_format&matrixFormatRowMajor)?CompressedIndexSize():IndexSize();} 
+        int* ColLocation() const {return (m_format&matrixFormatRowMajor)?IndexLocation():CompressedIndexLocation();}
+        size_t ColSize() const {return (m_format&matrixFormatRowMajor)?IndexSize():CompressedIndexSize();} // actual number of row bytes in use
 
         void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void SetValue(const GPUMatrix<ElemType>& denseMatrix);
@@ -110,7 +106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
     public:
         int GetComputeDeviceId(void) const;
-        size_t GetNZElements() const {return this->m_nz;}
+        size_t GetNZElements() const {return m_nz;}
         //Sets sparse matrix in CSR format. this acts as deep copy
         void SetMatrixFromCSRFormat(int *h_CSRRow, int *h_Col, ElemType *h_Val, size_t nz, size_t numRows, size_t numCols, bool IsOnDevice=false, int devId=0);
         void SetMatrixFromCSCFormat(size_t *h_row, size_t *h_rowIdx, size_t size, size_t blockSize);
