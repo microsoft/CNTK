@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-#ifdef CPUONLY
+#ifndef CPUONLY
 
 #include "GPUMatrix.cuh"
 #include "GPUSparseMatrix.cuh"
