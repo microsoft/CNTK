@@ -102,36 +102,57 @@ using namespace std;
 #define strerror(x) "strerror error but can't report error number sorry!"
 #endif
 
-#if 0
-#ifndef __in // dummies for sal annotations if compiler does not support it
-#define __in
-#define __inout_z
-#define __in_count(x)
-#define __inout_cap(x)
-#define __inout_cap_c(x)
-#endif
-#ifndef __out_z_cap    // non-VS2005 annotations
-#define __out_cap(x)
-#define __out_z_cap(x)
-#define __out_cap_c(x)
-#endif
-
-#ifndef __override      // and some more non-std extensions required by Office
-#define __override virtual
-#endif
-#endif
-
 // disable warnings for which fixing would make code less readable
 #pragma warning(disable : 4290) //  throw() declaration ignored
 #pragma warning(disable : 4244) // conversion from typeA to typeB, possible loss of data
 
+// ----------------------------------------------------------------------------
+// (w)cstring -- helper class like std::string but with auto-cast to char*
+// ----------------------------------------------------------------------------
+
+namespace msra { namespace strfun {
+    // a class that can return a std::string with auto-convert into a const char*
+    template<typename C> struct basic_cstring : std::basic_string<C>
+    {
+        template<typename S> basic_cstring (S p) : basic_string (p) { }
+        operator const char * () const { return c_str(); }
+    };
+    typedef basic_cstring<char> cstring;
+    typedef basic_cstring<wchar_t> wcstring;
+}}
+
 
 // ----------------------------------------------------------------------------
-// basic macros
+// some mappings for non-Windows builds
 // ----------------------------------------------------------------------------
 
-#define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
-#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
+#ifndef _MSC_VER    // add some functions that are VS-only
+// --- basic file functions
+// convert a wchar_t path to what gets passed to CRT functions that take narrow characters
+// This is needed for the Linux CRT which does not accept wide-char strings for pathnames anywhere.
+// Always use this function for mapping the paths.
+msra::strfun::cstring charpath (const std::wstring & p)
+{
+#ifdef _WIN32
+    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p);
+#else   // old version, delete once we know it works
+    size_t len = p.length();
+    std::vector<char> buf(2 * len + 1, 0); // max: 1 wchar => 2 mb chars
+    ::wcstombs(buf.data(), p.c_str(), 2 * len + 1);
+    return msra::strfun::cstring (&buf[0]);
+#endif
+}
+static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return fopen(charpath(path), charpath(mode)); }
+// --- basic string functions
+static inline wchar_t* wcstok_s(wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return ::wcstok(s, delim, ptr); }
+#endif
+
+// ----------------------------------------------------------------------------
+// basic macros   --TODO: do we need those? delete what we dont' need
+// ----------------------------------------------------------------------------
+
+//#define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
+//#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
 #ifndef ASSERT
 #define ASSERT assert
 #endif
@@ -584,45 +605,13 @@ static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
 #pragma warning(pop)
 
 #ifdef _WIN32
-struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
-{
-#if 1
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cv;
-    (*(std::string*)this) = cv.to_bytes(p);
-#else   // old version, delete once we know it works
-    size_t len = p.length();
-    if (len == 0) { return;}    // empty string
-    msra::basetypes::fixed_vector<char> buf (3 * len + 1);   // max: 1 wchar => up to 3 mb chars
-    // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-    std::fill (buf.begin (), buf.end (), 0);
-    int rc = WideCharToMultiByte (CP_UTF8, 0, p.c_str(), (int) len,
-                                  &buf[0], (int) buf.size(), NULL, NULL);
-    if (rc == 0) throw std::runtime_error ("WideCharToMultiByte");
-    (*(std::string*)this) = &buf[0];
-#endif
-}};
-struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
-{
-#if 1
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> cv;
-    (*(std::wstring*)this) = cv.from_bytes(p);
-#else   // old version, delete once we know it works
-    size_t len = p.length();
-    if (len == 0) { return;}    // empty string
-    msra::basetypes::fixed_vector<wchar_t> buf (len + 1);
-    // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-    std::fill(buf.begin(), buf.end(), (wchar_t)0);
-    int rc = MultiByteToWideChar(CP_UTF8, 0, p.c_str(), (int)len,
-        &buf[0], (int)buf.size());
-    if (rc == 0) throw std::runtime_error("MultiByteToWideChar");
-    ASSERT(rc < buf.size());
-    (*(std::wstring*)this) = &buf[0];
-#endif
-}};
+static inline cstring utf8(const std::wstring & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p); }     // utf-16 to -8
+static inline wcstring utf16 (const std::string & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(p); } // utf-8 to -16
 #else   // BUGBUG: we cannot compile the above on Cygwin GCC, so for now fake it using the mbs functions, which will only work for 7-bit ASCII strings
-static inline std::string utf8(const std::wstring & p) { return msra::strfun::wcstombs (p); }  // output: UTF-8... not really
-static inline std::wstring utf16(const std::string & p) { return msra::strfun::mbstowcs (p); } // input: UTF-8... not really
+static inline std::string utf8(const std::wstring & p) { return msra::strfun::wcstombs (p.c_str()); }   // output: UTF-8... not really
+static inline std::wstring utf16(const std::string & p) { return msra::strfun::mbstowcs(p.c_str()); }   // input: UTF-8... not really
 #endif
+static inline cstring utf8(const std::string & p) { return p; }     // no converstion (useful in templated functions)
 
 // split and join -- tokenize a string like strtok() would, join() strings together
 template<class _T> static inline std::vector<std::basic_string<_T>> split (const std::basic_string<_T> & s, const _T * delim)
@@ -736,10 +725,6 @@ public:
 // ----------------------------------------------------------------------------
 // wrappers for some basic types (files, handles, timer)
 // ----------------------------------------------------------------------------
-
-#ifndef _MSC_VER    // add some functions that are VS-only
-static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return fopen(msra::strfun::wcstombs(path).c_str(), msra::strfun::utf8(mode).c_str()); }
-#endif
 
 namespace msra { namespace basetypes {
 

@@ -402,7 +402,7 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
     if (!MoveFileW(from.c_str(), to.c_str()))
     RuntimeError ("error renaming: %s", GetLastError());
 #else
-    renameOrDie (msra::strfun::utf8(from), msra::strfun::utf8(to));
+    renameOrDie (charpath(from), charpath(to));
 #endif
 }
 
@@ -471,12 +471,6 @@ bool funicode (FILE * f)
 // Returns 'buf' (always). buf guaranteed to be 0-terminated.
 // ----------------------------------------------------------------------------
 
-// TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-static inline wchar_t * fgets(wchar_t * buf, int n, FILE * f) { return fgetws(buf, n, f); }
-static inline string _utf8 (const string & s) { return s; }
-static inline string _utf8 (const wstring & s) { return msra::strfun::utf8 (s); }
-static inline size_t strnlen (wchar_t * s, size_t n) { return wcsnlen (s, n); }
-
 #ifndef _MSC_VER        // strnlen is VS proprietary
 static inline size_t strnlen(const char * s, size_t /*n*/) { return strlen(s); }
 #endif
@@ -484,6 +478,9 @@ static inline size_t strnlen(const char * s, size_t /*n*/) { return strlen(s); }
 #ifdef UNDER_CE     // strlen for char * not defined in winCE
 static inline size_t strnlen (const char *s, size_t n) { return std::find (s,s+n,'\0') - s; }
 #endif
+
+static inline wchar_t * fgets(wchar_t * buf, int n, FILE * f) { return fgetws(buf, n, f); }
+static inline size_t strnlen(wchar_t * s, size_t n) { return wcsnlen(s, n); }
 
 template<class CHAR>
 CHAR * fgetline (FILE * f, CHAR * buf, int size)
@@ -504,9 +501,8 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
     if (n >= (size_t) size -1)
     {
         basic_string<CHAR> example (p, n < 100 ? n : 100);
-		uint64_t filepos = fgetpos(f); // (for error message only)
-		RuntimeError ("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]",
-               filepos, size -1, _utf8 (example).c_str());
+        uint64_t filepos = fgetpos(f); // (for error message only)
+        RuntimeError("input line too long at file offset %I64d (max. %d characters allowed) [%s ...]", filepos, size - 1, msra::strfun::utf8(example).c_str());
     }
 
     // remove newline at end
@@ -1538,10 +1534,6 @@ static void mkdir (const wstring & path)
 #endif
     RuntimeError ("mkdir: error creating intermediate directory %S", path.c_str());
 }
-
-#ifndef _MSC_VER
-wchar_t* wcstok_s(wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return wcstok (s, delim, ptr); }
-#endif
 
 // make subdir of a file including parents
 void msra::files::make_intermediate_dirs (const wstring & filepath)
