@@ -1,15 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CudaCompile Include="GPUSparseMatrix.cu" />
-    <CudaCompile Include="GPUWatcher.cu" />
-    <CudaCompile Include="GPUMatrix.cu" />
-    <CudaCompile Include="GPUMatrixCUDAKernels.cu" />
+    <CudaCompile Include="GPUMatrix.cu">
+      <Filter>GPU</Filter>
+    </CudaCompile>
+    <CudaCompile Include="GPUMatrixCUDAKernels.cu">
+      <Filter>GPU</Filter>
+    </CudaCompile>
+    <CudaCompile Include="GPUSparseMatrix.cu">
+      <Filter>GPU</Filter>
+    </CudaCompile>
+    <CudaCompile Include="GPUWatcher.cu">
+      <Filter>GPU</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="CPUMatrix.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="..\..\Common\File.cpp">
@@ -18,12 +24,18 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="GPUDummy.cpp" />
+    <ClCompile Include="CPUMatrix.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="CPUSparseMatrix.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUDummy.cpp">
+      <Filter>GPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
-    <ClInclude Include="CPUMatrix.h" />
-    <ClInclude Include="CPUSparseMatrix.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="stdafx.h" />
@@ -37,11 +49,23 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="CPUMatrix.h">
+      <Filter>CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="CPUSparseMatrix.h">
+      <Filter>CPU</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="GPUWatcher.cuh" />
-    <None Include="GPUSparseMatrix.cuh" />
-    <None Include="GPUMatrix.cuh" />
+    <None Include="GPUMatrix.cuh">
+      <Filter>GPU</Filter>
+    </None>
+    <None Include="GPUSparseMatrix.cuh">
+      <Filter>GPU</Filter>
+    </None>
+    <None Include="GPUWatcher.cuh">
+      <Filter>GPU</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -49,6 +73,12 @@
     </Filter>
     <Filter Include="Common\Include">
       <UniqueIdentifier>{51b468dd-7e8a-4be8-ae6f-5e3f3d752b88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CPU">
+      <UniqueIdentifier>{94878fe0-ecce-4868-b3be-2199f4ee7507}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU">
+      <UniqueIdentifier>{cc9a219d-d8ab-484a-b253-fd2a29ad7c7c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

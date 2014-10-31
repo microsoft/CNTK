@@ -559,6 +559,31 @@ typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 #endif
 
 // string-encoding conversion functions
+// Note: generally, 8-bit strings in this codebase are UTF-8.
+// One exception are functions that take 8-bit pathnames. Those will be interpreted by the OS as MBS. Best use wstring pathnames for all file accesses.
+
+#pragma warning(push)
+#pragma warning(disable : 4996) // Reviewed by Yusheng Li, March 14, 2006. depr. fn (wcstombs, mbstowcs)
+static inline std::string wcstombs(const std::wstring & p)  // output: MBCS
+{
+    size_t len = p.length();
+    msra::basetypes::fixed_vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
+    std::fill(buf.begin(), buf.end(), 0);
+    ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
+    return std::string(&buf[0]);
+}
+static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
+{
+    size_t len = p.length();
+    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
+    std::fill(buf.begin(), buf.end(), (wchar_t)0);
+    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    ::mbstowcs(&buf[0], p.c_str(), len + 1);
+    return std::wstring(&buf[0]);
+}
+#pragma warning(pop)
+
+#ifdef _WIN32
 struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
 {
 #if 1
@@ -594,27 +619,10 @@ struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
     (*(std::wstring*)this) = &buf[0];
 #endif
 }};
-
-#pragma warning(push)
-#pragma warning(disable : 4996) // Reviewed by Yusheng Li, March 14, 2006. depr. fn (wcstombs, mbstowcs)
-static inline std::string wcstombs (const std::wstring & p)  // output: MBCS
-{
-    size_t len = p.length();
-    msra::basetypes::fixed_vector<char> buf (2 * len + 1); // max: 1 wchar => 2 mb chars
-    std::fill (buf.begin (), buf.end (), 0);
-    ::wcstombs (&buf[0], p.c_str(), 2 * len + 1);
-    return std::string (&buf[0]);
-}
-static inline std::wstring mbstowcs (const std::string & p)  // input: MBCS
-{
-    size_t len = p.length();
-    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
-    std::fill(buf.begin(), buf.end(), (wchar_t)0);
-    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
-    ::mbstowcs(&buf[0], p.c_str(), len + 1);
-    return std::wstring(&buf[0]);
-}
-#pragma warning(pop)
+#else   // BUGBUG: we cannot compile the above on Cygwin GCC, so for now fake it using the mbs functions, which will only work for 7-bit ASCII strings
+static inline std::string utf8(const std::wstring & p) { return msra::strfun::wcstombs (p); }  // output: UTF-8... not really
+static inline std::wstring utf16(const std::string & p) { return msra::strfun::mbstowcs (p); } // input: UTF-8... not really
+#endif
 
 // split and join -- tokenize a string like strtok() would, join() strings together
 template<class _T> static inline std::vector<std::basic_string<_T>> split (const std::basic_string<_T> & s, const _T * delim)
