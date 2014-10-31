@@ -9,6 +9,8 @@
 #include "..\Math\CPUMatrix.h"
 #include "..\Math\GPUMatrix.cuh"
 
+#pragma warning (disable: 4244 4245 4305)       // conversions and truncations; we don't care in this test project
+
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace Microsoft::MSR::CNTK;
 
@@ -23,11 +25,11 @@ namespace CNTKMathTest
 
     TEST_METHOD(GPU_MultiplyAndWeightedAdd_NoExceptionOnly_Test)
     {        
-        float alpha = 0.435;
+        float alpha = 0.4;
         GPUMatrix<float> M0_GPU(12,5);
         GPUMatrix<float> M1_GPU(5,11);
         GPUMatrix<float> M2_GPU(12,11);        
-        GPUMatrix<float>::MultiplyAndWeightedAdd(0.1,M0_GPU,false,M1_GPU,false,0.4,M2_GPU); 
+        GPUMatrix<float>::MultiplyAndWeightedAdd(0.1,M0_GPU,false,M1_GPU,false,alpha,M2_GPU); 
     }
 
 

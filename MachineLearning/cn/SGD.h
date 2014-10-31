@@ -1252,7 +1252,7 @@ protected:
             {
                 const wstring prevEpochFile = GetModelNameForEpoch (e-1);
 
-                if (IsResultFileUpdateToDate (curEpochFile, prevEpochFile, false))
+                if (msra::files::fuptodate (curEpochFile, prevEpochFile, false))
                 {
                     firstEpoch = size_t(e)+1;
                     break;
@@ -1262,22 +1262,6 @@ protected:
             }
 
             return firstEpoch;
-        }
-
-        //up to date if resultFile is older than srcFile or missing
-        bool IsResultFileUpdateToDate (const wstring & resultFile, const wstring & srcFile, const bool IsSrcFileNeeded)
-        {
-            FILETIME resultFileTime;
-            if (!getfiletime (resultFile, resultFileTime)) 
-                return false;        // not up to date is resultFile is missing
-
-            FILETIME srcFileTime;
-            if (!getfiletime (srcFile, srcFileTime)) 
-                return !IsSrcFileNeeded; // srcFile missing: if required, the result file is not up to date
-
-            //up to date if resultFile has higher time stamp
-            return (resultFileTime.dwHighDateTime > srcFileTime.dwHighDateTime) || 
-                (resultFileTime.dwHighDateTime == srcFileTime.dwHighDateTime && resultFileTime.dwLowDateTime >= srcFileTime.dwLowDateTime);
         }
 
         AdaptationRegType ParseAdaptationRegType(wstring s)

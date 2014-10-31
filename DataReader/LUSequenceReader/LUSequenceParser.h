@@ -220,10 +220,10 @@ public:
 
         errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
         if (err)
-            Error("LUSequenceParser::ParseInit - error opening file"); 
+            RuntimeError("LUSequenceParser::ParseInit - error opening file"); 
         int rc = _fseeki64(m_pFile, 0, SEEK_END);
         if (rc)
-            Error("LUSequenceParser::ParseInit - error seeking in file");
+            RuntimeError("LUSequenceParser::ParseInit - error seeking in file");
 
         m_fileBuffer = new BYTE[m_bufferSize];
     }
@@ -271,7 +271,7 @@ public:
         if (mFile) fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
-            Error("cannot open file %s", fileName);
+            RuntimeError("cannot open file %s", fileName);
     }
 
     void ParseReset()

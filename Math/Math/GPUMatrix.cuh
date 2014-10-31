@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <limits.h>     // for ULONG_MAX
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
@@ -17,10 +18,16 @@ typedef struct cublasContext *cublasHandle_t;
 struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 
+#ifdef _WIN32
+#ifndef	MATH_API
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
+#endif
+#endif	/* MATH_API */
+#else	// no DLLs in Linux
+#define MATH_API 
 #endif
 
 #ifndef USE_TIME_BASED_SEED
@@ -56,6 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     {
+        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // without this, base members would require to use thi-> in GCC
     public:
         static const int MaxGpus = 8;  // support up to 8 GPUs
     private:
@@ -99,18 +107,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* BufferPointer() const {return m_pArray;}
 
         void Adagrad(GPUMatrix<ElemType>& gradients);
-		void RmsProp(GPUMatrix<ElemType>& gradients,
-			ElemType RMS_GAMMA,
-			ElemType RMS_WGT_INC,
-			ElemType RMS_WGT_MAX,
-			ElemType RMS_WGT_DEC,
-			ElemType RMS_WGT_MIN
-			);
+        void RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN);
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
-        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::exception("GPUMatrix doesn't support this"); }
-        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::exception("GPUMatrix doesn't support this"); }
+        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::logic_error("GPUMatrix doesn't support this"); }
+        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::logic_error("GPUMatrix doesn't support this"); }
         ElemType Get00Element() const;
 
         void SetValue(const ElemType v);
@@ -262,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignInnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 
 
         void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
-        void Print(const char* matrixName = nullptr) const; //print whole matrix. can be expensive
+        void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
 
         void ReadFromFile(FILE* f, const char * matrixName); //matrixName is used to verify that correct matrix is read.
         void WriteToFile(FILE* f, const char * matrixName); //matrixName is used to verify that correct matrix is read.
@@ -334,7 +336,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t elsize;
             stream>>elsize;
             if (sizeof(ElemType)!=elsize)
+#ifndef	LINUX
                 throw std::exception("Template argument size doesn't match those in file");
+#else
+                throw std::exception();
+#endif
             std::wstring matrixName;
             size_t numRows, numCols;
             int format;

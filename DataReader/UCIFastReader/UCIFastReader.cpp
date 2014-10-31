@@ -148,7 +148,7 @@ bool UCIFastReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool end
             if (value == m_mapLabelToId.end())
             {
                 if (m_labelFileToWrite.empty())
-                    Error("label found in data not specified in label mapping file: %s", label.c_str());
+                    RuntimeError("label found in data not specified in label mapping file: %s", label.c_str());
                 // new label so add it to the mapping tables
                 m_mapLabelToId[label] = m_labelIdMax;
                 m_mapIdToLabel[m_labelIdMax] = label;
@@ -301,11 +301,11 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     ConfigParameters configFeatures = readerConfig(m_featuresName,"");
     ConfigParameters configLabels = readerConfig(m_labelsName,"");;
     if (configFeatures.size() == 0)
-        Error("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
+        RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
     if (configLabels.size() == 0)
         fprintf(stderr, "Warning: labels are not specified.");
     else if (configFeatures("file","") != configLabels("file",""))
-        Error("features and label files must be the same file, use separate readers to define single use files");
+        RuntimeError("features and label files must be the same file, use separate readers to define single use files");
 
     size_t vdim = configFeatures("dim");
     string name = configFeatures.Name();
@@ -409,7 +409,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
             if (allowLabelCreation)
                 m_labelFileToWrite = labelPath;
             else
-                Error("label mapping file %ws not found, can be created with a 'createLabelMap' command/action\n", labelPath.c_str());
+                RuntimeError("label mapping file %ws not found, can be created with a 'createLabelMap' command/action\n", labelPath.c_str());
         }
     }
 
@@ -612,7 +612,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
             {
                 fprintf(stderr, "WARNING: file %ws NOT written to disk, label file will only be written when starting epochs at the beginning of the dataset\n", m_labelFileToWrite.c_str());
                 m_labelFileToWrite.clear();
-                Error("LabelMappingFile not provided in config, must be provided if not starting from epoch Zero (0)");
+                RuntimeError("LabelMappingFile not provided in config, must be provided if not starting from epoch Zero (0)");
             }
         }
         m_epochStartSample = m_mbStartSample = mbStartSample;
@@ -700,7 +700,7 @@ void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, si
         if (m_randomizeRange != randomizeAuto)
         {
             if ((m_epochSize != requestDataSize && m_epochSize % m_randomizeRange != 0) || (m_randomizeRange % m_mbSize != 0))
-                Error("randomizeRange must be an even multiple of mbSize and an integral factor of epochSize");
+                RuntimeError("randomizeRange must be an even multiple of mbSize and an integral factor of epochSize");
             m_randomordering.resize(m_randomizeRange, m_randomizeRange);
         }
     }
@@ -741,7 +741,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
     }
     // get the features array
 	if (matrices.find(m_featuresName) == matrices.end())
-		Error("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
+		RuntimeError("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
 		
     Matrix<ElemType>& features = *matrices[m_featuresName];
 

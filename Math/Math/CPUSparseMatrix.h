@@ -6,24 +6,29 @@
 #pragma once
 
 #include <stdio.h>
-#include "cpumatrix.h"
+#include "CPUMatrix.h"
 #include <map>
 #include <unordered_map>
 
+#ifdef _WIN32
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
 #endif
+#endif	/* Linux - already defined in CPUMatrix.h */
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
     template<class ElemType>
     class MATH_API CPUSparseMatrix : public BaseMatrix<ElemType>
     {
+        typedef BaseMatrix<ElemType> B; using B::m_elemSizeAllocated; using B::m_computeDevice; using B::m_externalBuffer; using B::m_format; using B::m_matrixName;
+        using B::m_numCols; using B::m_numRows; using B::m_nz; using B::m_pArray;    // without this, base members would require to use thi-> in GCC
 
     private:
         void ZeroInit();
+        void CheckInit(const MatrixFormat format);
 
     public:
         CPUSparseMatrix(const MatrixFormat format);
@@ -32,6 +37,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ~CPUSparseMatrix();
 
     public:
+        using B::GetNumCols; using B::GetNumRows;
+
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); 
         void SetValue(const CPUSparseMatrix& /*val*/) { NOT_IMPLEMENTED; }
 
@@ -46,14 +53,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const CPUSparseMatrix<ElemType> & label, const CPUMatrix<ElemType>& cls, 
             const CPUMatrix<ElemType>& idx2cls, CPUSparseMatrix<ElemType>& etp, CPUMatrix<ElemType>& entropyScore);
 
-        static void CPUSparseMatrix<ElemType>::ClassEntropyError(CPUSparseMatrix<ElemType>& a);
+        static void ClassEntropyError(CPUSparseMatrix<ElemType>& a);
 
-        static void CPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(
+        static void ClassEntropyGradientOfInput(
             const CPUSparseMatrix<ElemType>& error, 
             const CPUMatrix<ElemType>& weight,
             CPUMatrix<ElemType>& grd);
 
-        static void CPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(
+        static void ClassEntropyGradientOfWeight(
             const CPUSparseMatrix<ElemType>& error,             
             const CPUMatrix<ElemType>& input,
             const CPUSparseMatrix<ElemType> & label, 

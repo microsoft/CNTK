@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\Common\BestGpu.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\ConfigFile.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DataWriter.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\File.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkDescriptionLanguage.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\fileutil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="cn.cpp" />
+    <ClCompile Include="ComputationNode.cpp" />
+    <ClCompile Include="ModelEditLanguage.cpp" />
+    <ClCompile Include="PTaskGraphBuilder.cpp" />
+    <ClCompile Include="SimpleNetworkBuilder.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="tests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\basetypes.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\BestGpu.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\hostname.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\File.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\nvml.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataReader.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataWriter.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="CompositeComputationNode.h" />
+    <ClInclude Include="ComputationNetwork.h" />
+    <ClInclude Include="ComputationNetworkHelper.h" />
+    <ClInclude Include="ComputationNode.h" />
+    <ClInclude Include="EvaluationCriterionNode.h" />
+    <ClInclude Include="IComputationNetBuilder.h" />
+    <ClInclude Include="IExecutionEngine.h" />
+    <ClInclude Include="ModelEditLanguage.h" />
+    <ClInclude Include="NDLNetworkBuilder.h" />
+    <ClInclude Include="NDLUtil.h" />
+    <ClInclude Include="NetworkDescriptionLanguage.h" />
+    <ClInclude Include="PTask.h" />
+    <ClInclude Include="PTaskGraphBuilder.h" />
+    <ClInclude Include="SGD.h" />
+    <ClInclude Include="SimpleEvaluator.h" />
+    <ClInclude Include="SimpleNetworkBuilder.h" />
+    <ClInclude Include="SimpleOutputWriter.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SynchronousExecutionEngine.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="TrainingCriterionNode.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="config.txt" />
+    <Text Include="DefaultMacros.txt" />
+    <Text Include="modelEditor.txt" />
+    <Text Include="modelEditorFromScratch.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{b3d05c7b-7bcf-4b12-bcb5-dced86717202}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{85226dda-87ba-4da6-af04-563d0ce23b94}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

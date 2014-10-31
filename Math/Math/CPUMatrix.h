@@ -7,14 +7,19 @@
 #include <vector>
 #include <stdio.h>
 #include <ctime>
+#include <limits.h>
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
 
+#ifdef	_WIN32
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
+#endif
+#else	// no DLLs on Linux
+#define	MATH_API 
 #endif
 
 #ifndef USE_TIME_BASED_SEED
@@ -38,6 +43,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     {
+        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray; using B::m_computeDevice; using B::m_elemSizeAllocated;
+        using B::m_externalBuffer; using B::m_format; using B::m_matrixName;        // without this, base members would require to use thi-> in GCC
     public:
         CPUMatrix();
         CPUMatrix(FILE* f, const char * matrixName); //matrixName is used to verify that correct matrix is read.
@@ -51,7 +58,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ~CPUMatrix();
 
     public:
-        size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
+        using B::OwnBuffer; using B::GetNumElements; using B::IsEmpty; using B::GetNumRows; using B::GetNumCols; using B::SetOwnBuffer; using B::SetMatrixName;
+
+        size_t BufferSize() const { return m_numRows*m_numCols*sizeof(ElemType); }
         ElemType* BufferPointer() const {return m_pArray;}
 
         CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
@@ -274,7 +283,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT);
 
         static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, 
-            ElemType beta, CPUMatrix<ElemType>& c);
+                                           ElemType beta, CPUMatrix<ElemType>& c);
         static void MultiplyAndAdd(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
         static void Multiply(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
         static void Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
@@ -347,8 +356,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     protected:
-        inline size_t LocateElement (const size_t i, const size_t j) const;
-        inline size_t LocateColumn (const size_t j) const;
+        size_t LocateElement (const size_t i, const size_t j) const;
+        size_t LocateColumn (const size_t j) const;
 
     private:
         void ZeroInit(); //should only be used by constructors.

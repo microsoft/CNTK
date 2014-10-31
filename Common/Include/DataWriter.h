@@ -18,9 +18,10 @@
 #else
 #define DATAWRITER_API __declspec(dllimport)
 #endif
-#include "matrix.h"
+#include "Matrix.h"
 #include <map>
 #include <string>
+#include "basetypes.h"
 #include "commandArgUtil.h"
 
 
@@ -52,7 +53,7 @@ public:
     virtual void Destroy() = 0;
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;
+    virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
 };
 
 
@@ -68,12 +69,10 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
 // interface for clients of the Data Writer
 // mirrors the IDataWriter interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataWriter : public IDataWriter<ElemType>
+class DataWriter : public IDataWriter<ElemType>, public Plugin
 {
 private:
-    IDataWriter *m_dataWriter;  // writer
-    HMODULE m_hModule;  // module handle for the writer DLL
-    std::wstring m_dllName; // name of the writer DLL
+    IDataWriter<ElemType> *m_dataWriter;  // writer
 
     // Init - Writer Initialize for multiple data sets
     // config - [in] configuration parameters for the datawriter
@@ -146,7 +145,7 @@ public:
     // SaveMapping - save a map into the file
     // saveId - name of the section to save into (section:subsection format)
     // labelMapping - map we are saving to the file
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping);
+    virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
 };
 
 }}}

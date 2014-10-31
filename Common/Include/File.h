@@ -8,6 +8,12 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+#ifdef __unix__
+#include <unistd.h>
+#endif
 #include "fileutil.h"   // for f{ge,pu}t{,Text}()
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
@@ -40,8 +46,9 @@ enum FileMarker
 };
 
 // attempt a given operation (lambda) and retry multiple times
-// body - the lambda to retry
-template<typename FUNCTION> static void attempt (int retries, const FUNCTION & body)
+// body - the lambda to retry, must be restartable
+
+template<typename FUNCTION> static void attempt(int retries, const FUNCTION & body)
 {
     for (int attempt = 1; ; attempt++)
     {
@@ -53,16 +60,20 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
         }
         catch (const std::exception & e)
         {
+            void sleep(size_t ms);
             if (attempt >= retries)
                 throw;      // failed N times --give up and rethrow the error
             fprintf (stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt+1, retries);
-            ::Sleep (1000); // wait a little, then try again
-#ifdef _DEBUG
-            DebugBreak();
+            // wait a little, then try again
+#ifdef _WIN32
+            ::Sleep(1000);
+#else       // assuming __unix__
+            sleep(1);
 #endif
         }
     }
 }
+
 template<typename FUNCTION> static void attempt (const FUNCTION & body)
 {
     static const int retries = 5;
@@ -112,13 +123,18 @@ public:
     template <typename T>
     File& operator<<(T val)
     {
+#ifndef	__CUDACC__      // TODO: CUDA compiler blows up, fix this
         attempt([=]()
+#endif
         {
             if (IsTextBased())
                 fputText(m_file, val);
             else
                 fput(m_file, val);
-        });
+        }
+#ifndef	__CUDACC__
+        );
+#endif
         return *this;
     }
     File& operator<<(const std::wstring& val);
@@ -145,13 +161,18 @@ public:
     template <typename T>
     File& operator>>(T& val)
     {
+#ifndef	__CUDACC__      // TODO: CUDA compiler blows up, fix this
         attempt([&]()
+#endif
         {
             if (IsTextBased())
                 fgetText(m_file, val);
             else
                 fget(m_file, val);
-        });
+        }
+#ifndef	__CUDACC__
+        );
+#endif
         return *this;
     }
 

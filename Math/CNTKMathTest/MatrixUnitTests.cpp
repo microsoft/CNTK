@@ -7,6 +7,8 @@
 #include "CppUnitTest.h"
 #include "..\Math\Matrix.h"
 
+#pragma warning (disable: 4244 4245 4305)       // conversions and truncations; we don't care in this test project
+
 #define epsilon 0.000001
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 
@@ -86,12 +88,12 @@ namespace CNTKMathTest
                 if (i!=j)
                 {
                     float x = A1(i,j);
-                    Assert::AreEqual<float>(0,A1(i,j));
+                    Assert::AreEqual<float>(0,x);
                 }
                 else 
                 {
                     float x = A1(i,j);
-                    Assert::AreEqual<float>(1,A1(i,j));
+                    Assert::AreEqual<float>(1,x);
                 }
             }        
 
@@ -128,7 +130,6 @@ namespace CNTKMathTest
             bool has_big=false;
             foreach_coord(i,j,A4)
             {
-                float x = A4(i,j);
                 Assert::IsTrue((A4(i,j)>=-26.3)&&(A4(i,j)<30.2));
                 if (A4(i,j)<-3)
                     has_small=true;
@@ -577,7 +578,7 @@ namespace CNTKMathTest
             C.AssignElementProductOf(A,B);
             foreach_coord(i,j,C)
             {
-                Assert::IsTrue(C(i,j)=A(i,j)*B(i,j));
+                Assert::IsTrue(C(i,j)==A(i,j)*B(i,j));
             }
 
             //AddElementProductOf

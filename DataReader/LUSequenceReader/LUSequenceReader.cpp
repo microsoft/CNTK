@@ -90,7 +90,7 @@ bool LUSequenceReader<ElemType>::GetIdFromLabel(const vector<string>& labelValue
             val.push_back(found->second);
         }
         else
-            Error("LUSequenceReader::GetIdFromLabel: cannot find value");
+            RuntimeError("LUSequenceReader::GetIdFromLabel: cannot find value");
     }
     return true;
 }
@@ -262,7 +262,7 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
     }
     else
-        Error("two label definitions (in and out) required for Sequence Reader");
+        RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
@@ -440,7 +440,7 @@ void LUSequenceReader<ElemType>::ChangeMaping(const map<string, string>& maplist
         {
             if (punk == word4idx.end())
             {
-                Error("check unk list is missing ");
+                RuntimeError("check unk list is missing ");
             }
             idx = punk->second;
         }
@@ -468,7 +468,7 @@ void LUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
 
     if (vin == nullptr)
     {
-        Error("cannot open word class file");
+        RuntimeError("cannot open word class file");
     }
     b = 0;
     while (!feof(vin)){
@@ -720,7 +720,7 @@ bool LUSequenceReader<ElemType>::SentenceEnd()
     {
         LabelIdType index ;
         if (CheckIdFromLabel(labelInfo.endSequence, labelInfo, index) == false)
-            Error("cannot find sentence begining label");
+            RuntimeError("cannot find sentence begining label");
 
         if (m_labelIdData[jEnd] == index )
             return true;
@@ -752,7 +752,7 @@ void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionNa
 {
     if (m_cachingReader)
     {
-        Error("Cannot set mapping table when the caching reader is being used");
+        RuntimeError("Cannot set mapping table when the caching reader is being used");
     }
     LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
 
@@ -776,7 +776,7 @@ template<class ElemType>
 bool LUSequenceReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
 {
     if (!m_cachingReader)
-        Error("GetData not supported in LUSequenceReader");
+        RuntimeError("GetData not supported in LUSequenceReader");
     return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
 }
 
@@ -832,7 +832,7 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         }
     }
     else
-        Error("two label definitions (in and out) required for Sequence Reader");
+        RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
@@ -1185,7 +1185,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     }
                     else
                     {
-                        Error("Input label expected to be a category label");
+                        RuntimeError("Input label expected to be a category label");
                     }
                 }
 
@@ -1238,7 +1238,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
     // figure out the size of the next sequence
     actualmbsize = m_labelIdData.size() ; 
     if (actualmbsize > m_mbSize * mToProcess.size()){
-        Error("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
+        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
     }
 
     // now get the labels

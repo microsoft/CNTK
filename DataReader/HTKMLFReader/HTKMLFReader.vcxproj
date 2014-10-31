@@ -178,7 +178,6 @@
     <ClInclude Include="HTKMLFWriter.h" />
     <ClInclude Include="latticearchive.h" />
     <ClInclude Include="latticestorage.h" />
-    <ClInclude Include="message.h" />
     <ClInclude Include="minibatchiterator.h" />
     <ClInclude Include="minibatchsourcehelpers.h" />
     <ClInclude Include="msra_mgram.h" />

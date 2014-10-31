@@ -67,16 +67,31 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>     // include here because we redefine some names later
 #include <errno.h>
 #include <string>
 #include <vector>
-#include <cmath>        // for HUGE_VAL
+#include <math.h>        // for HUGE_VAL // potential double isnan definition
 #include <assert.h>
-using namespace std;
+#include <stdarg.h>
 #include <map>
 #include <stdexcept>
-#include <windows.h>    // for CRITICAL_SECTION
+#include <locale>       // std::wstring_convert
+#include <string>
+#ifdef _MSC_VER
+#include <codecvt>      // std::codecvt_utf8
+#endif
+#ifdef _WIN32
+#include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
+#endif
+#if __unix__
+#include <strings.h>
+#include <chrono>
+#include <thread>
+#endif
+
+using namespace std;
 
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
@@ -89,43 +104,66 @@ using namespace std;
 #define strerror(x) "strerror error but can't report error number sorry!"
 #endif
 
-#if 0
-#ifndef __in // dummies for sal annotations if compiler does not support it
-#define __in
-#define __inout_z
-#define __in_count(x)
-#define __inout_cap(x)
-#define __inout_cap_c(x)
-#endif
-#ifndef __out_z_cap    // non-VS2005 annotations
-#define __out_cap(x)
-#define __out_z_cap(x)
-#define __out_cap_c(x)
-#endif
-
-#ifndef __override      // and some more non-std extensions required by Office
-#define __override virtual
-#endif
-#endif
-
 // disable warnings for which fixing would make code less readable
 #pragma warning(disable : 4290) //  throw() declaration ignored
 #pragma warning(disable : 4244) // conversion from typeA to typeB, possible loss of data
 
+// ----------------------------------------------------------------------------
+// (w)cstring -- helper class like std::string but with auto-cast to char*
+// ----------------------------------------------------------------------------
+
+namespace msra { namespace strfun {
+    // a class that can return a std::string with auto-convert into a const char*
+    template<typename C> struct basic_cstring : public std::basic_string<C>
+    {
+        template<typename S> basic_cstring (S p) : std::basic_string<C> (p) { }
+        operator const C * () const { return this->c_str(); }
+    };
+    typedef basic_cstring<char> cstring;
+    typedef basic_cstring<wchar_t> wcstring;
+}}
+
 
 // ----------------------------------------------------------------------------
-// basic macros
+// some mappings for non-Windows builds
 // ----------------------------------------------------------------------------
 
-#define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
-#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
-#ifndef ASSERT
-#ifdef _CHECKED // basetypes.h expects this function to be defined (it is in message.h)
-extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp);
-#define ASSERT(exp) ((exp)||(_CHECKED_ASSERT_error(__FILE__,__LINE__,#exp),0))
-#else
-#define ASSERT assert
+#ifndef _MSC_VER    // add some functions that are VS-only
+// --- basic file functions
+// convert a wchar_t path to what gets passed to CRT functions that take narrow characters
+// This is needed for the Linux CRT which does not accept wide-char strings for pathnames anywhere.
+// Always use this function for mapping the paths.
+msra::strfun::cstring charpath (const std::wstring & p)
+{
+#ifdef _WIN32
+    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p);
+#else   // old version, delete once we know it works
+    size_t len = p.length();
+    std::vector<char> buf(2 * len + 1, 0); // max: 1 wchar => 2 mb chars
+    ::wcstombs(buf.data(), p.c_str(), 2 * len + 1);
+    return msra::strfun::cstring (&buf[0]);
 #endif
+}
+static inline FILE* _wfopen (const wchar_t * path, const wchar_t * mode) { return fopen(charpath(path), charpath(mode)); }
+// --- basic string functions
+static inline wchar_t* wcstok_s (wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return ::wcstok(s, delim, ptr); }
+static inline int _stricmp (const char * a, const char * b) { return ::strcasecmp (a, b); }
+static inline int _strnicmp (const char * a, const char * b, wchar_t n) { return ::strncasecmp (a, b, n); }
+static inline int _wcsicmp (const wchar_t * a, const wchar_t * b) { return ::wcscasecmp (a, b); }
+static inline int64_t _strtoi64 (const char * s, char ** ep, int r) { return strtoll (s, ep, r); }      // TODO: check if correct
+static inline uint64_t _strtoui64 (const char * s, char ** ep, int r) { return strtoull (s, ep, r); }   // TODO: correct for size_t?
+// -- other
+static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
+#endif
+
+// ----------------------------------------------------------------------------
+// basic macros   --TODO: do we need those? delete what we dont' need
+// ----------------------------------------------------------------------------
+
+//#define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
+//#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
+#ifndef ASSERT
+#define ASSERT assert
 #endif
 
 // ----------------------------------------------------------------------------
@@ -272,7 +310,6 @@ template<class _T> inline void swap (fixed_vector<_T> & L, fixed_vector<_T> & R)
 // TODO: get rid of these
 typedef std::string STRING;
 typedef std::wstring WSTRING;
-typedef std::basic_string<TCHAR> TSTRING;    // wide/narrow character string
 
 // derive from this for noncopyable classes (will get you private unimplemented copy constructors)
 // ... TODO: change all of basetypes classes/structs to use this
@@ -285,6 +322,13 @@ public:
 };
 
 // class CCritSec and CAutoLock -- simple critical section handling
+#ifndef	_WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
+#define	CRITICAL_SECTION 	int
+void InitializeCriticalSection(int *) {}
+void DeleteCriticalSection(int *) {}
+void EnterCriticalSection(int *) {}
+void LeaveCriticalSection(int *) {}
+#endif
 class CCritSec
 {
     CCritSec (const CCritSec &); CCritSec & operator= (const CCritSec &);
@@ -295,6 +339,7 @@ public:
     void Lock() { EnterCriticalSection(&m_CritSec); };
     void Unlock() { LeaveCriticalSection(&m_CritSec); };
 };
+
 
 // locks a critical section, and unlocks it automatically
 // when the lock goes out of scope
@@ -307,6 +352,7 @@ public:
     ~CAutoLock() { m_rLock.Unlock(); };
 };
 
+#if 0
 // an efficient way to write COM code
 // usage examples:
 //  COM_function() || throw_hr ("message");
@@ -387,6 +433,7 @@ public:
     operator void * () { return TlsGetValue (tlsSlot); }
     void *operator = (void *val) { if (!TlsSetValue (tlsSlot,val)) throw std::runtime_error ("tls: TlsSetValue failed"); return val; }
 };
+#endif
 
 };};    // namespace
 
@@ -416,7 +463,11 @@ public:
 #include <xlocale>      // uses strlen()
 #endif
 #define strlen strlen_
+#ifndef	LINUX
 template<typename _T> inline __declspec(deprecated("Dummy general template, cannot be used directly")) 
+#else
+template<typename _T> inline 
+#endif	// LINUX
 size_t strlen_(_T &s) { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); } // never be called but needed to keep compiler happy
 template<typename _T> inline size_t strlen_(const _T &s)     { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); }
 template<> inline size_t strlen_(char * &s)                  { return strnlen_s(s, SIZE_MAX); }
@@ -538,52 +589,38 @@ typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 #endif
 
 // string-encoding conversion functions
-struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
-{
-    size_t len = p.length();
-    if (len == 0) { return;}    // empty string
-    msra::basetypes::fixed_vector<char> buf (3 * len + 1);   // max: 1 wchar => up to 3 mb chars
-    // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-    std::fill (buf.begin (), buf.end (), 0);
-    int rc = WideCharToMultiByte (CP_UTF8, 0, p.c_str(), (int) len,
-                                  &buf[0], (int) buf.size(), NULL, NULL);
-    if (rc == 0) throw std::runtime_error ("WideCharToMultiByte");
-    (*(std::string*)this) = &buf[0];
-}};
-struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
-{
-    size_t len = p.length();
-    if (len == 0) { return;}    // empty string
-    msra::basetypes::fixed_vector<wchar_t> buf (len + 1);
-    // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-    std::fill (buf.begin (), buf.end (), (wchar_t) 0);
-    int rc = MultiByteToWideChar (CP_UTF8, 0, p.c_str(), (int) len,
-                                  &buf[0], (int) buf.size());
-    if (rc == 0) throw std::runtime_error ("MultiByteToWideChar");
-    ASSERT (rc < buf.size ());
-    (*(std::wstring*)this) = &buf[0];
-}};
+// Note: generally, 8-bit strings in this codebase are UTF-8.
+// One exception are functions that take 8-bit pathnames. Those will be interpreted by the OS as MBS. Best use wstring pathnames for all file accesses.
 
 #pragma warning(push)
 #pragma warning(disable : 4996) // Reviewed by Yusheng Li, March 14, 2006. depr. fn (wcstombs, mbstowcs)
-static inline std::string wcstombs (const std::wstring & p)  // output: MBCS
+static inline std::string wcstombs(const std::wstring & p)  // output: MBCS
 {
     size_t len = p.length();
-    msra::basetypes::fixed_vector<char> buf (2 * len + 1); // max: 1 wchar => 2 mb chars
-    std::fill (buf.begin (), buf.end (), 0);
-    ::wcstombs (&buf[0], p.c_str(), 2 * len + 1);
-    return std::string (&buf[0]);
+    msra::basetypes::fixed_vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
+    std::fill(buf.begin(), buf.end(), 0);
+    ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
+    return std::string(&buf[0]);
 }
-static inline std::wstring mbstowcs (const std::string & p)  // input: MBCS
+static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
 {
     size_t len = p.length();
-    msra::basetypes::fixed_vector<wchar_t> buf (len + 1); // max: >1 mb chars => 1 wchar
-    std::fill (buf.begin (), buf.end (), (wchar_t) 0);
+    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
+    std::fill(buf.begin(), buf.end(), (wchar_t)0);
     OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
-    ::mbstowcs (&buf[0], p.c_str(), len + 1);
-    return std::wstring (&buf[0]);
+    ::mbstowcs(&buf[0], p.c_str(), len + 1);
+    return std::wstring(&buf[0]);
 }
 #pragma warning(pop)
+
+#ifdef _WIN32
+static inline cstring utf8(const std::wstring & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p); }     // utf-16 to -8
+static inline wcstring utf16 (const std::string & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(p); } // utf-8 to -16
+#else   // BUGBUG: we cannot compile the above on Cygwin GCC, so for now fake it using the mbs functions, which will only work for 7-bit ASCII strings
+static inline std::string utf8(const std::wstring & p) { return msra::strfun::wcstombs (p.c_str()); }   // output: UTF-8... not really
+static inline std::wstring utf16(const std::string & p) { return msra::strfun::mbstowcs(p.c_str()); }   // input: UTF-8... not really
+#endif
+static inline cstring utf8(const std::string & p) { return p; }     // no converstion (useful in templated functions)
 
 // split and join -- tokenize a string like strtok() would, join() strings together
 template<class _T> static inline std::vector<std::basic_string<_T>> split (const std::basic_string<_T> & s, const _T * delim)
@@ -614,7 +651,7 @@ template<class _T> static inline std::basic_string<_T> join (const std::vector<s
 static inline int toint (const wchar_t * s)
 {
     return (int)wcstol(s, 0, 10);
-    //return _wtoi (s);   // ... TODO: check it
+    //return _wtoi (s);   // ... TODO: test this
 }
 static inline int toint (const char * s)
 {
@@ -698,10 +735,6 @@ public:
 // wrappers for some basic types (files, handles, timer)
 // ----------------------------------------------------------------------------
 
-#ifndef _MSC_VER    // add some functions that are VS-only
-static inline FILE* _wfopen(const wchar_t * path, const wchar_t * mode) { return fopen(msra::strfun::wcstombs(path).c_str(), msra::strfun::utf8(mode).c_str()); }
-#endif
-
 namespace msra { namespace basetypes {
 
 // FILE* with auto-close; use auto_file_ptr instead of FILE*.
@@ -722,7 +755,7 @@ public:
     auto_file_ptr() : f (NULL) { }
     ~auto_file_ptr() { close(); }
     auto_file_ptr (const char * path, const char * mode) { f = fopen (path, mode); if (f == NULL) openfailed (path); }
-    auto_file_ptr (const wchar_t * path, const char * mode) { f = _wfopen (path, msra::strfun::utf16 (mode).c_str()); if (f == NULL) openfailed (msra::strfun::utf8 (path)); }
+    auto_file_ptr (const wchar_t * wpath, const char * mode) { f = _wfopen (wpath, msra::strfun::utf16 (mode).c_str()); if (f == NULL) openfailed (msra::strfun::utf8 (wpath)); }
     FILE * operator= (FILE * other) { close(); f = other; return f; }
     auto_file_ptr (FILE * other) : f (other) { }
     operator FILE * () const { return f; }
@@ -731,6 +764,7 @@ public:
 };
 inline int fclose (auto_file_ptr & af) { return af.fclose(); }
 
+#ifdef _MSC_VER
 // auto-closing container for Win32 handles.
 // Pass close function if not CloseHandle(), e.g.
 // auto_handle h (FindFirstFile(...), FindClose);
@@ -747,6 +781,7 @@ public:
     operator _H () const { return h; }
 };
 typedef auto_handle_t<HANDLE> auto_handle;
+#endif
 
 // like auto_ptr but calls freeFunc_p (type free_func_t) instead of delete to clean up
 // minor difference - wrapped object is T, not T *, so to wrap a 
@@ -768,6 +803,7 @@ public:
     T detach () { T tmp = it; it = 0; return tmp; } // release ownership of object
 };
 
+#if 0
 // simple timer
 // auto_timer timer; run(); double seconds = timer; // now can abandon the object
 class auto_timer
@@ -793,6 +829,7 @@ public:
         fprintf (stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0/*to ms*/);
     }
 };
+#endif
 
 };};
 
@@ -878,6 +915,7 @@ template<class V> static inline void byteswap (V & v)  throw()
         bytereverse (v[i]);
 }
 
+#if 0
 // execute a block with retry
 // Block must be restartable.
 // Use this when writing small files to those unreliable Windows servers.
@@ -901,6 +939,7 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
         }
     }
 }
+#endif
 
 };};    // namespace
 
@@ -916,15 +955,62 @@ using namespace msra::basetypes;    // for compatibility
 
 #pragma warning (pop)
 
-// Error - throw an error after formatting a message
-static inline void Error (const char * format, ...)
+// RuntimeError - throw a std::runtime_error with a formatted error string
+static inline bool RuntimeError (const char * format, ...)
 {
     va_list args;
     char buffer[1024];
 
     va_start (args, format);
     vsprintf (buffer, format, args);
-    throw runtime_error (buffer);
+    throw std::runtime_error(buffer);
 };
+
+// LogicError - throw a std::logic_error with a formatted error string
+static inline bool LogicError(const char * format, ...)
+{
+    va_list args;
+    char buffer[1024];
+
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    throw std::logic_error(buffer);
+};
+
+// ----------------------------------------------------------------------------
+// dynamic loading of modules
+// ----------------------------------------------------------------------------
+
+#ifdef _WIN32
+class Plugin
+{
+    HMODULE m_hModule;      // module handle for the writer DLL
+    std::wstring m_dllName; // name of the writer DLL
+public:
+    Plugin() { m_hModule = NULL; }
+    FARPROC Load(const std::string & plugin, const std::string & proc)
+    {
+        m_dllName = msra::strfun::utf16(plugin);
+        m_dllName += L".dll";
+        m_hModule = LoadLibrary(m_dllName.c_str());
+        if (m_hModule == NULL)
+            RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName));
+
+        // create a variable of each type just to call the proper templated version
+        return GetProcAddress(m_hModule, proc.c_str());
+    }
+    ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
+};
+#else
+class Plugin
+{
+public:
+    void * Load(const std::string & plugin, const std::string & proc)
+    {
+        RuntimeError("Plugins not implemented on Linux yet");
+        return NULL;
+    }
+};
+#endif
 
 #endif    // _BASETYPES_
