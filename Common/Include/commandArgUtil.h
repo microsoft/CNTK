@@ -244,6 +244,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_separator = configParser.m_separator;
             m_configName = move(configParser.m_configName);
         }
+        ConfigParser& operator=(const ConfigParser& configParser)
+        {
+            m_separator = configParser.m_separator;
+            m_configName = configParser.m_configName;
+        }
+        ConfigParser& operator=(const ConfigParser&& configParser)
+        {
+            m_separator = configParser.m_separator;
+            m_configName = move(configParser.m_configName);
+        }
 
     public:
         // FindBraces - find matching braces in a string starting at the current position
@@ -873,7 +883,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_repeatAsterisk = repeatAsterisk;
         }
 
-        // copy and move constructors
+        // copy and move constructors and assignment
         ConfigArray(const ConfigArray& configValue) : ConfigParser(configValue)
         {
             m_repeatAsterisk = true;
@@ -881,6 +891,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         ConfigArray(const ConfigArray&& configValue) : ConfigParser(move(configValue))
         {
+            m_repeatAsterisk = true;
+            *this = move(configValue);
+        }
+        ConfigArray& operator=(const ConfigArray& configValue)
+        {
+            ConfigParser::operator=(configValue);
+            m_repeatAsterisk = true;
+            *this = configValue;
+        }
+        ConfigArray& operator=(const ConfigArray&& configValue)
+        {
+            ConfigParser::operator=(move(configValue));
             m_repeatAsterisk = true;
             *this = move(configValue);
         }
@@ -951,7 +973,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i=0;i < count;++i)
             {
                 char buf[10];
-                _itoa_s((int)size(), buf, 10);
+                sprintf (buf, "%d", (int)size());   // TODO: left-over of Linux compat, can be done nicer
                 std::string name = m_configName + '[' + buf + ']' ;
                 push_back(ConfigValue(value, name));
             }
@@ -980,6 +1002,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<typename T> 
     class argvector : public std::vector<T>
     {
+        typedef std::vector<T> B; using B::clear; using B::reserve;
         static void parse (const std::wstring & in, float & val) { val = (float) msra::strfun::todouble (in); }
         static void parse (const std::wstring & in, size_t & val)                    // convert wstring toks2[0] to T val and check type
         {
