@@ -6,14 +6,28 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
+#include "BestGpu.h"
+#include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
+
+#ifdef CPUONLY
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
+            short DeviceFromConfig(const ConfigParameters& config)
+            {
+                return CPUDEVICE;
+            }
+        }
+    }
+}
+#else
+
 // CUDA-C includes
 #include <cuda.h>
 #include <windows.h>
 #include <delayimp.h>
 #include <Shlobj.h>
 #include <stdio.h>
-#include "BestGpu.h"
-#include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
 
 // The "notify hook" gets called for every call to the
 // delay load helper.  This allows a user to hook every call and
@@ -508,3 +522,4 @@ void BestGpu::QueryNvmlData()
 	return;
 }
 }}}
+#endif

@@ -298,7 +298,7 @@ size_t filesize (const wchar_t * pathname)
 // filesize64(): determine size of the file in bytes (with pathname)
 int64_t filesize64 (const wchar_t * pathname)
 {
-    __stat64 fileinfo;
+    struct _stat64 fileinfo;
     if (_wstat64 (pathname,&fileinfo) == -1) 
         return 0;
     else
@@ -1370,11 +1370,24 @@ vector<char*> msra::files::fgetfilelines (const wstring & path, vector<char> & b
 }
 
 // ----------------------------------------------------------------------------
-// getfiletime(), setfiletime(): access modification time
+// getfiletime(): access modification time
 // ----------------------------------------------------------------------------
 
 bool getfiletime (const wstring & path, FILETIME & time)
 {   // return file modification time, false if cannot be determined
+#if 1
+    struct _stat buf;
+    int result;
+
+    // Get data associated with "crt_stat.c": 
+    result = _wstat(path.c_str(), &buf);
+    // Check if statistics are valid: 
+    if (result != 0)
+        return false;
+
+    (*(time_t*)(&time)) = buf.st_mtime;
+    return true;
+#else   // old version, delete once above is tested
     WIN32_FIND_DATAW findFileData;
     auto_handle hFind (FindFirstFileW (path.c_str(), &findFileData), ::FindClose);
     if (hFind != INVALID_HANDLE_VALUE)
@@ -1386,8 +1399,10 @@ bool getfiletime (const wstring & path, FILETIME & time)
     {
         return false;
     }
+#endif
 }
 
+#if 0
 void setfiletime (const wstring & path, const FILETIME & time)
 {   // update the file modification time of an existing file
     auto_handle h (CreateFileW (path.c_str(), FILE_WRITE_ATTRIBUTES,
@@ -1403,6 +1418,7 @@ void setfiletime (const wstring & path, const FILETIME & time)
         RuntimeError ("setfiletime: error setting file time information: %d", GetLastError());
     }
 }
+#endif
 
 #if 0
 // ----------------------------------------------------------------------------

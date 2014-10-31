@@ -39,7 +39,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
         GPUSparseMatrix(const GPUSparseMatrix<ElemType>&);
         GPUSparseMatrix(const GPUMatrix<ElemType>&);
+#ifndef	LINUX
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
+#endif	/* LINUX */
         ~GPUSparseMatrix();
     public:
         void Resize(const size_t numRows, const size_t numCols, size_t size = 0);
@@ -89,7 +91,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType> CopyToDenseMatrix();
         GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);
+#ifndef	LINUX
         GPUSparseMatrix<ElemType>& operator=(GPUSparseMatrix<ElemType>&& moveFrom);
+#endif	/* LINUX */
         GPUSparseMatrix<ElemType> operator+ (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType> operator- (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType>& operator^= (ElemType alpha); //element-wise power        
@@ -199,10 +203,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     public:
-        template <class ElemType>
-        friend MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us);
-        template <class ElemType>
-        friend MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us);
+        // See: http://stackoverflow.com/questions/4660123/overloading-friend-operator-for-template-class/4661372#4661372
+        template <class ElemTypeDummy>
+        friend MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemTypeDummy>& us);
+        template <class ElemTypeDummy>
+        friend MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemTypeDummy>& us);
 
         bool m_legacy;
         int m_colIdx; //used to SetValue()

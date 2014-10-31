@@ -6,6 +6,7 @@
 #pragma once
 
 #include <string>
+#include <stdint.h>
 
 #define AUTOPLACEMATRIX 1000 // used in parameters only
 #define MANAGEDEXTERN -2 // managed externally (i.e. PTask)
@@ -79,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Clear();
             if (s!=nullptr)
             {
-                size_t n = wcsnlen_s(s, SIZE_MAX);
+                size_t n = wcslen(s);
                 m_matrixName = new wchar_t[n+1];
                 wmemcpy(m_matrixName,s,n+1);
             }

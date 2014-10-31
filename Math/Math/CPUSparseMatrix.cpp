@@ -15,7 +15,9 @@
 #include "CPUSparseMatrix.h"
 #include <random>
 #include <chrono>
+#ifdef	_WIN32
 #include <Windows.h>
+#endif
 #ifdef LEAKDETECT
 #include <vld.h>
 #endif
@@ -114,10 +116,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    //should only be used by constructors.
     template<class ElemType>
-    CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format)
+    void CPUSparseMatrix<ElemType>::CheckInit(const MatrixFormat format)
     {
-        if(format != MatrixFormat::matrixFormatSparseCSC && format != MatrixFormat::matrixFormatSparseCSR && format != MatrixFormat::matrixFormatSparseBlockCol && format != MatrixFormat::matrixFormatSparseBlockRow) 
+        if (format != MatrixFormat::matrixFormatSparseCSC && format != MatrixFormat::matrixFormatSparseCSR && format != MatrixFormat::matrixFormatSparseBlockCol && format != MatrixFormat::matrixFormatSparseBlockRow)
         {
             throw std::logic_error("CPUSparseMatrix:  unsupported sparse matrix format");
         }
@@ -126,8 +129,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format)
+    {
+        CheckInit(format);
+    }
+
+    template<class ElemType>
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
-    {   CPUSparseMatrix<ElemType>::CPUSparseMatrix(format);
+    {
+        CheckInit(format);
         Resize(numRows, numCols, size);
     }
 
@@ -489,7 +499,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         else 
         {
-            throw std::exception("CPUSparseMatrix:: ScaleAndAdd() Not implemented");
+            throw std::runtime_error("CPUSparseMatrix:: ScaleAndAdd() Not implemented");
         }
     }
 
@@ -509,7 +519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignSoftmaxOf: Matrix a, class, idx2cls or label is empty.");
 
         if(etp.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
-            throw std::exception("CPUSparseMatrix:: ClassEntropy() only support CSC");  
+            throw std::runtime_error("CPUSparseMatrix:: ClassEntropy() only support CSC");  
 
         size_t nC = cls.GetNumCols();
         size_t nV = label.GetNumRows() - nC;
@@ -678,7 +688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (c.IsEmpty())
         {
-            c.Resize(this->GetNumRows(), this->GetNumCols());
+            c.Resize(GetNumRows(), GetNumCols());
             c.SetValue(0.0);
         }
 
@@ -701,7 +711,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         else 
         {
-            throw std::exception("CPUSparseMatrix:: NormalGrad() only support block sparse format");
+            throw std::runtime_error("CPUSparseMatrix:: NormalGrad() only support block sparse format");
         }
     }
 
@@ -711,7 +721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (c.IsEmpty())
         {
-            c.Resize(this->GetNumRows(), this->GetNumCols());
+            c.Resize(GetNumRows(), GetNumCols());
             c.SetValue(0.0);
         }
 
@@ -787,7 +797,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         else 
         {
-            throw std::exception("CPUSparseMatrix:: InplaceTruncate() only support block based sparse matrix");
+            throw std::runtime_error("CPUSparseMatrix:: InplaceTruncate() only support block based sparse matrix");
         }
         return *this;
     }    

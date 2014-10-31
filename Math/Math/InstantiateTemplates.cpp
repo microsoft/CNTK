@@ -8,8 +8,8 @@
 #include "CPUMatrix.cpp"
 #include "Matrix.cpp"
 
-#include "..\..\common\include\fileutil.cpp"
-#include "..\..\common\include\File.cpp"
+#include "..\..\Common\Include\fileutil.cpp"
+#include "..\..\Common\Include\File.cpp"
 
     //don't treat it as sample code. some code does not make sense 
     //only used to force compiler to build the code
