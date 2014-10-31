@@ -244,16 +244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_separator = configParser.m_separator;
             m_configName = move(configParser.m_configName);
         }
-        ConfigParser& operator=(const ConfigParser& configParser)
-        {
-            m_separator = configParser.m_separator;
-            m_configName = configParser.m_configName;
-        }
-        ConfigParser& operator=(const ConfigParser&& configParser)
-        {
-            m_separator = configParser.m_separator;
-            m_configName = move(configParser.m_configName);
-        }
+        ConfigParser& operator=(const ConfigParser& configParser) = default;
 
     public:
         // FindBraces - find matching braces in a string starting at the current position
@@ -894,18 +885,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_repeatAsterisk = true;
             *this = move(configValue);
         }
-        ConfigArray& operator=(const ConfigArray& configValue)
-        {
-            ConfigParser::operator=(configValue);
-            m_repeatAsterisk = true;
-            *this = configValue;
-        }
-        ConfigArray& operator=(const ConfigArray&& configValue)
-        {
-            ConfigParser::operator=(move(configValue));
-            m_repeatAsterisk = true;
-            *this = move(configValue);
-        }
+        ConfigArray& operator=(const ConfigArray& configValue) = default;
 
         // cast a configArray back to a string so we can return it as a ConfigValue
         operator ConfigValue() 
