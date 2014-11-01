@@ -24,7 +24,9 @@
 
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
 #include <fcntl.h>      // for _O_BINARY/TEXT - not needed for wince
+#ifndef __unix__
 #include <io.h>         // for _setmode()
+#endif
 #endif
 
 #include <errno.h>
@@ -44,13 +46,15 @@ static const wchar_t * strchr (const wchar_t * s, wchar_t v) { return wcschr (s,
 template<class _T> FILE * fopenStdHandle (const _T * mode)
 {
     FILE * f = strchr (mode, 'r') ? stdin : stdout;
-    if (strchr (mode, 'b') || strchr (mode, 't'))   // change binary mode
+#ifndef __unix__ // don't need binary/text distinction on unix
+	if (strchr(mode, 'b') || strchr(mode, 't'))   // change binary mode
     {
         // switch to binary mode if not yet (in case it is stdin)
         int rc = _setmode (_fileno (f), strchr (mode, 'b') ? _O_BINARY : _O_TEXT);
         if (rc == -1)
             RuntimeError ("error switching stream to binary mode: %s", strerror (errno));
     }
+#endif
     return f;
 }
 
@@ -88,7 +92,8 @@ FILE * fopenOrDie (const WSTRING & pathname, const wchar_t * mode)
 // set mode to binary or text (pass 'b' or 't')
 // ----------------------------------------------------------------------------
 
-void fsetmode (FILE * f, char type)
+#ifndef __unix__ // don't need binary/text distinction on unix
+void fsetmode(FILE * f, char type)
 {
     if (type != 'b' && type != 't')
     {
@@ -106,6 +111,7 @@ void fsetmode (FILE * f, char type)
     RuntimeError ("error changing file mode: %s", strerror (errno));
     }
 }
+#endif
 
 // ----------------------------------------------------------------------------
 // freadOrDie(): like fread() but terminate with err msg in case of error

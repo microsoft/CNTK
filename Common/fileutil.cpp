@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //
 // <copyright file="FileUtil.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
