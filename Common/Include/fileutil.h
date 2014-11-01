@@ -40,11 +40,13 @@ using namespace std;
 FILE * fopenOrDie (const string & pathname, const char * mode);
 FILE * fopenOrDie (const wstring & pathname, const wchar_t * mode);
 
+#ifndef __unix__
 // ----------------------------------------------------------------------------
 // fsetmode(): set mode to binary or text
 // ----------------------------------------------------------------------------
 
 void fsetmode (FILE * f, char type);
+#endif
 
 // ----------------------------------------------------------------------------
 // freadOrDie(): like fread() but terminate with err msg in case of error

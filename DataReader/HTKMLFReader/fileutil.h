@@ -29,11 +29,13 @@ using namespace std;
 FILE * fopenOrDie (const STRING & pathname, const char * mode);
 FILE * fopenOrDie (const WSTRING & pathname, const wchar_t * mode);
 
+#ifndef __unix__ // don't need binary/text distinction on unix
 // ----------------------------------------------------------------------------
 // fsetmode(): set mode to binary or text
 // ----------------------------------------------------------------------------
 
 void fsetmode (FILE * f, char type);
+#endif
 
 // ----------------------------------------------------------------------------
 // freadOrDie(): like fread() but terminate with err msg in case of error
