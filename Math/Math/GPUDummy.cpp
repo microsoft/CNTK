@@ -8,8 +8,8 @@
 
 #ifdef CPUONLY
 
-#include "GPUMatrix.cuh"
-#include "GPUSparseMatrix.cuh"
+#include "GPUMatrix.h"
+#include "GPUSparseMatrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     void PrepareDevice(short deviceId);
@@ -1646,7 +1646,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 }}}
 
 // define a dummy GPUWatcher class too
-#include "GPUWatcher.cuh"
+#include "GPUWatcher.h"
 
 int GPUWatcher::GetGPUIdWithTheMostFreeMemory()
 {

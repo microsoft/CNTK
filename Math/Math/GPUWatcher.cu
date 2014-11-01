@@ -3,11 +3,13 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
+#ifndef CPUONLY
+
 #include "stdafx.h"
 #include "GPUWatcher.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
-
 
 int GPUWatcher::GetGPUIdWithTheMostFreeMemory()
 {
@@ -59,3 +61,4 @@ GPUWatcher::~GPUWatcher(void)
 {
 }
 
+#endif  // CPUONLY

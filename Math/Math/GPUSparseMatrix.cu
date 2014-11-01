@@ -3,7 +3,9 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#pragma once
+
+#ifndef CPUONLY
+
 #include "GPUSparseMatrix.h"
 #include <cuda_runtime.h>
 #include <cusparse_v2.h>
@@ -2190,3 +2192,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template MATH_API File& operator<<(File& stream, const GPUSparseMatrix<double>& us);
 
 }}}
+
+#endif  // CPUONLY
