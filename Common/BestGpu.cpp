@@ -10,16 +10,14 @@
 #include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
 
 #ifdef CPUONLY
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
-            short DeviceFromConfig(const ConfigParameters& config)
-            {
-                return CPUDEVICE;
-            }
-        }
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+    short DeviceFromConfig(const ConfigParameters& /*config*/)
+    {
+        return CPUDEVICE;
     }
-}
+}}}
+
 #else
 
 // CUDA-C includes
