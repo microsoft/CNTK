@@ -4,7 +4,7 @@
 // </copyright>
 //
 
-#ifndef CPU_ONLY
+#ifndef CPUONLY
 
 #include <float.h>
 #include <cuda_runtime.h>
@@ -3231,4 +3231,4 @@ d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((
 }
 */
 
-#endif // !CPU_ONLY
+#endif // !CPUONLY

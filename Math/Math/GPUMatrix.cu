@@ -3,7 +3,9 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#pragma once
+
+#ifndef CPUONLY
+
 #include "stdafx.h"
 #include "cublas_v2.h"
 #include <assert.h>
@@ -3463,4 +3465,4 @@ int _ConvertSMVer2Cores(int major, int minor)
 //        return (long)free;
 //}
 
-
+#endif // CPUONLY
