@@ -13,6 +13,7 @@
 #include "matrix.h"
 #include <stdexcept>
 #include <regex>
+#include "BestGpu.h"
 
 #pragma warning (disable: 4661)
 

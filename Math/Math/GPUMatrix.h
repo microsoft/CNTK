@@ -1,9 +1,11 @@
 //
-// <copyright file="GPUMatrixUnitTests.cpp" company="Microsoft">
+// <copyright file="GPUMatrix.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
 #pragma once
+
 #include <string>
 #include <vector>
 #include <ctime>

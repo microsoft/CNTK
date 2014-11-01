@@ -7,7 +7,7 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
 #include "..\Math\CPUMatrix.h"
-#include "..\Math\GPUMatrix.cuh"
+#include "..\Math\GPUMatrix.h"
 
 #pragma warning (disable: 4244 4245 4305)       // conversions and truncations; we don't care in this test project
 

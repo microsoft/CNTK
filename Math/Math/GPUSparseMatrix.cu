@@ -4,7 +4,7 @@
 // </copyright>
 //
 #pragma once
-#include "GPUSparseMatrix.cuh"
+#include "GPUSparseMatrix.h"
 #include <cuda_runtime.h>
 #include <cusparse_v2.h>
 #include "cublas_v2.h"

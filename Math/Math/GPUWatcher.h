@@ -1,10 +1,13 @@
 //
-// <copyright file="MatrixUnitTests.cpp" company="Microsoft">
+// <copyright file="GPUWatcher.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#include "GPUMatrix.cuh"
+
 #pragma once
+
+#include "GPUMatrix.h"
+
 class MATH_API GPUWatcher
 {
 public:

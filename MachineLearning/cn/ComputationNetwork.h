@@ -25,7 +25,6 @@
 #include "Matrix.h"
 #include "PTaskGraphBuilder.h"
 #include "commandArgUtil.h"
-#include "BestGpu.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>

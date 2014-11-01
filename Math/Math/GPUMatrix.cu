@@ -12,9 +12,9 @@
 #include <curand.h>
 #include <curand_kernel.h>
 #include "device_launch_parameters.h"
-#include "GPUMatrix.cuh"
+#include "GPUMatrix.h"
 #include "GPUMatrixCUDAKernels.cu"
-#include "GPUSparseMatrix.cuh"
+#include "GPUSparseMatrix.h"
 #include <iostream> // for cout
 
 #pragma warning (disable: 4267) // conversion from 'size_t' to 'unsigned int'; happens in CUDA <<<a,b>>> syntax if a and b are size_t

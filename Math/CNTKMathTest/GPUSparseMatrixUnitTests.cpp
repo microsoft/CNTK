@@ -8,7 +8,7 @@
 #include "CppUnitTest.h"
 #include <math.h>
 #include "..\Math\CPUMatrix.h"
-#include "..\Math\GPUSparseMatrix.cuh"
+#include "..\Math\GPUSparseMatrix.h"
 #define epsilon 0.00001
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace Microsoft::MSR::CNTK;
