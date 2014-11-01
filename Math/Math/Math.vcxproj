@@ -152,10 +152,10 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="CPUMatrix.h" />
-    <None Include="GPUWatcher.cuh">
+    <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
     </None>
-    <None Include="GPUSparseMatrix.cuh">
+    <None Include="GPUSparseMatrix.h">
       <FileType>CppHeader</FileType>
     </None>
     <ClInclude Include="CPUSparseMatrix.h" />
@@ -196,7 +196,7 @@
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="GPUMatrix.cuh" />
+    <None Include="GPUMatrix.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

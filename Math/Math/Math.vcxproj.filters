@@ -57,13 +57,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="GPUMatrix.cuh">
+    <None Include="GPUMatrix.h">
       <Filter>GPU</Filter>
     </None>
-    <None Include="GPUSparseMatrix.cuh">
+    <None Include="GPUSparseMatrix.h">
       <Filter>GPU</Filter>
     </None>
-    <None Include="GPUWatcher.cuh">
+    <None Include="GPUWatcher.h">
       <Filter>GPU</Filter>
     </None>
   </ItemGroup>

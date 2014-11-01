@@ -8,8 +8,8 @@
 
 #include "CPUMatrix.h"
 #include "CPUSparseMatrix.h"
-#include "GPUMatrix.cuh"
-#include "GPUSparseMatrix.cuh"
+#include "GPUMatrix.h"
+#include "GPUSparseMatrix.h"
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {

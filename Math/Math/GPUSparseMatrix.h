@@ -1,10 +1,12 @@
 ﻿//
-// <copyright file="GPUSparseMatrix.cuh" company="Microsoft">
+// <copyright file="GPUSparseMatrix.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
 #pragma once
-#include "GPUMatrix.cuh"
+
+#include "GPUMatrix.h"
 #include <functional>
 
 namespace Microsoft { namespace MSR { namespace CNTK {    

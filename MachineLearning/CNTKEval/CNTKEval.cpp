@@ -15,6 +15,7 @@
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
+#include "BestGpu.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

@@ -4,7 +4,7 @@
 // </copyright>
 //
 #include "stdafx.h"
-#include "GPUWatcher.cuh"
+#include "GPUWatcher.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 

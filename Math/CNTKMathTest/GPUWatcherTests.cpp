@@ -5,7 +5,7 @@
 //
 #include "stdafx.h"
 #include "CppUnitTest.h"
-#include "..\Math\GPUWatcher.cuh"
+#include "..\Math\GPUWatcher.h"
 
 #define epsilon 0.000001
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing

@@ -8,7 +8,7 @@
 #include "CppUnitTest.h"
 #include <math.h>
 #include "..\Math\CPUMatrix.h"
-#include "..\Math\GPUMatrix.cuh"
+#include "..\Math\GPUMatrix.h"
 #define epsilon 0.00001
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 
