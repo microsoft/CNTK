@@ -1147,7 +1147,7 @@ public:
 #else
         const auto & us = *this;
         foreach_coord (i, j, us)
-            if (_isnan (us(i,j)))
+            if (std::isnan (us(i,j)))
             {
                 fprintf (stderr, "hasnan: NaN detected at %s (%d,%d)\n", name, i, j);
                 return true;
@@ -1166,7 +1166,7 @@ public:
         foreach_coord (i, j, us)
         {
             auto val = us(i,j);
-            if (_isnan (val) || !_finite (val))
+            if (std::isnan (val) || !std::isfinite (val))
                 n++;
         }
         return n;

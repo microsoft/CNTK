@@ -8,10 +8,6 @@
 #define _FILEUTIL_
 
 #include <stdio.h>
-#ifdef	_WIN32
-#define isfinite(x) _finite(x)
-#define isnan(x) _isnan(x)
-#endif
 #ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -1360,7 +1360,7 @@ protected:
 				double eGradNum = (mbEvalCriPos - mbEvalCriNeg)/(ePos - eNeg);
 			    ElemType threshold = (ElemType) pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum)))))-(int)m_gradientCheckSigDigit);
 			    ElemType diff = (ElemType) fabs(eGradErr - eGradNum);
-                bool wrong = (_isnan(diff) || diff > threshold);
+                bool wrong = (std::isnan(diff) || diff > threshold);
                 if (wrong)
 				{
                     fprintf (stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);

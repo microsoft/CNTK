@@ -3915,7 +3915,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const Matrix<ElemType> & us = *this;
 
         foreach_coord (i, j, us)
-            if (isnan(us(i, j)))
+            if (std::isnan(us(i, j)))
             {
                 fprintf (stderr, "hasnan: NaN detected at %s (%ld,%ld)\n", name, i, j);
                 return true;
@@ -3935,7 +3935,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         foreach_coord (i, j, us)
         {
             auto val = us(i,j);
-            if (isnan (val) || !isfinite (val))
+            if (std::isnan (val) || !std::isfinite (val))
                 n++;
         }
         return n;
