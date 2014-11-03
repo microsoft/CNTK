@@ -934,7 +934,7 @@ wstring fgetwtoken (FILE * f)
 
 void fputstring (FILE * f, const char * str)
 {
-    fwriteOrDie ((void *) str, sizeof (*str), strnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+    fwriteOrDie ((void *) str, sizeof (*str), strlen (str)+1, f);
 }
 
 void fputstring (FILE * f, const std::string & str)
@@ -945,7 +945,7 @@ void fputstring (FILE * f, const std::string & str)
 void fputstring (FILE * f, const wchar_t * str)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    fwriteOrDie((void *)str, sizeof (*str), wcsnlen(str, SIZE_MAX) + 1, f); // SECURITY NOTE: string use has been reviewed
+    fwriteOrDie((void *)str, sizeof (*str), wcslen(str) + 1, f);
 }
 
 void fputstring (FILE * f, const std::wstring & str)
