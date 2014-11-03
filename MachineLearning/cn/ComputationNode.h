@@ -5,9 +5,6 @@
 //
 #pragma once
 
-#include <Rpc.h>
-#pragma comment(lib, "Rpcrt4.lib")
-
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -16,7 +13,6 @@
 #include <list>
 #include <memory>
 #include <algorithm>
-#include <WinBase.h>
 #include <assert.h>
 #include "basetypes.h"
 
