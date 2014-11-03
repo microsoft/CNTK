@@ -7,7 +7,7 @@
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 #pragma warning (disable: 4996)     // ^^ this does not seem to work--TODO: make it work
-#define _FILE_OFFSET_BITS 64        // for ftell64() in Linux
+#define _FILE_OFFSET_BITS 64        // to force fseeko() and ftello() 64 bit in Linux
 
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
@@ -331,16 +331,26 @@ int64_t filesize64 (const wchar_t * pathname)
 
 uint64_t fgetpos (FILE * f)
 {
+#ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, so use ftello() instead
     fpos_t post;
     int rc = ::fgetpos (f, &post);
     if (rc != 0)
         RuntimeError ("error getting file position: %s", strerror (errno));
     return post;
+#else
+    off_t post = ftello (f);
+    uint64_t pos = (uint64_t) post;
+    static_assert (sizeof(off_t) >= sizeof(pos), "64-bit file offsets not enabled");
+    if ((decltype (pos)) post != pos)
+        LogicError("64-bit file offsets not enabled");
+    int rc = fseeko(f, post, SEEK_SET);
+#endif
 }
 
 void fsetpos (FILE * f, uint64_t reqpos)
 {
-#ifdef _MSC_VER
+#ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, so use fseeko() instead
+#ifdef _MSC_VER // special hack for VS CRT
     // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
@@ -363,13 +373,20 @@ void fsetpos (FILE * f, uint64_t reqpos)
         if (curpos != fgetpos (f) || curpos + f->_cnt != cureob)
             break;                              // oops
     }
-#endif
+#endif  // end special hack for VS CRT
 
     // actually perform the seek
     fpos_t post = reqpos;
-    int rc = ::fsetpos (f, &post);
+    int rc = ::fsetpos(f, &post);
+#else   // assuming __unix__
+    off_t post = (off_t) reqpos;
+    static_assert (sizeof (off_t) >= sizeof (reqpos), "64-bit file offsets not enabled");
+    if ((decltype (reqpos)) post != reqpos)
+        LogicError("64-bit file offsets not enabled");
+    int rc = fseeko(f, post, SEEK_SET);
+#endif
     if (rc != 0)
-        RuntimeError ("error setting file position: %s", strerror (errno));
+        RuntimeError("error setting file position: %s", strerror(errno));
 }
 
 // ----------------------------------------------------------------------------
