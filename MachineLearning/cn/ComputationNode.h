@@ -27,7 +27,7 @@
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
 
 #ifndef NOT_IMPLEMENTED
-#define NOT_IMPLEMENTED throw std::exception("Not implemented")
+#define NOT_IMPLEMENTED LogicError("Not implemented")
 #endif
 
 #pragma warning (disable: 4267)
@@ -330,7 +330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void InitRecurrentNode() 
         {
-            SetLoop(0);
+            SetLoop(0);     // TODO: SetLoop() takes a bool, not an int?
         }
 
         bool HasLoop() const { return m_hasloop ; }
@@ -702,10 +702,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-
-
-
-
         void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
             std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode) 
         {
@@ -839,8 +835,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         short m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
 
-        size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interprerate each column in the input as an image
-        size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interprerate each column in the output as an image
+        size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
+        size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
 
         std::vector<ComputationNodePtr> m_children;
 
@@ -853,7 +849,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::map<size_t, std::map<size_t, Matrix<ElemType>*>> s_constOnes;
 
     private:
-        /// for loop nodes
+        // for loop nodes
         bool m_hasloop; 
     };
 
