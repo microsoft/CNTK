@@ -7,6 +7,9 @@
 #pragma once
 
 #include <string>
+
+#ifdef _WIN32
+
 #include <WinSock.h>        // Note: this may conflict with WinSock2.h users (dup definition errors; don't know a general solution)
 
 #pragma comment(lib, "ws2_32.lib")
@@ -38,3 +41,7 @@ public:
         assign (hostname);
     }
 };
+
+#else   // __unix__
+std::string GetHostName() { return "localhost"; }       // TODO: implement this for Linux/GCC
+#endif

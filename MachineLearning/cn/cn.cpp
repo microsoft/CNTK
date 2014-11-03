@@ -25,7 +25,6 @@
 #include <algorithm>
 #include "io.h"
 #include "hostname.h"
-#include <windows.h>
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection
 #endif
