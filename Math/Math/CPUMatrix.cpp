@@ -3960,11 +3960,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             throw std::logic_error("Scale:  Input matrix a is empty.");
         if (alpha.GetNumElements()!=1)
-#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
-            throw std::exception("Matrix alpha must be 1x1");
-#else
-            throw std::exception();
-#endif
+            LogicError("Matrix alpha must be 1x1");
         CPUMatrix<ElemType>::Scale(alpha(0,0),a);
     }
 

@@ -320,7 +320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t elsize;
             stream>>elsize;
             if (sizeof(ElemType)!=elsize)
-                throw std::exception("Template argument size doesn't match those in file");
+                RuntimeError("Template argument size doesn't match those in file");
             std::wstring matrixName;
             size_t numRows, numCols;
             int format;

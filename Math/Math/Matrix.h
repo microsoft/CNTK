@@ -383,7 +383,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }                
             }
             else
-                throw std::exception("wrong matrix type!");
+                LogicError("wrong matrix type!");
             return stream;
 
         }
