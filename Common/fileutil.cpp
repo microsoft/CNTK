@@ -34,8 +34,15 @@
 #include <limits.h>
 
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
+#if defined(_WIN32) || defined(__CYGWIN__)
 #include <fcntl.h>      // for _O_BINARY/TEXT - not needed for wince
 #include <io.h>         // for _setmode()
+#define SET_BINARY_MODE(handle) setmode(handle, _O_BINARY)
+#define SET_TEXT_MODE(handle) setmode(handle, _O_TEXT)
+#else
+#define SET_BINARY_MODE(handle) ((int)0)
+#define SET_TEXT_MODE(handle) ((int)0)
+#endif
 #endif
 
 #define __out_z_cap(x)      // a fake SAL annotation; this may come in handy some day if we try static code analysis, so I don't want to delete it
@@ -170,8 +177,7 @@ void fsetmode(FILE * f, char type)
 #else
     int fd = fileno (f);   // note: no error check possible
 #endif
-    int mode = type == 'b' ? _O_BINARY : _O_TEXT;
-    int rc = setmode (fd, mode);
+    int rc = ( type == 'b' ? SET_BINARY_MODE(fd) : SET_TEXT_MODE(fd) );
     if (rc == -1)
     {
         RuntimeError ("error changing file mode: %s", strerror (errno));
