@@ -12,7 +12,7 @@
 #endif
 
 #include <string>
-#include <cuda_runtime.h>
+//#include <cuda_runtime.h>
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
 #include "PTaskGraphBuilder.h"

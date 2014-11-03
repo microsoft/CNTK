@@ -27,7 +27,7 @@
 #OBJ := $(SRC:%.cpp=%.obj)
 #DEP := $(OBJ:%.obj=%.dep)
 
-INCFLAGS = -I Common/Include -I Math/Math -I $(ACML_PATH)/include
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(ACML_PATH)/include
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/NetworkDescriptionLanguage.cpp Common/BestGpu.cpp

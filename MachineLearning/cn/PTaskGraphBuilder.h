@@ -19,9 +19,10 @@ typedef int CONTROLSIGNAL;
 #endif
 
 #include <string>
-#include <cuda_runtime.h>
+//#include <cuda_runtime.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+#if 0   // TODO: where is this used? It creates the dependency on cuda_runtime.h, which we prefer to not have
     extern __declspec(thread) cudaStream_t t_stream;
 
     // class for stream overrides for PTask
@@ -35,6 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         onstream (cudaStream_t stream) { prevStream = GetStream(); SetStream(stream);}
         ~onstream() { SetStream(prevStream); }
     };
+#endif
 
     // any  pointer/reference and all scalar types that fit into 8 bytes can be parameters
     enum ParamType
