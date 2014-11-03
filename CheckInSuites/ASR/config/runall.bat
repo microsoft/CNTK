@@ -1,4 +1,4 @@
-set cnpath=d:\src\codeplex\cntk\CNTKSolution\x64\Release
+set cnpath=d:\gitroot\cntk\CNTKSolution\x64\Release
 set proc=%1
 echo on
 %cnpath%\cn.exe configFile=globals_%proc%.config+TIMIT_TrainSimpleNetwork.config
