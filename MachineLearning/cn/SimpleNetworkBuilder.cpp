@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
+                unsigned long randomSeed = 1;
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
@@ -132,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
+                unsigned long randomSeed = 1;
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
         {
-            ULONG randomSeed = 1;
+            unsigned long randomSeed = 1;
 
             size_t numHiddenLayers = m_layerSizes.size()-2;
 
@@ -495,7 +495,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
+                unsigned long randomSeed = 1;
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
@@ -615,7 +615,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
+                unsigned long randomSeed = 1;
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
@@ -759,7 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildDirectConnect(ULONG &randomSeed, size_t /*mbSize*/, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildDirectConnect(unsigned long &randomSeed, size_t /*mbSize*/, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
     {
         ComputationNodePtr directOutput = nullptr, mergedNode = nullptr;
 
@@ -784,7 +784,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponent(ULONG &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs, bool inputWeightSparse)
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs, bool inputWeightSparse)
     {
 
         size_t numHiddenLayers = m_layerSizes.size()-2;
@@ -972,7 +972,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
+                unsigned long randomSeed = 1;
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
@@ -1088,7 +1088,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
+                unsigned long randomSeed = 1;
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 

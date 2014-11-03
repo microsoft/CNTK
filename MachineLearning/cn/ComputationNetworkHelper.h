@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void SetDropoutRate(ComputationNetwork<ElemType>& net, const ComputationNodePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, ULONG & dropOutSeed)
+        void SetDropoutRate(ComputationNetwork<ElemType>& net, const ComputationNodePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)
         {
             if (dropoutRate != prevDropoutRate)
             {

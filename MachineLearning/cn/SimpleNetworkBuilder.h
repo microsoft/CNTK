@@ -223,7 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
-                ULONG randomSeed = 1;
+                unsigned long randomSeed = 1;
 
                 size_t mbSize = 3; //this is not the actual minibatch size. only used in the validataion process
 
@@ -325,9 +325,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildClassEntropyNetwork(size_t mbSize = 1);
 
-        ComputationNodePtr BuildLSTMComponent(ULONG &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, bool inputWeightSparse = false);
+        ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, bool inputWeightSparse = false);
 
-        ComputationNode<ElemType>* BuildDirectConnect(ULONG &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
+        ComputationNode<ElemType>* BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
         ComputationNetwork<ElemType>& BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
 
@@ -347,7 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int numLayers,i;
             std::string layerType;
 
-            ULONG randomSeed = 1;
+            unsigned long randomSeed = 1;
 
             ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, output=nullptr, label=nullptr, prior=nullptr, scaledLogLikelihood=nullptr;
             PreComputedNode<ElemType>* pcNodePtr=nullptr;

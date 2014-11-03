@@ -18,6 +18,11 @@ typedef int CONTROLSIGNAL;
 #define DBCTLC_NONE 3
 #endif
 
+#ifndef _WIN32          // BUGBUG: fix this once we need it
+typedef unsigned int UINT;
+typedef long long (*FARPROC)();
+#endif
+
 #include <string>
 //#include <cuda_runtime.h>
 

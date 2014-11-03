@@ -19,6 +19,11 @@
 #include <Matrix.h>
 #include "PTaskGraphBuilder.h"
 
+#ifndef _WIN32
+static inline int64_t InterlockedIncrement64(int64_t * v) { return (*v)++; }          // BUGBUG: find the Linux equivalent
+#define WINAPI      // TODO: what is this needed for? If not needed, let's get rid of it
+#endif
+
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
 
@@ -198,10 +203,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gradientValues.Resize(numRows, numSamples); 
             }
         }
-		void ResetBound(size_t indexInBatch, size_t frameNum)
-		{
-			m_SentenceEnd[indexInBatch] = frameNum;
-		}
+        void ResetBound(size_t indexInBatch, size_t frameNum)
+        {
+            m_SentenceEnd[indexInBatch] = frameNum;
+        }
         void SetLoopId(const int id)
         {
             m_loopId = id;
@@ -210,35 +215,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_visitedOrder = id;
         }
-		void SetIndex (const size_t ind)
-		{
-			m_index = ind;
-		}
+        void SetIndex(const size_t ind)
+        {
+            m_index = ind;
+        }
 
-		void Setlowlink (const size_t lowlink)
-		{
-			m_lowlink = lowlink;
-		}
+        void Setlowlink(const size_t lowlink)
+        {
+            m_lowlink = lowlink;
+        }
 
-		void SetVisited (const bool visited)
-		{
-			m_visited = visited;
-		}
+        void SetVisited(const bool visited)
+        {
+            m_visited = visited;
+        }
 
-		void SetInStack (const bool instack)
-		{
-			m_inStack = instack;
-		}
+        void SetInStack(const bool instack)
+        {
+            m_inStack = instack;
+        }
 
-		void SetIndexInLoop (const size_t index)
-		{
-			m_indexInLoop = index;
-		}
+        void SetIndexInLoop(const size_t index)
+        {
+            m_indexInLoop = index;
+        }
 
-		size_t GetIndex ()
-		{
-			return m_index;
-		}
+        size_t GetIndex()
+        {
+            return m_index;
+        }
 
         size_t GetVisitedOrder()
         {
@@ -246,23 +251,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         size_t Getlowlink ()
-		{
-			return m_lowlink;
-		}
+        {
+            return m_lowlink;
+        }
 
-		size_t GetIndexInLoop ()
-		{
-			return m_indexInLoop;
-		}
-		bool isVisisted()
-		{
-			return m_visited;
-		}
+        size_t GetIndexInLoop()
+        {
+            return m_indexInLoop;
+        }
+        bool isVisisted()
+        {
+            return m_visited;
+        }
 
-		bool isInStack()
-		{
-			return m_inStack;
-		}
+        bool isInStack()
+        {
+            return m_inStack;
+        }
         int LoopId()
         {
             return m_loopId;
@@ -274,7 +279,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			m_SentenceEnd.resize(bsz);
         }
 
-        LONG64 UpdateEvalTimeStamp()
+        int64_t UpdateEvalTimeStamp()
         {
             m_evalTimeStamp = InterlockedIncrement64(&s_timeStampCounter);
             return m_evalTimeStamp;
@@ -679,7 +684,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               RpcStringFreeW((RPC_WSTR*)&szUuid);
             }
 #else
-            LONG64 id = InterlockedIncrement64(&s_timeStampCounter);
+            int64_t id = InterlockedIncrement64(&s_timeStampCounter);
             msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
 #endif
 
@@ -839,8 +844,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_nodeName;
         Matrix<ElemType> m_functionValues, m_gradientValues;
 
-        static LONG64 s_timeStampCounter;
-        LONG64 m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+        static int64_t s_timeStampCounter;
+        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
         static std::map<size_t, std::map<size_t, Matrix<ElemType>*>> s_constOnes;
 
@@ -4656,7 +4661,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
             m_dropoutRate = 0;
-            m_randomSeed = (ULONG) InterlockedIncrement64(&s_timeStampCounter);;
+            m_randomSeed = (unsigned long) InterlockedIncrement64(&s_timeStampCounter);;
             InitRecurrentNode();
         }
 
@@ -4665,7 +4670,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
-            m_randomSeed = (ULONG) InterlockedIncrement64(&s_timeStampCounter);
+            m_randomSeed = (unsigned long) InterlockedIncrement64(&s_timeStampCounter);
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
@@ -4754,7 +4759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(const ElemType dropoutRate, ULONG& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
+        static void WINAPI EvaluateThisNodeS(const ElemType dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
         {
             if(dropoutRate > 0)
             {
@@ -4819,9 +4824,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_dropoutRate = val;
         }
 
-        void SetRandomSeed(const ULONG val)
+        void SetRandomSeed(const unsigned long val)
         {
-            m_randomSeed = (ULONG) val;
+            m_randomSeed = (unsigned long) val;
         }
 
         virtual void MoveMatricesToDevice(const short deviceId)
@@ -4867,7 +4872,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         ElemType m_dropoutRate;
-        ULONG m_randomSeed;
+        unsigned long m_randomSeed;
 
         Matrix<ElemType> m_maskOfDropout;
     };

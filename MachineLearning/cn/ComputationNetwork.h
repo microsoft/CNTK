@@ -544,7 +544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete[] pArray;
         }
         
-        void InitLearnableParameters(const ComputationNodePtr node, const bool uniformInit,  const ULONG randomSeed, const ElemType initValueScale)
+        void InitLearnableParameters(const ComputationNodePtr node, const bool uniformInit,  const unsigned long randomSeed, const ElemType initValueScale)
         {
             size_t inputSize = node->FunctionValues().GetNumCols();
 
