@@ -331,7 +331,7 @@ int64_t filesize64 (const wchar_t * pathname)
 
 uint64_t fgetpos (FILE * f)
 {
-#ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, so use ftello() instead
+#if 1           // standard does not allow to cast between fpos_t and integer numbers, but it seems to work for both VS and GCC anyway
     fpos_t post;
     int rc = ::fgetpos (f, &post);
     if (rc != 0)
@@ -349,7 +349,7 @@ uint64_t fgetpos (FILE * f)
 
 void fsetpos (FILE * f, uint64_t reqpos)
 {
-#ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, so use fseeko() instead
+#if 1           // standard does not allow to cast between fpos_t and integer numbers, but it seems to work for both VS and GCC anyway
 #ifdef _MSC_VER // special hack for VS CRT
     // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
