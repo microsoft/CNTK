@@ -34,7 +34,9 @@ COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Com
 
 MATH_SRC = Math/Math/Matrix.obj Math/Math/CPUMatrix.obj Math/Math/CPUSparseMatrix.obj Math/Math/GPUDummy.obj
 
-SRC = $(MATH_SRC) $(COMMON_SRC)
+CN_SRC =  MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp
+
+SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 
 all:	${SRC:.cpp=.obj}
 

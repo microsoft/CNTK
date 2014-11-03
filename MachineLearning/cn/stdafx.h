@@ -10,8 +10,10 @@
 
 #pragma once
 
+#ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 #include "targetver.h"
+#endif
 
 #include <stdio.h>
 
