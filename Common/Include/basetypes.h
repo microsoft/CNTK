@@ -133,7 +133,7 @@ namespace msra { namespace strfun {
 // convert a wchar_t path to what gets passed to CRT functions that take narrow characters
 // This is needed for the Linux CRT which does not accept wide-char strings for pathnames anywhere.
 // Always use this function for mapping the paths.
-msra::strfun::cstring charpath (const std::wstring & p)
+static inline msra::strfun::cstring charpath (const std::wstring & p)
 {
 #ifdef _WIN32
     return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p);
@@ -325,10 +325,10 @@ public:
 // class CCritSec and CAutoLock -- simple critical section handling
 #ifndef	_WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
 typedef int CRITICAL_SECTION;
-void InitializeCriticalSection(int *) {}
-void DeleteCriticalSection(int *) {}
-void EnterCriticalSection(int *) {}
-void LeaveCriticalSection(int *) {}
+static inline void InitializeCriticalSection(CRITICAL_SECTION *) {}
+static inline void DeleteCriticalSection(CRITICAL_SECTION *) {}
+static inline void EnterCriticalSection(CRITICAL_SECTION *) {}
+static inline void LeaveCriticalSection(CRITICAL_SECTION *) {}
 #endif
 class CCritSec
 {
