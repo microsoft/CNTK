@@ -499,12 +499,12 @@ bool funicode (FILE * f)
 // Returns 'buf' (always). buf guaranteed to be 0-terminated.
 // ----------------------------------------------------------------------------
 
-#ifndef _MSC_VER        // strnlen is VS proprietary
-static inline size_t strnlen(const char * s, size_t /*n*/) { return strlen(s); }
+#ifdef __CYGWIN__           // strnlen() is somehow missing in Cygwin, which we use to quick-check GCC builds under Windows (although it is not a real target platform)
+static inline size_t strnlen (const char *s, size_t n) { return std::find (s, s + n, '\0') - s; }
 #endif
 
 #ifdef UNDER_CE     // strlen for char * not defined in winCE
-static inline size_t strnlen (const char *s, size_t n) { return std::find (s,s+n,'\0') - s; }
+static inline size_t strnlen (const char *s, size_t n) { return std::find (s, s + n, '\0') - s; }
 #endif
 
 static inline wchar_t * fgets(wchar_t * buf, int n, FILE * f) { return fgetws(buf, n, f); }
