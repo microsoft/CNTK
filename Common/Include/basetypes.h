@@ -324,7 +324,7 @@ public:
 
 // class CCritSec and CAutoLock -- simple critical section handling
 #ifndef	_WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
-#define	CRITICAL_SECTION 	int
+typedef int CRITICAL_SECTION;
 void InitializeCriticalSection(int *) {}
 void DeleteCriticalSection(int *) {}
 void EnterCriticalSection(int *) {}
