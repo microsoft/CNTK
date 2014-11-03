@@ -5,7 +5,6 @@
 //
 #pragma once
 
-#include <hash_set>
 #include <map>
 #include <string>
 #include <vector>
