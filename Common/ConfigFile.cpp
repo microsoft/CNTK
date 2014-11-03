@@ -222,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
         {
             auto pair = *iter;
-            ConfigParameters temp = iter->second;
+            ConfigParameters temp (iter->second);
             // see if we have a config parameters that contains a "dim" element, it's a sub key, use it
             if (temp.ExistsCurrent("dim"))
             {
@@ -250,7 +250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = config.begin(); iter != config.end(); ++iter)
         {
             auto pair = *iter;
-            ConfigParameters temp = iter->second;
+            ConfigParameters temp (iter->second);
             // see if we have a config parameters that contains a "key" element, if so use it
             if (temp.ExistsCurrent(key))
             {
