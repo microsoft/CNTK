@@ -482,7 +482,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
                 throw std::invalid_argument ("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
 
-            ULONG dropOutSeed = 1;
+            unsigned long dropOutSeed = 1;
             ElemType prevDropoutRate = 0;
 
             bool learnRateReduced = false;
