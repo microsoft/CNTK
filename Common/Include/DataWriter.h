@@ -69,7 +69,7 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
 // interface for clients of the Data Writer
 // mirrors the IDataWriter interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataWriter : public IDataWriter<ElemType>, public Plugin
+class DataWriter : public IDataWriter<ElemType>, protected Plugin
 {
     typedef typename IDataWriter<ElemType>::LabelType LabelType;
     typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;

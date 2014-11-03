@@ -983,7 +983,8 @@ class Plugin
     std::wstring m_dllName; // name of the writer DLL
 public:
     Plugin() { m_hModule = NULL; }
-    FARPROC Load(const std::string & plugin, const std::string & proc)
+    template<class STRING>  // accepts char (UTF-8) and wide string 
+    FARPROC Load(const STRING & plugin, const std::string & proc)
     {
         m_dllName = msra::strfun::utf16(plugin);
         m_dllName += L".dll";
@@ -1000,10 +1001,11 @@ public:
 class Plugin
 {
 public:
-    void * Load(const std::string & plugin, const std::string & proc)
+    template<class STRING>  // accepts char (UTF-8) and wide string 
+    void * Load(const STRING & plugin, const std::string & proc)
     {
         RuntimeError("Plugins not implemented on Linux yet");
-        return NULL;
+        return nullptr;
     }
 };
 #endif

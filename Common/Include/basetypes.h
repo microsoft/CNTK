@@ -615,13 +615,14 @@ static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
 #pragma warning(pop)
 
 #ifdef _WIN32
-static inline cstring utf8(const std::wstring & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p); }     // utf-16 to -8
-static inline wcstring utf16 (const std::string & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(p); } // utf-8 to -16
+static inline  cstring  utf8 (const std::wstring & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p); }     // utf-16 to -8
+static inline wcstring utf16 (const  std::string & p) { return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(p); } // utf-8 to -16
 #else   // BUGBUG: we cannot compile the above on Cygwin GCC, so for now fake it using the mbs functions, which will only work for 7-bit ASCII strings
-static inline std::string utf8(const std::wstring & p) { return msra::strfun::wcstombs (p.c_str()); }   // output: UTF-8... not really
-static inline std::wstring utf16(const std::string & p) { return msra::strfun::mbstowcs(p.c_str()); }   // input: UTF-8... not really
+static inline std::string utf8 (const std::wstring & p) { return msra::strfun::wcstombs (p.c_str()); }   // output: UTF-8... not really
+static inline std::wstring utf16 (const std::string & p) { return msra::strfun::mbstowcs(p.c_str()); }   // input: UTF-8... not really
 #endif
-static inline cstring utf8(const std::string & p) { return p; }     // no converstion (useful in templated functions)
+static inline  cstring  utf8 (const  std::string & p) { return p; }     // no conversion (useful in templated functions)
+static inline wcstring utf16 (const std::wstring & p) { return p; }
 
 // split and join -- tokenize a string like strtok() would, join() strings together
 template<class _T> static inline std::vector<std::basic_string<_T>> split (const std::basic_string<_T> & s, const _T * delim)
@@ -989,7 +990,8 @@ class Plugin
     std::wstring m_dllName; // name of the writer DLL
 public:
     Plugin() { m_hModule = NULL; }
-    FARPROC Load(const std::string & plugin, const std::string & proc)
+    template<class STRING>  // accepts char (UTF-8) and wide string 
+    FARPROC Load(const STRING & plugin, const std::string & proc)
     {
         m_dllName = msra::strfun::utf16(plugin);
         m_dllName += L".dll";
@@ -1006,10 +1008,11 @@ public:
 class Plugin
 {
 public:
-    void * Load(const std::string & plugin, const std::string & proc)
+    template<class STRING>  // accepts char (UTF-8) and wide string 
+    void * Load(const STRING & plugin, const std::string & proc)
     {
         RuntimeError("Plugins not implemented on Linux yet");
-        return NULL;
+        return nullptr;
     }
 };
 #endif
