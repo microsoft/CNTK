@@ -9,9 +9,9 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "stdafx.h"
+#include "basetypes.h"
 #define EVAL_LOCAL
 #include "Eval.h"
-#include "basetypes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -45,9 +45,8 @@ void Eval<ElemType>::GetEvalClass(const std::string& config)
     typedef void (*GetEvalProc)(IEvaluateModel<ElemType>** peval);
 
     // initialize just in case
-    m_hModule = NULL;
     m_eval = NULL;
-    m_dllName = L"CNTKEval";
+    std::wstring module = L"CNTKEval";
     // get the name for the dll we want to use, default to CNTKEval.dll
     std::string::size_type found = config.find("evaluator=");
     if (found != std::string::npos)
@@ -55,21 +54,12 @@ void Eval<ElemType>::GetEvalClass(const std::string& config)
         std::string::size_type end = config.find_first_of("\n \t", found);
         if (end != std::string::npos)
         {
-            m_dllName = msra::strfun::utf16(config.substr(found, end-found));
+            module = msra::strfun::utf16(config.substr(found, end-found));
         }
     }
-    m_dllName += L".dll";
-    m_hModule = LoadLibrary(m_dllName.c_str());
-    if (m_hModule == NULL)
-    {
-        std::string message = "Eval not found: ";
-        message += msra::strfun::utf8(m_dllName);
-        throw std::runtime_error(message);
-    }
-
     // create a variable of each type just to call the proper templated version
     ElemType elemType = ElemType();
-    GetEvalProc getEvalProc = (GetEvalProc)GetProcAddress(m_hModule, GetEvalName(elemType).c_str());
+    GetEvalProc getEvalProc = (GetEvalProc)Plugin::Load(module, GetEvalName(elemType));
     getEvalProc(&m_eval);
 }
 
@@ -92,11 +82,6 @@ Eval<ElemType>::~Eval()
     {
         m_eval->Destroy();
         m_eval = NULL;
-    }
-    if (m_hModule != NULL)
-    {
-        FreeLibrary(m_hModule);
-        m_hModule = NULL;
     }
 }
 

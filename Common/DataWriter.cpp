@@ -61,7 +61,7 @@ void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& config)
     }
 
     ElemType elemType = ElemType();
-    GetWriterProc getWriterProc = (GetWriterProc)Plugin::Load(writerType, GetWriterName(elemType).c_str());
+    GetWriterProc getWriterProc = (GetWriterProc)Plugin::Load(writerType, GetWriterName(elemType));
     getWriterProc(&m_dataWriter);
 }
 

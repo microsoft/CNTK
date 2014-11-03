@@ -18,6 +18,7 @@
 #else
 #define EVAL_API __declspec(dllimport)
 #endif
+#include "basetypes.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -57,12 +58,10 @@ extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval);
 // interface for clients of the Data Reader
 // mirrors the IEvaluateModel interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class Eval : public IEvaluateModel<ElemType>
+class Eval : public IEvaluateModel<ElemType>, protected Plugin
 {
 private:
-    IEvaluateModel *m_eval;  // evaluation class pointer
-    HMODULE m_hModule;  // module handle for the reader DLL
-    std::wstring m_dllName; // name of the reader DLL
+    IEvaluateModel<ElemType> *m_eval;  // evaluation class pointer
 
     virtual void Init(const std::string& config);
 

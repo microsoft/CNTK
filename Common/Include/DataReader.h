@@ -72,7 +72,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataReader : public IDataReader<ElemType>, public Plugin
+class DataReader : public IDataReader<ElemType>, protected Plugin
 {
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;

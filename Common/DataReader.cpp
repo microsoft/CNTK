@@ -49,7 +49,7 @@ void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
     // get the name for the reader we want to use, default to UCIFastReader
     // create a variable of each type just to call the proper templated version
     ElemType elemType = ElemType();
-    GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName(elemType).c_str());
+    GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName(elemType));
     getReaderProc(&m_dataReader);
 }
 
