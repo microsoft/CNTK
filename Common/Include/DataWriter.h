@@ -47,7 +47,7 @@ class DATAWRITER_API IDataWriter
 {
 public:
     typedef std::string LabelType;
-    typedef unsigned LabelIdType;
+    typedef unsigned int LabelIdType;
 
     virtual void Init(const ConfigParameters& config) = 0;
     virtual void Destroy() = 0;
@@ -71,6 +71,8 @@ extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
 template<class ElemType>
 class DataWriter : public IDataWriter<ElemType>, public Plugin
 {
+    typedef typename IDataWriter<ElemType>::LabelType LabelType;
+    typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
 private:
     IDataWriter<ElemType> *m_dataWriter;  // writer
 

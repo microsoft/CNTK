@@ -39,7 +39,7 @@ SRC = $(MATH_SRC) $(COMMON_SRC)
 all:	${SRC:.cpp=.obj}
 
 
-CFLAGS = -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -fpermissive
+CFLAGS = -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -fpermissive
 
 %.obj:	%.cpp
 	gcc -c -o $@ $(CPPFLAGS) $(CFLAGS) $(INCFLAGS) -MD -MP -MF ${@:.obj=.dep} $<

@@ -117,7 +117,7 @@ void DataReader<ElemType>::SetSentenceEndInBatch(std::vector<size_t> &sentenceEn
 // GetLabelMapping - Gets the label mapping from integer index to label type 
 // returns - a map from numeric datatype to native label type 
 template<class ElemType>
-const map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& DataReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<typename DataReader<ElemType>::LabelIdType, typename DataReader<ElemType>::LabelType>& DataReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     return m_dataReader->GetLabelMapping(sectionName);
 }
@@ -126,7 +126,7 @@ const map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<Elem
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void DataReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& labelMapping)
+void DataReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping)
 {
     m_dataReader->SetLabelMapping(sectionName, labelMapping);
 }

@@ -111,7 +111,7 @@ bool DataWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::wstr
 // saveId - name of the section to save into (section:subsection format)
 // labelMapping - map we are saving to the file
 template<class ElemType>
-void DataWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping)
+void DataWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping)
 {
     m_dataWriter->SaveMapping(saveId, labelMapping);
 }

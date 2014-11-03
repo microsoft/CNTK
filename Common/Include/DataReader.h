@@ -45,7 +45,7 @@ class DATAREADER_API IDataReader
 {
 public:
     typedef std::string LabelType;
-    typedef unsigned LabelIdType;
+    typedef unsigned int LabelIdType;
 
     virtual void Init(const ConfigParameters& config) = 0;
     virtual void Destroy() = 0;
@@ -53,8 +53,8 @@ public:
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
     virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
     virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;
-    virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapping(const std::wstring& sectionName) = 0; 
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename LabelIdType, typename LabelType>& labelMapping) = 0;
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) = 0; 
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;
     virtual bool DataEnd(EndDataType endDataType) = 0;
     virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd) = 0;
@@ -74,6 +74,8 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
 template<class ElemType>
 class DataReader : public IDataReader<ElemType>, public Plugin
 {
+    typedef typename IDataReader<ElemType>::LabelType LabelType;
+    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
 private:
     IDataReader<ElemType> *m_dataReader;  // reader
 
@@ -132,12 +134,12 @@ public:
 
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
-    virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapping(const std::wstring& sectionName);
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
 
     // SetLabelMapping - Sets the label mapping from integer index to label 
     // labelMapping - mapping table from label values to IDs (must be 0-n)
     // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename LabelIdType, typename LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
 
     // GetData - Gets metadata from the specified section (into CPU memory) 
     // sectionName - section name to retrieve data from
