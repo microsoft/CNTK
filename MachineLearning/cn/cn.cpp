@@ -294,10 +294,9 @@ TrainingCriterion ParseTrainingCriterionString(wstring s)
         return TrainingCriterion::CrossEntropyWithSoftmax;
     else if (s==L"squareerror")
         return TrainingCriterion::SquareError;
-    else if (s==L"classcrossentropywithsoftmax")
-        return TrainingCriterion::ClassCrossEntropyWithSoftmax;
-    else
-        throw std::exception("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError)");
+    else if (s!=L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
+        LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError)");
+    return TrainingCriterion::ClassCrossEntropyWithSoftmax;
 }
 
 EvalCriterion ParseEvalCriterionString(wstring s)
@@ -309,12 +308,10 @@ EvalCriterion ParseEvalCriterionString(wstring s)
         return EvalCriterion::CrossEntropyWithSoftmax;
     else if (s==L"classcrossentropywithsoftmax")
         return EvalCriterion::ClassCrossEntropyWithSoftmax;
-    else if (s==L"squareerror")
-        return EvalCriterion::SquareError;
-    else 
-        throw std::exception("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError)");
+    else if (s!=L"squareerror")
+        LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError)");
+    return EvalCriterion::SquareError;
 }
-
 
 }}};
 
