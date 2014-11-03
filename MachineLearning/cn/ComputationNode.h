@@ -171,7 +171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"\n%ws=%ws", NodeName().c_str(), OperationName().c_str());           
             fstream << wstring(str);
 
@@ -936,7 +936,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << wstring(str);
             wsprintf(str, L"NeedGradient=%ws", NeedGradient()? L"true" : L"false");
@@ -1103,7 +1103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << wstring(str);        
         }
@@ -1229,7 +1229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << wstring(str);        
         }

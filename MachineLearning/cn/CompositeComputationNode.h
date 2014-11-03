@@ -55,7 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << wstring(str);
             wsprintf(str, L"HasComputed=%ws", HasComputed()? L"true" : L"false");
@@ -1135,7 +1135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
             fstream << wstring(str);
             wsprintf(str, L"Kernel[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample);
@@ -1515,7 +1515,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
             fstream << wstring(str);
             wsprintf(str, L"PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
@@ -1777,7 +1777,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
+            wchar_t str[4096];
             wsprintf(str, L"Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
             fstream << wstring(str);
             wsprintf(str, L"PoolingWindow[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
