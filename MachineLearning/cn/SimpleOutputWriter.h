@@ -14,8 +14,6 @@
 #include "basetypes.h"
 #include "fileutil.h"
 #include "commandArgUtil.h"
-#include <Windows.h>
-#include <WinBase.h>
 #include <fstream>
 
 using namespace std;

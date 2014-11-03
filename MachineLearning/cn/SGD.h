@@ -14,9 +14,6 @@
 #include "basetypes.h"
 #include "fileutil.h"
 #include "commandArgUtil.h"
-#include <Windows.h>
-#include <WinBase.h>
-#include <Windows.h>
 #include <chrono> 
 #include <random>
 

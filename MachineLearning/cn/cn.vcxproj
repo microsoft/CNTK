@@ -219,6 +219,7 @@
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\nvml.h" />
     <ClInclude Include="CompositeComputationNode.h" />
     <ClInclude Include="ComputationNetwork.h" />
