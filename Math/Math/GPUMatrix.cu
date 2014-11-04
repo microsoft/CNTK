@@ -19,6 +19,11 @@
 #include "GPUSparseMatrix.h"
 #include <iostream> // for cout
 
+#pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
+#pragma comment (lib, "cublas.lib")
+#pragma comment (lib, "cusparse.lib")
+#pragma comment (lib, "curand.lib")
+
 #pragma warning (disable: 4267) // conversion from 'size_t' to 'unsigned int'; happens in CUDA <<<a,b>>> syntax if a and b are size_t
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning (disable: 4702) // unreachable code; triggered for unknown reasons

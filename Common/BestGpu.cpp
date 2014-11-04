@@ -7,18 +7,16 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "BestGpu.h"
+#ifndef CPUONLY
+#pragma comment (lib, "cudart.lib")
+#pragma comment (lib, "nvml.lib")
+#include <cuda_runtime.h>
+#include <nvml.h>
+#include <vector>
+#endif
 #include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
 
-#ifdef CPUONLY  // #define this to disable GPUs
-
-namespace Microsoft { namespace MSR { namespace CNTK {
-    short DeviceFromConfig(const ConfigParameters& /*config*/)
-    {
-        return CPUDEVICE;
-    }
-}}}
-
-#else   // CPUONLY
+#ifndef CPUONLY  // #define this to disable GPUs
 
 // CUDA-C includes
 #include <cuda.h>
