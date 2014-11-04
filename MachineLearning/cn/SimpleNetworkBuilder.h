@@ -10,7 +10,7 @@
 #include "IComputationNetBuilder.h"
 #include <string>
 #include "commandArgUtil.h"
-#include "matrix.h"
+#include "Matrix.h"
 #include <stdexcept>
 #include <regex>
 #include "BestGpu.h"
