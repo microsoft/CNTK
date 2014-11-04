@@ -58,9 +58,9 @@
     }
 
     #Sigmoid Feed Forward with Dropout
-    SBFFD(input,rowCount,colCount)
+    SBFFD(inputVal,rowCount,colCount)
     {
-        SBFF=SBFF(input,rowCount,colCount)
+        SBFF=SBFF(inputVal,rowCount,colCount)
         DO=Dropout(SBFF)
     }
 
