@@ -63,8 +63,7 @@ FILE * fopenOrDie (const STRING & pathname, const char * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : fopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-    RuntimeError ("error opening file '%s': %s", pathname.c_str(), strerror (errno));
-        return NULL;    // keep OACR happy
+        RuntimeError("error opening file '%s': %s", pathname.c_str(), strerror(errno));
     }
     if (strchr (mode, 'S'))
     {   // if optimized for sequential access then use large buffer
@@ -79,7 +78,6 @@ FILE * fopenOrDie (const WSTRING & pathname, const wchar_t * mode)
     if (f == NULL)
     {
         RuntimeError ("error opening file '%S': %s", pathname.c_str(), strerror (errno));
-        return NULL;    // keep OACR happy
     }
     if (strchr (mode, 'S'))
     {   // if optimized for sequential access then use large buffer

@@ -15,10 +15,6 @@
 #include "CommonMatrix.h"
 #include "BestGpu.h"    // for CPUONLY macro
 
-#ifndef CPUONLY
-#pragma comment (lib, "CNTKMathCUDA.lib")   // built by CNTKMathCUDA
-#endif
-
 // predeclare cublasHandle_t
 struct cublasContext;
 typedef struct cublasContext *cublasHandle_t;

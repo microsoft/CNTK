@@ -958,7 +958,8 @@ using namespace msra::basetypes;    // for compatibility
 #pragma warning (pop)
 
 // RuntimeError - throw a std::runtime_error with a formatted error string
-static inline bool RuntimeError (const char * format, ...)
+__declspec(noreturn)
+static inline void RuntimeError(const char * format, ...)
 {
     va_list args;
     char buffer[1024];
@@ -969,7 +970,8 @@ static inline bool RuntimeError (const char * format, ...)
 };
 
 // LogicError - throw a std::logic_error with a formatted error string
-static inline bool LogicError(const char * format, ...)
+__declspec(noreturn)
+static inline void LogicError(const char * format, ...)
 {
     va_list args;
     char buffer[1024];
