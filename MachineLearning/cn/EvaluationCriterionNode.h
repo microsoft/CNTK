@@ -19,11 +19,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ErrorPredictionNode : public ComputationNode<ElemType>
     {
-        typedef ComputationNode<ElemType>* ComputationNodePtr; 
-
+        UsingComputationNodeMembers;
     public:
         ErrorPredictionNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : ComputationNode(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -32,7 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         ErrorPredictionNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -194,7 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         ErrorPredictionNode(const ErrorPredictionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : ComputationNode(node->m_deviceId), m_maxIndexes0(node->m_deviceId), m_maxIndexes1(node->m_deviceId), m_maxValues(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId), m_maxIndexes0(node->m_deviceId), m_maxIndexes1(node->m_deviceId), m_maxValues(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }

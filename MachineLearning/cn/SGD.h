@@ -172,10 +172,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				rpi);
         }
 	
-		void setMomentum(float momentum)
-		{
-			m_momentumPerMB = (ElemType)momentum;
-		}
+        void setMomentum(float momentum)
+        {
+            m_momentumPerMB = (ElemType)momentum;
+        }
 
         //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
         void Init(const floatargvector& learningRatesPerMB, const floatargvector& learningRatesPerSample, const intargvector& mbSize, 
@@ -673,29 +673,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-	protected:
+    protected:
 
         //return true if precomputation is executed.
-		bool PreCompute(ComputationNetwork<ElemType>& net,
+        bool PreCompute(ComputationNetwork<ElemType>& net,
             IDataReader<ElemType>* trainSetDataReader, 
             std::vector<ComputationNodePtr>& FeatureNodes,
             std::vector<ComputationNodePtr>& labelNodes,
             std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
         {
             std::list<ComputationNodePtr> nodes = net.GetNodesRequirePreComputation();
-            
-			if (nodes.size() == 0)
+
+            if (nodes.size() == 0)
             {
-				fprintf(stderr,"No PreCompute nodes found, skipping PreCompute step\n");
-				return false;		
+                fprintf(stderr, "No PreCompute nodes found, skipping PreCompute step\n");
+                return false;
             }
 
-			fprintf(stderr,"Found %d PreCompute nodes\n",nodes.size());
-			for (auto nodeIter=nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-			{
-				PreComputedNode<ElemType>* node = static_cast<PreComputedNode<ElemType>*> (*nodeIter);
-				fprintf(stderr,"\tNodeName: %ws\n",(node->NodeName()).c_str());
-			}			
+            fprintf(stderr, "Found %d PreCompute nodes\n", nodes.size());
+            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            {
+                PreComputedNode<ElemType>* node = static_cast<PreComputedNode<ElemType>*> (*nodeIter);
+                fprintf(stderr, "\tNodeName: %ws\n", (node->NodeName()).c_str());
+            }
 
             //compute
             //trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize); 

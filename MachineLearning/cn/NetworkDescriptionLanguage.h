@@ -204,7 +204,7 @@ private:
     void GenerateName()
     {
         char buffer[10];
-        _itoa_s(++s_nameCounter, buffer, 10);
+        sprintf(buffer, "%d", ++s_nameCounter);
         m_name = std::string("unnamed") + buffer;
     }
 
@@ -248,9 +248,9 @@ public:
 
     // GetOptionalParameter - Get an optional parameter value
     // name - the name to search for in the optional parameters
-    // default - the default value (if not found)
+    // deflt - the default value (if not found)
     // returns: parameter value if found, or default value otherwise
-    ConfigValue GetOptionalParameter(const std::string& name, const std::string& default) const
+    ConfigValue GetOptionalParameter(const std::string& name, const std::string& deflt) const
     {
         for (NDLNode* param : m_parameters)
         {
@@ -260,7 +260,7 @@ public:
                 return param->GetValue();
             }
         }
-        return ConfigValue(default);
+        return ConfigValue(deflt);
     }
 
     // FindNode - Find a node of the given name
