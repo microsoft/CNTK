@@ -178,22 +178,11 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CPUMatrix.cpp" />
-    <CudaCompile Include="GPUSparseMatrix.cu" />
-    <CudaCompile Include="GPUWatcher.cu">
-      <FileType>CppCode</FileType>
-    </CudaCompile>
-    <ClCompile Include="GPUDummy.cpp" />
+    <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="GPUMatrix.cu" />
-    <CudaCompile Include="GPUMatrixCUDAKernels.cu">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h" />
