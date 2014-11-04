@@ -11,12 +11,16 @@
 // that uses this DLL. This way any other project whose source files include this file see 
 // DATAREADER_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
+#ifdef _WIN32
 #if defined(DATAREADER_EXPORTS)
 #define DATAREADER_API __declspec(dllexport)
 #elif defined(DATAREADER_LOCAL)
 #define DATAREADER_API
 #else
 #define DATAREADER_API __declspec(dllimport)
+#endif
+#else
+#define DATAREADER_API
 #endif
 #include "Matrix.h"
 #include <map>
