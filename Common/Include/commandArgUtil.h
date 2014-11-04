@@ -103,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {   // check for infinity since strtod() can't handle it
                 if (*ep && _strnicmp("#inf",ep, 4) == 0)
                     return std::numeric_limits<double>::infinity();
-                throw std::runtime_error ("ConfigValue (double): invalid input string");
+                RuntimeError ("ConfigValue (double): invalid input string");
             }
             return value;
         }
@@ -114,7 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             char * ep;          // will be set to point to first character that failed parsing
             long value = strtol(c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error("ConfigValue (long): invalid input string");
+                RuntimeError("ConfigValue (long): invalid input string");
             return value;
         }
         unsigned long toulong() const
@@ -122,7 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             char * ep;          // will be set to point to first character that failed parsing
             unsigned long value = strtoul(c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error("ConfigValue (unsigned long): invalid input string");
+                RuntimeError("ConfigValue (unsigned long): invalid input string");
             return value;
         }
     public:
@@ -133,7 +133,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             long val = tolong();
             short ival = (short) val;
             if (val != ival)
-                throw std::runtime_error ("ConfigValue (short): integer argument expected");
+                RuntimeError ("ConfigValue (short): integer argument expected");
             return ival;
         }
         operator unsigned short () const
@@ -141,7 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             unsigned long val = toulong();
             unsigned short ival = (unsigned short) val;
             if (val != ival)
-                throw std::runtime_error ("ConfigValue (unsigned short): integer argument expected");
+                RuntimeError ("ConfigValue (unsigned short): integer argument expected");
             return ival;
         }
         operator int () const
@@ -149,7 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             long val = tolong();
             int ival = (int) val;
             if (val != ival)
-                throw std::runtime_error ("ConfigValue (int): integer argument expected");
+                RuntimeError ("ConfigValue (int): integer argument expected");
             return ival;
         }
         operator unsigned int () const
@@ -157,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             unsigned long val = toulong();
             unsigned int ival = (unsigned int) val;
             if (val != ival)
-                throw std::runtime_error ("ConfigValue (unsigned int): integer argument expected");
+                RuntimeError ("ConfigValue (unsigned int): integer argument expected");
             return ival;
         }
         operator int64_t () const
@@ -165,7 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             char * ep;          // will be set to point to first character that failed parsing
             int64_t value = _strtoi64 (c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (int64_t): invalid input string");
+                RuntimeError ("ConfigValue (int64_t): invalid input string");
             return value;
         }
         operator uint64_t () const
@@ -173,7 +173,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             char * ep;          // will be set to point to first character that failed parsing
             uint64_t value = _strtoui64 (c_str(), &ep, 10);
             if (empty() || *ep != 0)
-                throw std::runtime_error ("ConfigValue (uint64_t): invalid input string");
+                RuntimeError ("ConfigValue (uint64_t): invalid input string");
             return value;
         }
         // size_t is the same as uint64_t()
@@ -182,7 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //    uint64_t val = (uint64_t) *this;
         //    size_t ival = (size_t) val;
         //    if (val != ival)
-        //        throw std::runtime_error ("ConfigValue (size_t): integer argument expected");
+        //        RuntimeError ("ConfigValue (size_t): integer argument expected");
         //    return ival;
         //}
         operator bool () const
@@ -192,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return true;
             if (us == "f" || us == "false" || us == "F" || us == "False" || us == "FALSE" || us == "0" || us == "")
                 return false;
-            throw std::runtime_error ("ConfigValue (bool): boolean argument expected");
+            RuntimeError ("ConfigValue (bool): boolean argument expected");
             // TODO: do we want to allow accept non-empty strings and non-0 numerical values as 'true'?
         }
 
@@ -298,7 +298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             // if we found unmatched parenthesis, throw an exception
             if (opening != npos)
-                throw std::runtime_error("unmatched bracket found in parameters");
+                RuntimeError("unmatched bracket found in parameters");
             return current;
         }
 
@@ -610,7 +610,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 std::string fullName = m_configName +  ":" + name;
                 auto res = ConfigDictionary::insert (std::make_pair (name, ConfigValue(val, fullName, this)));
                 if (!res.second)    // no insertion was made
-                    throw std::runtime_error ("configparameters: duplicate parameter definition for " + fullName);
+                    RuntimeError ("configparameters: duplicate parameter definition for %s", fullName.c_str());
             }
         }
 
@@ -716,14 +716,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // ensure that a closing brace exists for every opening brace.  
                 // Also ensure that there is no whitespace between the opening and closing braces.
                 if (end == std::string::npos)
-                    throw std::runtime_error ("\"" + openBraceVar + "\" found without corresponding closing \"" 
-                                              + closingBraceVar + "\": " + m_configName + ":" + newConfigLine);
+                    RuntimeError ("\"%s\" found without corresponding closing \"%s\": %s:%s", openBraceVar.c_str(), closingBraceVar.c_str(), m_configName.c_str(), newConfigLine.c_str());
 
                 if(newConfigLine[end] != '$')
-                    throw std::runtime_error ("Forbidden characters found between \"" + openBraceVar + "\" and \"" + closingBraceVar + 
-                                              "\".  Variable names cannot any of the following characters: " + 
-                                              forbiddenCharactersInVarNameEscapeWhitespace + ". "
-                                              + m_configName + ":" + newConfigLine);
+                    RuntimeError ("Forbidden characters found between \"%s\" and \"%s\".  Variable names cannot any of the following characters: %s. %s:%s",
+                                  openBraceVar.c_str(), closingBraceVar.c_str(), forbiddenCharactersInVarNameEscapeWhitespace.c_str(), m_configName.c_str(), newConfigLine.c_str());
 
                 // end + 1 - start = the length of the string, including opening and closing braces.
                 std::size_t varLength = (end + 1 - start) - (openBraceVarSize + closingBraceVarSize);
@@ -734,8 +731,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 std::string varValue = this->Find(varName);
 
                 if (varValue.empty())
-                    throw std::runtime_error ("No variable found with the name " + varName + ".  Parsing of string failed: " 
-                                              + m_configName + ":" + newConfigLine);
+                    RuntimeError ("No variable found with the name %s.  Parsing of string failed: %s:%s",
+                                  varName.c_str(), m_configName.c_str(), newConfigLine.c_str());
                 
                 if (varValue.find_first_of("\n") != std::string::npos)
                     throw std::logic_error ("Newline character cannot be contained in the value of a variable which is resolved using $varName$ feature");
@@ -796,7 +793,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 value.SetParent(this);
                 return value;
             }
-            throw std::runtime_error ("configparameters: required parameter missing: " + m_configName + ":" + name);
+            RuntimeError ("configparameters: required parameter missing: %s:%s", m_configName.c_str(), name.c_str());
         }
         // Match - comparison function, case insensitive
         // key - key to get the value from
@@ -988,7 +985,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             float fval = (float) msra::strfun::todouble (in);
             val = (size_t) fval;
-            if (val != fval) throw std::runtime_error ("argvector: invalid arg value");
+            if (val != fval) RuntimeError ("argvector: invalid arg value");
         }
         static void parse (const std::wstring & in, std::wstring & val) { val = in; }
     public:
@@ -998,7 +995,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             clear();
             std::vector<std::wstring> toks = msra::strfun::split (arg, L":");             // separate the arguments
             // comment the following argument for current stringargvector need to be empty.[v-xieche]
-            // if (toks.empty()) throw std::runtime_error ("argvector: arg must not be empty");
+            // if (toks.empty()) RuntimeError ("argvector: arg must not be empty");
             foreach_index (i, toks)
             {
                 std::vector<std::wstring> toks2 = msra::strfun::split (toks[i], L"*");    // split off repeat factor
@@ -1006,9 +1003,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 parse (toks2[0], val);                                          // convert wstring toks2[0] to T val and check type
                 //float fval = (float) msra::strfun::todouble (toks2[0]);
                 int rep = (toks2.size() > 1) ? msra::strfun::toint (toks2[1]) : 1; // repeat factor
-                if (rep < 1) throw std::runtime_error ("argvector: invalid repeat factor");
+                if (rep < 1) RuntimeError ("argvector: invalid repeat factor");
                 //T val = (T) fval;
-                //if (val != fval) throw std::runtime_error ("argvector: invalid arg value");
+                //if (val != fval) RuntimeError ("argvector: invalid arg value");
                 for (int j = 0; j < rep; j++)
                     push_back (val);
             }
