@@ -62,19 +62,19 @@ public:
     // copy and move constructors
     MELScript(const MELScript& melScript) : ConfigParser(melScript)
     {
-		m_scriptString = melScript.m_scriptString;
-		m_mapNameToNetNdl = melScript.m_mapNameToNetNdl; // computational networks
-		m_netNdlDefault = melScript.m_netNdlDefault;
-		// don't need to copy m_ndlScript, only used to store macros (which are stored in global instance anyway)
+        m_scriptString = melScript.m_scriptString;
+        m_mapNameToNetNdl = melScript.m_mapNameToNetNdl; // computational networks
+        m_netNdlDefault = melScript.m_netNdlDefault;
+        // don't need to copy m_ndlScript, only used to store macros (which are stored in global instance anyway)
     }
     MELScript(const MELScript&& melScript) : ConfigParser(move(melScript))
     {
-		m_scriptString = move(melScript.m_scriptString);
-		m_mapNameToNetNdl = move(melScript.m_mapNameToNetNdl); // computational networks
-		m_netNdlDefault = move(melScript.m_netNdlDefault);
-	}
+        m_scriptString = move(melScript.m_scriptString);
+        m_mapNameToNetNdl = move(melScript.m_mapNameToNetNdl); // computational networks
+        m_netNdlDefault = move(melScript.m_netNdlDefault);
+    }
     void ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil=ndlPassAll, bool fullValidate = false);
-    void MELScript<ElemType>::SetProperty(ComputationNode<ElemType>* nodeProp, vector<ComputationNode<ElemType>*>& propArray, bool set);
+    void SetProperty(ComputationNode<ElemType>* nodeProp, vector<ComputationNode<ElemType>*>& propArray, bool set);
     void CallFunction(const std::string& name, const ConfigParamList& params);
 
     // ParseName - Parse the name and find positions of the wildcard matches
