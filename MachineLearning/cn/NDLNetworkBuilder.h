@@ -12,7 +12,7 @@
 #include <string>
 #include "commandArgUtil.h"
 #include "DataReader.h"
-#include "matrix.h"
+#include "Matrix.h"
 #include "NDLUtil.h"
 #include <stdexcept>
 
