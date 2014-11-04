@@ -11,12 +11,16 @@
 // that uses this DLL. This way any other project whose source files include this file see 
 // DATAWRITER_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
+#ifdef _WIN32
 #if defined(DATAWRITER_EXPORTS)
 #define DATAWRITER_API __declspec(dllexport)
 #elif defined(DATAWRITER_LOCAL)
 #define DATAWRITER_API
 #else
 #define DATAWRITER_API __declspec(dllimport)
+#endif
+#else
+#define DATAWRITER_API
 #endif
 #include "Matrix.h"
 #include <map>
