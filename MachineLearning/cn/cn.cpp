@@ -289,19 +289,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 TrainingCriterion ParseTrainingCriterionString(wstring s)
 {
-    transform(s.begin(), s.end(), s.begin(),tolower); 
+    transform(s.begin(), s.end(), s.begin(), tolower); 
     if (s==L"crossentropywithsoftmax")
         return TrainingCriterion::CrossEntropyWithSoftmax;
     else if (s==L"squareerror")
         return TrainingCriterion::SquareError;
     else if (s!=L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-        LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError)");
+        LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax)");
     return TrainingCriterion::ClassCrossEntropyWithSoftmax;
 }
 
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
-    transform(s.begin(), s.end(), s.begin(),tolower); 
+    transform(s.begin(), s.end(), s.begin(), tolower); 
     if (s==L"errorprediction")
         return EvalCriterion::ErrorPrediction;
     else if (s==L"crossentropywithsoftmax")

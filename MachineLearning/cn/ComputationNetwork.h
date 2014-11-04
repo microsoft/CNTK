@@ -30,8 +30,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PTaskGraphBuilder;
 
-
-
     template<class ElemType>
     class ComputationNetwork
     {
@@ -53,7 +51,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_loopClosed = false; 
             }
         } RecurrentInfo;
-
 
     public:
         ComputationNetwork(short deviceId=AUTOPLACEMATRIX) : m_deviceId(deviceId)
@@ -442,8 +439,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-
-
 #pragma region Network Modification
 
         void SetLeanableNodesBelowNeedGradient(const bool needGradient, const ComputationNodePtr rootNode = nullptr)
@@ -730,7 +725,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (nodeType == LogNode<ElemType>::TypeName())
                 newNode = new LogNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CosineNode<ElemType>::TypeName())
-				newNode = new CosineNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+                newNode = new CosineNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == SoftmaxNode<ElemType>::TypeName())
                 newNode = new SoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == SumElementsNode<ElemType>::TypeName())
@@ -779,8 +774,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new DelayNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == LookupTableNode<ElemType>::TypeName())
                 newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-			else if (nodeType == RowSliceNode<ElemType>::TypeName())
-				newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == RowSliceNode<ElemType>::TypeName())
+                newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
@@ -815,7 +810,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-       //sparse matrix size is optionally specified
+        //sparse matrix size is optionally specified
         ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols, const size_t size = 0)
         {
             ComputationNodePtr newNode(new SparseInputValue<ElemType>(rows, cols, size, m_deviceId, inputName));
@@ -873,7 +868,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr CreateComputationNode(const std::wstring nodeType, const std::wstring nodeName) 
         {
-                        
             ComputationNode<ElemType>* newNode;
 
             if (nodeType == NegateNode<ElemType>::TypeName())
@@ -887,7 +881,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (nodeType == LogNode<ElemType>::TypeName())
                 newNode = new LogNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CosineNode<ElemType>::TypeName())
-				newNode = new CosineNode<ElemType>(m_deviceId, nodeName);
+                newNode = new CosineNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == SoftmaxNode<ElemType>::TypeName())
                 newNode = new SoftmaxNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == SumElementsNode<ElemType>::TypeName())
@@ -1233,14 +1227,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-		ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"")
-		{
-			ComputationNodePtr newNode(new RowSliceNode<ElemType>(m_deviceId, start_index, num_rows, nodeName));
-			newNode->AttachInputs(a);
-			AddNodeToNet(newNode);
+        ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new RowSliceNode<ElemType>(m_deviceId, start_index, num_rows, nodeName));
+            newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
 
-			return newNode;
-		}
+            return newNode;
+        }
 
         ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"")
         {
@@ -1310,20 +1304,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             int iFound = -1;
 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+            for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
                 {
                     iFound = (*iter).m_loopId;
-					if (isForwardComputing)
-					{
-						recurrentNodes = (*iter).m_recurrentNodesForForward;
-					}
-					else
-					{
-						recurrentNodes = (*iter).m_recurrentNodesForForward;
-					}
-                    break; 
+                    if (isForwardComputing)
+                    {
+                        recurrentNodes = (*iter).m_recurrentNodesForForward;
+                    }
+                    else
+                    {
+                        recurrentNodes = (*iter).m_recurrentNodesForForward;
+                    }
+                    break;
                 }
             }
 
@@ -1334,7 +1328,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             int iFound = -1;
 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+            for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
                 {
@@ -1852,7 +1846,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// merge loops if they have the same source node
             std::vector<RecurrentInfo>      m_recurrentInfoTmp;
             int iLoopId = 0; 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+            for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 if (m_recurrentInfoTmp.size() == 0)
                 {
@@ -1866,7 +1860,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                 {
                     bool bFound = false; 
-                    for (std::vector<RecurrentInfo>::iterator iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
+                    for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
                     {
                         if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
                         {
@@ -1885,11 +1879,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else 
                     {
-                        for (std::vector<RecurrentInfo>::iterator iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
+                        for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
                         {
                             if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
                             {
-                                for (std::vector<ComputationNodePtr>::iterator iter3 = (*iter).m_recurrentNodes.begin(); iter3 != (*iter).m_recurrentNodes.end(); iter3++)
+                                for (auto iter3 = (*iter).m_recurrentNodes.begin(); iter3 != (*iter).m_recurrentNodes.end(); iter3++)
                                 {
                                     (*iter2).m_recurrentNodes.push_back(*iter3);
                                 }
@@ -1899,7 +1893,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
+            for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
             {
                 // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
                 if ((*iter).m_recurrentNodes.size() > 1)
@@ -1909,17 +1903,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             /// debug purpose 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
+            for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
             {
                 fprintf(stderr, " nodes in the recurrent loops : \n"); 
-                for (std::vector<ComputationNodePtr>::iterator itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
+                for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
                     fprintf (stderr, "%ws\t", (*itr)->NodeName().c_str() ); 
                 }
             }
 
             m_recurrentInfo.clear();
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
+            for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
             {
                 RecurrentInfo rInfo;
                 rInfo.m_recurrentNodes.clear();
@@ -1928,7 +1922,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 rInfo.Reset(); 
 
                 ComputationNodePtr lastOne = nullptr ;
-                for (std::vector<ComputationNodePtr>::iterator itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
+                for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
                     if (lastOne != nullptr && lastOne->NodeName() == (*itr)->NodeName())
                         continue;
@@ -1940,10 +1934,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             /// debug purpose 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+            for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 fprintf(stderr, " nodes in the recurrent loops : \n"); 
-                for (std::vector<ComputationNodePtr>::iterator itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
+                for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
                     fprintf (stderr, "%ws\t", (*itr)->NodeName().c_str() ); 
                 }
@@ -2047,11 +2041,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode, sourceLoopNodes);
 
             /// debug purpose 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+            for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 fprintf(stderr, " nodes in the recurrent loops : \n"); 
                 size_t max_visitedOrderInLoop = 0;
-                for (std::vector<ComputationNodePtr>::iterator itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
+                for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
                     fprintf (stderr, "%ws\t", (*itr)->NodeName().c_str() ); 
                     if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
@@ -2059,7 +2053,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
                     }
                 }
-                for (std::vector<ComputationNodePtr>::iterator itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
+                for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
                     (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
                     
@@ -2067,14 +2061,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
 
-            for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+            for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
                 if ((*iter).m_recurrentNodes.size() > 1)
                 {
                     /// it is done in the mergerecurrentloops function, but just keep the code
                     std::sort((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), (*iter).m_recurrentNodes[0]->IsSmaller);
-                    for (std::vector<ComputationNodePtr>::iterator nodeRecIter = (*iter).m_recurrentNodes.begin(); nodeRecIter != (*iter).m_recurrentNodes.end(); 
+                    for (auto nodeRecIter = (*iter).m_recurrentNodes.begin(); nodeRecIter != (*iter).m_recurrentNodes.end(); 
                         nodeRecIter++)
                     {
                         (*nodeRecIter)->SetLoop(true);
@@ -2083,7 +2077,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 	
-			for (std::vector<RecurrentInfo>::iterator iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+			for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
                 if ((*iter).m_recurrentNodes.size() > 1 && (*iter).m_recurrentNodesForForward.size() == 0)
@@ -2104,7 +2098,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 						}
 					}
 				
-					//for (std::vector<ComputationNodePtr>::iterator nodeRecIter = startNodes.begin(); nodeRecIter != startNodes.end(); nodeRecIter++)
+					//for (auto nodeRecIter = startNodes.begin(); nodeRecIter != startNodes.end(); nodeRecIter++)
 						
 					for (size_t i = 0 ; i < (*iter).m_recurrentNodes.size(); i++)
 					{
@@ -2139,7 +2133,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef DISPLAY_DEBUG
                 fprintf(stderr, "Reordered nodes\n");
-                for (std::list<ComputationNodePtr>::iterator itr = nodes.begin(); itr != nodes.end(); itr++)
+                for (auto itr = nodes.begin(); itr != nodes.end(); itr++)
                 {
                     fprintf (stderr, "%ws\n", (*itr)->NodeName().c_str() ); 
                 }
@@ -2156,7 +2150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<ComputationNodePtr> vTmp;
             std::list<ComputationNodePtr> vRecurrentTmp;
             int  prevId = -1;
-            for (std::list<ComputationNodePtr>::iterator nodeIter=nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            for (auto nodeIter=nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 int iId = FindInRecurrentLoop(*nodeIter);
                 if (iId >= 0)
