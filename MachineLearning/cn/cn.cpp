@@ -44,7 +44,7 @@ void RedirectStdErr(wstring logpath)
     msra::files::make_intermediate_dirs (logpath);
     auto_file_ptr f (logpath.c_str(), "wb");
     if (_dup2 (_fileno (f), 2) == -1)
-        throw runtime_error ("unexpected failure to redirect stderr to log file");
+        RuntimeError ("unexpected failure to redirect stderr to log file");
     setvbuf (stderr, NULL, _IONBF, 16384);   // unbuffer it
 }
 
@@ -337,7 +337,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     std::map<std::wstring, Matrix<ElemType>*> matrices;
     matrices[featureNames[0]] = &featuresMatrix;
     if (labelNames.size() == 0)
-        throw runtime_error("CreateLabelMap: no labels found to process");
+        RuntimeError("CreateLabelMap: no labels found to process");
 
     // now create the reader and loop through the entire dataset to get all the labels
     auto start = std::chrono::system_clock::now();
@@ -354,7 +354,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
         else if (readerConfig.ExistsCurrent("labelMappingFile")) 
             labelMappingFile = labelConfig("labelMappingFile");
         else
-            throw runtime_error("CreateLabelMap: No labelMappingFile defined");
+            RuntimeError("CreateLabelMap: No labelMappingFile defined");
 
         if (fexists(labelMappingFile))
         {
@@ -410,7 +410,7 @@ void DoTrain(const ConfigParameters& config)
     }
     else
     {
-        throw runtime_error("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified" );
+        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified" );
     }
 
     DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
@@ -528,10 +528,10 @@ void DoCommand(const ConfigParameters& config)
             else if (action[j] == "createLabelMap")
                 DoCreateLabelMap<ElemType>(commandParams);
             else
-                throw runtime_error("unknown action: " + action[j] + " in command set: " + command[i]);
+                RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 			    
-			NDLScript<ElemType> ndlScript;
-			ndlScript.ClearGlobal(); // clear global macros between commands
+            NDLScript<ElemType> ndlScript;
+            ndlScript.ClearGlobal(); // clear global macros between commands
         }
     }
 }
@@ -623,7 +623,7 @@ int wmain(int argc, wchar_t* argv[])
         else if (type == "double")
             DoCommand<double>(config);
         else
-            throw runtime_error("invalid precision specified: " + type);
+            RuntimeError("invalid precision specified: %s", type.c_str());
     }
     catch(std::exception &err)
     {
@@ -631,7 +631,7 @@ int wmain(int argc, wchar_t* argv[])
 #ifdef _DEBUG
         DebugBreak();
 #endif
-        return -1;
+        return EXIT_FAILURE;
     }
     catch(...)
     {
@@ -639,7 +639,7 @@ int wmain(int argc, wchar_t* argv[])
 #ifdef _DEBUG
         DebugBreak();
 #endif
-        return -1;
+        return EXIT_FAILURE;
     }    
-    return 0;
+    return EXIT_SUCCESS;
 }
