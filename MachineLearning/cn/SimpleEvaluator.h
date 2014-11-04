@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        SimpleEvaluator(ComputationNetwork<ElemType>& net,  const size_t numMBsToShowResult=100, const UINT16 traceLevel=0) 
+        SimpleEvaluator(ComputationNetwork<ElemType>& net,  const size_t numMBsToShowResult=100, const int traceLevel=0) 
             : m_net(net), m_numMBsToShowResult(numMBsToShowResult), m_traceLevel(traceLevel)
         {
         }
@@ -337,7 +337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected: 
         ComputationNetwork<ElemType>& m_net;
         size_t m_numMBsToShowResult;
-        UINT16 m_traceLevel;
+        int m_traceLevel;
         void operator=(const SimpleEvaluator&); // (not assignable)
     };
 

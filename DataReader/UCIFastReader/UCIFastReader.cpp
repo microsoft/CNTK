@@ -364,7 +364,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
         labelType = configLabels("labelType","Category");
 
     //convert to lower case for case insensitive comparison
-    transform(labelType.begin(), labelType.end(), labelType.begin(), tolower); 
+    msra::strfun::tolower_ascii(labelType);
     if (labelType == "category")
     {
         m_labelType = labelCategory;

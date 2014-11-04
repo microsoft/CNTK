@@ -144,7 +144,7 @@ public:
                 ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
                 ElemType value = node->GetOptionalParameter("value", "0");
                 
-                transform(initString.begin(), initString.end(), initString.begin(),tolower); 
+                msra::strfun::tolower_ascii (initString);
                 if (initString == "fixedvalue")
                     nodePtr->FunctionValues().SetValue(value);
                 else if (initString == "uniform")
@@ -174,10 +174,10 @@ public:
 
             if (pass == ndlPassInitial)
             {
-				// evaluate only scalar parameters
-				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-				size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
-				size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "true");
 
@@ -192,7 +192,7 @@ public:
                 ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
                 ElemType value = node->GetOptionalParameter("value", "0");
                 
-                transform(initString.begin(), initString.end(), initString.begin(),tolower); 
+                msra::strfun::tolower_ascii(initString);
                 if (initString == "fixedvalue")
                     nodePtr->FunctionValues().SetValue(value);
                 else if (initString == "uniform")
@@ -656,57 +656,57 @@ public:
 		// loop through all the optional parameters processing them as necessary
         for (NDLNode<ElemType>* param : params)
         {
-			// make sure it's a "tag" optional parameter, that's all we process currently
-			if (_strcmpi(param->GetName().c_str(), "tag"))
-				continue;
+            // make sure it's a "tag" optional parameter, that's all we process currently
+            if (_stricmp(param->GetName().c_str(), "tag"))
+                continue;
 
             std::string value = param->GetValue();
-            if (!_strcmpi(value.c_str(), "feature"))
+            if (!_stricmp(value.c_str(), "feature"))
             {
-				SetOutputNode(m_net.FeatureNodes(), compNode);
+                SetOutputNode(m_net.FeatureNodes(), compNode);
             }
-            else if (!_strcmpi(value.c_str(), "label"))
+            else if (!_stricmp(value.c_str(), "label"))
             {
-				SetOutputNode(m_net.LabelNodes(), compNode);
+                SetOutputNode(m_net.LabelNodes(), compNode);
             }
-            else if (!_strcmpi(value.c_str(), "criteria"))
+            else if (!_stricmp(value.c_str(), "criteria"))
             {
-				SetOutputNode(m_net.FinalCriterionNodes(), compNode);
+                SetOutputNode(m_net.FinalCriterionNodes(), compNode);
             }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {
-				SetOutputNode(m_net.EvaluationNodes(), compNode);
+                SetOutputNode(m_net.EvaluationNodes(), compNode);
             }
-            else if (!_strcmpi(value.c_str(), "output"))
+            else if (!_stricmp(value.c_str(), "output"))
             {
-				SetOutputNode(m_net.OutputNodes(), compNode);
+                SetOutputNode(m_net.OutputNodes(), compNode);
             }
         }
 
     }
 
-	// SetOutputNode - Set the output node, checks to see if it already exists first
-	// nodeGroup - group vector to add to
-	// compNode - computation node to add
-	void SetOutputNode(std::vector<ComputationNode<ElemType>*>& nodeGroup, ComputationNode<ElemType>* compNode)
-	{
-		for (ComputationNodePtr node : nodeGroup)
-		{
-			if (node == compNode)
-				return;
-		}
-		nodeGroup.push_back(compNode);
-	}
+    // SetOutputNode - Set the output node, checks to see if it already exists first
+    // nodeGroup - group vector to add to
+    // compNode - computation node to add
+    void SetOutputNode(std::vector<ComputationNode<ElemType>*>& nodeGroup, ComputationNode<ElemType>* compNode)
+    {
+        for (ComputationNodePtr node : nodeGroup)
+        {
+            if (node == compNode)
+                return;
+        }
+        nodeGroup.push_back(compNode);
+    }
 
-	// FindSymbol - Search the nodes for a fully quantified symbol
-	// symbol - name of the symbol fully quantified name with "dots"
-	// returns - pointer to the matching EvalValue for that node, of NULL if not found
-	virtual void* FindSymbol(const wstring& symbol)
-	{
-		if (m_net.NodeNameExist(symbol))
-			return m_net.GetNodeFromName(symbol);
-		return NULL;
-	}
+    // FindSymbol - Search the nodes for a fully quantified symbol
+    // symbol - name of the symbol fully quantified name with "dots"
+    // returns - pointer to the matching EvalValue for that node, of NULL if not found
+    virtual void* FindSymbol(const wstring& symbol)
+    {
+        if (m_net.NodeNameExist(symbol))
+            return m_net.GetNodeFromName(symbol);
+        return NULL;
+    }
 
     virtual ~SynchronousNodeEvaluator()
     {
