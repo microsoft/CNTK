@@ -8,8 +8,6 @@
 
 // #define CPUONLY      // #define this to build without GPU support nor needing the SDK installed
 
-#include "commandArgUtil.h"
-
 namespace Microsoft { namespace MSR { namespace CNTK {
-    short DeviceFromConfig(const ConfigParameters& config);
+    short DeviceFromConfig(const class ConfigParameters& config);
 }}}
