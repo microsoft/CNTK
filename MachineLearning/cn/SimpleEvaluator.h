@@ -237,7 +237,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ofstream outputStream;
             if (output)
             {
+#ifdef _MSC_VER
                 outputStream.open(output);
+#else
+                outputStream.open(charpath(output));    // GCC does not implement wide-char pathnames here
+#endif
             }
 
             size_t numMBsRun = 0;

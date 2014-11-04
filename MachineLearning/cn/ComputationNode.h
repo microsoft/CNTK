@@ -176,9 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
-            wchar_t str[4096];
-            wsprintf(str, L"\n%ws=%ws", NodeName().c_str(), OperationName().c_str());           
-            fstream << wstring(str);
+            fstream << NodeName() + L"=" + OperationName();
 
             if (!IsLeaf())
             {
@@ -187,8 +185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (i > 0)
                         fstream << wstring(L",");
-                    wsprintf(str, L"%ws", Inputs(i)?Inputs(i)->NodeName().c_str():L"NULL");
-                    fstream << wstring(str);
+                    fstream << (Inputs(i) ? Inputs(i)->NodeName().c_str() : L"NULL");
                 }
                 fstream << wstring(L")");
             }
@@ -960,11 +957,11 @@ protected:  \
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            wchar_t str[4096];
-            wsprintf(str, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << wstring(str);
-            wsprintf(str, L"NeedGradient=%ws", NeedGradient()? L"true" : L"false");
-            fstream << wstring(str);
+            char str[4096];
+            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << string(str);
+            sprintf(str, "NeedGradient=%s", NeedGradient()? "true" : "false");
+            fstream << string(str);
 
             PrintNodeValuesToFile(printValues, fstream);
         }
@@ -1123,9 +1120,9 @@ protected:  \
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            wchar_t str[4096];
-            wsprintf(str, L"[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << wstring(str);        
+            char str[4096];
+            sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << string(str);        
         }
 
         // copy constructor
@@ -1250,9 +1247,9 @@ protected:  \
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            wchar_t str[4096];
-            wsprintf(str, L"[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << wstring(str);        
+            char str[4096];
+            sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << string(str);        
         }
 
         // copy constructor

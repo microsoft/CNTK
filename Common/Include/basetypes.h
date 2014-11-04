@@ -548,7 +548,9 @@ static inline const char *strerror_(int e)
     if (msgs.find(e) == msgs.end()) { char msg[1024]; strerror_s (msg, e); msgs[e] = msg; }
     return msgs[e].c_str();
 }
-
+#endif
+#ifdef __unix__
+extern int fileno(FILE*);   // somehow got deprecated in C++11
 #endif
 
 // ----------------------------------------------------------------------------
