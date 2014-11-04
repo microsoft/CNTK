@@ -16,8 +16,6 @@
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-    short DeviceFromConfig(const ConfigParameters& /*config*/) { return CPUDEVICE; }    // tells runtime system to not try to use GPUs
-
     // the reset below are dummy implementations
 
     void PrepareDevice(short deviceId);
@@ -39,8 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // PrepareDevice - Setup the correct cuda context for an operation
     // deviceId - the device on which the operation will take place
     //            defaults to -1, which means use matrices current device
-    template<class ElemType> void GPUSparseMatrix<ElemType>::PrepareDevice(short deviceId /*=-1*/) const
-    {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::PrepareDevice(short deviceId /*=-1*/) const {}
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCopy) { }
 

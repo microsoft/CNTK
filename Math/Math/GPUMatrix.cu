@@ -4,9 +4,11 @@
 // </copyright>
 //
 
+#include "stdafx.h"
+#include "BestGpu.h"
+
 #ifndef CPUONLY
 
-#include "stdafx.h"
 #include "cublas_v2.h"
 #include <assert.h>
 #include <cuda.h>

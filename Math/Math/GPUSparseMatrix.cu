@@ -4,6 +4,8 @@
 // </copyright>
 //
 
+#include "BestGpu.h"
+
 #ifndef CPUONLY
 
 #include "GPUSparseMatrix.h"

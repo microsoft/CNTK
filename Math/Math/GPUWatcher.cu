@@ -4,9 +4,11 @@
 // </copyright>
 //
 
+#include "stdafx.h"
+#include "BestGpu.h"
+
 #ifndef CPUONLY
 
-#include "stdafx.h"
 #include "GPUWatcher.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
