@@ -547,16 +547,19 @@ void DoCommand(const ConfigParameters& config)
 
 std::string TimeDateStamp()
 {
+#if 0   // "safe" version for Windows, not needed it seems
     __time64_t localtime;
 
     _time64 (&localtime);// get current time and date
     struct tm now;
     _localtime64_s (&now, &localtime);  // convert
-    std::string s; s.resize(30);
-    sprintf_s ( (char*)s.c_str(), s.size(), "%04d/%02d/%02d %02d:%02d:%02d",
-        now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
-        now.tm_hour, now.tm_min, now.tm_sec);
-    return s;
+#else
+    time_t t = time(NULL);
+    struct tm now = *localtime(&t);
+#endif
+    char buf[30];
+    sprintf (buf, "%04d/%02d/%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+    return buf;
 }
 
 int wmain(int argc, wchar_t* argv[])

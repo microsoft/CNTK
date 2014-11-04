@@ -299,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int startEpoch = DetermineStartEpoch(makeMode);
             if (startEpoch == m_maxEpochs)
             {
-                fprintf(stderr,"Final model exists. No further training is necessary.\n");
+                fprintf(stderr, "Final model exists. No further training is necessary.\n");
                 return;
             }
 
@@ -307,12 +307,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (startEpoch >= 0)
             {
                 wstring modelFileName = GetModelNameForEpoch(int(startEpoch)-1);
-                fprintf(stderr,"Starting from checkpoint. Load Network From File %ws.\n", modelFileName);
+                fprintf(stderr, "Starting from checkpoint. Load Network From File %ws.\n", modelFileName.c_str());
                 net.LoadFromFile(modelFileName);
             }
             else
             {
-                fprintf(stderr,"Load Network From the original model file %ws.\n", origModelFileName);
+                fprintf(stderr, "Load Network From the original model file %ws.\n", origModelFileName.c_str());
                 net.LoadFromFile(origModelFileName);
             }
 
@@ -322,14 +322,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needRegularization = m_adaptationRegType != AdaptationRegType::None && m_adaptationRegWeight > 0;
             if (m_needRegularization)
             {
-                fprintf(stderr,"Load reference Network From the original model file %ws.\n", origModelFileName);
+                fprintf(stderr, "Load reference Network From the original model file %ws.\n", origModelFileName.c_str());
                 refNet.LoadFromFile(origModelFileName);
             }
 
             ComputationNodePtr refNode = nullptr;
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL)
             {
-                fprintf(stderr,"Checkign refNodeName.\n", origModelFileName);
+                fprintf(stderr, "Checkign refNodeName.\n", origModelFileName.c_str());
                 if (refNodeName == L"")
                     throw invalid_argument("refNodeName does not exist and is needed when adaptationRegType is KL.");
 
@@ -347,13 +347,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int startEpoch = DetermineStartEpoch(makeMode);
             if (startEpoch == m_maxEpochs)
             {
-                fprintf(stderr,"Final model exists. No further training is necessary.\n");
+                fprintf(stderr, "Final model exists. No further training is necessary.\n");
                 return;
             }
 
             wstring modelFileName = GetModelNameForEpoch(int(startEpoch)-1);
             if (startEpoch >= 0)
-                fprintf(stderr,"Starting from checkpoint. Load Network From File %ws.\n", modelFileName);
+                fprintf(stderr, "Starting from checkpoint. Load Network From File %ws.\n", modelFileName.c_str());
             ComputationNetwork<ElemType>& net  = 
                 startEpoch<0? netBuilder->BuildNetworkFromDescription() : netBuilder->LoadNetworkFromFile(modelFileName);
             startEpoch = max(startEpoch, 0);
@@ -365,7 +365,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         std::vector<ComputationNodePtr>  GetTrainCriterionNodes(ComputationNetwork<ElemType>& net)
         {
-            fprintf(stderr, "GetTrainCriterionNodes %ls ...\n",  m_trainCriterionNodeName);
+            fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
             if (!m_trainCriterionNodeName.empty())
             {
                 std::vector<ComputationNodePtr> nodes;
@@ -382,7 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         std::vector<ComputationNodePtr>  GetEvalCriterionNodes(ComputationNetwork<ElemType>& net)
         {
-            fprintf(stderr, "GetEvalCriterionNodes %ls ...\n",  m_evalCriterionNodeName);
+            fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
             if (!m_evalCriterionNodeName.empty())
             {
                 std::vector<ComputationNodePtr> nodes;
@@ -543,7 +543,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (learnRatePerSample < m_minLearnRate)
                 {
-                    fprintf(stderr,"Learn Rate Per Sample for Epoch[%lu] = %.8g is less than minLearnRate %.8g. Training stops.\n", i+1, learnRatePerSample, m_minLearnRate);
+                    fprintf(stderr, "Learn Rate Per Sample for Epoch[%lu] = %.8g is less than minLearnRate %.8g. Training stops.\n", i+1, learnRatePerSample, m_minLearnRate);
                     if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                         net.SaveToFile(m_modelPath);
                     break;
@@ -596,7 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             net.LoadPersistableParametersFromFile(GetModelNameForEpoch(i-1), m_validateAfterModelReloading);
                             net.ResetEvalTimeStamp();
                             LoadCheckPointInfo(i-1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);  
-                            fprintf(stderr,"Loaded the previous model which has better training criterion.\n");
+                            fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                             loadedPrevModel = true;
                         }
                     }
@@ -612,14 +612,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             else 
                             {
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
-                                fprintf(stderr,"Finished training and saved final model\n\n");
+                                fprintf(stderr, "Finished training and saved final model\n\n");
                                 break;
                             }
                         }
                         if(learnRateReduced) 
                         {
                             learnRatePerSample *= m_learnRateDecreaseFactor;
-                            fprintf(stderr,"learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                            fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                         }
                     }
                     else 
@@ -628,12 +628,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
 
                             learnRatePerSample *= m_learnRateDecreaseFactor;
-                            fprintf(stderr,"learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                            fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                         }
                         else if (prevCriterion - epochCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
                         {
                             learnRatePerSample *= m_learnRateIncreaseFactor;
-                            fprintf(stderr,"learnRatePerSample increased to %.8g\n", learnRatePerSample);
+                            fprintf(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
                         }
                     }
                 }
@@ -650,7 +650,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     DeleteFile(GetCheckPointFileNameForEpoch(i-1).c_str());  //delete previous checkpiont file to save space
 
                 if (learnRatePerSample < 1e-12)
-                    fprintf(stderr,"learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n", learnRatePerSample);
+                    fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n", learnRatePerSample);
             }
 
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr) //since we linked feature nodes. we need to remove it from the deletion
@@ -824,7 +824,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 bestLearnRatePerSample =  (leftCriterion < rightCriterion)? leftLearnRatePerSample : rightLearnRatePerSample;
             }
 
-            fprintf(stderr,"Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n", epochNumber+1, bestLearnRatePerSample, baseCriterion);
+            fprintf(stderr, "Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n", epochNumber+1, bestLearnRatePerSample, baseCriterion);
 
             return bestLearnRatePerSample;
         }
@@ -843,15 +843,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize, trainSetDataReader, learnRatePerSample,FeatureNodes,labelNodes,
                 criterionNodes,evaluationNodes,inputMatrices, learnableNodes,smoothedGradients,
                 epochCriterion, epochEvalErrors, totalSamplesSeen); 
-			fprintf(stderr,"Finished Mini-Epoch For LearnRate Selection: Train Loss Per Sample = %.8g    ", epochCriterion);
+			fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: Train Loss Per Sample = %.8g    ", epochCriterion);
 			if (epochEvalErrors.size()==1)
-	            fprintf(stderr,"EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g\n", epochEvalErrors[0], learnRatePerSample);
+	            fprintf(stderr, "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g\n", epochEvalErrors[0], learnRatePerSample);
 			else
 			{
-				fprintf(stderr,"EvalErr Per Sample ");
+				fprintf(stderr, "EvalErr Per Sample ");
 				for (size_t i=0; i<epochEvalErrors.size(); i++)
-					fprintf(stderr,"[%lu] = %.8g ", i, epochEvalErrors[i]);
-				fprintf(stderr,"Ave Learn Rate Per Sample = %.10g\n",learnRatePerSample);
+					fprintf(stderr, "[%lu] = %.8g ", i, epochEvalErrors[i]);
+				fprintf(stderr, "Ave Learn Rate Per Sample = %.10g\n",learnRatePerSample);
 			}
 
             int baseModelEpoch =  epochNumber-1;
@@ -1025,12 +1025,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0,i);
                         }
 
-                        fprintf(stderr,"Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d    Train Loss Per Sample = %.8g    ",epochNumber+1, numMBsRun-m_numMBsToShowResult+1, numMBsRun, numSamplesLastMBs,
+                        fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d    Train Loss Per Sample = %.8g    ",epochNumber+1, numMBsRun-m_numMBsToShowResult+1, numMBsRun, numSamplesLastMBs,
                             (epochCriterion-epochCriterionLastMBs)/numSamplesLastMBs);
                         for (size_t i=0; i<numEvalNodes; i++){
-                            fprintf(stderr,"EvalErr[%lu] Per Sample = %.8g    ",i,(epochEvalErrors[i]-epochEvalErrorsLastMBs[i])/numSamplesLastMBs);
+                            fprintf(stderr, "EvalErr[%lu] Per Sample = %.8g    ",i,(epochEvalErrors[i]-epochEvalErrorsLastMBs[i])/numSamplesLastMBs);
                         }
-                        fprintf(stderr,"ReadData Time = %.8g Computing Time=%.8g Total Time Per Sample=%.8g\n", readTimeInMBs, ComputeTimeInMBs, (readTimeInMBs + ComputeTimeInMBs)/numSamplesLastMBs);
+                        fprintf(stderr, "ReadData Time = %.8g Computing Time=%.8g Total Time Per Sample=%.8g\n", readTimeInMBs, ComputeTimeInMBs, (readTimeInMBs + ComputeTimeInMBs)/numSamplesLastMBs);
                                                     
                         //reset statistics
                         readTimeInMBs = ComputeTimeInMBs = 0;
@@ -1141,7 +1141,7 @@ protected:
         void UpdateWeights(const ComputationNodePtr node, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, const size_t actualMBSize, const size_t expectedMBSize) const
         {
 #if DUMPOUTPUT
-            fprintf(stderr,"Update_%ws\n",node->NodeName().c_str());
+            fprintf(stderr, "Update_%ws\n",node->NodeName().c_str());
 #endif
             UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(), smoothedGradient, learnRatePerSample, actualMBSize, expectedMBSize);
             node->UpdateEvalTimeStamp();
@@ -1198,7 +1198,7 @@ protected:
             wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
             if (!fexists(checkPointFileName.c_str()) )
             {
-                fprintf(stderr,"Warning: checkpiont file is missing. learning parameters will be initialized from 0\n");
+                fprintf(stderr, "Warning: checkpiont file is missing. learning parameters will be initialized from 0\n");
                 return false;
             }
 
