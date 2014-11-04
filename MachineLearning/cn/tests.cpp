@@ -18,7 +18,6 @@
 #include "SimpleEvaluator.h"
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
-#include "datareader.h"
 #include <chrono>
 
 using namespace std;

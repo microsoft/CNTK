@@ -11,7 +11,7 @@
 #include <string>
 #include "commandArgUtil.h"
 #include "DataReader.h"
-#include "matrix.h"
+#include "Matrix.h"
 #include <stdexcept>
 
 using namespace std;

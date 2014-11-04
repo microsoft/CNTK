@@ -20,7 +20,6 @@
 #include "commandArgUtil.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
-#include "datareader.h"
 #include <chrono>
 #include <algorithm>
 #include "io.h"
