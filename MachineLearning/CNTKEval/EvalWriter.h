@@ -28,8 +28,7 @@ public:
         m_dimensions = dimensions;
         m_currentRecord = 0;
         m_recordCount = 0;
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator iter = outputs->begin();
-            iter != outputs->end(); ++iter)
+        for (auto iter = outputs->begin(); iter != outputs->end(); ++iter)
         {
             // figure out the dimension of the data
             const std::wstring& val = iter->first;
@@ -83,8 +82,7 @@ public:
     virtual bool SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
     {
         // loop through all the output vectors to copy the data over
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator iter = m_outputs->begin();
-            iter != m_outputs->end(); ++iter)
+        for (auto iter = m_outputs->begin(); iter != m_outputs->end(); ++iter)
         {
             // figure out the dimension of the data
             std::wstring val = iter->first;

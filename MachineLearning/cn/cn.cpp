@@ -199,7 +199,7 @@ void DoCrossValidate(const ConfigParameters& config)
         evalErrors = eval.Evaluate(cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
         cvErrorResults.push_back(evalErrors);
 
-        Sleep(DWORD(1000*sleepSecondsBetweenRuns));
+        ::Sleep(1000*sleepSecondsBetweenRuns);
     }
 
     //find best model

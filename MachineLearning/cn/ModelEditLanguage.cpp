@@ -74,7 +74,7 @@ enum MELProperty
 template <typename ElemType>
 void MELScript<ElemType>::SetProperty(ComputationNode<ElemType>* nodeProp, vector<ComputationNode<ElemType>*>& propArray, bool set)
 {
-    vector<ComputationNode<ElemType>*>::iterator found = propArray.begin();
+    auto found = propArray.begin();
     for (;found != propArray.end() && *found != nodeProp; ++found)
         ; // loop until you find the node, or the end
 

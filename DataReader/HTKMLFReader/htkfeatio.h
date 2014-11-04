@@ -570,7 +570,7 @@ public:
                 size_t pos = posIncrement;
                 for (size_t i=0;i < energyElements;i++,pos+=posIncrement)
                 {
-                    vector<float>::iterator iter = v.begin() + pos + i;
+                    auto iter = v.begin() + pos + i;
                     v.insert(iter,0.0f);
                 }
             }

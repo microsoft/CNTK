@@ -511,7 +511,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Section::~Section()
     {
         // go through the sections array and delete all the sections
-        for (vector<Section*>::iterator iter= m_sections.begin();iter != m_sections.end();++iter)
+        for (auto iter= m_sections.begin();iter != m_sections.end();++iter)
         {
             Section* section = *iter;
             // a section that is not mapped is skipped
@@ -642,7 +642,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // filePosition - filePosition view refers to
     void Section::RemapHeader(void* view, size_t filePosition)
     {
-        for (vector<Section*>::iterator iter = m_sections.begin();iter != m_sections.end();++iter)
+        for (auto iter = m_sections.begin();iter != m_sections.end();++iter)
         {
             Section* section = *iter;
             // a section that is not mapped is skipped

@@ -1217,7 +1217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		}
 
 		size_t totalLabelsNum = 0;
-		for (map<std::wstring,size_t>::iterator it = m_labelNameToIdMap.begin(); it != m_labelNameToIdMap.end(); ++it) 
+		for (auto it = m_labelNameToIdMap.begin(); it != m_labelNameToIdMap.end(); ++it) 
 		{
 			size_t id = m_labelNameToIdMap[it->first];
 			size_t dim  = m_labelNameToDimMap[it->first];
@@ -1282,7 +1282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			}
 		}
 		
-		for (map<std::wstring,size_t>::iterator it = m_labelNameToIdMap.begin(); it != m_labelNameToIdMap.end(); ++it) 
+		for (auto it = m_labelNameToIdMap.begin(); it != m_labelNameToIdMap.end(); ++it) 
 		{
 			size_t id = m_labelNameToIdMap[it->first];
 			size_t dim  = m_labelNameToDimMap[it->first];

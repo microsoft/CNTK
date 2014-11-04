@@ -94,7 +94,7 @@ public:
 
         // find the where the first section starts (if there is one)
         std::string symb = name.substr(0,firstDot);
-        MapNameToNetNdl::iterator found = m_mapNameToNetNdl.find(symb);
+        auto found = m_mapNameToNetNdl.find(symb);
         if (found != m_mapNameToNetNdl.end())
         {
             firstStart=(firstDot==npos?name.length():firstDot+1);
@@ -298,7 +298,6 @@ public:
         NetNdl<ElemType>* netNdlFrom;
         vector<GenNameValue> copyNodes = GenerateNames(symbolIn, symbolOut, netNdlFrom, netNdlTo);
         map<ComputationNode<ElemType>*,ComputationNode<ElemType>*> mapCopied; // map from old nodes to new nodes
-        map<ComputationNode<ElemType>*,ComputationNode<ElemType>*>::iterator found;
 
         // Process any outstanding NDL Scripts
         bool crossNetwork = netNdlTo->cn != netNdlFrom->cn;
@@ -333,7 +332,7 @@ public:
                 ComputationNode<ElemType>* toNode = mapCopied[fromNode];
                 for (int i=0; i<fromNode->ChildrenSize(); i++)
                 {
-                    found = mapCopied.find(fromNode->Inputs(i));
+                    auto found = mapCopied.find(fromNode->Inputs(i));
                     ComputationNode<ElemType>* newNode = (found == mapCopied.end())?nullptr:found->second;
                     toNode->SetInput(i, newNode);
                 }                     
