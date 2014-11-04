@@ -7,6 +7,7 @@
 
 #include "ComputationNetwork.h"
 #include "ComputationNetworkHelper.h"
+#include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include <vector>
 #include <string>
@@ -555,21 +556,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto t_end_epoch = clock();
                 ElemType epochTime = ElemType(1.0)*(t_end_epoch-t_start_epoch)/(CLOCKS_PER_SEC);
 
-				fprintf(stderr,"Finished Epoch[%lu]: [Training Set] Train Loss Per Sample = %.8g    ", i+1, epochCriterion);
-				if (epochEvalErrors.size()==1)
-				{
-					fprintf(stderr,"EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", epochEvalErrors[0], learnRatePerSample, epochTime);
-				}
-				else
-				{
-					fprintf(stderr,"EvalErr Per Sample ");
-					for (size_t j=0; j<epochEvalErrors.size(); j++)
-						fprintf(stderr,"[%lu]=%.8g ", j, epochEvalErrors[j]);
-					fprintf(stderr,"Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n",learnRatePerSample, epochTime);
-  				    fprintf(stderr,"Finished Epoch[%lu]: Criterion Node [%ws] Per Sample = %.8g\n",i+1,criterionNodes[0]->NodeName().c_str() ,epochCriterion);
-					for (size_t j=0; j<epochEvalErrors.size(); j++)
-						fprintf(stderr,"Finished Epoch[%lu]: Evaluation Node [%ws] Per Sample = %.8g\n",i+1,evalNodeNames[j].c_str(),epochEvalErrors[j]);
-				}
+                fprintf(stderr, "Finished Epoch[%lu]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
+                if (epochEvalErrors.size() == 1)
+                {
+                    fprintf(stderr, "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", epochEvalErrors[0], learnRatePerSample, epochTime);
+                }
+                else
+                {
+                    fprintf(stderr, "EvalErr Per Sample ");
+                    for (size_t j = 0; j < epochEvalErrors.size(); j++)
+                        fprintf(stderr, "[%lu]=%.8g ", j, epochEvalErrors[j]);
+                    fprintf(stderr, "Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", learnRatePerSample, epochTime);
+                    fprintf(stderr, "Finished Epoch[%lu]: Criterion Node [%ws] Per Sample = %.8g\n", i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
+                    for (size_t j = 0; j < epochEvalErrors.size(); j++)
+                        fprintf(stderr, "Finished Epoch[%lu]: Evaluation Node [%ws] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                }
 
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
                 {
@@ -579,8 +580,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
 
                     vector<ElemType> vScore = evalforvalidation.Evaluate(*validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-  				    fprintf(stderr,"Finished Epoch[%lu]: [Validation Set] Train Loss Per Sample = %.8g  EvalErr Per Sample = %.8g\n",
-                        i+1, vScore[0], vScore[1]);
+                    fprintf(stderr, "Finished Epoch[%lu]: [Validation Set] Train Loss Per Sample = %.8g  EvalErr Per Sample = %.8g\n",
+                            i + 1, vScore[0], vScore[1]);
 
                     epochCriterion = vScore[0]; //the first one is the training criterion.
                 }

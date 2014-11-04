@@ -6,6 +6,8 @@
 // cn.cpp : Defines the entry point for the console application.
 //
 
+#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
+
 #include "stdafx.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
@@ -42,9 +44,17 @@ void RedirectStdErr(wstring logpath)
     fprintf (stderr, "Redirecting stderr to file %S\n", logpath.c_str());
     msra::files::make_intermediate_dirs (logpath);
     auto_file_ptr f (logpath.c_str(), "wb");
-    if (_dup2 (_fileno (f), 2) == -1)
+    if (dup2 (fileno (f), 2) == -1)
         RuntimeError ("unexpected failure to redirect stderr to log file");
     setvbuf (stderr, NULL, _IONBF, 16384);   // unbuffer it
+}
+
+std::string WCharToString(const wchar_t* wst)
+{
+    std::wstring ws(wst);
+    std::string s(ws.begin(), ws.end());
+    s.assign(ws.begin(), ws.end());
+    return s;
 }
 
 template <typename ElemType>
@@ -549,14 +559,6 @@ std::string TimeDateStamp()
     return s;
 }
 
-std::string WCharToString(const wchar_t* wst)
-{
-    std::wstring ws(wst);
-    std::string s(ws.begin(), ws.end());
-    s.assign(ws.begin(), ws.end());
-    return s;
-}
-
 int wmain(int argc, wchar_t* argv[])
 {
     try
@@ -573,7 +575,7 @@ int wmain(int argc, wchar_t* argv[])
             for (int i=0; i < command.size(); i++)
             {
                 logpath += L"_";
-                logpath += command[i];
+                logpath += (wstring)command[i];
             }
             logpath += L".log";
             RedirectStdErr(logpath);

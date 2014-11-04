@@ -160,10 +160,6 @@ FILE * fopenOrDie (const wstring & pathname, const wchar_t * mode)
 // set mode to binary or text (pass 'b' or 't')
 // ----------------------------------------------------------------------------
 
-#ifdef __unix__
-extern int fileno(FILE*);   // somehow got deprecated in C++11
-#endif
-
 void fsetmode(FILE * f, char type)
 {
     if (type != 'b' && type != 't')
