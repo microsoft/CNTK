@@ -16,9 +16,6 @@
     <ClCompile Include="..\..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkDescriptionLanguage.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -42,6 +39,9 @@
     </ClCompile>
     <ClCompile Include="tests.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkDescriptionLanguage.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

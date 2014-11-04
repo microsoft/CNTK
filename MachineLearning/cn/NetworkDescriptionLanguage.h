@@ -383,8 +383,8 @@ private:
 
 public:
     // constructors that take a config name
-	NDLScript(const std::string & configname) : ConfigParser(';', configname) { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; }
-	NDLScript(const std::wstring & configname) : ConfigParser(';', configname) { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; }
+    NDLScript(const std::string & configname) : ConfigParser(';', configname) { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; }
+    NDLScript(const std::wstring & configname) : ConfigParser(';', configname) { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; }
     ~NDLScript() 
     {
         // need to free all the child nodes attached to this script node
@@ -396,7 +396,7 @@ public:
     }
 
     // empty constructor 
-	NDLScript() : ConfigParser(';') { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; } // parameterless version if needed
+    NDLScript() : ConfigParser(';') { m_macroNode = NULL; m_noDefinitions = false; m_definingMacro = false; } // parameterless version if needed
 
     // construct NDLScript from a ConfigValue, propogate the config Name
     NDLScript(const ConfigValue& configValue) : ConfigParser(';',configValue.Name())
@@ -450,10 +450,10 @@ public:
 
 
     // copy and move constructors
-	NDLScript(const NDLScript& copyMe);
-	NDLScript(const NDLScript&& moveMe);
+    NDLScript(const NDLScript& copyMe);
+    NDLScript(const NDLScript&& moveMe);
 private:
-	NDLNode<ElemType>* NDLScript<ElemType>::DuplicateNode(NDLNode<ElemType>* node);
+    NDLNode<ElemType>* DuplicateNode(NDLNode<ElemType>* node);
 public:
     // GlobalScript - Access to global script
     static NDLScript<ElemType>& GlobalScript() {return s_global;}
