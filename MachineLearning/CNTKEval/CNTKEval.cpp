@@ -80,8 +80,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
 {
     if (m_net == NULL)
     {
-        for (std::map<std::wstring, size_t>::iterator iter = dimensions.begin();
-            iter != dimensions.end(); iter++)
+        for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
         {
             iter->second = 0;
         }
@@ -114,8 +113,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         break;
         }
     case nodeSpecified:
-        for (std::map<std::wstring, size_t>::iterator iter = dimensions.begin();
-            iter != dimensions.end(); iter++)
+        for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
         {
             ComputationNode<ElemType>* node = m_net->GetNodeFromName(iter->first);
             iter->second = node->FunctionValues().GetNumRows();

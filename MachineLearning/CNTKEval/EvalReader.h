@@ -31,8 +31,7 @@ public:
         m_dimensions = dimensions;
         m_currentRecord = 0;
         m_recordCount = 0;
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator iter = inputs->begin();
-            iter != inputs->end(); ++iter)
+        for (auto iter = inputs->begin(); iter != inputs->end(); ++iter)
         {
             // figure out the dimension of the data
             const std::wstring& val = iter->first;
@@ -122,8 +121,7 @@ public:
             return false;
 
         // loop through all the input vectors to copy the data over
-        for (std::map<std::wstring, std::vector<ElemType>*>::iterator iter = m_inputs->begin();
-            iter != m_inputs->end(); ++iter)
+        for (auto iter = m_inputs->begin(); iter != m_inputs->end(); ++iter)
         {
             // figure out the dimension of the data
             std::wstring val = iter->first;
@@ -131,7 +129,7 @@ public:
             //size_t count = rows*recordCount;
 
             // find the output matrix we want to fill
-            std::map<std::wstring, Matrix<ElemType>*>::iterator iterIn = matrices.find(val);
+            auto iterIn = matrices.find(val);
 
             // allocate the matrix if we don't have one yet
             if (iterIn == matrices.end())

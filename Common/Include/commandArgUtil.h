@@ -831,9 +831,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         operator ConfigValue() 
         {
             std::string unparse = "[";
-            for (ConfigParameters::iterator iter=this->begin();
-                iter != this->end();
-                ++iter)
+            for (auto iter=this->begin(); iter != this->end(); ++iter)
             {
                 // NOTE: the first time through this loop we will get a separator before the first value
                 // this is by design, since a separator immediately following a brace "[," defines the separator for that block
@@ -886,9 +884,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         operator ConfigValue() 
         {
             std::string unparse = "{";
-            for (ConfigArray::iterator iter=this->begin();
-                iter != this->end();
-                ++iter)
+            for (auto iter=this->begin(); iter != this->end(); ++iter)
             {
                 // NOTE: the first time through this loop we will get a separator before the first value
                 // this is by design, since a separator immediately following a brace "{," defines the separator for that block

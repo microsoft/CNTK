@@ -218,7 +218,7 @@ template <typename ElemType>
 void TestConfiguration(const ConfigParameters& configBase)
 {
     ConfigParameters configMacros = configBase("macroExample");
-    for(ConfigParameters::iterator iterMacro = configMacros.begin(); iterMacro != configMacros.end(); iterMacro++)
+    for(auto iterMacro = configMacros.begin(); iterMacro != configMacros.end(); iterMacro++)
     {
         std::map<std::string, ConfigValue> paramsMap;
         ConfigParameters configCN = iterMacro->second;
@@ -287,8 +287,7 @@ void TestConfiguration(const ConfigParameters& configBase)
 
         //now link up all the nodes
         configNodes = configCN("Relation");
-        for(ConfigParameters::iterator iter = configNodes.begin();
-            iter != configNodes.end(); iter++)
+        for(auto iter = configNodes.begin(); iter != configNodes.end(); iter++)
         {
             std::wstring nodeName = msra::strfun::utf16(iter->first);
             ConfigArray configNode = iter->second;
