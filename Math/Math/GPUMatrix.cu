@@ -35,7 +35,7 @@ __declspec (thread)
 #endif
 cudaStream_t t_stream = cudaStreamDefault;
 
-extern int _ConvertSMVer2Cores(int major, int minor);
+extern int _ConvertSMVer2Cores(int major, int minor);   // forward declaration
 
 // SetStream - set the stream that will be used by the GPU routines
 void MATH_API SetStream(cudaStream_t stream)
@@ -3398,6 +3398,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 }}}
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
+// TODO: This is duplicated in BestGpu.cpp
 // Beginning of GPU Architecture definitions
 int _ConvertSMVer2Cores(int major, int minor)
 {
