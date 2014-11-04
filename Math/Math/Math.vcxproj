@@ -23,7 +23,6 @@
     <SccProvider>
     </SccProvider>
     <ProjectName>CNTKMath</ProjectName>
-    <CudaToolkitCustomDir>$(CUDA_PATH)</CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -40,9 +39,6 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -84,10 +80,10 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath) &amp;&amp; xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_65.dll" $(OutputPath)</Command>
+      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>Copy ACML DLLs and cudart64_65.dll</Message>
+      <Message>Copying ACML DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -131,8 +127,8 @@
       <DelayLoadDLLs>cublas64_65.dll;cusparse64_65.dll;curand64_65.dll;cudart64_65.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath) &amp;&amp; xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_65.dll" $(OutputPath)</Command>
-      <Message>Copy ACML DLLs and cudart64_65.dll</Message>
+      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath)</Command>
+      <Message>Copying ACML DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>
@@ -188,7 +184,4 @@
     <None Include="GPUMatrix.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
-  </ImportGroup>
 </Project>
