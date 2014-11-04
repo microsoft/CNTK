@@ -854,6 +854,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasloop; 
     };
     // add this at the start of each derived class, to get access to the members of ComputationNode
+    // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
 #define UsingComputationNodeMembers    \
         typedef ComputationNode<ElemType> B; \
 protected:  \
