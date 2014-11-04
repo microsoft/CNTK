@@ -167,7 +167,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     continue; // empty input
 
                 // check for end of sequence marker
-                if (!bSentenceStart && (!_strcmpi(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()) || ((label - 1 )% m_mbSize == 0) ))
+                if (!bSentenceStart && (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()) || ((label - 1 )% m_mbSize == 0) ))
                 {
                     // ignore those cases where $</s> is put in the begining, because those are used for initialization purpose
                     spos.flags |= seqFlagStopLabel;
@@ -181,7 +181,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                         RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
                     }
 
-                    if (!_strcmpi(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                    if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
                         continue; /// ignore sentence ending
                 }
 
@@ -233,7 +233,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                 {
                     // this is the next word (label was incremented above)
                     labelValue = labelTemp[label];
-                    if (!_strcmpi(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                    if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
                     {
                         labelValue = labelInfo.endSequence;
                     }
@@ -1693,7 +1693,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
             {
                 // this is the next word (label was incremented above)
                 labelValue = m_labelTemp[label];
-                if (!_strcmpi(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
+                if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
                 {
                     labelValue = labelInfo.endSequence;
                 }

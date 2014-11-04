@@ -166,7 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB, gradientClippingWithTruncation, 
                 clippingThresholdPerSample,autoAdjustLRType, increaseLearnRateIfImproveMoreThan, learnRateIncreaseFactor, 
                 reduceLearnRateIfImproveLessThan, continueReduce, learnRateDecreaseFactor, dropoutRates,
-                loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, (UINT16)traceLevel, numMBsToShowResult,
+                loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, usePtask, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
 				rpi);
@@ -186,7 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const ElemType increaseLearnRateIfImproveMoreThan = std::numeric_limits<ElemType>::infinity(), const ElemType learnRateIncreaseFactor = 1.382f,
             const ElemType reduceLearnRateIfImproveLessThan=0, const bool continueReduce=false, const ElemType learnRateDecreaseFactor = 0.618f, floatargvector dropoutRates = floatargvector(L"0.0f"),
             const bool loadBestModel=true, const intargvector& numMiniBatch4LRSearch=intargvector(L"500"), const size_t numPrevLearnRates = 5, 
-            const size_t numBestSearchEpoch = 1, const UINT16 traceLevel = 0,
+            const size_t numBestSearchEpoch = 1, const int traceLevel = 0,
             const size_t numMBsToShowResult = 10, const size_t maxTempMemSizeInSamplesForCNN = 0,
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
@@ -1263,7 +1263,7 @@ protected:
 
         AdaptationRegType ParseAdaptationRegType(wstring s)
         {
-            transform(s.begin(), s.end(), s.begin(),tolower); 
+            msra::strfun::tolower_ascii(s);
             if (s == L"" || s == L"none")
                 return AdaptationRegType::None;
             else if (s == L"kl" || s == L"klreg" )
@@ -1276,7 +1276,7 @@ protected:
 
         GradientsUpdateType ParseGradUpdateType(wstring s)
         {
-            transform(s.begin(), s.end(), s.begin(),tolower); 
+            msra::strfun::tolower_ascii(s);
             if (s == L"" || s == L"none")
                 return GradientsUpdateType::None;
             else if (s == L"adagrad")
@@ -1291,7 +1291,7 @@ protected:
 
         LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
         {
-            transform(s.begin(), s.end(), s.begin(),tolower); 
+            msra::strfun::tolower_ascii(s);
             if (s == L"false" || s == L"none")
                 return LearningRateSearchAlgorithm::None;
             else if (s == L"searchbeforeepoch" || s == L"beforeepoch" || s == L"before")
@@ -1427,7 +1427,7 @@ protected:
 		floatargvector m_dropoutRates;
         size_t m_maxTempMemSizeInSamplesForCNN;
 
-        UINT16 m_traceLevel;
+        int m_traceLevel;
 
         size_t m_numPrevLearnRates;
 

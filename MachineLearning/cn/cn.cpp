@@ -74,7 +74,7 @@ void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
     wstring modelPath = config("modelPath");
     intargvector mbSize = minibatchSize;
 
-    UINT16 traceLevel = config("traceLevel", "0");    
+    int traceLevel = config("traceLevel", "0");    
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
     ConfigArray evalNodeNames = config("evalNodeNames","");
@@ -155,7 +155,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
     size_t sleepSecondsBetweenRuns = config("sleepTimeBetweenRuns", "0"); 
 
-    UINT16 traceLevel = config("traceLevel", "0");    
+    int traceLevel = config("traceLevel", "0");    
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
     ConfigArray evalNodeNames = config("evalNodeNames","");
@@ -288,7 +288,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 TrainingCriterion ParseTrainingCriterionString(wstring s)
 {
-    transform(s.begin(), s.end(), s.begin(), tolower); 
+    msra::strfun::tolower_ascii(s);
     if (s==L"crossentropywithsoftmax")
         return TrainingCriterion::CrossEntropyWithSoftmax;
     else if (s==L"squareerror")
@@ -300,7 +300,7 @@ TrainingCriterion ParseTrainingCriterionString(wstring s)
 
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
-    transform(s.begin(), s.end(), s.begin(), tolower); 
+    msra::strfun::tolower_ascii(s);
     if (s==L"errorprediction")
         return EvalCriterion::ErrorPrediction;
     else if (s==L"crossentropywithsoftmax")
