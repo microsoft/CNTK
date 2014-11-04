@@ -962,6 +962,7 @@ using namespace msra::basetypes;    // for compatibility
 #pragma warning (pop)
 
 // RuntimeError - throw a std::runtime_error with a formatted error string
+__declspec(noreturn)
 static inline void RuntimeError(const char * format, ...)
 {
     va_list args;

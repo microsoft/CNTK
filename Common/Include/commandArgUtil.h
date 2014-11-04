@@ -787,13 +787,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConfigValue operator() (const std::string & name) const
         {
             ConfigValue value = Find (name);
-            if (!value.empty())
-            {
-                // update parent pointer to this pointer
-                value.SetParent(this);
-                return value;
-            }
-            RuntimeError ("configparameters: required parameter missing: %s:%s", m_configName.c_str(), name.c_str());
+            if (value.empty())
+                RuntimeError("configparameters: required parameter missing: %s:%s", m_configName.c_str(), name.c_str());
+            // update parent pointer to this pointer
+            value.SetParent(this);
+            return value;
         }
         // Match - comparison function, case insensitive
         // key - key to get the value from
