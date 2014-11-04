@@ -1,3 +1,4 @@
+// Matrix.cpp -- main CPP file that contains all functions exported by the CNTKMath.dll
 //
 // <copyright file="Matrix.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -9,6 +10,7 @@
 #include "Matrix.h"
 #include <assert.h>
 #include <math.h>
+#include "GPUWatcher.h"     // bring in this class as well so that it gets exported from this DLL
 
 #ifndef CPUONLY
 #pragma comment (lib, "CNTKMathCUDA.lib")   // built by CNTKMathCUDA project
