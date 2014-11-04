@@ -6,12 +6,8 @@
 
 #pragma once
 
-#ifndef CPUONLY
-#pragma comment (lib, "cudart.lib")
-#include <cuda_runtime.h>
-#include <nvml.h>
-#include <vector>
-#endif
+// #define CPUONLY      // #define this to build without GPU support nor needing the SDK installed
+
 #include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

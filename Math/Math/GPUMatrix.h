@@ -13,6 +13,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "BestGpu.h"    // for CPUONLY macro
 
 #ifndef CPUONLY
 #pragma comment (lib, "CNTKMathCUDA.lib")   // built by CNTKMathCUDA

@@ -12,8 +12,13 @@
 #include "GPUSparseMatrix.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
+#pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+    short DeviceFromConfig(const ConfigParameters& /*config*/) { return CPUDEVICE; }    // tells runtime system to not try to use GPUs
+
+    // the reset below are dummy implementations
+
     void PrepareDevice(short deviceId);
 
 #pragma region Constructors and Destructor
