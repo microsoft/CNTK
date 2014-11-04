@@ -1,20 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CudaCompile Include="GPUMatrix.cu">
-      <Filter>GPU</Filter>
-    </CudaCompile>
-    <CudaCompile Include="GPUMatrixCUDAKernels.cu">
-      <Filter>GPU</Filter>
-    </CudaCompile>
-    <CudaCompile Include="GPUSparseMatrix.cu">
-      <Filter>GPU</Filter>
-    </CudaCompile>
-    <CudaCompile Include="GPUWatcher.cu">
-      <Filter>GPU</Filter>
-    </CudaCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="stdafx.cpp" />
@@ -30,7 +16,7 @@
     <ClCompile Include="CPUSparseMatrix.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
-    <ClCompile Include="GPUDummy.cpp">
+    <ClCompile Include="NoGPU.cpp">
       <Filter>GPU</Filter>
     </ClCompile>
   </ItemGroup>

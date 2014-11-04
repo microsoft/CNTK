@@ -1,5 +1,5 @@
 //
-// <copyright file="GPUDummy.cu" company="Microsoft">
+// <copyright file="NoGPU.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

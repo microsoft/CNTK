@@ -14,6 +14,10 @@
 #include "Helpers.h"
 #include "CommonMatrix.h"
 
+#ifndef CPUONLY
+#pragma comment (lib, "CNTKMathCUDA.lib")   // built by CNTKMathCUDA
+#endif
+
 // predeclare cublasHandle_t
 struct cublasContext;
 typedef struct cublasContext *cublasHandle_t;
@@ -376,4 +380,3 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef GPUMatrix<float> GPUSingleMatrix;
 
 }}}
-
