@@ -160,7 +160,7 @@ public:
                 else
                 {
                     if (ndlNode->GetType() != ndlTypeConstant)
-                        RuntimeError("Matching NDL name found for %s, but no corresponding computation node found\n", symbol);
+                        RuntimeError("Matching NDL name found for %s, but no corresponding computation node found\n", symbol.c_str());
                     // probably a constant node, so make the ComputationNode that is equivalent
                     ComputationNode<ElemType>* nodePtr = cn->CreateLearnableParameter(name, 1, 1);
                     ndlNode->SetEvalValue(nodePtr);
@@ -170,7 +170,7 @@ public:
             }
         }
         if (nodes.empty())
-            RuntimeError("FindSymbols could not find a symbol for %s\n", symbol);
+            RuntimeError("FindSymbols could not find a symbol for %s\n", symbol.c_str());
         return nodes;
     }
 
@@ -396,7 +396,7 @@ public:
     {
         auto found = m_mapNameToNetNdl.find(modelName);
         if (found == m_mapNameToNetNdl.end())
-            RuntimeError("Model %s does not exist. Cannot set it to default.", modelName);
+            RuntimeError("Model %s does not exist. Cannot set it to default.", modelName.c_str());
         else
             m_netNdlDefault = &found->second;
     }
