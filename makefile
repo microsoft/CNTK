@@ -32,7 +32,7 @@ INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(ACML_PATH)/
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/NetworkDescriptionLanguage.cpp Common/BestGpu.cpp
 
-MATH_SRC = Math/Math/Matrix.obj Math/Math/CPUMatrix.obj Math/Math/CPUSparseMatrix.obj Math/Math/GPUDummy.obj
+MATH_SRC = Math/Math/Matrix.obj Math/Math/CPUMatrix.obj Math/Math/CPUSparseMatrix.obj Math/Math/NoGPU.obj
 
 CN_SRC =  MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp
 
