@@ -15,6 +15,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template<class ElemType>
 class EvalReader : public IDataReader<ElemType>
 {
+    typedef typename IDataReader<ElemType>::LabelType LabelType;
+    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
 private:
     std::map<std::wstring, std::vector<ElemType>*>* m_inputs; // our input data
     std::map<std::wstring, size_t>* m_dimensions; // the number of rows for the input data
@@ -180,16 +182,16 @@ public:
 	}
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
-    virtual const std::map<typename LabelIdType, typename LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/) 
+    virtual const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/) 
     {
-        static std::map<typename LabelIdType, typename LabelType> labelMap;
+        static std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType> labelMap;
         return labelMap;
     }
 
     // SetLabelMapping - Sets the label mapping from integer index to label 
     // labelMapping - mapping table from label values to IDs (must be 0-n)
     // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
-    virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/) {}
+    virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& /*labelMapping*/) {}
 
     // GetData - Gets metadata from the specified section (into CPU memory) 
     // sectionName - section name to retrieve data from

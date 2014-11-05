@@ -36,7 +36,7 @@ MATH_SRC = Math/Math/Matrix.obj Math/Math/CPUMatrix.obj Math/Math/CPUSparseMatri
 
 CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
           MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
-          MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp
+          MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
 
 SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 

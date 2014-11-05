@@ -15,6 +15,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template<class ElemType>
 class EvalWriter : public IDataWriter<ElemType>
 {
+    typedef typename IDataWriter<ElemType>::LabelType LabelType;
+    typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
 private:
     std::map<std::wstring, std::vector<ElemType>*>* m_outputs; // our output data
     std::map<std::wstring, size_t>* m_dimensions; // the number of rows for the output data
@@ -119,7 +121,7 @@ public:
         return (m_currentRecord >= m_recordCount);
 
     }
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/) {};
+    virtual void SaveMapping(std::wstring saveId, const std::map<typename EvalWriter<ElemType>::LabelIdType, typename EvalWriter<ElemType>::LabelType>& /*labelMapping*/) {};
 
 };
 
