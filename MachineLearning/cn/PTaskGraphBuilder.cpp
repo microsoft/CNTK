@@ -842,7 +842,7 @@ void PTaskGraphBuilder<ElemType>::CreateTaskDescriptorsForComputationNodes()
         ComputationNodePtr node = *nodeIter;
         std::wstring opName = node->OperationName();
 
-        if (m_verbosity >= 1) fprintf(stderr, "  %ws(%ws): ",
+        if (m_verbosity >= 1) fprintf(stderr, "  %ls(%ls): ",
             opName.c_str(), node->NodeName().c_str());
 
         // Learnable parameter node types.
@@ -905,7 +905,7 @@ void PTaskGraphBuilder<ElemType>::CreateTaskDescriptorsForComputationNodes()
         }
         else
         {
-            fprintf(stderr, "PTaskGraphBuilder does not (yet) support ComputationNode type %ws.\n",
+            fprintf(stderr, "PTaskGraphBuilder does not (yet) support ComputationNode type %ls.\n",
                 opName.c_str());
             throw exception("Unsupported computation node type");
         }

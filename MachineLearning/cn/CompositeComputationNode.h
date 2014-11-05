@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             char str[4096];
             sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << string(str);
-            sprintf(str, "HasComputed=%ws", HasComputed()? L"true" : L"false");
+            sprintf(str, "HasComputed=%ls", HasComputed()? L"true" : L"false");
             fstream << string(str);
 
             PrintNodeValuesToFile(printValues, fstream);
@@ -1057,7 +1057,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_children[0]->FunctionValues().GetNumCols() != weightCols || m_children[0]->FunctionValues().GetNumRows() != m_outputChannels)
             {
-                msra::strfun::strprintf msg("convolutionWeight matrix %ws should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", 
+                msra::strfun::strprintf msg("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", 
                     m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
                 throw std::logic_error(msg.c_str());            
             }
@@ -1070,7 +1070,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_children[1]->FunctionValues().GetNumRows() != inputDim)
             {
-                msra::strfun::strprintf msg("each column of input to the convolution node %ws is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
+                msra::strfun::strprintf msg("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
                     NodeName().c_str(), inputDim);
                 throw std::logic_error(msg.c_str());            
             }
@@ -1132,7 +1132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << string(str);
             sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputWidth, m_outputHeight, m_outputChannels);
             fstream << string(str);
-            sprintf(str, "ZeroPadding=%ws  maxTempMemSizeInSamples=%lu\n", m_zeroPadding? L"true" : L"false", m_maxTempMemSizeInSamples);
+            sprintf(str, "ZeroPadding=%ls  maxTempMemSizeInSamples=%lu\n", m_zeroPadding? L"true" : L"false", m_maxTempMemSizeInSamples);
             fstream << string(str);
         }
 
@@ -1471,7 +1471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_children[0]->FunctionValues().GetNumRows() != m_inputSizePerSample)
             {
-                msra::strfun::strprintf msg("each column of input to the MaxPooling node %ws is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
+                msra::strfun::strprintf msg("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
                     NodeName().c_str(), m_inputSizePerSample);
                 throw std::logic_error(msg.c_str());            
             }
@@ -1732,7 +1732,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_children[0]->FunctionValues().GetNumRows() != m_inputSizePerSample)
             {
-                msra::strfun::strprintf msg("each column of input to the AveragePooling node %ws is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
+                msra::strfun::strprintf msg("each column of input to the AveragePooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
                     NodeName().c_str(), m_inputSizePerSample);
                 throw std::logic_error(msg.c_str());            
             }
