@@ -159,6 +159,7 @@ static inline int _wcsnicmp (const wchar_t * a, const wchar_t * b, size_t n) { r
 static inline int64_t  _strtoi64  (const char * s, char ** ep, int r) { return strtoll (s, ep, r); }    // TODO: check if correct
 static inline uint64_t _strtoui64 (const char * s, char ** ep, int r) { return strtoull (s, ep, r); }   // TODO: correct for size_t?
 // -- other
+static inline void memcpy_s(void * dst, size_t dstsize, const void * src, size_t maxcount) { assert (maxcount <= dstsize); memcpy (dst, src, maxcount); }
 static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
 #endif
 

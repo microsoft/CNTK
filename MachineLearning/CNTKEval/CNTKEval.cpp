@@ -52,7 +52,7 @@ template<class ElemType>
 void CNTKEval<ElemType>::Destroy()
 {
     // cleanup everything
-    delete m_net;
+    delete m_net;   // TODO: use shared_ptr
     delete m_reader;
     delete m_writer;
     delete this;
