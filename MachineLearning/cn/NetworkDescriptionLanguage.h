@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // string2 - second string to compare
 // alternate - alternate naming of the string
 // return - true if strings are equal insensitive and modifies string1 to sensitive version if different
-bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, wchar_t* alternate=NULL);
+bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const wchar_t* alternate=NULL);
 
 // CheckFunction - check to see if we match a function name
 // string1 - [in,out] string to compare, if comparision is equal and at least half the full node name will replace with full node name
