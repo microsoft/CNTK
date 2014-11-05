@@ -38,7 +38,9 @@ CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/c
           MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
           MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
 
-SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
+BINARYREADER_SRC = DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
+
+SRC = $(BINARYREADER_SRC) $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 
 all:	${SRC:.cpp=.obj}
 

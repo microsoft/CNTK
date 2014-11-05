@@ -161,6 +161,7 @@ static inline uint64_t _strtoui64 (const char * s, char ** ep, int r) { return s
 // -- other
 static inline void memcpy_s(void * dst, size_t dstsize, const void * src, size_t maxcount) { assert (maxcount <= dstsize); memcpy (dst, src, maxcount); }
 static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
+#define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
 #endif
 
 // ----------------------------------------------------------------------------
