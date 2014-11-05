@@ -183,11 +183,11 @@ void DoCrossValidate(const ConfigParameters& config)
     bool finalModelEvaluated = false;
     for (size_t i=cvInterval[0]; i<=cvInterval[2]; i+=cvInterval[1])
     {
-        wstring cvModelPath = msra::strfun::wstrprintf (L"%ws.%lld", modelPath.c_str(), i);
+        wstring cvModelPath = msra::strfun::wstrprintf (L"%ls.%lld", modelPath.c_str(), i);
 
         if (!fexists (cvModelPath)) 
         {
-            fprintf(stderr, "model %ws does not exist.\n", cvModelPath.c_str());
+            fprintf(stderr, "model %ls does not exist.\n", cvModelPath.c_str());
             if (finalModelEvaluated || !fexists (modelPath))
                 continue; // file missing
             else 
@@ -204,7 +204,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
         SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
 
-        fprintf(stderr, "model %ws --> \n",cvModelPath.c_str());
+        fprintf(stderr, "model %ls --> \n",cvModelPath.c_str());
         std::vector<ElemType> evalErrors;
         evalErrors = eval.Evaluate(cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
         cvErrorResults.push_back(evalErrors);
@@ -242,7 +242,7 @@ void DoCrossValidate(const ConfigParameters& config)
     fprintf(stderr,"------------\n");
     for (int i=0; i < minErrors.size(); ++i)
     {
-        fprintf(stderr,"Based on Err[%d]: Best model = %ws with min err %.8g\n", i, cvModels[minErrIds[i]].c_str(), minErrors[i]);
+        fprintf(stderr,"Based on Err[%d]: Best model = %ls with min err %.8g\n", i, cvModels[minErrIds[i]].c_str(), minErrors[i]);
     }
 }
 

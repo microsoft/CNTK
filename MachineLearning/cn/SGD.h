@@ -309,12 +309,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (startEpoch >= 0)
             {
                 wstring modelFileName = GetModelNameForEpoch(int(startEpoch)-1);
-                fprintf(stderr, "Starting from checkpoint. Load Network From File %ws.\n", modelFileName.c_str());
+                fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
                 net.LoadFromFile(modelFileName);
             }
             else
             {
-                fprintf(stderr, "Load Network From the original model file %ws.\n", origModelFileName.c_str());
+                fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
                 net.LoadFromFile(origModelFileName);
             }
 
@@ -324,7 +324,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needRegularization = m_adaptationRegType != AdaptationRegType::None && m_adaptationRegWeight > 0;
             if (m_needRegularization)
             {
-                fprintf(stderr, "Load reference Network From the original model file %ws.\n", origModelFileName.c_str());
+                fprintf(stderr, "Load reference Network From the original model file %ls.\n", origModelFileName.c_str());
                 refNet.LoadFromFile(origModelFileName);
             }
 
@@ -355,7 +355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             wstring modelFileName = GetModelNameForEpoch(int(startEpoch)-1);
             if (startEpoch >= 0)
-                fprintf(stderr, "Starting from checkpoint. Load Network From File %ws.\n", modelFileName.c_str());
+                fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
             ComputationNetwork<ElemType>& net  = 
                 startEpoch<0? netBuilder->BuildNetworkFromDescription() : netBuilder->LoadNetworkFromFile(modelFileName);
             startEpoch = max(startEpoch, 0);
@@ -569,9 +569,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (size_t j = 0; j < epochEvalErrors.size(); j++)
                         fprintf(stderr, "[%lu]=%.8g ", j, epochEvalErrors[j]);
                     fprintf(stderr, "Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", learnRatePerSample, epochTime);
-                    fprintf(stderr, "Finished Epoch[%lu]: Criterion Node [%ws] Per Sample = %.8g\n", i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
+                    fprintf(stderr, "Finished Epoch[%lu]: Criterion Node [%ls] Per Sample = %.8g\n", i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
                     for (size_t j = 0; j < epochEvalErrors.size(); j++)
-                        fprintf(stderr, "Finished Epoch[%lu]: Evaluation Node [%ws] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                        fprintf(stderr, "Finished Epoch[%lu]: Evaluation Node [%ls] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
                 }
 
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
@@ -697,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 PreComputedNode<ElemType>* node = static_cast<PreComputedNode<ElemType>*> (*nodeIter);
-                fprintf(stderr, "\tNodeName: %ws\n", (node->NodeName()).c_str());
+                fprintf(stderr, "\tNodeName: %ls\n", (node->NodeName()).c_str());
             }
 
             //compute
@@ -1143,7 +1143,7 @@ protected:
         void UpdateWeights(const ComputationNodePtr node, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, const size_t actualMBSize, const size_t expectedMBSize) const
         {
 #if DUMPOUTPUT
-            fprintf(stderr, "Update_%ws\n",node->NodeName().c_str());
+            fprintf(stderr, "Update_%ls\n",node->NodeName().c_str());
 #endif
             UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(), smoothedGradient, learnRatePerSample, actualMBSize, expectedMBSize);
             node->UpdateEvalTimeStamp();
@@ -1330,7 +1330,7 @@ protected:
                 irow = max(0, irow);
                 icol = max(0, icol);
 
-                fprintf(stderr, "\n###### d%ws######\n", node->NodeName().c_str());
+                fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
                 // node->FunctionValues().Print();
                 ElemType eOrg = node->FunctionValues()(irow,icol);
 
@@ -1363,7 +1363,7 @@ protected:
                 bool wrong = (std::isnan(diff) || diff > threshold);
                 if (wrong)
 				{
-                    fprintf (stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                    fprintf (stderr, "\nd%ls Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
                     return false; 
 				}
             }
