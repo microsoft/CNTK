@@ -612,7 +612,7 @@ public:
         auto found = m_symbols.find(symbol);
         if (found == m_symbols.end())
         {
-            RuntimeError("Symbol '%s' currently does not exist, attempting to assigned value '%s' AssignSymbol() requires existing symbol\n", symbol.c_str(), node->GetValue());
+            RuntimeError("Symbol '%s' currently does not exist, attempting to assigned value '%s' AssignSymbol() requires existing symbol\n", symbol.c_str(), node->GetValue().c_str());
         }
         m_symbols[symbol] = node;
     }

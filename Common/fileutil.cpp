@@ -55,11 +55,6 @@ using namespace std;
 // some mappings for non-Windows builds
 // ----------------------------------------------------------------------------
 
-#ifndef _MSC_VER    // add some functions that are VS-only
-static int _wunlink (const wchar_t * p) { return unlink (charpath (p)); }
-static int _wmkdir (const wchar_t * p) { return mkdir (charpath (p), 0777/*correct?*/); }
-#endif
-
 template <>             const wchar_t* GetScanFormatString(char) {return L" %hc";}
 template <>          const wchar_t* GetScanFormatString(wchar_t) {return L" %lc";}
 template <>            const wchar_t* GetScanFormatString(short) {return L" %hi";}

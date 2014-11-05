@@ -1177,9 +1177,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
     {
         if (a.GetNumCols()!=b.GetNumCols() || a.GetNumRows()!=b.GetNumRows())
-            throw new std::runtime_error("Dimensions mismatch in ScaleAndAdd");
+            throw std::runtime_error("Dimensions mismatch in ScaleAndAdd");
         if (a.GetComputeDeviceId()!=b.GetComputeDeviceId())
-            throw new std::runtime_error("ScaleAndAdd: matrices must be on the same device");
+            throw std::runtime_error("ScaleAndAdd: matrices must be on the same device");
 
         int m = (int)a.GetNumRows();
         int n = (int)a.GetNumCols();

@@ -381,7 +381,7 @@ public:
             // clear out the default if needed
             if (m_netNdlDefault == &found->second)
                 m_netNdlDefault = nullptr;
-            fprintf(stderr, "WARNING: conflicting model name %s. Deleting the old model with the same name.", modelName);
+            fprintf(stderr, "WARNING: conflicting model name %s. Deleting the old model with the same name.", modelName.c_str());
             found->second.Clear();
         }
 
@@ -679,7 +679,7 @@ public:
         {
             std::string value = stringParse.substr(tokenStart,tokenEnd-tokenStart);
             if (keyEnd > tokenEnd)
-                RuntimeError("Invalid line, expecting function call, %s", value);
+                RuntimeError("Invalid line, expecting function call, %s", value.c_str());
             std::string functionName;
             std::string paramList;
             // Function(x,y,z) - function with no return

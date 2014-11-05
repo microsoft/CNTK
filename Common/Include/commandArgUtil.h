@@ -126,8 +126,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return value;
         }
     public:
-        operator long() const { return tolong();  }
-        operator unsigned long() const { return toulong(); }
         operator short () const
         {
             long val = tolong();
@@ -160,6 +158,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError ("ConfigValue (unsigned int): integer argument expected");
             return ival;
         }
+        operator long () const { return tolong(); }
+#if (SIZE_MAX != ULONG_MAX)     // on x64 GCC unsigned long == size_t, i.e. we'd get an ambigous declaration
+        operator unsigned long() const { return toulong(); }
+#endif
         operator int64_t () const
         {
             char * ep;          // will be set to point to first character that failed parsing
@@ -973,7 +975,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<typename T> 
     class argvector : public std::vector<T>
     {
-        typedef std::vector<T> B; using B::clear; using B::reserve;
+        typedef std::vector<T> B; using B::clear; using B::reserve; using B::push_back;
         static void parse (const std::wstring & in, float & val) { val = (float) msra::strfun::todouble (in); }
         static void parse (const std::wstring & in, size_t & val)                    // convert wstring toks2[0] to T val and check type
         {

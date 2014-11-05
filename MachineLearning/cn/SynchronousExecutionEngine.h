@@ -67,7 +67,7 @@ public:
         if (InputValue<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
@@ -86,7 +86,7 @@ public:
         else if (SparseInputValue<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
@@ -105,7 +105,7 @@ public:
         else if (cnNodeType == L"ImageInput")
         {
             if (parameter.size() < 3 || parameter.size() > 4)
-                RuntimeError("%ws should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType);
+                RuntimeError("%ws should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
@@ -122,7 +122,7 @@ public:
         else if (LearnableParameter<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
@@ -160,7 +160,7 @@ public:
                         // remove the opening and closing double quotes
                         initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size()-2);
                     if(!fexists(initFromFilePath))
-                        RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath);
+                        RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
                     m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
                 }
                 else
@@ -170,7 +170,7 @@ public:
         else if (SparseLearnableParameter<ElemType>::TypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
-                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType);
+                RuntimeError("%ws should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
 
             if (pass == ndlPassInitial)
             {
@@ -208,7 +208,7 @@ public:
                         // remove the opening and closing double quotes
                         initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size()-2);
                     if(!fexists(initFromFilePath))
-                        RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath);
+                        RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
                     m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
                 }
                 else
@@ -281,7 +281,7 @@ public:
         else if (cnNodeType == ConvolutionNode<ElemType>::TypeName())
         {
             if (parameter.size() != 7)
-                RuntimeError("%ws should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue]].", cnNodeType);
+                RuntimeError("%ws should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue]].", cnNodeType.c_str());
 
             // setup the parameter position of children so we can hook them up later
             nodeParamCount = 2;
@@ -314,7 +314,7 @@ public:
         else if (cnNodeType == MaxPoolingNode<ElemType>::TypeName())
         {
             if (parameter.size() != 5)
-                RuntimeError("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
+                RuntimeError("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());
 
             // setup the parameter position of children so we can hook them up later
             nodeParamCount = 1;
@@ -341,7 +341,7 @@ public:
         else if (cnNodeType == AveragePoolingNode<ElemType>::TypeName())
         {
             if (parameter.size() != 5)
-                RuntimeError("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType);
+                RuntimeError("%ws should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());
 
             // setup the parameter position of children so we can hook them up later
             nodeParamCount = 1;

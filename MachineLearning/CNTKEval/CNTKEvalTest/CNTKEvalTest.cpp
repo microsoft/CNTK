@@ -13,7 +13,7 @@ void DoCommand(const ConfigParameters& configRoot)
 {
     ConfigArray command = configRoot("command", "train");
     ConfigParameters config=configRoot(command[0]);
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
     ConfigArray minibatchSize = config("minibatchSize", "256");

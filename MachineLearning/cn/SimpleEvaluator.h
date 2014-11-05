@@ -23,6 +23,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SimpleEvaluator : ComputationNetworkHelper<ElemType>
     {
+        typedef ComputationNetworkHelper<ElemType> B;
+        using B::UpdateEvalTimeStamps;
     protected:
         typedef ComputationNode<ElemType>* ComputationNodePtr;
         typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
@@ -203,11 +205,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			
             if (criterionNodes.size()==0)
             {
-                throw new runtime_error("No CrossEntropyWithSoftmax node found\n");
+                throw std::runtime_error("No CrossEntropyWithSoftmax node found\n");
             }
             if (evaluationNodes.size()==0)
             {
-                throw new runtime_error("No Evaluation node found\n");
+                throw std::runtime_error("No Evaluation node found\n");
             }
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;

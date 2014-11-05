@@ -106,7 +106,7 @@ template <typename ElemType>
 void DoEval(const ConfigParameters& config)
 {
     //test
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
     DataReader<ElemType> testDataReader(readerConfig);
@@ -118,7 +118,7 @@ template <typename ElemType>
 void DoEvalUnroll(const ConfigParameters& config)
 {
     //test
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
     DataReader<ElemType> testDataReader(readerConfig);
@@ -147,7 +147,7 @@ template <typename ElemType>
 void DoCrossValidate(const ConfigParameters& config)
 {
     //test
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
     short deviceId = DeviceFromConfig(config);
@@ -249,7 +249,7 @@ void DoCrossValidate(const ConfigParameters& config)
 template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
     readerConfig.Insert("randomize","None");  //we don't want randomization when output results
 
@@ -281,7 +281,7 @@ void DoWriteOutput(const ConfigParameters& config)
 
 	if (config.Exists("writer"))
 	{
-		ConfigParameters writerConfig = config("writer");
+		ConfigParameters writerConfig (config("writer"));
         bool bWriterUnittest = writerConfig("unittest","false");
 		DataWriter<ElemType> testDataWriter(writerConfig);
 		writer.WriteOutput(testDataReader,mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, bWriterUnittest);
@@ -330,8 +330,8 @@ void DoCreateLabelMap(const ConfigParameters& config)
     // this gets the section name we are interested in
     std::string section = config("section");
     // get that section (probably a peer config section, which works thanks to heirarchal symbol resolution)
-    ConfigParameters configSection=config(section);
-    ConfigParameters readerConfig = configSection("reader");
+    ConfigParameters configSection (config(section));
+    ConfigParameters readerConfig (configSection("reader"));
     readerConfig.Insert("allowMapCreation","true");
     short deviceId = CPUDEVICE;
     size_t minibatchSize = config("minibatchSize", "2048");
@@ -356,7 +356,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
         matrices[labelsName] = &labelsMatrix;
 
         // get the label mapping file name
-        ConfigParameters labelConfig = readerConfig(labelsName);
+        ConfigParameters labelConfig (readerConfig(labelsName));
         std::string labelMappingFile;
         if (labelConfig.ExistsCurrent("labelMappingFile"))
             labelMappingFile = labelConfig("labelMappingFile");
@@ -399,22 +399,22 @@ void DoCreateLabelMap(const ConfigParameters& config)
 template <typename ElemType>
 void DoTrain(const ConfigParameters& config)
 {
-    ConfigParameters configSGD=config("SGD");
+    ConfigParameters configSGD (config("SGD"));
     bool makeMode = config("makeMode", "true");
 
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
     IComputationNetBuilder<ElemType>* netBuilder = NULL;
 
     if (config.Exists("NDLNetworkBuilder"))
     {
-        ConfigParameters configNDL = config("NDLNetworkBuilder");
+        ConfigParameters configNDL (config("NDLNetworkBuilder"));
         netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
-        ConfigParameters configSNB = config("SimpleNetworkBuilder");
+        ConfigParameters configSNB (config("SimpleNetworkBuilder"));
         netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
@@ -425,7 +425,7 @@ void DoTrain(const ConfigParameters& config)
     DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
 
     DataReader<ElemType>* cvDataReader = nullptr;
-    ConfigParameters cvReaderConfig = config("cvReader", L"");
+    ConfigParameters cvReaderConfig (config("cvReader", L""));
     
     if (cvReaderConfig.size() != 0)
     {
@@ -447,16 +447,16 @@ void DoAdapt(const ConfigParameters& config)
 {
     short deviceId = DeviceFromConfig(config);
 
-    ConfigParameters configSGD=config("SGD");
+    ConfigParameters configSGD (config("SGD"));
     bool makeMode = config("makeMode", "true");
 
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
     DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
 
     DataReader<ElemType>* cvDataReader = nullptr;
-    ConfigParameters cvReaderConfig = config("cvReader", L"");
+    ConfigParameters cvReaderConfig (config("cvReader", L""));
     
     if (cvReaderConfig.size() != 0)
     {
@@ -508,7 +508,7 @@ void DoCommand(const ConfigParameters& config)
     for (int i=0; i < command.size(); i++)
     {
         //get the configuration parameters that match the command
-        ConfigParameters commandParams=config(command[i]);
+        ConfigParameters commandParams (config(command[i]));
         ConfigArray action = commandParams("action","train");
 
         // determine the action to perform, and do it

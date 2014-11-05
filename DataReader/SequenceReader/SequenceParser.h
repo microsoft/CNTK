@@ -231,10 +231,10 @@ public:
 
         errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
         if (err)
-            throw new std::runtime_error("SequenceParser::ParseInit - error opening file"); 
+            RuntimeError("SequenceParser::ParseInit - error opening file"); 
         int rc = _fseeki64(m_pFile, 0, SEEK_END);
         if (rc)
-            throw new std::runtime_error("SequenceParser::ParseInit - error seeking in file");
+            RuntimeError("SequenceParser::ParseInit - error seeking in file");
 
         m_fileSize = GetFilePosition();
         m_fileBuffer = new BYTE[m_bufferSize];

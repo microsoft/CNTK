@@ -59,16 +59,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		string command(readerConfig("action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
 
-		if (readerConfig.Exists("legacyMode"))
-			throw new runtime_error("legacy mode has been deprecated\n");
+                if (readerConfig.Exists("legacyMode"))
+                    RuntimeError("legacy mode has been deprecated\n");
 
-		if (command == "write"){
-			m_trainOrTest=false;
-			PrepareForWriting(readerConfig);
-		}
-		else{
-			m_trainOrTest=true;
-			PrepareForTrainingOrTesting(readerConfig);
+                if (command == "write"){
+                    m_trainOrTest = false;
+                    PrepareForWriting(readerConfig);
+                }
+                else{
+                    m_trainOrTest = true;
+                    PrepareForTrainingOrTesting(readerConfig);
 		}
 		
 	}
@@ -106,7 +106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		GetDataNamesFromConfig(readerConfig, featureNames, labelNames);
 		if (featureNames.size() + labelNames.size() <= 1)
 		{
-			throw new std::runtime_error("network needs at least 1 input and 1 output specified!");
+			RuntimeError("network needs at least 1 input and 1 output specified!");
 		}
 			
 		//load data for all real-valued inputs (features)
@@ -119,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
 			}
 			else{
-				throw new std::runtime_error("feature type must be Real");
+				RuntimeError("feature type must be Real");
 			}
 
 			m_featureNameToIdMap[featureNames[i]]= iFeat;
@@ -140,7 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			else if (thisLabel.Exists("dim"))
 				m_labelDims.push_back(thisLabel("dim"));
 			else
-				throw new std::runtime_error("labels must specify dim or labelDim");
+				RuntimeError("labels must specify dim or labelDim");
 
 			string type;
 			if (thisLabel.Exists("labelType"))
@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			if (type=="Category")
 				m_nameToTypeMap[labelNames[i]] = InputOutputTypes::category;
 			else
-				throw new std::runtime_error("label type must be Category");
+				RuntimeError("label type must be Category");
 
 			statelistpaths.push_back(thisLabel("labelMappingFile",L""));
 
@@ -176,10 +176,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					m_labelNameToDimMap[labelNames[i]]=m_labelDims[i]=thisLabel("targetDim");
 				}
 				else
-					throw new std::runtime_error("output must specify targetDim if labelToTargetMappingFile specified!");
+					RuntimeError("output must specify targetDim if labelToTargetMappingFile specified!");
 				size_t targetDim = ReadLabelToTargetMappingFile (labelToTargetMappingFile,statelistpaths[i], labelToTargetMap);	
 				if (targetDim!=m_labelDims[i])
-					throw new std::runtime_error("mismatch between targetDim and dim found in labelToTargetMappingFile");
+					RuntimeError("mismatch between targetDim and dim found in labelToTargetMappingFile");
 				m_labelToTargetMapMultiIO.push_back(labelToTargetMap);
 			}
 			else
@@ -361,7 +361,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		}
 		else
 		{
-			throw new std::runtime_error("readMethod must be rollingWindow or blockRandomize");
+			RuntimeError("readMethod must be rollingWindow or blockRandomize");
 		}
 
 	}
@@ -394,7 +394,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
 			}
 			else{
-				throw new std::runtime_error("feature type must be Real");
+				RuntimeError("feature type must be Real");
 			}
 
 			m_featureNameToIdMap[featureNames[i]]= iFeat;
@@ -408,7 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		}
 
 		if (labelNames.size()>0)
-			throw new std::runtime_error("writer mode does not support labels as inputs, only features");
+			RuntimeError("writer mode does not support labels as inputs, only features");
 
 		numFiles=0;
 		foreach_index(i,scriptpaths)
@@ -1373,12 +1373,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			std::wstring targetstring = line.substr(pos+1);
 
 			if (labelList[count]!=token)
-				throw new std::runtime_error("HTKMLFReader::ReadLabelToTargetMappingFile(): mismatch between labelMappingFile and labelToTargetMappingFile");
+				RuntimeError("HTKMLFReader::ReadLabelToTargetMappingFile(): mismatch between labelMappingFile and labelToTargetMappingFile");
 
 			if (count==0)
 				targetDim = targetstring.length();
 			else if (targetDim!=targetstring.length())
-				throw new std::runtime_error("HTKMLFReader::ReadLabelToTargetMappingFile(): inconsistent target length among records");
+				RuntimeError("HTKMLFReader::ReadLabelToTargetMappingFile(): inconsistent target length among records");
 
 			std::vector<ElemType> targetVector(targetstring.length(),(ElemType)0.0);
 			foreach_index(i, targetstring)
@@ -1386,7 +1386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				if (targetstring.compare(i,1,L"1")==0)
 					targetVector[i] = (ElemType)1.0;
 				else if (targetstring.compare(i,1,L"0")!=0)
-					throw new std::runtime_error("HTKMLFReader::ReadLabelToTargetMappingFile(): expecting label2target mapping to contain only 1's or 0's");
+					RuntimeError("HTKMLFReader::ReadLabelToTargetMappingFile(): expecting label2target mapping to contain only 1's or 0's");
 			}
 			labelToTargetMap.push_back(targetVector);
 			count++;
@@ -1394,7 +1394,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		// verify that statelist and label2target mapping file are in same order (to match up with reader) while reading mapping
 		if (count!=labelList.size())
-			throw new std::runtime_error("HTKMLFReader::ReadLabelToTargetMappingFile(): mismatch between lengths of labelMappingFile vs labelToTargetMappingFile");
+			RuntimeError("HTKMLFReader::ReadLabelToTargetMappingFile(): mismatch between lengths of labelMappingFile vs labelToTargetMappingFile");
 
 		return targetDim;
 	}

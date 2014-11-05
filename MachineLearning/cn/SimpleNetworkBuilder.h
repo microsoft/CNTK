@@ -610,7 +610,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> name >> numRows >> numCols;
             if (name != expectedName)
             {
-                throw new std::invalid_argument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n",expectedName, name));
+                throw std::invalid_argument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str()));
             }
 
             if (numCols>1) // transpose W because dbn stores that way apparently

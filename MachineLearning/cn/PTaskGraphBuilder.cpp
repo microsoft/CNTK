@@ -327,7 +327,7 @@ void TaskDescriptor<ElemType>::CreateTask(Graph* graph)
         (FARPROC)HostTaskDriver<ElemType>);
     if(kernel == NULL)
     {
-        throw new exception("Failed to get PTask kernel");
+        throw exception("Failed to get PTask kernel");
     }
 
     m_task = graph->AddTask(
@@ -716,7 +716,7 @@ Port* TaskDescriptor<ElemType>::CreatePortForTemplate(DatablockTemplate* dt,
         // Store the name-port association globally, so that consumers can connect to it.
         if (valueNameToProducerPortMap.find(valueName) != valueNameToProducerPortMap.end())
         {
-            throw new exception("Each value name may only be produced by one task/port");
+            throw exception("Each value name may only be produced by one task/port");
         }
         valueNameToProducerPortMap[valueName] = port;
         break;
@@ -727,7 +727,7 @@ Port* TaskDescriptor<ElemType>::CreatePortForTemplate(DatablockTemplate* dt,
         break;
     default:
     case PTask::PORTTYPE::META_PORT:
-        throw new exception("Unsupported port type");
+        throw exception("Unsupported port type");
         break;
     }
     return port;
@@ -827,7 +827,7 @@ void PTaskGraphBuilder<ElemType>::CreateInputName(std::string inputName)
     // Will populate later with graph input channels.
     if (m_inputNameToChannelsMap.find(inputName) != m_inputNameToChannelsMap.end())
     {
-        throw new exception("Input names must be unique");
+        throw exception("Input names must be unique");
     }
     std::vector<PTask::GraphInputChannel*>* channels = new std::vector<PTask::GraphInputChannel*>();
     m_inputNameToChannelsMap[inputName] = channels;
@@ -908,7 +908,7 @@ void PTaskGraphBuilder<ElemType>::CreateTaskDescriptorsForComputationNodes()
         {
             fprintf(stderr, "PTaskGraphBuilder does not (yet) support ComputationNode type %ws.\n",
                 opName.c_str());
-            throw new exception("Unsupported computation node type");
+            throw exception("Unsupported computation node type");
         }
     }
 }

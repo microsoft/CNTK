@@ -93,7 +93,7 @@ void TestReader(const ConfigParameters& configBase)
 {
     //int nonexistant = configBase("nonexistant");  // use to test global exception handler
     ConfigParameters config = configBase("mnistTest");
-    ConfigParameters readerConfig = config("reader");
+    ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
     size_t mbSize = config("minibatchSize");

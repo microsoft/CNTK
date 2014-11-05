@@ -16,8 +16,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    LONG64 ComputationNode<float>::s_timeStampCounter = 0;
-    LONG64 ComputationNode<double>::s_timeStampCounter = 0;
+    int64_t ComputationNode<float>::s_timeStampCounter = 0;
+    int64_t ComputationNode<double>::s_timeStampCounter = 0;
 
     std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes;
     std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes;

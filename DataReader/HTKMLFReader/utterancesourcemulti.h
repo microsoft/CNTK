@@ -303,7 +303,7 @@ public:
 		std::vector<size_t> classidsbegin;
 		if (!lattices.empty())
 		{
-			throw new std::logic_error("lattices not supported in utterancereadermulti");
+			LogicError("lattices not supported in utterancereadermulti");
 		}
 
 		foreach_index (i, labels)
@@ -883,7 +883,7 @@ private:
 		}
 		if (numreleased>0 && numreleased<randomizedchunks.size())
 		{
-			throw new std::logic_error ("releaserandomizedchunk: inconsistency detected - some inputs have chunks in ram, some not");
+			LogicError ("releaserandomizedchunk: inconsistency detected - some inputs have chunks in ram, some not");
 		}
 		else if (numreleased==randomizedchunks.size())
 		{
@@ -927,7 +927,7 @@ private:
 			return true;
 		}
 		else{
-			throw new std::logic_error ("requirerandomizedchunk: inconsistency detected - some inputs need chunks paged in, some not");
+			LogicError ("requirerandomizedchunk: inconsistency detected - some inputs need chunks paged in, some not");
 		}
 	}
 
