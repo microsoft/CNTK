@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (size_t i=0; i<evalResults.size(); i++)
             {
-                fprintf(stderr, "%ws/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), (evalResults[i]-evalResultsLastMBs[i])/numSamplesLastMBs);
+                fprintf(stderr, "%ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), (evalResults[i]-evalResultsLastMBs[i])/numSamplesLastMBs);
             }
 
             fprintf(stderr, "\n");

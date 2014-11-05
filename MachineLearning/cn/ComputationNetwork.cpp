@@ -88,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(fstream, m_deviceId, nodeName);
             else
             {
-                fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
+                fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
 
@@ -162,7 +162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
             else
             {
-                fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
+                fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
 
