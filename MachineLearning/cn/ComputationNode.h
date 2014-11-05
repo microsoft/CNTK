@@ -290,7 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //for debugging purpose
         virtual void PrintSelf(bool printMatrices = false) const
         {
-            fprintf(stderr, "\n%ws[%lu, %lu] = %ws", NodeName().c_str(), FunctionValues().GetNumRows(),  FunctionValues().GetNumCols(), OperationName().c_str());           
+            fprintf(stderr, "\n%ls[%lu, %lu] = %ls", NodeName().c_str(), FunctionValues().GetNumRows(),  FunctionValues().GetNumCols(), OperationName().c_str());           
 
             if (!IsLeaf())
             {
@@ -299,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (i > 0)
                         fprintf(stderr, ", ");           
-                    fprintf(stderr, "%ws[%lu, %lu]", Inputs(i)?Inputs(i)->NodeName().c_str():L"NULL", Inputs(i)->FunctionValues().GetNumRows(), Inputs(i)->FunctionValues().GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", Inputs(i)?Inputs(i)->NodeName().c_str():L"NULL", Inputs(i)->FunctionValues().GetNumRows(), Inputs(i)->FunctionValues().GetNumCols());
                 }
                 fprintf(stderr, ")");           
             }
@@ -417,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
 #if DUMPOUTPUT
-                    fprintf(stderr,"Backprop%d_%ws\n",i,NodeName().c_str());
+                    fprintf(stderr,"Backprop%d_%ls\n",i,NodeName().c_str());
 #endif
                     ComputeInputPartial(i); //this computes partial wrt to the child and sums the gradient value in the child
                 }
@@ -600,7 +600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void PrintSelfBeforeValidation(bool allowNulls=false) const
         {
-            fprintf(stderr, "\nValidating --> %ws = %ws", NodeName().c_str(), OperationName().c_str());           
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());           
 
             if (!IsLeaf())
             {
@@ -623,10 +623,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
                     if (IsChildAnImage(i))  //image
-                        fprintf(stderr, "%ws[%lu {W=%lu, H=%lu, C=%lu}, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), 
+                        fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), 
                             child->m_outputWidth, child->m_outputHeight, child->m_outputChannels, child->FunctionValues().GetNumCols());
                     else
-                        fprintf(stderr, "%ws[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                        fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
 
                 }
                 fprintf(stderr, ")");           

@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else  //node name is not found, dump all nodes
             {
-                fprintf (stderr, "Warning: node name %ws does not exist in the network. dumping all nodes.\n", nodeName.c_str());
+                fprintf (stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n", nodeName.c_str());
                 DumpAllNodesToFile(printValues, outputFile);
             }
         }
@@ -780,7 +780,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
-                fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
+                fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
             
@@ -934,7 +934,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
             else
             {
-                fprintf(stderr, "Error creating new ComputationNode of type %ws, with name %ws\n", nodeType.c_str(), nodeName.c_str());
+                fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
                 throw std::invalid_argument("Invalid node type.");
             }
             
@@ -1428,7 +1428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
 #if DUMPOUTPUT
-                    fprintf(stderr,"Forward_%ws\n",(*nodeIter)->NodeName().c_str());
+                    fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
 #endif
                     (*nodeIter)->EvaluateThisNode(); // we manage time stamp here so that derived classes don't need to worry about it
                     (*nodeIter)->UpdateEvalTimeStamp();
@@ -1776,7 +1776,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ValidateNetwork(const ComputationNodePtr rootNode)
         {
-            fprintf(stderr, "\n\nValidating node %ws \n", rootNode->NodeName().c_str());
+            fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
 
             std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
             
@@ -1908,7 +1908,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, " nodes in the recurrent loops : \n"); 
                 for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
-                    fprintf (stderr, "%ws\t", (*itr)->NodeName().c_str() ); 
+                    fprintf (stderr, "%ls\t", (*itr)->NodeName().c_str() ); 
                 }
             }
 
@@ -1939,7 +1939,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, " nodes in the recurrent loops : \n"); 
                 for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
-                    fprintf (stderr, "%ws\t", (*itr)->NodeName().c_str() ); 
+                    fprintf (stderr, "%ls\t", (*itr)->NodeName().c_str() ); 
                 }
             }
         }
@@ -2047,7 +2047,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t max_visitedOrderInLoop = 0;
                 for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
                 {
-                    fprintf (stderr, "%ws\t", (*itr)->NodeName().c_str() ); 
+                    fprintf (stderr, "%ls\t", (*itr)->NodeName().c_str() ); 
                     if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
                     {
                         max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
@@ -2135,7 +2135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "Reordered nodes\n");
                 for (auto itr = nodes.begin(); itr != nodes.end(); itr++)
                 {
-                    fprintf (stderr, "%ws\n", (*itr)->NodeName().c_str() ); 
+                    fprintf (stderr, "%ls\n", (*itr)->NodeName().c_str() ); 
                 }
 #endif
             }
