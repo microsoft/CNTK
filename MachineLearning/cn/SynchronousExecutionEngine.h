@@ -71,10 +71,10 @@ public:
 
             if (pass == ndlPassInitial)
             {
-				// evaluate only scalar parameters
-				vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
-				size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
-				size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 // first look for this node already existing in the network
                 if (m_net.NodeNameExist(name))
