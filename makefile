@@ -30,11 +30,13 @@
 INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(ACML_PATH)/include
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
-             Common/Eval.cpp Common/File.cpp Common/NetworkDescriptionLanguage.cpp Common/BestGpu.cpp
+             Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp
 
 MATH_SRC = Math/Math/Matrix.obj Math/Math/CPUMatrix.obj Math/Math/CPUSparseMatrix.obj Math/Math/NoGPU.obj
 
-CN_SRC =  MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp
+CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
+          MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
+          MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp
 
 SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 
