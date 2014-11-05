@@ -40,7 +40,16 @@ CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/c
 
 BINARYREADER_SRC = DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 
-SRC = $(BINARYREADER_SRC) $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
+HTKMLFREADER_SRC = DataReader/HTKMLFReader/HTKMLFWriter.cpp DataReader/HTKMLFReader/latticearchive.cpp DataReader/HTKMLFReader/HTKMLFReader.cpp
+
+SEQUENCEREADER_SRC = DataReader/SequenceReader/SequenceReader.cpp DataReader/SequenceReader/SequenceParser.cpp DataReader/SequenceReader/Exports.cpp
+
+LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
+
+UCIFASTREADER_SRC = DataReader/UCIFastReader/Exports.cpp DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cp
+
+
+SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC) $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 
 all:	${SRC:.cpp=.obj}
 
