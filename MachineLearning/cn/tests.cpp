@@ -23,12 +23,13 @@
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
 
+#if 0   // unused, and does not build without SimpleSGD which is not present in this Solution
 template <typename ElemType>
 void TestBing(const ConfigParameters& config)
 {
     if (!config.Exists("train.set"))
     {
-        cout<<"USAGE: cn.exe train.set featureDim networkDescription learnRatesPerMB mbSize epochSize maxEpochs outdir test.set test.set.size"<<endl;
+        std::cout<<"USAGE: cn.exe train.set featureDim networkDescription learnRatesPerMB mbSize epochSize maxEpochs outdir test.set test.set.size"<<endl;
         exit(0);
     }
 
@@ -66,6 +67,7 @@ void TestBing(const ConfigParameters& config)
     SimpleEvaluator<ElemType> eval(netBuilder.LoadNetworkFromFile(finalNetPath, false));
     eval.Evaluate(testDataReader, 1024, (finalNetPath.append(L".results.txt")).c_str(),testSize);
 }
+#endif
 
 template <typename ElemType> void DoEval(const ConfigParameters& config);
 template <typename ElemType> void DoTrain(const ConfigParameters& config);
@@ -73,18 +75,18 @@ template <typename ElemType> void DoTrain(const ConfigParameters& config);
 template <typename ElemType>
 void TestMNist(const ConfigParameters& configBase)
 {
-    ConfigParameters config = configBase("mnistTrain");
+    ConfigParameters config (configBase("mnistTrain"));
     DoTrain<ElemType>(config);
-    ConfigParameters configTest = configBase("mnistTest");
+    ConfigParameters configTest (configBase("mnistTest"));
     DoEval<ElemType>(configTest);
 }
 
 template <typename ElemType>
 void TestSpeech(const ConfigParameters& configBase)
 {
-    ConfigParameters config = configBase("speechTrain");
+    ConfigParameters config (configBase("speechTrain"));
     DoTrain<ElemType>(config);
-    ConfigParameters configTest = configBase("speechTest");
+    ConfigParameters configTest (configBase("speechTest"));
     DoEval<ElemType>(configTest);
 }
 
@@ -92,7 +94,7 @@ template <typename ElemType>
 void TestReader(const ConfigParameters& configBase)
 {
     //int nonexistant = configBase("nonexistant");  // use to test global exception handler
-    ConfigParameters config = configBase("mnistTest");
+    ConfigParameters config (configBase("mnistTest"));
     ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
@@ -347,11 +349,11 @@ template <typename ElemType>
 void TestCommandLine(const ConfigParameters& configBase)
 {
 //    commandLine=[
-    ConfigParameters config = configBase("commandline");
-    ConfigParameters stringTests = config("stringTests");
-    ConfigParameters unicodeTests = stringTests("unicodeTests");
-    ConfigParameters arrayTests = config("arrayTests");
-    ConfigParameters dictTests = config("dictTests");
+    ConfigParameters config       (configBase("commandline"));
+    ConfigParameters stringTests  (config("stringTests"));
+    ConfigParameters unicodeTests (stringTests("unicodeTests"));
+    ConfigParameters arrayTests   (config("arrayTests"));
+    ConfigParameters dictTests    (config("dictTests"));
     //    # config file parsing, basic types
     //    int=20
     int i = config("int","5555");
@@ -403,9 +405,9 @@ void TestCommandLine(const ConfigParameters& configBase)
     str = stringTests("stringQuotes");
     //    wstring=東京
     std::wstring wstr = unicodeTests("wstring");
-    wstr = unicodeTests(L"nothere", L"newValue");
+    wstr = (std::wstring)unicodeTests(L"nothere", L"newValue");
     //wcout << wstr << endl;
-    wstr = unicodeTests("nothere", L"defWstring");
+    wstr = (std::wstring)unicodeTests("nothere", L"defWstring");
     //    wstringQuotes="東京に行きましょう． 明日"
     std::wstring wstrQuotes = unicodeTests("wstringQuotes");
     //
@@ -433,11 +435,11 @@ void TestCommandLine(const ConfigParameters& configBase)
     //    arrayHetro={string;明日;123;1.234e56;True;dict=first=1;second=2}
     ConfigArray arrayHetro = arrayTests("arrayHetro");
     str=arrayHetro[0];
-    wstr=arrayHetro[1];
+    wstr=(std::wstring)arrayHetro[1];
     i=arrayHetro[2];
     d=arrayHetro[3];
     bt=arrayHetro[4];
-    ConfigParameters dict = arrayHetro[5];
+    ConfigParameters dict (arrayHetro[5]);
     std::string name = dict.Name();
     //    arrayNested={|1:2:3|first:second:third|t:f:t|{|identical*2|separator*1|nested*3}}
     ConfigArray arrayNested = arrayTests(L"arrayNested");
@@ -452,16 +454,16 @@ void TestCommandLine(const ConfigParameters& configBase)
 //
     //    #dictionary tests
     //    dictEmpty=[]
-    ConfigParameters dictEmpty = dictTests("dictEmpty");
+    ConfigParameters dictEmpty (dictTests("dictEmpty"));
     //    dictSingle=first=1
-    ConfigParameters dictSingle = dictTests("dictSingle");
+    ConfigParameters dictSingle (dictTests("dictSingle"));
     //    dictMultiple=first=hello;second=there
-    ConfigParameters dictMultiple = dictTests("dictMultiple");
+    ConfigParameters dictMultiple (dictTests("dictMultiple"));
     //    dictMultipleBraces=[first=hello;second=there;third=with;forth=braces]
-    ConfigParameters dictMultipleBraces = dictTests(L"dictMultipleBraces");
+    ConfigParameters dictMultipleBraces (dictTests(L"dictMultipleBraces"));
     //dictMultiple = dictTests("nothere", dictMultipleBraces); no longer supported, can add if we need
     //    dictMultipleSeparatorBraces=[|first=hello|second=1|thirdBool|forth=12.345|fifth="quoted string"|sixth=古部|seventh=braces]
-    ConfigParameters dictMultipleSeparatorBraces = dictTests("dictMultipleSeparatorBraces");
+    ConfigParameters dictMultipleSeparatorBraces (dictTests("dictMultipleSeparatorBraces"));
     //    dictQuotedStrings=[
     //        files={
     //            "c:\path with spaces\file.txt"
@@ -469,7 +471,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     //        }
     //        mapping="e:\the path\that has\spaces"
     //    ]
-    ConfigParameters dictQuotedStrings = dictTests("dictQuotedStrings");
+    ConfigParameters dictQuotedStrings (dictTests("dictQuotedStrings"));
     arrayQuotedStrings = dictQuotedStrings("files");
     const char * mapping = dictQuotedStrings("mapping"); mapping;
     //
@@ -495,23 +497,23 @@ void TestCommandLine(const ConfigParameters& configBase)
     //            forth=4@fifth=5
     //        ]
     //    ]
-    ConfigParameters dictNested = config("dictNested");
+    ConfigParameters dictNested (config("dictNested"));
     name = dictNested.Name();
     ConfigArray array = dictNested("array");
     name = array.Name();
-    ConfigParameters dictElement1 = array[0];
+    ConfigParameters dictElement1 (array[0]);
     name = dictElement1.Name();
-    ConfigParameters dictElement2 = array[1];
+    ConfigParameters dictElement2 (array[1]);
     name = dictElement2.Name();
-    ConfigArray arrayNest = array[2];
+    ConfigArray arrayNest (array[2]);
     name = arrayNest.Name();
-    ConfigParameters dictNElement1 = arrayNest[0];
+    ConfigParameters dictNElement1 (arrayNest[0]);
     name = dictNElement1.Name();
-    ConfigParameters dictNElement2 = arrayNest[1];
+    ConfigParameters dictNElement2 (arrayNest[1]);
     name = dictNElement2.Name();
-    ConfigParameters dict2 = dictNested(L"dict2");
+    ConfigParameters dict2 (dictNested(L"dict2"));
     name = dict2.Name();
-    ConfigParameters dict3 = dictNested("dict3");
+    ConfigParameters dict3 (dictNested("dict3"));
     name = dict3.Name();
     //]
 
