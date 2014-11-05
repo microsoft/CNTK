@@ -633,7 +633,7 @@ static inline wcstring utf16 (const std::wstring & p) { return p; }
 
 // convert a string to lowercase  --TODO: currently only correct for 7-bit ASCII
 template<typename CHAR>
-static inline void tolower_ascii (std::basic_string<CHAR> s) { std::transform(s.begin(), s.end(), s.begin(), [] (CHAR c) { return (c >= 0 && c < 128) ? ::tolower(c) : c; }); }
+static inline void tolower_ascii (std::basic_string<CHAR> & s) { std::transform(s.begin(), s.end(), s.begin(), [] (CHAR c) { return (c >= 0 && c < 128) ? ::tolower(c) : c; }); }
 
 // split and join -- tokenize a string like strtok() would, join() strings together
 template<class _T> static inline std::vector<std::basic_string<_T>> split (const std::basic_string<_T> & s, const _T * delim)
