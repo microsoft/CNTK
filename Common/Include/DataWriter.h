@@ -22,10 +22,11 @@
 #else
 #define DATAWRITER_API
 #endif
+
+#include "basetypes.h"
 #include "Matrix.h"
 #include <map>
 #include <string>
-#include "basetypes.h"
 #include "commandArgUtil.h"
 
 

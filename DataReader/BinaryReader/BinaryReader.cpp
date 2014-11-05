@@ -16,7 +16,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-
 // Destroy - cleanup and remove this class
 // NOTE: this destroys the object, and it can't be used past this point
 template<class ElemType>
@@ -38,9 +37,7 @@ void BinaryReader<ElemType>::LoadSections(Section* sectionRoot, MappingType mapp
         auto found = m_sections.find(newSection->GetName());
         if (found != m_sections.end())
         {
-            char message[128];
-            sprintf_s(message, "LoadSections, duplicate section name %ls already defined previously", newSection->GetName());
-            throw runtime_error(message);
+            RuntimeError("LoadSections, duplicate section name %ls already defined previously", newSection->GetName().c_str());
         }
         m_sections[newSection->GetName()] = newSection;
         // load in any subsections
@@ -118,7 +115,7 @@ void BinaryReader<ElemType>::DisplayProperties()
     for (SectionFile* file : m_secFiles)
     {
         Section* section = file->FileSection();
-        fprintf(stderr,"File: %ls, Records: %lld\n", file->GetName(), section->GetElementCount());
+        fprintf(stderr,"File: %ls, Records: %lld\n", file->GetName().c_str(), section->GetElementCount());
     }
 
     for (auto pair : m_sections)
@@ -235,7 +232,7 @@ bool BinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
     if (endOfDataset)
         return false;
 
-    for each(auto value in matrices)
+    for (auto value : matrices)
     {
         wstring matrixName = value.first;
         Section* section = m_sections[matrixName];
@@ -293,9 +290,7 @@ bool BinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
         // make sure that the data is as expected
         if (!!(section->GetFlags() & flagAuxilarySection) || section->GetElementSize() != sizeof(ElemType))
         {
-            char message[128];
-            sprintf_s(message, "GetMinibatch: Section %ls Auxilary section specified, and/or element size %lld mismatch", section->GetName().c_str(), section->GetElementSize());
-            throw runtime_error(message);
+            RuntimeError("GetMinibatch: Section %ls Auxilary section specified, and/or element size %lld mismatch", section->GetName().c_str(), section->GetElementSize());
         }
         gpuData->SetValue(rows, actualmbsize, data);
     }
@@ -327,7 +322,7 @@ void BinaryReader<ElemType>::SetupEpoch()
 // GetLabelMapping - Gets the label mapping from integer index to label type 
 // returns - a map from numeric datatype to native label type 
 template<class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& BinaryReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& BinaryReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
 {
     auto iter = m_sections.find(sectionName);
     if (iter == m_sections.end())
@@ -349,7 +344,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void BinaryReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& /*labelMapping*/)
+void BinaryReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& /*labelMapping*/)
 {
     throw runtime_error("Binary reader does not support setting the mapping table.\n");
 }

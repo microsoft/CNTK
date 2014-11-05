@@ -7,6 +7,7 @@
 //
 
 #include "stdafx.h"
+#include "basetypes.h"
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
 #include "BinaryReader.h"
@@ -347,8 +348,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         // can't have identical names in a write configuration
         if (m_sections.find(wsectionName) != m_sections.end())
         {
-            std::string message = "Identical section name appears twice:" + sectionName;
-            throw runtime_error(message);
+            RuntimeError("Identical section name appears twice:%s", sectionName.c_str());
         }
         m_sections[wsectionName] = section;
     }
@@ -356,9 +356,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     // validate the header (make sure it's sane)
     if (section && file && !section->ValidateHeader(file->Writing()))
     {
-        char message[256];
-        sprintf_s(message, "Invalid header in file %ls, in header %s\n", file->GetName(), section->GetName());
-        throw runtime_error(message);
+        RuntimeError("Invalid header in file %ls, in header %ls\n", file->GetName().c_str(), section->GetName().c_str());
     }
 
     // return the now complete section
@@ -410,9 +408,7 @@ bool BinaryWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::ws
     // make sure there are no gaps in the writing
     if (m_recordCurrent != recordStart)
     {
-        char message[256];
-        sprintf_s(message, "Caching with binary writer, records skip from %ld to %ld", m_recordCurrent, recordStart);
-        throw runtime_error(message);
+        RuntimeError("Caching with binary writer, records skip from %ld to %ld", m_recordCurrent, recordStart);
     }
     bool written = false;
     for (auto pair : m_sections)
@@ -430,7 +426,7 @@ bool BinaryWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::ws
 // saveId - name of the section to save into
 // labelMapping - map we are saving to the file
 template<class ElemType>
-void BinaryWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<IDataWriter<ElemType>::LabelIdType, IDataWriter<ElemType>::LabelType>& labelMapping)
+void BinaryWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<typename BinaryWriter<ElemType>::LabelIdType, typename BinaryWriter<ElemType>::LabelType>& labelMapping)
 {
     Section* section = m_sections[saveId];
     if (section->GetSectionType() == sectionTypeLabelMapping)

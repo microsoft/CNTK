@@ -213,7 +213,7 @@ public:
     virtual void* GetElement(size_t index) const {return (char*)m_elementBuffer+index*GetElementSize();}
     virtual char* EnsureElements(size_t element, size_t bytesRequested=0);
 
-    SectionHeader* Section::GetSectionHeader(size_t filePosition, MappingType& mappingType, size_t& size);
+    SectionHeader* GetSectionHeader(size_t filePosition, MappingType& mappingType, size_t& size);
 
     void* EnsureMapped(void* start, size_t size);
     // subsection functions
@@ -235,7 +235,7 @@ public:
     void SetHeaderSize(size_t size) {assert(size < 0x10000);m_sectionHeader->sizeHeader = (WORD)size;}
     size_t GetMappedSize() const {return m_mappedSize;}
     void SetMappedSize(size_t mappedSize) {m_mappedSize = mappedSize;}
-    void SetDescription(const std::string& description) { strcpy_s(m_sectionHeader->nameDescription, description.c_str());}
+    void SetDescription(const std::string& description) { assert(description.size() < _countof(m_sectionHeader->nameDescription)); strcpy(m_sectionHeader->nameDescription, description.c_str()); }
     char* GetDescription() const {return m_sectionHeader->nameDescription;}
     void SetDataTypeSize(SectionData dataType, size_t size) 
     {
@@ -330,7 +330,7 @@ public:
 class SectionString: public Section
 {
 public:
-    typedef std::string LabelType;
+    typedef std::string LabelType;      // TODO: are these supposed to be the same as the DataReader's?
     typedef unsigned LabelIdType;
 private:
     std::map<LabelIdType, LabelType> m_mapIdToLabel;
@@ -347,7 +347,7 @@ public:
 
     // mapping table case
     const std::map<LabelIdType, LabelType>& GetLabelMapping( );
-    void SetLabelMapping(const std::map<LabelIdType, typename LabelType>& labelMapping);
+    void SetLabelMapping(const std::map<LabelIdType, LabelType>& labelMapping);
 };
 
 // SectionLabel - class for handling labels
@@ -383,9 +383,8 @@ public:
 template<class ElemType>
 class BinaryReader : public IDataReader<ElemType>
 {
-//public:
-//    typedef std::string LabelType;
-//    typedef unsigned LabelIdType;
+    typedef typename IDataReader<ElemType>::LabelType LabelType;
+    typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
 private:
     size_t m_mbSize;    // size of minibatch requested
     size_t m_mbStartSample; // starting sample # of the next minibatch
@@ -417,7 +416,7 @@ public:
     void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
@@ -426,8 +425,9 @@ public:
 template<class ElemType>
 class BinaryWriter : public IDataWriter<ElemType>
 {
+    typedef typename IDataWriter<ElemType>::LabelType LabelType;
+    typedef typename IDataWriter<ElemType>::LabelIdType LabelIdType;
 private:
-
     int m_traceLevel; // trace level to output the 
     size_t m_recordCurrent;
     size_t m_recordMax;
@@ -472,7 +472,7 @@ public:
     // SaveMapping - save a map into the file
     // saveId - name of the section to save into (section:subsection format)
     // labelMapping - map we are saving to the file
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping);
+    virtual void SaveMapping(std::wstring saveId, const std::map<typename BinaryWriter<ElemType>::LabelIdType, typename BinaryWriter<ElemType>::LabelType>& labelMapping);
 };
 
 
