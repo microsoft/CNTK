@@ -3,11 +3,11 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
 #pragma once
 
 #include "IExecutionEngine.h"
 #include "ComputationNetwork.h"
-#include "NDLUtil.h"
 #include "fileutil.h"   // for fexists()
 
 namespace Microsoft { namespace MSR { namespace CNTK {

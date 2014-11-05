@@ -93,7 +93,7 @@ void MELScript<ElemType>::SetProperty(ComputationNode<ElemType>* nodeProp, vecto
 // ndlPassUntil - complete processing through this pass, all passes if ndlPassAll
 // fullValidate - validate as a complete network? (false if this might be a snippet of a full network)
 template <typename ElemType>
-void MELScript<ElemType>::ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil=ndlPassAll, bool fullValidate = false)
+void MELScript<ElemType>::ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil, bool fullValidate)
 {
     NDLUtil<ElemType> ndlUtil(netNdl->cn);
     ndlUtil.ProcessNDLScript(netNdl, ndlPassUntil, fullValidate);
@@ -158,7 +158,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         wstring ndlSnippetFileName = params[1];
         ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
         NDLScript<ElemType> script;
-        ConfigParameters ndlScript = script.ReadConfigFile(ndlSnippetFileName);
+        ConfigParameters ndlScript (script.ReadConfigFile(ndlSnippetFileName));
 
         // check for a section of the snippet file we wish to read
         std::string section = GetOptionalSnippetSection(params, numFixedParams);
@@ -241,7 +241,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 m_mapNameToNetNdl.erase(found);
             }
             else
-                fprintf(stderr, "WARNING: model %s does not exist.", modelName);
+                fprintf(stderr, "WARNING: model %s does not exist.", modelName.c_str());
         }
     }
     else if (EqualInsensitive(name, "DumpModel", "Dump"))        
@@ -257,7 +257,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         auto found = m_mapNameToNetNdl.find(modelName);
         if (found == m_mapNameToNetNdl.end())
-            RuntimeError("Model %s does not exist. Cannot dump non-existant model.", modelName);
+            RuntimeError("Model %s does not exist. Cannot dump non-existant model.", modelName.c_str());
         else
         {
             NetNdl<ElemType>* netNdl = &found->second;
@@ -317,7 +317,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         vector<GenNameValue> names = GenerateNames(params[0], params[1], netNdlFrom, netNdlTo);
 
         if (netNdlFrom != netNdlTo)
-            RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0], params[1]);
+            RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[1].c_str());
 
         ProcessNDLScript(netNdlFrom, ndlPassAll);
         for (GenNameValue name : names)
@@ -343,12 +343,12 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         int inputNum = params[1];
 
         if (netNdlTo != netNdlFrom)
-            RuntimeError("SetNodeInput() requires two symbols from the same network, %s and %s belong to different networks", params[0], params[2]);
+            RuntimeError("SetNodeInput() requires two symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[2].c_str());
 
         if (nodeFrom.size() != 1)
-            RuntimeError("SetNodeInput() must have a single value input, %s doesn't represent one item",params[0]);
+            RuntimeError("SetNodeInput() must have a single value input, %s doesn't represent one item",params[0].c_str());
         if (nodeTo.size() < 1)
-            RuntimeError("SetNodeInput() must have at least one target, %s doesn't represent any items",params[2]);
+            RuntimeError("SetNodeInput() must have at least one target, %s doesn't represent any items",params[2].c_str());
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
         ProcessNDLScript(netNdlFrom, ndlPassResolve); 
@@ -366,7 +366,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         NetNdl<ElemType>* netNdlTo;
         vector<ComputationNode<ElemType>*> nodeTo = FindSymbols(params[0], netNdlTo);
         if (nodeTo.size() != 1)
-            RuntimeError("SetNodeInputs() must have exactly one target, %s doesn't represent any node.",params[0]);
+            RuntimeError("SetNodeInputs() must have exactly one target, %s doesn't represent any node.",params[0].c_str());
         
         vector<ComputationNode<ElemType>*> inputNodes;
         inputNodes.resize(params.size()-1);
@@ -380,10 +380,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             vector<ComputationNode<ElemType>*> nodeFrom = FindSymbols(params[i], netNdlFrom);
 
             if (netNdlTo != netNdlFrom)
-                RuntimeError("SetNodeInputs() requires all symbols from the same network, %s and %s belong to different networks", params[0], params[i]);
+                RuntimeError("SetNodeInputs() requires all symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[i].c_str());
 
             if (nodeFrom.size() != 1)
-                RuntimeError("SetNodeInputs() each input node should be translated to one node name. %s is translated to multiple node names.",  params[i]);
+                RuntimeError("SetNodeInputs() each input node should be translated to one node name. %s is translated to multiple node names.", params[i].c_str());
 
             inputNodes[i-1] = nodeFrom[0];
         }
@@ -434,7 +434,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         }
         else
         {
-            RuntimeError("Invalid property, %s, is not supported", propName);
+            RuntimeError("Invalid property, %s, is not supported", propName.c_str());
         }
 
         // get the nodes
@@ -491,7 +491,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 }
                 default:
                 {
-                    RuntimeError("Invalid property, %s, is not supported", propName);
+                    RuntimeError("Invalid property, %s, is not supported", propName.c_str());
                     break;
                 }
             }
@@ -511,7 +511,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         }
         else
         {
-            RuntimeError("Invalid property, %s, is not supported", propName);
+            RuntimeError("Invalid property, %s, is not supported", propName.c_str());
         }
 
         // get the nodes
@@ -533,7 +533,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 }
                 default:
                 {
-                    RuntimeError("Invalid property, %s, is not supported", propName);
+                    RuntimeError("Invalid property, %s, is not supported", propName.c_str());
                     break;
                 }
             }
@@ -558,7 +558,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             }
 
             if (nodes.size() < 1)
-                RuntimeError("Delete must have at least one target, %s doesn't represent any items",params[i]);
+                RuntimeError("Delete must have at least one target, %s doesn't represent any items", params[i].c_str());
             for (ComputationNode<ElemType>* node : nodes)
             {
                 netNdl->cn->DeleteNode(node->NodeName());
@@ -577,7 +577,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         vector<GenNameValue> nodeNames = GenerateNames(params[0], params[1], netNdlFrom, netNdlTo);
 
         if (netNdlFrom != netNdlTo)
-            RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0], params[1]);
+            RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[1].c_str());
 
         // process everything in case these nodes may have tags on them
         ProcessNDLScript(netNdlFrom, ndlPassAll);

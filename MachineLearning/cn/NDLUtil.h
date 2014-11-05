@@ -3,11 +3,13 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
 #pragma once
+
+#include "basetypes.h"
 #include "NetworkDescriptionLanguage.h"
 #include "ComputationNetwork.h"
 #include "SynchronousExecutionEngine.h"
-#include "basetypes.h"
 #include <string>
 #include "commandArgUtil.h"
 #include <stdexcept>
@@ -130,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);
             if (ndlPass == ndlPassResolve)
             {
-			    SetOutputNodes(script);
+                SetOutputNodes(script);
                 FixupInputMinibatchSize();
             }
             return lastNode;
