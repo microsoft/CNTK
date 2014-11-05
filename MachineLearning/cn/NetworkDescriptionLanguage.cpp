@@ -25,9 +25,6 @@ NDLNode<ElemType>* NDLScript<ElemType>::DuplicateNode(NDLNode<ElemType>* node)
 	return newNode;
 }
 
-template class NDLNode<float>;
-template class NDLNode<double>;
-
 template <typename ElemType>
 NDLScript<ElemType>::NDLScript(const NDLScript& copyMe) : ConfigParser(copyMe)
 {
@@ -110,7 +107,7 @@ NDLScript<ElemType>::NDLScript(const NDLScript&& moveMe) : ConfigParser(move(mov
 // string2 - second string to compare
 // alternate - alternate naming of the string
 // return - true if strings are equal insensitive and modifies string1 to sensitive version if different
-bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, wchar_t* alternate/*=NULL*/)
+bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const wchar_t* alternate/*=NULL*/)
 {
     bool equal = !_wcsnicmp(string1.c_str(), string2.c_str(), string1.size()) && string1.size()==string2.size();
 
@@ -234,11 +231,11 @@ template <typename ElemType>
 NDLScript<ElemType> NDLScript<ElemType>::s_global("global");
 
 // declare the static variables from the classes
-NDLScript<float> NDLScript<float>::s_global;
-NDLScript<double> NDLScript<double>::s_global;
+template<> NDLScript<float> NDLScript<float>::s_global;
+template<> NDLScript<double> NDLScript<double>::s_global;
 
-int NDLNode<float>::s_nameCounter=0;
-int NDLNode<double>::s_nameCounter=0;
+template<> int NDLNode<float>::s_nameCounter = 0;
+template<> int NDLNode<double>::s_nameCounter = 0;
 
 template class NDLNode<float>;
 template class NDLNode<double>;

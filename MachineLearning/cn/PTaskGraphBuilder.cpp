@@ -3,7 +3,6 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-#pragma once
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -23,7 +22,7 @@ template<class ElemType>
 TaskDescriptor<ElemType>::TaskDescriptor(
     const ComputationNode<ElemType>* node,
     TaskType taskType,
-    size_t input=0
+    size_t input
     ) 
     : m_node(const_cast<ComputationNodePtr>(node)), m_taskType(taskType)
 {
@@ -45,7 +44,7 @@ TaskDescriptor<ElemType>::TaskDescriptor(
     case taskComputeInputPartial: // ComputeInputPartial() task
         m_taskName = msra::strfun::utf8(node->NodeName());
         char number[2];
-        _itoa_s((int)input, number, 10);
+        sprintf(number, "%d", input);
         m_taskName = "Backprop" + std::string(number) + "_" + m_taskName;
         break;
     case taskEvaluateRecurrent: // EvaluateThisNode() Recurrent task
@@ -65,7 +64,7 @@ TaskDescriptor<ElemType>::~TaskDescriptor()
 // index - index of input, or -1 for current node gradient
 // options - param options
 template<class ElemType>
-ParamData<ElemType>* TaskDescriptor<ElemType>::GradientParam(int index=-1, UINT options=paramOptionsInput, ElemType initValue=ElemType(0.0))
+ParamData<ElemType>* TaskDescriptor<ElemType>::GradientParam(int index, UINT options, ElemType initValue)
 {
     ComputationNodePtr inputNode = index<0?m_node:m_node->Inputs(index);
     std::string valueName = msra::strfun::utf8(inputNode->NodeName()) + "_GradientValues";
@@ -81,7 +80,7 @@ ParamData<ElemType>* TaskDescriptor<ElemType>::GradientParam(int index=-1, UINT 
 // index - index of input, or -1 for current node gradient
 // options - param options
 template<class ElemType>
-ParamData<ElemType>* TaskDescriptor<ElemType>::FunctionParam(int index=-1, UINT options=paramOptionsOutput)
+ParamData<ElemType>* TaskDescriptor<ElemType>::FunctionParam(int index, UINT options)
 {
     ComputationNodePtr inputNode = index<0?m_node:m_node->Inputs(index);
     std::string valueName = msra::strfun::utf8(inputNode->NodeName()) + "_FunctionValues";
@@ -96,7 +95,7 @@ ParamData<ElemType>* TaskDescriptor<ElemType>::FunctionParam(int index=-1, UINT 
 // name - name to be used for this parameter, will have node name prepended
 // options - param options
 template<class ElemType>
-ParamData<ElemType>* TaskDescriptor<ElemType>::MatrixParam(const Matrix<ElemType>& matrix, const std::string& name, UINT options=paramOptionsInput)
+ParamData<ElemType>* TaskDescriptor<ElemType>::MatrixParam(const Matrix<ElemType>& matrix, const std::string& name, UINT options)
 {
     std::string valueName = msra::strfun::utf8(m_node->NodeName()) + "_" + name;
     ParamData<ElemType>* pd = new ParamData<ElemType>(paramTypeMatrix, valueName, (void *)&matrix, options);
@@ -110,7 +109,7 @@ ParamData<ElemType>* TaskDescriptor<ElemType>::MatrixParam(const Matrix<ElemType
 // name - name to be used for this parameter, will have node name prepended
 // options - param options
 template<class ElemType>
-ParamData<ElemType>* TaskDescriptor<ElemType>::Param(ParamType paramType, const std::string& name, UINT options=paramOptionsInput, void* data=nullptr)
+ParamData<ElemType>* TaskDescriptor<ElemType>::Param(ParamType paramType, const std::string& name, UINT options, void* data)
 {
     std::string valueName = msra::strfun::utf8(m_node->NodeName()) + "_" + name;
     ParamData<ElemType>* pd = new ParamData<ElemType>(paramType, valueName, data, options);
@@ -149,7 +148,7 @@ template<class ElemType>
 void PTaskGraphBuilder<ElemType>::UpdateParameters(void* /*sgd*/, const ElemType /*learnRatePerSample*/, const size_t /*expectedMBSize*/)
 {}
 template<class ElemType>
-void PTaskGraphBuilder<ElemType>::PushMatrix(const Matrix<ElemType>& /*matrix*/, Channel* /*channel*/, CONTROLSIGNAL signal=DBCTLC_NONE)
+void PTaskGraphBuilder<ElemType>::PushMatrix(const Matrix<ElemType>& /*matrix*/, Channel* /*channel*/, CONTROLSIGNAL signal)
 {
     signal;
 }
@@ -1166,7 +1165,7 @@ void __stdcall PTaskGraphBuilder<ElemType>::ApplicationContextCallback(
 #endif // USE_PTASK
 
 // instantiate classes
-template PTaskGraphBuilder<float>;
-template PTaskGraphBuilder<double>;
+template class PTaskGraphBuilder<float>;
+template class PTaskGraphBuilder<double>;
 
 }}}
