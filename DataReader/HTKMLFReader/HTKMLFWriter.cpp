@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		ConfigArray outputNames = writerConfig("outputNodeNames","");
 		if (outputNames.size()<1)
-			throw new runtime_error("writer needs at least one outputNodeName specified in config");
+			RuntimeError("writer needs at least one outputNodeName specified in config");
 
 
 		foreach_index(i, outputNames) // inputNames should map to node names
@@ -58,14 +58,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			if (thisOutput.Exists("dim"))
 				udims.push_back(thisOutput("dim"));
 			else
-				throw new runtime_error("HTKMLFWriter::Init: writer need to specify dim of output");
+				RuntimeError("HTKMLFWriter::Init: writer need to specify dim of output");
 
 			if (thisOutput.Exists("file"))
 				scriptpaths.push_back(thisOutput("file"));
 			else if (thisOutput.Exists("scpFile"))
 				scriptpaths.push_back(thisOutput("scpFile"));
 			else
-				throw new runtime_error("HTKMLFWriter::Init: writer needs to specify scpFile for output");
+				RuntimeError("HTKMLFWriter::Init: writer needs to specify scpFile for output");
 
 			outputNameToIdMap[outputNames[i]]= i;
 			outputNameToDimMap[outputNames[i]]=udims[i];
@@ -128,7 +128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		//std::map<std::wstring, void*, nocase_compare>::iterator iter;
 		if (outputFileIndex>=outputFiles[0].size())
-			throw new runtime_error("index for output scp file out of range...");
+			RuntimeError("index for output scp file out of range...");
 
 		for (auto iter = matrices.begin();iter!=matrices.end(); iter++)
 		{

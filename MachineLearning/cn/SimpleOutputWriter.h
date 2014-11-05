@@ -23,6 +23,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SimpleOutputWriter : ComputationNetworkHelper<ElemType>
     {
+        typedef ComputationNetworkHelper<ElemType> B;
+        using B::UpdateEvalTimeStamps;
         typedef ComputationNode<ElemType>* ComputationNodePtr;
 
     public:
@@ -143,7 +145,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::vector<ofstream *> outputStreams;
             for (int i=0; i<outputNodes.size(); i++)
+#ifdef _MSC_VER
                 outputStreams.push_back(new ofstream ((outputPath + L"." + outputNodes[i]->NodeName()).c_str()));
+#else
+                outputStreams.push_back(new ofstream(charpath(outputPath + L"." + outputNodes[i]->NodeName())));
+#endif
 
             //specify feature value nodes
             std::vector<ComputationNodePtr>& featureNodes = m_net.FeatureNodes();

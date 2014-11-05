@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include "basetypes.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkHelper.h"
 #include "SimpleEvaluator.h"
@@ -12,7 +13,6 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "basetypes.h"
 #include "fileutil.h"
 #include "commandArgUtil.h"
 #include <chrono> 
@@ -67,12 +67,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mType = GradientsUpdateType::AdaGrad;
             mGaussianNoiseInjectStd = 0.0075f;
         }
-    }GradientUpdateInfo;
+    } GradientUpdateInfo;
 
     template<class ElemType>
     class SGD : ComputationNetworkHelper<ElemType>
     {
-	protected:
+    protected:
+        typedef ComputationNetworkHelper<ElemType> B;
+        using B::SetMaxTempMemSizeForCNN; using B::SetDropoutRate; using B::UpdateEvalTimeStamps;
         typedef ComputationNode<ElemType>* ComputationNodePtr;
         typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
@@ -94,7 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool usePtask = false;
 #endif
             // AutoAdjust Parameters
-            ConfigParameters configAALR=configSGD("AutoAdjust","");
+            ConfigParameters configAALR (configSGD("AutoAdjust",""));
             LearningRateSearchAlgorithm autoAdjustLRType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
             ElemType reduceLearnRateIfImproveLessThan = configAALR("reduceLearnRateIfImproveLessThan", "0");
             bool continueReduce = (bool)configAALR("continueReduce", "false");
@@ -138,13 +140,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gUpdateInfo.mType = gradUpdateType;
             gUpdateInfo.mGaussianNoiseInjectStd = (float)gaussianNoiseInjecStd;
             
-			// extract RMSProp parameters from config, if they exist. Default to reasonable values.
-			RMSPropInfo rpi;
-			rpi.dec = (double) configSGD("rms_wgt_dec","0.75");
-			rpi.inc = (double) configSGD("rms_wgt_inc","1.2");
-			rpi.min = (double) configSGD("rms_wgt_min","0.1");
-			rpi.max = (double) configSGD("rms_wgt_max","10.0");
-			rpi.gamma = (double) configSGD("rms_gamma","0.99");
+            // extract RMSProp parameters from config, if they exist. Default to reasonable values.
+            RMSPropInfo rpi;
+            rpi.dec = (double)configSGD("rms_wgt_dec", "0.75");
+            rpi.inc = (double)configSGD("rms_wgt_inc", "1.2");
+            rpi.min = (double)configSGD("rms_wgt_min", "0.1");
+            rpi.max = (double)configSGD("rms_wgt_max", "10.0");
+            rpi.gamma = (double)configSGD("rms_gamma", "0.99");
 
             /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of 
             /// useAdagrad=true
@@ -181,7 +183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
         void Init(const floatargvector& learningRatesPerMB, const floatargvector& learningRatesPerSample, const intargvector& mbSize, 
             const size_t epochSize, const size_t maxEpochs, 
-			const wstring& modelPath, const floatargvector& momentumPerMB, const bool gradientClippingWithTruncation=true, 
+            const wstring& modelPath, const floatargvector& momentumPerMB, const bool gradientClippingWithTruncation = true,
             const ElemType clippingThresholdPerSample=std::numeric_limits<ElemType>::infinity(),
             const LearningRateSearchAlgorithm autoLearnRateSearchType = LearningRateSearchAlgorithm::None, 
             const ElemType increaseLearnRateIfImproveMoreThan = std::numeric_limits<ElemType>::infinity(), const ElemType learnRateIncreaseFactor = 1.382f,
@@ -192,7 +194,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
-			RMSPropInfo rpi = RMSPropInfo())
+            RMSPropInfo rpi = RMSPropInfo())
         {
             numPrevLearnRates;
             m_mbSize=mbSize;
@@ -647,7 +649,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 net.SaveToFile(GetModelNameForEpoch(i));
                 SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion); 
                 if (!m_keepCheckPointFiles)
-                    DeleteFile(GetCheckPointFileNameForEpoch(i-1).c_str());  //delete previous checkpiont file to save space
+                    _wunlink(GetCheckPointFileNameForEpoch(i-1).c_str());  //delete previous checkpiont file to save space
 
                 if (learnRatePerSample < 1e-12)
                     fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n", learnRatePerSample);
@@ -1354,10 +1356,10 @@ protected:
 				// back to its orginal parameter value
                 node->FunctionValues()(irow, icol) = eOrg; 
 
-				// check if they are consistent
-				double eGradNum = (mbEvalCriPos - mbEvalCriNeg)/(ePos - eNeg);
-			    ElemType threshold = (ElemType) pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum)))))-(int)m_gradientCheckSigDigit);
-			    ElemType diff = (ElemType) fabs(eGradErr - eGradNum);
+                // check if they are consistent
+                ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
+                ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
                 bool wrong = (std::isnan(diff) || diff > threshold);
                 if (wrong)
 				{

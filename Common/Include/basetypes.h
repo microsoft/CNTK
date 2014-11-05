@@ -90,6 +90,8 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <strings.h>
 #include <chrono>
 #include <thread>
+#include <unistd.h>
+#include <sys/stat.h>
 #endif
 
 using namespace std;
@@ -146,6 +148,8 @@ static inline msra::strfun::cstring charpath (const std::wstring & p)
 #endif
 }
 static inline FILE* _wfopen (const wchar_t * path, const wchar_t * mode) { return fopen(charpath(path), charpath(mode)); }
+static inline int _wunlink (const wchar_t * p) { return unlink (charpath (p)); }
+static inline int _wmkdir (const wchar_t * p) { return mkdir (charpath (p), 0777/*correct?*/); }
 // --- basic string functions
 static inline wchar_t* wcstok_s (wchar_t* s, const wchar_t* delim, wchar_t** ptr) { return ::wcstok(s, delim, ptr); }
 static inline int _stricmp  (const char * a, const char * b)                 { return ::strcasecmp (a, b); }
