@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InitRecurrentConfig(const ConfigParameters& config)
         {
             ConfigArray rLayerSizes = config("recurrentLayer", "");
-		    intargvector recurrentLayers = rLayerSizes;
+            intargvector recurrentLayers = rLayerSizes;
             m_recurrentLayers=recurrentLayers;
             m_defaultHiddenActivity = config("defaultHiddenActivity", "0.1");
             ConfigArray str_rnnType = config("rnnType", L"SIMPLENET");
@@ -133,7 +133,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_rnnType= CLASSLSTM;
             if (std::find(strType.begin(), strType.end(), L"TENSORIOLSTM") != strType.end())
                 m_rnnType= TENSORIOLSTM;
-		}
+        }
 
         // Init - Builder Initialize for multiple data sets
         // config - [in] configuration parameters for the network builder

@@ -1253,7 +1253,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
         {
 //            assert(features.GetMatrixType() == MatrixType::SPARSE);
             //features.Resize(featInfo.dim, actualmbsize, true);
-			features.Resize(featInfo.dim * m_wordContext.size(), actualmbsize, true);
+            features.Resize(featInfo.dim * m_wordContext.size(), actualmbsize, true);
             features.SetValue(0);
         }
 

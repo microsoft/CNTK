@@ -330,7 +330,7 @@ public:
 };
 
 // class CCritSec and CAutoLock -- simple critical section handling
-#ifndef	_WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
+#ifndef    _WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
 typedef int CRITICAL_SECTION;
 static inline void InitializeCriticalSection(CRITICAL_SECTION *) {}
 static inline void DeleteCriticalSection(CRITICAL_SECTION *) {}
@@ -471,11 +471,11 @@ public:
 #include <xlocale>      // uses strlen()
 #endif
 #define strlen strlen_
-#ifndef	LINUX
+#ifndef    LINUX
 template<typename _T> inline __declspec(deprecated("Dummy general template, cannot be used directly")) 
 #else
 template<typename _T> inline 
-#endif	// LINUX
+#endif    // LINUX
 size_t strlen_(_T &s) { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); } // never be called but needed to keep compiler happy
 template<typename _T> inline size_t strlen_(const _T &s)     { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); }
 template<> inline size_t strlen_(char * &s)                  { return strnlen_s(s, SIZE_MAX); }

@@ -50,20 +50,20 @@ namespace msra { namespace dbn {
             if (!paging()) return;
             msra::files::make_intermediate_dirs (pagepath);
 
-			if (!wantread)
-			{
+            if (!wantread)
+            {
                 FILE *ftry = NULL;
                 wstring pathname (pagepath);
                 ftry = _wfopen (pathname.c_str(), L"wbS");
                 if (ftry) fclose (ftry);
-			}
+            }
 
-			/* 
-				code below to cycle through a-z appended to file name is no longer necessary 
-				since caller guarantees unique file names via HTKMLFReader 
-				and we want the pagepath logged to the user to be the actual one used by the code
+            /* 
+                code below to cycle through a-z appended to file name is no longer necessary 
+                since caller guarantees unique file names via HTKMLFReader 
+                and we want the pagepath logged to the user to be the actual one used by the code
 
-			// try to open the pagepath from a to z
+            // try to open the pagepath from a to z
             if (!wantread)
             {
                 FILE *ftry = NULL;
@@ -77,7 +77,7 @@ namespace msra { namespace dbn {
                 if (ftry) fclose (ftry);
                 pagepath += --trynum;
             }
-			*/
+            */
             f = fopenOrDie (pagepath, wantread ? L"rbS" : L"wbS");
             reading = wantread;
         }
@@ -115,7 +115,7 @@ namespace msra { namespace dbn {
             fsetpos (f, blockid * block.sizeinpagefile());
             block.frompagefile (f);
         }
-		
+        
     public:
         biggrowablevectorarray (const wstring & pagepath)
             : growablevectorbase (65536), m (0), 
@@ -125,17 +125,17 @@ namespace msra { namespace dbn {
             if (paging())
                 fprintf (stderr, "biggrowablevectorarray: creating disk backup store at '%S'\n", pagepath.c_str());
         }
-		~biggrowablevectorarray() { // clean up the big temp file 
-			if (paging()) {
-				fclose (f); 
-				if (_wunlink (pagepath.c_str())==0)
-					fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%S'\n", pagepath.c_str());
-				else
-					fprintf (stderr, "biggrowablevectorarray: unable to delete disk backup store at '%S'\n", pagepath.c_str());
-			}
-		}            
-		
-		size_t dim() const { return m; }    // dimension of a frame
+        ~biggrowablevectorarray() { // clean up the big temp file 
+            if (paging()) {
+                fclose (f); 
+                if (_wunlink (pagepath.c_str())==0)
+                    fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%S'\n", pagepath.c_str());
+                else
+                    fprintf (stderr, "biggrowablevectorarray: unable to delete disk backup store at '%S'\n", pagepath.c_str());
+            }
+        }            
+        
+        size_t dim() const { return m; }    // dimension of a frame
 
         // reading phase
         void push_back (const std::vector<float> & in)
@@ -213,19 +213,19 @@ namespace msra { namespace dbn {
             /*const*/ msra::dbn::matrix & block = getblock (t);
             return msra::dbn::matrixstripe (block, blockt, 1);
         }
-		wstring pagepathname(){ return pagepath;}
-		void cleanuppagefile()
-		{
-			if (paging()) {
-				fclose (f); 
-				if (_wunlink (pagepath.c_str())==0){
-					fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%S'\n", pagepath.c_str());
-				}
-				else{
-					fprintf (stderr, "biggrowablevectorarray: could NOT delete disk backup store at '%S'\n", pagepath.c_str());
-				}
-			}
-		}
+        wstring pagepathname(){ return pagepath;}
+        void cleanuppagefile()
+        {
+            if (paging()) {
+                fclose (f); 
+                if (_wunlink (pagepath.c_str())==0){
+                    fprintf (stderr, "biggrowablevectorarray: deleted disk backup store at '%S'\n", pagepath.c_str());
+                }
+                else{
+                    fprintf (stderr, "biggrowablevectorarray: could NOT delete disk backup store at '%S'\n", pagepath.c_str());
+                }
+            }
+        }
     };
 
     // ---------------------------------------------------------------------------
@@ -459,8 +459,8 @@ namespace msra { namespace dbn {
             // for single input/output set size to be 1 and run old getbatch
             feat.resize(1);
             uids.resize(1);
-			//transcripts.resize(1);
-			//latticepairs.resize(1);
+            //transcripts.resize(1);
+            //latticepairs.resize(1);
             return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
         }
 

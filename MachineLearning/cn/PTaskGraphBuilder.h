@@ -275,7 +275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_verbosity >= 1) fprintf(stderr, "\nConfiguring task inputs and outputs ...\n");
             for (auto taskIter=m_taskNameToTaskDescriptorMap.begin(); taskIter != m_taskNameToTaskDescriptorMap.end(); taskIter++)
             {                
-	            if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
+                if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
                 TaskDescriptorPtr taskDescriptor = taskIter->second;
                 taskDescriptor->ConfigureInputsAndOutputs(m_portUIDCounter, m_valueNameToProducerPortMap);
             }
@@ -287,7 +287,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_verbosity >= 1) fprintf(stderr, "\nCreating tasks from descriptors ...\n");
             for (auto taskIter=m_taskNameToTaskDescriptorMap.begin(); taskIter != m_taskNameToTaskDescriptorMap.end(); taskIter++)
             {                
-	            if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
+                if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
                 TaskDescriptorPtr taskDescriptor = taskIter->second;
                 taskDescriptor->CreateTask(m_PTaskGraph);
             }
@@ -299,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_verbosity >= 1) fprintf(stderr, "\nCreating PTask channels ...\n");
             for (auto taskIter=m_taskNameToTaskDescriptorMap.begin(); taskIter != m_taskNameToTaskDescriptorMap.end(); taskIter++)
             {                
-	            if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
+                if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
                 TaskDescriptorPtr taskDescriptor = taskIter->second;
                 taskDescriptor->CreateChannelsForInputs(m_PTaskGraph, m_valueNameToProducerPortMap, m_inputNameToChannelsMap, m_verbosity);
             }
@@ -310,7 +310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_verbosity >= 1) fprintf(stderr, "\nCreating LearnableParameter extra channels...\n");
             for (auto taskIter=m_taskNameToTaskDescriptorMap.begin(); taskIter != m_taskNameToTaskDescriptorMap.end(); taskIter++)
             {                
-	            if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
+                if (m_verbosity >= 2) fprintf(stderr, "  Task %s\n", taskIter->first.c_str());
                 TaskDescriptorPtr taskDescriptor = taskIter->second;
                 taskDescriptor->CreateBackAndInitChannel(m_PTaskGraph, m_outputNameToChannelsMap);
             }

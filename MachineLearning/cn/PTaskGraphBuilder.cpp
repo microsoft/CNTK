@@ -277,7 +277,7 @@ void TaskDescriptor<ElemType>::ConfigureInputsAndOutputs(UINT& uidCounter, std::
             }
 
             // TODO: Any benefit to caching/reusing templates across different tasks? DBN doesn't bother; 
-			// PTask doesn't use unique identity, it seems - at least at present. Do it anyway, in case this changes in the future?
+            // PTask doesn't use unique identity, it seems - at least at present. Do it anyway, in case this changes in the future?
             DatablockTemplate* dt = Runtime::GetDatablockTemplate((char *)name.c_str(), &dims, 1, FALSE, TRUE); // TODO which override? flag values?
 
             // if this is a matrix type we want to add an application context
@@ -354,18 +354,18 @@ void TaskDescriptor<ElemType>::CreateChannelsForInputs(
     {
         // find the associated parameter data
         ParamData<ElemType>* param;
-		// for (param = m_paramData[iparam]; 
+        // for (param = m_paramData[iparam]; 
         //     !(param->options & (paramOptionsInput|paramOptionsConstant|paramOptionsInitialize))
         //     && iparam < m_paramData.size();
         //      param = m_paramData[++iparam])
         //         ; 
-		for (param = m_paramData[iparam++];
+        for (param = m_paramData[iparam++];
             !(param->options & (paramOptionsInput|paramOptionsConstant|paramOptionsInitialize))
             && iparam < m_paramData.size();
             param = m_paramData[iparam++])
                 ;
 
-		Port* destinationPort = m_inputPorts[i];
+        Port* destinationPort = m_inputPorts[i];
         std::string valueName = m_inputNames.at(i);
         assert(destinationPort == param->port);
 
@@ -475,7 +475,7 @@ void TaskDescriptor<ElemType>::CreateInitializerChannel(
     }
     Channel* pInitChannel = graph->AddInitializerChannel(port, (char*)name.c_str());
     pInitChannel->SetPredicationType(CE_DST, CGATEFN_OPEN_ON_BOF);
-	pInitChannel->SetInitialPropagatedControlSignal(DBCTLC_BOF);
+    pInitChannel->SetInitialPropagatedControlSignal(DBCTLC_BOF);
 }
 
 // FindEmptyOutPorts - find unconnected output ports and hook up "bit buckets"
@@ -738,7 +738,7 @@ PTaskGraphBuilder<ElemType>::PTaskGraphBuilder()
     // Level of console logging, useful for development/debugging.
     // 0 = silent; 1 = summary; 2 = debug. 
     // m_verbosity = 1;
-	m_verbosity = 2;
+    m_verbosity = 2;
 
     m_portUIDCounter = 0;
     PTask::Runtime::SetUseOpenCL(FALSE);

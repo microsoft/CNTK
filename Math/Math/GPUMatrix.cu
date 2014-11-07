@@ -276,30 +276,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_elemSizeAllocated = m_numRows*m_numCols;
 
-		// check to make sure we have something to copy (on init we often have zero sized allocations)
-		if (m_elemSizeAllocated > 0)
-		{
-			// first try peer access
-			int canAccessPeer = false;
-			CUDA_CALL(cudaDeviceCanAccessPeer(&canAccessPeer, to_id, m_computeDevice));
-			if (canAccessPeer)
-			{
-				CUDA_CALL(cudaDeviceEnablePeerAccess(m_computeDevice, 0));
-				CUDA_CALL(cudaMemcpyPeer(d_dst,to_id,m_pArray,m_computeDevice,sizeof(ElemType)*m_numRows*m_numCols));  
-			}
-			else
-			{
-				// peer access didn't work, just copy normal
-				// make this more efficient by keeping some buffers available for each copy
-				ElemType* h_dst=NULL;
-				PrepareDevice();
-				CUDA_CALL(cudaMallocHost((void**)&h_dst,sizeof(ElemType)*m_numRows*m_numCols));
-				CUDA_CALL(cudaMemcpy(h_dst,m_pArray,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyDeviceToHost));  
-				PrepareDevice((short)to_id);       
-				CUDA_CALL(cudaMemcpy(d_dst,h_dst,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyHostToDevice)); 
-				CUDA_CALL(cudaFreeHost(h_dst));  
-			}
-		}
+        // check to make sure we have something to copy (on init we often have zero sized allocations)
+        if (m_elemSizeAllocated > 0)
+        {
+            // first try peer access
+            int canAccessPeer = false;
+            CUDA_CALL(cudaDeviceCanAccessPeer(&canAccessPeer, to_id, m_computeDevice));
+            if (canAccessPeer)
+            {
+                CUDA_CALL(cudaDeviceEnablePeerAccess(m_computeDevice, 0));
+                CUDA_CALL(cudaMemcpyPeer(d_dst,to_id,m_pArray,m_computeDevice,sizeof(ElemType)*m_numRows*m_numCols));  
+            }
+            else
+            {
+                // peer access didn't work, just copy normal
+                // make this more efficient by keeping some buffers available for each copy
+                ElemType* h_dst=NULL;
+                PrepareDevice();
+                CUDA_CALL(cudaMallocHost((void**)&h_dst,sizeof(ElemType)*m_numRows*m_numCols));
+                CUDA_CALL(cudaMemcpy(h_dst,m_pArray,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyDeviceToHost));  
+                PrepareDevice((short)to_id);       
+                CUDA_CALL(cudaMemcpy(d_dst,h_dst,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyHostToDevice)); 
+                CUDA_CALL(cudaFreeHost(h_dst));  
+            }
+        }
         PrepareDevice();
         CUDA_CALL(cudaFree(m_pArray));
         m_pArray=d_dst;
@@ -840,7 +840,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!(matrixFlags&matrixFormatRowMajor))
                 {
-				    CUDA_CALL(cudaMemcpy(m_pArray, pArray, sizeof(ElemType)*GetNumElements(), 
+                    CUDA_CALL(cudaMemcpy(m_pArray, pArray, sizeof(ElemType)*GetNumElements(), 
                         (matrixFlags&matrixFlagSetValueOnDevice)?cudaMemcpyDeviceToDevice:cudaMemcpyHostToDevice));
                 }
                 else
@@ -1014,62 +1014,62 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _adagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(m_pArray, gradients.m_pArray, GetNumElements());
     }
 
-	template<class ElemType>
-	void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
-		ElemType RMS_GAMMA,
-		ElemType RMS_WGT_INC,
-		ElemType RMS_WGT_MAX,
-		ElemType RMS_WGT_DEC,
-		ElemType RMS_WGT_MIN
-		)
-	{
+    template<class ElemType>
+    void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
+        ElemType RMS_GAMMA,
+        ElemType RMS_WGT_INC,
+        ElemType RMS_WGT_MAX,
+        ElemType RMS_WGT_DEC,
+        ElemType RMS_WGT_MIN
+        )
+    {
         const ElemType floor = 1e-6f;
-		static ElemType *upd_gpu = (ElemType*)0;
+        static ElemType *upd_gpu = (ElemType*)0;
 
         size_t n = gradients.GetNumElements();
-		int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
+        int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
 
         if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
         {
             Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
             SetValue(0.0);
 
-			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
-			ElemType *signs=m_pArray+n; // sign of previous gradient
-			ElemType *steps=m_pArray+2*n; // current step size
+            ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+            ElemType *signs=m_pArray+n; // sign of previous gradient
+            ElemType *steps=m_pArray+2*n; // current step size
 
-			_rmsprop_init<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n);
+            _rmsprop_init<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n);
 
         }
 
         ElemType *avars=m_pArray; // accumulated variances for RMS scaling
-		ElemType *signs=m_pArray+n; // sign of previous gradient
-		ElemType *steps=m_pArray+2*n; // current step size
+        ElemType *signs=m_pArray+n; // sign of previous gradient
+        ElemType *steps=m_pArray+2*n; // current step size
 
         assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
 
-		if( !upd_gpu )
-		{
-			ElemType upd[] = {
-				2,2,0,
-				2,2,0,
-				1,1,1,
-				2,2,0,
-				1,2,1,
-				0,2,2,
-				1,1,1,
-				0,2,2,
-				0,2,2,
-			};
+        if( !upd_gpu )
+        {
+            ElemType upd[] = {
+                2,2,0,
+                2,2,0,
+                1,1,1,
+                2,2,0,
+                1,2,1,
+                0,2,2,
+                1,1,1,
+                0,2,2,
+                0,2,2,
+            };
 
-			CUDA_CALL(cudaMalloc((void**)&upd_gpu,sizeof(ElemType)*27));
+            CUDA_CALL(cudaMalloc((void**)&upd_gpu,sizeof(ElemType)*27));
             CUDA_CALL(cudaMemcpy(upd_gpu,upd,sizeof(ElemType)*27,cudaMemcpyHostToDevice));
-		}
+        }
 
-		_rmsprop<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n,
-			RMS_GAMMA,RMS_WGT_INC,RMS_WGT_MAX,RMS_WGT_DEC,RMS_WGT_MIN,
-			floor,upd_gpu);
-	}
+        _rmsprop<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n,
+            RMS_GAMMA,RMS_WGT_INC,RMS_WGT_MAX,RMS_WGT_DEC,RMS_WGT_MIN,
+            floor,upd_gpu);
+    }
 
     template<class ElemType>
     void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
@@ -2682,7 +2682,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, 
         ElemType beta, GPUMatrix<ElemType>& c)
     {
-		a.PrepareDevice();
+        a.PrepareDevice();
         if ((a.GetComputeDeviceId()!=b.GetComputeDeviceId()) || (b.GetComputeDeviceId()!=c.GetComputeDeviceId())) //different GPUs
         {
             throw std::invalid_argument("All matrices must be on the same GPU");

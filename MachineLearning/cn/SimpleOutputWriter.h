@@ -35,7 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-		void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples=requestDataSize, bool doUnitTest = false)
+        void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples=requestDataSize, bool doUnitTest = false)
         {
             
             //specify output nodes and files
@@ -67,8 +67,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();                
             }
-			Matrix<ElemType> endOfFile =  Matrix<ElemType>(1,1);
-			endOfFile(0,0)=0;
+            Matrix<ElemType> endOfFile =  Matrix<ElemType>(1,1);
+            endOfFile(0,0)=0;
 
             //evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
@@ -85,12 +85,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
                 m_net.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
-				dataReader.SetSentenceEndInBatch(m_net.m_sentenceEnd);
+                dataReader.SetSentenceEndInBatch(m_net.m_sentenceEnd);
 
-	            for (int i=0; i<outputNodes.size(); i++)
+                for (int i=0; i<outputNodes.size(); i++)
                 {
                     m_net.Evaluate(outputNodes[i]);
-					outputMatrices[outputNodes[i]->NodeName()] = (void *)(&outputNodes[i]->FunctionValues());
+                    outputMatrices[outputNodes[i]->NodeName()] = (void *)(&outputNodes[i]->FunctionValues());
                 }
 
                 if (doUnitTest) 
@@ -121,7 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //clean up
             
         }
-		
+        
 
         void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples=requestDataSize)
         {
@@ -173,12 +173,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
-				dataReader.SetSentenceEndInBatch(m_net.m_sentenceEnd);
+                dataReader.SetSentenceEndInBatch(m_net.m_sentenceEnd);
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
                     m_net.Evaluate(outputNodes[i]);
-					
+                    
                     Matrix<ElemType> & outputValues = outputNodes[i]->FunctionValues();
                     ofstream & outputStream = *outputStreams[i];
                     outputValues.CopyToArray(tempArray, tempArraySize);

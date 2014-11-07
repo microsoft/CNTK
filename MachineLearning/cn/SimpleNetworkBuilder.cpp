@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     input = output;
                 }
 
-				int recur_idx = 0; 
+                int recur_idx = 0; 
                 if (numHiddenLayers > 0)
                 {
                     //TODO: to figure out sparse matrix size
@@ -49,27 +49,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
-					{
-	                    w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
+                    {
+                        w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-						delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
-						/// unless there is a good algorithm to detect loops, use this explicit setup
-						output = ApplyNonlinearFunction(
-							m_net->Plus(
-								m_net->Times(u, input), m_net->Times(w, delay)), 0);
-						delay->AttachInputs(output);
+                        delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                        /// unless there is a good algorithm to detect loops, use this explicit setup
+                        output = ApplyNonlinearFunction(
+                            m_net->Plus(
+                                m_net->Times(u, input), m_net->Times(w, delay)), 0);
+                        delay->AttachInputs(output);
                         ((DelayNode<ElemType>*) delay)->SetDelay(1);
-						recur_idx ++;
-					}
-					else
-					{
-	                    output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
+                        recur_idx ++;
+                    }
+                    else
+                    {
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
                         //output = m_net->Times(u, input);
-					}
+                    }
 
-					if (m_addDropoutNodes)
-						input = m_net->Dropout(output);
+                    if (m_addDropoutNodes)
+                        input = m_net->Dropout(output);
                     else
                         input = output;
 
@@ -80,31 +80,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
                         if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
-						{
-							w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
+                        {
+                            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-						    delay = m_net->Delay(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
-						    /// unless there is a good algorithm to detect loops, use this explicit setup
-						    output = ApplyNonlinearFunction(
-							    m_net->Plus(
-								    m_net->Times(u, input), m_net->Times(w, delay)), 0);
-						    delay->AttachInputs(output);
-							recur_idx++;
-						}
-						else
-						{
-	                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-						}
+                            delay = m_net->Delay(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
+                            /// unless there is a good algorithm to detect loops, use this explicit setup
+                            output = ApplyNonlinearFunction(
+                                m_net->Plus(
+                                    m_net->Times(u, input), m_net->Times(w, delay)), 0);
+                            delay->AttachInputs(output);
+                            recur_idx++;
+                        }
+                        else
+                        {
+                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
+                        }
 
-					    if (m_addDropoutNodes)
-						    input = m_net->Dropout(output);
+                        if (m_addDropoutNodes)
+                            input = m_net->Dropout(output);
                         else
                             input = output;
                     }
                 }
 
-				w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
+                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
                 /*m_net->MatrixL2Reg(w , L"L1w");*/
 
@@ -136,9 +136,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
-				size_t numRecurrentLayers = m_recurrentLayers.size(); 
+                size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-				ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+                ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 m_net->FeatureNodes().push_back(input);
 
@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     input = output;
                 }
 
-				int recur_idx = 0; 
+                int recur_idx = 0; 
                 if (numHiddenLayers > 0)
                 {
                     u = m_net->CreateSparseLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
@@ -167,9 +167,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     b->FunctionValues()(0,0) = 0.1;
                     b->FunctionValues()(1,0) = -0.1;
 #endif
-					if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
-					{
-	                    w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
+                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
+                    {
+                        w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 #ifdef RNN_DEBUG
                         w->FunctionValues()(0,0) = 0.2;
@@ -178,21 +178,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w->FunctionValues()(1,1) = -0.1;
 #endif
 
-						delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
-						/// unless there is a good algorithm to detect loops, use this explicit setup
-						output = ApplyNonlinearFunction(
-							m_net->Plus(
-								m_net->Times(u, input), m_net->Times(w, delay)), 0);
-						delay->AttachInputs(output);
-						recur_idx ++;
-					}
-					else
-					{
-	                    output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
-					}
+                        delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                        /// unless there is a good algorithm to detect loops, use this explicit setup
+                        output = ApplyNonlinearFunction(
+                            m_net->Plus(
+                                m_net->Times(u, input), m_net->Times(w, delay)), 0);
+                        delay->AttachInputs(output);
+                        recur_idx ++;
+                    }
+                    else
+                    {
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
+                    }
 
-					if (m_addDropoutNodes)
-						input = m_net->Dropout(output);
+                    if (m_addDropoutNodes)
+                        input = m_net->Dropout(output);
                     else
                         input = output;
 
@@ -211,26 +211,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         b->FunctionValues()(0,0) = 0.1;
                         b->FunctionValues()(1,0) = -0.1;
 #endif
-						if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
-						{
-							w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
+                        if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
+                        {
+                            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-						    delay = m_net->Delay(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
-						    /// unless there is a good algorithm to detect loops, use this explicit setup
-						    output = ApplyNonlinearFunction(
-							    m_net->Plus(
-								    m_net->Times(u, input), m_net->Times(w, delay)), 0);
-						    delay->AttachInputs(output);
-							recur_idx++;
-						}
-						else
-						{
-	                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-						}
+                            delay = m_net->Delay(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
+                            /// unless there is a good algorithm to detect loops, use this explicit setup
+                            output = ApplyNonlinearFunction(
+                                m_net->Plus(
+                                    m_net->Times(u, input), m_net->Times(w, delay)), 0);
+                            delay->AttachInputs(output);
+                            recur_idx++;
+                        }
+                        else
+                        {
+                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
+                        }
 
-					    if (m_addDropoutNodes)
-						    input = m_net->Dropout(output);
+                        if (m_addDropoutNodes)
+                            input = m_net->Dropout(output);
                         else
                             input = output;
                     }
@@ -267,9 +267,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numHiddenLayers = m_layerSizes.size()-2;
 
-			size_t numRecurrentLayers = m_recurrentLayers.size(); 
+            size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-			ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr, pastEmbedding=nullptr;
+            ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr, pastEmbedding=nullptr;
             ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
             ComputationNodePtr Wxf=nullptr, Whf=nullptr, Wcf=nullptr, bf=nullptr, Wxc=nullptr, Whc=nullptr, bc=nullptr;
             ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, ct=nullptr, ht=nullptr;
@@ -327,20 +327,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Wxc = m_net->CreateLearnableParameter(L"WXC0", m_layerSizes[offset+1], m_layerSizes[offset]*(offset?m_lookupTableOrder:1));
                 m_net->InitLearnableParameters(Wxc, m_uniformInit, randomSeed++, m_initValueScale);
                 if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == offset+1)
-				{
-	                Whi = m_net->CreateLearnableParameter(L"WHI0", m_layerSizes[offset+1], m_layerSizes[offset+1]);
+                {
+                    Whi = m_net->CreateLearnableParameter(L"WHI0", m_layerSizes[offset+1], m_layerSizes[offset+1]);
                     m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
-	                Wci = m_net->CreateLearnableParameter(L"WCI0", m_layerSizes[offset+1], 1);
+                    Wci = m_net->CreateLearnableParameter(L"WCI0", m_layerSizes[offset+1], 1);
                     m_net->InitLearnableParameters(Wci, m_uniformInit, randomSeed++, m_initValueScale);
 
                     Whf = m_net->CreateLearnableParameter(L"WHF0", m_layerSizes[offset+1], m_layerSizes[offset+1]);
                     m_net->InitLearnableParameters(Whf, m_uniformInit, randomSeed++, m_initValueScale);
-	                Wcf = m_net->CreateLearnableParameter(L"WCF0", m_layerSizes[offset+1], 1);
+                    Wcf = m_net->CreateLearnableParameter(L"WCF0", m_layerSizes[offset+1], 1);
                     m_net->InitLearnableParameters(Wcf, m_uniformInit, randomSeed++, m_initValueScale);
 
                     Who = m_net->CreateLearnableParameter(L"WHO0", m_layerSizes[offset+1], m_layerSizes[offset+1]);
                     m_net->InitLearnableParameters(Who, m_uniformInit, randomSeed++, m_initValueScale);
-	                Wco = m_net->CreateLearnableParameter(L"WCO0", m_layerSizes[offset+1], 1);
+                    Wco = m_net->CreateLearnableParameter(L"WCO0", m_layerSizes[offset+1], 1);
                     m_net->InitLearnableParameters(Wco, m_uniformInit, randomSeed++, m_initValueScale);
 
                     Whc = m_net->CreateLearnableParameter(L"WHC0", m_layerSizes[offset+1], m_layerSizes[offset+1]);
@@ -359,9 +359,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delayHF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
                     delayHO = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
                     delayHC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-					delayCI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-					delayCF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-					delayCC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+                    delayCI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+                    delayCF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+                    delayCC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
 
 
                     delayYI = m_net->Delay(NULL, 0, layerOutput, mbSize);                    
@@ -380,7 +380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_net->Times(Wti, m_net->Times(Wtensoroi,m_net->KhatriRaoProduct(reducedInput, reducedOutput))));
 
                     it = ApplyNonlinearFunction(
-					    m_net->Plus(
+                        m_net->Plus(
                             m_net->Plus(
                                 m_net->Plus(
                                     m_net->Times(Wxi, input), 
@@ -388,7 +388,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     m_net->Times(Whi, delayHI)),
                                 m_net->DiagTimes(Wci, delayCI)), 0);
                     ft = ApplyNonlinearFunction(
-					    m_net->Plus(
+                        m_net->Plus(
                             m_net->Plus(
                                 m_net->Plus(
                                     m_net->Times(Wxf, input), 
@@ -411,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 )
                               );
                     ot = ApplyNonlinearFunction(
-					    m_net->Plus(
+                        m_net->Plus(
                             m_net->Plus(
                                 m_net->Plus(
                                     m_net->Times(Wxo, input), 
@@ -419,24 +419,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     m_net->Times(Who, delayHO)),
                                 m_net->DiagTimes(Wco, ct)), 0);
                     output = m_net->ElementTimes(ot, m_net->Tanh(ct));
-					
+                    
                     delayHO->AttachInputs(output);
-					delayHI->AttachInputs(output);
-					delayHF->AttachInputs(output);
-					delayHC->AttachInputs(output);
-					delayCI->AttachInputs(ct);
-					delayCF->AttachInputs(ct);
-					delayCC->AttachInputs(ct);
-					
+                    delayHI->AttachInputs(output);
+                    delayHF->AttachInputs(output);
+                    delayHC->AttachInputs(output);
+                    delayCI->AttachInputs(ct);
+                    delayCF->AttachInputs(ct);
+                    delayCC->AttachInputs(ct);
+                    
                     recur_idx ++;
-			    }
-				else
-				{
-	                output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
-			    }
+                }
+                else
+                {
+                    output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
+                }
 
-				if (m_addDropoutNodes)
-				    input = m_net->Dropout(output);
+                if (m_addDropoutNodes)
+                    input = m_net->Dropout(output);
                 else
                     input = output;
 
@@ -444,29 +444,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
                     m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-					if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
-					{
-					    w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
+                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
+                    {
+                        w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-						std::list<ComputationNodePtr> recurrent_loop;
-						delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
-						output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, delay)), i);
-						delay->AttachInputs(output);
-						recur_idx++;
-					}
-					else
-					{
-	                    output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-					}
+                        std::list<ComputationNodePtr> recurrent_loop;
+                        delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, delay)), i);
+                        delay->AttachInputs(output);
+                        recur_idx++;
+                    }
+                    else
+                    {
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
+                    }
 
-					if (m_addDropoutNodes)
+                    if (m_addDropoutNodes)
                         input = m_net->Dropout(output);
                     else
                         input = output;
                 }
             }
 
-			w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
+            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
             label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
 
@@ -536,7 +536,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 int recur_idx = 0; 
-    			/// unless there is a good algorithm to detect loops, use this explicit setup
+                /// unless there is a good algorithm to detect loops, use this explicit setup
                 int ik = 1; 
                 output = input;
                 while (ik <= m_maOrder)
@@ -558,7 +558,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 
                 if (m_addDropoutNodes)
-				    input = m_net->Dropout(output);
+                    input = m_net->Dropout(output);
                 else
                     input = output;
 
@@ -568,28 +568,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
                     output= m_net->Times(u, input);
                     input = output;
-					if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
-					{
-					    w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"R%d", i+1), m_layerSizes[i+1], m_layerSizes[i+1]);
+                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
+                    {
+                        w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"R%d", i+1), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-						delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
-						output = m_net->Plus(m_net->Times(w, delay), input);
+                        delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                        output = m_net->Plus(m_net->Times(w, delay), input);
 
                         delay->AttachInputs(output);
                         input = output;
-						recur_idx++;
-			        }
+                        recur_idx++;
+                    }
 
                     bi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"bi%d", i), m_layerSizes[i+1], 1);
                     output = m_net->Plus(input, bi);
 
-					if (m_addDropoutNodes)
-						input = m_net->Dropout(output);
+                    if (m_addDropoutNodes)
+                        input = m_net->Dropout(output);
                     else
                         input = output;
                 }
             
-				w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
+                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
                 label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
@@ -619,9 +619,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
-				size_t numRecurrentLayers = m_recurrentLayers.size(); 
+                size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-				ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+                ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
                 ComputationNodePtr bi=nullptr;
                 ComputationNodePtr Wxi1=nullptr, Wxi=nullptr;
                 ComputationNodePtr Wxi2=nullptr, Wxi3=nullptr, Wxi4=nullptr;
@@ -655,26 +655,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delayXIII->AttachInputs(input);
                     delayXIV->AttachInputs(input);
 
-					if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
-					{
+                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
+                    {
                         //TODO: to figure out sparse matrix size
-	                    Wxi2 = m_net->CreateSparseLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi2 = m_net->CreateSparseLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0], 0);
                         m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
-	                    //TODO: to figure out sparse matrix size
+                        //TODO: to figure out sparse matrix size
                         Wxi3 = m_net->CreateSparseLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0], 0);
                         m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
-	                    //TODO: to figure out sparse matrix size
+                        //TODO: to figure out sparse matrix size
                         Wxi4 = m_net->CreateSparseLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0], 0);
                         m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
-	                    //TODO: to figure out sparse matrix size
+                        //TODO: to figure out sparse matrix size
                         Wxi1 = m_net->CreateSparseLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0], 0);
                         m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
-	                    //TODO: to figure out sparse matrix size
+                        //TODO: to figure out sparse matrix size
                         Wxi = m_net->CreateSparseLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0], 0);
                         m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
-						/// unless there is a good algorithm to detect loops, use this explicit setup
-						it = m_net->Plus(
+                        /// unless there is a good algorithm to detect loops, use this explicit setup
+                        it = m_net->Plus(
                                 m_net->Tanh(
                                 m_net->Plus(
                                 m_net->Times(Wxi4, delayXIV),
@@ -697,15 +697,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         delayXII->NeedGradient() = false;
                         delayXIII->NeedGradient() = false;
                         delayXIV->NeedGradient() = false;
-						recur_idx ++;
-					}
-					else
-					{
-	                    output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
-					}
+                        recur_idx ++;
+                    }
+                    else
+                    {
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
+                    }
 
-					if (m_addDropoutNodes)
-						input = m_net->Dropout(output);
+                    if (m_addDropoutNodes)
+                        input = m_net->Dropout(output);
                     else
                         input = output;
 
@@ -713,30 +713,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
                         m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-						if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
-						{
-							w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
+                        if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
+                        {
+                            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-							std::list<ComputationNodePtr> recurrent_loop;
-							delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
-							output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, delay)), i);
-							delay->AttachInputs(output);
-							recur_idx++;
-						}
-						else
-						{
-	                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-						}
+                            std::list<ComputationNodePtr> recurrent_loop;
+                            delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, delay)), i);
+                            delay->AttachInputs(output);
+                            recur_idx++;
+                        }
+                        else
+                        {
+                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
+                        }
 
-					    if (m_addDropoutNodes)
-						    input = m_net->Dropout(output);
+                        if (m_addDropoutNodes)
+                            input = m_net->Dropout(output);
                         else
                             input = output;
                     }
                 }
 
                 //TODO: to figure out sparse matrix size
-				w = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers], 0);
+                w = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers], 0);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 //                b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
                 //TODO: to figure out sparse matrix size
@@ -833,17 +833,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Wci = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WCI%d", iLayer), outputDim, 1);
         m_net->InitLearnableParameters(Wci, m_uniformInit, randomSeed++, m_initValueScale);
 
-	    Whf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WHF%d", iLayer), outputDim, outputDim);
+        Whf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WHF%d", iLayer), outputDim, outputDim);
         m_net->InitLearnableParameters(Whf, m_uniformInit, randomSeed++, m_initValueScale);
-	    Wcf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WCF%d", iLayer), outputDim, 1);
+        Wcf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WCF%d", iLayer), outputDim, 1);
         m_net->InitLearnableParameters(Wcf, m_uniformInit, randomSeed++, m_initValueScale);
 
-	    Who = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WHO%d", iLayer), outputDim, outputDim);
+        Who = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WHO%d", iLayer), outputDim, outputDim);
         m_net->InitLearnableParameters(Who, m_uniformInit, randomSeed++, m_initValueScale);
-	    Wco = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WCO%d", iLayer), outputDim, 1);
+        Wco = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WCO%d", iLayer), outputDim, 1);
         m_net->InitLearnableParameters(Wco, m_uniformInit, randomSeed++, m_initValueScale);
 
-	    Whc = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WHC%d", iLayer), outputDim, outputDim);
+        Whc = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WHC%d", iLayer), outputDim, outputDim);
         m_net->InitLearnableParameters(Whc, m_uniformInit, randomSeed++, m_initValueScale);
 
         size_t layer1 = outputDim;
@@ -852,10 +852,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         delayHF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
         delayHO = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
         delayHC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-		delayCI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-		delayCF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-		delayCC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-		
+        delayCI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        delayCF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        delayCC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        
         if(m_constInputGateValue)
         {
             //it = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim, mbSize);
@@ -865,7 +865,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
             it = ApplyNonlinearFunction(
-		        m_net->Plus(
+                m_net->Plus(
                     m_net->Plus(
                         m_net->Plus(
                             m_net->Times(Wxi, input), 
@@ -906,7 +906,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
             ft = ApplyNonlinearFunction(
-		        m_net->Plus(
+                m_net->Plus(
                     m_net->Plus(
                         m_net->Plus(
                             m_net->Times(Wxf, input), 
@@ -933,7 +933,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
             ot = ApplyNonlinearFunction(
-		        m_net->Plus(
+                m_net->Plus(
                     m_net->Plus(
                         m_net->Plus(
                             m_net->Times(Wxo, input), 
@@ -949,17 +949,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             output = m_net->ElementTimes(ot, m_net->Tanh(ct));
         }
-		
+        
         delayHO->AttachInputs(output);
-		delayHI->AttachInputs(output);
-		delayHF->AttachInputs(output);
-		delayHC->AttachInputs(output);
-		delayCI->AttachInputs(ct);
-		delayCF->AttachInputs(ct);
-		delayCC->AttachInputs(ct);
-		
+        delayHI->AttachInputs(output);
+        delayHF->AttachInputs(output);
+        delayHC->AttachInputs(output);
+        delayCI->AttachInputs(ct);
+        delayCF->AttachInputs(ct);
+        delayCC->AttachInputs(ct);
+        
         if (m_addDropoutNodes)
-		    input = m_net->Dropout(output);
+            input = m_net->Dropout(output);
         else
             input = output;
         output = input;
@@ -976,9 +976,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
-				size_t numRecurrentLayers = m_recurrentLayers.size(); 
+                size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-				ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+                ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
                 ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
                 ComputationNodePtr Wxf=nullptr, Whf=nullptr, Wcf=nullptr, bf=nullptr, Wxc=nullptr, Whc=nullptr, bc=nullptr;
                 ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, ct=nullptr, ht=nullptr;
@@ -1014,7 +1014,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// direct connect from input node to output node
 
-				int recur_idx = 0;
+                int recur_idx = 0;
                 int offset = m_lookupTableOrder > 0? 1 : 0;
                 if (numHiddenLayers > 0)
                 {
@@ -1024,22 +1024,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     for (int i=1 + offset; i<numHiddenLayers; i++)
                     {
-						if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
-						{
+                        if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
+                        {
                             output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i+1], input);
 
                             recur_idx++;
-						}
-						else
-						{
+                        }
+                        else
+                        {
                             u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
                             m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
                             b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", i), m_layerSizes[i+1], 1);
-	                        output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-						}
+                            output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
+                        }
 
-					    if (m_addDropoutNodes)
-						    input = m_net->Dropout(output);
+                        if (m_addDropoutNodes)
+                            input = m_net->Dropout(output);
                         else
                             input = output;
 
@@ -1055,7 +1055,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         input = output;
                 }
 
-				w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
+                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
                 label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
                 AddTrainAndEvalCriterionNodes(input, label, w);
@@ -1092,9 +1092,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numHiddenLayers = m_layerSizes.size()-2;
 
-				size_t numRecurrentLayers = m_recurrentLayers.size(); 
+                size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-				ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+                ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
                 ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
                 ComputationNodePtr Wxf=nullptr, Whf=nullptr, Wcf=nullptr, bf=nullptr, Wxc=nullptr, Whc=nullptr, bc=nullptr;
                 ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, ct=nullptr, ht=nullptr;
@@ -1130,7 +1130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// direct connect from input node to output node
 
-				int recur_idx = 0;
+                int recur_idx = 0;
                 int offset = m_lookupTableOrder > 0? 1 : 0;
                 if (numHiddenLayers > 0)
                 {
@@ -1140,22 +1140,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     for (int i=1 + offset; i<numHiddenLayers; i++)
                     {
-						if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
-						{
+                        if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
+                        {
                             output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i+1], input);
 
                             recur_idx++;
-						}
-						else
-						{
+                        }
+                        else
+                        {
                             u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
                             m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
                             b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", i), m_layerSizes[i+1], 1);
-	                        output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-						}
+                            output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
+                        }
 
-					    if (m_addDropoutNodes)
-						    input = m_net->Dropout(output);
+                        if (m_addDropoutNodes)
+                            input = m_net->Dropout(output);
                         else
                             input = output;
 

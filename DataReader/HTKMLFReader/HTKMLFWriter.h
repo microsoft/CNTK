@@ -13,27 +13,27 @@ template<class ElemType>
 class HTKMLFWriter : public IDataWriter<ElemType>
 {
 private:
-	std::vector<size_t> outputDims;
-	std::vector<std::vector<std::wstring>> outputFiles;
-	
+    std::vector<size_t> outputDims;
+    std::vector<std::vector<std::wstring>> outputFiles;
+    
     std::vector<size_t> udims;
-	std::map<std::wstring,size_t> outputNameToIdMap;
+    std::map<std::wstring,size_t> outputNameToIdMap;
     std::map<std::wstring,size_t> outputNameToDimMap;
     std::map<std::wstring,size_t> outputNameToTypeMap;
-	unsigned int sampPeriod;
-	size_t outputFileIndex;
-	void SaveToFile(std::wstring& outputFile, Matrix<ElemType>& outputData);
+    unsigned int sampPeriod;
+    size_t outputFileIndex;
+    void SaveToFile(std::wstring& outputFile, Matrix<ElemType>& outputData);
     ElemType * m_tempArray;
     size_t m_tempArraySize;
 
-	enum OutputTypes
+    enum OutputTypes
     {
         outputReal,
         outputCategory,
     };
 
 public:
-	virtual void Init(const ConfigParameters& writerConfig);
+    virtual void Init(const ConfigParameters& writerConfig);
     virtual void Destroy();
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections);
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
