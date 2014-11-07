@@ -763,6 +763,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t actualMBSize = net.GetActualMBSize();
                 net.SetActualMiniBatchSize(actualMBSize);
+                net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd);
+
                 for (auto nodeIter=nodes.begin(); nodeIter != nodes.end(); nodeIter++)
                 {
                     net.Evaluate( *nodeIter);
