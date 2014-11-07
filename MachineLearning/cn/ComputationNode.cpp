@@ -11,7 +11,13 @@
 #include "IComputationNetBuilder.h"
 #include "SGD.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+// The SGD CLass is MPI-aware and expects these globals to exist.
+int myRank = 0;
+int numProcs = 1;
+
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
 
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
