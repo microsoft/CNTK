@@ -277,20 +277,27 @@ public:
 
     // GetScalar - Get a scalar value from a node, may loop through some variables before arriving
     // returns: scalar value
-    ConfigValue GetScalar()
-    {
-        NDLNode<ElemType>* node = this;
-        while (node && (node->GetType() == ndlTypeVariable || node->GetType() == ndlTypeParameter))
-        {
-            node = node->FindNode(node->GetValue(), true /*searchForDotNames*/);
-        }
-        if (!node || node->GetType() != ndlTypeConstant)
-        {
-            std::string name = node->GetName();
-            RuntimeError("Scalar expected, '%s' must be a constant or variable that resolves to a constant\n", name.c_str());
-        }
-        return node->GetValue();
-    }
+	ConfigValue GetScalar()
+	{
+		NDLNode<ElemType>* node = this;
+		while (node && (node->GetType() == ndlTypeVariable || node->GetType() == ndlTypeParameter))
+		{
+			NDLNode<ElemType>* nodeLast = node;
+			node = node->FindNode(node->GetValue(), true /*searchForDotNames*/);
+
+			// if we are still on the same node, that means it was never resolved to anything, an undefined variable
+			if (nodeLast == node)
+			{
+				RuntimeError("undefined Variable, '%s' found, must be declared before first use\n", node->GetName().c_str());
+			}
+		}
+		if (!node || node->GetType() != ndlTypeConstant)
+		{
+			std::string name = node ? node->GetName() : GetName();
+			RuntimeError("Scalar expected, '%s' must be a constant or variable that resolves to a constant\n", name.c_str());
+		}
+		return node->GetValue();
+	}
 
     void InsertParam(NDLNode* param) {m_parameters.push_back(param);}
 
