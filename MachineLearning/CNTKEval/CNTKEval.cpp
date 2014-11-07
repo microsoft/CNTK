@@ -37,7 +37,7 @@ extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval)
 template<class ElemType>
 void CNTKEval<ElemType>::Init(const std::string& config)
 {
-	m_start = 0;
+    m_start = 0;
     m_config.Parse(config);
     if (m_config.Exists("modelPath"))
     {
@@ -144,7 +144,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     // now set the data in the reader
     GetNodeDimensions(m_dimensions, nodeInput);
     m_reader->SetData(&inputs, &m_dimensions);
-	m_reader->SetBoundary(m_start);
+    m_reader->SetBoundary(m_start);
     // create the reader if necessary
     if (m_writer == nullptr)
     {
@@ -164,7 +164,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
 template<class ElemType>
 void CNTKEval<ElemType>::ResetState()
 {
-	m_start = 1 - m_start;
+    m_start = 1 - m_start;
 }
 
 // instantiate all the combinations we expect to be used

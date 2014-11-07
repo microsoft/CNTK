@@ -279,19 +279,19 @@ void DoWriteOutput(const ConfigParameters& config)
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
-	if (config.Exists("writer"))
-	{
-		ConfigParameters writerConfig (config("writer"));
+    if (config.Exists("writer"))
+    {
+        ConfigParameters writerConfig (config("writer"));
         bool bWriterUnittest = writerConfig("unittest","false");
-		DataWriter<ElemType> testDataWriter(writerConfig);
-		writer.WriteOutput(testDataReader,mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, bWriterUnittest);
-	}
-	else if (config.Exists("outputPath"))
-	{
-		wstring outputPath = config("outputPath"); // crashes if no default given? 
-		writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, epochSize);
-	}
-	//writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
+        DataWriter<ElemType> testDataWriter(writerConfig);
+        writer.WriteOutput(testDataReader,mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, bWriterUnittest);
+    }
+    else if (config.Exists("outputPath"))
+    {
+        wstring outputPath = config("outputPath"); // crashes if no default given? 
+        writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, epochSize);
+    }
+    //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
 }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -538,7 +538,7 @@ void DoCommand(const ConfigParameters& config)
                 DoCreateLabelMap<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
-			    
+                
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
         }

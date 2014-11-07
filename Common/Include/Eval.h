@@ -43,7 +43,7 @@ public:
     virtual void LoadModel(const std::wstring& modelFileName)=0;
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup)=0; 
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)=0; 
-	virtual void ResetState() = 0;
+    virtual void ResetState() = 0;
 };
 
 // GetEval - get a evaluator type from the DLL
@@ -94,7 +94,7 @@ public:
     // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
-	virtual void ResetState();
+    virtual void ResetState();
 };
 
 }}}

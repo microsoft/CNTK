@@ -23,7 +23,7 @@ class CNTKEval : public IEvaluateModel<ElemType>
     ConfigParameters m_config;
     ComputationNetwork<ElemType>* m_net;
     std::map<std::wstring, size_t> m_dimensions;
-	size_t m_start;
+    size_t m_start;
 
 public:
     // constructor
@@ -45,6 +45,6 @@ public:
 
     virtual void Init(const std::string& config);
     virtual void Destroy();
-	virtual void ResetState();
+    virtual void ResetState();
 };
 }}}

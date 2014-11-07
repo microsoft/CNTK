@@ -233,8 +233,8 @@ public:
 
         feat.resize(1);
         uids.resize(1);
-		//transcripts.resize(1);
-		//lattices.resize(1);
+        //transcripts.resize(1);
+        //lattices.resize(1);
         return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, lattices);
     }
 

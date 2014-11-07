@@ -42,9 +42,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
         GPUSparseMatrix(const GPUSparseMatrix<ElemType>&);
         GPUSparseMatrix(const GPUMatrix<ElemType>&);
-#ifndef	LINUX
+#ifndef    LINUX
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
-#endif	/* LINUX */
+#endif    /* LINUX */
         ~GPUSparseMatrix();
     public:
         void Resize(const size_t numRows, const size_t numCols, size_t size = 0);
@@ -94,9 +94,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType> CopyToDenseMatrix();
         GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);
-#ifndef	LINUX
+#ifndef    LINUX
         GPUSparseMatrix<ElemType>& operator=(GPUSparseMatrix<ElemType>&& moveFrom);
-#endif	/* LINUX */
+#endif    /* LINUX */
         GPUSparseMatrix<ElemType> operator+ (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType> operator- (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType>& operator^= (ElemType alpha); //element-wise power        

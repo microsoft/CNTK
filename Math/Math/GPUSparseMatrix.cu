@@ -21,7 +21,7 @@
 #pragma warning (disable: 4267) // conversion from 'size_t' to 'unsigned int'; happens in CUDA <<<a,b>>> syntax if a and b are size_t
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
-#ifdef	_WIN32
+#ifdef    _WIN32
 // thread local storage to access the current stream, initalize to default stream
 extern __declspec (thread)
 #endif

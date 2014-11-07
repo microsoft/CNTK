@@ -22,7 +22,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Create a Data Writer
-	//DATAWRITER_API IDataWriter* DataWriterFactory(void)
+    //DATAWRITER_API IDataWriter* DataWriterFactory(void)
 
 
     // comparison, not case sensitive.
@@ -32,30 +32,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return ( first < second );
     }
 
-	template<class ElemType>
-	void LUSequenceWriter<ElemType>::Init(const ConfigParameters& writerConfig)
-	{
+    template<class ElemType>
+    void LUSequenceWriter<ElemType>::Init(const ConfigParameters& writerConfig)
+    {
         udims.clear();
 
-		ConfigArray outputNames = writerConfig("outputNodeNames","");
-		if (outputNames.size()<1)
-			RuntimeError("writer needs at least one outputNodeName specified in config");
+        ConfigArray outputNames = writerConfig("outputNodeNames","");
+        if (outputNames.size()<1)
+            RuntimeError("writer needs at least one outputNodeName specified in config");
 
 
-		foreach_index(i, outputNames) // inputNames should map to node names
-		{
-			ConfigParameters thisOutput = writerConfig(outputNames[i]);
-			outputFiles[outputNames[i]] = thisOutput("file");
+        foreach_index(i, outputNames) // inputNames should map to node names
+        {
+            ConfigParameters thisOutput = writerConfig(outputNames[i]);
+            outputFiles[outputNames[i]] = thisOutput("file");
             int iN = thisOutput("nbest", "1");
             nBests[outputNames[i]] = iN; 
-			wstring fname = thisOutput("token");
+            wstring fname = thisOutput("token");
             ReadLabelInfo(fname, word4idx[outputNames[i]], idx4word[outputNames[i]]);
-			size_t dim = idx4word[outputNames[i]].size(); 
+            size_t dim = idx4word[outputNames[i]].size(); 
             udims.push_back(dim);
 
-		}
+        }
 
-	}
+    }
 
     template<class ElemType>
     void LUSequenceWriter<ElemType>::ReadLabelInfo(const wstring & vocfile, 
@@ -87,40 +87,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     }
 
-	template<class ElemType>
-	void LUSequenceWriter<ElemType>::Destroy()
-	{
+    template<class ElemType>
+    void LUSequenceWriter<ElemType>::Destroy()
+    {
         for (auto ptr = outputFileIds.begin(); ptr != outputFileIds.end(); ptr++)
         {
             fclose(ptr->second);
         }
     }
 
-	template<class ElemType>
-	bool LUSequenceWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
-	{
-		
-		for (auto iter = matrices.begin();iter!=matrices.end(); iter++)
-		{
-			wstring outputName = iter->first;
-			Matrix<ElemType>& outputData = *(static_cast<Matrix<ElemType>*>(iter->second));
-			wstring outFile = outputFiles[outputName];
-			
-			SaveToFile(outFile,outputData, idx4word[outputName], nBests[outputName]);
-		}
+    template<class ElemType>
+    bool LUSequenceWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
+    {
+        
+        for (auto iter = matrices.begin();iter!=matrices.end(); iter++)
+        {
+            wstring outputName = iter->first;
+            Matrix<ElemType>& outputData = *(static_cast<Matrix<ElemType>*>(iter->second));
+            wstring outFile = outputFiles[outputName];
+            
+            SaveToFile(outFile,outputData, idx4word[outputName], nBests[outputName]);
+        }
 
         return true;
-	}
+    }
 
-	template<class ElemType>
-	void LUSequenceWriter<ElemType>::SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest)
-	{
+    template<class ElemType>
+    void LUSequenceWriter<ElemType>::SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest)
+    {
         size_t nT = outputData.GetNumCols();
         size_t nD = min(idx2wrd.size(), outputData.GetNumRows());
         FILE *fp = nullptr; 
         vector<pair<size_t, ElemType>> lv;
 
-    	auto NbestComparator = [](const pair<size_t, ElemType>& lv,const pair<size_t, ElemType>& rv){return lv.second > rv.second;};
+        auto NbestComparator = [](const pair<size_t, ElemType>& lv,const pair<size_t, ElemType>& rv){return lv.second > rv.second;};
 
         if (outputFileIds.find(outputFile) == outputFileIds.end())
         {
@@ -136,13 +136,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fp = outputFileIds[outputFile];
 
         for (int j=0; j< nT; j++)
-		{
+        {
             int imax = 0;
             ElemType fmax = outputData(imax,j);
             lv.clear();
             if (nbest > 1) lv.push_back(pair<size_t, ElemType>(0, fmax));
-		    for (int i=1; i<nD; i++)
-			{
+            for (int i=1; i<nD; i++)
+            {
                 if (nbest > 1) lv.push_back(pair<size_t, ElemType>(i, outputData(i,j)));
                 if (outputData(i,j) > fmax)
                 {
@@ -150,7 +150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     imax = i;
                 }
             }
-			if (nbest > 1) sort(lv.begin(),lv.end(),NbestComparator);
+            if (nbest > 1) sort(lv.begin(),lv.end(),NbestComparator);
             for (int i = 0 ;i < nbest; i++)
             {
                 if (nbest > 1) 
@@ -170,10 +170,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             fprintf(fp, "\n");
         }
-	}
+    }
 
 
-	template class LUSequenceWriter<float>;
-	template class LUSequenceWriter<double>;
+    template class LUSequenceWriter<float>;
+    template class LUSequenceWriter<double>;
 
 }}}

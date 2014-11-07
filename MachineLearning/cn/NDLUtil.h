@@ -139,31 +139,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
 
-		// CheckOutputNodes - check output nodes
-		// symbolName - name of the computation nodes we are collecting
-		// compNodes - array of computation nodes
-		void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodePtr>& compNodes)
-		{
-			NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
-			bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
-			if (!valid && nodeArray) //otherwise, see if we found a symbol
-			{
-				NDLType outputType = nodeArray->GetType();
-				// accept either an array of nodes, or a single node
-				valid = (outputType == ndlTypeArray || outputType == ndlTypeFunction || outputType == ndlTypeMacroCall);
-			}
-			if (!valid)
+        // CheckOutputNodes - check output nodes
+        // symbolName - name of the computation nodes we are collecting
+        // compNodes - array of computation nodes
+        void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodePtr>& compNodes)
+        {
+            NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
+            bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
+            if (!valid && nodeArray) //otherwise, see if we found a symbol
+            {
+                NDLType outputType = nodeArray->GetType();
+                // accept either an array of nodes, or a single node
+                valid = (outputType == ndlTypeArray || outputType == ndlTypeFunction || outputType == ndlTypeMacroCall);
+            }
+            if (!valid)
                             RuntimeError("Invalid network node definition for '%s', nonexistant or wrong type", symbolName.c_str());
-			if (nodeArray)
-			{
-				vector<NDLNode<ElemType>*> nodes;
-				if (nodeArray->GetType() == ndlTypeArray)
-					nodes = nodeArray->GetParameters();
-				else
-					nodes.push_back(nodeArray);
+            if (nodeArray)
+            {
+                vector<NDLNode<ElemType>*> nodes;
+                if (nodeArray->GetType() == ndlTypeArray)
+                    nodes = nodeArray->GetParameters();
+                else
+                    nodes.push_back(nodeArray);
 
-				for (size_t i=0; i<nodes.size(); i++)
-				{
+                for (size_t i=0; i<nodes.size(); i++)
+                {
                     // get the computation node 
                     ComputationNodePtr cnNode = (ComputationNodePtr)nodes[i]->GetEvalValue();
 
@@ -186,24 +186,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // add it if it's not already there
                     if (!found)
-					    compNodes.push_back(cnNode);
-				}
-			}
-		}
+                        compNodes.push_back(cnNode);
+                }
+            }
+        }
 
-		// SetOutputNodes - Set the output nodes for the Computational Network
-		// NOTE: seems to be specific to SynchronousExecutionEngine, should be in a derived class for that execution engine
-		void SetOutputNodes(NDLScript<ElemType>* script)
-		{
-			// NOTE: all optional parameter nodes (i.e. tag=feature) have already been processed in ProcessOptionalParameters()
+        // SetOutputNodes - Set the output nodes for the Computational Network
+        // NOTE: seems to be specific to SynchronousExecutionEngine, should be in a derived class for that execution engine
+        void SetOutputNodes(NDLScript<ElemType>* script)
+        {
+            // NOTE: all optional parameter nodes (i.e. tag=feature) have already been processed in ProcessOptionalParameters()
 
-			// handle the alternate way of specifying nodes, the array of nodes method
-			CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
-			CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
-			CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes());
-			CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
-			CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
-		}
+            // handle the alternate way of specifying nodes, the array of nodes method
+            CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
+            CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
+            CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes());
+            CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
+            CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
+        }
     };
 
     template class NDLUtil<float>; 

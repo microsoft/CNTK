@@ -740,9 +740,9 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         return m_cachingReader->GetMinibatch(matrices);
     }
     // get the features array
-	if (matrices.find(m_featuresName) == matrices.end())
-		RuntimeError("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
-		
+    if (matrices.find(m_featuresName) == matrices.end())
+        RuntimeError("Features matrix not found in config file, there should be a section '%ls=[...]' in the configuration file.", m_featuresName.c_str());
+        
     Matrix<ElemType>& features = *matrices[m_featuresName];
 
     // get out if they didn't call StartMinibatchLoop() first

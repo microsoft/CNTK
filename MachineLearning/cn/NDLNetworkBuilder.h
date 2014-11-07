@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             NDLUtil<ElemType> ndlUtil(m_net);
             ndlUtil.ProcessNDLConfig(config, true);
-		}
+        }
 
         virtual ComputationNetwork<ElemType>& BuildNetworkFromDescription()
         {
