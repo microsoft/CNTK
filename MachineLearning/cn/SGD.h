@@ -28,20 +28,20 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-	template<class ElemType>
-	void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb)
-	{
-		if ( numProcs > 1 ) for (auto it = mb.begin(); it != mb.end(); ++it)
-		{
-			MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
-			size_t nCols = mat.GetNumCols();
-			size_t col_start = (nCols * myRank)/ numProcs;
-			size_t col_end = (nCols*(myRank + 1)) / numProcs;
-			if (col_end > nCols) col_end = nCols; // this shouldn't happen
-			MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
-			mat.SetValue(tmp);
-		}
-	}
+    template<class ElemType>
+    void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb)
+    {
+        if ( numProcs > 1 ) for (auto it = mb.begin(); it != mb.end(); ++it)
+        {
+            MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
+            size_t nCols = mat.GetNumCols();
+            size_t col_start = (nCols * myRank)/ numProcs;
+            size_t col_end = (nCols*(myRank + 1)) / numProcs;
+            if (col_end > nCols) col_end = nCols; // this shouldn't happen
+            MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
+            mat.SetValue(tmp);
+        }
+    }
 
     enum class LearningRateSearchAlgorithm : int
     {
@@ -379,10 +379,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
             ComputationNetwork<ElemType>& net  = 
                 startEpoch<0? netBuilder->BuildNetworkFromDescription() : netBuilder->LoadNetworkFromFile(modelFileName);
-			// TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
-			// strategy should be to run the initializer above on myRank==0, and then broadcast parameters.
+            // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
+            // strategy should be to run the initializer above on myRank==0, and then broadcast parameters.
 
-			startEpoch = max(startEpoch, 0);
+            startEpoch = max(startEpoch, 0);
             m_needRegularization = false;
 
             TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
@@ -494,9 +494,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 prevLearnRates[i] = std::numeric_limits<ElemType>::infinity();
 
             //precompute mean and invStdDev nodes and save initial model
-			if (PreCompute(net, trainSetDataReader, FeatureNodes, labelNodes, inputMatrices) || startEpoch == 0)
-				if (0 == myRank) // only needs to be done by one process
-					net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
+            if (PreCompute(net, trainSetDataReader, FeatureNodes, labelNodes, inputMatrices) || startEpoch == 0)
+                if (0 == myRank) // only needs to be done by one process
+                    net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
 
             bool learnRateInitialized = false;
             if (startEpoch > 0)
@@ -598,26 +598,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 #ifdef MPI_SUPPORT
-				// model reduction and averaging
-				if ( numProcs > 0 )
-				for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
-				{
-					ComputationNodePtr node = (*nodeIter);
-					Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
-					ElemType *px = mat.CopyToArray();
-					size_t nx = mat.GetNumElements();
-					vector<ElemType> py = vector<ElemType>(nx, ElemType(0));
-					// TODO: Replace this with the reduction-shuffle-dance
-					MPI_Reduce(px, &(py[0]), (int)nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-					if (myRank == 0)
-						transform(py.begin(), py.end(), py.begin(), [](ElemType&val)->ElemType{return val / (ElemType)numProcs; });
-					MPI_Bcast(&(py[0]), nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, 0, MPI_COMM_WORLD);
-					mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), &(py[0]));
-					delete px;
-				}
+                // model reduction and averaging
+                if ( numProcs > 0 )
+                for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                {
+                    ComputationNodePtr node = (*nodeIter);
+                    Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
+                    ElemType *px = mat.CopyToArray();
+                    size_t nx = mat.GetNumElements();
+                    vector<ElemType> py = vector<ElemType>(nx, ElemType(0));
+                    // TODO: Replace this with the reduction-shuffle-dance
+                    MPI_Reduce(px, &(py[0]), (int)nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+                    if (myRank == 0)
+                        transform(py.begin(), py.end(), py.begin(), [](ElemType&val)->ElemType{return val / (ElemType)numProcs; });
+                    MPI_Bcast(&(py[0]), nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                    mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), &(py[0]));
+                    delete px;
+                }
 #endif
 
-				if ( 0 == myRank ) // only evaluate once, on the master process. TODO: This could be faster by farming out the validation parts
+                if ( 0 == myRank ) // only evaluate once, on the master process. TODO: This could be faster by farming out the validation parts
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
                 {
                     SimpleEvaluator<ElemType> evalforvalidation(net);
@@ -632,8 +632,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     epochCriterion = vScore[0]; //the first one is the training criterion.
                 }
 #ifdef MPI_SUPPORT
-				// ensure all processes have the same epochCriterion
-				MPI_Bcast(&epochCriterion, 1, sizeof(epochCriterion) == 4 ? MPI_FLOAT : MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                // ensure all processes have the same epochCriterion
+                MPI_Bcast(&epochCriterion, 1, sizeof(epochCriterion) == 4 ? MPI_FLOAT : MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
 
                 bool loadedPrevModel = false;
@@ -661,8 +661,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             else 
                             {
-								if ( myRank == 0 )
-									net.SaveToFile(GetModelNameForEpoch(i, true));
+                                if ( myRank == 0 )
+                                    net.SaveToFile(GetModelNameForEpoch(i, true));
                                 fprintf(stderr, "Finished training and saved final model\n\n");
                                 break;
                             }
@@ -695,13 +695,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 //persist model and check-point info
-				if (0 == myRank)
-				{
-					net.SaveToFile(GetModelNameForEpoch(i));
-					SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
-					if (!m_keepCheckPointFiles)
-						_wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
-				}
+                if (0 == myRank)
+                {
+                    net.SaveToFile(GetModelNameForEpoch(i));
+                    SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                    if (!m_keepCheckPointFiles)
+                        _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
+                }
 
                 if (learnRatePerSample < 1e-12)
                     fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n", learnRatePerSample);
@@ -982,7 +982,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
 #ifdef MPI_SUPPORT
-				DecimateMinibatch(inputMatrices);
+                DecimateMinibatch(inputMatrices);
 #endif
                 endReadMBTime=clock();
                 startComputeMBTime=clock();

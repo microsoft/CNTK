@@ -577,43 +577,43 @@ std::string TimeDateStamp()
 // Oh, my gosh, this is going to be ugly. MPI_INIT needs a char* argv[], so let's interface.
 int MPIAPI MPI_Init(_In_opt_ int *argc, _Inout_count_(*argc) wchar_t*** argv)
 {
-	// this maps from the strings 
-	std::map<std::string, wchar_t*> recover_wstring;
+    // this maps from the strings 
+    std::map<std::string, wchar_t*> recover_wstring;
 
-	// do the mapping to 8-bit encoding for MPI_Init()
-	vector<vector<char>> argv_string_vector;
-	transform(*argv, *argv + *argc, std::back_inserter(argv_string_vector),
-		[&recover_wstring](wchar_t*pws)->vector<char>
-		{ 
-			std::string tmp = msra::strfun::utf8(std::wstring(pws));
-			recover_wstring[tmp] = pws;
-			vector<char> rv(tmp.begin(), tmp.end());
-			rv.push_back('\0');
-			return rv;
-		}
-		);
-	vector<char*> argv_charptr_vector;
-	transform(argv_string_vector.begin(), argv_string_vector.end(), std::back_inserter(argv_charptr_vector),
-		[](std::vector<char>&cs)->char*{ return &(cs[0]); }
-		);
-	char** argv_char = &(argv_charptr_vector[0]);
+    // do the mapping to 8-bit encoding for MPI_Init()
+    vector<vector<char>> argv_string_vector;
+    transform(*argv, *argv + *argc, std::back_inserter(argv_string_vector),
+        [&recover_wstring](wchar_t*pws)->vector<char>
+        { 
+            std::string tmp = msra::strfun::utf8(std::wstring(pws));
+            recover_wstring[tmp] = pws;
+            vector<char> rv(tmp.begin(), tmp.end());
+            rv.push_back('\0');
+            return rv;
+        }
+        );
+    vector<char*> argv_charptr_vector;
+    transform(argv_string_vector.begin(), argv_string_vector.end(), std::back_inserter(argv_charptr_vector),
+        [](std::vector<char>&cs)->char*{ return &(cs[0]); }
+        );
+    char** argv_char = &(argv_charptr_vector[0]);
 
-	// Do the initialization
-	int rv = MPI_Init(argc, &argv_char);
+    // Do the initialization
+    int rv = MPI_Init(argc, &argv_char);
 
-	// try and reconstruct how MPI_Init changed the argv
-	transform(argv_char, argv_char + *argc, stdext::checked_array_iterator<wchar_t**>(*argv, *argc),
-		[&recover_wstring](char*pc)->wchar_t*
-		{
-			auto it = recover_wstring.find(std::string(pc));
-			if (it == recover_wstring.end())
-				RuntimeError("Unexpected interaction between MPI_Init and command line parameters");
-			return it->second;
-		}
-		);
+    // try and reconstruct how MPI_Init changed the argv
+    transform(argv_char, argv_char + *argc, stdext::checked_array_iterator<wchar_t**>(*argv, *argc),
+        [&recover_wstring](char*pc)->wchar_t*
+        {
+            auto it = recover_wstring.find(std::string(pc));
+            if (it == recover_wstring.end())
+                RuntimeError("Unexpected interaction between MPI_Init and command line parameters");
+            return it->second;
+        }
+        );
 
-	// pass through return value from internal call to MPI_Init()
-	return rv;
+    // pass through return value from internal call to MPI_Init()
+    return rv;
 }
 #endif
 
@@ -623,22 +623,22 @@ int wmain(int argc, wchar_t* argv[])
     {
 
 #ifdef MPI_SUPPORT
-		{
-			int rc;
-			rc = MPI_Init(&argc, &argv);
-			if (rc != MPI_SUCCESS)
-			{
-				MPI_Abort(MPI_COMM_WORLD, rc);
-				RuntimeError("Failure in MPI_Init: %d", rc);
-			}
-			MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
-			MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-			fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), myRank, numProcs);
-			fflush(stderr);
-		}
+        {
+            int rc;
+            rc = MPI_Init(&argc, &argv);
+            if (rc != MPI_SUCCESS)
+            {
+                MPI_Abort(MPI_COMM_WORLD, rc);
+                RuntimeError("Failure in MPI_Init: %d", rc);
+            }
+            MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+            MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+            fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), myRank, numProcs);
+            fflush(stderr);
+        }
 #else
-		numProcs = 1;
-		myRank = 0;
+        numProcs = 1;
+        myRank = 0;
 #endif
 
         ConfigParameters config;
@@ -656,64 +656,64 @@ int wmain(int argc, wchar_t* argv[])
                 logpath += (wstring)command[i];
             }
             logpath += L".log";
-			if (numProcs > 1)
-			{
-				std::wostringstream oss;
-				oss << myRank;
-				logpath += L"rank" + oss.str();
-			}
+            if (numProcs > 1)
+            {
+                std::wostringstream oss;
+                oss << myRank;
+                logpath += L"rank" + oss.str();
+            }
             RedirectStdErr(logpath);
         }
 
         std::string timestamp = TimeDateStamp();
 
-		if (myRank == 0) // main process
-		{
-			//dump config info
-			fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-			fprintf(stderr, "command line options: \n");
-			for (int i = 1; i < argc; i++)
-				fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
+        if (myRank == 0) // main process
+        {
+            //dump config info
+            fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+            fprintf(stderr, "command line options: \n");
+            for (int i = 1; i < argc; i++)
+                fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
 
-			// This simply merges all the different config parameters specified (eg, via config files or via command line directly),
-			// and prints it.
-			fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
-			fprintf(stderr, "%s\n", rawConfigString.c_str());
-			fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
+            // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+            // and prints it.
+            fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+            fprintf(stderr, "%s\n", rawConfigString.c_str());
+            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
-			// Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
-			// All of these assignments will appear, even though only the last assignment matters.
-			fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-			fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-			fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+            // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+            // All of these assignments will appear, even though only the last assignment matters.
+            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+            fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-			// This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
-			// value it is set to will appear).
-			fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-			config.dumpWithResolvedVariables();
-			fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+            // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
+            // value it is set to will appear).
+            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+            config.dumpWithResolvedVariables();
+            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-			fprintf(stderr, "command: ");
-			for (int i = 0; i < command.size(); i++)
-			{
-				fprintf(stderr, "%s ", command[i].c_str());
-			}
-		}
+            fprintf(stderr, "command: ");
+            for (int i = 0; i < command.size(); i++)
+            {
+                fprintf(stderr, "%s ", command[i].c_str());
+            }
+        }
 
         //run commands
         std::string type = config("precision", "float");
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
             type = config("type", "float");
-		if ( myRank == 0 )
-			fprintf(stderr, "\nprecision = %s\n", type.c_str());
+        if ( myRank == 0 )
+            fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
             DoCommand<float>(config);
         else if (type == "double")
             DoCommand<double>(config);
         else
             RuntimeError("invalid precision specified: %s", type.c_str());
-	}
+    }
     catch(std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s", err.what());
@@ -731,7 +731,7 @@ int wmain(int argc, wchar_t* argv[])
         return EXIT_FAILURE;
     }    
 #ifdef MPI_SUPPORT
-	MPI_Finalize();
+    MPI_Finalize();
 #endif
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
