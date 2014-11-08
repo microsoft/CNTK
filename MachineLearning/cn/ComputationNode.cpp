@@ -11,10 +11,6 @@
 #include "IComputationNetBuilder.h"
 #include "SGD.h"
 
-// The SGD CLass is MPI-aware and expects these globals to exist.
-int myRank = 0;
-int numProcs = 1;
-
 namespace Microsoft {
     namespace MSR {
         namespace CNTK {

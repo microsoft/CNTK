@@ -10,7 +10,11 @@
 #include <Windows.h>
 #endif
 
-BOOL APIENTRY DllMain( HMODULE /*hModule*/,
+// The SGD CLass is MPI-aware and expects these globals to exist.
+int myRank = 0;
+int numProcs = 1;
+
+BOOL APIENTRY DllMain(HMODULE /*hModule*/,
                        DWORD  ul_reason_for_call,
                        LPVOID /*lpReserved*/
                      )
