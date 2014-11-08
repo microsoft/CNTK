@@ -143,6 +143,11 @@
     </ClCompile>
     <ClCompile Include="CNTKEval.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Math\Math\Math.vcxproj">
+      <Project>{60bdb847-d0c4-4fd3-a947-0c15c08bcdb5}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
