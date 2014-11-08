@@ -386,7 +386,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> A = ReadMatrixFromDbnFile(fstream,std::string("b"));
                 if (wts.GetNumRows()!=m_layerSizes[i+1] || wts.GetNumCols()!=m_layerSizes[i])
                 {
-                    throw std::runtime_error("error reading DBN file: mismatch in layer size between dbn file and config specification!\n");
+                    std::stringstream msg;
+                    msg << "error reading DBN file: mismatch in layer size between dbn file and config specification!" << endl;
+                    msg << wts.GetNumRows() << "," << wts.GetNumCols() << "!=" << m_layerSizes[i + 1] << "," << m_layerSizes[i] << endl;
+                    
+                    throw std::runtime_error(msg.str().c_str());
                 }
                 if (i==0)
                 {
