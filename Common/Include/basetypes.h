@@ -733,7 +733,7 @@ public:
         resize (0);
 
         // strtok_s not available on all platforms - so backoff to strtok on those
-#ifdef strtok_s
+#if __STDC_WANT_SECURE_LIB__
         char * context; // for strtok_s()
         for (char * p = strtok_s (buf, delim, &context); p; p = strtok_s (NULL, delim, &context))
             push_back (p);
