@@ -116,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }           
 
             if (m_verbosity > 0)
-                fprintf(stderr,"Total Samples Evaluated = %d\n", totalEpochSamples);
+                fprintf(stderr,"Total Samples Evaluated = %lu\n", totalEpochSamples);
 
             //clean up
             
@@ -195,10 +195,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 totalEpochSamples += actualMBSize;
             
-                fprintf(stderr,"Minibatch[%d]: ActualMBSize = %d\n", ++numMBsRun, actualMBSize);
+                fprintf(stderr,"Minibatch[%lu]: ActualMBSize = %lu\n", ++numMBsRun, actualMBSize);
             }           
 
-            fprintf(stderr,"Totol Samples Evaluated = %d\n", totalEpochSamples);
+            fprintf(stderr,"Total Samples Evaluated = %lu\n", totalEpochSamples);
 
             //clean up
             for (int i=0; i<outputStreams.size(); i++)
