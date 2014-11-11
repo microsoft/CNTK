@@ -330,7 +330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodePtr>& evalNodes, 
             const vector<ElemType> & evalResults, const vector<ElemType> & evalResultsLastMBs)
         {
-            fprintf(stderr,"Minibatch[%d-%d]: Samples Seen = %d    ", startMBNum, endMBNum, numSamplesLastMBs);
+            fprintf(stderr,"Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
             for (size_t i=0; i<evalResults.size(); i++)
             {

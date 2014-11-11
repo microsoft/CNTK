@@ -24,7 +24,9 @@
 #include "SimpleOutputWriter.h"
 #include <chrono>
 #include <algorithm>
+#if defined(_WIN32)
 #include "io.h"
+#endif
 #include "hostname.h"
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection

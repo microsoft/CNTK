@@ -352,7 +352,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr refNode = nullptr;
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL)
             {
-                fprintf(stderr, "Checkign refNodeName.\n", origModelFileName.c_str());
+                fprintf(stderr, "Checking refNodeName %ls.\n", origModelFileName.c_str());
                 if (refNodeName == L"")
                     throw invalid_argument("refNodeName does not exist and is needed when adaptationRegType is KL.");
 
@@ -568,7 +568,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (learnRatePerSample < m_minLearnRate)
                 {
-                    fprintf(stderr, "Learn Rate Per Sample for Epoch[%lu] = %.8g is less than minLearnRate %.8g. Training stops.\n", i+1, learnRatePerSample, m_minLearnRate);
+                    fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n", i+1, learnRatePerSample, m_minLearnRate);
                     if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                         net.SaveToFile(m_modelPath);
                     break;
@@ -581,7 +581,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto t_end_epoch = clock();
                 ElemType epochTime = ElemType(1.0)*(t_end_epoch-t_start_epoch)/(CLOCKS_PER_SEC);
 
-                fprintf(stderr, "Finished Epoch[%lu]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
+                fprintf(stderr, "Finished Epoch[%d]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
                 if (epochEvalErrors.size() == 1)
                 {
                     fprintf(stderr, "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", epochEvalErrors[0], learnRatePerSample, epochTime);
@@ -592,9 +592,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (size_t j = 0; j < epochEvalErrors.size(); j++)
                         fprintf(stderr, "[%lu]=%.8g ", j, epochEvalErrors[j]);
                     fprintf(stderr, "Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", learnRatePerSample, epochTime);
-                    fprintf(stderr, "Finished Epoch[%lu]: Criterion Node [%ls] Per Sample = %.8g\n", i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
+                    fprintf(stderr, "Finished Epoch[%d]: Criterion Node [%ls] Per Sample = %.8g\n", i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
                     for (size_t j = 0; j < epochEvalErrors.size(); j++)
-                        fprintf(stderr, "Finished Epoch[%lu]: Evaluation Node [%ls] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                        fprintf(stderr, "Finished Epoch[%d]: Evaluation Node [%ls] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
                 }
 
 #ifdef MPI_SUPPORT
@@ -626,7 +626,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
 
                     vector<ElemType> vScore = evalforvalidation.Evaluate(*validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                    fprintf(stderr, "Finished Epoch[%lu]: [Validation Set] Train Loss Per Sample = %.8g  EvalErr Per Sample = %.8g\n",
+                    fprintf(stderr, "Finished Epoch[%d]: [Validation Set] Train Loss Per Sample = %.8g  EvalErr Per Sample = %.8g\n",
                             i + 1, vScore[0], vScore[1]);
 
                     epochCriterion = vScore[0]; //the first one is the training criterion.
@@ -745,7 +745,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return false;
             }
 
-            fprintf(stderr, "Found %d PreCompute nodes\n", nodes.size());
+            fprintf(stderr, "Found %lu PreCompute nodes\n", nodes.size());
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 PreComputedNode<ElemType>* node = static_cast<PreComputedNode<ElemType>*> (*nodeIter);
