@@ -44,7 +44,7 @@ TaskDescriptor<ElemType>::TaskDescriptor(
     case taskComputeInputPartial: // ComputeInputPartial() task
         m_taskName = msra::strfun::utf8(node->NodeName());
         char number[2];
-        sprintf(number, "%d", input);
+        sprintf(number, "%lu", input);
         m_taskName = "Backprop" + std::string(number) + "_" + m_taskName;
         break;
     case taskEvaluateRecurrent: // EvaluateThisNode() Recurrent task
