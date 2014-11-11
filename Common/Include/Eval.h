@@ -11,6 +11,7 @@
 // that uses this DLL. This way any other project whose source files include this file see 
 // EVAL_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
+#ifdef _WIN32
 #if defined(EVAL_EXPORTS)
 #define EVAL_API __declspec(dllexport)
 #elif defined(EVAL_LOCAL)
@@ -18,6 +19,10 @@
 #else
 #define EVAL_API __declspec(dllimport)
 #endif
+#else
+#define EVAL_API
+#endif
+
 #include "basetypes.h"
 #include <map>
 #include <vector>
