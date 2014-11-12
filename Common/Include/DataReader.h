@@ -156,7 +156,7 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-	void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
+    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
 };
 
 }}}

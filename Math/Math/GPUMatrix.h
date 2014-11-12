@@ -22,14 +22,14 @@ struct CUstream_st;
 typedef struct CUstream_st *cudaStream_t;
 
 #ifdef _WIN32
-#ifndef	MATH_API
+#ifndef    MATH_API
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
 #endif
-#endif	/* MATH_API */
-#else	// no DLLs in Linux
+#endif    /* MATH_API */
+#else    // no DLLs in Linux
 #define MATH_API 
 #endif
 

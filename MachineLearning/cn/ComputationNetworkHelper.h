@@ -51,8 +51,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (auto nodeIter=dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
                     {
                         DropoutNode<ElemType>* node = static_cast<DropoutNode<ElemType>*>(*nodeIter);
-				        node->SetDropoutRate(dropoutRate);
-				        node->SetRandomSeed(dropOutSeed++);
+                        node->SetDropoutRate(dropoutRate);
+                        node->SetRandomSeed(dropOutSeed++);
                     }
                 }
 
@@ -73,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto nodeIter=convolutionNodes.begin(); nodeIter != convolutionNodes.end(); nodeIter++)
                 {
                     ConvolutionNode<ElemType>* node = static_cast<ConvolutionNode<ElemType>*>(*nodeIter);
-				    node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
+                    node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
                 }
             }
         }

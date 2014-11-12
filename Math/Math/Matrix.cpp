@@ -1116,12 +1116,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
-		ElemType RMS_GAMMA,
-		ElemType RMS_WGT_INC,
-		ElemType RMS_WGT_MAX,
-		ElemType RMS_WGT_DEC,
-		ElemType RMS_WGT_MIN
-		)
+        ElemType RMS_GAMMA,
+        ElemType RMS_WGT_INC,
+        ElemType RMS_WGT_MAX,
+        ElemType RMS_WGT_DEC,
+        ElemType RMS_WGT_MIN
+        )
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
@@ -1470,7 +1470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::operator-= (const Matrix<ElemType>& a)
     {
-		if (a.IsEmpty())
+        if (a.IsEmpty())
             throw std::logic_error("Minus Operation: Matrix a is empty.");
         DecideAndMoveToRightDevice(*this, a);
 
@@ -1481,7 +1481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-		
+        
         return *this;
     }
 
@@ -2391,7 +2391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (sizeof(ElemType)==sizeof(float))
         {
-		    if (!isfinite((float)threshold))
+            if (!isfinite((float)threshold))
         {
                 (*this) = a;
                 return *this;
@@ -3427,7 +3427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else 
                 {
                     GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
-                    GPUMatrix<ElemType> & first= firstDummy;				// GCC does not support mixing refs and non-refs
+                    GPUMatrix<ElemType> & first= firstDummy;                // GCC does not support mixing refs and non-refs
                     GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
                     GPUSparseMatrix<ElemType> & second = secondDummy;
                     if (beta==0)
@@ -3452,7 +3452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (a.m_matrixType==b.m_matrixType && b.m_matrixType==c.m_matrixType && a.m_matrixType==MatrixType::SPARSE)
             {
                 GPUSparseMatrix<ElemType> firstDummy = alpha==1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix)*alpha;
-                GPUSparseMatrix<ElemType> & first = firstDummy;				 // By Malcolm.. gcc doesn't support auto
+                GPUSparseMatrix<ElemType> & first = firstDummy;                 // By Malcolm.. gcc doesn't support auto
                 if (beta==0)
                 {
                     GPUSparseMatrix<ElemType>::Multiply(first,transposeA,*b.m_GPUSparseMatrix,transposeB,*c.m_GPUSparseMatrix);   
@@ -3970,27 +3970,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return r; 
     }
 
-	template<class ElemType>
-	ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
-	{
-		ElemType temp, diff, z;
+    template<class ElemType>
+    ElemType Matrix<ElemType>::LogAdd(ElemType x, ElemType y)
+    {
+        ElemType temp, diff, z;
 
-		if (x < y) {
-			temp = x; x = y; y = temp;
-		}
-		diff = y - x;
-		if (diff < MINLOGEXP)
-		{
-			return (ElemType) ((x < LSMALL) ? LZERO : x);
-		}
-		else
-		{
-			z = exp(diff);
+        if (x < y) {
+            temp = x; x = y; y = temp;
+        }
+        diff = y - x;
+        if (diff < MINLOGEXP)
+        {
+            return (ElemType) ((x < LSMALL) ? LZERO : x);
+        }
+        else
+        {
+            z = exp(diff);
                         return (ElemType) (x + log(1.0 + z));
-		}
-	}
+        }
+    }
 
-	template<class ElemType>
+    template<class ElemType>
     void Matrix<ElemType>::ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& wgt,
         const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
         const Matrix<ElemType>* idx2cls,  Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore)

@@ -361,10 +361,10 @@ public:
         fprintf (stderr, " %d frames in %d out of %d utterances; %d classes\n", _totalframes, utteranceset.size(),infiles.size(), numclasses);
         if (!labels.empty())
             foreach_index (i, utteranceset)
-		{
+        {
                 if (classids[utteranceset[i].classidsbegin + utteranceset[i].numframes()] != (CLASSIDTYPE) -1)
                     throw std::logic_error ("minibatchutterancesource: classids[] out of sync");
-		}
+        }
         if (nomlf + nolat > 0)
         {
             fprintf (stderr, "minibatchutterancesource: out of %d files, %d files not found in label set and %d have no lattice\n", infiles.size(), nomlf, nolat);
@@ -952,15 +952,15 @@ public:
         return readfromdisk;
     }
 
-	bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+    bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
             std::vector<std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>>> & transcripts, 
             std::vector<std::vector<shared_ptr<const latticesource::latticepair>>> & latticepairs)
     {
         // for single input/output set size to be 1 and run old getbatch
-		feat.resize(1);
+        feat.resize(1);
         uids.resize(1);
-		transcripts.resize(1);
-		latticepairs.resize(1);
+        transcripts.resize(1);
+        latticepairs.resize(1);
         return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts[0], latticepairs[0]);
     }
 

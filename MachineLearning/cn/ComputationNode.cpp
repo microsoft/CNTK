@@ -11,7 +11,9 @@
 #include "IComputationNetBuilder.h"
 #include "SGD.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
 
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;

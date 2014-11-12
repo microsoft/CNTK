@@ -326,14 +326,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (samples.GetNumCols() != ones.GetNumRows())
                 {
-					//ones._decideDevices(ones); // if it's going to move do it before we resize
+                    //ones._decideDevices(ones); // if it's going to move do it before we resize
                     ones.Resize(samples.GetNumCols(), 1);
                     ones.SetValue(1);
                 }
 
                 if (samples.GetNumCols() != sampsqr.GetNumCols() || samples.GetNumRows() != sampsqr.GetNumRows())
                 {
-					//sampsqr._decideDevices(sampsqr); // if it's going to move do it before we resize
+                    //sampsqr._decideDevices(sampsqr); // if it's going to move do it before we resize
                     sampsqr.Resize(samples.GetNumRows(), samples.GetNumCols());
                     sampsqr.SetValue(1); // value not needed, but need to get it to correct device (handled by SetValue())
                 }
@@ -393,7 +393,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     avgsqr.TransferFromDeviceToDevice(avgsqr.GetDeviceId(), deviceId);
                 if (ones.GetDeviceId() != deviceId)
                     ones.TransferFromDeviceToDevice(ones.GetDeviceId(), deviceId);
-				if (sampsqr.GetDeviceId() != deviceId)
+                if (sampsqr.GetDeviceId() != deviceId)
                     sampsqr.TransferFromDeviceToDevice(sampsqr.GetDeviceId(), deviceId);
 
             }
@@ -608,7 +608,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class PerDimMeanVarNormalizationNode<float>; 
     template class PerDimMeanVarNormalizationNode<double>;
 
-	template<class ElemType>
+    template<class ElemType>
     class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
     {
         UsingComputationNodeMembers;

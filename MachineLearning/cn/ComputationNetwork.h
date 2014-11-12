@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType>* ComputationNodePtr;
         typedef struct stRecurrentInfo{
             std::vector<ComputationNodePtr> m_recurrentNodes;
-			std::vector<ComputationNodePtr> m_recurrentNodesForForward;
+            std::vector<ComputationNodePtr> m_recurrentNodesForForward;
             ComputationNodePtr    m_sourceNode;
             int m_loopId;
             bool m_completedGradient;
@@ -427,7 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
-			
+            
 
             ValidateNetwork();  //some internal values in the nodes are computed during validation
 
@@ -1401,20 +1401,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
             {
                 (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-				if ((*nodeIter)->OperationName() == L"Delay")
-				{
-					for (size_t i = 0; i < m_nbrSlicesInEachRecurrentIteration; i++)
-					{
-						(*nodeIter)->ResetBound(i, m_sentenceEnd[i]);
-					}
-					if (m_sentenceEnd[0] <= m_actMiniBSize)
-					{
-						(*nodeIter)->Reset();
-					} else
-					{
-						(*nodeIter)->NotReset();
-					}
-				}
+                if ((*nodeIter)->OperationName() == L"Delay")
+                {
+                    for (size_t i = 0; i < m_nbrSlicesInEachRecurrentIteration; i++)
+                    {
+                        (*nodeIter)->ResetBound(i, m_sentenceEnd[i]);
+                    }
+                    if (m_sentenceEnd[0] <= m_actMiniBSize)
+                    {
+                        (*nodeIter)->Reset();
+                    } else
+                    {
+                        (*nodeIter)->NotReset();
+                    }
+                }
             }
 
             for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -1467,7 +1467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetActualNbrSlicesInEachRecIter(const size_t aSize)
         {
             m_nbrSlicesInEachRecurrentIteration = aSize;
-			m_sentenceEnd.assign(aSize, m_actMiniBSize/aSize);
+            m_sentenceEnd.assign(aSize, m_actMiniBSize/aSize);
         }
 
         void ComputeGradientLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
@@ -1745,10 +1745,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (ComputationNodePtr node : FinalCriterionNodes())
                 {
-					PrintComputationTree(node, false);
+                    PrintComputationTree(node, false);
                     if(!allowFragment) FormRecurentLoops(node);
-					size_t actualMBSize = this->GetActualMBSize();
-					this->SetActualMiniBatchSize(actualMBSize);
+                    size_t actualMBSize = this->GetActualMBSize();
+                    this->SetActualMiniBatchSize(actualMBSize);
                     ValidateNetwork(node);
                 }
             }
@@ -1944,95 +1944,95 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-		// get the strong connected component from the graph
-		void getStrongSCC (const ComputationNodePtr rootNode)
-		{
-			std::unordered_set<ComputationNodePtr> visited;
-			std::list<ComputationNodePtr> sccStack;
-			size_t index = 0;
-			size_t loopId = 0;
-			if(rootNode->isVisisted()==false)
-				strongSCC(rootNode, sccStack, index, loopId);
-			
-		}
+        // get the strong connected component from the graph
+        void getStrongSCC (const ComputationNodePtr rootNode)
+        {
+            std::unordered_set<ComputationNodePtr> visited;
+            std::list<ComputationNodePtr> sccStack;
+            size_t index = 0;
+            size_t loopId = 0;
+            if(rootNode->isVisisted()==false)
+                strongSCC(rootNode, sccStack, index, loopId);
+            
+        }
 
-		void strongSCC (ComputationNodePtr cur, std::list<ComputationNodePtr>& sccStack, size_t& index, size_t& loopId)
-		{
-			cur->SetIndex(index);
-			cur->Setlowlink(index);
-			index++;
+        void strongSCC (ComputationNodePtr cur, std::list<ComputationNodePtr>& sccStack, size_t& index, size_t& loopId)
+        {
+            cur->SetIndex(index);
+            cur->Setlowlink(index);
+            index++;
 
-			cur->SetVisited(true);
-			sccStack.push_back(cur);
-			cur->SetInStack(true);
+            cur->SetVisited(true);
+            sccStack.push_back(cur);
+            cur->SetInStack(true);
 
-			for (int i = 0; i < cur->ChildrenSize(); i++)
-			{
-				if (cur->Inputs(i)->isVisisted() == false)
-				{
-					strongSCC(cur->Inputs(i),sccStack, index, loopId);
-					cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
-				} else if (cur->Inputs(i)->isInStack())
-				{
-					cur->Setlowlink(min(cur->Getlowlink(),cur->Inputs(i)->Getlowlink())); 
-				}
-			}
+            for (int i = 0; i < cur->ChildrenSize(); i++)
+            {
+                if (cur->Inputs(i)->isVisisted() == false)
+                {
+                    strongSCC(cur->Inputs(i),sccStack, index, loopId);
+                    cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
+                } else if (cur->Inputs(i)->isInStack())
+                {
+                    cur->Setlowlink(min(cur->Getlowlink(),cur->Inputs(i)->Getlowlink())); 
+                }
+            }
 
-			if (cur->Getlowlink() == cur->GetIndex())
-			{
-				RecurrentInfo rInfo;
-				rInfo.m_loopId = loopId;
-				rInfo.m_sourceNode = cur;
-				size_t sccSize = 0;
+            if (cur->Getlowlink() == cur->GetIndex())
+            {
+                RecurrentInfo rInfo;
+                rInfo.m_loopId = loopId;
+                rInfo.m_sourceNode = cur;
+                size_t sccSize = 0;
                                 for (;;)
-				{
-					ComputationNodePtr w = sccStack.back();
-					sccStack.pop_back();
-					w->SetInStack(false);
-					rInfo.m_recurrentNodes.push_back(w);
-					sccSize++;
-					if (w == cur)
-					{
-						break;
-					}
-				}
+                {
+                    ComputationNodePtr w = sccStack.back();
+                    sccStack.pop_back();
+                    w->SetInStack(false);
+                    rInfo.m_recurrentNodes.push_back(w);
+                    sccSize++;
+                    if (w == cur)
+                    {
+                        break;
+                    }
+                }
                 rInfo.Reset(); 
-				if (sccSize>1)
-				{
-					loopId++;
-					m_recurrentInfo.push_back(rInfo);
-				}
-			}
-		}
+                if (sccSize>1)
+                {
+                    loopId++;
+                    m_recurrentInfo.push_back(rInfo);
+                }
+            }
+        }
         
-		void getLoopForwordOrder(std::unordered_set<ComputationNodePtr>& visited,std::unordered_set<ComputationNodePtr>& recStack, std::list<ComputationNodePtr>& nodesStack, ComputationNodePtr cur)
-		{
-			if (visited.find(cur) == visited.end())
-			{
-				visited.insert(cur);
-				recStack.insert(cur);
+        void getLoopForwordOrder(std::unordered_set<ComputationNodePtr>& visited,std::unordered_set<ComputationNodePtr>& recStack, std::list<ComputationNodePtr>& nodesStack, ComputationNodePtr cur)
+        {
+            if (visited.find(cur) == visited.end())
+            {
+                visited.insert(cur);
+                recStack.insert(cur);
 
-				if (cur->OperationName() != L"Delay")
-				{
-					for (size_t i = 0; i < cur->ChildrenSize() ; i++)
-					{
-						if (cur->Inputs(i)->LoopId()==cur->LoopId())
-						{
-							getLoopForwordOrder(visited, recStack, nodesStack, cur->Inputs(i));
-						}
-					}
-				}
-				recStack.erase(cur);
-				nodesStack.push_back(cur);
-			} else
-			{
-				if (!(recStack.find(cur) == recStack.end()))
-				{
-					 throw std::logic_error("There is infinite Loop which cannot be unrolled!!");
-				}
+                if (cur->OperationName() != L"Delay")
+                {
+                    for (size_t i = 0; i < cur->ChildrenSize() ; i++)
+                    {
+                        if (cur->Inputs(i)->LoopId()==cur->LoopId())
+                        {
+                            getLoopForwordOrder(visited, recStack, nodesStack, cur->Inputs(i));
+                        }
+                    }
+                }
+                recStack.erase(cur);
+                nodesStack.push_back(cur);
+            } else
+            {
+                if (!(recStack.find(cur) == recStack.end()))
+                {
+                     throw std::logic_error("There is infinite Loop which cannot be unrolled!!");
+                }
 
-			}
-		}
+            }
+        }
         //must be called before ValidateNetwork
         void FormRecurentLoops(const ComputationNodePtr rootNode)
         {
@@ -2076,43 +2076,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
             }
-	
-			for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+    
+            for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
             {
                 // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
                 if ((*iter).m_recurrentNodes.size() > 1 && (*iter).m_recurrentNodesForForward.size() == 0)
                 {
-					std::list<ComputationNodePtr> result;
-					std::unordered_set<ComputationNodePtr> visited;
-					std::unordered_set<ComputationNodePtr> recStack;
-					
-					for (size_t j = 0 ; j < (*iter).m_recurrentNodes.size(); j++)
-					{
-						ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[j];
-						for (size_t i = 0; i < nodeRecIter->ChildrenSize() ; i++)
-						{
-							if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != L"Delay"))
-							{
-								nodeRecIter->Inputs(i)->SetIndexInLoop(nodeRecIter->Inputs(i)->GetIndexInLoop()+1);
-							}
-						}
-					}
-				
-					//for (auto nodeRecIter = startNodes.begin(); nodeRecIter != startNodes.end(); nodeRecIter++)
-						
-					for (size_t i = 0 ; i < (*iter).m_recurrentNodes.size(); i++)
-					{
-						ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[i];
-						if (visited.find(nodeRecIter) == visited.end() && nodeRecIter->GetIndexInLoop() == 0)
-							getLoopForwordOrder(visited,recStack, result,nodeRecIter);
-					}
-					for(size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
-					{
-						(*iter).m_recurrentNodesForForward.push_back(result.front());
-						result.pop_front();
-					}
-					
-				
+                    std::list<ComputationNodePtr> result;
+                    std::unordered_set<ComputationNodePtr> visited;
+                    std::unordered_set<ComputationNodePtr> recStack;
+                    
+                    for (size_t j = 0 ; j < (*iter).m_recurrentNodes.size(); j++)
+                    {
+                        ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[j];
+                        for (size_t i = 0; i < nodeRecIter->ChildrenSize() ; i++)
+                        {
+                            if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != L"Delay"))
+                            {
+                                nodeRecIter->Inputs(i)->SetIndexInLoop(nodeRecIter->Inputs(i)->GetIndexInLoop()+1);
+                            }
+                        }
+                    }
+                
+                    //for (auto nodeRecIter = startNodes.begin(); nodeRecIter != startNodes.end(); nodeRecIter++)
+                        
+                    for (size_t i = 0 ; i < (*iter).m_recurrentNodes.size(); i++)
+                    {
+                        ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[i];
+                        if (visited.find(nodeRecIter) == visited.end() && nodeRecIter->GetIndexInLoop() == 0)
+                            getLoopForwordOrder(visited,recStack, result,nodeRecIter);
+                    }
+                    for(size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
+                    {
+                        (*iter).m_recurrentNodesForForward.push_back(result.front());
+                        result.pop_front();
+                    }
+                    
+                
                 }
             }
 
@@ -2284,7 +2284,7 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
 
             return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
         }
-		vector<size_t> m_sentenceEnd;
+        vector<size_t> m_sentenceEnd;
 protected:
         std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode, std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap, const bool forwardCompute) 
         {

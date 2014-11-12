@@ -541,9 +541,9 @@ void BestGpu::QueryNvmlData()
 // dliNotify == { dliStartProcessing | dliNotePreLoadLibrary  | dliNotePreGetProc | dliNoteEndProcessing } on this call.
 
 extern "C" INT_PTR WINAPI DelayLoadNofify(
-	unsigned        dliNotify,
-	PDelayLoadInfo  pdli
-	)
+    unsigned        dliNotify,
+    PDelayLoadInfo  pdli
+    )
 {
     // load the library from an alternate path
     if (dliNotify == dliNotePreLoadLibrary && !strcmp(pdli->szDll, "nvml.dll"))

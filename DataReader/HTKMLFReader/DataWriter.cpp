@@ -71,7 +71,7 @@ DataWriter<ElemType>::DataWriter(const ConfigParameters& config)
 template<class ElemType>
 DataWriter<ElemType>::~DataWriter()
 {
-	delete m_dataWriter;
+    delete m_dataWriter;
     m_dataWriter = NULL;
 }
 

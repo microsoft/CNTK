@@ -202,7 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<ComputationNodePtr> labelNodes = m_net.LabelNodes();
             std::vector<ComputationNodePtr> criterionNodes = m_net.FinalCriterionNodes();
             std::vector<ComputationNodePtr> evaluationNodes = m_net.EvaluationNodes();
-			
+            
             if (criterionNodes.size()==0)
             {
                 throw std::runtime_error("No CrossEntropyWithSoftmax node found\n");
@@ -219,7 +219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             for (size_t i=0; i<labelNodes.size(); i++)
             {
-                inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();				
+                inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();                
             }
             inputMatrices[L"numberobs"] = new Matrix<ElemType>(1,1, m_net.GetDeviceID()); 
 
@@ -235,7 +235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numSamples = 0;
             ElemType crossEntropy = 0;
             ElemType evalError = 0;
-			
+            
             ofstream outputStream;
             if (output)
             {
@@ -247,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             size_t numMBsRun = 0;
-			size_t actualMBSize = 0;
+            size_t actualMBSize = 0;
             while (dataReader.GetMinibatch(inputMatrices))
             {
                 size_t nbrSamples = (size_t)(*inputMatrices[L"numberobs"])(0, 0);
@@ -330,7 +330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodePtr>& evalNodes, 
             const vector<ElemType> & evalResults, const vector<ElemType> & evalResultsLastMBs)
         {
-            fprintf(stderr,"Minibatch[%d-%d]: Samples Seen = %d    ", startMBNum, endMBNum, numSamplesLastMBs);
+            fprintf(stderr,"Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
             for (size_t i=0; i<evalResults.size(); i++)
             {

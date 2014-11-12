@@ -278,8 +278,8 @@ namespace CNTKMathTest
             Assert::IsTrue(M2.IsEqualTo(M3, 0.0001f)); 
         }
 
-		TEST_METHOD(GPUMatrixRowSlice)
-		{
+        TEST_METHOD(GPUMatrixRowSlice)
+        {
             float *fArray = new float[15];
             fArray[0] = 1; fArray[5] = 6; fArray[10] = 11;
             fArray[1] = 2; fArray[6] = 7; fArray[11] = 12;
@@ -308,7 +308,7 @@ namespace CNTKMathTest
             M3 += M0;
             M0.AddToRowSliceValuesOf(M1, 2,2);
             Assert::IsTrue(M3.IsEqualTo(M0, 0.0001)); 
-		}
+        }
 
         TEST_METHOD(GPUKhatriRaoProduct)
         {

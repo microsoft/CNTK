@@ -183,5 +183,10 @@
   <ItemGroup>
     <None Include="GPUMatrix.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="CNTKMathCUDA.vcxproj">
+      <Project>{b3dd765e-694e-4494-bad7-37bbf2942517}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
