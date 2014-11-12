@@ -1036,4 +1036,37 @@ public:
 };
 #endif
 
+#if 0   // construction site
+// ----------------------------------------------------------------------------
+// class RegisterModule
+// TODO: move this elsewhere
+// ----------------------------------------------------------------------------
+#include<functional>
+template<typename MODULETYPE>
+class RegisterModule
+{
+    static std::map<std::wstring, std::function<MODULETYPE*()>> & GetFactoryMethodsHash()
+    {
+        static std::map<std::wstring, std::function<MODULETYPE*()>> FactoryMethods; // shared object
+        return FactoryMethods;
+    }
+public:
+    RegisterModule(const std::wstring & ModuleName, std::function<MODULETYPE*()> FactoryMethod)
+    {
+        auto & FactoryMethods = GetFactoryMethodsHash();
+        FactoryMethods[ModuleName] = FactoryMethod;
+        // TODO: check for dups, using map::insert()
+    }
+    static MODULETYPE* Create(const std::wstring & ModuleName)
+    {
+        auto & FactoryMethods = GetFactoryMethodsHash();
+        auto Entry = FactoryMethods.find(ModuleName);
+        if (Entry != FactoryMethods.end())
+            return Entry->second();
+        else
+            return nullptr;
+    }
+};
+#endif
+
 #endif    // _BASETYPES_
