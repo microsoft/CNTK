@@ -15,7 +15,7 @@
 #include "CPUSparseMatrix.h"
 #include <random>
 #include <chrono>
-#ifdef	_WIN32
+#ifdef    _WIN32
 #include <Windows.h>
 #endif
 #ifdef LEAKDETECT

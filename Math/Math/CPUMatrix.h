@@ -13,14 +13,14 @@
 #include "CommonMatrix.h"
 #include "basetypes.h" // for RuntimeError()
 
-#ifdef	_WIN32
+#ifdef    _WIN32
 #ifdef MATH_EXPORTS
 #define MATH_API __declspec(dllexport)
 #else
 #define MATH_API __declspec(dllimport)
 #endif
-#else	// no DLLs on Linux
-#define	MATH_API 
+#else    // no DLLs on Linux
+#define    MATH_API 
 #endif
 
 #ifndef USE_TIME_BASED_SEED
@@ -69,12 +69,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Adagrad(CPUMatrix<ElemType>& gradients);
         void RmsProp(CPUMatrix<ElemType>& gradients,
-			ElemType RMS_GAMMA,
-			ElemType RMS_WGT_INC,
-			ElemType RMS_WGT_MAX,
-			ElemType RMS_WGT_DEC,
-			ElemType RMS_WGT_MIN
-			);
+            ElemType RMS_GAMMA,
+            ElemType RMS_WGT_INC,
+            ElemType RMS_WGT_MAX,
+            ElemType RMS_WGT_DEC,
+            ElemType RMS_WGT_MIN
+            );
 
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow

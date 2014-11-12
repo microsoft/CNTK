@@ -47,7 +47,7 @@ template<class _T> FILE * fopenStdHandle (const _T * mode)
 {
     FILE * f = strchr (mode, 'r') ? stdin : stdout;
 #ifndef __unix__ // don't need binary/text distinction on unix
-	if (strchr(mode, 'b') || strchr(mode, 't'))   // change binary mode
+    if (strchr(mode, 'b') || strchr(mode, 't'))   // change binary mode
     {
         // switch to binary mode if not yet (in case it is stdin)
         int rc = _setmode (_fileno (f), strchr (mode, 'b') ? _O_BINARY : _O_TEXT);

@@ -23,8 +23,8 @@ private:
     size_t m_recordCount; // count of records in this data
     size_t m_currentRecord; // next record number to read
     size_t m_mbSize;
-	vector<size_t> m_switchFrame;
-	size_t m_oldSig;
+    vector<size_t> m_switchFrame;
+    size_t m_oldSig;
 public:
     // Method to setup the data for the reader
     void SetData(std::map<std::wstring, std::vector<ElemType>*>* inputs, std::map<std::wstring, size_t>* dimensions)
@@ -55,26 +55,26 @@ public:
         }
     }
 
-	void SetBoundary (size_t newSig)
-	{
-		if (m_switchFrame.size()==0)
-		{
-			m_oldSig = newSig;
-			m_switchFrame.assign(1,0);
-		} else
-		{
-			if (m_oldSig==newSig)
-			{
-				m_switchFrame[0] = m_mbSize+8888;
-			}
-			else
-			{
-				m_switchFrame[0] = 0;
-				m_oldSig = newSig;
-			}
-		}
+    void SetBoundary (size_t newSig)
+    {
+        if (m_switchFrame.size()==0)
+        {
+            m_oldSig = newSig;
+            m_switchFrame.assign(1,0);
+        } else
+        {
+            if (m_oldSig==newSig)
+            {
+                m_switchFrame[0] = m_mbSize+8888;
+            }
+            else
+            {
+                m_switchFrame[0] = 0;
+                m_oldSig = newSig;
+            }
+        }
 
-	}
+    }
 
     virtual void Init(const ConfigParameters& /*config*/)
     {
@@ -164,22 +164,22 @@ public:
     size_t NumberSlicesInEachRecurrentIter() {return 1;}
 
     void SetNbrSlicesEachRecurrentIter(const size_t ) {}
-	void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd)
-	{
-		sentenceEnd.resize(m_switchFrame.size());
-		for (size_t i = 0; i < m_switchFrame.size() ; i++)
-		{
-			sentenceEnd[i] = m_switchFrame[i];
-		}
-	}
-	void GetSentenceBoundary(std::vector<size_t> boundaryInfo)
-	{
-		m_switchFrame.resize(boundaryInfo.size());
-		for (size_t i = 0; i < m_switchFrame.size(); i ++)
-		{
-			m_switchFrame[i] = boundaryInfo[i];
-		}
-	}
+    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd)
+    {
+        sentenceEnd.resize(m_switchFrame.size());
+        for (size_t i = 0; i < m_switchFrame.size() ; i++)
+        {
+            sentenceEnd[i] = m_switchFrame[i];
+        }
+    }
+    void GetSentenceBoundary(std::vector<size_t> boundaryInfo)
+    {
+        m_switchFrame.resize(boundaryInfo.size());
+        for (size_t i = 0; i < m_switchFrame.size(); i ++)
+        {
+            m_switchFrame[i] = boundaryInfo[i];
+        }
+    }
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
     virtual const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/) 

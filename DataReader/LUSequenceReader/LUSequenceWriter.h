@@ -16,20 +16,20 @@ template<class ElemType>
 class LUSequenceWriter : public IDataWriter<ElemType>
 {
 private:
-	std::vector<size_t> outputDims;
-	map<wstring, wstring> outputFiles;
+    std::vector<size_t> outputDims;
+    map<wstring, wstring> outputFiles;
     map<wstring, FILE*> outputFileIds;
 
     std::vector<size_t> udims;
     map<wstring, map<string, int>> word4idx;
     map<wstring, map<int, string>> idx4word;
 
-	map<wstring, int> nBests;
+    map<wstring, int> nBests;
     bool compare_val(const ElemType& first, const ElemType& second);
 
-	void SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest = 1);
+    void SaveToFile(std::wstring& outputFile, const Matrix<ElemType>& outputData, const map<int, string>& idx2wrd, const int& nbest = 1);
 
-	void ReadLabelInfo(const wstring & vocfile, 
+    void ReadLabelInfo(const wstring & vocfile, 
             map<string, int> & word4idx,
             map<int, string>& idx4word);
 
@@ -43,7 +43,7 @@ public:
     void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/){}
 
 public:
-	virtual void Init(const ConfigParameters& writerConfig);
+    virtual void Init(const ConfigParameters& writerConfig);
     virtual void Destroy();
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
 };

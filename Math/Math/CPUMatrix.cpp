@@ -19,7 +19,7 @@
 #include <chrono>
 #include <exception>
 
-#ifdef	 _WIN32
+#ifdef     _WIN32
 #include <Windows.h>
 #else
 #ifndef max
@@ -646,7 +646,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #ifndef USE_MKL
                             dcopy((int)numRows, reinterpret_cast <double*>(pArray+j), (int)numCols, reinterpret_cast <double*>(m_pArray + LocateColumn(j)), 1);
     #else
-						    cblas_dcopy ((int)numRows, reinterpret_cast <double*>(pArray+j), (int)numCols, reinterpret_cast <double*>(m_pArray + LocateColumn(j)), 1);
+                            cblas_dcopy ((int)numRows, reinterpret_cast <double*>(pArray+j), (int)numCols, reinterpret_cast <double*>(m_pArray + LocateColumn(j)), 1);
     #endif
                         }
                     }
@@ -660,7 +660,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #ifndef USE_MKL
                                 scopy((int)numRows, reinterpret_cast <float*>(pArray+j), (int)numCols, reinterpret_cast <float*>(m_pArray + LocateColumn(j)), 1);
     #else
-							    cblas_scopy ((int)numRows, reinterpret_cast <float*>(pArray+j), (int)numCols, reinterpret_cast <float*>(m_pArray + LocateColumn(j)), 1);
+                                cblas_scopy ((int)numRows, reinterpret_cast <float*>(pArray+j), (int)numCols, reinterpret_cast <float*>(m_pArray + LocateColumn(j)), 1);
     #endif
                             }
                         }
@@ -761,7 +761,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
-#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
         std::ranlux64_base_01 generator;   
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
 #else
@@ -796,7 +796,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
         std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
 #else
@@ -820,7 +820,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
         std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
 #else
@@ -857,7 +857,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
 
         auto& us = *this;
-#ifdef _MSC_VER	// TODO: check if available under GCC/Linux
+#ifdef _MSC_VER    // TODO: check if available under GCC/Linux
         std::ranlux64_base_01 generator;
         generator.seed(seed==USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
 #else
@@ -934,87 +934,87 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
-		ElemType RMS_GAMMA,
-		ElemType RMS_WGT_INC,
-		ElemType RMS_WGT_MAX,
-		ElemType RMS_WGT_DEC,
-		ElemType RMS_WGT_MIN
-		)
+        ElemType RMS_GAMMA,
+        ElemType RMS_WGT_INC,
+        ElemType RMS_WGT_MAX,
+        ElemType RMS_WGT_DEC,
+        ElemType RMS_WGT_MIN
+        )
     {
         const ElemType floor = 1e-6f;
 
         size_t n = gradients.GetNumElements();
-		ElemType *curr_grad=gradients.m_pArray;
+        ElemType *curr_grad=gradients.m_pArray;
 
         if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
         {
             Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
             SetValue(0.0);
 
-			ElemType *avars=m_pArray; // accumulated variances for RMS scaling
-			ElemType *steps=m_pArray+2*n; // current step size
+            ElemType *avars=m_pArray; // accumulated variances for RMS scaling
+            ElemType *steps=m_pArray+2*n; // current step size
 
-			// initialize moving average of gradient-squared
-			for( long i = 0; i < n; i++ )
-				avars[i] = curr_grad[i]*curr_grad[i];
+            // initialize moving average of gradient-squared
+            for( long i = 0; i < n; i++ )
+                avars[i] = curr_grad[i]*curr_grad[i];
 
-			// initialize starting step size
-			for( long i = 0; i < n; i++ )
-				steps[i] = ElemType(0.02);
+            // initialize starting step size
+            for( long i = 0; i < n; i++ )
+                steps[i] = ElemType(0.02);
         }
 
         ElemType *avars=m_pArray; // accumulated variances for RMS scaling
-		ElemType *signs=m_pArray+n; // sign of previous gradient
-		ElemType *steps=m_pArray+2*n; // current step size
+        ElemType *signs=m_pArray+n; // sign of previous gradient
+        ElemType *steps=m_pArray+2*n; // current step size
 
         assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
 
-		ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
-		//int upd[] = {
-		//	2,2,0,
-		//	2,2,0,
-		//	1,1,1,
-		//	2,2,0,
-		//	1,2,1,
-		//	0,2,2,
-		//	1,1,1,
-		//	0,2,2,
-		//	0,2,2,
-		//};
+        ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
+        //int upd[] = {
+        //    2,2,0,
+        //    2,2,0,
+        //    1,1,1,
+        //    2,2,0,
+        //    1,2,1,
+        //    0,2,2,
+        //    1,1,1,
+        //    0,2,2,
+        //    0,2,2,
+        //};
 
   //      for (long i=0; i<n; i++)
   //      {
   //          avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
-		//	// grad sign base 3: 0->neg, 1->zero, 2->pos
-		//	const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+        //    // grad sign base 3: 0->neg, 1->zero, 2->pos
+        //    const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
 
-		//	// signs[i] contains three consecutive grad_sign
-		//	signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
+        //    // signs[i] contains three consecutive grad_sign
+        //    signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
 
-		//	switch(upd[int(signs[i])])
-		//	{
-		//	case 0:
-		//		steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-		//		break;
-		//	case 2:
-		//		steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-		//		break;
-		//	}
-		//	curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+        //    switch(upd[int(signs[i])])
+        //    {
+        //    case 0:
+        //        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+        //        break;
+        //    case 2:
+        //        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+        //        break;
+        //    }
+        //    curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
   //      }
 
         for (long i=0; i<n; i++)
         {
             avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
-			const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+            const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
 
-			if( signs[i] * grad_sign > 0 )
-				steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-			else
-				steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+            if( signs[i] * grad_sign > 0 )
+                steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+            else
+                steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-			curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
-			signs[i] = (ElemType)grad_sign;
+            curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+            signs[i] = (ElemType)grad_sign;
         }
     }
 
@@ -1924,7 +1924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType sum = 0;
                 foreach_row(i, a)
                     sum +=  exp(us(i,j) = a(i,j) - maxV);
-				sum = log(sum);
+                sum = log(sum);
                 foreach_row(i, us)
                     us(i,j) -= sum;
             }
@@ -1943,7 +1943,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType sum = 0;
                 foreach_column(j,a)
                     sum +=  exp(us(i,j) = a(i,j) - maxV);
-				sum = log(sum);
+                sum = log(sum);
                 foreach_column(j,us)
                     us(i,j) -= sum;
             }
@@ -2383,16 +2383,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             return (ElemType)dasum((int)GetNumElements(), reinterpret_cast <double*>(m_pArray), 1);
 #else  
-			return (ElemType)cblas_dasum((int)GetNumElements(), reinterpret_cast <double*>(m_pArray), 1);
+            return (ElemType)cblas_dasum((int)GetNumElements(), reinterpret_cast <double*>(m_pArray), 1);
 #endif
-		}
+        }
         else
         {
 #pragma warning (suppress: 4244)
 #ifndef USE_MKL
             return sasum((int)GetNumElements(), reinterpret_cast <float*>(m_pArray), 1);
 #else
-			return cblas_sasum ((int)GetNumElements(), reinterpret_cast <float*>(m_pArray), 1);
+            return cblas_sasum ((int)GetNumElements(), reinterpret_cast <float*>(m_pArray), 1);
 #endif
         }
     }
@@ -2525,7 +2525,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(0,j) = (ElemType) dnrm2(m, reinterpret_cast <double*>(us.m_pArray+us.LocateColumn(j)), 1);
 #else
-					c(0,j) = (ElemType) cblas_dnrm2 (m, reinterpret_cast <double*>(us.m_pArray+us.LocateColumn(j)), 1);
+                    c(0,j) = (ElemType) cblas_dnrm2 (m, reinterpret_cast <double*>(us.m_pArray+us.LocateColumn(j)), 1);
 #endif
                 }
             }
@@ -2538,7 +2538,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(0,j) = snrm2(m, reinterpret_cast <float*>(us.m_pArray+us.LocateColumn(j)), 1);
 #else
-					c(0,j) = cblas_snrm2 (m, reinterpret_cast <float*>(us.m_pArray+us.LocateColumn(j)), 1);
+                    c(0,j) = cblas_snrm2 (m, reinterpret_cast <float*>(us.m_pArray+us.LocateColumn(j)), 1);
 #endif
                 }                
             }
@@ -2555,7 +2555,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(i,0) = dnrm2(n, reinterpret_cast <double*>(us.m_pArray+i), m);
 #else
-					c(i,0) = cblas_dnrm2 (n, reinterpret_cast <double*>(us.m_pArray+i), m);
+                    c(i,0) = cblas_dnrm2 (n, reinterpret_cast <double*>(us.m_pArray+i), m);
 #endif
                 }
             }
@@ -2568,7 +2568,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(i,0) = snrm2(n, reinterpret_cast <float*>(us.m_pArray+i), m);
 #else
-					c(i,0) = cblas_snrm2 (n, reinterpret_cast <float*>(us.m_pArray+i), m);
+                    c(i,0) = cblas_snrm2 (n, reinterpret_cast <float*>(us.m_pArray+i), m);
 #endif
                 }
 
@@ -3461,8 +3461,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
         char transA, transB;
 #else
-		CBLAS_TRANSPOSE mklTransA;
-		CBLAS_TRANSPOSE mklTransB;
+        CBLAS_TRANSPOSE mklTransA;
+        CBLAS_TRANSPOSE mklTransB;
 #endif
 
         if (transposeA)
@@ -3473,7 +3473,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             transA = (char)MatrixTranspose::Trans;
 #else
-			mklTransA = CBLAS_TRANSPOSE::CblasTrans;
+            mklTransA = CBLAS_TRANSPOSE::CblasTrans;
 #endif
         }
         else
@@ -3484,7 +3484,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             transA = (char)MatrixTranspose::NoTrans;
 #else
-			mklTransA = CBLAS_TRANSPOSE::CblasNoTrans;
+            mklTransA = CBLAS_TRANSPOSE::CblasNoTrans;
 #endif   
         }
 
@@ -3496,7 +3496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             transB = (char)MatrixTranspose::Trans;
 #else
-			mklTransB = CBLAS_TRANSPOSE::CblasTrans;
+            mklTransB = CBLAS_TRANSPOSE::CblasTrans;
 #endif
         }
         else
@@ -3507,7 +3507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             transB = (char)MatrixTranspose::NoTrans;
 #else
-			mklTransB = CBLAS_TRANSPOSE::CblasNoTrans;
+            mklTransB = CBLAS_TRANSPOSE::CblasNoTrans;
 #endif            
         }
 
@@ -3520,20 +3520,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ldc = (int)c.GetNumRows();
 
         if (sizeof(ElemType) == sizeof(double))
-		{
+        {
 #ifndef USE_MKL
             dgemm(transA, transB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
 #else
-			cblas_dgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
+            cblas_dgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
 #endif
-		}
+        }
         else
         {
 #pragma warning (suppress: 4244)
 #ifndef USE_MKL
             sgemm(BLAS_COLMAJOR transA, transB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #else
-		    cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
+            cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #endif
         }
     }
@@ -3636,16 +3636,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                 daxpy(len, alpha, reinterpret_cast <double*>(a.m_pArray), incx, reinterpret_cast <double*>(c.m_pArray), incy);
 #else
-				cblas_daxpy(len, alpha, reinterpret_cast <double*>(a.m_pArray), incx, reinterpret_cast <double*>(c.m_pArray), incy);
+                cblas_daxpy(len, alpha, reinterpret_cast <double*>(a.m_pArray), incx, reinterpret_cast <double*>(c.m_pArray), incy);
 #endif
-			}
-			else
+            }
+            else
             {
 #pragma warning (suppress: 4244)
 #ifndef USE_MKL
                 saxpy(len, alpha, reinterpret_cast <float*>(a.m_pArray), incx, reinterpret_cast <float*>(c.m_pArray), incy);
 #else
-				cblas_saxpy(len, alpha, reinterpret_cast <float*>(a.m_pArray), incx, reinterpret_cast <float*>(c.m_pArray), incy);
+                cblas_saxpy(len, alpha, reinterpret_cast <float*>(a.m_pArray), incx, reinterpret_cast <float*>(c.m_pArray), incy);
 #endif
             }
         }
@@ -3937,7 +3937,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             dscal(len, alpha, reinterpret_cast <double*>(a.m_pArray), incx);
 #else
-			cblas_dscal(len, alpha, reinterpret_cast <double*>(a.m_pArray), incx);
+            cblas_dscal(len, alpha, reinterpret_cast <double*>(a.m_pArray), incx);
 #endif
         }
         else
@@ -3946,7 +3946,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             sscal(len, alpha, reinterpret_cast <float*>(a.m_pArray), incx);
 #else
-			cblas_sscal (len, alpha, reinterpret_cast <float*>(a.m_pArray), incx);
+            cblas_sscal (len, alpha, reinterpret_cast <float*>(a.m_pArray), incx);
 #endif
         }
     }
@@ -3996,7 +3996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(0,j) = (ElemType)ddot(m, reinterpret_cast <double*>(a.m_pArray+a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray+b.LocateColumn(j)), 1);
 #else
-					c(0,j) = (ElemType)cblas_ddot(m, reinterpret_cast <double*>(a.m_pArray+a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray+b.LocateColumn(j)), 1);
+                    c(0,j) = (ElemType)cblas_ddot(m, reinterpret_cast <double*>(a.m_pArray+a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray+b.LocateColumn(j)), 1);
 #endif
                 }
             }
@@ -4009,7 +4009,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(0,j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray+a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray+b.LocateColumn(j)), 1);
 #else
-					c(0,j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray+a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray+b.LocateColumn(j)), 1);
+                    c(0,j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray+a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray+b.LocateColumn(j)), 1);
 #endif
                 }                
             }
@@ -4026,7 +4026,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(i,0) = ddot(n, reinterpret_cast <double*>(a.m_pArray+i), m, reinterpret_cast <double*>(b.m_pArray+i), m);
 #else
-					c(i,0) = cblas_ddot (n, reinterpret_cast <double*>(a.m_pArray+i), m, reinterpret_cast <double*>(b.m_pArray+i), m);
+                    c(i,0) = cblas_ddot (n, reinterpret_cast <double*>(a.m_pArray+i), m, reinterpret_cast <double*>(b.m_pArray+i), m);
 #endif
                 }
             }
@@ -4039,7 +4039,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(i,0) = sdot(n, reinterpret_cast <float*>(a.m_pArray+i), m, reinterpret_cast <float*>(b.m_pArray+i), m);
 #else
-					c(i,0) = cblas_sdot (n, reinterpret_cast <float*>(a.m_pArray+i), m, reinterpret_cast <float*>(b.m_pArray+i), m);
+                    c(i,0) = cblas_sdot (n, reinterpret_cast <float*>(a.m_pArray+i), m, reinterpret_cast <float*>(b.m_pArray+i), m);
 #endif                
                 }                
             }
@@ -4068,7 +4068,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     return (ElemType)ddot((int)a.GetNumElements(), reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(b.m_pArray), 1);
 #else
-					return (ElemType)cblas_ddot ((int)a.GetNumElements(), reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(b.m_pArray), 1);
+                    return (ElemType)cblas_ddot ((int)a.GetNumElements(), reinterpret_cast <double*>(a.m_pArray), 1, reinterpret_cast <double*>(b.m_pArray), 1);
 #endif
         }
         else
@@ -4077,7 +4077,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     return (ElemType)sdot((int)a.GetNumElements(), reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(b.m_pArray), 1);
 #else
-					return (ElemType)cblas_sdot ((int)a.GetNumElements(), reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(b.m_pArray), 1);
+                    return (ElemType)cblas_sdot ((int)a.GetNumElements(), reinterpret_cast <float*>(a.m_pArray), 1, reinterpret_cast <float*>(b.m_pArray), 1);
 #endif 
         }
     }

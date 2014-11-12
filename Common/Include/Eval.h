@@ -11,6 +11,7 @@
 // that uses this DLL. This way any other project whose source files include this file see 
 // EVAL_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
+#ifdef _WIN32
 #if defined(EVAL_EXPORTS)
 #define EVAL_API __declspec(dllexport)
 #elif defined(EVAL_LOCAL)
@@ -18,6 +19,10 @@
 #else
 #define EVAL_API __declspec(dllimport)
 #endif
+#else
+#define EVAL_API
+#endif
+
 #include "basetypes.h"
 #include <map>
 #include <vector>
@@ -43,7 +48,7 @@ public:
     virtual void LoadModel(const std::wstring& modelFileName)=0;
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup)=0; 
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)=0; 
-	virtual void ResetState() = 0;
+    virtual void ResetState() = 0;
 };
 
 // GetEval - get a evaluator type from the DLL
@@ -94,7 +99,7 @@ public:
     // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
 
-	virtual void ResetState();
+    virtual void ResetState();
 };
 
 }}}

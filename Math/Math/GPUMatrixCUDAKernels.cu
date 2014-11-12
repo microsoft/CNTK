@@ -604,10 +604,10 @@ __global__ void _logSoftMaxColWise(
 
     for (long i=0;i<m_numRows;++i)
     {
-		ElemType tmp = a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x];
-		Sum[threadIdx.x] += (sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp));
-	}
-	Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
+        ElemType tmp = a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x];
+        Sum[threadIdx.x] += (sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp));
+    }
+    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
     for (long i=0;i<m_numRows;++i)
     {
         a[IDX2C(i,col_id,m_numRows)] -= Sum[threadIdx.x] ;
@@ -741,8 +741,8 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
     {
         ElemType tmp=a[IDX2C(i,blockIdx.x,m_numRows)]-colMax[0];
-		us[IDX2C(i,blockIdx.x,m_numRows)]=tmp;
-		partials[threadIdx.x]+=(sizeof(ElemType)==sizeof(float)?expf(tmp):exp(tmp));
+        us[IDX2C(i,blockIdx.x,m_numRows)]=tmp;
+        partials[threadIdx.x]+=(sizeof(ElemType)==sizeof(float)?expf(tmp):exp(tmp));
     }
     __syncthreads();
 
@@ -798,7 +798,7 @@ __global__ void _assignColumnwiseLogSoftmaxOf(
     if (threadIdx.x==0)
     {
         colSum[0] = partials[0]+partials[1]+partials[2]+partials[3];
-		colSum[0] = (sizeof(ElemType)==sizeof(float)?logf(colSum[0]):log(colSum[0]));
+        colSum[0] = (sizeof(ElemType)==sizeof(float)?logf(colSum[0]):log(colSum[0]));
     }
     __syncthreads();
     //end of finding sums
@@ -833,10 +833,10 @@ __global__ void _logSoftMaxRowWise(
 
     for (long j=0;j<m_numCols;++j)
     {
-		ElemType tmp = a[IDX2C(row_id,j,m_numRows)]-maxV[threadIdx.x];
-		Sum[threadIdx.x] += sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp);
+        ElemType tmp = a[IDX2C(row_id,j,m_numRows)]-maxV[threadIdx.x];
+        Sum[threadIdx.x] += sizeof(ElemType)==sizeof(float) ? expf(tmp) : exp(tmp);
     }
-	Sum[threadIdx.x] = maxV[threadIdx.x]+(sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
+    Sum[threadIdx.x] = maxV[threadIdx.x]+(sizeof(ElemType)==sizeof(float)?logf(Sum[threadIdx.x]):log(Sum[threadIdx.x]));
     for (long j=0;j<m_numCols;++j)
     {
         a[IDX2C(row_id,j,m_numRows)] -= Sum[threadIdx.x] ;
@@ -995,68 +995,68 @@ __global__ void _adagrad(
 
 template<class ElemType>
 __global__ void _rmsprop_init(
-	ElemType* avars, ElemType* signs, ElemType* steps,
-	ElemType* curr_grad,
-	const LONG64 N
-	)
+    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* curr_grad,
+    const LONG64 N
+    )
 {
     LONG64 i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
-	ElemType tmp = curr_grad[i];
-	avars[i] = tmp * tmp;
-	signs[i] = ElemType(0.0);
-	steps[i] = ElemType(0.02);
+    ElemType tmp = curr_grad[i];
+    avars[i] = tmp * tmp;
+    signs[i] = ElemType(0.0);
+    steps[i] = ElemType(0.02);
 }
 
 template<class ElemType>
 __global__ void _rmsprop(
-	ElemType* avars, ElemType* signs, ElemType* steps,
-	ElemType* curr_grad,
-	const LONG64 N,
-	ElemType RMS_GAMMA,ElemType RMS_WGT_INC,ElemType RMS_WGT_MAX,ElemType RMS_WGT_DEC,ElemType RMS_WGT_MIN,
-	ElemType floor,
-	ElemType *upd_gpu
-	)
+    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* curr_grad,
+    const LONG64 N,
+    ElemType RMS_GAMMA,ElemType RMS_WGT_INC,ElemType RMS_WGT_MAX,ElemType RMS_WGT_DEC,ElemType RMS_WGT_MIN,
+    ElemType floor,
+    ElemType *upd_gpu
+    )
 {
     LONG64 i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
-	avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0)-RMS_GAMMA)* (curr_grad[i] * curr_grad[i]);
+    avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0)-RMS_GAMMA)* (curr_grad[i] * curr_grad[i]);
 
-	//// grad sign base 3: 0->neg, 1->zero, 2->pos
-	//const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+    //// grad sign base 3: 0->neg, 1->zero, 2->pos
+    //const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
 
-	//// signs[i] contains three consecutive grad_sign
-	//signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
+    //// signs[i] contains three consecutive grad_sign
+    //signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
 
-	//// update according to the following table:
-	//// (!pos,!pos,!pos) or (!neg,!neg,!neg): RMS_WGT_INC
-	//// (!neg,!neg,neg) or (!pos,!pos,pos): RMS_WGT_DEC
-	//// otherwise: no action
+    //// update according to the following table:
+    //// (!pos,!pos,!pos) or (!neg,!neg,!neg): RMS_WGT_INC
+    //// (!neg,!neg,neg) or (!pos,!pos,pos): RMS_WGT_DEC
+    //// otherwise: no action
 
-	//switch(int(upd_gpu[int(signs[i])]))
-	//{
-	//case 0:
-	//	steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-	//	break;
-	//case 2:
-	//	steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-	//	break;
-	//}
-	//curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+    //switch(int(upd_gpu[int(signs[i])]))
+    //{
+    //case 0:
+    //    steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+    //    break;
+    //case 2:
+    //    steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+    //    break;
+    //}
+    //curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
 
-	const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+    const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
 
-	if( signs[i] * grad_sign > 0 )
-		steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-	else
-		steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+    if( signs[i] * grad_sign > 0 )
+        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+    else
+        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-	curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
-	signs[i] = grad_sign;
+    curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+    signs[i] = grad_sign;
 
 }
 

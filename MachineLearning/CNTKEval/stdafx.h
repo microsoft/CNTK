@@ -6,7 +6,9 @@
 #pragma once
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
+#ifdef _WIN32
 #include "targetver.h"
+#endif
 #include <stdio.h>
 #include <math.h>
 

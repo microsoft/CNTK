@@ -16,7 +16,7 @@
 #else
 #define MATH_API __declspec(dllimport)
 #endif
-#endif	/* Linux - already defined in CPUMatrix.h */
+#endif    /* Linux - already defined in CPUMatrix.h */
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 

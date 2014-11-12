@@ -593,4 +593,4 @@ static inline std::string &trim(std::string &s) {
 
 vector<string> sep_string(const string & str, const string & sep);
 
-#endif	// _FILEUTIL_
+#endif    // _FILEUTIL_

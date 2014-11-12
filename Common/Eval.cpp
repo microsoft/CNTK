@@ -115,7 +115,7 @@ void Eval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& in
 template<class ElemType>
 void Eval<ElemType>::ResetState()
 {
-	m_eval->ResetState();
+    m_eval->ResetState();
 }
 
 //The explicit instantiation

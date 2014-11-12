@@ -19,53 +19,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <typename ElemType>
 NDLNode<ElemType>* NDLScript<ElemType>::DuplicateNode(NDLNode<ElemType>* node)
 {
-	NDLNode<ElemType>* newNode = node->Copy();
-	m_children.push_back(newNode);
-	newNode->SetParentScript(this);
-	return newNode;
+    NDLNode<ElemType>* newNode = node->Copy();
+    m_children.push_back(newNode);
+    newNode->SetParentScript(this);
+    return newNode;
 }
 
 template <typename ElemType>
 NDLScript<ElemType>::NDLScript(const NDLScript& copyMe) : ConfigParser(copyMe)
 {
-	m_baseName = copyMe.m_baseName;
-	m_scriptString = copyMe.m_scriptString;
-	m_macroNode = copyMe.m_macroNode;
-	m_noDefinitions = copyMe.m_noDefinitions; // no definitions can be made in this script, interpret all macro/function names as calls
-	m_definingMacro = false; // not defining when expanding macros (only reason to call this method
-	m_cn = copyMe.m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+    m_baseName = copyMe.m_baseName;
+    m_scriptString = copyMe.m_scriptString;
+    m_macroNode = copyMe.m_macroNode;
+    m_noDefinitions = copyMe.m_noDefinitions; // no definitions can be made in this script, interpret all macro/function names as calls
+    m_definingMacro = false; // not defining when expanding macros (only reason to call this method
+    m_cn = copyMe.m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
 
-	// script lines in parsed node order
-	for (NDLNode<ElemType>* node : copyMe.m_script)
-	{
-		// duplicate this node
-		NDLNode<ElemType>* newNode = DuplicateNode(node);
-		AddSymbol(newNode->GetName(), newNode);
+    // script lines in parsed node order
+    for (NDLNode<ElemType>* node : copyMe.m_script)
+    {
+        // duplicate this node
+        NDLNode<ElemType>* newNode = DuplicateNode(node);
+        AddSymbol(newNode->GetName(), newNode);
 
-		// now get the parameters to the functions added
-		ConfigValue value = newNode->GetParamString();
-		ParseParameters(newNode, value, true /*createNew*/);
+        // now get the parameters to the functions added
+        ConfigValue value = newNode->GetParamString();
+        ParseParameters(newNode, value, true /*createNew*/);
 
-		// add it to the new script
-		m_script.push_back(newNode);
-	}
+        // add it to the new script
+        m_script.push_back(newNode);
+    }
 
-	// now search the symbol table for other symbols that haven't been copied yet
-	// this happens for constants defined in macros and such
-	for (std::pair<std::string, NDLNode<ElemType>*> pair : copyMe.m_symbols)
-	{
-		// if we can't find the symbol in the copied symbol table, copy it here
-		if (m_symbols.find(pair.first) == end(m_symbols))
-		{
-			// duplicate this node
-			NDLNode<ElemType>* newNode = DuplicateNode(pair.second);
-			AddSymbol(pair.first, newNode);
-			// anything that takes parameters should be evaluated in the script loop
-			assert(newNode->GetParamString().empty());
-		}
-	}
-	// NOTE: the child nodes get populated as the nodes are duplicated in the loop above
-	// we shouldn't try to duplicate them separately
+    // now search the symbol table for other symbols that haven't been copied yet
+    // this happens for constants defined in macros and such
+    for (std::pair<std::string, NDLNode<ElemType>*> pair : copyMe.m_symbols)
+    {
+        // if we can't find the symbol in the copied symbol table, copy it here
+        if (m_symbols.find(pair.first) == end(m_symbols))
+        {
+            // duplicate this node
+            NDLNode<ElemType>* newNode = DuplicateNode(pair.second);
+            AddSymbol(pair.first, newNode);
+            // anything that takes parameters should be evaluated in the script loop
+            assert(newNode->GetParamString().empty());
+        }
+    }
+    // NOTE: the child nodes get populated as the nodes are duplicated in the loop above
+    // we shouldn't try to duplicate them separately
 }
 
 // copy constructor, creates a new disconnected copy of this node
@@ -74,32 +74,32 @@ NDLScript<ElemType>::NDLScript(const NDLScript& copyMe) : ConfigParser(copyMe)
 template <typename ElemType>
 NDLNode<ElemType>::NDLNode(const NDLNode<ElemType>& copyMe)
 {
-	m_name = copyMe.m_name; // value on the left of the equals
-	m_value = copyMe.m_value; // value on the right of the equals (CN node name, or value)
-	m_parent = copyMe.m_parent; // parent script
-	m_type = copyMe.m_type; //type of node
-	m_paramString = copyMe.m_paramString; // parameter of a function/array
-	m_paramMacro = copyMe.m_paramMacro; // parameter of a macro (the variables used in the macro definition)
-	// don't copy over the parameters, they will be reparsed after the copy
-	//m_parameters = copyMe.m_parameters; // copy over the parameters straight
+    m_name = copyMe.m_name; // value on the left of the equals
+    m_value = copyMe.m_value; // value on the right of the equals (CN node name, or value)
+    m_parent = copyMe.m_parent; // parent script
+    m_type = copyMe.m_type; //type of node
+    m_paramString = copyMe.m_paramString; // parameter of a function/array
+    m_paramMacro = copyMe.m_paramMacro; // parameter of a macro (the variables used in the macro definition)
+    // don't copy over the parameters, they will be reparsed after the copy
+    //m_parameters = copyMe.m_parameters; // copy over the parameters straight
 
-	m_eval = nullptr; // pointer to an arbitrary eval structure
-	// script for macro calls, need to expand the macro for each call
-	// if it's not expanded the evalValue will be overwitten on multiple calls to a macro
-	m_script = (copyMe.m_script) ? new NDLScript<ElemType>(*copyMe.m_script) : nullptr;
+    m_eval = nullptr; // pointer to an arbitrary eval structure
+    // script for macro calls, need to expand the macro for each call
+    // if it's not expanded the evalValue will be overwitten on multiple calls to a macro
+    m_script = (copyMe.m_script) ? new NDLScript<ElemType>(*copyMe.m_script) : nullptr;
 }
 template <typename ElemType>
 NDLScript<ElemType>::NDLScript(const NDLScript&& moveMe) : ConfigParser(move(moveMe))
 {
-	m_baseName = move(moveMe.m_baseName);
-	m_scriptString = move(moveMe.m_scriptString);
-	m_script = move(moveMe.m_script); // script lines in parsed node order, macros will have definition followed by body
-	m_symbols = move(moveMe.m_symbols); // symbol table
-	m_macroNode = move(moveMe.m_macroNode); // set when interpretting a macro definition
-	m_noDefinitions = move(moveMe.m_noDefinitions); // no definitions can be made in this script, interpret all macro/function names as calls
-	m_definingMacro = move(moveMe.m_definingMacro);
-	m_children = move(moveMe.m_children); // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
-	m_cn = move(moveMe.m_cn); // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+    m_baseName = move(moveMe.m_baseName);
+    m_scriptString = move(moveMe.m_scriptString);
+    m_script = move(moveMe.m_script); // script lines in parsed node order, macros will have definition followed by body
+    m_symbols = move(moveMe.m_symbols); // symbol table
+    m_macroNode = move(moveMe.m_macroNode); // set when interpretting a macro definition
+    m_noDefinitions = move(moveMe.m_noDefinitions); // no definitions can be made in this script, interpret all macro/function names as calls
+    m_definingMacro = move(moveMe.m_definingMacro);
+    m_children = move(moveMe.m_children); // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
+    m_cn = move(moveMe.m_cn); // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
 }
 
 // EqualInsensitive - check to see if two nodes are equal 
@@ -212,10 +212,10 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;   
     else if (EqualInsensitive(nodeType, DelayNode<ElemType>::TypeName()))
         ret = true;
-	else if (EqualInsensitive(nodeType, RowSliceNode<ElemType>::TypeName()))
-		ret = true;
-	else if (EqualInsensitive(nodeType, LookupTableNode<ElemType>::TypeName()))
-		ret = true;
+    else if (EqualInsensitive(nodeType, RowSliceNode<ElemType>::TypeName()))
+        ret = true;
+    else if (EqualInsensitive(nodeType, LookupTableNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, GMMLogLikelihoodNode<ElemType>::TypeName(), L"GMMLL"))
         ret = true;
     

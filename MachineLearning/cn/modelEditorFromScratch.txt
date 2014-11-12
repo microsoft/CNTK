@@ -5,10 +5,10 @@ m1=[
     HDim=256
     LDim=10
 
-	macro(test)
-	{
-		local=test
-	}
+    macro(test)
+    {
+        local=test
+    }
 
     features=Input(SDim, tag=feature)
     labels=Input(LDim, tag=label)

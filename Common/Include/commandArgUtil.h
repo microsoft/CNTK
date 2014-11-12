@@ -634,7 +634,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-		// ExistsCurrent - check to see if a key exists in THIS config, don't check parent
+        // ExistsCurrent - check to see if a key exists in THIS config, don't check parent
         bool ExistsCurrent(const std::string & name) const 
         {
             return  (find(name) != end());
