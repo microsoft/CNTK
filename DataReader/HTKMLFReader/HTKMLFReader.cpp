@@ -398,7 +398,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_featureNameToIdMap[featureNames[i]]= iFeat;
-            realDims.push_back(realDims[i]);
             scriptpaths.push_back(thisFeature("scpFile"));
             m_featureNameToDimMap[featureNames[i]] = realDims[i];
 
