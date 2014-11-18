@@ -648,14 +648,20 @@ void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, si
         return;
     } 
 
-    if (m_featuresBuffer==NULL)
+    if (m_featuresBuffer==NULL || mbSize > m_mbSize)
     {
+        // if we are reallocating bigger, release the original
+        if (m_featuresBuffer != NULL)
+            delete[] m_featuresBuffer;
         m_featuresBuffer = new ElemType[mbSize*m_featureCount];
         memset(m_featuresBuffer,0,sizeof(ElemType)*mbSize*m_featureCount);
     }
 
-    if (m_labelsBuffer==NULL)
+    if (m_labelsBuffer == NULL || mbSize > m_mbSize)
     {
+        // if we are reallocating bigger, release the original
+        if (m_labelsBuffer != NULL)
+            delete[] m_labelsBuffer;
         if (m_labelType == labelCategory)
         {
             m_labelsBuffer = new ElemType[m_labelDim*mbSize];
