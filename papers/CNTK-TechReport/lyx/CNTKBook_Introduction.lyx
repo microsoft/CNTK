@@ -1,0 +1,346 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass extbook
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Chapter
+Introduction
+\begin_inset CommandInset label
+LatexCommand label
+name "chap:Introduction"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Overview
+\end_layout
+
+\begin_layout Standard
+The Computational Network Toolkit (CNTK) is a software package that makes
+ it easy to design and test computational networks such as deep-belief networks.
+ The goal of a computational network is to take feature data, transform
+ the data through a network of simple computations, and then produce an
+ output.
+ The output is often some sort of decision based on the input features.
+ A computational network can take many forms―such as feed-forward, recursive
+ or convolutional―and includes various forms of non-linearities.
+ The network’s parameters are optimized to produce the best possible outcome
+ for a given set of data and an optimization criteria.
+\end_layout
+
+\begin_layout Standard
+CNTK has 5 primary features:
+\end_layout
+
+\begin_layout Itemize
+CNTK is a general solution for training and testing all kinds of neural
+ networks
+\end_layout
+
+\begin_layout Itemize
+A user specifies a network using a simple text configuration file.
+ The configuration file specifies the type of network, where to find the
+ input data, and how to optimize the parameters.
+ All of these design parameters are fixed in the configuration file.
+\end_layout
+
+\begin_layout Itemize
+CNTK is designed to seamlessly put as many of the computations onto a GPU,
+ if available, as possible.
+ These types of computational networks are easy to vectorize and fit nicely
+ onto GPUs.
+ CNTK is compatible across many GPUs [Can we be more specific?]
+\end_layout
+
+\begin_layout Itemize
+CNTK automatically calculates the needed derivatives in order to efficiently
+ perform the necessary optimizations.
+ Networks are composed of many simple elements, and CNTK can keep track
+ of the details to insure that the optimization is done correctly.
+\end_layout
+
+\begin_layout Itemize
+CNTK can be extended by adding small amounts of code to implement the necessary
+ blocks.
+ This can be done with any language that can be linked with C++.
+ New non-linearities and objective functions are easy to add.
+\end_layout
+
+\begin_layout Standard
+The purpose of this documentation is to describe how to use CNTK for your
+ own experiments.
+ The bulk of this documentation describes the mathematics of computational
+ networks (Chapter
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CN"
+
+\end_inset
+
+), how to run and configure CNTK (Section 2), how to design networks and
+ edit the models (Section 3), and how to extend CNTK (Section 4).
+ But first we start with a couple of simple examples to show the basics
+ of CNTK.
+\end_layout
+
+\begin_layout Section
+A Simple Demo
+\end_layout
+
+\begin_layout Standard
+We used a simple Matlab script (included) to generate two-dimensional data
+ with binary labels.
+ The raw data is shown below.
+ This data was stored as a text file, one sample per line, that can be read
+ by the UCIFastReader method (page XX) in CNTK.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename D:/Projects/CNTK/cntk/papers/CNTK-TechReport/figures/SimpleDemoData.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+A simple test set to demonstrate the power and ease of CNTK.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The following configuration file tells CNTK how to process this data.
+ There are three sections of this file:
+\end_layout
+
+\begin_layout Itemize
+The preamble specifies which command blocks to run (Simple_Demo), which
+ GPU to use, and how to log CNTK’s output.
+\end_layout
+
+\begin_layout Itemize
+The Simple_Demo block specifies one action for CNTK.
+ The start of the block specifies the action to take (train) but more importantl
+y specifies the actions needed to train the desired network.
+ This block specifies three components in order to train a new network:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+The SimpleNetworkBuilder block specifies the topology of the network, how
+ to initialize the network, and how to evaluate its performance (cross-entry
+ with softmax in this case).
+\end_layout
+
+\begin_layout Itemize
+The SGD (Stochastic Gradient Descent) block tells CNTK how to optimize the
+ network to find the best parameters.
+ This includes information about mini-block size (so the computation is
+ more efficient), the learning rate, and how many epochs to train.
+\end_layout
+
+\begin_layout Itemize
+Finally, the reader block specifies from where to read the input data, how
+ the features and labels are formatted, and how to randomize the order the
+ data is applied to the network during training 
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Finally, the test block specifies how to test the network.
+ Again we must specify the source of the data (we are training and testing
+ on the same data to keep the example small) and how to evaluate the results.
+\end_layout
+
+\begin_layout Standard
+You can run this script using the following command on Windows 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+cn.exe config=Simple.config 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+or under Linux 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+cn config=Simple.config 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This CNTK job trains a feedforward network with 2 inputs (x and y coordinates),
+ and hidden layers with XXX,XXX units, and then with one output unit (the
+ decision).
+ CNTK uses cross entropy with softmax to measure and optimize the network’s
+ performance.
+\end_layout
+
+\begin_layout Standard
+Describe the output…..But first we need a UCIFastWriter!!!
+\end_layout
+
+\begin_layout Section
+A Speech Demo (TIMIT)
+\end_layout
+
+\begin_layout Standard
+A second example shows how to use CNTK to do a simple speech experiment.
+ We use the LDC’s TIMIT speech database as training and testing data.
+ While this data is not free, it is relatively common and illustrates a
+ real speech task.
+ The data is available at https://catalog.ldc.upenn.edu/LDC93S1.
+\end_layout
+
+\begin_layout Standard
+There are three steps in using TIMIT with CNTK: prepare the data, train
+ the network, and finally test the network’s performance.
+ We will describe each step in turn.
+ A (Cygwin) shell script performs the necessary actions, but the necessary
+ actions can easily be replicated with other shells.
+\end_layout
+
+\begin_layout Standard
+The first step is to prepare the data using HTK (Hidden Markov Toolkit).
+ This involves creating a list of files (the HTK script) and then passing
+ this script to HTK’s HCopy program, which calculates the filterbank features
+ we use in our experiment.
+ Not all the files in TIMIT are usable, so we start with a list of valid
+ subjects (the text file TimitSubjects.txt).
+ A python script uses this list of subjects, prepends the directory where
+ the TIMIT distribution is found, and creates two script files.
+ The first script file is used by HCopy to tell it where to read each audio
+ file (in NIST’s wave format, which is different from Microsoft’s wave format)
+ and where to put the output (in a directory called features.) We also take
+ this opportunity to change the directory structure so the output feature
+ files (___.zda) are stored in a flat directory called Features.
+ The second script file is used as input to CNTK and tells CNTK where to
+ find each input file, already processed into features.
+ If you do not have python, or you prefer, you can also edit these two included
+ .scp files by hand so each line contains the directory where your data is
+ stored.
+\end_layout
+
+\begin_layout Standard
+On a 2.2GHz Xeon processor the training takes 167 minutes without a GPU,
+ and 61 minutes with a low-end Quadro 4000 GPU.
+ 
+\end_layout
+
+\end_body
+\end_document
