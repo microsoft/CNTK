@@ -15,8 +15,13 @@
 #define EPS_IN_LOG 1e-40f
 #define LOG_OF_EPS_IN_LOG -92.1f // log(EPS_IN_LOG)
 #define LOG10_OF_EPS_IN_LOG -40 // log_10(EPS_IN_LOG)
+#define LZERO  -10e10
+#define MINLOGEXP -9.2103
+#define LSMALL -0.5E10
 
 #define NOT_IMPLEMENTED throw std::logic_error("Not implemented.")
+
+#define DEVICEID_TYPE int
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
@@ -68,8 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsEmpty() const {return m_numRows  == 0 || m_numCols == 0; }
         ElemType* GetArray() {return m_pArray;}
         void SetArray(ElemType *parray) {m_pArray = parray;}
-        int GetComputeDeviceId() const {return m_computeDevice;}
-        void SetComputeDeviceId(int computeId) {m_computeDevice = computeId;}
+        DEVICEID_TYPE GetComputeDeviceId() const {return m_computeDevice;}
+        void SetComputeDeviceId(DEVICEID_TYPE computeId) {m_computeDevice = computeId;}
         bool OwnBuffer() const {return !m_externalBuffer && m_computeDevice != MANAGEDEXTERN;}
         void SetOwnBuffer(bool own) {m_externalBuffer = !own;}
         wchar_t* GetMatrixName() const { return m_matrixName; }
@@ -117,7 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixFormat m_format;
         bool m_externalBuffer; // is the buffer used by this matrix, 
         ElemType *m_pArray;
-        int m_computeDevice; //current GPU device Id, CPUDEVICE, or MANAGEDEXTERN 
+        DEVICEID_TYPE m_computeDevice; //current GPU device Id, CPUDEVICE, or MANAGEDEXTERN 
         size_t m_nz; //Number of non-zero elements for sparse matrices (unused in other formats)
         wchar_t* m_matrixName;
     };

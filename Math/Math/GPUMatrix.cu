@@ -78,7 +78,7 @@ void CUDA_CALL(cudaError_t x)
     if(x!=cudaSuccess) 
     { 
         const char* errmsg = cudaGetErrorString(x);
-        std::cout<<"!!!!!!!!CUDA EXCEPTION: "<<errmsg<<std::endl;
+        std::cerr << "!!!!!!!!CUDA EXCEPTION: " << errmsg << std::endl;
         cudaDeviceSynchronize();
         throw std::runtime_error(errmsg);
     }    
@@ -88,9 +88,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // PrepareDevice - Setup the correct cuda context for an operation
     // deviceId - the device on which the operation will take place
-    void PrepareDevice(short deviceId)
+    void PrepareDevice(DEVICEID_TYPE deviceId)
     {
-        static short currentDevice = AUTOPLACEMATRIX; // set to anything invalid
+        static DEVICEID_TYPE currentDevice = AUTOPLACEMATRIX; // set to anything valid
         // externally managed matrices are guaranteed to be on the right device
         if (deviceId == MANAGEDEXTERN)
             return;
@@ -144,7 +144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>    
     cublasHandle_t _initCUBLAS(int devId)
     {
-        PrepareDevice((short)devId);
+        PrepareDevice((DEVICEID_TYPE)devId);
         cublasHandle_t cuHandle;
         CUBLAS_CALL(cublasCreate(&cuHandle));
         return cuHandle;
@@ -178,7 +178,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int setDev = -1;
             int curDev=0;
             long curPower = 0;
-            for (short dev = 0; dev < deviceCount; ++dev)
+            for (DEVICEID_TYPE dev = 0; dev < deviceCount; ++dev)
             {
                 CUDA_CALL(cudaSetDevice(dev));
                 setDev = dev;
@@ -212,11 +212,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // deviceId - the device on which the operation will take place
     //            defaults to -1, which means use matrices current device
     template<class ElemType>
-    void GPUMatrix<ElemType>::PrepareDevice(short deviceId /*=-1*/) const
+    void GPUMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const
     {
         // if default value use current compute device
         if (deviceId == -1)
-            deviceId = (short)m_computeDevice;
+            deviceId = (DEVICEID_TYPE)m_computeDevice;
         Microsoft::MSR::CNTK::PrepareDevice(deviceId);
     }
 
@@ -270,7 +270,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_computeDevice==to_id) 
             return;
 
-        PrepareDevice((short)to_id);       
+        PrepareDevice((DEVICEID_TYPE)to_id);       
         ElemType* d_dst=NULL;
         CUDA_CALL(cudaMalloc((void**)&d_dst,sizeof(ElemType)*m_numRows*m_numCols));
 
@@ -295,7 +295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 PrepareDevice();
                 CUDA_CALL(cudaMallocHost((void**)&h_dst,sizeof(ElemType)*m_numRows*m_numCols));
                 CUDA_CALL(cudaMemcpy(h_dst,m_pArray,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyDeviceToHost));  
-                PrepareDevice((short)to_id);       
+                PrepareDevice((DEVICEID_TYPE)to_id);       
                 CUDA_CALL(cudaMemcpy(d_dst,h_dst,sizeof(ElemType)*m_numRows*m_numCols, cudaMemcpyHostToDevice)); 
                 CUDA_CALL(cudaFreeHost(h_dst));  
             }
@@ -304,7 +304,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaFree(m_pArray));
         m_pArray=d_dst;
 
-        PrepareDevice((short)to_id);       
+        PrepareDevice((DEVICEID_TYPE)to_id);       
         m_computeDevice=to_id;
     }
 

@@ -29,7 +29,7 @@ namespace CNTKMathTest
             SingleMatrix A0;
             SingleMatrix A1(AUTOPLACEMATRIX);
             SingleMatrix A2(-1);
-            SingleMatrix A3((size_t)13,(size_t)12,(short)0);
+            SingleMatrix A3((size_t)13,(size_t)12,(DEVICEID_TYPE)0);
 
             Assert::AreEqual<size_t>(0,A0.GetNumRows());
             Assert::AreEqual<size_t>(0,A0.GetNumCols());            
