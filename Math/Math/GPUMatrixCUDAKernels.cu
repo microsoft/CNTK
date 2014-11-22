@@ -22,7 +22,6 @@
 
 // Predefine this for later.
 static __inline__ __device__ double atomicAdd(double* address, double val);
-
 //CUDA Kernels code
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(

@@ -363,7 +363,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDACALL(cudaFree(m_blockVal));
         if(m_blockIds != nullptr) 
             CUDACALL(cudaFree(m_blockIds));
-
         ZeroInit(m_format, m_computeDevice);
     }
 
