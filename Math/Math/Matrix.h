@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mutable CPUSparseMatrix<ElemType> *m_CPUSparseMatrix;
         mutable MatrixType m_matrixType;
         mutable CurrentDataLocation m_currentDataLocation; //Indicates which matrix is current        
-        mutable int m_preferredDeviceId;
+        mutable DEVICEID_TYPE m_preferredDeviceId;
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
         //Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
@@ -53,37 +53,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //Elseif deviceId>=0 and <AUTOPLACEMATRIX, then the matrix will be based on GPU with specified deviceId
         //Else (default) if deviceId=AUTOPLACEMATRIX, the class will try to place itself on the best GPU, if fails it will go to CPU
         //The default behaiviour should be deviceId=AUTOPLACEMATRIX        
-        Matrix(short deviceId=AUTOPLACEMATRIX); 
-        Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType *pArray, short deviceId); // constructor for setting Matrix from a base matrix (externally managed butter pArray)
-        Matrix(FILE* f, const char * matrixName, short deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE); //matrixName is used to verify that correct matrix is read.
-        Matrix(const size_t numRows, const size_t numCols, short deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE);
-        Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, short deviceId=AUTOPLACEMATRIX, const size_t nnz=0);
-        Matrix(const Matrix<ElemType>& deepCopyFrom, short deviceId=AUTOPLACEMATRIX);  //copy constructor, deep copy
+        Matrix(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX); 
+        Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType *pArray, DEVICEID_TYPE deviceId); // constructor for setting Matrix from a base matrix (externally managed butter pArray)
+        Matrix(FILE* f, const char * matrixName, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE); //matrixName is used to verify that correct matrix is read.
+        Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE);
+        Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const size_t nnz=0);
+        Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);  //copy constructor, deep copy
         Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
         Matrix(Matrix<ElemType>&& moveFrom);  //move constructor, shallow copy
         Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);  //move coment operator, shallow copy
 
-        static Matrix<ElemType> Ones(const size_t rows, const size_t cols, short deviceId=AUTOPLACEMATRIX);
-        static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, short deviceId=AUTOPLACEMATRIX);
-        static Matrix<ElemType> Eye(const size_t rows, short deviceId=AUTOPLACEMATRIX);
-        static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED, short deviceId=AUTOPLACEMATRIX);
-        static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED, short deviceId=AUTOPLACEMATRIX);
+        static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
+        static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
+        static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
+        static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
+        static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
         void Clear();
         ~Matrix();
 
     private:
-        Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, short deviceID); //only used internally to initialize a blank matrix
-        Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, short deviceID); //only used internally to initialize a blank matrix
-        Matrix(const MatrixFlags matrixFlags, short deviceID); //only used internally to initialize a blank matrix
-        void Init(short deviceID); //only used internally to initialize a blank matrix
+        Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); //only used internally to initialize a blank matrix
+        Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID); //only used internally to initialize a blank matrix
+        Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID); //only used internally to initialize a blank matrix
+        void Init(DEVICEID_TYPE deviceID); //only used internally to initialize a blank matrix
         void SetDataLocation(CurrentDataLocation location, MatrixType type=UNDETERMINED) const;
 
     public:
         MatrixType GetMatrixType() const {return m_matrixType;};
         bool OwnBuffer() const {return m_baseMatrix->OwnBuffer();}
         int GetDeviceId() const; //-1 if CPU, otherwise GPU CUDA device id
-        int GetPreferredDeviceId() const { return m_preferredDeviceId; }; //-1 if CPU, otherwise GPU CUDA device id
-        void SetPreferredDeviceId(int preferredDeviceId){ if (m_preferredDeviceId != preferredDeviceId) m_preferredDeviceId = preferredDeviceId; }
+        DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; //-1 if CPU, otherwise GPU CUDA device id
+        void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId){ if (m_preferredDeviceId != preferredDeviceId) m_preferredDeviceId = preferredDeviceId; }
         //Moves matrix from device id_from to device with id_to. 
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
@@ -316,7 +316,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType LogAdd(ElemType x, ElemType y);
 
     public:
-        static short GetBestGPUDeviceId(); //{ return GPUMatrix<ElemType>::GetBestGPUDeviceId();}
+        static DEVICEID_TYPE GetBestGPUDeviceId(); //{ return GPUMatrix<ElemType>::GetBestGPUDeviceId();}
 
         //static BLAS functions
 

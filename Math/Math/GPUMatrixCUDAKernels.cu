@@ -11,6 +11,7 @@
 #include <float.h>
 #include <cuda_runtime.h>
 #include "CommonMatrix.h"
+#include "device_functions.h"
 
 #ifndef LONG64  //we would like to use 64-bit long to support large matrices. However, CUDA seems to support only 32-bit long
 #define LONG64  long
@@ -18,10 +19,6 @@
 
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 #define threadsPerBlock 512
-
-#define LZERO  -10e10
-#define MINLOGEXP -9.2103
-#define LSMALL -0.5E10
 
 // Predefine this for later.
 static __inline__ __device__ double atomicAdd(double* address, double val);

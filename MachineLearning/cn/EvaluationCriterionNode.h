@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ErrorPredictionNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
+        ErrorPredictionNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
             : ComputationNode<ElemType>(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -30,7 +30,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        ErrorPredictionNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        ErrorPredictionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -161,7 +161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = rightNode;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 

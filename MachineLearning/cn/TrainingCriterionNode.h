@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        SquareErrorNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        SquareErrorNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_leftMinusRight(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -30,7 +30,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        SquareErrorNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        SquareErrorNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_leftMinusRight(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -172,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = rightNode;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -222,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        CrossEntropyWithSoftmaxNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        CrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -231,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        CrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        CrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -417,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = prediction;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -476,7 +476,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        CrossEntropyNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        CrossEntropyNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_logOfRight(deviceId), m_leftDivRight(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -485,7 +485,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        CrossEntropyNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        CrossEntropyNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logOfRight(deviceId), m_leftDivRight(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -649,7 +649,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = prediction;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -708,7 +708,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        MatrixL1RegNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        MatrixL1RegNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_gradientOfL1Norm(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -717,7 +717,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        MatrixL1RegNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        MatrixL1RegNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfL1Norm(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -822,7 +822,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -872,7 +872,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        MatrixL2RegNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        MatrixL2RegNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -881,7 +881,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        MatrixL2RegNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        MatrixL2RegNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1001,7 +1001,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
                 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -1027,7 +1027,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ClassBasedCrossEntropyWithSoftmaxNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        ClassBasedCrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1036,7 +1036,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        ClassBasedCrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        ClassBasedCrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1193,7 +1193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_logSoftmax.Resize(label->FunctionValues().GetNumRows(), label->FunctionValues().GetNumCols());
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 

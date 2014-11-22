@@ -18,36 +18,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ElemType elements[m_elemSizeAllocated]
     // int colIdx[m_elemSizeAllocated]
     // int rowIdxStart[m_numRows+1]
+
+#define GPUSPARSE_INDEX_TYPE int  //cuSparse only supports int array indexes
+
     template<class ElemType>
     class MATH_API GPUSparseMatrix : public BaseMatrix<ElemType>
     {
         typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray; using B::m_elemSizeAllocated; using B::m_nz; using B::m_format;   // without this, base members would require to use thi-> in GCC
     private:
-        void ZeroInit();
+        void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE deviceId);
         void Init();
-        void ClearNew();
     private:
-        void performInplaceFunction(int kind);
+        void performInplaceFunction(const int kind);
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void Clear();
-        void PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t (int* csrRowPtrC)> func);
-        size_t ElemCountFromBufferSize(size_t totalBufferSize);
-        void PrepareDevice(short deviceId=-1) const;
+        void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t (int* csrRowPtrC)> func);
+        size_t ElemCountFromBufferSize(const size_t totalBufferSize) const;
+        void PrepareDevice(const DEVICEID_TYPE deviceId=-1) const;
 
     public:
-        GPUSparseMatrix(const MatrixFormat format, const int deviceId);
-        
-        GPUSparseMatrix();
-        GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t nz, ElemType* pArray, const size_t matrixFlags=matrixFormatSparseCSR, int deviceId=MANAGEDEXTERN, const size_t elemSizeAllocated=0);
+        GPUSparseMatrix(const MatrixFormat format, const DEVICEID_TYPE deviceId);
     
         GPUSparseMatrix(const GPUSparseMatrix<ElemType>&);
-        GPUSparseMatrix(const GPUMatrix<ElemType>&);
+        GPUSparseMatrix(const GPUMatrix<ElemType>&, const MatrixFormat matrixFormat /* = MatrixFormat::matrixFormatSparseCSR*/);
 #ifndef    LINUX
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
 #endif    /* LINUX */
         ~GPUSparseMatrix();
     public:
-        void Resize(const size_t numRows, const size_t numCols, size_t size = 0);
         void Reset();
 
     public:
@@ -55,38 +53,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // in memory format is always in the following order:
         // Non-zero data elements, Full index locations, compressed index locations
         // In CSR row data is compressed, in CSC col data is compressed
-        const ElemType* NzLocation() const {return m_pArray;}
-        ElemType* NzLocation() {return m_pArray;}
-        size_t NzCount() const {return m_nz;}
+        const ElemType* NzValues() const {return m_pArray;}
+        ElemType* NzValues() {return m_pArray;}
         size_t NzSize() const {return sizeof(ElemType)*m_nz;} // actual number of element bytes in use
-        int* IndexLocation() const {return (int*)(m_pArray+m_elemSizeAllocated);}
-        size_t IndexSize() const {return sizeof(int)*m_nz;} // actual number of index bytes in use
-        int* CompressedIndexLocation() const {return IndexLocation() + m_elemSizeAllocated;}
-        size_t CompressedIndexCount() const 
+        GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return (GPUSPARSE_INDEX_TYPE*)(m_pArray + m_elemSizeAllocated); } //this is the major index, row/col ids in CSC/CSR format
+        size_t MajorIndexSize() const { return sizeof(GPUSPARSE_INDEX_TYPE)*m_nz; } // actual number of major index bytes in use
+        GPUSPARSE_INDEX_TYPE* SecondaryrIndexLocation() const { return MajorIndexLocation() + m_elemSizeAllocated; } //this is the compressed index, col/row in CSC/CSR format
+        size_t MajorIndexCount() const { return m_nz; }
+        size_t SecondaryIndexCount() const 
         {
             if (m_format&matrixFormatCompressed)
             {
                 size_t cnt = (m_format&matrixFormatRowMajor)?m_numRows:m_numCols;
-                if (cnt) cnt++; // add an extra element on the end for the "max" value
+                if (cnt > 0) cnt++; // add an extra element on the end for the "max" value
                 return cnt;
             }
-            return m_nz; // COO format
+            else
+                return m_nz; // COO format
         }
         // get size for compressed index
-        size_t CompressedIndexSize() const {return (CompressedIndexCount())*sizeof(int);}
-        size_t BufferSize() const {return NzSize() + IndexSize() + CompressedIndexSize();}
+        size_t SecondaryIndexSize() const { return (SecondaryIndexCount())*sizeof(GPUSPARSE_INDEX_TYPE); }
+        size_t BufferSize() const { return NzSize() + MajorIndexSize() + SecondaryIndexSize(); }
         ElemType* BufferPointer() const;
 
         // the column and row locations will swap based on what format we are in. Full index always follows the data array
-        int* RowLocation() const {return (m_format&matrixFormatRowMajor)?CompressedIndexLocation():IndexLocation();}
-        size_t RowSize() const {return (m_format&matrixFormatRowMajor)?CompressedIndexSize():IndexSize();} 
-        int* ColLocation() const {return (m_format&matrixFormatRowMajor)?IndexLocation():CompressedIndexLocation();}
-        size_t ColSize() const {return (m_format&matrixFormatRowMajor)?IndexSize():CompressedIndexSize();} // actual number of row bytes in use
+        GPUSPARSE_INDEX_TYPE* RowLocation() const { return (m_format&matrixFormatRowMajor) ? SecondaryrIndexLocation() : MajorIndexLocation(); }
+        size_t RowSize() const {return (m_format&matrixFormatRowMajor)?SecondaryIndexSize():MajorIndexSize();} 
+        GPUSPARSE_INDEX_TYPE* ColLocation() const { return (m_format&matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryrIndexLocation(); }
+        size_t ColSize() const {return (m_format&matrixFormatRowMajor)?MajorIndexSize():SecondaryIndexSize();} // actual number of bytes in use
 
         void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-        void SetValue(const GPUMatrix<ElemType>& denseMatrix);
-        void ResizeAs(const GPUSparseMatrix<ElemType>& a);
-        //void Resize(const size_t numRows, const size_t numCols, const size_t numNZ);
+        void SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat);
+        void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly /*= true*/);
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const bool growOnly = true); //matrix format will affect the size to allocate
 
         GPUSparseMatrix<ElemType> Transpose() const;
         void InplaceTranspose();
@@ -99,23 +98,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif    /* LINUX */
         GPUSparseMatrix<ElemType> operator+ (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType> operator- (const GPUSparseMatrix<ElemType>& a) const;
-        GPUSparseMatrix<ElemType>& operator^= (ElemType alpha); //element-wise power        
-        GPUSparseMatrix<ElemType> operator^ (ElemType alpha) const; //element-wise power
-        GPUSparseMatrix<ElemType>& operator*= (ElemType alpha);
-        GPUSparseMatrix<ElemType> operator*(ElemType alpha) const;
+        GPUSparseMatrix<ElemType>& operator^= (const ElemType alpha); //element-wise power        
+        GPUSparseMatrix<ElemType> operator^ (const ElemType alpha) const; //element-wise power
+        GPUSparseMatrix<ElemType>& operator*= (const ElemType alpha);
+        GPUSparseMatrix<ElemType> operator*(const ElemType alpha) const;
         GPUSparseMatrix<ElemType>& AssignElementPowerOf(const GPUSparseMatrix<ElemType>& a, const ElemType power);        
 
         bool IsEqualTo(const GPUSparseMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
         bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
     public:
-        int GetComputeDeviceId(void) const;
+        DEVICEID_TYPE GetComputeDeviceId(void) const;
         size_t GetNZElements() const {return m_nz;}
         //Sets sparse matrix in CSR format. this acts as deep copy
-        void SetMatrixFromCSRFormat(int *h_CSRRow, int *h_Col, ElemType *h_Val, size_t nz, size_t numRows, size_t numCols, bool IsOnDevice=false, int devId=0);
+        void SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE *h_CSRRow, const GPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val, 
+            const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = 0);
         void SetMatrixFromCSCFormat(size_t *h_row, size_t *h_rowIdx, size_t size, size_t blockSize);
         void SetMatrixFromLabelAndClass(size_t *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
         //Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
-        void GetMatrixFromCSRFormat(int*& h_CSRRow, int*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
+        void GetMatrixFromCSRFormat(GPUSPARSE_INDEX_TYPE*& h_CSRRow, GPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
 
     public:       
         GPUSparseMatrix<ElemType>& ElementInverse ();
@@ -212,13 +212,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template <class ElemTypeDummy>
         friend MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemTypeDummy>& us);
 
-        bool m_legacy;
-        int m_colIdx; //used to SetValue()
-        ElemType *m_val; // values
-        size_t *m_row; //row/col ids in CSC/CSR format
-        size_t *m_pb; //begin ids of col/row in CSC/CSR format
-        size_t *m_rowIdx; //indexer of m_row
-        size_t *m_col; //used in COO format
+        size_t m_totalBufferSizeAllocated;
+        GPUSPARSE_INDEX_TYPE *m_rowIdx; //indexer of m_row
 
         size_t m_blockSize; //block size        
         ElemType *m_blockVal; //block values

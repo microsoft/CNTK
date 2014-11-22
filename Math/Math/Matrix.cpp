@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //This function will only initialize default bland matrix. The actual matrices need to allocated
     //after calling this function and flags need to set correctly by calling SetDataLocation.
     template<class ElemType>
-    void Matrix<ElemType>::Init(short deviceId)
+    void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
     {
         m_baseMatrix=NULL;
         m_GPUMatrix=NULL;
@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //this is a private constructor only used internally to initialize a blank matrix
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, short deviceID)
+    Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID)
     {
         Init(deviceID);
 
@@ -162,7 +162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //this is a private constructor only used internally to initialize a blank matrix
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, short deviceID)
+    Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID)
     {    
         Init(deviceID);
 
@@ -172,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //this is a private constructor only used internally to initialize a blank matrix
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, short deviceID)
+    Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID)
     {
         Init(deviceID);
 
@@ -181,7 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>::Matrix(short deviceID)
+    Matrix<ElemType>::Matrix(DEVICEID_TYPE deviceID)
     {
         Init(deviceID);
 
@@ -194,7 +194,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // pArray - pointer to current data array, will replace existing pointer in baseMatrix if != NULL
     // deviceId - deviceId where the pArray exists
     template<class ElemType>
-    Matrix<ElemType>::Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType *pArray, short deviceId) // constructor for setting Matrix from a base matrix
+    Matrix<ElemType>::Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType *pArray, DEVICEID_TYPE deviceId) // constructor for setting Matrix from a base matrix
     {
         Init(deviceId);
 
@@ -230,7 +230,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    Matrix<ElemType>::Matrix(FILE* f, const char * matrixName, short deviceId, const MatrixType matrixType)
+    Matrix<ElemType>::Matrix(FILE* f, const char * matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType)
     {
         if (deviceId == MANAGEDEXTERN)
             throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue()\n");            
@@ -268,7 +268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, short deviceId, const MatrixType matrixType)
+    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType)
     {
         if (deviceId == MANAGEDEXTERN)
             throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
@@ -306,7 +306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, short deviceId, const size_t nnz)
+    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz)
     {
         Init(deviceId);
 
@@ -344,7 +344,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //copy constructor, deep copy
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, short deviceId)
+    Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId)
     {
         if (deviceId == MANAGEDEXTERN)
             throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
@@ -352,7 +352,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int origCopyFromDeviceId = deepCopyFrom.GetDeviceId();
 
         if (deviceId == AUTOPLACEMATRIX)  //use copyFrom's device if we have choice
-            deviceId = (short)origCopyFromDeviceId;
+            deviceId = (DEVICEID_TYPE)origCopyFromDeviceId;
 
         Init(deviceId);  //will set m_preferredDeviceId
 
@@ -387,7 +387,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)  
     {
-        Init((short)moveFrom.GetDeviceId());
+        Init((DEVICEID_TYPE)moveFrom.GetDeviceId());
 
         DISPATCH_MATRIX_ON_FLAG(&moveFrom,
             this,
@@ -459,7 +459,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>  Matrix<ElemType>::Ones(const size_t rows, const size_t cols, short deviceId)
+    Matrix<ElemType>  Matrix<ElemType>::Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId)
     {
         Matrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         c.SetValue(1);
@@ -467,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>  Matrix<ElemType>::Zeros(const size_t rows, const size_t cols, short deviceId)
+    Matrix<ElemType>  Matrix<ElemType>::Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId)
     {
         Matrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         c.SetValue(0);
@@ -475,7 +475,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>  Matrix<ElemType>::Eye(const size_t rows, short deviceId)
+    Matrix<ElemType>  Matrix<ElemType>::Eye(const size_t rows, DEVICEID_TYPE deviceId)
     {
         Matrix<ElemType> c(rows, rows, deviceId); //will initialize to 0
         c.SetDiagonalValue(1);
@@ -483,7 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>  Matrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed, short deviceId)
+    Matrix<ElemType>  Matrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed, DEVICEID_TYPE deviceId)
     {
         Matrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         c.SetUniformRandomValue(low, high, seed);
@@ -491,7 +491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>  Matrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed, short deviceId)
+    Matrix<ElemType>  Matrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed, DEVICEID_TYPE deviceId)
     {
         Matrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         c.SetGaussianRandomValue(mean, sigma, seed);
@@ -594,7 +594,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {            
         int devId = GetDeviceId();
 
-        Matrix<ElemType> slice(matrixFlagDontOwnBuffer, (short)devId); //
+        Matrix<ElemType> slice(matrixFlagDontOwnBuffer, (DEVICEID_TYPE)devId); //
 
         slice.m_preferredDeviceId = m_preferredDeviceId;
 
@@ -790,7 +790,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("Transpose: Matrix is empty.");
 
-        Matrix<ElemType> c(this->GetNumCols(), this->GetNumRows(), (short)this->GetDeviceId());
+        Matrix<ElemType> c(this->GetNumCols(), this->GetNumRows(), (DEVICEID_TYPE)this->GetDeviceId());
         c.AssignTransposeOf(*this);
         return c;
     }
@@ -1518,7 +1518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::operator* (ElemType alpha) const
     {
-        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (short)this->m_preferredDeviceId);
+        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (DEVICEID_TYPE)this->m_preferredDeviceId);
         Scale(alpha, *this, c);
         return c;
     }
@@ -1576,7 +1576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {        
         if (GetNumElements() == 1)
         {
-            Matrix<ElemType> c((short)a.GetPreferredDeviceId());
+            Matrix<ElemType> c((DEVICEID_TYPE)a.GetPreferredDeviceId());
 
             DISPATCH_MATRIX_ON_FLAG(this,
                 nullptr,
@@ -1590,7 +1590,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (a.GetNumElements() == 1)
         {
-            Matrix<ElemType> c((short)GetPreferredDeviceId());
+            Matrix<ElemType> c((DEVICEID_TYPE)GetPreferredDeviceId());
 
             DISPATCH_MATRIX_ON_FLAG(&a,
                 nullptr,
@@ -1604,7 +1604,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            Matrix<ElemType> c(this->GetNumRows(), a.GetNumCols(), (short)GetPreferredDeviceId());
+            Matrix<ElemType> c(this->GetNumRows(), a.GetNumCols(), (DEVICEID_TYPE)GetPreferredDeviceId());
             Multiply(*this, a, c);
             return c;
         }
@@ -1636,7 +1636,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::operator^ (ElemType alpha) const
     {
-        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (short)GetDeviceId());
+        Matrix<ElemType> c(GetNumRows(), GetNumCols(), (DEVICEID_TYPE)GetDeviceId());
         ElementWisePower(alpha, *this, c);
         return c;
     }
@@ -3436,7 +3436,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else
                     {   
-                        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),(short)c.GetDeviceId());
+                        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),(DEVICEID_TYPE)c.GetDeviceId());
                         GPUSparseMatrix<ElemType>::Multiply(first,second,*tmp.m_GPUMatrix);
                         c=tmp+c*beta;                               
                     }
@@ -3948,9 +3948,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    short Matrix<ElemType>::GetBestGPUDeviceId()
+    DEVICEID_TYPE Matrix<ElemType>::GetBestGPUDeviceId()
     { 
-        return (short)GPUMatrix<ElemType>::GetBestGPUDeviceId();
+        return (DEVICEID_TYPE)GPUMatrix<ElemType>::GetBestGPUDeviceId();
     }
 
     template<class ElemType>

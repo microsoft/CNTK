@@ -43,21 +43,21 @@ cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
-    void PrepareDevice(short deviceId);
+    void PrepareDevice(DEVICEID_TYPE deviceId);
 
     //This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
     template<class ElemType>
     class MATH_API DeviceBoundNumber
     {
     private:
-        int m_computeDevice;
+        DEVICEID_TYPE m_computeDevice;
         ElemType* m_data;
     public:        
         DeviceBoundNumber() {m_data=NULL;};        
         DeviceBoundNumber(const DeviceBoundNumber<ElemType> &deepCopy);
         DeviceBoundNumber(DeviceBoundNumber<ElemType> &&shallowCopy);
         ~DeviceBoundNumber();
-        int GetDeviceId() const {return m_computeDevice;}
+        DEVICEID_TYPE GetDeviceId() const { return m_computeDevice; }
         ElemType* ExposePointer2Value() const {return m_data;}
         //performs shallow copy only
         void ShallowCopyFrom(ElemType* newVal,int newValsDevceId);
@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static int GetBestGPUDeviceId();  
         int GetComputeDeviceId() const;
-        void PrepareDevice(short deviceId=-1) const;
+        void PrepareDevice(DEVICEID_TYPE deviceId=-1) const;
 
         static cublasHandle_t GetCublasHandle(int computeDevice=-1);
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
