@@ -86,23 +86,34 @@ Overview
 
 \begin_layout Standard
 The Computational Network Toolkit (CNTK) is a software package that makes
- it easy to design and test computational networks such as deep-belief networks.
+ it easy to design and test computational networks such as deep neural networks.
+ A computational network is a style of computation where data flows through
+ a graph and computations happen in the nodes of the graph.
  The goal of a computational network is to take feature data, transform
- the data through a network of simple computations, and then produce an
- output.
+ the data through a network of simple computations, and then produce one
+ or more outputs.
  The output is often some sort of decision based on the input features.
  A computational network can take many forms―such as feed-forward, recursive
- or convolutional―and includes various forms of non-linearities.
- The network’s parameters are optimized to produce the best possible outcome
- for a given set of data and an optimization criteria.
+ or convolutional―and includes various forms of computations and non-linearities.
+ The network’s parameters are optimized to produce the 
+\begin_inset Quotes eld
+\end_inset
+
+best
+\begin_inset Quotes erd
+\end_inset
+
+ possible outcome for a given set of data and an optimization criteria.
 \end_layout
 
 \begin_layout Standard
-CNTK has 5 primary features:
+In this chapter we can only give readers a taste for CNTK, and specific
+ features are described in more detail later.
+ With this purpose, CNTK has 5 primary features:
 \end_layout
 
 \begin_layout Itemize
-CNTK is a general solution for training and testing all kinds of neural
+CNTK is a general solution for training and testing many kinds of neural
  networks
 \end_layout
 
@@ -118,7 +129,7 @@ CNTK is designed to seamlessly put as many of the computations onto a GPU,
  if available, as possible.
  These types of computational networks are easy to vectorize and fit nicely
  onto GPUs.
- CNTK is compatible across many GPUs [Can we be more specific?]
+ CNTK is compatible with GPUs that support the CUDA programming environment.
 \end_layout
 
 \begin_layout Itemize
@@ -129,25 +140,39 @@ CNTK automatically calculates the needed derivatives in order to efficiently
 \end_layout
 
 \begin_layout Itemize
-CNTK can be extended by adding small amounts of code to implement the necessary
- blocks.
- This can be done with any language that can be linked with C++.
- New non-linearities and objective functions are easy to add.
+CNTK can be extended by adding small amounts of C++ code to implement the
+ necessary blocks.
+ New data readers, non-linearities, and objective functions are easy to
+ add.
+\end_layout
+
+\begin_layout Standard
+Consider the work needed to build a non-standard neural network such as
+ the variable parameter DNN [Dong, what is a variable parameter DNN? I thought
+ all DNNs had variable parameters].
+ Conventionally, one needs to design the network, derive the derivations
+ needed to optimize the network, implement the algorithm, and then run the
+ experiments.
+ These steps are error pronoe and time consuming.
+ With CNTK, however in many cases, you only need to write a simple configuration
+ file.
+ The rest of this chapter describes the configuration file needed to implement
+ two simple examples.
 \end_layout
 
 \begin_layout Standard
 The purpose of this documentation is to describe how to use CNTK for your
  own experiments.
- The bulk of this documentation describes the mathematics of computational
- networks (Chapter
+ The bulk of this documentation describes the definition and mathematics
+ of computational networks (Chapter
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "chap:CN"
 
 \end_inset
 
-), how to run and configure CNTK (Section 2), how to design networks and
- edit the models (Section 3), and how to extend CNTK (Section 4).
+), how to run and configure CNTK (Chapter 3), how to design networks and
+ edit the models (Chapter 4), and how to extend CNTK (Chapter 5).
  But first we start with a couple of simple examples to show the basics
  of CNTK.
 \end_layout
@@ -157,8 +182,8 @@ A Simple Demo
 \end_layout
 
 \begin_layout Standard
-We used a simple Matlab script (included) to generate two-dimensional data
- with binary labels.
+We used a simple Matlab script (included in the distribution) to generate
+ two-dimensional data with binary labels.
  The raw data is shown below.
  This data was stored as a text file, one sample per line, that can be read
  by the UCIFastReader method (page XX) in CNTK.
@@ -171,6 +196,7 @@ sideways false
 status open
 
 \begin_layout Plain Layout
+\align center
 \begin_inset Graphics
 	filename D:/Projects/CNTK/cntk/papers/CNTK-TechReport/figures/SimpleDemoData.png
 	scale 50
@@ -246,6 +272,416 @@ Finally, the test block specifies how to test the network.
 \end_layout
 
 \begin_layout Standard
+The entire script is shown below.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+# command=Simple_Demo_Output 
+\end_layout
+
+\begin_layout Plain Layout
+
+command=Simple_Demo:Simple_Demo_Output
+\end_layout
+
+\begin_layout Plain Layout
+
+# deviceId=-1 for CPU, >=0 for GPU devices 
+\end_layout
+
+\begin_layout Plain Layout
+
+DeviceNumber=0 
+\end_layout
+
+\begin_layout Plain Layout
+
+stderr=Demo
+\end_layout
+
+\begin_layout Plain Layout
+
+precision=float
+\end_layout
+
+\begin_layout Plain Layout
+
+modelPath=models/simple.dnn 
+\end_layout
+
+\begin_layout Plain Layout
+
+deviceId=$DeviceNumber$
+\end_layout
+
+\begin_layout Plain Layout
+
+outputNodeNames=ScaledLogLikelihood 
+\end_layout
+
+\begin_layout Plain Layout
+
+traceLevel=1
+\end_layout
+
+\begin_layout Plain Layout
+
+####################################### 
+\end_layout
+
+\begin_layout Plain Layout
+
+#  TRAINING CONFIG (Simple, Fixed LR) 
+\end_layout
+
+\begin_layout Plain Layout
+
+# #######################################
+\end_layout
+
+\begin_layout Plain Layout
+
+Simple_Demo=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    action=train
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Notation xxx:yyy*n:zzz is equivalent to xxx, then yyy repeated n times,
+\end_layout
+
+\begin_layout Plain Layout
+
+    #  then zzz     
+\end_layout
+
+\begin_layout Plain Layout
+
+    # example: 10:20*3:5 is equivalent to 10:20:20:20:5   
+\end_layout
+
+\begin_layout Plain Layout
+
+    SimpleNetworkBuilder=[
+\end_layout
+
+\begin_layout Plain Layout
+
+        layerSizes=2:50*2:2
+\end_layout
+
+\begin_layout Plain Layout
+
+        trainingCriterion=CrossEntropyWithSoftmax
+\end_layout
+
+\begin_layout Plain Layout
+
+        evalCriterion=ErrorPrediction
+\end_layout
+
+\begin_layout Plain Layout
+
+        layerTypes=Sigmoid
+\end_layout
+
+\begin_layout Plain Layout
+
+        initValueScale=1.0
+\end_layout
+
+\begin_layout Plain Layout
+
+        applyMeanVarNorm=true
+\end_layout
+
+\begin_layout Plain Layout
+
+        uniformInit=true
+\end_layout
+
+\begin_layout Plain Layout
+
+        needPrior=true     ]
+\end_layout
+
+\begin_layout Plain Layout
+
+    SGD=[
+\end_layout
+
+\begin_layout Plain Layout
+
+        # epochSize=0 means epochSize is the size of the training set
+\end_layout
+
+\begin_layout Plain Layout
+
+        epochSize=0         # Must be evenly divisible into number of data
+ frames
+\end_layout
+
+\begin_layout Plain Layout
+
+        minibatchSize=25
+\end_layout
+
+\begin_layout Plain Layout
+
+        learningRatesPerMB=0.5:0.2*20:0.1
+\end_layout
+
+\begin_layout Plain Layout
+
+        momentumPerMB=0.9
+\end_layout
+
+\begin_layout Plain Layout
+
+        dropoutRate=0.0
+\end_layout
+
+\begin_layout Plain Layout
+
+        maxEpochs=500
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Parameter values for the reader
+\end_layout
+
+\begin_layout Plain Layout
+
+    reader=[
+\end_layout
+
+\begin_layout Plain Layout
+
+      # reader to use
+\end_layout
+
+\begin_layout Plain Layout
+
+      readerType=UCIFastReader
+\end_layout
+
+\begin_layout Plain Layout
+
+      file=SimpleDataTrain.txt
+\end_layout
+
+\begin_layout Plain Layout
+
+      miniBatchMode=Partial
+\end_layout
+
+\begin_layout Plain Layout
+
+      randomize=Auto
+\end_layout
+
+\begin_layout Plain Layout
+
+      verbosity=1
+\end_layout
+
+\begin_layout Plain Layout
+
+      features=[
+\end_layout
+
+\begin_layout Plain Layout
+
+          dim=2
+\end_layout
+
+\begin_layout Plain Layout
+
+          start=0
+\end_layout
+
+\begin_layout Plain Layout
+
+      ]
+\end_layout
+
+\begin_layout Plain Layout
+
+      labels=[
+\end_layout
+
+\begin_layout Plain Layout
+
+        start=2
+\end_layout
+
+\begin_layout Plain Layout
+
+        dim=1
+\end_layout
+
+\begin_layout Plain Layout
+
+        labelDim=2
+\end_layout
+
+\begin_layout Plain Layout
+
+        labelMappingFile=SimpleMapping.txt
+\end_layout
+
+\begin_layout Plain Layout
+
+      ]
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\begin_layout Plain Layout
+
+####################################### 
+\end_layout
+
+\begin_layout Plain Layout
+
+#  OUTPUT RESUTLS (Simple)            # 
+\end_layout
+
+\begin_layout Plain Layout
+
+#######################################
+\end_layout
+
+\begin_layout Plain Layout
+
+Simple_Demo_Output=[
+\end_layout
+
+\begin_layout Plain Layout
+
+    action=write
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Parameter values for the reader
+\end_layout
+
+\begin_layout Plain Layout
+
+    reader=[
+\end_layout
+
+\begin_layout Plain Layout
+
+      # reader to use
+\end_layout
+
+\begin_layout Plain Layout
+
+      readerType=UCIFastReader
+\end_layout
+
+\begin_layout Plain Layout
+
+      file=SimpleDataTest.txt
+\end_layout
+
+\begin_layout Plain Layout
+
+      features=[
+\end_layout
+
+\begin_layout Plain Layout
+
+          dim=2
+\end_layout
+
+\begin_layout Plain Layout
+
+          start=0
+\end_layout
+
+\begin_layout Plain Layout
+
+      ]
+\end_layout
+
+\begin_layout Plain Layout
+
+      labels=[
+\end_layout
+
+\begin_layout Plain Layout
+
+        start=2
+\end_layout
+
+\begin_layout Plain Layout
+
+        dim=1
+\end_layout
+
+\begin_layout Plain Layout
+
+        labelDim=2
+\end_layout
+
+\begin_layout Plain Layout
+
+        labelMappingFile=SimpleMapping.txt
+\end_layout
+
+\begin_layout Plain Layout
+
+      ]
+\end_layout
+
+\begin_layout Plain Layout
+
+    ]
+\end_layout
+
+\begin_layout Plain Layout
+
+    outputPath=SimpleOutput             # Dump output as text
+\end_layout
+
+\begin_layout Plain Layout
+
+] 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 You can run this script using the following command on Windows 
 \end_layout
 
@@ -285,14 +721,108 @@ cn config=Simple.config
 
 \begin_layout Standard
 This CNTK job trains a feedforward network with 2 inputs (x and y coordinates),
- and hidden layers with XXX,XXX units, and then with one output unit (the
- decision).
+ and two hidden layers with 50 units, and then with two output units (one
+ for each decision).
  CNTK uses cross entropy with softmax to measure and optimize the network’s
  performance.
 \end_layout
 
 \begin_layout Standard
-Describe the output…..But first we need a UCIFastWriter!!!
+Figure 1.2 shows the optimized output (before the sigmoid) of one of the
+ two output nodes.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename D:/Projects/CNTK/cntk/papers/CNTK-TechReport/figures/SimpleDemoOutput.png
+	scale 50
+
+\end_inset
+
+
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Trained output values over the region of interest for the first (of two)
+ output neurons.
+ The dashed line shows the position where the output is zero (the decision
+ boundary).
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The output neuron successfully captures the shape of the decision boundary.
+ The network's error rate over time is interesting.
+ It is shown in Figure 1.3.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename D:/Projects/CNTK/cntk/papers/CNTK-TechReport/figures/SimpleDemoErrorRate.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Training error rate vs.
+ epoch number.
+ The network quickly converges to a solution that gets most of the data
+ correct, before finding the non-linearity that allows it to track the 
+\begin_inset Quotes eld
+\end_inset
+
+bumps
+\begin_inset Quotes erd
+\end_inset
+
+ in the decision boundary.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
