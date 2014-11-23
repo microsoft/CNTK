@@ -115,8 +115,8 @@ Jie Gao, Avner May, Baolin Peng, Andreas Stolcke, Malcolm Slaney
 \end_layout
 
 \begin_layout Date
-MSR-TR-2014-112 (DRAFT v0.2: Oct.
- 3, 2014)
+MSR-TR-2014-112 (DRAFT v0.3: Nov.
+ 23, 2014)
 \end_layout
 
 \begin_layout Standard
@@ -213,6 +213,16 @@ filename "CNTKBook_ExampleSetup_Chapter.lyx"
 LatexCommand bibtex
 bibfiles "references"
 options "IEEEtran"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset index_print
+LatexCommand printindex
+type "idx"
 
 \end_inset
 

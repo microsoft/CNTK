@@ -148,9 +148,15 @@ CNTK can be extended by adding small amounts of C++ code to implement the
 
 \begin_layout Standard
 Consider the work needed to build a non-standard neural network such as
- the variable parameter DNN [Dong, what is a variable parameter DNN? I thought
- all DNNs had variable parameters].
- Conventionally, one needs to design the network, derive the derivations
+ the variable parameter DNN 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Variable-Component-Deep-Neural-Network:2014"
+
+\end_inset
+
+.
+ Conventionally, one needs to design the network, derive the derivatives
  needed to optimize the network, implement the algorithm, and then run the
  experiments.
  These steps are error pronoe and time consuming.
@@ -164,29 +170,89 @@ Consider the work needed to build a non-standard neural network such as
 The purpose of this documentation is to describe how to use CNTK for your
  own experiments.
  The bulk of this documentation describes the definition and mathematics
- of computational networks (Chapter
+ of computational networks (Chapter 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "chap:CN"
 
 \end_inset
 
-), how to run and configure CNTK (Chapter 3), how to design networks and
- edit the models (Chapter 4), and how to extend CNTK (Chapter 5).
+), how to run and configure CNTK (Chapter 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CNTK"
+
+\end_inset
+
+), how to design networks and edit the models (Chapter 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CNTK_Adv"
+
+\end_inset
+
+), and how to extend CNTK (Chapter 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CNTK_Programmer"
+
+\end_inset
+
+).
+ Chapter 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:ASRDecoder"
+
+\end_inset
+
+ describes a modern speech decoder known as Argon, and Chapter 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:ExampleSetup"
+
+\end_inset
+
+ describes a number of CNTK examples.
  But first we start with a couple of simple examples to show the basics
  of CNTK.
+ 
 \end_layout
 
 \begin_layout Section
 A Simple Demo
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Simple Demo
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
 We used a simple Matlab script (included in the distribution) to generate
  two-dimensional data with binary labels.
- The raw data is shown below.
+ The raw data is shown below in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:A-simple-test"
+
+\end_inset
+
+.
  This data was stored as a text file, one sample per line, that can be read
- by the UCIFastReader method (page XX) in CNTK.
+ by the UCIFastReader method (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:UCIFastReader"
+
+\end_inset
+
+) in CNTK.
 \end_layout
 
 \begin_layout Standard
@@ -198,7 +264,7 @@ status open
 \begin_layout Plain Layout
 \align center
 \begin_inset Graphics
-	filename D:/Projects/CNTK/cntk/papers/CNTK-TechReport/figures/SimpleDemoData.png
+	filename ../figures/SimpleDemoDataReference.png
 	scale 50
 
 \end_inset
@@ -210,6 +276,12 @@ status open
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:A-simple-test"
+
+\end_inset
+
 A simple test set to demonstrate the power and ease of CNTK.
 \end_layout
 
@@ -246,29 +318,69 @@ y specifies the actions needed to train the desired network.
 
 \begin_deeper
 \begin_layout Itemize
-The SimpleNetworkBuilder block specifies the topology of the network, how
- to initialize the network, and how to evaluate its performance (cross-entry
- with softmax in this case).
+The SimpleNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SimpleNetworkBuilder
+\end_layout
+
+\end_inset
+
+ block specifies the topology of the network, how to initialize the network,
+ and how to evaluate its performance (cross-entry with softmax in this case).
 \end_layout
 
 \begin_layout Itemize
-The SGD (Stochastic Gradient Descent) block tells CNTK how to optimize the
- network to find the best parameters.
- This includes information about mini-block size (so the computation is
- more efficient), the learning rate, and how many epochs to train.
+The SGD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
+ (Stochastic Gradient Descent
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Stochastic Gradient Descent
+\end_layout
+
+\end_inset
+
+) block tells CNTK how to optimize the network to find the best parameters.
+ This includes information about miniblock size (so the computation is more
+ efficient), the learning rate, and how many epochs to train.
 \end_layout
 
 \begin_layout Itemize
-Finally, the reader block specifies from where to read the input data, how
- the features and labels are formatted, and how to randomize the order the
- data is applied to the network during training 
+The reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+ block specifies from where to read the input data, how the features and
+ labels are formatted, and how to randomize the order the data is applied
+ to the network during training 
 \end_layout
 
 \end_deeper
 \begin_layout Itemize
-Finally, the test block specifies how to test the network.
+Finally, the Simple_Demo_Output block specifies how to test the network.
  Again we must specify the source of the data (we are training and testing
  on the same data to keep the example small) and how to evaluate the results.
+ CNTK write the value of the two output nodes, for each test case, into
+ a text file.
 \end_layout
 
 \begin_layout Standard
@@ -337,12 +449,12 @@ traceLevel=1
 
 \begin_layout Plain Layout
 
-#  TRAINING CONFIG (Simple, Fixed LR) 
+#  TRAINING CONFIG (Simple, Fixed LR) # 
 \end_layout
 
 \begin_layout Plain Layout
 
-# #######################################
+#######################################
 \end_layout
 
 \begin_layout Plain Layout
@@ -357,22 +469,27 @@ Simple_Demo=[
 
 \begin_layout Plain Layout
 
-    # Notation xxx:yyy*n:zzz is equivalent to xxx, then yyy repeated n times,
+    # Notation xxx:yyy*n:zzz is equivalent to xxx,
 \end_layout
 
 \begin_layout Plain Layout
 
-    #  then zzz     
+    #  then yyy repeated n times, then zzz
 \end_layout
 
 \begin_layout Plain Layout
 
-    # example: 10:20*3:5 is equivalent to 10:20:20:20:5   
+    # example: 10:20*3:5 is equivalent to 10:20:20:20:5
 \end_layout
 
 \begin_layout Plain Layout
 
     SimpleNetworkBuilder=[
+\end_layout
+
+\begin_layout Plain Layout
+
+        # 2 input, 2 50-element hidden, 2 output
 \end_layout
 
 \begin_layout Plain Layout
@@ -422,13 +539,23 @@ Simple_Demo=[
 
 \begin_layout Plain Layout
 
-        # epochSize=0 means epochSize is the size of the training set
+        # epochSize=0 means epochSize is the size of
 \end_layout
 
 \begin_layout Plain Layout
 
-        epochSize=0         # Must be evenly divisible into number of data
- frames
+        # the training set.
+ Must be evenly divisible
+\end_layout
+
+\begin_layout Plain Layout
+
+        # into number of data frames.
+\end_layout
+
+\begin_layout Plain Layout
+
+        epochSize=0
 \end_layout
 
 \begin_layout Plain Layout
@@ -508,12 +635,12 @@ Simple_Demo=[
 
 \begin_layout Plain Layout
 
-          dim=2
+          dim=2      # two-dimensional input data
 \end_layout
 
 \begin_layout Plain Layout
 
-          start=0
+          start=0    # Start with first element on line
 \end_layout
 
 \begin_layout Plain Layout
@@ -528,17 +655,17 @@ Simple_Demo=[
 
 \begin_layout Plain Layout
 
-        start=2
+        start=2      # Skip two elements
 \end_layout
 
 \begin_layout Plain Layout
 
-        dim=1
+        dim=1        # One label dimension
 \end_layout
 
 \begin_layout Plain Layout
 
-        labelDim=2
+        labelDim=2   # Two labels possible
 \end_layout
 
 \begin_layout Plain Layout
@@ -668,7 +795,7 @@ Simple_Demo_Output=[
 
 \begin_layout Plain Layout
 
-    outputPath=SimpleOutput             # Dump output as text
+    outputPath=SimpleOutput    # Dump output as text
 \end_layout
 
 \begin_layout Plain Layout
@@ -720,16 +847,23 @@ cn config=Simple.config
 \end_layout
 
 \begin_layout Standard
-This CNTK job trains a feedforward network with 2 inputs (x and y coordinates),
- and two hidden layers with 50 units, and then with two output units (one
- for each decision).
+This CNTK job trains a feedforward network with 2-dimensional input (x and
+ y coordinates), and two hidden layers with 50 units each, and then with
+ two output units (one for each decision).
  CNTK uses cross entropy with softmax to measure and optimize the network’s
  performance.
 \end_layout
 
 \begin_layout Standard
-Figure 1.2 shows the optimized output (before the sigmoid) of one of the
- two output nodes.
+Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Trained-output-values"
+
+\end_inset
+
+ shows the optimized output (before the sigmoid) of one of the two output
+ nodes.
 \end_layout
 
 \begin_layout Standard
@@ -741,7 +875,7 @@ status open
 \begin_layout Plain Layout
 \align center
 \begin_inset Graphics
-	filename D:/Projects/CNTK/cntk/papers/CNTK-TechReport/figures/SimpleDemoOutput.png
+	filename ../figures/SimpleDemoOutputReference.png
 	scale 50
 
 \end_inset
@@ -750,6 +884,12 @@ status open
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Trained-output-values"
+
+\end_inset
+
 Trained output values over the region of interest for the first (of two)
  output neurons.
  The dashed line shows the position where the output is zero (the decision
@@ -772,8 +912,14 @@ Trained output values over the region of interest for the first (of two)
 
 \begin_layout Standard
 The output neuron successfully captures the shape of the decision boundary.
- The network's error rate over time is interesting.
- It is shown in Figure 1.3.
+ The network's error rate, shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Training-error-rate"
+
+\end_inset
+
+, over time is interesting.
 \end_layout
 
 \begin_layout Standard
@@ -785,7 +931,7 @@ status open
 \begin_layout Plain Layout
 \align center
 \begin_inset Graphics
-	filename D:/Projects/CNTK/cntk/papers/CNTK-TechReport/figures/SimpleDemoErrorRate.png
+	filename ../figures/SimpleDemoErrorRateReference.png
 	scale 50
 
 \end_inset
@@ -797,8 +943,14 @@ status open
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Training-error-rate"
+
+\end_inset
+
 Training error rate vs.
- epoch number.
+ epoch number for the simple demo.
  The network quickly converges to a solution that gets most of the data
  correct, before finding the non-linearity that allows it to track the 
 \begin_inset Quotes eld
@@ -825,8 +977,25 @@ bumps
 
 \end_layout
 
+\begin_layout Standard
+On a 2.2GHz Xeon processor with a low-end Quadro 4000 GPU, the training and
+ testing take 11 minutes 9 seconds (it is this long because the model size
+ and minibatch size are both small, and the GPU is more efficient with larger
+ amounts of data).
+\end_layout
+
 \begin_layout Section
-A Speech Demo (TIMIT)
+A Speech Demo (TIMIT
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+TIMIT
+\end_layout
+
+\end_inset
+
+)
 \end_layout
 
 \begin_layout Standard
@@ -841,8 +1010,8 @@ A second example shows how to use CNTK to do a simple speech experiment.
 There are three steps in using TIMIT with CNTK: prepare the data, train
  the network, and finally test the network’s performance.
  We will describe each step in turn.
- A (Cygwin) shell script performs the necessary actions, but the necessary
- actions can easily be replicated with other shells.
+ We provide a (cygwin) shell script to perform the necessary actions, but
+ the necessary steps can easily be replicated with other shells.
 \end_layout
 
 \begin_layout Standard
@@ -867,6 +1036,169 @@ The first step is to prepare the data using HTK (Hidden Markov Toolkit).
 \end_layout
 
 \begin_layout Standard
+The second step is to use HTK's HCopy program to compute the necessary speech
+ features.
+ In this study the features are 24-dimensional filterbank features, plus
+ delta and delta-delta features, and the results are stored in the Features/
+ directory.
+ The original TIMIT database is supplied in multiple directories and subdirector
+ies, but we've flattened the directory structure to make later processing
+ easier.
+ (No extra directories to create.)
+\end_layout
+
+\begin_layout Standard
+The third and final step is to use CNTK to compute a model that predicts
+ the correct tri-phone label.
+ The neural network has 792 input nodes, 3 hidden layers with 512 nodes
+ each, and 183 output nodes.
+\end_layout
+
+\begin_layout Description
+Input: The number of input nodes in the network divided by the dimensionality
+ of the HTK feature vector determines the width of the context window.
+ In this case 11 frames are used as input to the network.
+ 
+\end_layout
+
+\begin_layout Description
+Output: The TIMIT data is labeled with 61 different phonemes, and the network
+ is trained to recognize tri-phones.
+ Thus there are 61x3=183 output nodes.
+\end_layout
+
+\begin_layout Standard
+We use a couple of Matlab scripts to analyze the output data and compute
+ the phone confusion matrix.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:phone-confusion-matrices"
+
+\end_inset
+
+ shows the confusion matrices after 1 and 100 epochs.
+ As expected, there is much less energy in the off-diagonal terms as the
+ number of epochs grows.
+ This is also shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:speech-training-error-rate"
+
+\end_inset
+
+ which shows the training error rate calculated after each epoch.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename ../figures/ConfusionData1.png
+	scale 35
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename ../figures/ConfusionData100.png
+	scale 35
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:phone-confusion-matrices"
+
+\end_inset
+
+(Square root of the) phone confusion matrices after 1 (left) and 100 (right)
+ epochs.
+ To highlight the off-diagonal terms in these figures, we are displaying
+ the square root of all the matrix elements.
+ The single bright yellow off-diagonal pixel in the epoch 1 result corresponds
+ to phones that are supposed to be 
+\begin_inset Quotes eld
+\end_inset
+
+pau
+\begin_inset Quotes erd
+\end_inset
+
+ (silence) but are confused with 
+\begin_inset Quotes eld
+\end_inset
+
+h#
+\begin_inset Quotes erd
+\end_inset
+
+ (the beginning/end of the word.).
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename ../figures/SpeechErrorRate.png
+	scale 40
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:speech-training-error-rate"
+
+\end_inset
+
+Training error rate as a function of epoch number for the TIMIT speech example.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
 On a 2.2GHz Xeon processor the training takes 167 minutes without a GPU,
  and 61 minutes with a low-end Quadro 4000 GPU.
  

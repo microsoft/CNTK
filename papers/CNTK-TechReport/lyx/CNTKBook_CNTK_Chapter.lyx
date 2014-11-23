@@ -478,6 +478,16 @@ lder block of the options.
 \emph on
 initValueScale
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+initValueScale
+\end_layout
+
+\end_inset
+
 : the value for scaling the range of the random numbers used for initialization.
  Default is 1.
  If the model parameters are initialized using the uniform distribution,
@@ -499,6 +509,16 @@ initValueScale
 \emph on
 layerTypes
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+layerTypes
+\end_layout
+
+\end_inset
+
 : the type of nonlinear operation in hidden layers.
  Valid values are sigmoid (default), Tanh, and RectifiedLinear.
  
@@ -509,6 +529,16 @@ layerTypes
 \emph on
 uniformInit
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+uniformInit
+\end_layout
+
+\end_inset
+
 : determines whether to use uniform distribution to initialize model parameters.
  Valid values are true (default) and false (using Gaussian distribution
  to initialize model parameters).
@@ -519,6 +549,16 @@ uniformInit
 \emph on
 applyMeanVarNorm
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+applyMeanVarNorm
+\end_layout
+
+\end_inset
+
 : whether to apply mean/variance normalization on the input.
  Valid values are true and false (default) 
 \end_layout
@@ -528,6 +568,16 @@ applyMeanVarNorm
 \emph on
 addDropoutNodes
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+addDropoutNodes
+\end_layout
+
+\end_inset
+
 : whether to add drop-out nodes.
  The default is false.
  If specified to true, a drop-out node will be applied to the input node
@@ -540,7 +590,17 @@ addDropoutNodes
 \emph on
 layerSize
 \emph default
-s: specifies the dimensions of layers.
+s
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+layerSizes
+\end_layout
+
+\end_inset
+
+: specifies the dimensions of layers.
  For instance, layerSizes=128:10:200:4000 describes a neural network with
  two hidden layers.
  The first hidden layer has a dimension of 10, and the second hidden layer
@@ -554,6 +614,16 @@ s: specifies the dimensions of layers.
 \emph on
 trainingCriterion
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+trainingCriterion
+\end_layout
+
+\end_inset
+
 : the criterion used for training.
  The default is CrossEntropyWithSoftmax.
  Alternatives are SquareError, CrossEntropy, and ClassBasedCrossEntropyWithSoftm
@@ -568,6 +638,16 @@ ax.
 \emph on
 evalCriterion
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+evalCriterion
+\end_layout
+
+\end_inset
+
 : the criterion for evaluation.
  The selection of values are the same as the 
 \emph on
@@ -582,6 +662,16 @@ trainingCriterion
 \emph on
 lookupTableOrder
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lookupTableOrder
+\end_layout
+
+\end_inset
+
 : specifies the order of context expanding in the lookupNode.
  The default value is 1.
  Setting it to a value such as 3 would expand the input dimension in a context-d
@@ -601,6 +691,16 @@ For recurrent neural networks (RNNs), there are additional parameters.
 \emph on
 recurrentLayer
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+recurrentLayer
+\end_layout
+
+\end_inset
+
 : specifies the layers that contain self recurrent connections.
  By default there is no recurrent layer.
  Use the syntax n1:n2:n3 to specify that layers n1, n2, and n3 have recurrent
@@ -612,6 +712,16 @@ recurrentLayer
 \emph on
 defaultHiddenActivity
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+defaultHiddenActivity
+\end_layout
+
+\end_inset
+
 : the default hidden layer activity value used by the delay node when accessing
  values before the first observation.
  The default value is 0.1.
@@ -623,48 +733,128 @@ defaultHiddenActivity
 \emph on
 rnnType
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+rnnType
+\end_layout
+
+\end_inset
+
 : the type of predefined networks.
  Valid values are 
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-SIMPLENET: the feed-forward neural network.
+SIMPLENET
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SIMPLENET
+\end_layout
+
+\end_inset
+
+: the feed-forward neural network.
  This is the default network type.
  
 \end_layout
 
 \begin_layout Itemize
-SIMPLERNN: the simple RNN, which may be a deep RNN in which several layers
- have recurrent loops.
+SIMPLERNN
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SIMPLERNN
+\end_layout
+
+\end_inset
+
+: the simple RNN, which may be a deep RNN in which several layers have recurrent
+ loops.
  
 \end_layout
 
 \begin_layout Itemize
-CLASSLM: the class-based simple RNN.
+CLASSLM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CLASSLM
+\end_layout
+
+\end_inset
+
+: the class-based simple RNN.
  It uses sparse input, sparse parameter and sparse output.
  This is often used for language modeling tasks.
 \end_layout
 
 \begin_layout Itemize
-LBLM: the log-bilinear neural network.
+LBLM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LBLM
+\end_layout
+
+\end_inset
+
+: the log-bilinear neural network.
  
 \end_layout
 
 \begin_layout Itemize
-LSTM: the long short-term memory neural network.
+LSTM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LSTM
+\end_layout
+
+\end_inset
+
+: the long short-term memory neural network.
  
 \end_layout
 
 \begin_layout Itemize
-CLASSLSTM: the class-based long short-term memory neural network.
+CLASSLSTM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CLASSLSTM
+\end_layout
+
+\end_inset
+
+: the class-based long short-term memory neural network.
  It uses sparse input, sparse parameter and sparse output.
  This is often uesd for language modeling tasks.
 \end_layout
 
 \end_deeper
 \begin_layout Subsection
-The Network Description Language (NDL) 
+The Network Description Language
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Network Description Language
+\end_layout
+
+\end_inset
+
+ (NDL) 
 \end_layout
 
 \begin_layout Standard
@@ -687,6 +877,16 @@ reference "chap:CNTK_Adv"
 \emph on
 networkDescription
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+networkDescription
+\end_layout
+
+\end_inset
+
 : the file path of the NDL script, which will be described in Chapter 
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -719,7 +919,17 @@ ndlMacros
 \emph on
 ru
 \emph default
-n: the block of the NDL that will be executed.
+n
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+run
+\end_layout
+
+\end_inset
+
+: the block of the NDL that will be executed.
  If an external NDL file is specified via the 
 \emph on
 networkDescription
@@ -740,6 +950,16 @@ networkDescription
 \emph on
 load
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+load
+\end_layout
+
+\end_inset
+
 : the blocks of NDL scripts to load.
   Multiple blocks can be specified via a ":" separated list.
  The blocks specified by the load parameter typically contain macros, which
@@ -763,6 +983,16 @@ reference "chap:CNTK_Adv"
 \emph on
 ndlMacros
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ndlMacros
+\end_layout
+
+\end_inset
+
 : the file path where NDL macros may be loaded.
  This parameter is usually used to load a default set of NDL macros that
  can be used by all NDL scripts.
@@ -788,6 +1018,16 @@ reference "chap:CNTK_Adv"
 \emph on
 randomSeedOffset
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+randomSeedOffset
+\end_layout
+
+\end_inset
+
 : a non-negative random seed offset value in initializing the learnable
  parameters.
  The default value is 0.
@@ -806,6 +1046,16 @@ Up to now, CNTK implements an SGD learner.
 
 \begin_layout Subsection
 Stochastic Gradient Descent Learner
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Stochastic Gradient Descent Learner
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -824,6 +1074,16 @@ Training process control
 \emph on
 modelPath
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
 : the full path to save the final model.
  Must be provided and points to a valid file name.
 \end_layout
@@ -833,6 +1093,16 @@ modelPath
 \emph on
 trainCriterionNodeName
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+trainCriterionNodeName
+\end_layout
+
+\end_inset
+
 : the name of the training criterion node.
  If not provided the default training criterion node in the network will
  be used.
@@ -843,6 +1113,16 @@ trainCriterionNodeName
 \emph on
 evalCriterionNodeName
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+evalCriterionNodeName
+\end_layout
+
+\end_inset
+
 : the name of the evaluation criterion node.
  If not provided the default evaluation criterion node in the network will
  be used.
@@ -853,6 +1133,16 @@ evalCriterionNodeName
 \emph on
 epochSize
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+epochSize
+\end_layout
+
+\end_inset
+
 : epoch size, i.e., the number of samples in each epoch.
  Often is but may be different from the dataset size.
  An intermediate model and other check point information is saved for each
@@ -865,6 +1155,16 @@ epochSize
 \emph on
 keepCheckPointFiles
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+keepCheckPointFiles
+\end_layout
+
+\end_inset
+
 : whether you want to keep the check point file after a new epoch starts.
  Valid values are true and false (default).
  
@@ -875,6 +1175,16 @@ keepCheckPointFiles
 \emph on
 maxEpochs
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+maxEpochs
+\end_layout
+
+\end_inset
+
 : maximum number of epochs to run.
 \end_layout
 
@@ -883,6 +1193,16 @@ maxEpochs
 \emph on
 minibatchSize
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSize
+\end_layout
+
+\end_inset
+
 : minibatch size for each epoch.
  Default value is 256.
  Can use syntax such as 128*2:1024 which means using minibatch size 128
@@ -894,6 +1214,16 @@ minibatchSize
 \emph on
 dropoutRate
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+dropoutRate
+\end_layout
+
+\end_inset
+
 : dropout rate during the training procedure.
  Default is 0.0.
  Can use syntax such as 0.5*10:0.2 which means using dropout rate 0.5 for 10
@@ -905,6 +1235,16 @@ dropoutRate
 \emph on
 maxTempMemSizeInSamplesForCNN
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+maxTempMemSizeInSamplesForCNN
+\end_layout
+
+\end_inset
+
 : maximum temporary memory used (in number of samples) when packaging and
  unpackaging input features.
  Default is 0, which means using any value as needed.
@@ -917,6 +1257,16 @@ maxTempMemSizeInSamplesForCNN
 \emph on
 executionEngine
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+executionEngine
+\end_layout
+
+\end_inset
+
 : the execution engine to use.
  Valid values is synchronous (default).
 \end_layout
@@ -930,6 +1280,16 @@ Learning rate and momentum control
 \emph on
 learningRatesPerMB
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learningRatesPerMB
+\end_layout
+
+\end_inset
+
 : learning rates per minibatch.
  Useful when you want to use the same learning rate while the minibatch
  size is changed.
@@ -944,6 +1304,16 @@ learningRatesPerMB
 \emph on
 learningRatesPerSample
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learningRatesPerSample
+\end_layout
+
+\end_inset
+
 : learning rates per sample.
  Useful when you want to keep the learning rates per sample constant, i.e.,
  automatically increases effective learning rate for the minibatch when
@@ -959,6 +1329,16 @@ learningRatesPerSample
 \emph on
 momentumPerMB
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+momentumPerMB
+\end_layout
+
+\end_inset
+
 : momentum per minibatch.
  Default is 0.9.
  Can use syntax such as 0.1*2:0.9 which means using momentum 0.1 for 2 epochs
@@ -970,6 +1350,16 @@ momentumPerMB
 \emph on
 autoAdjust
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+autoAdjust
+\end_layout
+
+\end_inset
+
 : contains the information related to the automatic learning rate control.
  Default value is empty (
 \begin_inset Quotes eld
@@ -989,6 +1379,16 @@ autoAdjust
 \emph on
 autoAdjustLR
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+autoAdjustLR
+\end_layout
+
+\end_inset
+
 : the automatic learning rate adjustment algorithm to use.
  Valid values are None (default, don't auto adjust learning rate), AdjustAfterEp
 och (check the training criterion after each epoch using the development
@@ -998,7 +1398,17 @@ och (check the training criterion after each epoch using the development
 \end_layout
 
 \begin_layout Standard
-used in the AdjustAfterEpoch mode:
+used in the AdjustAfterEpoch
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+AdjustAfterEpoch
+\end_layout
+
+\end_inset
+
+ mode:
 \end_layout
 
 \begin_layout Itemize
@@ -1006,6 +1416,16 @@ used in the AdjustAfterEpoch mode:
 \emph on
 reduceLearnRateIfImproveLessThan
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reduceLearnRateIfImproveLessThan
+\end_layout
+
+\end_inset
+
 : reduce the learning rate if the improvement is less than this value.
  Default is 0.
  
@@ -1016,6 +1436,16 @@ reduceLearnRateIfImproveLessThan
 \emph on
 learnRateDecreaseFactor
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learnRateDecreaseFactor
+\end_layout
+
+\end_inset
+
 : the learning rate decrease factor.
  Default value is 0.618.
  
@@ -1026,6 +1456,16 @@ learnRateDecreaseFactor
 \emph on
 increaseLearnRateIfImproveMoreThan
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+increaseLearnRateIfImproveMoreThan
+\end_layout
+
+\end_inset
+
 : increase the learning rate if the improvement is larger than this value.
  Default value is 1#INF (infinity) which means never increase.
  
@@ -1036,6 +1476,16 @@ increaseLearnRateIfImproveMoreThan
 \emph on
 learnRateIncreaseFactor
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learnRateIncreaseFactor
+\end_layout
+
+\end_inset
+
 : the learning rate increase factor.
  Default value is 1.382.
  
@@ -1046,6 +1496,16 @@ learnRateIncreaseFactor
 \emph on
 loadBestModel
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+loadBestModel
+\end_layout
+
+\end_inset
+
 : weather to load the best model if the current model decreases the performance.
  Valid values are true (default) and false.
  
@@ -1060,6 +1520,16 @@ Used in the SearchBeforeEpoch mode.
 \emph on
 numMiniBatch4LRSearch
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numMiniBatch4LRSearch
+\end_layout
+
+\end_inset
+
 : the number of minibatches used to search the learning rate.
  Default value is 500.
  It's typically set to 10-20% of the total minibatches in an epoch.
@@ -1071,6 +1541,16 @@ numMiniBatch4LRSearch
 \emph on
 numPrevLearnRate
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numPrevLearnRate
+\end_layout
+
+\end_inset
+
 : number of previous learning rates used as a hint to the search range.
  Default value is 5.
  
@@ -1081,6 +1561,16 @@ numPrevLearnRate
 \emph on
 numBestSearchEpoch
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numBestSearchEpoch
+\end_layout
+
+\end_inset
+
 : number of epochs in which we use the best learning rate instead of the
  sufficient learning rate .
  Default value is 1.
@@ -1097,6 +1587,16 @@ Gradient control
 \emph on
 gradientClippingWithTruncation
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+gradientClippingWithTruncation
+\end_layout
+
+\end_inset
+
 : whether to use the truncation based gradient clipping to control gradient
  explosion.
  Valid values are true (default) and false.
@@ -1109,6 +1609,16 @@ gradientClippingWithTruncation
 \emph on
 clippingThresholdPerSample
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+clippingThresholdPerSample
+\end_layout
+
+\end_inset
+
 : the clipping thread for each sample.
  Default value is 1#INF which means infinity (i.e., clipping is turned off).
 \end_layout
@@ -1118,6 +1628,16 @@ clippingThresholdPerSample
 \emph on
 gradUpdateType
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+gradUpdateType
+\end_layout
+
+\end_inset
+
 : gradient update type.
  Valid values are None (default, no special treatment to the gradient),
  AdaGrad, and RmsProp.
@@ -1129,6 +1649,16 @@ gradUpdateType
 \emph on
 gaussianNoiseInjectStd
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+gaussianNoiseInjectStd
+\end_layout
+
+\end_inset
+
 : the standard deviation of the Gaussian noise added when using the AdaGrad
  approach.
  Default is 0.
@@ -1157,6 +1687,16 @@ reference "chap:CNTK_Adv"
 \emph on
 adaptationRegType
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+adaptationRegType
+\end_layout
+
+\end_inset
+
 : adaptation regularization type.
  Valid values are None (default) and KL (for KL divergence based regularization)
 \end_layout
@@ -1166,6 +1706,16 @@ adaptationRegType
 \emph on
 adaptationRegWeight
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+adaptationRegWeight
+\end_layout
+
+\end_inset
+
 : adaptation regularization weight.
  Default value is 0.
 \end_layout
@@ -1179,6 +1729,16 @@ Information display
 \emph on
 traceLevel
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+traceLevel
+\end_layout
+
+\end_inset
+
 : trace level to decide what information to print out in the stderr.
  Valid values are 0 (default) and 1.
 \end_layout
@@ -1188,6 +1748,16 @@ traceLevel
 \emph on
 numMBsToShowResult
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numMBsToShowResult
+\end_layout
+
+\end_inset
+
 : display training statistics after how many minibatches.
  Default is 10.
 \end_layout
@@ -1201,6 +1771,16 @@ Gradient Check
 \emph on
 gradientcheck
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+gradientcheck
+\end_layout
+
+\end_inset
+
 : determines whether to use the gradient checker.
  The default value is false.
  When using the gradient checker you need to use a minibatch size that is
@@ -1235,6 +1815,23 @@ reference "chap:CNTK_Programmer"
 
 \begin_layout Subsection
 UCIFastReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+UCIFastReader
+\end_layout
+
+\end_inset
+
+
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:UCIFastReader"
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1370,6 +1967,16 @@ In this example you can also notice two sub-blocks named features and labels.
 \emph on
 file
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
 : the file that contains the dataset.
  This parameter has been moved up from the features and labels sub-blocks,
  because UCIFastReader requires the file be the same, and moving up a level
@@ -1382,6 +1989,16 @@ file
 \emph on
 dim
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+dim
+\end_layout
+
+\end_inset
+
 : the dimension of the input value.
  Note that each column in the UCI data file represents one dimension of
  the input data.
@@ -1392,6 +2009,16 @@ dim
 \emph on
 start
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+start
+\end_layout
+
+\end_inset
+
 : the start column (zero-based) of the input data.
 \end_layout
 
@@ -1400,6 +2027,16 @@ start
 \emph on
 labelDim
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labelDim
+\end_layout
+
+\end_inset
+
 : the number of possible label values.
  This parameter is required for categorical labels since the dimension of
  the label node will be determined by this value.
@@ -1412,6 +2049,16 @@ labelDim
 \emph on
 labelMappingFile
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labelMappingFile
+\end_layout
+
+\end_inset
+
 : the path to a file used to map from the label value to a numerical label
  identifier.
  The file typically lists all possible label values, one per line, which
@@ -1430,6 +2077,16 @@ parameter up so that it can be shared by both the training and evaluation
 
 \begin_layout Subsection
 HTKMLFReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+HTKMLFReader
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1563,7 +2220,17 @@ The HTKMLFReader has the following configuration parameters:
 \begin_layout Itemize
 
 \emph on
-readMethod:
+readMethod
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+readMethod
+\end_layout
+
+\end_inset
+
+:
 \emph default
  the method used to read the features files into memory for processing during
  network training.
@@ -1615,7 +2282,17 @@ frameMode=false
 \begin_layout Itemize
 
 \emph on
-randomize:
+randomize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+randomize
+\end_layout
+
+\end_inset
+
+:
 \emph default
  Auto or None, whether the reader should randomize the data
 \end_layout
@@ -1625,6 +2302,16 @@ randomize:
 \emph on
 minibatchMode
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchMode
+\end_layout
+
+\end_inset
+
 : Partial or Full, this option decides how to handle the last minibatch
  if there are not enough frames to form a complete minibatch of the requested
  size.
@@ -1676,7 +2363,17 @@ To specify continuous-valued features, e.g.
 \begin_layout Itemize
 
 \emph on
-scpFile: 
+scpFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+scpFile
+\end_layout
+
+\end_inset
+
+: 
 \emph default
 a list of files to be processed.
  The files should be HTK compatible files and can be specified in standard
@@ -1700,7 +2397,17 @@ are described below.
 \begin_layout Itemize
 
 \emph on
-dim:
+dim
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+dim
+\end_layout
+
+\end_inset
+
+:
 \emph default
  an integer that specifies the full feature vector dimension with the desired
  context window.
@@ -1721,7 +2428,17 @@ To specify the corresponding labels, e.g.
 \begin_layout Itemize
 
 \emph on
-mlfFile:
+mlfFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+mlfFile
+\end_layout
+
+\end_inset
+
+:
 \emph default
  an HTK-style MLF file that contains the labels for all utterances specified
  in the SCP file.
@@ -1733,6 +2450,16 @@ mlfFile:
 \emph on
 labelDim
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labelDim
+\end_layout
+
+\end_inset
+
 : the total cardinality of the label set 
 \end_layout
 
@@ -1741,6 +2468,16 @@ labelDim
 \emph on
 labelMappingFile
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labelMappingFile
+\end_layout
+
+\end_inset
+
 : a list of all the labels seen in the MLF file 
 \end_layout
 
@@ -1767,6 +2504,16 @@ For recurrent structures, such as an RNN or an LSTM, there are additional
 \emph on
 frameMode
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+frameMode
+\end_layout
+
+\end_inset
+
 : true or false, whether the reader should randomize the data at the frame
  level or the utterance level.
  Setting frameMode to true is the default and is appropriate for training
@@ -1791,6 +2538,16 @@ blockRandomize
 \emph on
 nbruttsineachrecurrentiter
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+nbruttsineachrecurrentiter
+\end_layout
+
+\end_inset
+
 : specifies the number of utterances to process together for efficient training
  of networks with recurrent structures.
  The default is 1.
@@ -1802,6 +2559,16 @@ nbruttsineachrecurrentiter
 \emph on
 truncated
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+truncated
+\end_layout
+
+\end_inset
+
 : true or false
 \end_layout
 
@@ -1825,11 +2592,20 @@ on.
 \end_layout
 
 \begin_layout Standard
-The SCP files processed by the HTKMLFReader can be one of two varieties:
- either the standard format, where each line corresponds to a physical feature
- file, or the aliased format, where each line contains a logical name and
- refers to a segment of a possibly larger physical file, defined by start
- and end frames.
+The SCP files
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SCP files
+\end_layout
+
+\end_inset
+
+ processed by the HTKMLFReader can be one of two varieties: either the standard
+ format, where each line corresponds to a physical feature file, or the
+ aliased format, where each line contains a logical name and refers to a
+ segment of a possibly larger physical file, defined by start and end frames.
  The logical name is used to identify the corresponding labels in the MLF
  file.
  Even if the files are stored individually, as in the first case, the aliased
@@ -2000,7 +2776,17 @@ Finally, it is important to note that in most speech recognition applications,
 \end_layout
 
 \begin_layout Subsection
-SequenceReader 
+SequenceReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SequenceReader
+\end_layout
+
+\end_inset
+
+ 
 \end_layout
 
 \begin_layout Standard
@@ -2109,6 +2895,16 @@ In this example, the SequenceReader has following parameters:
 \emph on
 randomize
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+randomize
+\end_layout
+
+\end_inset
+
 : it is either None or Auto.
  This specifies the mode of whether doing sentence randomization of the
  whole corpus.
@@ -2118,7 +2914,17 @@ randomize
 \begin_layout Itemize
 
 \emph on
-nbruttsineachrecurrentiter 
+nbruttsineachrecurrentiter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+nbruttsineachrecurrentiter
+\end_layout
+
+\end_inset
+
+ 
 \emph default
 : this specifies the limit of the number of sentences in a minibatch.
  The reader arranges same-length input sentences, up to the specified limit,
@@ -2134,7 +2940,17 @@ nbruttsineachrecurrentiter
 \begin_layout Itemize
 
 \emph on
-unk :
+unk
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+unk
+\end_layout
+
+\end_inset
+
+ :
 \emph default
  this specifies the symbol to represent unseen input symbols.
  Usually, this symbol is “<unk>”.
@@ -2145,7 +2961,17 @@ unk :
 \begin_layout Itemize
 
 \emph on
-wordclass :
+wordclass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordclass
+\end_layout
+
+\end_inset
+
+ :
 \emph default
  this specifies the word class information.
  This is used for class-based language modeling.
@@ -2211,7 +3037,17 @@ status open
 \begin_layout Itemize
 
 \emph on
-file : 
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+ : 
 \emph default
 the file contains text strings.
  An example is below
@@ -2251,6 +3087,16 @@ In this example you can also notice one sub-blocks named labelIn.
 \emph on
 labelIn
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labelIn
+\end_layout
+
+\end_inset
+
 : the section for input label.
  It contains the following setups 
 \end_layout
@@ -2273,6 +3119,16 @@ labelDim – the dimension of labels.
 \end_deeper
 \begin_layout Subsection
 LUSequenceReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LUSequenceReader
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2429,6 +3285,16 @@ In this example, the LUSequenceReader has following parameters:
 \emph on
 wordContext
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordContext
+\end_layout
+
+\end_inset
+
 : this specifies a context window.
  For example, wordContext=0:1:2 specifies a context window of 3.
  In this context window, it reads input at a current time, the next time
@@ -2444,6 +3310,16 @@ wordContext
 \emph on
 randomize
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+randomize
+\end_layout
+
+\end_inset
+
 : it is either None or Auto.
  This specifies the mode of whether doing sentence randomization of the
  whole corpus.
@@ -2453,7 +3329,17 @@ randomize
 \begin_layout Itemize
 
 \emph on
-nbruttsineachrecurrentiter 
+nbruttsineachrecurrentiter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+nbruttsineachrecurrentiter
+\end_layout
+
+\end_inset
+
+ 
 \emph default
 : this specifies the limit of the number of sentences in a minibatch.
  The reader arranges same-length input sentences, up to the specified limit,
@@ -2469,7 +3355,17 @@ nbruttsineachrecurrentiter
 \begin_layout Itemize
 
 \emph on
-unk :
+unk
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+unk
+\end_layout
+
+\end_inset
+
+ :
 \emph default
  this specifies the symbol to represent unseen input symbols.
  Usually, this symbol is “<unk>”.
@@ -2480,6 +3376,16 @@ unk :
 \emph on
 wordmap
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordmap
+\end_layout
+
+\end_inset
+
 : this specifies a file that maps inputs to other inputs.
  This is useful if the user wants to map some inputs to unknown symbols.
  An example of the word mapping file is as follows
@@ -2508,7 +3414,31 @@ status open
 \begin_layout Itemize
 
 \emph on
-file : 
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\emph on
+ : 
 \emph default
 the file contains input and its labels.
  The last column is the label, and the other columns contain inputs.
@@ -2576,6 +3506,16 @@ In this example you can also notice two sub-blocks named features and labels.
 \emph on
 labelIn
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labelIn
+\end_layout
+
+\end_inset
+
 : the section for input label.
  It contains the following setups 
 \end_layout
@@ -2606,7 +3546,17 @@ token – token file contains a list of input words.
 \emph on
 label
 \emph default
-s: the section for output label.
+s
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labels
+\end_layout
+
+\end_inset
+
+: the section for output label.
  
 \end_layout
 
@@ -2634,7 +3584,17 @@ train
 \end_layout
 
 \begin_layout Subsection
-Train Command
+Train
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Train
+\end_layout
+
+\end_inset
+
+ Command
 \end_layout
 
 \begin_layout Standard
@@ -2643,42 +3603,119 @@ This command asks CNTK to train a model.
 \end_layout
 
 \begin_layout Itemize
-reader – the reader configuration block used to determine how to load input
- data.
+reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+ – the reader configuration block used to determine how to load input data.
  We have covered this parameter block in previous sections.
 \end_layout
 
 \begin_layout Itemize
-SGD – the SGD training setup.
+SGD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
+ – the SGD training setup.
 \end_layout
 
 \begin_layout Itemize
-NDLNetworkBuilder – the NDL network builder configuration block.
+NDLNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDLNetworkBuilder
+\end_layout
+
+\end_inset
+
+ – the NDL network builder configuration block.
 \end_layout
 
 \begin_layout Itemize
-simpleNetworkBuilde] – the simple network builder configuration block.
+simpleNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+simpleNetworkBuilder
+\end_layout
+
+\end_inset
+
+ – the simple network builder configuration block.
  
 \end_layout
 
 \begin_layout Itemize
-cvReader – (optional) the reader configuration block for cross-validation
- data
+cvReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cvReader
+\end_layout
+
+\end_inset
+
+ – (optional) the reader configuration block for cross-validation data
 \end_layout
 
 \begin_layout Itemize
-makeMode – if true (default) the training will continue from whatever epoch
- interrupted.
+makeMode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+makeMode
+\end_layout
+
+\end_inset
+
+ – if true (default) the training will continue from whatever epoch interrupted.
  If false the training will restart from scratch.
 \end_layout
 
 \begin_layout Itemize
-numMBsToShowResult – indicates after how many minibatches the intermediate
- results should be shown.
+numMBsToShowResult
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numMBsToShowResult
+\end_layout
+
+\end_inset
+
+ – indicates after how many minibatches the intermediate results should
+ be shown.
 \end_layout
 
 \begin_layout Subsection
-Adapt Command
+Adapt
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Adapt
+\end_layout
+
+\end_inset
+
+ Command
 \end_layout
 
 \begin_layout Standard
@@ -2698,7 +3735,27 @@ refNodeName – the name of the node in the computational network which will
 \end_layout
 
 \begin_layout Subsection
-Test or Eval Command
+Test
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Test Command
+\end_layout
+
+\end_inset
+
+ or 
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Eval Command
+\end_layout
+
+\end_inset
+
+Eval Command
 \end_layout
 
 \begin_layout Standard
@@ -2707,36 +3764,105 @@ This command evaluate/test a model for accuracy, usually with a test dataset.
 \end_layout
 
 \begin_layout Itemize
-reader – the reader configuration block to read the test data.
+reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+ – the reader configuration block to read the test data.
 \end_layout
 
 \begin_layout Itemize
-modelPath – the path to the model to be evaluated.
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+ – the path to the model to be evaluated.
 \end_layout
 
 \begin_layout Itemize
-minibatchSize – the minibatch size to use when reading and processing the
- dataset.
+minibatchSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSize
+\end_layout
+
+\end_inset
+
+ – the minibatch size to use when reading and processing the dataset.
 \end_layout
 
 \begin_layout Itemize
-epochSize – the size of dataset.
+epochSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+epochSize
+\end_layout
+
+\end_inset
+
+ – the size of dataset.
  Default is 0.
  The entire dataset will be evaluated if it's set to 0.
  
 \end_layout
 
 \begin_layout Itemize
-numMBsToShowResult – indicates after how many minibatches the intermediate
- results should be shown.
+numMBsToShowResult
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numMBsToShowResult
+\end_layout
+
+\end_inset
+
+ – indicates after how many minibatches the intermediate results should
+ be shown.
 \end_layout
 
 \begin_layout Itemize
-evalNodeNames – an array of one or more node names to evaluate.
+evalNodeNames
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+evalNodeNames
+\end_layout
+
+\end_inset
+
+ – an array of one or more node names to evaluate.
 \end_layout
 
 \begin_layout Subsection
 CV
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CV
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2747,18 +3873,48 @@ This command evaluates a series of models from different epochs on a development
 \end_layout
 
 \begin_layout Itemize
-crossValidationInterval – the array of 3 integers identifying the starting
- epoch, epoch increment and final epoch to evaluate.
+crossValidationInterval
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+crossValidationInterval
+\end_layout
+
+\end_inset
+
+ – the array of 3 integers identifying the starting epoch, epoch increment
+ and final epoch to evaluate.
  For example, 3:2:9 means the models 3,5,7, and 9 will be evaluated.
 \end_layout
 
 \begin_layout Itemize
-sleepTimeBetweenRuns – how many seconds to wait between runs.
+sleepTimeBetweenRuns
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+sleepTimeBetweenRuns
+\end_layout
+
+\end_inset
+
+ – how many seconds to wait between runs.
  This is needed only if your GPU is too hot.
 \end_layout
 
 \begin_layout Subsection
 Write Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Write Command
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2767,46 +3923,123 @@ This command writes the value of an output node to a file.
 \end_layout
 
 \begin_layout Itemize
-reader – the reader configuration block to read the input data.
+reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+ – the reader configuration block to read the input data.
  
 \end_layout
 
 \begin_layout Itemize
-writer – the writer configuration block to determine how to write the output
- data.
+writer
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+writer
+\end_layout
+
+\end_inset
+
+ – the writer configuration block to determine how to write the output data.
  If this value is not specified the outputPath parameter will be used.
  
 \end_layout
 
 \begin_layout Itemize
-minibatchSize – the minibatch size to use when reading and processing the
- dataset.
+minibatchSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSize
+\end_layout
+
+\end_inset
+
+ – the minibatch size to use when reading and processing the dataset.
 \end_layout
 
 \begin_layout Itemize
-epochSize – the size of dataset.
+epochSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+epochSize
+\end_layout
+
+\end_inset
+
+ – the size of dataset.
  Default is 0.
  The entire dataset will be evaluated if it's set to 0.
  
 \end_layout
 
 \begin_layout Itemize
-modelPath – the path to the model to be used to compute the output.
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+ – the path to the model to be used to compute the output.
 \end_layout
 
 \begin_layout Itemize
-outputPath – the path to the file to write the output in a text format.
+outputPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputPath
+\end_layout
+
+\end_inset
+
+ – the path to the file to write the output in a text format.
  If the writer block exists this parameter will be ignored.
  Either outputPath or writer must exist.
 \end_layout
 
 \begin_layout Itemize
-outputNodeNames – an array of one or more output node names to be written
- to a file.
+outputNodeNames
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputNodeNames
+\end_layout
+
+\end_inset
+
+ – an array of one or more output node names to be written to a file.
 \end_layout
 
 \begin_layout Subsection
 Edit Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Command
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2823,17 +4056,47 @@ reference "chap:CNTK_Adv"
 \end_layout
 
 \begin_layout Itemize
-editPath – the path to the MEL script to be executed.
+editPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+editPath
+\end_layout
+
+\end_inset
+
+ – the path to the MEL script to be executed.
 \end_layout
 
 \begin_layout Itemize
-ndlMacros – the path to the NDL macros file that will be loaded and used
- in the MEL script.
+ndlMacros
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ndlMacros
+\end_layout
+
+\end_inset
+
+ – the path to the NDL macros file that will be loaded and used in the MEL
+ script.
  
 \end_layout
 
 \begin_layout Subsection
 Dumpnode Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dumpnode Command
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2843,29 +4106,79 @@ This command dumps the information of node(s) to an output file, which can
 \end_layout
 
 \begin_layout Itemize
-modelPath – the path to the model file containing the nodes to dump.
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+ – the path to the model file containing the nodes to dump.
 \end_layout
 
 \begin_layout Itemize
-nodeName – the name of the node to be written to a file.
+nodeName
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+nodeName
+\end_layout
+
+\end_inset
+
+ – the name of the node to be written to a file.
  If not specified all nodes will be dumped.
 \end_layout
 
 \begin_layout Itemize
-outputFile – the path to the output file.
+outputFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputFile
+\end_layout
+
+\end_inset
+
+ – the path to the output file.
  If not specified a file name will be automatically generated based on the
  modelPath.
  
 \end_layout
 
 \begin_layout Itemize
-printValues – determines whether to print the values associated with a node
- if the node's values are persisted in the model.
+printValues
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+printValues
+\end_layout
+
+\end_inset
+
+ – determines whether to print the values associated with a node if the
+ node's values are persisted in the model.
  Default is true.
 \end_layout
 
 \begin_layout Subsection
 CreateLabelMap Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CreateLabelMap Command
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2877,16 +4190,35 @@ Often it is easy to manually craft the label mapping file.
 \end_layout
 
 \begin_layout Itemize
-section – the parameter block name (usually a train block) which has the
- reader sub-block that will be used to generate the label mapping file.
+section
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+section
+\end_layout
+
+\end_inset
+
+ – the parameter block name (usually a train block) which has the reader
+ sub-block that will be used to generate the label mapping file.
  The generated label mapping file will be saved to the labelMappingFile
  specified in the reader sub-block of this parameter block.
  
 \end_layout
 
 \begin_layout Itemize
-minibatchSize – the minibatch size to use when creating the label mapping
- file.
+minibatchSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSize
+\end_layout
+
+\end_inset
+
+ – the minibatch size to use when creating the label mapping file.
 \end_layout
 
 \begin_layout Section
@@ -2900,6 +4232,16 @@ Besides commands, there are several top-level configurations that you can
 
 \begin_layout Subsection
 Stderr
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Stderr
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2944,6 +4286,16 @@ cntk_mnistTrain.log.
 
 \begin_layout Subsection
 DeviceId
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DeviceId
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2973,6 +4325,16 @@ all : use all the available GPU devices (currently this flag is not supported)
 
 \begin_layout Subsection
 Precision
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Precision
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3006,6 +4368,16 @@ The valid values are float (default) and double.
 
 \begin_layout Subsection
 TraceLevel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+TraceLevel
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3237,6 +4609,16 @@ mnistTest=[
 
 \begin_layout Subsection
 Configuration Overloads In the Command Line
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Command Line
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3308,6 +4690,16 @@ cn.exe configFile=yourExp.config mnistTrain=[reader=[file=mynewfile.txt]]
 
 \begin_layout Subsection
 Layered Configuration Files
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Layered Configuration Files
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3473,6 +4865,16 @@ ig will effectively be included in yourExpA.config.
 
 \begin_layout Subsection
 Stringize Variables
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Stringize Variables
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
