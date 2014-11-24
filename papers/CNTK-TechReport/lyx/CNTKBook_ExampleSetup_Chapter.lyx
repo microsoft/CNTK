@@ -112,6 +112,16 @@ TIMIT)
 
 \begin_layout Subsection
 Training a DNN with SimpleNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SimpleNetworkBuilder
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -149,6 +159,16 @@ SimpleNetworkBuilder
 \emph on
 SGD
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
 : this block specifies the parameters for stochastic gradient descent optimizati
 on.
  In this example, a total of 25 epochs will be run using a fixed learning
@@ -162,9 +182,29 @@ on.
 \begin_layout Itemize
 
 \emph on
-reader:
+reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+:
 \emph default
- this example uses the HTKMLFReader.
+ this example uses the HTKMLFReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+HTKMLFReader
+\end_layout
+
+\end_inset
+
+.
  For SimpleNetworkBuilder, the inputs must be called 
 \begin_inset Quotes eld
 \end_inset
@@ -182,8 +222,18 @@ labels
 \end_inset
 
 .
- The scpFile contains the list of files to be processed and the mlfFile
- contains the labels for these files.
+ The scpFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+scpFile
+\end_layout
+
+\end_inset
+
+ contains the list of files to be processed and the mlfFile contains the
+ labels for these files.
  More details about the HTKMLFReader can be found in Section 1.4.2.
 \end_layout
 
@@ -435,6 +485,16 @@ cvReader
 \end_inset
 
 AutoAdjust
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+autoAdjust
+\end_layout
+
+\end_inset
+
+
 \begin_inset Quotes erd
 \end_inset
 
@@ -652,6 +712,16 @@ In this example, the learning rate will be reduced by a factor of 0.5 if
 
 \begin_layout Subsection
 Training a DNN with NDLNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDLNetworkBuilder
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -739,12 +809,31 @@ reader
 
 \begin_layout Subsection
 Training an autoencoder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+autoencoder
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
 Training an autoencoder is straightforward using either SimpleNetworkBuilder
- or NDLNetworkBuilder by using the SquareError criterion node rather than
- the CrossEntropyWithSoftmax criterion node.
+ or NDLNetworkBuilder by using the SquareError
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SquareError
+\end_layout
+
+\end_inset
+
+ criterion node rather than the CrossEntropyWithSoftmax criterion node.
  In this example, the network is constructed with NDL.
  Below is a snippet from the NDL file for this example.
  This autoencoder has three hidden layers including a middle bottleneck
@@ -1018,7 +1107,17 @@ TIMIT.train.scp.fbank.fullpath
 \end_layout
 
 \begin_layout Subsection
-Using layer-by-layer discriminative pre-training
+Using layer-by-layer 
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+discriminative pre-training
+\end_layout
+
+\end_inset
+
+discriminative pre-training
 \end_layout
 
 \begin_layout Standard
@@ -1037,7 +1136,27 @@ It is well known that deep networks can be difficult to optimize, especially
 
 \begin_layout Standard
 This process can be performed in CNTK using alternating steps of model training
- and model editing using the Model Editing Language (MEL).
+ and model editing using the Model Editing Language
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Model Editing Language
+\end_layout
+
+\end_inset
+
+ (MEL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MEL
+\end_layout
+
+\end_inset
+
+).
  The config file example shows how to do this using a series of execution
  commands.
  The top level command contains five configuration blocks to execute in
@@ -1066,6 +1185,16 @@ This main configuration file is a good example of how certain config blocks
  In this example, the 
 \emph on
 SGD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
+
 \emph default
  and 
 \emph on
@@ -1383,6 +1512,16 @@ In this script, the initial model is loaded and set as the default model.
 
 \begin_layout Subsection
 Training a network with multi-task learning
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+multi-task learning
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1594,6 +1733,16 @@ eval
 
 \begin_layout Subsection
 Training a network with multiple inputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+multiple inputs
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1841,7 +1990,27 @@ The rest of the hidden layers and the output layer with a cross entropy
 \end_layout
 
 \begin_layout Subsection
-Evaluating networks and cross validation
+Evaluating networks
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Evaluating networks
+\end_layout
+
+\end_inset
+
+ and cross validation
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cross validation
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1945,7 +2114,17 @@ crossValidationInterval=0:2:25
 \end_layout
 
 \begin_layout Subsection
-Writing network outputs to files
+Writing network outputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Writing network outputs
+\end_layout
+
+\end_inset
+
+ to files
 \end_layout
 
 \begin_layout Standard
@@ -2204,11 +2383,41 @@ cntkSpeech.dnn
 
 \begin_layout Section
 RNN Language Model
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RNN ! Language Model
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-Recurrent neural network (RNN) language models have been proven to obtain
- state-of-the-art performance in language modeling.
+Recurrent neural network
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Recurrent ! neural network (RNN)
+\end_layout
+
+\end_inset
+
+ (RNN
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RNN
+\end_layout
+
+\end_inset
+
+) language models have been proven to obtain state-of-the-art performance
+ in language modeling.
  We use Penn Treebank data set to demonstrate how to build a RNN language
  model with CNTK.
  In particular, we will build a class based RNN language model.
@@ -2224,6 +2433,16 @@ rnnlmConfig.txt, which consists of two components: train and test.
 
 \begin_layout Subsection
 Train
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Train
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2232,12 +2451,32 @@ Training parameters are specified in this section, with the most important
 \end_layout
 
 \begin_layout Itemize
-action=trainRNN.
+action
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+action
+\end_layout
+
+\end_inset
+
+=trainRNN.
  It indicates the section is for training.
 \end_layout
 
 \begin_layout Itemize
-minibatchSize=10.
+minibatchSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSize
+\end_layout
+
+\end_inset
+
+=10.
  Mini batch size is 10.
  That is, 10 words are processed at the same time during forward (computing
  evaluation value) and backward (computing gradients) processes.
@@ -2245,13 +2484,33 @@ minibatchSize=10.
 \end_layout
 
 \begin_layout Itemize
-deviceId=-1.
+deviceId
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+deviceId
+\end_layout
+
+\end_inset
+
+=-1.
  -1 is CPU device.
  One can change to GPU devices in non-negative intergers (0, 1, etc.).
 \end_layout
 
 \begin_layout Itemize
-epochSize=4430000.
+epochSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+epochSize
+\end_layout
+
+\end_inset
+
+=4430000.
  The max number of words used to train RNN model in each epoch.
  This provides a way to use a proportion of entire training data for model
  training.
@@ -2259,7 +2518,17 @@ epochSize=4430000.
 \end_layout
 
 \begin_layout Itemize
-rnnType=CLASSLM.
+rnnType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+rnnType
+\end_layout
+
+\end_inset
+
+=CLASSLM.
  The RNN network structure.
  It consists of an input layer, a recurrent hidden layer and an output layer
  (including classes and vocabularies).
@@ -2267,22 +2536,62 @@ rnnType=CLASSLM.
 \end_layout
 
 \begin_layout Itemize
-SimpleNetworkBuilder section
+SimpleNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SimpleNetworkBuilder
+\end_layout
+
+\end_inset
+
+ section
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-trainingCriterion=classcrossentropywithsoftmax.
+trainingCriterion
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+trainingCriterion
+\end_layout
+
+\end_inset
+
+=classcrossentropywithsoftmax.
  Training criterion used in model training.
 \end_layout
 
 \begin_layout Itemize
-nodeType=Sigmoid.
+nodeType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+nodeType
+\end_layout
+
+\end_inset
+
+=Sigmoid.
  Non-linearity function used in hidden layer.
 \end_layout
 
 \begin_layout Itemize
-layerSizes=10000:200:10050.
+layerSizes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+layerSizes
+\end_layout
+
+\end_inset
+
+=10000:200:10050.
  Sizes of input, hidden and ouput layers.
  Input layer size is equal to vocabulary size, hidden layer is normally
  in the range of 50 to 500, output layer size is the sum of vocabulary size
@@ -2290,23 +2599,63 @@ layerSizes=10000:200:10050.
 \end_layout
 
 \begin_layout Itemize
-uniformInit=true.
+uniformInit
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+uniformInit
+\end_layout
+
+\end_inset
+
+=true.
  Whether to use uniformly randomizied values for initial paramter weights.
 \end_layout
 
 \end_deeper
 \begin_layout Itemize
-SGD section
+SGD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
+ section
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-learningRatesPerSample=0.1.
+learningRatesPerSample
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learningRatesPerSample
+\end_layout
+
+\end_inset
+
+=0.1.
  Learning rate in stochastic gradient descent.
 \end_layout
 
 \begin_layout Itemize
-momentumPerMB=0.
+momentumPerMB
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+momentumPerMB
+\end_layout
+
+\end_inset
+
+=0.
  Momentum used in updating parameter weights.
  The updating equation is 
 \begin_inset Formula $g_{new}=(1-m)*g+m*g_{old}$
@@ -2332,36 +2681,96 @@ momentumPerMB=0.
 \end_layout
 
 \begin_layout Itemize
-gradientClippingWithTruncation=true.
+gradientClippingWithTruncation
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+gradientClippingWithTruncation
+\end_layout
+
+\end_inset
+
+=true.
  Whether to truncate gradient values if their abosolute values are greater
  than clippingThresholdPerSample.
 \end_layout
 
 \begin_layout Itemize
-clippingThresholdPerSample=15.0.
+clippingThresholdPerSample
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+clippingThresholdPerSample
+\end_layout
+
+\end_inset
+
+=15.0.
  Used when gradientClippingWithTruncation=true.
 \end_layout
 
 \begin_layout Itemize
-maxEpochs=40.
+maxEpochs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+maxEpochs
+\end_layout
+
+\end_inset
+
+=40.
  Maximum number of training epochs.
 \end_layout
 
 \begin_layout Itemize
-numMBsToShowResult=2000.
+numMBsToShowResult
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numMBsToShowResult
+\end_layout
+
+\end_inset
+
+=2000.
  The frequency of showing training/validation loss results (in terms of
  how many mini-batches are processed).
 \end_layout
 
 \begin_layout Itemize
-gradUpdateType=None.
+gradUpdateType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+gradUpdateType
+\end_layout
+
+\end_inset
+
+=None.
  How the gradients are computed.
  None stands for standard gradient update.
  One can also choose adagrad or rmsprop.
 \end_layout
 
 \begin_layout Itemize
-modelPath=C:
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+=C:
 \backslash
 CNTKExp
 \backslash
@@ -2374,36 +2783,96 @@ modelRnnCNTK.
 \end_layout
 
 \begin_layout Itemize
-loadBestModel=true.
+loadBestModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+loadBestModel
+\end_layout
+
+\end_inset
+
+=true.
  Wether to use the best of previous models to start training in each epoch.
 \end_layout
 
 \begin_layout Itemize
-reduceLearnRateIfImproveLessThan=0.001.
+reduceLearnRateIfImproveLessThan
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reduceLearnRateIfImproveLessThan
+\end_layout
+
+\end_inset
+
+=0.001.
  The learning parameter is reduced if the difference between previous criterion
  and current criterion is smaller than previous criterion multiplied by
  reduceLearnRateIfImproveLessThan.
 \end_layout
 
 \begin_layout Itemize
-continueReduce=true.
+continueReduce
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+continueReduce
+\end_layout
+
+\end_inset
+
+=true.
  If true, the learning rate is always reduced per epoch once it is first
  reduced.
 \end_layout
 
 \begin_layout Itemize
-learnRateDecreaseFactor=0.5.
+learnRateDecreaseFactor
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learnRateDecreaseFactor
+\end_layout
+
+\end_inset
+
+=0.5.
  Learning rate decrese factor.
 \end_layout
 
 \end_deeper
 \begin_layout Itemize
-reader section
+reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+ section
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-wordclass=C:
+wordclass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordclass
+\end_layout
+
+\end_inset
+
+=C:
 \backslash
 CNTKExp
 \backslash
@@ -2453,7 +2922,17 @@ key "SpeedRegularization-Zweig:2013"
 
 \end_deeper
 \begin_layout Itemize
-file=C:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=C:
 \backslash
 CNTKExp
 \backslash
@@ -2476,12 +2955,32 @@ ptb.train.cntk.txt.
 \end_deeper
 \end_deeper
 \begin_layout Itemize
-cvReader section
+cvReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cvReader
+\end_layout
+
+\end_inset
+
+ section
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-wordclass=C:
+wordclass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordclass
+\end_layout
+
+\end_inset
+
+=C:
 \backslash
 CNTKExp
 \backslash
@@ -2496,7 +2995,17 @@ vocab.txt.
 \end_layout
 
 \begin_layout Itemize
-file=C:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=C:
 \backslash
 CNTKExp
 \backslash
@@ -2514,6 +3023,16 @@ ptb.valid.cntk.txt.
 \end_deeper
 \begin_layout Subsection
 Test
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Test
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2522,27 +3041,77 @@ Test parameters are specified in this section, with the most important ones
 \end_layout
 
 \begin_layout Itemize
-action=eval.
+action
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+action
+\end_layout
+
+\end_inset
+
+=eval.
  It indicates the section is for test.
 \end_layout
 
 \begin_layout Itemize
-minibatchSize=1.
+minibatchSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSize
+\end_layout
+
+\end_inset
+
+=1.
  Mini batch size is 1.
 \end_layout
 
 \begin_layout Itemize
-deviceId=-1.-1 is CPU device.
+deviceId
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+deviceId
+\end_layout
+
+\end_inset
+
+=-1.-1 is CPU device.
  One can change to GPU devices in non-negative intergers (0, 1, etc.).
 \end_layout
 
 \begin_layout Itemize
-reader section
+reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+ section
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-wordclass=C:
+wordclass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordclass
+\end_layout
+
+\end_inset
+
+=C:
 \backslash
 CNTKExp
 \backslash
@@ -2557,7 +3126,17 @@ vocab.txt.
 \end_layout
 
 \begin_layout Itemize
-file=C:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ile
+\end_layout
+
+\end_inset
+
+=C:
 \backslash
 CNTKExp
 \backslash
@@ -2575,6 +3154,16 @@ ptb.test.cntk.txt.
 \end_deeper
 \begin_layout Subsection
 Results
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Results
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2593,12 +3182,31 @@ With the above configuration, we achieved the training speech of 2600 words/sec
 \end_layout
 
 \begin_layout Section
-LSTM Language Model
+LSTM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LSTM
+\end_layout
+
+\end_inset
+
+ Language Model
 \end_layout
 
 \begin_layout Standard
-We apply long-short-term memory (LSTM) recurrent neural network for language
- modeling task.
+We apply long-short-term memory
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+long-short-term memory
+\end_layout
+
+\end_inset
+
+ (LSTM) recurrent neural network for language modeling task.
  The example setup is at ExampleSetups
 \backslash
 LM
@@ -2614,55 +3222,164 @@ Training
 \end_layout
 
 \begin_layout Itemize
-action=trainRNN : this informs CNTK to call RNN function.
+action
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+action
+\end_layout
+
+\end_inset
+
+=trainRNN : this informs CNTK to call RNN function.
  
 \end_layout
 
 \begin_layout Itemize
-deviceId=-1 : this specifies using CPU.
+deviceId
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+deviceId
+\end_layout
+
+\end_inset
+
+=-1 : this specifies using CPU.
 \end_layout
 
 \begin_layout Itemize
-SimpleNetworkBuilder: 
+SimpleNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SimpleNetworkBuilder
+\end_layout
+
+\end_inset
+
+: 
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-recurrentLayer=1 : this specifies that layer 1 is recurrent layer.
+recurrentLayer
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+recurrentLayer
+\end_layout
+
+\end_inset
+
+=1 : this specifies that layer 1 is recurrent layer.
 \end_layout
 
 \begin_layout Itemize
-rnnType=CLASSLM : this informs CNTK to call class-based LSTM function in
- simplenetworkbuilder.
+rnnType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+rnnType
+\end_layout
+
+\end_inset
+
+=CLASSLM : this informs CNTK to call class-based LSTM function in simplenetworkb
+uilder.
 \end_layout
 
 \begin_layout Itemize
-trainingCriterion=classcrossentropywithsoftmax specifies that training set
- to use class-based cross entropy
+trainingCriterion
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+trainingCriterion
+\end_layout
+
+\end_inset
+
+=classcrossentropywithsoftmax specifies that training set to use class-based
+ cross entropy
 \end_layout
 
 \begin_layout Itemize
-evalCriterion=classcrossentropywithsoftmax specifies validation set also
- uses class-based cross entropy for evaluation.
+evalCriterion
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+evalCriterion
+\end_layout
+
+\end_inset
+
+=classcrossentropywithsoftmax specifies validation set also uses class-based
+ cross entropy for evaluation.
 \end_layout
 
 \begin_layout Itemize
-layerSizes=10000:200:10050 : this specifies input, hidden and output layer
- sizes.
+layerSizes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+layerSizes
+\end_layout
+
+\end_inset
+
+=10000:200:10050 : this specifies input, hidden and output layer sizes.
 \end_layout
 
 \end_deeper
 \begin_layout Itemize
 SGD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-useAdagrad=true : this specifies using AdaGrad for weight update.
+useAdagrad
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+useAdagrad
+\end_layout
+
+\end_inset
+
+=true : this specifies using AdaGrad for weight update.
 \end_layout
 
 \begin_layout Itemize
-modelPath=c:
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 temp
 \backslash
@@ -2673,16 +3390,46 @@ cntkdebug.dnn : this is the trained model file name.
 
 \end_deeper
 \begin_layout Itemize
-Reader: specifies training reader
+Reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+: specifies training reader
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-readerType=SequenceReader : specifies using sequence reader.
+readerType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+readerType
+\end_layout
+
+\end_inset
+
+=SequenceReader : specifies using sequence reader.
 \end_layout
 
 \begin_layout Itemize
-wordclass=c:
+wordclass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordclass
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2694,7 +3441,17 @@ wordclass.txt : specifies word class info.
 \end_layout
 
 \begin_layout Itemize
-file=c:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2707,16 +3464,46 @@ ptb.train.cntk.txt : specifies training file
 
 \end_deeper
 \begin_layout Itemize
-cvReader: specifies cross-validation reader
+cvReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cvReader
+\end_layout
+
+\end_inset
+
+: specifies cross-validation reader
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-readerType=SequenceReader : specifies using sequence reader.
+readerType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+readerType
+\end_layout
+
+\end_inset
+
+=SequenceReader : specifies using sequence reader.
 \end_layout
 
 \begin_layout Itemize
-wordclass=c:
+wordclass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordclass
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2728,7 +3515,17 @@ wordclass.txt : specifies word class info.
 \end_layout
 
 \begin_layout Itemize
-file=c:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2742,6 +3539,16 @@ ptb.valid.cntk.txt : specifies validation file
 \end_deeper
 \begin_layout Subsection
 Test
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Test
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2749,16 +3556,46 @@ In this setup, the following need to specified for testing
 \end_layout
 
 \begin_layout Itemize
-action=eval : this informs CNTK to call simplenetwork evaluation.
+action
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+action
+\end_layout
+
+\end_inset
+
+=eval : this informs CNTK to call simplenetwork evaluation.
  
 \end_layout
 
 \begin_layout Itemize
-deviceId=-1 : this specifies using CPU.
+deviceId
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+deviceId
+\end_layout
+
+\end_inset
+
+=-1 : this specifies using CPU.
 \end_layout
 
 \begin_layout Itemize
-modelPath=c:
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 temp
 \backslash
@@ -2768,16 +3605,46 @@ cntkdebug.dnn : this is the trained model file name.
 \end_layout
 
 \begin_layout Itemize
-Reader: specifies test set reader
+Reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+: specifies test set reader
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-readerType=SequenceReader : specifies using sequence reader.
+readerType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+readerType
+\end_layout
+
+\end_inset
+
+=SequenceReader : specifies using sequence reader.
 \end_layout
 
 \begin_layout Itemize
-wordclass=c:
+wordclass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordclass
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2789,7 +3656,17 @@ wordclass.txt : specifies word class info.
 \end_layout
 
 \begin_layout Itemize
-file=c:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2816,6 +3693,16 @@ LSTM converges very fast with this setup.
 
 \begin_layout Section
 Spoken Language Understanding
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Spoken Language Understanding
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2840,6 +3727,16 @@ rnnlu.config.
 
 \begin_layout Subsection
 Training
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Training
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2847,49 +3744,147 @@ In this setup, the following need to specified for training
 \end_layout
 
 \begin_layout Itemize
-action=trainRNN : this informs CNTK to call RNN function.
+action
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+action
+\end_layout
+
+\end_inset
+
+=trainRNN : this informs CNTK to call RNN function.
  
 \end_layout
 
 \begin_layout Itemize
-deviceId=-1 : this specifies using CPU.
+deviceId
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+deviceId
+\end_layout
+
+\end_inset
+
+=-1 : this specifies using CPU.
 \end_layout
 
 \begin_layout Itemize
-minibatchSize = 10 : this specifies the maximum number of words per minibatch.
+minibatchSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSize
+\end_layout
+
+\end_inset
+
+ = 10 : this specifies the maximum number of words per minibatch.
 \end_layout
 
 \begin_layout Itemize
-SimpleNetworkBuilder: 
+SimpleNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SimpleNetworkBuilder
+\end_layout
+
+\end_inset
+
+: 
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-recurrentLayer=2 : this specifies that layer 2 is recurrent layer.
+recurrentLayer
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+recurrentLayer
+\end_layout
+
+\end_inset
+
+=2 : this specifies that layer 2 is recurrent layer.
 \end_layout
 
 \begin_layout Itemize
-rnnType=LSTM: this informs CNTK to call LSTM function in simplenetworkbuilder.
+rnnType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+rnnType
+\end_layout
+
+\end_inset
+
+=LSTM: this informs CNTK to call LSTM function in simplenetworkbuilder.
 \end_layout
 
 \begin_layout Itemize
-lookupTableOrder=3: this specifies forming a context-dependent input with
- a context window size of 3.
+lookupTableOrder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lookupTableOrder
+\end_layout
+
+\end_inset
+
+=3: this specifies forming a context-dependent input with a context window
+ size of 3.
 \end_layout
 
 \begin_layout Itemize
-trainingCriterion=crossentropywithsoftmax specifies that training set to
- use cross entropy
+trainingCriterion
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+trainingCriterion
+\end_layout
+
+\end_inset
+
+=crossentropywithsoftmax specifies that training set to use cross entropy
 \end_layout
 
 \begin_layout Itemize
-evalCriterion=crossentropywithsoftmax specifies validation set also uses
- cross entropy for evaluation.
+evalCriterion
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+evalCriterion
+\end_layout
+
+\end_inset
+
+=crossentropywithsoftmax specifies validation set also uses cross entropy
+ for evaluation.
 \end_layout
 
 \begin_layout Itemize
-layerSizes=2832:50:300:127: this specifies input, hidden and output layer
- sizes.
+layerSizes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+layerSizes
+\end_layout
+
+\end_inset
+
+=2832:50:300:127: this specifies input, hidden and output layer sizes.
  Notice that input layer has dimension of 2832, which is 3 times 944.
  This number is obtained in consideration of context window size and the
  number of unique words, which 944.
@@ -2901,15 +3896,45 @@ layerSizes=2832:50:300:127: this specifies input, hidden and output layer
 \end_deeper
 \begin_layout Itemize
 SGD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-learningRatePerSample=0.1 : this specifies learning rate per sample.
+learningRatePerSample
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learningRatePerSample
+\end_layout
+
+\end_inset
+
+=0.1 : this specifies learning rate per sample.
 \end_layout
 
 \begin_layout Itemize
-modelPath=c:
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 temp
 \backslash
@@ -2923,27 +3948,75 @@ cntkdebug.dnn : this is the trained model file name.
 \end_layout
 
 \begin_layout Itemize
-gradUpdateType=AdaGrad : this specifies using AdaGrad for updating weights.
+gradUpdateType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+gradUpdateType
+\end_layout
+
+\end_inset
+
+=AdaGrad : this specifies using AdaGrad for updating weights.
 \end_layout
 
 \end_deeper
 \begin_layout Itemize
-Reader: specifies training reader
+Reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Reader
+\end_layout
+
+\end_inset
+
+: specifies training reader
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-readerType=LUSequenceReader : specifies using LUsequence reader.
+readerType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+readerType
+\end_layout
+
+\end_inset
+
+=LUSequenceReader : specifies using LUsequence reader.
 \end_layout
 
 \begin_layout Itemize
-nbruttsineachrecurrentiter=10 : this specifies using maximum of 10 sentences
- for each minibatch.
+nbruttsineachrecurrentiter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+nbruttsineachrecurrentiter
+\end_layout
+
+\end_inset
+
+=10 : this specifies using maximum of 10 sentences for each minibatch.
 \end_layout
 
 \begin_layout Itemize
-wordcontext=0:1:2 : this specifies the time indices for forming a context
- window.
+wordcontext
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordContext
+\end_layout
+
+\end_inset
+
+=0:1:2 : this specifies the time indices for forming a context window.
  In this example, this setup coresponds to using the current input, the
  next input, and the input after the next input for a context window of
  size 3.
@@ -2954,7 +4027,17 @@ wordcontext=0:1:2 : this specifies the time indices for forming a context
 \end_layout
 
 \begin_layout Itemize
-wordmap=c:
+wordmap
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordmap
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2969,7 +4052,17 @@ inputmap.txt : specifies a file that lists a mapping from word to the other
 \end_layout
 
 \begin_layout Itemize
-file=c:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -2981,12 +4074,32 @@ atis.train.apos.pred.pos.head.IOB.simple: specifies training file
 \end_layout
 
 \begin_layout Itemize
-labelIn : this specifies information of inputs
+labelIn
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labelIn
+\end_layout
+
+\end_inset
+
+ : this specifies information of inputs
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-beginingSequence=
+beginingSequence
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+beginingSequence
+\end_layout
+
+\end_inset
+
+=
 \begin_inset Quotes erd
 \end_inset
 
@@ -2998,7 +4111,17 @@ BOS
 \end_layout
 
 \begin_layout Itemize
-endSequence=
+endSequence
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+endSequence
+\end_layout
+
+\end_inset
+
+=
 \begin_inset Quotes erd
 \end_inset
 
@@ -3010,7 +4133,17 @@ EOS
 \end_layout
 
 \begin_layout Itemize
-token=c:
+token
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+token
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -3024,12 +4157,32 @@ input.txt : this specifies a list of word as input.
 
 \end_deeper
 \begin_layout Itemize
-labels : this specifies information of labels
+labels
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+labels
+\end_layout
+
+\end_inset
+
+ : this specifies information of labels
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-beginingSequence=
+beginingSequence
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+beginingSequence
+\end_layout
+
+\end_inset
+
+=
 \begin_inset Quotes erd
 \end_inset
 
@@ -3041,7 +4194,17 @@ O
 \end_layout
 
 \begin_layout Itemize
-endSequence=
+endSequence
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+endSequence
+\end_layout
+
+\end_inset
+
+=
 \begin_inset Quotes erd
 \end_inset
 
@@ -3053,7 +4216,17 @@ O
 \end_layout
 
 \begin_layout Itemize
-token=c:
+token
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+token
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -3067,23 +4240,62 @@ output.txt : this specifies output semantic labels.
 \end_deeper
 \end_deeper
 \begin_layout Itemize
-cvReader: specifies cross-validation reader.
+cvReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cvReader
+\end_layout
+
+\end_inset
+
+: specifies cross-validation reader.
  Most of setups should be same as those in Reader section.
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-readerType=LUSequenceReader : specifies using sequence reader.
+readerType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+readerType
+\end_layout
+
+\end_inset
+
+=LUSequenceReader : specifies using sequence reader.
 \end_layout
 
 \begin_layout Itemize
-wordcontext=0:1:2 : this specifies the time indices for forming a context
- window.
+wordcontext
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordContext
+\end_layout
+
+\end_inset
+
+=0:1:2 : this specifies the time indices for forming a context window.
  This should be the same as specified in Reader section.
 \end_layout
 
 \begin_layout Itemize
-file=c:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -3108,17 +4320,47 @@ In this setup, the following need to specified for writing/decoding test
 \end_layout
 
 \begin_layout Itemize
-action=write: this informs CNTK to call simplenetwork evaluation and write
- outputs, which will be specified below.
+action
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+action
+\end_layout
+
+\end_inset
+
+=write: this informs CNTK to call simplenetwork evaluation and write outputs,
+ which will be specified below.
  
 \end_layout
 
 \begin_layout Itemize
-deviceId=-1 : this specifies using CPU.
+deviceId
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+deviceId
+\end_layout
+
+\end_inset
+
+=-1 : this specifies using CPU.
 \end_layout
 
 \begin_layout Itemize
-modelPath=c:
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 temp
 \backslash
@@ -3132,7 +4374,17 @@ cntkdebug.dnn: this is the trained model file name.
 \end_layout
 
 \begin_layout Itemize
-outputNodeNames=outputs:labels : this specifies which nodes to output results.
+outputNodeNames
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputNodeNames
+\end_layout
+
+\end_inset
+
+=outputs:labels : this specifies which nodes to output results.
  These node names are pre-spefied in CNTK's simple network builder.
  The node 
 \begin_inset Quotes eld
@@ -3155,16 +4407,46 @@ labels
 \end_layout
 
 \begin_layout Itemize
-reader: specifies test set reader
+reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+reader
+\end_layout
+
+\end_inset
+
+: specifies test set reader
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-readerType=LUSequenceReader : specifies using LUsequence reader.
+readerType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+readerType
+\end_layout
+
+\end_inset
+
+=LUSequenceReader : specifies using LUsequence reader.
 \end_layout
 
 \begin_layout Itemize
-wordmap=c:
+wordmap
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wordmap
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -3178,7 +4460,17 @@ inputmap.txt: specifies word map file, which should be the same as those
 \end_layout
 
 \begin_layout Itemize
-file=c:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash
@@ -3191,21 +4483,61 @@ atis.test.apos.pred.pos.head.IOB.simple: specifies testing file
 
 \end_deeper
 \begin_layout Itemize
-writer : this specifies where to write 
+writer
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+writer
+\end_layout
+
+\end_inset
+
+ : this specifies where to write 
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-writerType=LUSequenceWriter : this specifies using LUSequenceWriter.
+writerType
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+writerType
+\end_layout
+
+\end_inset
+
+=LUSequenceWriter : this specifies using LUSequenceWriter.
 \end_layout
 
 \begin_layout Itemize
-outputs : specifies where to write for the outputs node.
+outputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputs
+\end_layout
+
+\end_inset
+
+ : specifies where to write for the outputs node.
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-file=c:
+file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+file
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 temp
 \backslash
@@ -3220,7 +4552,17 @@ output.rec.txt : the file name for writting decode results from LUSequenceWriter
 \end_layout
 
 \begin_layout Itemize
-token=c:
+token
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+token
+\end_layout
+
+\end_inset
+
+=c:
 \backslash
 exp
 \backslash

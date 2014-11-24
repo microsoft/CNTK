@@ -225,7 +225,7 @@ A Simple Demo
 status open
 
 \begin_layout Plain Layout
-Simple Demo
+Demo ! Simple
 \end_layout
 
 \end_inset
@@ -985,7 +985,17 @@ On a 2.2GHz Xeon processor with a low-end Quadro 4000 GPU, the training and
 \end_layout
 
 \begin_layout Section
-A Speech Demo (TIMIT
+A Speech Demo
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Demo ! Speech
+\end_layout
+
+\end_inset
+
+ (TIMIT
 \begin_inset Index idx
 status open
 

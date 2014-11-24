@@ -102,6 +102,16 @@ The computational network toolkit (CNTK) implements CNs.
 
 \begin_layout Section
 Run CNTK
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Run CNTK
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -380,18 +390,46 @@ The most frequently used configuration blocks are:
 
 \begin_layout Itemize
 Network Builders
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Network ! Builders
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-SimpletNetworkBulder: creates one of the predefined networks with limited
- customization.
+SimpletNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SimpletNetworkBuilder
+\end_layout
+
+\end_inset
+
+: creates one of the predefined networks with limited customization.
  
 \end_layout
 
 \begin_layout Itemize
-NDLNetworkBuilder: creates a network defined using the network description
- language (NDL).
+NDLNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDLNetworkBuilder
+\end_layout
+
+\end_inset
+
+: creates a network defined using the network description language (NDL).
  It provides full flexibility in designing your own network operations and
  structure.
  
@@ -400,11 +438,31 @@ NDLNetworkBuilder: creates a network defined using the network description
 \end_deeper
 \begin_layout Itemize
 Learners
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Learners
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-SGD : uses the stochastic gradient descent algorithm to train the model.
+SGD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SGD
+\end_layout
+
+\end_inset
+
+ : uses the stochastic gradient descent algorithm to train the model.
  It is the desired trainer for most applications.
  
 \end_layout
@@ -412,35 +470,93 @@ SGD : uses the stochastic gradient descent algorithm to train the model.
 \end_deeper
 \begin_layout Itemize
 Data Readers
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Data Reader
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_deeper
 \begin_layout Itemize
-UCIFastReader: reads the text-based UCI format, which contains labels and
- features combined in one file.
+UCIFastReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+UCIFastReader
+\end_layout
+
+\end_inset
+
+: reads the text-based UCI format, which contains labels and features combined
+ in one file.
 \end_layout
 
 \begin_layout Itemize
-HTKMLFReader: reads the HTK/MLF format files, often used in speech recognition
- applications.
+HTKMLFReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+HTKMLFReader
+\end_layout
+
+\end_inset
+
+: reads the HTK/MLF format files, often used in speech recognition applications.
 \end_layout
 
 \begin_layout Itemize
-BinaryReader: reads files in a CNTK binary format.
+BinaryReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+BinaryReader
+\end_layout
+
+\end_inset
+
+: reads files in a CNTK binary format.
  It is also used by UCIFastReader to cache the dataset in a binary format
  for faster processing.
  
 \end_layout
 
 \begin_layout Itemize
-SequenceReader: reads text-based files that contain word sequences, for
- predicting word sequences.
+SequenceReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SequenceReader
+\end_layout
+
+\end_inset
+
+: reads text-based files that contain word sequences, for predicting word
+ sequences.
  This is often used in language modeling.
 \end_layout
 
 \begin_layout Itemize
-LUSequenceReader: reads text-based files that contain word sequences and
- their labels.
+LUSequenceReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LUSequenceReader
+\end_layout
+
+\end_inset
+
+: reads text-based files that contain word sequences and their labels.
  This is often used for language understanding.
  
 \end_layout
@@ -464,6 +580,16 @@ Computational networks are constructed using either the network description
 
 \begin_layout Subsection
 The Simple Network Builder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Simple Network Builder
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -849,7 +975,7 @@ The Network Description Language
 status open
 
 \begin_layout Plain Layout
-Network Description Language
+Network ! Description Language
 \end_layout
 
 \end_inset
@@ -1050,7 +1176,7 @@ Stochastic Gradient Descent Learner
 status open
 
 \begin_layout Plain Layout
-Stochastic Gradient Descent Learner
+Stochastic Gradient Descent ! Learner
 \end_layout
 
 \end_inset
@@ -4091,7 +4217,7 @@ Dumpnode Command
 status open
 
 \begin_layout Plain Layout
-Dumpnode Command
+DumpNode
 \end_layout
 
 \end_inset
@@ -4126,6 +4252,16 @@ status open
 
 \begin_layout Plain Layout
 nodeName
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! nodeName
 \end_layout
 
 \end_inset
@@ -4290,7 +4426,7 @@ DeviceId
 status open
 
 \begin_layout Plain Layout
-DeviceId
+deviceId
 \end_layout
 
 \end_inset
@@ -4372,7 +4508,7 @@ TraceLevel
 status open
 
 \begin_layout Plain Layout
-TraceLevel
+traceLevel
 \end_layout
 
 \end_inset
