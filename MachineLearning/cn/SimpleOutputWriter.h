@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();                
             }
-            Matrix<ElemType> endOfFile =  Matrix<ElemType>(1,1);
+            Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
             endOfFile(0,0)=0;
 
             //evaluate with minibatches

@@ -88,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
-        void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat = matrixFormatSparseCSC); //sets matrix type between dense and sparse
+        void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat = matrixFormatSparseCSR); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;
@@ -126,7 +126,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
-        void SetMatrixFromCSCFormat(size_t *h_row, size_t *h_rowIdx, size_t size, size_t blockSize);
+        void SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+            const size_t nz, const size_t numRows, const size_t numCols);
         void SetMatrixFromLabelAndClass(size_t *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const ElemType val, size_t colInd);

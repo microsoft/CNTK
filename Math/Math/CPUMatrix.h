@@ -1,4 +1,4 @@
-//
+    //
 // <copyright file="CPUMatrix.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>

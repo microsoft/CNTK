@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
 
-        void ChangeDeviceTo(int to_id);
+        void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
     public:
 

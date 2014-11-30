@@ -328,8 +328,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (matrixFlags&matrixFormatSparse)
             {
-                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
-                SetDataLocation(GPU, SPARSE);            
+                //m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
+                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask), m_preferredDeviceId);
+                m_GPUSparseMatrix->Resize(numRows, numCols, nnz);
+                SetDataLocation(GPU, SPARSE);
             }
             else
             {
@@ -347,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId)
     {
         if (deviceId == MANAGEDEXTERN)
-            throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
+            throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");
 
         int origCopyFromDeviceId = deepCopyFrom.GetDeviceId();
 
@@ -360,17 +362,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
             this,
-            m_CPUMatrix = new CPUMatrix<ElemType>(*(deepCopyFrom.m_CPUMatrix)), 
-            m_GPUMatrix = new GPUMatrix<ElemType>(*(deepCopyFrom.m_GPUMatrix)), 
-            m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(*(deepCopyFrom.m_CPUSparseMatrix)), 
-            NOT_IMPLEMENTED
+            m_CPUMatrix = new CPUMatrix<ElemType>(*(deepCopyFrom.m_CPUMatrix)),
+            m_GPUMatrix = new GPUMatrix<ElemType>(*(deepCopyFrom.m_GPUMatrix)),
+            m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(*(deepCopyFrom.m_CPUSparseMatrix)),
+            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(*(deepCopyFrom.m_GPUSparseMatrix))
             );
 
         //should we move back?
         deepCopyFrom._transferToDevice(origCopyFromDeviceId, true);
 
         m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
-            }
+    }
 
     //assignment operator, deep copy
     template<class ElemType>
@@ -544,7 +546,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_baseMatrix->GetSizeAllocated()*sizeof(ElemType), 
             return m_baseMatrix->GetSizeAllocated()*sizeof(ElemType), 
             return m_CPUSparseMatrix->BufferSize(), 
-            return m_GPUSparseMatrix->BufferSize()
+            return m_GPUSparseMatrix->BufferSizeAllocated()
             );
         }
 
@@ -712,7 +714,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         } 
                         else
                         {
-                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(*m_GPUMatrix); //this is deep copy in legacy code
+                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(*m_GPUMatrix, newMatrixFormat); //this is deep copy in legacy code
                         }
                         delete m_GPUMatrix;
                         m_GPUMatrix = nullptr;
@@ -899,7 +901,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this->m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix), 
             this->m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix), 
             this->m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix), 
-            NOT_IMPLEMENTED
+            this->m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix)
             );
             }
 
@@ -934,14 +936,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // read features
     template<class ElemType>
-    void Matrix<ElemType>::SetMatrixFromCSCFormat(size_t *h_row, size_t *h_rowIdx, size_t size, size_t blockSize)
+    void Matrix<ElemType>::SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+        const size_t nz, const size_t numRows, const size_t numCols)
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
-            m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_row, h_rowIdx, size, blockSize)
+            m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols)
             );
 
     }
@@ -1153,8 +1156,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             m_CPUMatrix->Resize(numRows,numCols,growOnly), 
             m_GPUMatrix->Resize(numRows,numCols,growOnly), 
-            m_CPUSparseMatrix->Resize(numRows,numCols, numRows * numCols), 
-            m_GPUSparseMatrix->Resize(numRows,numCols)
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
             );
     }
 
@@ -2339,15 +2342,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this->m_CPUMatrix->InplaceTruncate(threshold), 
             this->m_GPUMatrix->InplaceTruncateTop(fabs(threshold)); this->m_GPUMatrix->InplaceTruncateBottom(-fabs(threshold)), 
             this->m_CPUSparseMatrix->InplaceTruncate(threshold),
-            if(this->m_GPUSparseMatrix->m_legacy)
-            {
-                this->m_GPUSparseMatrix->InplaceTruncateTop(fabs(threshold));
-                this->m_GPUSparseMatrix->InplaceTruncateBottom(-fabs(threshold));
-            }
-            else //new GPU Sparse matrix
-            {
-                this->m_GPUSparseMatrix->InplaceTruncate(threshold);
-            }
+            this->m_GPUSparseMatrix->InplaceTruncate(threshold)
             );
 
         return *this;
@@ -3055,9 +3050,65 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         }
 
-        if (m_matrixType==MatrixType::SPARSE)
-            NOT_IMPLEMENTED;
+        if (m_matrixType == MatrixType::SPARSE)
+        {
+            if (from_id == CPUDEVICE) //from CPU to GPU
+            {
+                if (m_CPUSparseMatrix == NULL)
+                    throw std::logic_error("Can't move from CPU because I'm not there!");
 
+                if (m_GPUSparseMatrix == NULL)
+                    m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(m_CPUSparseMatrix->GetFormat(), to_id);
+
+                if (m_CPUMatrix->GetNumElements() != 0 && !emptyTransfer)
+                {
+                    m_GPUSparseMatrix->SetValue(*m_CPUSparseMatrix);
+                }
+
+                if (ismoved)
+                {
+                    delete m_CPUSparseMatrix;
+                    m_CPUSparseMatrix = NULL;
+                    SetDataLocation(GPU, DENSE);
+                }
+                else
+                {
+                    SetDataLocation(BOTH, DENSE);
+                }
+            }
+            else //from GPU
+            {
+                if (m_GPUSparseMatrix == NULL || m_GPUSparseMatrix->GetComputeDeviceId() != from_id)
+                    throw std::logic_error("This matrix isn't on this (or any?) GPU");
+
+                if (to_id < 0) //to CPU
+                {
+                    if (m_CPUSparseMatrix == NULL)
+                        m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(m_GPUSparseMatrix->GetFormat());
+
+                    if (m_GPUSparseMatrix->GetNumElements() != 0 && !emptyTransfer)
+                    {
+                        m_GPUSparseMatrix->CopyToCPUSparseMatrix(*m_CPUSparseMatrix);
+                    }
+
+                    if (ismoved)
+                    {
+                        delete m_GPUSparseMatrix;
+                        m_GPUSparseMatrix = NULL;
+                        SetDataLocation(CPU, DENSE);
+                    }
+                    else
+                    {
+                        SetDataLocation(BOTH, DENSE);
+                    }
+                }
+                else //to another GPU
+                {
+                    m_GPUSparseMatrix->ChangeDeviceTo(to_id);
+                }
+            }
+        }
+        else
 #pragma omp critical
         {
             if (from_id == CPUDEVICE) //from CPU to GPU
@@ -3414,33 +3465,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (a.m_matrixType==MatrixType::SPARSE && b.m_matrixType==c.m_matrixType && b.m_matrixType==MatrixType::DENSE) //Sparse*Dense+Dense
             {
                 GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
-                GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha,*a.m_GPUSparseMatrix,transposeA,second,beta,*c.m_GPUMatrix);    
+                GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, second, false, beta, *c.m_GPUMatrix);
                 c.SetDataLocation(GPU, DENSE);
             }
             else if (a.m_matrixType==MatrixType::DENSE && b.m_matrixType==MatrixType::SPARSE && c.m_matrixType==MatrixType::DENSE) //Dense*Sparse + Dense
             {
-                if(b.m_GPUSparseMatrix->m_legacy == false) 
-                {
-                    // new GPU sparse matrix code
-                    GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix);
-                }
-                else 
-                {
-                    GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
-                    GPUMatrix<ElemType> & first= firstDummy;                // GCC does not support mixing refs and non-refs
-                    GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
-                    GPUSparseMatrix<ElemType> & second = secondDummy;
-                    if (beta==0)
-                    {
-                        GPUSparseMatrix<ElemType>::Multiply(first,second,*c.m_GPUMatrix);
-                    }
-                    else
-                    {   
-                        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),(DEVICEID_TYPE)c.GetDeviceId());
-                        GPUSparseMatrix<ElemType>::Multiply(first,second,*tmp.m_GPUMatrix);
-                        c=tmp+c*beta;                               
-                    }
-                }
+                //if (b.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+                //{
+                GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix);
+                //}
+                //else 
+                //{
+                //    GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
+                //    GPUMatrix<ElemType> & first= firstDummy;                // GCC does not support mixing refs and non-refs
+                //    GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
+                //    GPUSparseMatrix<ElemType> & second = secondDummy;
+                //    if (beta==0)
+                //    {
+                //        GPUSparseMatrix<ElemType>::Multiply(first,second,*c.m_GPUMatrix);
+                //    }
+                //    else
+                //    {   
+                //        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),(DEVICEID_TYPE)c.GetDeviceId());
+                //        GPUSparseMatrix<ElemType>::Multiply(first,second,*tmp.m_GPUMatrix);
+                //        c=tmp+c*beta;                               
+                //    }
+                //}
                 c.SetDataLocation(GPU, DENSE);
             }
             else if (a.m_matrixType==MatrixType::DENSE && b.m_matrixType==MatrixType::SPARSE && c.m_matrixType==MatrixType::SPARSE) // h -> u0
@@ -3537,7 +3587,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(&c,
                 nullptr,
                 CPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_CPUSparseMatrix,*c.m_CPUMatrix); c.SetDataLocation(CPU),
-                if(a.m_GPUSparseMatrix->m_legacy) {
+            if (a.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSC) {
                     GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_GPUSparseMatrix,1,*c.m_GPUMatrix,*c.m_GPUMatrix); 
                 }
                 else // new GPU sparse matrix code 

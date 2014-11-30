@@ -138,7 +138,7 @@ namespace CNTKMathTest
             GPUMatrix<float> B = GPUMatrix<float>::Eye(5);
             GPUMatrix<float> C = GPUMatrix<float>::Ones(4,5);
 
-            GPUSparseMatrix<float>::MultiplyAndWeightedAdd(1,A,false,B,1,C);
+            GPUSparseMatrix<float>::MultiplyAndWeightedAdd(1,A,false,B,false,1,C);
 
             float* arr = C.CopyToArray();
             CPUMatrix<float> CCPU(4,5,arr,matrixFlagNormal);
@@ -152,7 +152,7 @@ namespace CNTKMathTest
 
         TEST_METHOD(GPUSDenseTimesSparse)
         {
-            GPUSparseMatrix<float> A;
+            GPUSparseMatrix<float> A(matrixFormatSparseCSR,0);
             Assert::IsTrue(A.IsEmpty());
             float v[9] = {1,4,2,3,5,7,8,9,6};
             int i[5] = {0,2,4,7,9};
@@ -232,7 +232,7 @@ namespace CNTKMathTest
 
             GPUSparseMatrix<float> C;
             float p = 3.14;
-            C.ResizeAs(A);
+            C.ResizeAsAndCopyIndexFrom(A);
             A.ElementWisePower(p,A,C);
 
             float *arr = NULL;
