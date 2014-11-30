@@ -18,38 +18,36 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
     // the reset below are dummy implementations
 
-    void PrepareDevice(short deviceId);
-
+    void PrepareDevice(DEVICEID_TYPE deviceId);
+    
 #pragma region Constructors and Destructor
 
-    template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix() { }
+    template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix(const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/,
+        const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/) { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ZeroInit() { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice) { }
 
-    template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUMatrix<ElemType>& deepCopy) { }
+    template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUMatrix<ElemType>& deepCopy, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/) { }
 
 
     template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deepCopy) { }
 
-    template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t nz, ElemType* pArray, 
-        const size_t matrixFlags /*=matrixFormatSparseCSR*/, int deviceId /*=MANAGEDEXTERN*/, const size_t elemSizeAllocated /*=0*/) { }
+    template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/, const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/) { }
 
     // PrepareDevice - Setup the correct cuda context for an operation
     // deviceId - the device on which the operation will take place
     //            defaults to -1, which means use matrices current device
-    template<class ElemType> void GPUSparseMatrix<ElemType>::PrepareDevice(short deviceId /*=-1*/) const {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const {}
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCopy) { }
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopy) { }
 
-    template<class ElemType> GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix()
-    {
-        GPUMatrix<ElemType> res;
-        return res;            
-    }
-
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix) { }
+
+    template<class ElemType> void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat){}
+
+    template<class ElemType> void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom) {}
 
     template<class ElemType> GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::operator=(const GPUSparseMatrix<ElemType>& deepCopy) { return *this; }
 
@@ -58,27 +56,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUSparseMatrix<ElemType>::~GPUSparseMatrix() { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ClearNew() { }
     template<class ElemType> void GPUSparseMatrix<ElemType>::Clear() { }
 
-    //ResizeAs - Resize this sparse matrix to have the same element structure as the passed matrix
+    //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
     // a - sparse matrix whose structure we want to clone
     // remark: this was done for element wise operations where the structure will be identical after an operation
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ResizeAs(const GPUSparseMatrix<ElemType>& a) { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly /*= true*/){}
 
     //-------------------------------------------------------------------------
     // Start of new GPU Sparse Matrix code 
     //-------------------------------------------------------------------------
-
-    template<class ElemType> void GPUSparseMatrix<ElemType>::Init() { }
-    template<class ElemType> GPUSparseMatrix<ElemType>::GPUSparseMatrix(const MatrixFormat format, const int deviceId) { }
 
     template<class ElemType> ElemType* GPUSparseMatrix<ElemType>::BufferPointer() const
     {
         return this->m_blockVal;
     }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t size) { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const bool growOnly = true) {}//matrix format will affect the size to allocate
+    template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ) {}
+
+    template<class ElemType> GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix() const
+    {
+        GPUMatrix < ElemType> res;
+        return res;
+    }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType> &denseMatrix) const {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType> &cpuSparseMatrix) const {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE toId) {}
 
     //Reset matrix so it can be reused
     template<class ElemType> void GPUSparseMatrix<ElemType>::Reset() { }
@@ -88,7 +92,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Static BLAS Functions
     
     // copy features to GPU matrix 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(size_t *h_row, size_t *h_rowIdx, size_t size, size_t blockSize) { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
        
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromLabelAndClass(size_t *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize) { }
 
@@ -130,18 +135,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // End of new GPU Sparse Matrix code 
     //-------------------------------------------------------------------------
 
-    template<class ElemType> void  GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA, 
-        const GPUMatrix<ElemType>& /*b*/, ElemType beta, GPUMatrix<ElemType>& c) { }
+    template<class ElemType> void  GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
+        const GPUMatrix<ElemType>& b, const bool transposeD, ElemType beta, GPUMatrix<ElemType>& c) {}
     template<class ElemType> void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S, const GPUMatrix<ElemType>& D, GPUMatrix<ElemType>& C) { }
     template<class ElemType> void GPUSparseMatrix<ElemType>::Multiply(const GPUMatrix<ElemType>& D, const GPUSparseMatrix<ElemType>& S, GPUMatrix<ElemType>& C) { }
 
-    // ElemCountFromBufferSize - Return the elemCountAllocated for a particular buffersize
-    // totalBufferSize - total buffer we have to use
-    // return: size of allocated elements/index slots available
-    template<class ElemType> size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize(size_t totalBufferSize)
-    {
-        return 0;
-    }
+    template<class ElemType> size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize(const size_t totalBufferSize) const { return 0; }
+    template<class ElemType> size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize() const { return 0; }
+
 
     // PrepareBuffer - Get the dimensions start buffer, computes the starting row/column of each value
     // m - rows in the source
@@ -330,13 +331,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return *this;  
     }
-    template<class ElemType> void GPUSparseMatrix<ElemType>::Unrolling (//GPUSparseMatrix<ElemType>& debugMatrix, 
-        GPUMatrix<ElemType>& UnrolledMatrix, const GPUMatrix<ElemType>& InMatrix, GPUSparseMatrix<ElemType>& UnrollMapping, 
-        const int inputWidth, const int inputHeight, const int inputChannelNum,
-        const int FltWidth,const int FltHeight, const int FltChannel,
-        const int FltStepW,  const int FltStepH)
-    {
-    }
+
 
 #pragma endregion
 
@@ -344,11 +339,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::performInplaceFunction(int kind) { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(int *h_CSRRow, int *h_Col, ElemType *h_Val, size_t nz, size_t numRows, size_t numCols, bool IsOnDevice, int devId) { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE *h_CSRRow, const GPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
+        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
 
-    // NOTE: we should change this to just use a single buffer, and return pointers into it
-    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(int*& h_CSRRow, int*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
-    {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(GPUSPARSE_INDEX_TYPE*& h_CSRRow, GPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
+
+    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_CSCCol, GPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
+
+    template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat) {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const {}
+
+    template<class ElemType> template <class OutType, class InType>
+    static void GPUSparseMatrix<ElemType>::CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size){}
+    //caller needs to release the returned pointer
+    template<class ElemType>  GPUSPARSE_INDEX_TYPE * GPUSparseMatrix<ElemType>::ConvertCPUBuffer(const size_t * inBuffer, const size_t size) { return nullptr; }
+    //caller needs to release the returned pointer
+    template<class ElemType>  size_t * GPUSparseMatrix<ElemType>::ConvertCPUBuffer(const GPUSPARSE_INDEX_TYPE * inBuffer, const size_t size) { return nullptr; }
 
 #pragma endregion Helper Functions
 
@@ -404,7 +410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // PrepareDevice - Setup the correct cuda context for an operation
     // deviceId - the device on which the operation will take place
     //            defaults to -1, which means use matrices current device
-    template<class ElemType> void GPUMatrix<ElemType>::PrepareDevice(short deviceId /*=-1*/) const
+    template<class ElemType> void GPUMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const
     {}
 
     template<class ElemType> ElemType* GPUMatrix<ElemType>::CopyToArray() const

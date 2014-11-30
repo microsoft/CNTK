@@ -7,6 +7,7 @@
 #pragma once
 
 // #define CPUONLY      // #define this to build without GPU support nor needing the SDK installed
+#include "commonmatrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef CPUONLY

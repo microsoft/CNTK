@@ -153,7 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
     //  TODO: should be replaced by BestGpu class instead, it's much better
     template<class ElemType>
-    int GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
+    DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
     {      
         // currently there is little point in giving out different device IDs each time ask for a matrix, 
         // we really want them all on the same device eventually
@@ -261,7 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::ChangeDeviceTo(int to_id)
+    void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     {
         if (!OwnBuffer())
             throw std::logic_error("Cannot change device on Managed external matrix");

@@ -13,6 +13,7 @@
 #include "CommonMatrix.h"
 #include "device_functions.h"
 
+
 #ifndef LONG64  //we would like to use 64-bit long to support large matrices. However, CUDA seems to support only 32-bit long
 #define LONG64  long
 #endif
@@ -2212,7 +2213,7 @@ __global__ void _scaleArray(
 
 
 template<class ElemType>
-__global__ void _sparsePlusDense(
+__global__ void _sparseCSRPlusDense(
     ElemType alpha,
     const ElemType* m_dVal,
     const int* m_dRow,
@@ -2233,7 +2234,7 @@ __global__ void _sparsePlusDense(
 }
 
 template<class ElemType>
-__global__ void _sparseMulDense(    
+__global__ void _sparseCSRElemMulDense(    
     const ElemType* m_dVal,
     const int* m_dRow,
     const int* m_dCol,
@@ -2254,13 +2255,13 @@ __global__ void _sparseMulDense(
 }
 
 // forward pass from feature to hidden layer
-template<class ElemType>
-__global__ void _denseMulSparseToDense(
+/*template<class ElemType>
+__global__ void _denseMulSparseCSCToDense(
     ElemType alpha,
     const ElemType* lhs,
     int numrows,
     int numcols,
-    const size_t* row,
+    const GPUSPARSE_INDEX_TYPE* row,
     ElemType* c)
 {
     int loadPerThread = (numrows+blockDim.x-1)/blockDim.x;
@@ -2276,6 +2277,41 @@ __global__ void _denseMulSparseToDense(
         ElemType res = alpha * lhs[IDX2C(h, i, numrows)]; 
         atomicAdd(&c[IDX2C(h,j,numrows)], res);
     }
+}*/
+
+//c = alpha * op(a) * op(b) + beta*c
+//this function can be further improved by using shared memory
+template<class ElemType>
+__global__ void _denseMultSparseCSCAndWeightedAddToDense(
+    int m, //rowDense
+    int k,  //colDense = rowSparse
+    int n,   //colSparse
+    ElemType alpha,
+    const ElemType* a,  //dense
+    const ElemType* bnzValues,  //sparse nz values
+    const GPUSPARSE_INDEX_TYPE* rowIndex,
+    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    ElemType beta,
+    ElemType* c  //dense target
+    )
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m*n)  
+        return;
+
+    int colInC = id / m;
+    int rowInC = id - colInC * m;
+
+    int start = colCSCIndex[colInC]; 
+    int end = colCSCIndex[colInC + 1];
+
+    ElemType s = 0;
+   for (int j = start; j<end; j++)  //j points to the value
+    {
+        int i = rowIndex[j];
+        s += a[IDX2C(rowInC, i, m)] * bnzValues[j];
+    }
+    c[IDX2C(rowInC, colInC, m)] = alpha * s + beta * c[IDX2C(rowInC, colInC, m)];
 }
 
 // backward pass from hidden layer to feature weight
@@ -2283,8 +2319,8 @@ template<class ElemType>
 __global__ void _denseMulSparseToSparse(    
     ElemType* lhs,
     size_t nrs,
-    const size_t* row,
-    const size_t* rowIdx,
+    const GPUSPARSE_INDEX_TYPE* row,
+    const GPUSPARSE_INDEX_TYPE* rowIdx,
     ElemType* blockVal,
     size_t* blockIds)
 {
@@ -2307,7 +2343,7 @@ __global__ void _denseMulSparseToSparse(
 
 // gradients update
 template<class ElemType>
-__global__ void _scaleAndAdd(    
+__global__ void _scaleSparseAndAddToDense(    
     ElemType alpha,
     bool blockCol,
     ElemType* blockVal,
@@ -2344,13 +2380,13 @@ __global__ void _computePrediction(
     const ElemType* weight,   
     int nrs,
     int labelSize,
-    const size_t* labelRow,
+    const GPUSPARSE_INDEX_TYPE* labelRow,
     const size_t* block2Id,
     const ElemType* cls,
     const ElemType* idx2cls,    
     ElemType* val,
-    size_t* row,
-    size_t* pb)
+    GPUSPARSE_INDEX_TYPE* row,
+    GPUSPARSE_INDEX_TYPE* pb)
 {
     // get label block id
     int id = -1;
@@ -2411,9 +2447,9 @@ template<class ElemType>
 __global__ void _normalizePrediction(
     const size_t labelSize,
     const size_t expandedLabelSize,
-    const size_t* labelRow,
+    const GPUSPARSE_INDEX_TYPE* labelRow,
     const size_t* block2Id,    
-    const size_t* row,
+    const GPUSPARSE_INDEX_TYPE* row,
     ElemType* val,
     ElemType* entropyScore)
 {    
@@ -2491,8 +2527,8 @@ __global__ void _computePredictionError(
 template<class ElemType>
 __global__ void _computeGradientOfInput(
     const ElemType* val,
-    const size_t* row,
-    const size_t* pb,    
+    const GPUSPARSE_INDEX_TYPE* row,
+    const GPUSPARSE_INDEX_TYPE* pb,    
     ElemType* weight,
     size_t nrs,
     ElemType* grd,
@@ -2523,11 +2559,11 @@ __global__ void _computeGradientOfInput(
 template<class ElemType>
 __global__ void _computeGradientOfWeight(
     const ElemType* val,
-    const size_t* row,
-    const size_t* pb,
+    const GPUSPARSE_INDEX_TYPE* row,
+    const GPUSPARSE_INDEX_TYPE* pb,
     size_t mb,
     size_t nv,
-    const size_t* labelRow,
+    const GPUSPARSE_INDEX_TYPE* labelRow,
     const size_t* labelBlock2UniqId,
     const ElemType* cls,
     const ElemType* idx2cls,
@@ -3092,7 +3128,7 @@ __global__ void _reductionMatrixNorm0(
 
 
 template<class ElemType>
-__global__ void _getSparseVectorRepresntationForMatrix(
+__global__ void _getSparseVectorRepresntationForCSCMatrix(
     const int* m_dRow,
     const int* m_dCol,    
     int* vectArray,    

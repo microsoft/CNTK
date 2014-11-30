@@ -96,7 +96,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numCols = 0;
         m_elemSizeAllocated = 0;
         m_externalBuffer = false;
-        m_pArray = NULL;
         m_computeDevice = CPUDEVICE;
         m_nz = 0;
         m_matrixName = NULL;   
@@ -104,9 +103,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
             m_colIdx = -1;
-            m_val = NULL;
-            m_row = NULL;
-            m_pb = NULL;
+            m_pArray = NULL;
+            m_unCompIndex = NULL;
+            m_compIndex = NULL;
         } 
         else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
@@ -151,12 +150,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
-            if(m_val != NULL) 
-                delete[] m_val;
-            if(m_row != NULL) 
-                delete[] m_row;
-            if(m_pb != NULL)
-                delete[] m_pb;
+            if(m_pArray != NULL) 
+                delete[] m_pArray;
+            if(m_unCompIndex != NULL) 
+                delete[] m_unCompIndex;
+            if(m_compIndex != NULL)
+                delete[] m_compIndex;
         }  
         else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
@@ -197,21 +196,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t r = (m_format == matrixFormatSparseCSC) ? rIdx: cIdx;
         size_t c = (m_format == matrixFormatSparseCSC) ? cIdx: rIdx;
 
-        m_val[m_nz] = v;
-        m_row[m_nz] = r;
+        m_pArray[m_nz] = v;
+        m_unCompIndex[m_nz] = r;
 
         //consistency check
-        if(c == m_colIdx && r <= m_row[m_nz-1]) 
+        if(c == m_colIdx && r <= m_unCompIndex[m_nz-1]) 
         {
             throw std::logic_error("CPUSparseMatrix:  SetValue is not called properly");
         }
 
         if (c != m_colIdx) 
         {
-            m_pb[c] = m_nz;
+            m_compIndex[c] = m_nz;
             m_colIdx = (int) c;
         } 
-        m_pb[c+1] = m_nz+1;
+        m_compIndex[c+1] = m_nz+1;
         m_nz++;
     }
 
@@ -220,7 +219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
-            return m_val;
+            return m_pArray;
         }  
         else
         {
@@ -241,18 +240,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_elemSizeAllocated = size;
             if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
             {
-                if(m_val != NULL) 
-                    delete[] m_val;
-                if(m_row != NULL) 
-                    delete[] m_row;
-                if(m_pb != NULL) 
-                    delete[] m_pb; 
+                if(m_pArray != NULL) 
+                    delete[] m_pArray;
+                if(m_unCompIndex != NULL) 
+                    delete[] m_unCompIndex;
+                if(m_compIndex != NULL) 
+                    delete[] m_compIndex; 
                 
                 //int len = m_format == MatrixFormat::matrixFormatSparseCSC ? numCols : numRows;
                 size_t len = numCols > numRows ? numCols : numRows;
-                m_val = new ElemType[size];
-                m_row = new size_t[size];                
-                m_pb = new size_t[len+1];  
+                m_pArray = new ElemType[size];
+                m_unCompIndex = new size_t[size];                
+                m_compIndex = new size_t[len+1];  
                 
             } 
             else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
@@ -321,12 +320,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for(size_t j = 0; j < rhs.GetNumCols(); j++) 
             {
-                size_t start = rhs.m_pb[j];
-                size_t end = rhs.m_pb[j+1];
+                size_t start = rhs.m_compIndex[j];
+                size_t end = rhs.m_compIndex[j+1];
                 for(size_t p = start; p < end; p++)
                 { 
-                    size_t i = rhs.m_row[p];
-                    ElemType val = rhs.m_val[p];
+                    size_t i = rhs.m_unCompIndex[p];
+                    ElemType val = rhs.m_pArray[p];
 
                     for(size_t h = 0; h < lhs.GetNumRows(); h++)
                     {
@@ -339,13 +338,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {           
             for(size_t j = 0; j < rhs.GetNumCols(); j++)
             { 
-                size_t start = rhs.m_pb[j];
-                size_t end = rhs.m_pb[j + 1];
+                size_t start = rhs.m_compIndex[j];
+                size_t end = rhs.m_compIndex[j + 1];
 
                 for(size_t p = start; p < end; p++)
                 { 
-                    size_t i = rhs.m_row[p];
-                    ElemType val = rhs.m_val[p];
+                    size_t i = rhs.m_unCompIndex[p];
+                    ElemType val = rhs.m_pArray[p];
                     for(size_t h = 0; h < lhs.GetNumRows(); h++)
                     {                     
                         c(h, i) += alpha * lhs(h, j)*val;
@@ -400,13 +399,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             map<size_t, size_t> w2Id;
             for(size_t j = 0; j < rhs.GetNumCols(); j++)
             { // j ranges over batches
-                size_t start = rhs.m_pb[j];
-                size_t end = rhs.m_pb[j+1];
+                size_t start = rhs.m_compIndex[j];
+                size_t end = rhs.m_compIndex[j+1];
 
                 for(size_t p = start; p < end; p++) 
                 { 
-                    size_t i = rhs.m_row[p]; //i ranges over words
-                    ElemType val = rhs.m_val[p]; //1 for(i, j)
+                    size_t i = rhs.m_unCompIndex[p]; //i ranges over words
+                    ElemType val = rhs.m_pArray[p]; //1 for(i, j)
 
                     bool first = true;
                     if(w2Id.find(i) == w2Id.end()) 
@@ -468,12 +467,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t col_num = (lhs.m_format == MatrixFormat::matrixFormatSparseCSC) ? lhs.GetNumCols(): lhs.GetNumRows();
             for(size_t j = 0; j < col_num; j++) 
             {
-                size_t start = lhs.m_pb[j];
-                size_t end = lhs.m_pb[j + 1];
+                size_t start = lhs.m_compIndex[j];
+                size_t end = lhs.m_compIndex[j + 1];
                 for(size_t p = start; p < end; p++) 
                 {
-                    size_t i = lhs.m_row[p];
-                    ElemType val = lhs.m_val[p];
+                    size_t i = lhs.m_unCompIndex[p];
+                    ElemType val = lhs.m_pArray[p];
                     size_t r = (lhs.m_format == MatrixFormat::matrixFormatSparseCSC) ? i : j;
                     size_t c = (lhs.m_format == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                     rhs(r, c) += alpha * val; 
@@ -535,11 +534,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         entropyScore(0, 0) = 0;
         for(size_t j = 0; j < label.GetNumCols(); j++)
         {
-            size_t start = label.m_pb[j];
-            size_t end = label.m_pb[j + 1];
+            size_t start = label.m_compIndex[j];
+            size_t end = label.m_compIndex[j + 1];
             for (size_t p = start; p < end; p++)
             {
-                size_t i = label.m_row[p];
+                size_t i = label.m_unCompIndex[p];
                 size_t iStt, iEnd;
                 if (i < nV)
                 {
@@ -566,17 +565,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType maxV = LZERO;
                 for(size_t ii = b; ii < etp.m_nz; ii++)
                 {
-                    maxV = (ElemType) logadd(maxV, etp.m_val[ii]);
+                    maxV = (ElemType) logadd(maxV, etp.m_pArray[ii]);
                 }
 
                 for(size_t ii = b; ii < etp.m_nz; ii++)
                 {
-                    etp.m_val[ii] = etp.m_val[ii] - maxV;
+                    etp.m_pArray[ii] = etp.m_pArray[ii] - maxV;
                 }
 
-                entropyScore(0, 0) -= etp.m_val[b+i-iStt];
+                entropyScore(0, 0) -= etp.m_pArray[b+i-iStt];
                 //negate positive data points
-                etp.m_val[b+i-iStt] *=-1;
+                etp.m_pArray[b+i-iStt] *=-1;
             }
         }
     }
@@ -587,13 +586,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {        
         for(int i = 0; i < a.m_nz; i++) 
         {
-            if(a.m_val[i] < 0) 
+            if(a.m_pArray[i] < 0) 
             {
-                a.m_val[i] = exp(a.m_val[i]); //negative;
+                a.m_pArray[i] = exp(a.m_pArray[i]); //negative;
             } 
             else 
             { 
-                a.m_val[i] = exp(-a.m_val[i])-1; //positive
+                a.m_pArray[i] = exp(-a.m_pArray[i])-1; //positive
             }
         }       
     }
@@ -609,14 +608,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         for(size_t j = 0; j < error.GetNumCols(); j++) 
         {
-            size_t start = error.m_pb[j];
-            size_t end = error.m_pb[j+1];
+            size_t start = error.m_compIndex[j];
+            size_t end = error.m_compIndex[j+1];
             for(size_t p = start; p < end; p++)
             {
-                size_t i = error.m_row[p];
+                size_t i = error.m_unCompIndex[p];
                 for(size_t h = 0; h < grd.GetNumRows(); h++)
                 { // h ranges over hidden units
-                    grd(h,j) += weight(i, h) * error.m_val[p];
+                    grd(h,j) += weight(i, h) * error.m_pArray[p];
                 }
             }
         }
@@ -642,12 +641,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         map<size_t, size_t> w2Id;
         for(size_t j = 0; j < error.GetNumCols(); j++)
         {
-            size_t start = error.m_pb[j];
-            size_t end = error.m_pb[j+1];
+            size_t start = error.m_compIndex[j];
+            size_t end = error.m_compIndex[j+1];
 
             for(size_t p = start; p < end; p++)
             {
-                size_t i = error.m_row[p]; // i ranges over words
+                size_t i = error.m_unCompIndex[p]; // i ranges over words
                 bool first = true;
                 if(w2Id.find(i) == w2Id.end()) 
                 {
@@ -664,11 +663,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 { // h range over hidden layer 
                     if(first == true) 
                     {
-                        grd.m_blockVal[pos] = input(h, j)*error.m_val[p];
+                        grd.m_blockVal[pos] = input(h, j)*error.m_pArray[p];
                     } 
                     else 
                     {
-                        grd.m_blockVal[pos] += input(h, j)*error.m_val[p];
+                        grd.m_blockVal[pos] += input(h, j)*error.m_pArray[p];
                     }
                     pos++;
                 }
@@ -731,19 +730,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t col_num = (m_format == MatrixFormat::matrixFormatSparseCSC) ? GetNumCols() : GetNumRows();
             for(size_t j = 0; j < col_num; j++) 
             {
-                size_t start = m_pb[j];
-                size_t end = m_pb[j+1];
+                size_t start = m_compIndex[j];
+                size_t end = m_compIndex[j+1];
                 for(size_t p = start; p < end; p++) 
                 {
-                    size_t i = m_row[p];
-                    ElemType val = m_val[p];
+                    size_t i = m_unCompIndex[p];
+                    ElemType val = m_pArray[p];
 
                     size_t row = (m_format == MatrixFormat::matrixFormatSparseCSC) ? i : j;
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                     ElemType adenorm = c(row, col); 
                     adenorm += val * val; 
                     val = val / (floor + sqrt(adenorm)); 
-                    m_val[p] = val;
+                    m_pArray[p] = val;
                     c(row, col) = adenorm; 
                 }
             }
@@ -802,7 +801,109 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }    
 
-    template class CPUSparseMatrix<float>; 
+    template <class ElemType>
+    MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
+    {
+        stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
+        size_t elsize;
+        stream >> elsize;
+        if (sizeof(ElemType) != elsize)
+            throw std::runtime_error("Template argument size doesn't match those in file");
+        std::wstring matrixName;
+
+        // now prepare this header to receive the data being read
+        size_t nz, colnum, rownum;
+        int format;
+
+        // read in the header information
+        stream >> matrixName >> format >> nz >> colnum >> rownum;
+
+        us.SetFormat((MatrixFormat)format);
+        if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
+            NOT_IMPLEMENTED;
+
+        us.Resize(rownum, colnum, nz);
+
+        if (nz > 0)
+        {
+            size_t compressedSize = (us.GetFormat() == matrixFormatSparseCSC) ? colnum + 1 : rownum + 1;
+            ElemType* dataBuffer = us.NzValues();
+            size_t* unCompressedIndex = us.MajorIndexLocation();
+            size_t* compressedIndex = us.SecondaryIndexLocation();
+
+            // read in the sparse matrix info
+            for (size_t i = 0; i < nz; ++i)
+            {
+                stream >> dataBuffer[i];
+            }
+            for (size_t i = 0; i < nz; ++i)
+            {
+                stream >> unCompressedIndex[i];
+            }
+            for (size_t i = 0; i < compressedSize; ++i)
+            {
+                stream >> compressedIndex[i];
+            }
+        }
+        stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
+
+        us.SetMatrixName(matrixName.c_str());
+
+        return stream;
+    }
+
+    template MATH_API File& operator>>(File& stream, CPUSparseMatrix<float>& us);
+    template MATH_API File& operator>>(File& stream, CPUSparseMatrix<double>& us);
+
+    template <class ElemType>
+    MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
+    {
+        if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
+            NOT_IMPLEMENTED;
+
+        stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
+        stream << sizeof(ElemType);
+        if (us.GetMatrixName() == nullptr)
+        {
+            std::wstring s(L"nnmatrix");
+            stream << s;
+        }
+        else
+        {
+            stream << us.GetMatrixName();
+        }
+
+        size_t nz, numRows, numCols;
+        size_t compressedSize = us.SecondaryIndexCount();
+        int format = us.GetFormat();
+
+        stream << format << nz << numCols << numRows;
+
+        if (nz > 0)
+        {
+            ElemType* dataBuffer = us.NzValues();
+            size_t* unCompressedIndex = us.MajorIndexLocation();
+            size_t* compressedIndex = us.SecondaryIndexLocation();
+
+            for (size_t i = 0; i < nz; ++i)
+            {
+                stream << dataBuffer[i];
+            }
+            for (size_t i = 0; i < nz; ++i)
+            {
+                stream << unCompressedIndex[i];
+            }
+            for (size_t i = 0; i < compressedSize; ++i)
+            {
+                stream << compressedIndex[i];
+            }
+        }
+        stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
+
+        return stream;
+    }
+
+    template class CPUSparseMatrix<float>;
     template class CPUSparseMatrix<double>;
 
 }}}
