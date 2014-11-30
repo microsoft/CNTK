@@ -76,6 +76,16 @@
 
 \begin_layout Chapter
 Computational Network
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Computational Network
+\end_layout
+
+\end_inset
+
+
 \begin_inset CommandInset label
 LatexCommand label
 name "chap:CN"
@@ -126,17 +136,7 @@ reference "alg:Computation-Steps-One-Hidden-Layer"
  If we know how to compute each step and in which order the steps are computed
  we have an implementation of the neural network.
  This observation suggests that we can unify all these models under the
- framework of computational network
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-computational network
-\end_layout
-
-\end_inset
-
- (CN
+ framework of computational network (CN
 \begin_inset Index idx
 status open
 
@@ -1062,6 +1062,16 @@ A computational network with shared model parameters (highlighted).
 
 \begin_layout Section
 Forward Computation
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Forward Computation
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1144,7 +1154,7 @@ reference "alg:CN-ForwardOrder-DAG"
 status open
 
 \begin_layout Plain Layout
-forward computation
+Forward Computation
 \end_layout
 
 \end_inset
@@ -2715,6 +2725,16 @@ reference "sec:Typical-Computation-Nodes"
 
 \begin_layout Section
 Model Training
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Model Training
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2723,8 +2743,27 @@ To train a CN, we need to define a training criterion
 \end_inset
 
 .
- Popular criteria include cross-entropy (CE) for classification and mean
- square error (MSE) for regression.
+ Popular criteria include cross-entropy
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cross-entropy
+\end_layout
+
+\end_inset
+
+ (CE) for classification and mean square error
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+mean square error
+\end_layout
+
+\end_inset
+
+ (MSE) for regression.
  Since the training criterion is also a result of some computation, it can
  be represented as a computation node and inserted into the CN.
  Figure 
@@ -4809,7 +4848,17 @@ where
 \end_layout
 
 \begin_layout Section
-Typical Computation Nodes
+Typical Computation
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node! Typical Computation
+\end_layout
+
+\end_inset
+
+ Nodes
 \begin_inset CommandInset label
 LatexCommand label
 name "sec:Typical-Computation-Nodes"
@@ -5473,16 +5522,46 @@ name "tab:CN-Notations"
 
 \begin_layout Subsection
 Computation Node Types with No Operand
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! No Operand
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
 The values of a computation node that has no operand are given instead of
  computed.
  As a result both 
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Evaluate 
+\end_layout
+
+\end_inset
+
+
 \begin_inset Formula $Evaluate$
 \end_inset
 
  and 
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ComputePartialGradient 
+\end_layout
+
+\end_inset
+
+
 \begin_inset Formula $ComputePartialGradient(child)$
 \end_inset
 
@@ -5497,7 +5576,7 @@ Parameter
 status collapsed
 
 \begin_layout Plain Layout
-Parameter, computation node
+Parameter ! computation node
 \end_layout
 
 \end_inset
@@ -5522,6 +5601,16 @@ InputValue
 
 \begin_layout Subsection
 Computation Node Types with One Operand
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! One Operand
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -5570,7 +5659,7 @@ Negate
 status open
 
 \begin_layout Plain Layout
-Negate, computation node
+Negate
 \end_layout
 
 \end_inset
@@ -5661,7 +5750,7 @@ Sigmoid
 status open
 
 \begin_layout Plain Layout
-Sigmoid, computation node
+Sigmoid
 \end_layout
 
 \end_inset
@@ -5749,7 +5838,7 @@ Tanh
 status open
 
 \begin_layout Plain Layout
-Tanh, computation node
+Tanh
 \end_layout
 
 \end_inset
@@ -5840,7 +5929,7 @@ ReLU
 status open
 
 \begin_layout Plain Layout
-ReLU, computation node
+ReLU
 \end_layout
 
 \end_inset
@@ -5931,7 +6020,7 @@ Log
 status open
 
 \begin_layout Plain Layout
-Log, computation node
+Log
 \end_layout
 
 \end_inset
@@ -6022,7 +6111,7 @@ Exp
 status open
 
 \begin_layout Plain Layout
-Exp, computation node
+Exp
 \end_layout
 
 \end_inset
@@ -6116,7 +6205,7 @@ Softmax
 status open
 
 \begin_layout Plain Layout
-Softmax, computation node
+Softmax
 \end_layout
 
 \end_inset
@@ -6212,7 +6301,7 @@ Elements
 status open
 
 \begin_layout Plain Layout
-SumElements, computation node
+SumElements
 \end_layout
 
 \end_inset
@@ -6320,7 +6409,7 @@ L1Norm
 status open
 
 \begin_layout Plain Layout
-L1Norm, computation node
+L1Norm
 \end_layout
 
 \end_inset
@@ -6428,7 +6517,7 @@ L2Norm
 status open
 
 \begin_layout Plain Layout
-L2Norm, computation node
+L2Norm
 \end_layout
 
 \end_inset
@@ -6531,7 +6620,17 @@ and
 \end_layout
 
 \begin_layout Subsection
-Computation Node Types with Two Operands
+Computation Node Types with 
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! Two Operands
+\end_layout
+
+\end_inset
+
+Two Operands
 \end_layout
 
 \begin_layout Standard
@@ -6628,7 +6727,17 @@ Scale
 status open
 
 \begin_layout Plain Layout
-Scale, computation node
+Node ! Scale
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Scale
 \end_layout
 
 \end_inset
@@ -6798,7 +6907,17 @@ Times
 status open
 
 \begin_layout Plain Layout
-Times, computation node
+Node ! Times
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Times
 \end_layout
 
 \end_inset
@@ -6961,7 +7080,17 @@ ElementTimes
 status open
 
 \begin_layout Plain Layout
-ElementTimes, computation node
+Node ! ElementTimes
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ElementTimes
 \end_layout
 
 \end_inset
@@ -7070,7 +7199,17 @@ Plus
 status open
 
 \begin_layout Plain Layout
-Plus, computation node
+Node ! Plus
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Plus
 \end_layout
 
 \end_inset
@@ -7281,7 +7420,17 @@ Minus
 status open
 
 \begin_layout Plain Layout
-Minus, computation node
+Node ! Minus
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Minus
 \end_layout
 
 \end_inset
@@ -7349,7 +7498,17 @@ DiagTimes
 status open
 
 \begin_layout Plain Layout
-DiagTimes, computation node
+Node ! DiagTimes
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DiagTimes
 \end_layout
 
 \end_inset
@@ -7513,7 +7672,17 @@ Dropout
 status open
 
 \begin_layout Plain Layout
-Dropout, computation node
+Node ! Dropout
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dropout
 \end_layout
 
 \end_inset
@@ -7586,6 +7755,26 @@ ElementTimes
 \emph on
 KhatriRaoProduct
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! KhatriRaoProduct
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+KhatriRaoProduct
+\end_layout
+
+\end_inset
+
 : column-wise cross product of two matrices 
 \begin_inset Formula $\mathbf{X}$
 \end_inset
@@ -7700,6 +7889,26 @@ The gradient
 \emph on
 Cos
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! Cos
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Cos
+\end_layout
+
+\end_inset
+
 : column-wise cosine distance of two matrices 
 \begin_inset Formula $\mathbf{X}$
 \end_inset
@@ -7808,7 +8017,17 @@ ClassificationError
 status open
 
 \begin_layout Plain Layout
-ClassificationError, computation node
+Node ! ClassificationError
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ClassificationError
 \end_layout
 
 \end_inset
@@ -7860,7 +8079,17 @@ SquareError
 status open
 
 \begin_layout Plain Layout
-SquareError, computation node
+Node ! SquareError
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SquareError
 \end_layout
 
 \end_inset
@@ -7937,7 +8166,17 @@ CrossEntropy
 status open
 
 \begin_layout Plain Layout
-CrossEntropy, computation node
+Node ! CrossEntropy
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CrossEntropy
 \end_layout
 
 \end_inset
@@ -8129,7 +8368,17 @@ CrossEntropyWithSoftmax
 status open
 
 \begin_layout Plain Layout
-CrossEntropyWithSoftmax, computation node
+Node ! CrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CrossEntropyWithSoftmax
 \end_layout
 
 \end_inset
@@ -8288,7 +8537,17 @@ Mean
 status open
 
 \begin_layout Plain Layout
-Mean, computation node
+Node ! Mean
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Mean
 \end_layout
 
 \end_inset
@@ -8349,7 +8608,17 @@ InvStdDev
 status open
 
 \begin_layout Plain Layout
-InvStdDev, computation node
+Node ! InvStdDev
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+InvStdDev
 \end_layout
 
 \end_inset
@@ -8403,7 +8672,17 @@ PerDimMeanVarNorm
 status open
 
 \begin_layout Plain Layout
-PerDimMeanVarNorm, computation node
+Node ! PerDimMeanVarNorm
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMeanVarNorm
 \end_layout
 
 \end_inset
@@ -8504,7 +8783,17 @@ Convolution
 status open
 
 \begin_layout Plain Layout
-Convolution, computation node
+Node ! Convolution
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Convolution
 \end_layout
 
 \end_inset
@@ -8540,7 +8829,7 @@ There is a kernel
 status open
 
 \begin_layout Plain Layout
-kernel, convolutional neural network
+kernel ! convolutional neural network
 \end_layout
 
 \end_inset
@@ -8870,7 +9159,17 @@ MaxPooling
 status open
 
 \begin_layout Plain Layout
-MaxPooling, computation node
+Node ! MaxPooling
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MaxPooling
 \end_layout
 
 \end_inset
@@ -8979,7 +9278,17 @@ AveragePooling
 status open
 
 \begin_layout Plain Layout
-AveragePooling, computation node
+Node ! AveragePooling
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+AveragePooling
 \end_layout
 
 \end_inset
@@ -9088,7 +9397,7 @@ In the above sections, we assumed that the CN is a DAG.
 status open
 
 \begin_layout Plain Layout
-recurrent connection
+Recurrent ! connection
 \end_layout
 
 \end_inset
@@ -9100,7 +9409,7 @@ Delay
 status open
 
 \begin_layout Plain Layout
-Delay, computation node
+Delay
 \end_layout
 
 \end_inset
@@ -9811,6 +10120,16 @@ Process multiple sequences in a batch.
 
 \begin_layout Subsection
 Building Arbitrary Recurrent Neural Networks
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Recurrent ! neural network (RNN)
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -9821,7 +10140,7 @@ With the inclusion of delay nodes, we can easily construct complicated recurrent
 status open
 
 \begin_layout Plain Layout
-long-short-term-memory neural network
+long-short-term memory
 \end_layout
 
 \end_inset
@@ -9831,7 +10150,7 @@ long-short-term-memory neural network
 status open
 
 \begin_layout Plain Layout
-LSTM, recurrent neural network
+LSTM
 \end_layout
 
 \end_inset
