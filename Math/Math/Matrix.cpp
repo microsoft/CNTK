@@ -887,23 +887,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     template<class ElemType>
-    void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom)
+    void Matrix<ElemType>::SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format /*= matrixFormatSparseCSR*/)
     {
         if (this == &deepCopyFrom)
             return;
 
         this->m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
         DecideAndMoveToRightDevice(deepCopyFrom, *this);
-        this->SwitchToMatrixType(deepCopyFrom.GetMatrixType());
+        this->SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format);
 
         DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
             this,
-            this->m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix), 
-            this->m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix), 
-            this->m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix), 
+            this->m_CPUMatrix->SetValue(*deepCopyFrom.m_CPUMatrix),
+            this->m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUMatrix),
+            this->m_CPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix),
             this->m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix)
             );
-            }
+    }
 
 
     //WARNING: what's the exact meaning of MANAGEDEXTERN here? This is not handled currently
