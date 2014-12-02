@@ -1,4 +1,4 @@
-//
+    //
 // <copyright file="CPUMatrix.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
@@ -34,9 +34,6 @@
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    #define LZERO  -10e10
-    #define MINLOGEXP -9.2103
-    #define LSMALL -0.5E10
     double logadd(double x, double y);
 
     //To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor

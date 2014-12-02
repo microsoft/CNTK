@@ -98,7 +98,7 @@ void AddMultiplyAndInplaceSigmoidTest(int n, int k, int m)
 }
 
 template<class ElemType>
-void ColumnSliceMultAndAddTest(int n, int k, int m, short deviceID)
+void ColumnSliceMultAndAddTest(int n, int k, int m, DEVICEID_TYPE deviceID)
 {
     cout<<"Testing Matrix"<<endl;
 

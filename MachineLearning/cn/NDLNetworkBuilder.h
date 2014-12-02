@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             IExecutionEngine<ElemType>* executionEngine,
             const std::wstring& networkConfig, 
             const std::string& configParams,
-            short deviceId=AUTOPLACEMATRIX) 
+            DEVICEID_TYPE deviceId=AUTOPLACEMATRIX) 
         {
             m_executionEngine=executionEngine;
             m_networkConfig=networkConfig;
@@ -69,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ConfigParameters newConfig;
             ConfigValue networkConfig = config("networkDescription","");
-            short deviceId = DeviceFromConfig(config);
+            DEVICEID_TYPE deviceId = DeviceFromConfig(config);
             unsigned long randomSeedOffset = config("randomSeedOffset","0");
             auto executionEngine = new SynchronousExecutionEngine<ElemType>(deviceId, randomSeedOffset);
 
@@ -224,7 +224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_networkConfig;
         std::string m_initialConfig;
 
-        short m_deviceId;
+        DEVICEID_TYPE m_deviceId;
 
 };
 

@@ -86,7 +86,17 @@ name "chap:ASRDecoder"
 \end_layout
 
 \begin_layout Section
-Argon Speech Recognition Decoder
+Argon
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Argon
+\end_layout
+
+\end_inset
+
+ Speech Recognition Decoder
 \end_layout
 
 \begin_layout Standard
@@ -130,7 +140,17 @@ As output, Argon produces one-best word hypotheses and lattices.
 \end_layout
 
 \begin_layout Standard
-Argon is a token-passing decoder.
+Argon is a token-passing decoder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+token-passing, decoder
+\end_layout
+
+\end_inset
+
+.
  It works by maintaining a set of tokens, each of which represents a partial
  path.
  Each token maintains a language model history state, a pointer to its location
@@ -176,7 +196,17 @@ Representing the Acoustic Search Space
 
 \begin_layout Standard
 Argon represents the acoustic search space as a determinized, minimized
- finite state transducer, encapsulating 
+ finite state transducer
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+finite state transducer
+\end_layout
+
+\end_inset
+
+, encapsulating 
 \begin_inset Formula $H\textdegree C\mathcal{\textdegree L}$
 \end_inset
 
@@ -315,6 +345,16 @@ Command-Line Parameters
 
 \begin_layout Subsubsection
 WFST Compilation Parameters
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+WFST, Compilation Parameters
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -324,26 +364,75 @@ These parameters are used in the graph pre-compilation stage, when a fsm
 \end_layout
 
 \begin_layout Standard
-[-infsm (string: )]: gzipp'd ascii fsm to precompile
+[-infsm
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+infsm
+\end_layout
+
+\end_inset
+
+ (string: )]: gzipp'd ascii fsm to precompile
 \end_layout
 
 \begin_layout Standard
-[-lookahead-file (string: )]: file with the lookahead scores for each word,
- if lookahead was used 
+[-lookahead-file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lookahead-file
+\end_layout
+
+\end_inset
+
+ (string: )]: file with the lookahead scores for each word, if lookahead
+ was used 
 \end_layout
 
 \begin_layout Standard
-[-precompile (bool: false)]: precompile the graph? true indicates that precompil
-ation should be done
+[-precompile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+precompile
+\end_layout
+
+\end_inset
+
+ (bool: false)]: precompile the graph? true indicates that precompilation
+ should be done
 \end_layout
 
 \begin_layout Standard
-[-transition-file (string: )]: transition probability file for use in precompila
-tion 
+[-transition-file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+transition-file
+\end_layout
+
+\end_inset
+
+ (string: )]: transition probability file for use in precompilation 
 \end_layout
 
 \begin_layout Standard
-[-graph (string)]: decoding graph to read/write
+[-graph
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+graph
+\end_layout
+
+\end_inset
+
+ (string)]: decoding graph to read/write
 \end_layout
 
 \begin_layout Subsubsection
@@ -356,39 +445,118 @@ These parameters are related to the inputs used in decoding.
 \end_layout
 
 \begin_layout Standard
-[-infiles (string: )]: file with a list of mfcc files to process
+[-infiles
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+infiles
+\end_layout
+
+\end_inset
+
+ (string: )]: file with a list of mfcc files to process
 \end_layout
 
 \begin_layout Standard
-[-graph (string)]: decoding graph to read/write
+[-graph
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+graph
+\end_layout
+
+\end_inset
+
+ (string)]: decoding graph to read/write
 \end_layout
 
 \begin_layout Standard
-[-lm (string: )]: language model to use in decoding; use when there is one
+[-
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lm
+\end_layout
+
+\end_inset
+
+lm (string: )]: language model to use in decoding; use when there is one
  LM only 
 \end_layout
 
 \begin_layout Standard
-[-lm-collection (string: )]: file specifying a set of language models to
- use for decoding
+[-lm-collection
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lm-collection
+\end_layout
+
+\end_inset
+
+ (string: )]: file specifying a set of language models to use for decoding
 \end_layout
 
 \begin_layout Standard
-[-sil-cost (float: 1.0)]: cost charged to silence 
+[-
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+sil-cost
+\end_layout
+
+\end_inset
+
+sil-cost (float: 1.0)]: cost charged to silence 
 \end_layout
 
 \begin_layout Standard
-[-am (string: )]: binary acoustic model to use in decoding 
+[-
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+am
+\end_layout
+
+\end_inset
+
+am (string: )]: binary acoustic model to use in decoding 
 \end_layout
 
 \begin_layout Standard
-[-cntkmap (string: )]: mapping from output names in decoding graph to dnn
- output nodes
+[-cntkmap
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cntkmap
+\end_layout
+
+\end_inset
+
+ (string: )]: mapping from output names in decoding graph to dnn output
+ nodes
 \end_layout
 
 \begin_layout Standard
-[-dnn_window_size (int: 11)]: number of consecutive acoustic vectors to
- stack into one context-window input, depends on acoustic model
+[-dnn_window_size
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+dnn_window_size
+\end_layout
+
+\end_inset
+
+ (int: 11)]: number of consecutive acoustic vectors to stack into one context-wi
+ndow input, depends on acoustic model
 \end_layout
 
 \begin_layout Subsubsection
@@ -400,17 +568,47 @@ These parameters specify the outputs that Argon creates at runtime.
 \end_layout
 
 \begin_layout Standard
-[-outmlf (string: )]: store recognition results in HTK-style master label
- format file
+[-outmlf
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outmlf
+\end_layout
+
+\end_inset
+
+ (string: )]: store recognition results in HTK-style master label format
+ file
 \end_layout
 
 \begin_layout Standard
-[-detailed-alignment (bool: false)]: enables state-level recognition output
+[-detailed-alignment
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+detailed-alignment
+\end_layout
+
+\end_inset
+
+ (bool: false)]: enables state-level recognition output
 \end_layout
 
 \begin_layout Standard
-[-lattice-prefix (string: )]: path and filename prefix for output lattices;
- will be post-pended with a number
+[-lattice-prefix
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lattice-prefix
+\end_layout
+
+\end_inset
+
+ (string: )]: path and filename prefix for output lattices; will be post-pended
+ with a number
 \end_layout
 
 \begin_layout Subsubsection
@@ -422,30 +620,88 @@ These parameters control Argon's search
 \end_layout
 
 \begin_layout Standard
-[-acweight (float: 0.0667)]: acoustic model weight.
+[-acweight
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+acweight
+\end_layout
+
+\end_inset
+
+ (float: 0.0667)]: acoustic model weight.
  language model weight is always 1
 \end_layout
 
 \begin_layout Standard
-[-beam (float: 15)]: absolute beam threshold 
+[-beam
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+beam
+\end_layout
+
+\end_inset
+
+ (float: 15)]: absolute beam threshold 
 \end_layout
 
 \begin_layout Standard
-[-alignmlf (string: )]: source transcription for forced alignment 
+[-alignmlf
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+alignmlf
+\end_layout
+
+\end_inset
+
+ (string: )]: source transcription for forced alignment 
 \end_layout
 
 \begin_layout Standard
-[-max-tokens (int: 20000)]: number of tokens to keep at each time frame
- 
+[-max-tokens
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+max-tokens
+\end_layout
+
+\end_inset
+
+ (int: 20000)]: number of tokens to keep at each time frame 
 \end_layout
 
 \begin_layout Standard
-[-word_end_beam_frac (float: 0.33333)]: beam at word ends is this times the
- normal beam
+[-word_end_beam_frac
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+word_end_beam_frac
+\end_layout
+
+\end_inset
+
+ (float: 0.33333)]: beam at word ends is this times the normal beam
 \end_layout
 
 \begin_layout Section
 Constructing a Decoding Graph
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Decoding Graph
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
