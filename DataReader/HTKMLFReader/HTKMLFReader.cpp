@@ -771,8 +771,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         if (m_convertLabelsToTargetsMultiIO[id])
                         {
-                                                    size_t labelDim = m_labelToTargetMapMultiIO[id].size();
-                                                    for (int i = 0; i < uids.size(); i++)
+                            size_t labelDim = m_labelToTargetMapMultiIO[id].size();
+                            for (int i = 0; i < uids.size(); i++)
                             {
                                 assert(uids[i] < labelDim); labelDim;
                                 size_t labelId = uids[i];

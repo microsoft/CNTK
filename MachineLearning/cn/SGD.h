@@ -314,7 +314,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             msra::files::make_intermediate_dirs (m_modelPath);
         }
 
-        void Adapt(wstring origModelFileName, wstring refNodeName, IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader, const short deviceID, const bool makeMode = true)
+        void Adapt(wstring origModelFileName, wstring refNodeName, IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader, const DEVICEID_TYPE deviceID, const bool makeMode = true)
         {
             if (origModelFileName == L"" || trainSetDataReader == nullptr)
                     throw std::invalid_argument ("origModel and trainSetDataReader should not be null.");
@@ -448,8 +448,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t vSz = FeatureNodes[0]->FunctionValues().GetNumRows();
                 int deviceId = FeatureNodes[0]->FunctionValues().GetDeviceId();
-                inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, (short)deviceId); 
-                inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, (short)deviceId);
+                inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId); 
+                inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId);
             }
 
 
@@ -1159,7 +1159,7 @@ public:
 
             GradientsUpdateType adpType = sgd->GradUpdateType();
             ElemType noiseStd = sgd->GradientUpdateNoiseStd();
-            Matrix<ElemType> sgdUpdateNoise((short)functionValues.GetDeviceId());
+            Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE)functionValues.GetDeviceId());
             if (noiseStd > 0)
             {
                 sgdUpdateNoise.SetValue(gradientValues);  /// get the gradient structure since gradient is sparse

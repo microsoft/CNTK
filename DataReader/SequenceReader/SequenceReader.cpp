@@ -1770,39 +1770,42 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
                 features.Resize(labelInfo.dim, actualmbsize, actualmbsize);
                 features.Reset();
             }
-        }
+        };
       
-        // copy m_featureData to matrix, for CPU
-        if(features.GetCurrentMatrixLocation() == CPU )
-        {
-            for (size_t j = 0; j < actualmbsize; ++j)
-            {
-                // vector of feature data goes into matrix column
-                size_t idx = (size_t)m_featureData[j];
+        // copy m_featureData to matrix
+        // we always copy it to cpu first and then convert to gpu if gpu is desired.
+        DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
+        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
-                if (matrices.find(m_featuresName) != matrices.end())
-                    features.SetValue(idx, j, (ElemType)1); 
-            }
-        }
-        else // for GPU
+        for (size_t j = 0; j < actualmbsize; ++j)
         {
+            // vector of feature data goes into matrix column
+            size_t idx = (size_t)m_featureData[j];
+
             if (matrices.find(m_featuresName) != matrices.end())
-            {
-                m_indexer.clear();
-                size_t size = m_featureData.size();
-
-                for(int i = 0; i < size; i++) 
-                {
-                    m_featuresBufferRow[i] = (size_t)m_featureData[i];                    
-                    if(m_indexer.find(m_featuresBufferRow[i]) == m_indexer.end()) 
-                    {
-                        m_indexer[m_featuresBufferRow[i]] = m_indexer.size();
-                    }
-                    m_featuresBufferRowIdx[i] = m_indexer[m_featuresBufferRow[i]];
-                }               
-                features.SetMatrixFromCSCFormat(m_featuresBufferRow, m_featuresBufferRowIdx, size, m_indexer.size());
-            }
+                features.SetValue(idx, j, (ElemType)1); 
         }
+        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, true,false, false);
+
+        //else // for GPU
+        //{
+        //    if (matrices.find(m_featuresName) != matrices.end())
+        //    {
+        //        m_indexer.clear();
+        //        size_t size = m_featureData.size();
+
+        //        for(int i = 0; i < size; i++) 
+        //        {
+        //            m_featuresBufferRow[i] = (size_t)m_featureData[i];                    
+        //            if(m_indexer.find(m_featuresBufferRow[i]) == m_indexer.end()) 
+        //            {
+        //                m_indexer[m_featuresBufferRow[i]] = m_indexer.size();
+        //            }
+        //            m_featuresBufferRowIdx[i] = m_indexer[m_featuresBufferRow[i]];
+        //        }               
+        //        features.SetMatrixFromCSCFormat(m_featuresBufferRow, m_featuresBufferRowIdx, size, m_indexer.size());
+        //    }
+        //}
                 
         // TODO: move these two methods to startMiniBatchLoop()
         GetInputToClass(matrices);
