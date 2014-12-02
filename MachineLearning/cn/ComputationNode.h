@@ -3699,7 +3699,7 @@ protected:  \
             }       
 
 #if NANCHECK
-            m_functionValues.HasNan("Plus");
+            functionValues.HasNan("Plus");
 #endif
 #if DUMPOUTPUT
             functionValues.Print("PlusNode");
@@ -4991,7 +4991,7 @@ protected:  \
         {
             functionValues.AssignKhatriRaoProductOf(in0,in1);
 #if NANCHECK
-            m_functionValues.HasNan("KhatriRaoProduct");
+            functionValues.HasNan("KhatriRaoProduct");
 #endif
         }
 
