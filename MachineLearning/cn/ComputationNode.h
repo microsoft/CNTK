@@ -176,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
-            fstream << NodeName() + L"=" + OperationName();
+            fstream << L"\n" + NodeName() + L"=" + OperationName();
 
             if (!IsLeaf())
             {
@@ -185,7 +185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (i > 0)
                         fstream << wstring(L",");
-                    fstream << (Inputs(i) ? Inputs(i)->NodeName().c_str() : L"NULL");
+                    fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
                 }
                 fstream << wstring(L")");
             }
