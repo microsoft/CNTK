@@ -68,7 +68,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_indexInLoop;
         vector<size_t> m_sentenceEnd;
     public:
-        ComputationNode(short deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
+        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -94,7 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << OperationName() << NodeName();
         }
 
-        virtual void LoadFromFile(File& /*fstream*/, const size_t /*modelVersion*/, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& /*fstream*/, const size_t /*modelVersion*/, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
@@ -149,7 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children.resize(0);
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             if (deviceId != AUTOPLACEMATRIX)
             {
@@ -176,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
-            fstream << NodeName() + L"=" + OperationName();
+            fstream << L"\n" + NodeName() + L"=" + OperationName();
 
             if (!IsLeaf())
             {
@@ -185,7 +185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (i > 0)
                         fstream << wstring(L",");
-                    fstream << (Inputs(i) ? Inputs(i)->NodeName().c_str() : L"NULL");
+                    fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
                 }
                 fstream << wstring(L")");
             }
@@ -565,7 +565,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
                 s_constOnes[rows].find(cols) == s_constOnes[rows].end()) //not found
             {
-                Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, (short)deviceId);
+                Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, (DEVICEID_TYPE)deviceId);
                 matrix->SetValue(ElemType(1.000));
                 s_constOnes[rows][cols] = matrix;
             }
@@ -830,7 +830,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
 
-        short m_deviceId; //CPU=-1, >=0 GPU
+        DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
 
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
@@ -886,7 +886,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        LearnableParameter(size_t rows, size_t cols, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        LearnableParameter(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             //intentionally comment out so that we may support automatic dimention inference
             //if (rows * cols == 0) 
@@ -905,7 +905,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        LearnableParameter(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        LearnableParameter(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -920,7 +920,7 @@ protected:  \
             fstream << FunctionValues();
         }
         
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -988,21 +988,21 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        SparseLearnableParameter(size_t rows, size_t cols, const size_t size, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        SparseLearnableParameter(size_t rows, size_t cols, const size_t size, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : LearnableParameter<ElemType>(rows, cols, deviceId, name)
         {
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
             m_gradientValues.Resize(rows, cols, size);
         }
 
-        SparseLearnableParameter (File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") 
+        SparseLearnableParameter (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") 
             : LearnableParameter<ElemType>(fstream, modelVersion, deviceId, name)
         {
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             LearnableParameter<ElemType>::LoadFromFile(fstream,   modelVersion, deviceId);
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
@@ -1035,7 +1035,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        InputValue(size_t rows, size_t cols, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        InputValue(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
         {
             if (rows * cols == 0) 
                 throw std::logic_error("This InputValue dimension is 0.");
@@ -1052,7 +1052,7 @@ protected:  \
             InitRecurrentNode();
         }
         
-        InputValue(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        InputValue(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
         {
             size_t rows = imageWidth * imageHeight * imageChannels;
             size_t cols = numImages;
@@ -1072,7 +1072,7 @@ protected:  \
             InitRecurrentNode();
         }        
 
-        InputValue(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        InputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -1086,7 +1086,7 @@ protected:  \
             fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -1154,7 +1154,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        SparseInputValue (size_t rows, size_t cols, size_t size, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        SparseInputValue (size_t rows, size_t cols, size_t size, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
         {
             if (rows * cols == 0) 
                 throw std::logic_error("This InputValue dimension is 0.");
@@ -1172,7 +1172,7 @@ protected:  \
             InitRecurrentNode();
         }
         
-        SparseInputValue (size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
+        SparseInputValue (size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
             : ComputationNode<ElemType>(deviceId) 
         {
             size_t rows = imageWidth * imageHeight * imageChannels;
@@ -1194,7 +1194,7 @@ protected:  \
             InitRecurrentNode();
         }        
 
-        SparseInputValue (File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        SparseInputValue (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -1209,7 +1209,7 @@ protected:  \
             fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -1282,7 +1282,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        NegateNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        NegateNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -1290,7 +1290,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        NegateNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        NegateNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -1411,7 +1411,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        RectifiedLinearNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        RectifiedLinearNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_gradientOfRectifiedLinear(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1420,7 +1420,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        RectifiedLinearNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        RectifiedLinearNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfRectifiedLinear(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1532,7 +1532,7 @@ protected:  \
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -1583,7 +1583,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        SigmoidNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        SigmoidNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_gradientOfSigmoid(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1592,7 +1592,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        SigmoidNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        SigmoidNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfSigmoid(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1713,7 +1713,7 @@ protected:  \
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -1762,7 +1762,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        TanhNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        TanhNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_gradientOfTanh(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1771,7 +1771,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        TanhNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        TanhNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfTanh(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -1895,7 +1895,7 @@ protected:  \
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -1944,7 +1944,7 @@ protected:  \
     {
                 UsingComputationNodeMembers;
         public:
-        LogNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        LogNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfLog(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
@@ -1953,7 +1953,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        LogNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        LogNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfLog(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
@@ -2059,7 +2059,7 @@ protected:  \
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -2109,7 +2109,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        ExpNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        ExpNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfExp(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
@@ -2118,7 +2118,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        ExpNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        ExpNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfExp(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
@@ -2224,7 +2224,7 @@ protected:  \
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -2274,7 +2274,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        CosineNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        CosineNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_gradientOfCosine(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -2283,7 +2283,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        CosineNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        CosineNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientOfCosine(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -2388,7 +2388,7 @@ protected:  \
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -2440,7 +2440,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        SoftmaxNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"", const bool isColWise = true)
+        SoftmaxNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"", const bool isColWise = true)
             : ComputationNode<ElemType>(deviceId), m_gradientDotValue(deviceId), m_diff(deviceId), m_isColWise(isColWise)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -2449,7 +2449,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        SoftmaxNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        SoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_gradientDotValue(deviceId), m_diff(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -2559,7 +2559,7 @@ protected:  \
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -2613,7 +2613,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        SumElementsNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        SumElementsNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -2621,7 +2621,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        SumElementsNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        SumElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -2752,7 +2752,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        RowSliceNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_startIndex(0), m_numRows (0) 
+        RowSliceNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_startIndex(0), m_numRows (0) 
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -2760,7 +2760,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        RowSliceNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        RowSliceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -2772,7 +2772,7 @@ protected:  \
             node->CopyTo(this, newName, flags);
         }
         
-        RowSliceNode(const short deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        RowSliceNode(const DEVICEID_TYPE deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -2808,7 +2808,7 @@ protected:  \
             fstream << m_startIndex << m_numRows;
         }
         
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -2932,7 +2932,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        ScaleNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        ScaleNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -2940,7 +2940,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        ScaleNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        ScaleNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -3097,7 +3097,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        TimesNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        TimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -3105,7 +3105,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        TimesNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        TimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -3316,7 +3316,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        ElementTimesNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        ElementTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -3324,7 +3324,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        ElementTimesNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        ElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -3499,7 +3499,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        PlusNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        PlusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -3507,7 +3507,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        PlusNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        PlusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -3699,7 +3699,7 @@ protected:  \
             }       
 
 #if NANCHECK
-            m_functionValues.HasNan("Plus");
+            functionValues.HasNan("Plus");
 #endif
 #if DUMPOUTPUT
             functionValues.Print("PlusNode");
@@ -3781,7 +3781,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        MinusNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        MinusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -3789,7 +3789,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        MinusNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        MinusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -4121,7 +4121,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        DiagTimesNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        DiagTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_innerproduct(deviceId), m_rightGradient(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -4130,7 +4130,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        DiagTimesNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        DiagTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_innerproduct(deviceId), m_rightGradient(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -4296,7 +4296,7 @@ protected:  \
             m_children[1] = rightNode;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -4350,7 +4350,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        CosDistanceNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        CosDistanceNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -4359,7 +4359,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        CosDistanceNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        CosDistanceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -4569,7 +4569,7 @@ protected:  \
             m_children[1] = rightNode;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -4637,7 +4637,7 @@ protected:  \
         UsingComputationNodeMembers;
     public:
 
-        DropoutNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        DropoutNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -4648,7 +4648,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        DropoutNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        DropoutNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -4812,7 +4812,7 @@ protected:  \
             m_randomSeed = (unsigned long) val;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -4868,7 +4868,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        KhatriRaoProductNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        KhatriRaoProductNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -4876,7 +4876,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        KhatriRaoProductNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        KhatriRaoProductNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -4991,7 +4991,7 @@ protected:  \
         {
             functionValues.AssignKhatriRaoProductOf(in0,in1);
 #if NANCHECK
-            m_functionValues.HasNan("KhatriRaoProduct");
+            functionValues.HasNan("KhatriRaoProduct");
 #endif
         }
 
@@ -5058,7 +5058,7 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        LookupTableNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        LookupTableNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -5066,7 +5066,7 @@ protected:  \
             InitRecurrentNode();
         }
 
-        LookupTableNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        LookupTableNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -5252,7 +5252,7 @@ protected:  \
 
         UsingComputationNodeMembers;
     public:
-        DelayNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        DelayNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -5266,7 +5266,7 @@ protected:  \
             InitRecurrentNode();
         }
                 
-        DelayNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        DelayNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -5287,7 +5287,7 @@ protected:  \
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
         }
 
-        void LoadFromFile(File& fstream, const size_t /*modelVersion*/, const short deviceId = AUTOPLACEMATRIX)
+        void LoadFromFile(File& fstream, const size_t /*modelVersion*/, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
@@ -5301,7 +5301,7 @@ protected:  \
             m_pastActivity.Resize(iRow, timeIdxInSeq);
         }
 
-        DelayNode(const short deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        DelayNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -5469,7 +5469,7 @@ protected:  \
            /// this can point to the past activity of the previous mninibatch
 
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp((short)functionValues.GetDeviceId()) ;
+            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
             if (iPastIndex < 0 && reset)
                 out.SetValue(default_activity);
@@ -5499,7 +5499,7 @@ protected:  \
             /// this can point to the past activity of the previous mninibatch
 
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr+indexInBatch, 1);
-            Matrix<ElemType> inp((short)functionValues.GetDeviceId()) ;
+            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
             if (iPastIndex < 0 && reset)
                 out.SetValue(default_activity);
@@ -5554,7 +5554,7 @@ protected:  \
             m_delay = val;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 

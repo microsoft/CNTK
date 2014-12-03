@@ -97,11 +97,11 @@ public:
 // 0:2:3- an array of ids to use, (PTask will only use the specified IDs)
 // *3   - a count of GPUs to use (PTask)
 // All  - Use all the GPUs (PTask) 
-short DeviceFromConfig(const ConfigParameters& config)
+DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
     static BestGpu* g_bestGpu = NULL;
+    DEVICEID_TYPE deviceId = CPUDEVICE;
 
-    short deviceId = CPUDEVICE;
     ConfigValue val = config("deviceId", "auto");
     if (!_stricmp(val.c_str(), "CPU"))
     {
@@ -116,18 +116,18 @@ short DeviceFromConfig(const ConfigParameters& config)
     if (!_stricmp(val.c_str(), "Auto"))
     {
         std::vector<int> devices = g_bestGpu->GetDevices(1);
-        deviceId = (short)devices[0];
+        deviceId = (DEVICEID_TYPE)devices[0];
     }
     else if (!_stricmp(val.c_str(), "All"))
     {
         std::vector<int> devices = g_bestGpu->GetDevices(BestGpu::AllDevices);
-        deviceId = (short)devices[0];
+        deviceId = (DEVICEID_TYPE)devices[0];
     }
     else if (val.size() == 2 && val[0] == '*' && isdigit(val[1]))
     {
         int number = (int)(val[1] - '0');
         std::vector<int> devices = g_bestGpu->GetDevices(number);
-        deviceId = (short)devices[0];
+        deviceId = (DEVICEID_TYPE)devices[0];
     }
     else
     {
@@ -141,7 +141,7 @@ short DeviceFromConfig(const ConfigParameters& config)
             argvector<int> allowed = arr;
             g_bestGpu->SetAllowedDevices(allowed);
             std::vector<int> devices = g_bestGpu->GetDevices();
-            deviceId = (short)devices[0];
+            deviceId = (DEVICEID_TYPE)devices[0];
         }
     }
     return deviceId;

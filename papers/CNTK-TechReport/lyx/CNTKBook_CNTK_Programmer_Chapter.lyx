@@ -76,7 +76,17 @@
 \begin_body
 
 \begin_layout Chapter
+Extending the Computational Network Toolkit 
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
 Extending the Computational Network Toolkit
+\end_layout
+
+\end_inset
+
+
 \begin_inset CommandInset label
 LatexCommand label
 name "chap:CNTK_Programmer"
@@ -109,8 +119,37 @@ At the center of the CNTK is the ComputationNetwork class, which manages
  To build a computational network you need to use one of the ComputationNetBuild
 er classes that implement the IComputationNetBuilder interface.
  These classes include SimpleNetworkBuilder that supports building simple
- layer-by-layer fully connected networks, recurrent neural networks (RNNs)
- such as simple RNN and long short-term memory (LSTM) neural networks.
+ layer-by-layer fully connected networks, 
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Recurrent ! neural network (RNN)
+\end_layout
+
+\end_inset
+
+recurrent neural networks (RNNs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RNN
+\end_layout
+
+\end_inset
+
+) such as simple RNN and long short-term memory (LSTM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LSTM
+\end_layout
+
+\end_inset
+
+) neural networks.
  It also includes NDLNetworkBuilder that can build neural network, using
  any computation node we have described in Section 
 \begin_inset CommandInset ref
@@ -131,7 +170,17 @@ reference "chap:CNTK_Adv"
 \end_layout
 
 \begin_layout Standard
-IDataReader is an interface for loading data and its transcriptions.
+IDataReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+IDataReader
+\end_layout
+
+\end_inset
+
+ is an interface for loading data and its transcriptions.
  Different data file format requires different data readers.
  CNTK already implements the UCIFastReader and the BinaryReader that reads
  in UCI data in either text or binary format, the HTKMLFReader that reads
@@ -210,7 +259,27 @@ In most cases you will find that the existing functionality in the CNTK
 \end_layout
 
 \begin_layout Section
-Adding a Data Reader and Writer
+Adding a Data Reader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Data Reader
+\end_layout
+
+\end_inset
+
+ and Writer
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Data Writer
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -269,6 +338,26 @@ to return the IDataWriter interfaces for the floating and double precision,
 
 \begin_layout Subsection
 IDataReader
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+IDataReader
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -410,12 +499,42 @@ ypename LabelIdType, typename LabelType>& labelMapping) = 0;
 
 \end_inset
 
-and the GetReaderF and GetReaderD methods, where
+and the GetReaderF
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GetReaderF
+\end_layout
+
+\end_inset
+
+ and GetReaderD
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GetReaderD
+\end_layout
+
+\end_inset
+
+ methods, where
 \end_layout
 
 \begin_layout Itemize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Init 
+\end_layout
+
+\end_inset
+
 
 \series bold
+
 \begin_inset Formula $Init$
 \end_inset
 
@@ -430,6 +549,16 @@ and the GetReaderF and GetReaderD methods, where
 
 \emph on
 Destroy
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Destroy
+\end_layout
+
+\end_inset
+
+
 \emph default
  – release the resources used by the reader.
  
@@ -439,6 +568,16 @@ Destroy
 
 \emph on
 StartMinibatchLoop
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+StartMinibatchLoop
+\end_layout
+
+\end_inset
+
+
 \series bold
 \emph default
  
@@ -451,6 +590,16 @@ StartMinibatchLoop
 
 \emph on
 mbSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+mbSize
+\end_layout
+
+\end_inset
+
+
 \series bold
 \emph default
  
@@ -463,6 +612,16 @@ mbSize
 
 \emph on
 epoch
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+epoch
+\end_layout
+
+\end_inset
+
+
 \series bold
 \emph default
  
@@ -474,6 +633,16 @@ epoch
 
 \emph on
 requestedEpochSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+requestedEpochSize
+\end_layout
+
+\end_inset
+
+
 \series bold
 \emph default
  – 
@@ -490,6 +659,16 @@ the number of records in an epoch.
 
 \emph on
 GetMinibatch
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GetMinibatch
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Get the values of the next minibatch.
  To support multiple inputs/outputs for the CNs, 
@@ -506,6 +685,16 @@ matrices
 
 \emph on
 GetLabelMapping
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GetLabelMapping
+\end_layout
+
+\end_inset
+
+
 \series bold
 \emph default
  
@@ -532,6 +721,16 @@ label
 
 \emph on
 SetLabelMapping
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetLabelMapping
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Set the label map for the reader, where 
 \emph on
@@ -556,6 +755,16 @@ is the label map that is being set.
 
 \emph on
 GetData
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GetData
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Get data from a predefined section with parameters
 \end_layout
@@ -565,6 +774,16 @@ GetData
 
 \emph on
 sectionName
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+sectionName
+\end_layout
+
+\end_inset
+
+
 \emph default
  – the section which contains the data,
 \end_layout
@@ -573,6 +792,16 @@ sectionName
 
 \emph on
 numRecords
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numRecords
+\end_layout
+
+\end_inset
+
+
 \emph default
  – the number of records to read,
 \end_layout
@@ -581,6 +810,16 @@ numRecords
 
 \emph on
 data
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+data
+\end_layout
+
+\end_inset
+
+
 \emph default
  
 \series bold
@@ -594,6 +833,16 @@ data
 
 \emph on
 dataBufferSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+dataBufferSize
+\end_layout
+
+\end_inset
+
+
 \series bold
 \emph default
  
@@ -615,6 +864,16 @@ data
 
 \emph on
 recordStart
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+recordStart
+\end_layout
+
+\end_inset
+
+
 \emph default
  – the record to start reading from.
 \end_layout
@@ -624,7 +883,27 @@ recordStart
 
 \emph on
 DataEnd
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DataEnd
+\end_layout
+
+\end_inset
+
+
 \emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
  – Returns whether it is the end of a dataset, an epoch or a sentence as
  specified by 
 \emph on
@@ -635,6 +914,16 @@ endDataType.
 
 \emph on
 NumberSlicesInEachRecurrentIter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NumberSlicesInEachRecurrentIter
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Get the number of slices for each truncated BPTT computation.
  It is used in recurrent networks.
@@ -645,6 +934,16 @@ NumberSlicesInEachRecurrentIter
 
 \emph on
 SetNbrSlicesEachRecurrentIter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetNbrSlicesEachRecurrentIter
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Set the number of slices for each truncated BPTT computation.
  It is used in recurrent networks.
@@ -654,6 +953,16 @@ SetNbrSlicesEachRecurrentIter
 
 \emph on
 SetSentenceEndInBatch
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetSentenceEndInBatch
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Set the end of sentences in the sentence minibatch.
  It is used in recurrent networks.
@@ -701,6 +1010,16 @@ reference "chap:CN"
 
 \begin_layout Subsection
 IDataWriter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+IDataWriter
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -798,6 +1117,16 @@ and the GetWriterF and GetWriterD methods, where
 
 \emph on
 Init
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Init
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Initialize the writer from a set of ConfigurationParameters.
  
@@ -807,6 +1136,16 @@ Init
 
 \emph on
 Destroy
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Destroy
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Release the resources used by the writer.
  
@@ -816,6 +1155,16 @@ Destroy
 
 \emph on
 GetSections
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GetSections
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Gets the 
 \emph on
@@ -828,6 +1177,16 @@ sections
 
 \emph on
 SaveData
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveData
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Save data to the file with parameters
 \end_layout
@@ -837,6 +1196,16 @@ SaveData
 
 \emph on
 recordStart
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+recordStart
+\end_layout
+
+\end_inset
+
+
 \emph default
  – the record to start writing to
 \end_layout
@@ -845,6 +1214,16 @@ recordStart
 
 \emph on
 matrices
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+matrices
+\end_layout
+
+\end_inset
+
+
 \emph default
  – a dictionary that maps from the section names to the data pointers.
  The names of the sections in the dictionary should be equal to the sections
@@ -855,6 +1234,16 @@ matrices
 
 \emph on
 numRecords
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numRecords
+\end_layout
+
+\end_inset
+
+
 \emph default
  – number of records to write out
 \end_layout
@@ -863,6 +1252,16 @@ numRecords
 
 \emph on
 datasetSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+datasetSize
+\end_layout
+
+\end_inset
+
+
 \emph default
  – size of the dataset
 \end_layout
@@ -871,6 +1270,16 @@ datasetSize
 
 \emph on
 byteVariableSized
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+byteVariableSized
+\end_layout
+
+\end_inset
+
+
 \emph default
  – the number of bytes used for variable sized data.
 \end_layout
@@ -880,6 +1289,16 @@ byteVariableSized
 
 \emph on
 SaveMapping
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveMapping
+\end_layout
+
+\end_inset
+
+
 \emph default
  – Save the label mapping table, where 
 \emph on
@@ -902,6 +1321,16 @@ label
 
 \begin_layout Subsection
 Configuration
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Configuration
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1447,6 +1876,16 @@ ConfigArray.
 
 \emph on
 ConfigValue
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ConfigValue
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1465,6 +1904,16 @@ ConfigValue
 
 \emph on
 ConfigParameters
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ConfigParameters
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1610,6 +2059,16 @@ name=value
 
 \emph on
 ConfigArray
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ConfigArray
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1713,6 +2172,16 @@ config.LoadConfigFile(path.c_str());
 It is implemented in the 
 \emph on
 ConfigParser
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ConfigParser
+\end_layout
+
+\end_inset
+
+
 \emph default
  class, from which both of these two classes inherit.
 \end_layout
@@ -2151,23 +2620,63 @@ In the current file structure, computation nodes are implemented in four
 \end_layout
 
 \begin_layout Itemize
-ComputationNode.h: the base class ComputationNode and most computation nodes
- are implemented in this file.
+ComputationNode.h
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ComputationNode.h
+\end_layout
+
+\end_inset
+
+: the base class ComputationNode and most computation nodes are implemented
+ in this file.
 \end_layout
 
 \begin_layout Itemize
-EvaluationCriterionNode.h: computation nodes used mainly as evaluation criterion
- are implemented in this file.
+EvaluationCriterionNode.h
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+EvaluationCriterionNode.h
+\end_layout
+
+\end_inset
+
+: computation nodes used mainly as evaluation criterion are implemented
+ in this file.
 \end_layout
 
 \begin_layout Itemize
-TrainingCriterionNode.h: computation nodes used mainly as training criterion
- are implemented in this file.
+TrainingCriterionNode.h
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+TrainingCriterionNode.h
+\end_layout
+
+\end_inset
+
+: computation nodes used mainly as training criterion are implemented in
+ this file.
 \end_layout
 
 \begin_layout Itemize
-CompositeComputationNode.h: complicated computation nodes such as those used
- in the convolutional neural networks are implemented in this file.
+CompositeComputationNode.h
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CompositeComputationNode.h
+\end_layout
+
+\end_inset
+
+: complicated computation nodes such as those used in the convolutional
+ neural networks are implemented in this file.
 \end_layout
 
 \begin_layout Standard
@@ -2362,6 +2871,16 @@ The third constructor creates a node by copying information from another
 
 \begin_layout Subsubsection
 Duplicate a Node
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Duplicate a Node
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2414,6 +2933,16 @@ virtual ComputationNodePtr Duplicate(const std::wstring& newName, const
 
 \begin_layout Subsubsection
 Give the Computation Node a Type Name
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! Name
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2466,6 +2995,16 @@ if (node->OperationName() == ScaleNode<ElemType>::TypeName())
 
 \begin_layout Subsubsection
 Attach Input Nodes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Attach Input Nodes
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2563,6 +3102,16 @@ virtual void CopyImageSizeFromInputs()
 
 \begin_layout Subsubsection
 Validate the Node
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Validate the Node
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2679,6 +3228,16 @@ unctionValues().GetNumCols());
 
 \begin_layout Subsubsection
 Forward Evaluation
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Forward Evaluation
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2807,6 +3366,16 @@ which contains the actual evaluation code.
 
 \begin_layout Subsubsection
 Gradient Computation
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Gradient Computation
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3109,6 +3678,16 @@ which contains the actual gradient computation code.
 
 \begin_layout Subsubsection
 The CNTKMath Library
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CNTKMath Library
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3167,7 +3746,17 @@ k.h file.
 \end_layout
 
 \begin_layout Standard
-The first function is CreateComputationNode as shown below.
+The first function is CreateComputationNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CreateComputationNode
+\end_layout
+
+\end_inset
+
+ as shown below.
  This function allows a programmer to create a new node of a specific type.
 \end_layout
 
@@ -3237,7 +3826,17 @@ ComputationNodePtr CreateComputationNode(const std::wstring nodeType, const
 \end_layout
 
 \begin_layout Standard
-The second function is CreateNodeFromFile as shown below.
+The second function is CreateNodeFromFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CreateNodeFromFile
+\end_layout
+
+\end_inset
+
+ as shown below.
  This function allows a programmer to create a new node of a specified type
  from a file stream.
  
@@ -3308,7 +3907,17 @@ ComputationNode<ElemType>* CreateNodeFromFile(const std::wstring nodeType,
 
 \begin_layout Standard
 The third function is type specific.
- For the ScaleNode class we defined the Scale operation as shown below.
+ For the ScaleNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ScaleNode
+\end_layout
+
+\end_inset
+
+ class we defined the Scale operation as shown below.
  
 \end_layout
 
@@ -3388,8 +3997,17 @@ Adding the New Node Type to the Network Definition Language
 End users create computation nodes through network builders.
  For this reason, we also need to add the node type to the network description
  language (NDL).
- This is done by modifying the CheckFunction function to make Scale a valid
- function name.
+ This is done by modifying the CheckFunction
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CheckFunction
+\end_layout
+
+\end_inset
+
+ function to make Scale a valid function name.
 \end_layout
 
 \begin_layout Standard
@@ -3485,6 +4103,16 @@ function in the SynchronousExecutionEngine.h file to handle special parameters.
 
 \begin_layout Subsubsection
 NDL Processing Phases
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDL ! Processing Phases
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3657,6 +4285,16 @@ This pass does special processing, such as matrix initialization, that requires
 
 \begin_layout Section
 Adding a New Training Algorithm
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Algorithm, Adding a New Training 
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3758,6 +4396,16 @@ for (size_t i=0; i<labelNodes.size(); i++)
 
 \begin_layout Subsection
 Evaluate Precomputed Nodes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! Evaluate Precomputed 
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3887,7 +4535,17 @@ Train One Epoch
 \end_layout
 
 \begin_layout Standard
-The TrainOneEpoch function contains your core training algorithm.
+The TrainOneEpoch
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+TrainOneEpoch
+\end_layout
+
+\end_inset
+
+ function contains your core training algorithm.
  It typically looks like following:
 \end_layout
 

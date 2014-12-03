@@ -269,10 +269,10 @@ namespace CNTKMathTest
 
         TEST_METHOD(MatrixInnerProductOfMatrices)
         {
-            SingleMatrix V1(2,3);
+            SingleMatrix V1((size_t)2, (size_t)3);
             V1(0,0)=1; V1(0,1)=2; V1(0,2)=3;
             V1(1,0)=4; V1(1,1)=5; V1(1,2)=6;
-            SingleMatrix V2(2,3);
+            SingleMatrix V2((size_t)2, (size_t)3);
             V2(0,0)=7; V2(0,1)=8; V2(0,2)=9;
             V2(1,0)=10; V2(1,1)=11; V2(1,2)=12;
             float ip = SingleMatrix::InnerProductOfMatrices(V1,V2);

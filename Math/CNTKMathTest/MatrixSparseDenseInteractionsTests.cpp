@@ -60,7 +60,7 @@ namespace CNTKMathTest
             Matrix<float> Ad;
             Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(1024,2048,-3,0.1,0),0);
             Matrix<float> As(Ad);
-            As.SwitchToMatrixType(MatrixType::SPARSE);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC);
 
             Matrix<float> B = Matrix<float>::RandomGaussian(2048,1024,1,4);
             Matrix<float> C = Matrix<float>::RandomGaussian(2048,2048,1,2);
@@ -68,12 +68,12 @@ namespace CNTKMathTest
 
             float alpha = 0.3, beta = 0;
             bool transposeA=false, transposeB=false;
-            Matrix<float>::MultiplyAndWeightedAdd(alpha,B,transposeB,Ad,transposeB,beta,C);
+            Matrix<float>::MultiplyAndWeightedAdd(alpha,B,transposeA,Ad,transposeB,beta,C);
             Matrix<float>::MultiplyAndWeightedAdd(alpha,B,transposeA,As,transposeB,beta,C1);            
-            Assert::IsTrue(C1.IsEqualTo(C,0.00001));  
+            Assert::IsTrue(C1.IsEqualTo(C,0.0001));  
 
             alpha = 3.3, beta = 1.3;            
-            Matrix<float>::MultiplyAndWeightedAdd(alpha,B,transposeB,Ad,transposeB,beta,C);
+            Matrix<float>::MultiplyAndWeightedAdd(alpha,B,transposeA,Ad,transposeB,beta,C);
             Matrix<float>::MultiplyAndWeightedAdd(alpha,B,transposeA,As,transposeB,beta,C1);            
             Assert::IsTrue(C1.IsEqualTo(C,0.00005)); //Seems like bad precision
         }
