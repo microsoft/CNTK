@@ -1016,7 +1016,7 @@ public:
         m_dllName += L".dll";
         m_hModule = LoadLibrary(m_dllName.c_str());
         if (m_hModule == NULL)
-            RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName));
+            RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
 
         // create a variable of each type just to call the proper templated version
         return GetProcAddress(m_hModule, proc.c_str());
