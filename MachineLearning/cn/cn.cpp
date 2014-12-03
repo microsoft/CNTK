@@ -87,7 +87,7 @@ void DumpNodeInfo(const ConfigParameters& config)
 template <typename ElemType>
 void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
 {
-    short deviceId = DeviceFromConfig(config);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config("minibatchSize", "40960");
     size_t epochSize = config("epochSize", "0");
     if (epochSize == 0)
@@ -136,7 +136,7 @@ void DoEvalUnroll(const ConfigParameters& config)
 
     DataReader<ElemType> testDataReader(readerConfig);
 
-    short deviceId = DeviceFromConfig(config);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config("minibatchSize", "40960");
     size_t epochSize = config("epochSize", "0");
     if (epochSize == 0)
@@ -163,7 +163,7 @@ void DoCrossValidate(const ConfigParameters& config)
     ConfigParameters readerConfig (config("reader"));
     readerConfig.Insert("traceLevel",config("traceLevel","0"));
 
-    short deviceId = DeviceFromConfig(config);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config("minibatchSize", "40960");
     size_t epochSize = config("epochSize", "0");
     if (epochSize == 0)
@@ -268,7 +268,7 @@ void DoWriteOutput(const ConfigParameters& config)
 
     DataReader<ElemType> testDataReader(readerConfig);
 
-    short deviceId = DeviceFromConfig(config);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     ConfigArray minibatchSize = config("minibatchSize", "2048");
     wstring modelPath = config("modelPath");
     intargvector mbSize = minibatchSize;
@@ -346,7 +346,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     ConfigParameters configSection (config(section));
     ConfigParameters readerConfig (configSection("reader"));
     readerConfig.Insert("allowMapCreation","true");
-    short deviceId = CPUDEVICE;
+    DEVICEID_TYPE deviceId = CPUDEVICE;
     size_t minibatchSize = config("minibatchSize", "2048");
     int traceLevel = config("traceLevel","0");
     std::vector<std::wstring> featureNames;
@@ -458,7 +458,7 @@ void DoTrain(const ConfigParameters& config)
 template <typename ElemType>
 void DoAdapt(const ConfigParameters& config)
 {
-    short deviceId = DeviceFromConfig(config);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
     ConfigParameters configSGD (config("SGD"));
     bool makeMode = config("makeMode", "true");

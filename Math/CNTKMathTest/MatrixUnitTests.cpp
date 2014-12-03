@@ -29,7 +29,7 @@ namespace CNTKMathTest
             SingleMatrix A0;
             SingleMatrix A1(AUTOPLACEMATRIX);
             SingleMatrix A2(-1);
-            SingleMatrix A3((size_t)13,(size_t)12,(short)0);
+            SingleMatrix A3((size_t)13,(size_t)12,(DEVICEID_TYPE)0);
 
             Assert::AreEqual<size_t>(0,A0.GetNumRows());
             Assert::AreEqual<size_t>(0,A0.GetNumCols());            
@@ -140,7 +140,7 @@ namespace CNTKMathTest
             Assert::IsTrue(has_big);
 
             //RandomUniform
-            SingleMatrix A5(429,1024);
+            SingleMatrix A5((size_t)429,(size_t)1024);
             A5.SetUniformRandomValue(-0.01,0.01);
             foreach_coord(i,j,A5)
             {
@@ -263,11 +263,11 @@ namespace CNTKMathTest
 
         TEST_METHOD(MatrixMultiAndDiv)
         {
-            SingleMatrix M0(2,3);
+            SingleMatrix M0((size_t)2,(size_t)3);
             M0(0,0) = 1; M0(0,1) = 2; M0(0,2) = 3;
             M0(1,0) = 4; M0(1,1) = 5; M0(1,2) = 6;
 
-            SingleMatrix M00(2,3);
+            SingleMatrix M00((size_t)2, (size_t)3);
             M00(0,0) = 10; M00(0,1) = 20; M00(0,2) = 30;
             M00(1,0) = 40; M00(1,1) = 50; M00(1,2) = 60;
 
@@ -418,7 +418,7 @@ namespace CNTKMathTest
             M00(0,0) = 1.0; M00(0,1) = 1/2.0; M00(0,2) = 1/3.0;
             M00(1,0) = 1/4.0; M00(1,1) = 1/5.0; M00(1,2) = 1/6.0;
 
-            SingleMatrix M1(2,3);
+            SingleMatrix M1((size_t)2, (size_t)3);
             M1(0,0) = 1; M1(0,1) = 1; M1(0,2) = 1;
             M1(1,0) = 1; M1(1,1) = 1; M1(1,2) = 1;
 
@@ -603,7 +603,7 @@ namespace CNTKMathTest
 
             //AssignSignOf
             Matrix<float> M1 = Matrix<float>::RandomUniform(42,12,-5,12);
-            Matrix<float> M2(4,5);
+            Matrix<float> M2((size_t)4, (size_t)5);
             M2.AssignSignOf(M1);
             foreach_coord(i,j,M1)
             {
@@ -624,7 +624,7 @@ namespace CNTKMathTest
             
 
             //AssignTruncateBottom and Top
-            Matrix<float> M5(2,2);
+            Matrix<float> M5((size_t)2, (size_t)2);
             M5(0,0)=1;     M5(0,1)=2;                    
             M5(1,0)=3;     M5(1,1)=4;
 
@@ -755,7 +755,7 @@ namespace CNTKMathTest
             fArray[1] = 0.3636f; fArray[3] = 0.6416f; 
             Matrix<float> D1(2,2,fArray);
 
-            Matrix<float> C(2,2);
+            Matrix<float> C((size_t)2, (size_t)2);
             C.SetValue(0.0f);
             C.AddColumnReshapeProductOf(A, B, false);
             Assert::IsTrue(C.IsEqualTo(D0, 0.0001f)); 

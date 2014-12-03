@@ -101,10 +101,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
 
+    public:
+        const ElemType* NzValues() const { return m_pArray; }
+        ElemType* NzValues() { return m_pArray; }
+        size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
+
+        size_t* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
+        size_t MajorIndexCount() const { return m_nz; }
+        size_t MajorIndexSize() const { return sizeof(size_t)*MajorIndexCount(); } // actual number of major index bytes in use
+
+        size_t* SecondaryIndexLocation() const { return m_compIndex; } //this is the compressed index, col/row in CSC/CSR format
+        size_t SecondaryIndexCount() const
+        {
+            if (m_format&matrixFormatCompressed)
+            {
+                size_t cnt = (m_format&matrixFormatRowMajor) ? m_numRows : m_numCols;
+                if (cnt > 0) cnt++; // add an extra element on the end for the "max" value
+                return cnt;
+            }
+            else
+                return m_nz; // COO format
+        }
+        // get size for compressed index
+        size_t SecondaryIndexSize() const { return (SecondaryIndexCount())*sizeof(size_t); }
+
+        // the column and row locations will swap based on what format we are in. Full index always follows the data array
+        size_t* RowLocation() const { return (m_format&matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation(); }
+        size_t RowSize() const { return (m_format&matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize(); }
+        size_t* ColLocation() const { return (m_format&matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation(); }
+        size_t ColSize() const { return (m_format&matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize(); } // actual number of bytes in use
+
+    private:
         int m_colIdx; //used to SetValue()
-        ElemType *m_val; // values
-        size_t *m_row; //row/col ids in CSC/CSR format
-        size_t *m_pb; //begin ids of col/row in CSC/CSR format
+        //non-zero values are stored in m_pArray
+        size_t *m_unCompIndex; //row/col ids in CSC/CSR format
+        size_t *m_compIndex; //begin ids of col/row in CSC/CSR format
 
         size_t m_blockSize; //block size        
         ElemType *m_blockVal; //block values

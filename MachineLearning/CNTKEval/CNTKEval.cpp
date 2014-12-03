@@ -63,7 +63,7 @@ void CNTKEval<ElemType>::Destroy()
 template<class ElemType>
 void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
 {
-    short deviceId = DeviceFromConfig(m_config);
+    DEVICEID_TYPE deviceId = DeviceFromConfig(m_config);
     if (m_net != NULL)
         delete m_net;
     m_net = new ComputationNetwork<ElemType>(deviceId);

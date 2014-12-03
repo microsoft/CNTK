@@ -26,7 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        PreComputedNode<ElemType>(short deviceId) : ComputationNode<ElemType>(deviceId) {}
+        PreComputedNode<ElemType>(DEVICEID_TYPE deviceId) : ComputationNode<ElemType>(deviceId) {}
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
 
@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_functionValues;
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingPreComputedNodeMembers;
     public:
-        MeanNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)  
+        MeanNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -85,13 +85,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        MeanNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)
+        MeanNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -179,7 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -231,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingPreComputedNodeMembers;
     public:
-        InvStdDevNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        InvStdDevNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : PreComputedNode<ElemType>(deviceId), avg(deviceId), avgsqr(deviceId), ones(deviceId), sampsqr(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -242,14 +242,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        InvStdDevNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        InvStdDevNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : PreComputedNode<ElemType>(deviceId), avg(deviceId), avgsqr(deviceId), ones(deviceId), sampsqr(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -381,7 +381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -447,7 +447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        PerDimMeanVarNormalizationNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        PerDimMeanVarNormalizationNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -455,7 +455,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        PerDimMeanVarNormalizationNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        PerDimMeanVarNormalizationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -613,7 +613,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        PerDimMeanVarDeNormalizationNode(const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        PerDimMeanVarDeNormalizationNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -621,7 +621,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        PerDimMeanVarDeNormalizationNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        PerDimMeanVarDeNormalizationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -804,7 +804,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConvolutionNode(const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
                         const size_t horizontalSubsample, const size_t verticalSubsample, 
                         const bool zeroPadding = false, 
-                        const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"",
+                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"",
                         const size_t maxTempMemSizeInSamples = 0)
                         : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId),
                           m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight), 
@@ -818,7 +818,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        ConvolutionNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
+        ConvolutionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
             : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
@@ -833,7 +833,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_outputChannels << m_zeroPadding << m_maxTempMemSizeInSamples; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -1110,7 +1110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = inputFeature;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
@@ -1267,7 +1267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         MaxPoolingNode( const size_t windowWidth, const size_t windowHeight, 
                         const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId),
+                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId),
                           m_windowWidth(windowWidth), m_windowHeight(windowHeight),
                           m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)                       
         {
@@ -1277,7 +1277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
                 
-        MaxPoolingNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        MaxPoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -1290,7 +1290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -1533,7 +1533,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         AveragePoolingNode(const size_t windowWidth, const size_t windowHeight, 
                         const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId),
+                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId),
                           m_windowWidth(windowWidth), m_windowHeight(windowHeight),
                           m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)                     
         {
@@ -1543,7 +1543,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        AveragePoolingNode(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        AveragePoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -1556,7 +1556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -1791,7 +1791,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        GMMLogLikelihoodNode(const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        GMMLogLikelihoodNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_prior(deviceId), m_normedDeviation(deviceId), m_normedDeviationVectors(deviceId), m_stddev(deviceId), m_posterior(deviceId), m_temp(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
@@ -1800,7 +1800,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        GMMLogLikelihoodNode(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        GMMLogLikelihoodNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_prior(deviceId), m_normedDeviation(deviceId), m_normedDeviationVectors(deviceId), m_stddev(deviceId), m_posterior(deviceId), m_temp(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
@@ -2185,7 +2185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[3] = feature;
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 

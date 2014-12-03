@@ -69,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(const intargvector& layerSizes, const TrainingCriterion trainCriterion, const EvalCriterion evalCriterion, const stringargvector nonLinearFunctions=L"Sigmoid", 
             const bool addDropoutNodes=false,
             const bool uniformInit = true, const ElemType initValueScale = 1.0f,
-            const bool applyMeanVarNorm = false, bool needPrior = false, short deviceId=AUTOPLACEMATRIX) 
+            const bool applyMeanVarNorm = false, bool needPrior = false, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId=deviceId;
             m_net = new ComputationNetwork<ElemType>(m_deviceId);
@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // config - [in] configuration parameters for the network builder
         virtual void Init(const ConfigParameters& config)
         {
-            short deviceId = DeviceFromConfig(config);
+            DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
             ElemType initValueScale = config("initValueScale", "1.0");
 
@@ -666,7 +666,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_applyMeanVarNorm;
         bool m_needPrior;
 
-        short m_deviceId;
+        DEVICEID_TYPE m_deviceId;
         bool m_uniformInit;
 
         ElemType m_initValueScale;

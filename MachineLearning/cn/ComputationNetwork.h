@@ -53,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } RecurrentInfo;
 
     public:
-        ComputationNetwork(short deviceId=AUTOPLACEMATRIX) : m_deviceId(deviceId)
+        ComputationNetwork(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX) : m_deviceId(deviceId)
         {
             m_randomSeedOffset = 0;
             m_actMiniBSize = 0;
@@ -144,14 +144,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void SetDeviceID(const short deviceId=AUTOPLACEMATRIX)
+        void SetDeviceID(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;  
             if (m_deviceId == AUTOPLACEMATRIX)
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
         }
 
-        short GetDeviceID() {return m_deviceId;}
+        DEVICEID_TYPE GetDeviceID() {return m_deviceId;}
         unsigned long GetRandomSeedOffset() {return m_randomSeedOffset;}
         void SetRandomSeedOffset(unsigned long value) {m_randomSeedOffset = value;}
 
@@ -2314,7 +2314,7 @@ protected:
 
         PTaskGraphBuilder<ElemType>* m_PTaskGraphBuilder;
 
-        short m_deviceId;
+        DEVICEID_TYPE m_deviceId;
         unsigned long m_randomSeedOffset;
 
         std::vector<ComputationNodePtr> m_features;

@@ -88,6 +88,16 @@ name "chap:CNTK_Adv"
 
 \begin_layout Section
 Network Definition Language
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Network ! Definition Language
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -298,6 +308,16 @@ We will introduce the basic concepts such as variables, parameters, inputs,
 
 \begin_layout Subsubsection
 Variables
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Variables
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -359,6 +379,16 @@ The variables SDim, HDim and LDim are set to scalar numeric values in this
 
 \begin_layout Subsubsection
 Inputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Input
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -401,6 +431,16 @@ labels
 
 \begin_layout Subsubsection
 Parameters
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -462,6 +502,16 @@ reference "sub:NDL-Functions"
 
 \begin_layout Subsubsection
 Functions
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Functions
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -517,7 +567,27 @@ The hidden layer in this example involves three computation steps: It first
 \end_layout
 
 \begin_layout Subsubsection
-Training and Testing Criteria
+Training
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Training Criteria
+\end_layout
+
+\end_inset
+
+ and Testing Criteria
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Testing Criteria
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -553,8 +623,27 @@ ErrPredict=ErrorPrediction(labels, Plus2)
 
 Each CN can have multiple root nodes used for different purposes.
  In this example, the training and testing criteria are different.
- We use the operator CrossEntropyWithSoftmax() to compute the training criterion
- and the operator ErrorPrediction() to compute the testing criterion.
+ We use the operator CrossEntropyWithSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+() to compute the training criterion and the operator ErrorPrediction
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ErrorPrediction
+\end_layout
+
+\end_inset
+
+() to compute the testing criterion.
  These operators are internally represented as computation nodes CrossEntropyWit
 hSoftmaxNode and ErrorPredictionNode with names CrossEntropy and ErrPredict,
  respectively.
@@ -562,6 +651,16 @@ hSoftmaxNode and ErrorPredictionNode with names CrossEntropy and ErrPredict,
 
 \begin_layout Subsubsection
 Special Nodes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Special Nodes
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -613,7 +712,17 @@ These special nodes can be specified in two different ways, the node arrays,
 \end_layout
 
 \begin_layout Subsubsection
-Comments:
+Comments
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Comments
+\end_layout
+
+\end_inset
+
+:
 \end_layout
 
 \begin_layout Standard
@@ -662,6 +771,16 @@ var = 1#INF
 
 \begin_layout Subsection
 Macros
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Macros
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -673,6 +792,16 @@ While creating a network using the syntax shown above is not all that difficult,
 
 \begin_layout Subsubsection
 Defining Macros
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Defining Macros
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -874,6 +1003,16 @@ computes the output layer value and the cross entropy training criterion.
 
 \begin_layout Subsubsection
 Using Macros
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Using Macros
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -980,6 +1119,26 @@ Err=ErrorPrediction(labels, CE.F)
 
 \begin_layout Subsection
 Optional Parameters
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Optional Parameters
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter ! Optional
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -994,6 +1153,15 @@ s, or there is no effect on the network.
 \end_layout
 
 \begin_layout Subsubsection
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter ! initialization
+\end_layout
+
+\end_inset
+
 Parameter initialization
 \end_layout
 
@@ -1034,6 +1202,26 @@ reference "sub:NDL-Functions"
 
 \begin_layout Subsubsection
 Tagging special values
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter ! special values
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Tagging special values
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1189,6 +1377,16 @@ output
 
 \begin_layout Subsection
 NDL Functions
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDL ! Functions
+\end_layout
+
+\end_inset
+
+
 \begin_inset CommandInset label
 LatexCommand label
 name "sub:NDL-Functions"
@@ -1267,7 +1465,27 @@ instead.
 \end_layout
 
 \begin_layout Subsubsection
-Input, InputValue
+Input
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Input
+\end_layout
+
+\end_inset
+
+, InputValue
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+InputValue
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1315,7 +1533,27 @@ tag - [named optional] tag for the inputs to indicate the intended usage.
 \end_layout
 
 \begin_layout Subsubsection
-ImageInput, Image
+ImageInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ImageInput
+\end_layout
+
+\end_inset
+
+, Image
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Image
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1392,7 +1630,27 @@ CNTK uses column-major (similar to matlab) to store the matrices.
 \end_layout
 
 \begin_layout Subsubsection
-Parameter, LearnableParameter
+Parameter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter
+\end_layout
+
+\end_inset
+
+, LearnableParameter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LearnableParameter
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1515,7 +1773,27 @@ value - [named optional] the initial value of all the parameters when the
 \end_layout
 
 \begin_layout Subsubsection
-Constant, Const
+Constant
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Constant
+\end_layout
+
+\end_inset
+
+, Const
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Const
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1558,7 +1836,57 @@ cols - [ordered optional] column dimension of the data, default to 1.
 \end_layout
 
 \begin_layout Subsubsection
-RectifiedLinear, ReLU, Sigmoid, Tanh, Log
+RectifiedLinear
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RectifiedLinear
+\end_layout
+
+\end_inset
+
+, ReLU
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ReLU
+\end_layout
+
+\end_inset
+
+, Sigmoid
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Sigmoid
+\end_layout
+
+\end_inset
+
+, Tanh
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Tanh
+\end_layout
+
+\end_inset
+
+, Log
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Log
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1613,6 +1941,16 @@ m - input matrix.
 
 \begin_layout Subsubsection
 Softmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Softmax
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1643,6 +1981,16 @@ m - input matrix.
 
 \begin_layout Subsubsection
 SumElements
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SumElements
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1672,6 +2020,16 @@ m - input matrix
 
 \begin_layout Subsubsection
 Negate
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Negate
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1701,6 +2059,16 @@ m - input matrix.
 
 \begin_layout Subsubsection
 RowSlice
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RowSlice
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1739,6 +2107,16 @@ numRows - the number of rows to get
 
 \begin_layout Subsubsection
 Scale
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Scale
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1772,6 +2150,16 @@ m - input matrix
 
 \begin_layout Subsubsection
 Times
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Times
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1802,6 +2190,16 @@ m1, m2 - input matrices.
 
 \begin_layout Subsubsection
 DiagTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DiagTimes
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1837,7 +2235,37 @@ m2 - a normal input matrix.
 \end_layout
 
 \begin_layout Subsubsection
-Plus, Minus, ElementTimes
+Plus
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Plus
+\end_layout
+
+\end_inset
+
+, Minus
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Minus
+\end_layout
+
+\end_inset
+
+, ElementTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ElementTimes
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1878,7 +2306,27 @@ m1, m2 - input matrices.
 \end_layout
 
 \begin_layout Subsubsection
-KhatriRaoProduct, ColumnwiseCrossProduct
+KhatriRaoProduct
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+KhatriRaoProduct
+\end_layout
+
+\end_inset
+
+, ColumnwiseCrossProduct
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ColumnwiseCrossProduct
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1915,7 +2363,27 @@ m1, m2 - input matrices.
 \end_layout
 
 \begin_layout Subsubsection
-GMMLogLikelihood, GMMLL
+GMMLogLikelihood
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GMMLogLikelihood
+\end_layout
+
+\end_inset
+
+, GMMLL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GMMLL
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -1980,7 +2448,27 @@ Note, UnnormedPrior, Means and LogStddev should have the same number of
 \end_layout
 
 \begin_layout Subsubsection
-SquareError, SE
+SquareError
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SquareError
+\end_layout
+
+\end_inset
+
+, SE
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SE
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2017,7 +2505,27 @@ m1, m2 - input matrices.
 \end_layout
 
 \begin_layout Subsubsection
-CrossEntropyWithSoftmax, CEWithSM
+CrossEntropyWithSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+, CEWithSM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CEWithSM
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2058,7 +2566,27 @@ matrix - input matrix.
 \end_layout
 
 \begin_layout Subsubsection
-ErrorPrediction, ClassificationError
+ErrorPrediction
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ErrorPrediction
+\end_layout
+
+\end_inset
+
+, ClassificationError
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ClassificationError
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2101,7 +2629,27 @@ m - input matrix.
 \end_layout
 
 \begin_layout Subsubsection
-CosDistance, CosDist
+CosDistance
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosDistance
+\end_layout
+
+\end_inset
+
+, CosDist
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosDist
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2136,7 +2684,47 @@ m1, m2 - input matrices.
 \end_layout
 
 \begin_layout Subsubsection
-MatrixL1Reg, L1Reg, MatrixL2Reg, L2Reg
+MatrixL1Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MatrixL1Reg
+\end_layout
+
+\end_inset
+
+, L1Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+L1Reg
+\end_layout
+
+\end_inset
+
+, MatrixL2Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MatrixL2Reg
+\end_layout
+
+\end_inset
+
+, L2Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+L2Reg
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2183,6 +2771,16 @@ m - input matrix
 
 \begin_layout Subsubsection
 Mean
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Mean
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2213,6 +2811,16 @@ m - input matrix
 
 \begin_layout Subsubsection
 InvStdDev
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+InvStdDev
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2244,7 +2852,27 @@ m - input matrix
 \end_layout
 
 \begin_layout Subsubsection
-PerDimMeanVarNormalization, PerDimMVNorm
+PerDimMeanVarNormalization
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMeanVarNormalization
+\end_layout
+
+\end_inset
+
+, PerDimMVNorm
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMVNorm
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2289,7 +2917,27 @@ invStdDev - the per-dimensional inversed standard deviation vector.
 \end_layout
 
 \begin_layout Subsubsection
-PerDimMeanVarDeNormalization, PerDimMVDeNorm
+PerDimMeanVarDeNormalization
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMeanVarDeNormalization
+\end_layout
+
+\end_inset
+
+, PerDimMVDeNorm
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMVDeNorm
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2338,6 +2986,16 @@ invStdDev - the per-dimensional inversed standard deviation vector.
 
 \begin_layout Subsubsection
 Dropout
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dropout
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2380,7 +3038,27 @@ m - input matrix
 \end_layout
 
 \begin_layout Subsubsection
-Convolution, Convolve
+Convolution
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Convolution
+\end_layout
+
+\end_inset
+
+, Convolve
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Convolve
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2488,7 +3166,27 @@ maxTempMemSizeInSamples - [named optional] maximum amount of memory (in
 \end_layout
 
 \begin_layout Subsubsection
-MaxPooling, AveragePooling
+MaxPooling
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MaxPooling
+\end_layout
+
+\end_inset
+
+, AveragePooling
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+AveragePooling
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2541,6 +3239,16 @@ stepH - step (or stride) used in the height direction
 
 \begin_layout Subsubsection
 Delay
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Delay
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -2591,14 +3299,43 @@ defaultPastValue - [named optional] the default value to use if the past
 
 \begin_layout Section
 Model Editing Language
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Model Editing Language
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-The model editing language (MEL) of the CNTK provides a means to modify
- both the structure and the model parameters of an existing trained network
- using a set of provided commands.
+The model editing language (MEL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MEL
+\end_layout
+
+\end_inset
+
+) of the CNTK provides a means to modify both the structure and the model
+ parameters of an existing trained network using a set of provided commands.
  It provides a number of functions to modify the network and can use network
- description language (NDL) to define new elements.
+ description language (NDL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDL
+\end_layout
+
+\end_inset
+
+) to define new elements.
  MEL is very important since it allows users, for example, to train a network
  with one configuration and later use it as part of another network designed
  for another purpose.
@@ -2860,10 +3597,30 @@ OutputNodes=(CE.F)
 
 \begin_layout Subsubsection
 Loading and Setting Default Models
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Default Models
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-The first command of a MEL script is usually a LoadModel() command.
+The first command of a MEL script is usually a LoadModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadModel
+\end_layout
+
+\end_inset
+
+() command.
  This function takes the name of a model file on disk, and an optional parameter
  specifying the format of the model file.
  Currently only CNTK format model files are accepted, and CNTK format is
@@ -2921,8 +3678,17 @@ It is often necessary to view a model file to determine the names used in
  the model file.
  MEL uses the node names in most commands, to specify which node(s) should
  be modified.
- The Dump() command dumps the node names and optionally values to a readable
- file.
+ The Dump
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dump
+\end_layout
+
+\end_inset
+
+() command dumps the node names and optionally values to a readable file.
  The parameters are the model name, the file name, and if the dump should
  include data.
  The includeData optional parameter defaults to false.
@@ -3042,8 +3808,18 @@ Copy Nodes
 \end_layout
 
 \begin_layout Standard
-The copy command will copy a node, or a group of nodes from one location
- to another location.
+The copy
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Copy
+\end_layout
+
+\end_inset
+
+ command will copy a node, or a group of nodes from one location to another
+ location.
  This can be done within the same model, or between different models:
 \end_layout
 
@@ -3119,6 +3895,16 @@ The new L4 layer will contain all the nodes L3 contains (RectifiedLinear,
 
 \begin_layout Subsubsection
 SetInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetInput
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3174,7 +3960,27 @@ To connect our new L4 layer, we need to set the second input of the Times
 \end_layout
 
 \begin_layout Subsubsection
-Adding New Nodes: In-line NDL and NDL Snippets
+Adding New Nodes: In-line NDL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+In-line NDL
+\end_layout
+
+\end_inset
+
+ and NDL Snippets
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDL ! Snippets
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3303,6 +4109,16 @@ Upon the completion of the snippet, the modelName will be the name of the
 
 \begin_layout Subsubsection
 SaveModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveModel
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3345,11 +4161,40 @@ This command saves the default model to the path name specified.
 
 \begin_layout Subsubsection
 Name Matching
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Name Matching
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-You may have noticed the use of the ‘*’ wildcard character in the commands
- presented to this point.
+You may have noticed the use of the ‘*
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+*
+\end_layout
+
+\end_inset
+
+’ wildcard character
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wildcard character
+\end_layout
+
+\end_inset
+
+ in the commands presented to this point.
  Those are name matching wildcards, and are useful in matching a group of
  related nodes.
  Because of the hierarchical dot-naming scheme used by NDL, it is easy to
@@ -3542,7 +4387,27 @@ This section contains the currently implemented MEL Command functions.
 \begin_layout Subsubsection
 
 \series bold
-CreateModel, CreateModelWithName
+CreateModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CreateModel
+\end_layout
+
+\end_inset
+
+, CreateModelWithName
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CreateModelWithName
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3577,7 +4442,27 @@ m - the name of newly created model
 \begin_layout Subsubsection
 
 \series bold
-LoadModel, LoadModelWithName
+LoadModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadModel
+\end_layout
+
+\end_inset
+
+, LoadModelWithName
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadModelWithName
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3623,7 +4508,27 @@ modelFileName - name of the model file, can be a full path name.
 \begin_layout Subsubsection
 
 \series bold
-SaveDefaultModel, SaveModel
+SaveDefaultModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveDefaultModel
+\end_layout
+
+\end_inset
+
+, SaveModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveModel
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3670,6 +4575,16 @@ modelFileName - name of the model file, can be a full path name.
 
 \series bold
 UnloadModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+UnloadModel
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3707,6 +4622,16 @@ In general it is unnecessary to unload a model explicitly since it will
 
 \series bold
 LoadNDLSnippet
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadNDLSnippet
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3749,7 +4674,39 @@ section - [named optional] name of the section that contains the snippet
 \begin_layout Subsubsection
 
 \series bold
-Dump, DumpModel
+Dump
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dump
+\end_layout
+
+\end_inset
+
+, DumpModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DumpModel
+\end_layout
+
+\end_inset
+
+
+\series default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3796,6 +4753,16 @@ includeData - [named optional] if set to true the contents of the nodes
 
 \series bold
 DumpNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DumpNode
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3836,7 +4803,27 @@ includeData - [named optional] if set to true the contents of the nodes
 \begin_layout Subsubsection
 
 \series bold
-Copy, CopyNode
+Copy
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Copy
+\end_layout
+
+\end_inset
+
+, CopyNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CopyNode
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -3996,6 +4983,16 @@ Not a valid option, the nodes must exist to copy only values.
 
 \series bold
 CopySubTree
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CopySubTree
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -4046,7 +5043,27 @@ If the fromRootNode is a wildcard pattern then the toRootNode must also
 \begin_layout Subsubsection
 
 \series bold
-SetInput, SetNodeInput
+SetInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetInput
+\end_layout
+
+\end_inset
+
+, SetNodeInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetNodeInput
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -4086,7 +5103,27 @@ inputNode - node identifier for input node.
 \begin_layout Subsubsection
 
 \series bold
-SetInputs, SetNodeInputs
+SetInputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetInputs
+\end_layout
+
+\end_inset
+
+, SetNodeInputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetNodeInputs
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -4124,6 +5161,16 @@ inputNode1, inputNode2, inputNode3 - node identifier for input node.
 
 \series bold
 SetProperty
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetProperty
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -4163,38 +5210,117 @@ The acceptable property names and property values are as follows:
 \end_layout
 
 \begin_layout Itemize
-ComputeGradient or NeedsGradient=true|false: A flag that determine if a
- node participates in gradient calculations.
+ComputeGradient
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ComputeGradient
+\end_layout
+
+\end_inset
+
+ or NeedsGradient
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NeedsGradient
+\end_layout
+
+\end_inset
+
+=true|false: A flag that determine if a node participates in gradient calculatio
+ns.
  Applies to Parameter nodes
 \end_layout
 
 \begin_layout Itemize
-Feature=true|false: Sets the node as a feature input.
+Feature
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Feature
+\end_layout
+
+\end_inset
+
+=true|false: Sets the node as a feature input.
  Applies to input nodes.
 \end_layout
 
 \begin_layout Itemize
-Label=true|false: Set the node as a label input.
+Label
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Label
+\end_layout
+
+\end_inset
+
+=true|false: Set the node as a label input.
  Applies to input nodes.
 \end_layout
 
 \begin_layout Itemize
-FinalCriterionCriteria=true|false: Sets the node as one of the criteria
- nodes of the network.
+FinalCriterionCriteria
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+FinalCriterionCriteria
+\end_layout
+
+\end_inset
+
+=true|false: Sets the node as one of the criteria nodes of the network.
 \end_layout
 
 \begin_layout Itemize
-EvaluationEval=true|false: Set the node as one of the evaluation nodes.
+EvaluationEval
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+EvaluationEval
+\end_layout
+
+\end_inset
+
+=true|false: Set the node as one of the evaluation nodes.
 \end_layout
 
 \begin_layout Itemize
-Output=true|false: Set the node as one of the output nodes.
+Output
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Output
+\end_layout
+
+\end_inset
+
+=true|false: Set the node as one of the output nodes.
 \end_layout
 
 \begin_layout Subsubsection
 
 \series bold
 SetPropertyForSubTree
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetPropertyForSubTree
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -4243,7 +5369,47 @@ ComputeGradient or NeedsGradient=true|false: A flag that determine if a
 \begin_layout Subsubsection
 
 \series bold
-Remove, RemoveNode, Delete, DeleteNode
+Remove
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Remove
+\end_layout
+
+\end_inset
+
+, RemoveNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RemoveNode
+\end_layout
+
+\end_inset
+
+, Delete
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Delete
+\end_layout
+
+\end_inset
+
+, DeleteNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DeleteNode
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
@@ -4301,6 +5467,16 @@ This command can leave unconnected nodes in a model that would need to be
 
 \series bold
 Rename
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Rename
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
