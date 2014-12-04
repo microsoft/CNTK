@@ -125,10 +125,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (outputFileIds.find(outputFile) == outputFileIds.end())
         {
             FILE* ofs;
+			msra::files::make_intermediate_dirs(outputFile);
             string str(outputFile.begin(), outputFile.end());
             ofs = fopen(str.c_str(), "wt");
             if (ofs == nullptr)
-                RuntimeError("Cannot open open %s for writing", str.c_str());
+                RuntimeError("Cannot open %s for writing", str.c_str());
             outputFileIds[outputFile] = ofs;
             fp = ofs;
         }
