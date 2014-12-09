@@ -105,6 +105,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         iFeat = iLabel = 0;
         vector<wstring> statelistpaths;
         bool framemode = true;
+        vector<size_t> numContextLeft;
+        vector<size_t> numContextRight;
 
         // for the multi-utterance process
         m_featuresBufferMultiUtt.assign(m_numberOfuttsPerMinibatch,NULL);
@@ -125,6 +127,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ConfigParameters thisFeature = readerConfig(featureNames[i]);
             m_featDims.push_back(thisFeature("dim"));
+            ConfigArray contextWindow = thisFeature("contextWindow", "1");
+            if (contextWindow.size() == 1) // symmetric
+            {
+                size_t windowFrames = contextWindow[0];
+                if (windowFrames % 2 == 0 )
+                    RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowFrames);
+                size_t context = windowFrames / 2;           // extend each side by this
+                numContextLeft.push_back(context);
+                numContextRight.push_back(context);
+
+            }
+            else if (contextWindow.size() == 2) // left context, right context
+            {
+                numContextLeft.push_back(contextWindow[0]);
+                numContextRight.push_back(contextWindow[1]);
+            }
+            else
+            {
+                RuntimeError("contextFrames must have 1 or 2 values specified, found %d", contextWindow.size());
+            }
+            // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
+            // that is what the lower level feature readers expect
+            m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]); 
+            
             string type = thisFeature("type","Real");
             if (type=="Real"){
                 m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
@@ -367,7 +393,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //m_frameSourceMultiIO = new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, randomize, pagepath, mayhavenoframe, addEnergy);
             //m_frameSourceMultiIO->setverbosity(verbosity);
-            m_frameSource = new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, randomize, pagePaths, mayhavenoframe, addEnergy);
+            m_frameSource = new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, pagePaths, mayhavenoframe, addEnergy);
             m_frameSource->setverbosity(verbosity);
         }
         else
