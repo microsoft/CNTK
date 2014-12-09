@@ -1947,8 +1947,27 @@ __global__ void _vectorMin(
     minValues[id]=minVal;
 }
 
+//this implementation uses more threads but also more memory access
 template<class ElemType>
-__global__ void _matrixVectorColumnWiseAdd(
+__global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
+    const ElemType* a,
+    ElemType* us,
+    ElemType alpha,
+    const long m,  //number of rows
+    const long n)  //number of cols     
+{
+    long id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m*n)
+        return;
+
+    long col = id / m;
+    long row = id - col*m;
+
+    us[id] += alpha*a[row];
+}
+
+template<class ElemType>
+__global__ void _matrixVectorColumnWiseAddWithThreadPerRow(
     const ElemType* a,
     ElemType* us,
     ElemType alpha,
@@ -1978,29 +1997,6 @@ __global__ void _matrixVectorColumnWiseAdd(
  
 }
 
-#ifdef OLD
-template<class ElemType>
-__global__ void _matrixVectorColumnWiseAdd(
-    const ElemType* a,
-    ElemType* us,
-    ElemType alpha,
-    const long m,  //number of rows
-    const long n)  //number of cols     
-{
-    int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=m)
-        return;
-    if (blockIdx.x == 0)
-    {
-        printf("_matrixVectorColumnWiseAdd: a=%p, us=%p\n", a, us);
-    }
-    ElemType tmp = a[id];
-    for (long j = 0; j < n; ++j )
-    {
-        us[j*m+id] += alpha*tmp;
-    }
-}
-#endif
 
 template<class ElemType>
 __global__ void _matrixVectorColumnWiseAddBlockPerRow(

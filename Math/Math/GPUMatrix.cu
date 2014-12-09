@@ -2808,7 +2808,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     throw std::invalid_argument("To add column vector, rows should match.");
 
                 cudaEvent_t done = nullptr;
-                int blocksPerGrid = (int)ceil(1.0*m/threadsPerBlock);
+                int blocksPerGrid = (int)(ceil(1.0*m*n / threadsPerBlock));
                 if (do_sync)    CUDA_CALL(cudaEventCreate(&done));   
 #ifdef VALIDATION
                 printf(">>>> CUDA compute device is %d\n", a.GetComputeDeviceId());
@@ -2822,8 +2822,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 #endif
 
-                _matrixVectorColumnWiseAdd<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,c.m_pArray,alpha,m,n);
-                if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
+                _matrixVectorColumnWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,c.m_pArray,alpha,m,n);
+
+
+                if (do_sync)    CUDA_CALL(cudaEventRecord(done));
                 if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));   
                 if (do_sync)    CUDA_CALL(cudaEventDestroy(done));                
             }
