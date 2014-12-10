@@ -121,6 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LearningRateSearchAlgorithm autoAdjustLRType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
             ElemType reduceLearnRateIfImproveLessThan = configAALR("reduceLearnRateIfImproveLessThan", "0");
             bool continueReduce = (bool)configAALR("continueReduce", "false");
+            size_t learnRateAdjustInterval = (size_t)configAALR("learnRateAdjustInterval", "1");
             ElemType learnRateDecreaseFactor = configAALR("learnRateDecreaseFactor", "0.618");
             ElemType increaseLearnRateIfImproveMoreThan = configAALR("increaseLearnRateIfImproveMoreThan", "1#INF");// std::numeric_limits<ElemType>::infinity());
             ElemType learnRateIncreaseFactor = configAALR("learnRateIncreaseFactor", "1.382");
@@ -193,7 +194,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, usePtask, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
-                rpi);
+                rpi, learnRateAdjustInterval);
         }
     
         void setMomentum(float momentum)
@@ -215,7 +216,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
-            RMSPropInfo rpi = RMSPropInfo())
+            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1)
         {
             numPrevLearnRates;
             m_mbSize=mbSize;
@@ -235,6 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_learnRateIncreaseFactor=learnRateIncreaseFactor;
             m_reduceLearnRateIfImproveLessThan=reduceLearnRateIfImproveLessThan;
              m_continueReduce=continueReduce;
+             m_learnRateAdjustInterval = max(1, learnRateAdjustInterval); //minimum interval is 1 epoch
             m_learnRateDecreaseFactor=learnRateDecreaseFactor;
             m_clippingThresholdPerSample=abs(clippingThresholdPerSample);
             m_numMiniBatch4LRSearch=numMiniBatch4LRSearch;
@@ -477,7 +479,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(),net.GetDeviceID()));
             }
 
-            ElemType epochCriterion = std::numeric_limits<ElemType>::infinity(), prevCriterion = std::numeric_limits<ElemType>::infinity();
+            ElemType epochCriterion, avgCriterion, prevCriterion;
+            epochCriterion = avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
+            size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
+
             std::vector<ElemType> epochEvalErrors(evaluationNodes.size(),std::numeric_limits<ElemType>::infinity());
             
             std::vector<wstring> evalNodeNames;
@@ -637,9 +642,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                 bool loadedPrevModel = false;
-                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesPerSample.size() <= i)
+                size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
+                if (avgCriterion == std::numeric_limits<ElemType>::infinity())
+                    avgCriterion = epochCriterion;
+                else
+                    avgCriterion = ((epochsSinceLastLearnRateAdjust -1 - epochsNotCountedInAvgCriterion)* avgCriterion + epochCriterion) / (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
+
+                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
                 {
-                    if (prevCriterion - epochCriterion < 0 && prevCriterion != std::numeric_limits<ElemType>::infinity())                    
+                    if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<ElemType>::infinity())
                     {
                         if (m_loadBestModel)
                         {
@@ -653,7 +664,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if(m_continueReduce)
                     {
-                        if (prevCriterion - epochCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
                         {
                             if(learnRateReduced == false) 
                             {
@@ -675,13 +686,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else 
                     {
-                        if (prevCriterion - epochCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
                         {
 
                             learnRatePerSample *= m_learnRateDecreaseFactor;
                             fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                         }
-                        else if (prevCriterion - epochCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
                         {
                             learnRatePerSample *= m_learnRateIncreaseFactor;
                             fprintf(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
@@ -689,9 +700,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                if (!loadedPrevModel)  //not loading previous values then set them
+                if (!loadedPrevModel && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)  //not loading previous values then set them
                 {
-                    prevCriterion = epochCriterion;
+                    prevCriterion = avgCriterion;
+                    epochsNotCountedInAvgCriterion = 0;
                 }
 
                 //persist model and check-point info
@@ -1481,6 +1493,7 @@ protected:
         bool m_loadBestModel;
         ElemType m_reduceLearnRateIfImproveLessThan;
         bool m_continueReduce;
+        size_t m_learnRateAdjustInterval; //determine after how many epochs the learning rate should be auto adjusted.
         ElemType m_increaseLearnRateIfImproveMoreThan;
         ElemType m_learnRateIncreaseFactor;
         ElemType m_learnRateDecreaseFactor;
