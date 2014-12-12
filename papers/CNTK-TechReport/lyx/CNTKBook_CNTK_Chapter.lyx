@@ -1638,8 +1638,21 @@ loadBestModel
 \end_layout
 
 \begin_layout Itemize
-learnRateAdjustInterval: determine the frequency of applying the learning
- rate adjustment check.
+
+\emph on
+learnRateAdjustInterval
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+learnRateAdjustInterval
+\end_layout
+
+\end_inset
+
+
+\emph default
+: determine the frequency of applying the learning rate adjustment check.
  Default is 1 epoch.
  If this value is set to a value larger than 1 the learning rate adjustment
  will be based on the average criterion computed from the last learnRateAdjustIn

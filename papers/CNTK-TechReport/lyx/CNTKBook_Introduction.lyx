@@ -159,7 +159,7 @@ key "Variable-Component-Deep-Neural-Network:2014"
  Conventionally, one needs to design the network, derive the derivatives
  needed to optimize the network, implement the algorithm, and then run the
  experiments.
- These steps are error pronoe and time consuming.
+ These steps are error prone and time consuming.
  With CNTK, however in many cases, you only need to write a simple configuration
  file.
  The rest of this chapter describes the configuration file needed to implement
@@ -819,7 +819,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe config=Simple.config 
+cn.exe configFile=Simple.config 
 \end_layout
 
 \end_inset
@@ -838,7 +838,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn config=Simple.config 
+cn configFile=Simple.config 
 \end_layout
 
 \end_inset
