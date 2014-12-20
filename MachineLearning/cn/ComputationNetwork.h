@@ -118,9 +118,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //dump all nodes in the network to file
-        void DumpAllNodesToFile(const bool printValues, const std::wstring outputFile)
+        void DumpAllNodesToFile(const bool printValues, const std::wstring outputFile, const bool validateBeforeDump = true)
         {
-            ValidateNetwork();  //some internal values in the nodes are computed during validation
+            if (validateBeforeDump)
+                ValidateNetwork();  //some internal values in the nodes are computed during validation
 
             File fstream(outputFile, FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
