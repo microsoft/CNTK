@@ -88,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // skipThrough - [in/out] for iterative processing, a pointer to an array of NDLNode*, one for each pass
         //               the pointer will be updated to last node processed for that pass, can be NULL if all node processing is desired
         // fullValidate - validate as a complete network? (false if this might be a snippet of a full network)
-        void ProcessNDLScript(NDLScript<ElemType>* script, NDLPass ndlPassUntil=ndlPassAll, NDLNode<ElemType>** skipThrough=nullptr, bool fullValidate = false)
+        void ProcessNDLScript(NDLScript<ElemType>* script, NDLPass ndlPassUntil = ndlPassAll, NDLNode<ElemType>** skipThrough = nullptr, bool fullValidate = false, const std::wstring& dumpFileName = L"")
         {
             // if we don't have a script yet, don't bother
             if (script == nullptr)
@@ -104,7 +104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (NDLPass ndlPass=ndlPassInitial;ndlPass <= ndlPassUntil;++ndlPass)
             {
                 NDLNode<ElemType>* skipThroughNode = skipThrough?*skipThrough:nullptr;
-                lastNode = ProcessPassNDLScript(script, ndlPass, skipThroughNode, fullValidate);
+                lastNode = ProcessPassNDLScript(script, ndlPass, skipThroughNode, fullValidate, dumpFileName);
                 if (skipThrough)
                 {
                     *skipThrough = lastNode;
@@ -119,13 +119,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // skipThrough - for iterative processing, skip through this node in the script (used for in-line MEL processing)
         // fullValidate - validate as a complete network? (false if this might be a snippet of a full network)
         // returns: last NDL node processed 
-        NDLNode<ElemType>* ProcessPassNDLScript(NDLScript<ElemType>* script, NDLPass ndlPass, NDLNode<ElemType>* skipThrough=nullptr, bool fullValidate = false)
+        NDLNode<ElemType>* ProcessPassNDLScript(NDLScript<ElemType>* script, NDLPass ndlPass, NDLNode<ElemType>* skipThrough = nullptr, bool fullValidate = false, const std::wstring& dumpFileName = L"")
         {
             if (ndlPass == ndlPassFinal)
             {
                 // make sure to clear the caches so we pick up the new nodes
                 m_net->ClearCaches();
                 // validate the network
+                if (dumpFileName != L"")
+                    m_net->DumpAllNodesToFile(false, dumpFileName, false);
                 m_net->ValidateNetwork(!fullValidate);
             }
             SynchronousNodeEvaluator<ElemType> ndlEvaluator(*m_net);
