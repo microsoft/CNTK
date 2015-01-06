@@ -461,6 +461,9 @@ void BestGpu::QueryNvmlData()
             }
         }
 
+        if (curPd == NULL)
+            continue;
+
         // Get the memory usage, will only work for TCC drivers
         result = nvmlDeviceGetMemoryInfo(device, &memory);
         if (NVML_SUCCESS != result)
