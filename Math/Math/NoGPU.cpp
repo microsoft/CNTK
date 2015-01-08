@@ -73,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const bool growOnly = true) {}//matrix format will affect the size to allocate
-    template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ) {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const bool growOnly = true) {}
 
     template<class ElemType> GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix() const
     {

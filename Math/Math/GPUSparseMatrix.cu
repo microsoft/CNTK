@@ -630,9 +630,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ)
+    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const bool growOnly)
     {
-        Resize(numRows, numCols, numNZ, GetFormat(), true);
+        Resize(numRows, numCols, numNZ, GetFormat(), growOnly);
     }
 
     template<class ElemType>
