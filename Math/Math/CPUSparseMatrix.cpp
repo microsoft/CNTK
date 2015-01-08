@@ -228,14 +228,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t size)
+    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t size, const bool growOnly)
     {               
         m_nz = 0; 
         m_colIdx = -1;
         m_numRows = numRows;
-        m_numCols = numCols;            
-        
-        if(m_elemSizeAllocated < size) 
+        m_numCols = numCols;     
+
+        if (m_elemSizeAllocated < size || (m_elemSizeAllocated > size && ! growOnly))
         {                
             m_elemSizeAllocated = size;
             if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
