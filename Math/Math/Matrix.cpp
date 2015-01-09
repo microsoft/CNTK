@@ -1150,14 +1150,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t allocatedSize /*=0*/, bool growOnly /*=true*/)
+    void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->Resize(numRows,numCols,growOnly), 
             m_GPUMatrix->Resize(numRows,numCols,growOnly), 
-            m_CPUSparseMatrix->Resize(numRows, numCols, allocatedSize, growOnly),
-            m_GPUSparseMatrix->Resize(numRows, numCols, allocatedSize, growOnly)
+            m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly),
+            m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly)
             );
     }
 
