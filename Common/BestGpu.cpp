@@ -26,6 +26,12 @@
 #include <Shlobj.h>
 #include <stdio.h>
 
+#ifdef MPI_SUPPORT
+#include "mpi.h"
+#endif
+extern int myRank;
+extern int numProcs;
+
 // ---------------------------------------------------------------------------
 // BestGpu class
 // ---------------------------------------------------------------------------
@@ -81,6 +87,7 @@ public:
     void Init();
     void SetAllowedDevices(const std::vector<int>& devices); // only allow certain GPUs
     bool DeviceAllowed(int device);
+    void DisallowDevice(int device) { m_allowedDevices &= ~(1 << device); }
     void AllowAll(); // reset to allow all GPUs (no allowed list)
     bool UseMultiple(); // using multiple GPUs?
     int GetDevice(BestGpuFlags flags = bestGpuNormal); // get a single device
@@ -115,8 +122,39 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     }
     if (!_stricmp(val.c_str(), "Auto"))
     {
+#ifdef MPI_SUPPORT
+        // make sure deviceId is unique among processes on the same machine
+        g_bestGpu->AllowAll();
+        std::string MyName(getenv("COMPUTERNAME"));
+        for (int i = 0; i < numProcs; i++)
+        {
+            DEVICEID_TYPE yourDeviceId = deviceId;
+            if (myRank == i)
+            {
+                std::vector<int> devices = g_bestGpu->GetDevices(1);
+                deviceId = yourDeviceId = (DEVICEID_TYPE)devices[0];
+            }
+            MPI_Bcast(&yourDeviceId, 1, MPI_INT, i, MPI_COMM_WORLD);
+            {
+                INT32 YourSize = (INT32)MyName.length();
+                MPI_Bcast(&YourSize,1,MPI_INT,i,MPI_COMM_WORLD);
+                vector<char> YourName(YourSize+1);
+                if (myRank == i)
+                    copy(MyName.begin(), MyName.end(), YourName.begin());
+                MPI_Bcast(YourName.data(), YourSize + 1, MPI_CHAR, i, MPI_COMM_WORLD);
+                if (myRank != i)
+                {
+                    if (!_strcmpi(MyName.data(), YourName.data()))
+                    {
+                        g_bestGpu->DisallowDevice(yourDeviceId);
+                    }
+                }
+            }
+        }
+#else
         std::vector<int> devices = g_bestGpu->GetDevices(1);
         deviceId = (DEVICEID_TYPE)devices[0];
+#endif
     }
     else if (!_stricmp(val.c_str(), "All"))
     {
