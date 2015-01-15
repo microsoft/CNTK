@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
             size_t nCols = mat.GetNumCols();
-            size_t col_start = (nCols * myRank)/ numProcs;
+            size_t col_start = (nCols * myRank) / numProcs;
             size_t col_end = (nCols*(myRank + 1)) / numProcs;
             if (col_end > nCols) col_end = nCols; // this shouldn't happen
             if (col_end == col_start)
@@ -1040,6 +1040,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UpdateEvalTimeStamps(labelNodes);
 
                 size_t actualMBSize = net.GetActualMBSize();
+                if (0 == actualMBSize)
+                    continue;
 
                 net.SetActualMiniBatchSize(actualMBSize);
                 net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
