@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t MajorIndexSize() const { return sizeof(GPUSPARSE_INDEX_TYPE)*MajorIndexCount(); } // actual number of major index bytes in use
 
         GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const { return MajorIndexLocation() + m_elemSizeAllocated; } //this is the compressed index, col/row in CSC/CSR format
-        size_t SecondaryIndexCount() const 
+        size_t SecondaryIndexCount(const size_t numNZ) const 
         {
             if (m_format&matrixFormatCompressed)
             {
@@ -67,12 +67,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return cnt;
             }
             else
-                return m_nz; // COO format
+                return numNZ; // COO format
         }
+
+        size_t SecondaryIndexCount() const
+        {
+            return SecondaryIndexCount(m_nz);
+        }
+
         // get size for compressed index
         size_t SecondaryIndexSize() const { return (SecondaryIndexCount())*sizeof(GPUSPARSE_INDEX_TYPE); }
 
         size_t BufferSizeNeeded() const { return NzSize() + MajorIndexSize() + SecondaryIndexSize(); }
+        size_t BufferSizeNeeded(const size_t numNZ) const 
+        { return sizeof(ElemType)*numNZ + sizeof(GPUSPARSE_INDEX_TYPE)*(numNZ + SecondaryIndexCount(numNZ)); }
+
         size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
         ElemType* BufferPointer() const;
 
@@ -88,8 +97,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const GPUMatrix<ElemType>& denseMatrix);
 
         void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const bool growOnly = true); //matrix format will affect the size to allocate
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZ);  
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true); //matrix format will affect the size to allocate
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly = true);
 
         GPUSparseMatrix<ElemType> Transpose() const;
         void InplaceTranspose();

@@ -95,6 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numRows = 0;
         m_numCols = 0;
         m_elemSizeAllocated = 0;
+        m_compIndexSize = 0;
         m_externalBuffer = false;
         m_computeDevice = CPUDEVICE;
         m_nz = 0;
@@ -181,11 +182,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("CPUSparseMatrix:  unsupported SetValue() call.");
         }
 
-        if(m_elemSizeAllocated < m_nz +1) {
-            throw std::logic_error("CPUSparseMatrix:  allocated size is too small.");
+        if(m_elemSizeAllocated < m_nz +1) //automatic resize
+        {
+            Resize(m_numRows, m_numCols, m_nz + 100);  //allocate 100 more elelemnts and keep existing values
         }
 
-        if(rIdx < 0 || rIdx >= m_numRows) {
+        if(rIdx < 0 || rIdx >= m_numRows) 
+        {
             throw std::logic_error("CPUSparseMatrix: SetValue() invalid row id");
         }
 
@@ -228,43 +231,62 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t size)
+    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, const bool keepExistingValues)
     {               
-        m_nz = 0; 
-        m_colIdx = -1;
+        size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
+        bool reallocate = (m_elemSizeAllocated < numNZElemToReserve || (m_elemSizeAllocated > numNZElemToReserve && !growOnly) || m_compIndexSize < newCompIndexSize);
+
         m_numRows = numRows;
-        m_numCols = numCols;            
-        
-        if(m_elemSizeAllocated < size) 
+        m_numCols = numCols;
+
+        if (reallocate)
         {                
-            m_elemSizeAllocated = size;
-            if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+            if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
             {
-                if(m_pArray != NULL) 
+                ElemType *pArray = new ElemType[numNZElemToReserve];
+                size_t *unCompIndex = new size_t[numNZElemToReserve];
+                size_t *compIndex = new size_t[newCompIndexSize];
+                
+                if (keepExistingValues && m_nz > 0)
+                {
+                    memcpy(pArray, m_pArray, sizeof(ElemType)*m_nz);
+                    memcpy(unCompIndex, m_unCompIndex, sizeof(size_t)*m_nz);
+                    memcpy(compIndex, m_compIndex, sizeof(size_t)*m_compIndexSize);
+                }
+
+                if (m_pArray != NULL)
                     delete[] m_pArray;
-                if(m_unCompIndex != NULL) 
+                if (m_unCompIndex != NULL)
                     delete[] m_unCompIndex;
-                if(m_compIndex != NULL) 
-                    delete[] m_compIndex; 
-                
-                //int len = m_format == MatrixFormat::matrixFormatSparseCSC ? numCols : numRows;
-                size_t len = numCols > numRows ? numCols : numRows;
-                m_pArray = new ElemType[size];
-                m_unCompIndex = new size_t[size];                
-                m_compIndex = new size_t[len+1];  
-                
-            } 
+                if (m_compIndex != NULL)
+                    delete[] m_compIndex;
+
+                m_pArray = pArray;
+                m_unCompIndex = unCompIndex;
+                m_compIndex = compIndex;
+            }
             else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
             {
-                if(m_blockVal != NULL) 
+                ElemType *blockVal = new ElemType[numNZElemToReserve];
+                size_t *blockIds = new size_t[newCompIndexSize];
+
+                if (keepExistingValues && m_elemSizeAllocated > 0)
+                {
+                    memcpy(blockVal, m_blockVal, sizeof(ElemType)*m_elemSizeAllocated);
+                    memcpy(blockIds, m_blockIds, sizeof(size_t)*m_compIndexSize);
+                }
+
+                if (m_blockVal != NULL)
                     delete[] m_blockVal;
                 if(m_blockIds != NULL) 
                     delete[] m_blockIds;
 
-                size_t max = numCols > numRows ? numCols : numRows;
-                m_blockVal = new ElemType[size];                
-                m_blockIds = new size_t[max];
+                m_blockVal = blockVal;
+                m_blockIds = blockIds;
             }
+
+            m_elemSizeAllocated = numNZElemToReserve;
+            m_compIndexSize = newCompIndexSize;
         }
     }
 
@@ -274,6 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {                
         m_nz = 0;
         m_colIdx = -1;
+        m_compIndexSize = 0;
         m_blockSize = 0;
     }
 
