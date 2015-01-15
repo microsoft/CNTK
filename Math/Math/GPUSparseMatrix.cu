@@ -130,6 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         deepCopy.PrepareDevice();
 
         Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_nz, deepCopy.m_format);
+        m_nz = deepCopy.m_nz;
         CUDACALL(cudaMemcpy(NzValues(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
         CUDACALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
         CUDACALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
@@ -199,6 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
             GPUSPARSE_INDEX_TYPE *h_CSRRow, *h_Col;
             cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements());
+            cpuSparseMatrix.SetNzCount(GetNumNZElements());
 
             PrepareDevice();
             h_CSRRow = new GPUSPARSE_INDEX_TYPE[m_numRows + 1];
@@ -219,6 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
             GPUSPARSE_INDEX_TYPE *h_CSCCol, *h_Row;
             cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements());
+            cpuSparseMatrix.SetNzCount(GetNumNZElements());
 
             PrepareDevice();
             h_CSCCol = new GPUSPARSE_INDEX_TYPE[m_numCols + 1];
@@ -322,6 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         outMatrix.ChangeDeviceTo(GetComputeDeviceId());
         outMatrix.Resize(m_numRows, m_numCols, m_nz,newFormat);
+        outMatrix.SetNzCount(m_nz);
 
         if (oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
         {
@@ -475,6 +479,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDACALL(cudaEventDestroy(done));
 
         Resize(numRows, numCols, nnzTotalDevHostPtr, matrixFormat);
+        SetNzCount(nnzTotalDevHostPtr);
 
         CUDACALL(cudaEventCreate(&done));
         
@@ -605,6 +610,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly /*= true*/)
     {
         Resize(a.m_numRows, a.m_numCols, a.m_nz, a.m_format, growOnly);
+        SetNzCount(a.m_nz);
 
         CUDACALL(cudaMemcpy(MajorIndexLocation(), a.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
         CUDACALL(cudaMemcpy(SecondaryIndexLocation(), a.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
@@ -630,29 +636,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ)
+    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly)
     {
-        Resize(numRows, numCols, numNZ, GetFormat(), true);
+        Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly);
     }
 
+    //WARNING: When memory is reallocated existing information will be lost, workaround is to allocte enough memory from start.
+    //TODO: add keepExistingValues (default to true) argument so that the existing values are kept even after reallocation 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
+    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
     {               
         m_numRows = numRows;
         m_numCols = numCols; 
-        m_nz = numNZ;
 
         if (matrixFormat == MatrixFormat::matrixFormatSparseCSC || matrixFormat == MatrixFormat::matrixFormatSparseCSR)
         {
-            bool reallocate = (m_totalBufferSizeAllocated < BufferSizeNeeded() || (!growOnly && m_totalBufferSizeAllocated > BufferSizeNeeded()));
+            size_t bufferSizeNeeded = BufferSizeNeeded(numNZElemToReserve);
+            bool reallocate = (m_totalBufferSizeAllocated < bufferSizeNeeded || (!growOnly && m_totalBufferSizeAllocated > bufferSizeNeeded));
 
             if (reallocate)
             {
                 if (!OwnBuffer())
                     throw logic_error("Cannot Resize since the buffer is managed externally.");
-
-                m_totalBufferSizeAllocated = BufferSizeNeeded();
-                m_elemSizeAllocated = numNZ;
 
                 if (m_pArray != nullptr)
                     CUDACALL(cudaFree(m_pArray));
@@ -663,21 +668,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 PrepareDevice();
 
-                CUDACALL(cudaMalloc((void **)&m_pArray, m_totalBufferSizeAllocated));
+                CUDACALL(cudaMalloc((void **)&m_pArray, bufferSizeNeeded));
                 CUDACALL(cudaMalloc((void **)&m_block2Id, sizeof(size_t)*(numCols * 2)));
                 CUDACALL(cudaMalloc((void **)&m_block2UniqId, sizeof(size_t)*(numCols * 2)));
+
+                m_totalBufferSizeAllocated = bufferSizeNeeded;
+                m_elemSizeAllocated = numNZElemToReserve;
             }
         } 
         else if (matrixFormat == MatrixFormat::matrixFormatSparseBlockCol || matrixFormat == MatrixFormat::matrixFormatSparseBlockRow)
         {
-            if (m_blockVal != nullptr)
-                CUDACALL(cudaFree(m_blockVal));
-            if (m_blockIds != nullptr)
-                CUDACALL(cudaFree(m_blockIds));
-            PrepareDevice();
-            CUDACALL(cudaMalloc((void **)&m_blockVal, sizeof(ElemType)*numNZ));
-            int max = numCols > numRows ? numCols : numRows;
-            CUDACALL(cudaMalloc((void **)&m_blockIds, sizeof(size_t)*max));
+            if (m_elemSizeAllocated < numNZElemToReserve || (m_elemSizeAllocated > numNZElemToReserve && !growOnly))
+            {
+                if (m_blockVal != nullptr)
+                    CUDACALL(cudaFree(m_blockVal));
+                if (m_blockIds != nullptr)
+                    CUDACALL(cudaFree(m_blockIds));
+                PrepareDevice();
+                CUDACALL(cudaMalloc((void **)&m_blockVal, sizeof(ElemType)*numNZElemToReserve));
+                int max = numCols > numRows ? numCols : numRows;
+                CUDACALL(cudaMalloc((void **)&m_blockIds, sizeof(size_t)*max));
+
+                m_elemSizeAllocated = numNZElemToReserve;
+            }
         }
         else
             NOT_IMPLEMENTED;
@@ -701,6 +714,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_format = matrixFormatSparseCSR;
         Resize(numRows, numCols, nz);
+        SetNzCount(nz);
 
         cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
         CUDACALL(cudaMemcpy(RowLocation(), h_CSRRow, RowSize(), kind));
@@ -741,6 +755,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SetComputeDeviceId(devId);
         m_format = matrixFormatSparseCSC;
         Resize(numRows, numCols, nz);
+        SetNzCount(nz);
 
         cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
         CUDACALL(cudaMemcpy(RowLocation(), h_Row, RowSize(), kind));
@@ -792,6 +807,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         m_format = matrixFormatSparseCSC;
         Resize(m_numRows, m_numCols, labelSize);
+        SetNzCount(labelSize);
 
         m_expandedSize = expandedSize;
         m_blockSize = blockSize;
@@ -1320,6 +1336,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // now we know the number of Non-zeros in the result set, set the output size
         c.Resize(m, n, nnzC);
+        c.m_nz = nnzC;
+
         CUDACALL(cudaMemcpy(c.SecondaryIndexLocation(),csrRowPtrC,c.SecondaryIndexSize(),cudaMemcpyDeviceToDevice));
 
         // if we allocated the buffer, free it here
@@ -1805,6 +1823,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice();
         GPUSparseMatrix c(GetFormat(), GetComputeDeviceId());
         c.Resize(n, m, nnz, GetFormat());
+        c.m_nz = nnz;
 
         cusparseHandle_t cusparseHandle = 0;
         CUSPARSECALL(cusparseCreate(&cusparseHandle));
@@ -2283,6 +2302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         us.Resize(rownum, colnum, nz);
+        us.SetNzCount(nz);
 
         if (nz > 0)
         {

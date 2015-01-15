@@ -81,6 +81,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetOwnBuffer(bool own) {m_externalBuffer = !own;}
         wchar_t* GetMatrixName() const { return m_matrixName; }
         size_t NzCount() const {return m_nz;}
+        void SetNzCount(const size_t nz) { m_nz = nz; }
         size_t GetSizeAllocated() const {return m_elemSizeAllocated; }
         void SetMatrixName(const wchar_t* s) 
         { 
