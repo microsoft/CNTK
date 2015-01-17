@@ -12,15 +12,15 @@ using namespace Microsoft::MSR::CNTK;
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace DataReaderTest
-{		
-	TEST_CLASS(UCIDataReaderUnitTest)
-	{
-	public:
-		
+{        
+    TEST_CLASS(UCIDataReaderUnitTest)
+    {
+    public:
+        
         // StandardLoopTest
         // Test of the DataReader loop 
-		TEST_METHOD(TestMode)
-		{
+        TEST_METHOD(TestMode)
+        {
             size_t vdim = 785;
             size_t udim = 10;
             size_t epochSize = 500;
@@ -48,10 +48,10 @@ namespace DataReaderTest
                     }
                 }
             }
-		}
+        }
 
-		TEST_METHOD(Partial)
-		{
+        TEST_METHOD(Partial)
+        {
             size_t vdim = 784;
             size_t udim = 10;
             size_t epochSize = 500;
@@ -79,6 +79,6 @@ namespace DataReaderTest
                     }
                 }
             }
-		}
-	};
+        }
+    };
 }

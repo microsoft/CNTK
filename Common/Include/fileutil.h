@@ -7,6 +7,7 @@
 #ifndef _FILEUTIL_
 #define _FILEUTIL_
 
+#include "Platform.h"
 #include <stdio.h>
 #ifdef __unix__
 #include <sys/types.h>
@@ -97,6 +98,14 @@ size_t filesize (FILE * f);
 int64_t filesize64 (const wchar_t * pathname);
 
 // ----------------------------------------------------------------------------
+// fseekOrDie(),ftellOrDie(), fget/setpos(): seek functions with error handling
+// ----------------------------------------------------------------------------
+
+// 32-bit offsets only
+long fseekOrDie (FILE * f, long offset, int mode = SEEK_SET);
+#define ftellOrDie ftell
+
+// ----------------------------------------------------------------------------
 // fget/setpos(): seek functions with error handling
 // ----------------------------------------------------------------------------
 
@@ -148,6 +157,16 @@ bool fskipwspace (FILE * F);
 // fskipNewLine(): skip all white space until end of line incl. the newline
 // ----------------------------------------------------------------------------
 
+// ----------------------------------------------------------------------------
+// fputstring(): write a 0-terminated string (terminate if error)
+// ----------------------------------------------------------------------------
+
+void fputstring (FILE * f, const char *);
+void fputstring (const HANDLE f, const char * str);
+void fputstring (FILE * f, const std::string &);
+void fputstring (FILE * f, const wchar_t *);
+void fputstring (FILE * f, const std::wstring &);
+
 template<class CHAR> CHAR * fgetline (FILE * f, CHAR * buf, int size);
 template<class CHAR, size_t n> CHAR * fgetline (FILE * f, CHAR (& buf)[n]) { return fgetline (f, buf, n); }
 string fgetline (FILE * f);
@@ -159,6 +178,9 @@ void fgetline (FILE * f, std::vector<wchar_t> & buf);
 
 const char * fgetstring (FILE * f, char * buf, int size);
 template<size_t n> const char * fgetstring (FILE * f, char (& buf)[n]) { return fgetstring (f, buf, n); }
+const char * fgetstring (const HANDLE f, char * buf, int size);
+template<size_t n> const char * fgetstring (const HANDLE f, char (& buf)[n]) { return fgetstring (f, buf, n); }
+
 const wchar_t * fgetstring (FILE * f, wchar_t * buf, int size);
 wstring fgetwstring (FILE * f);
 string fgetstring (FILE * f);

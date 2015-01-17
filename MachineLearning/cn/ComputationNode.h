@@ -28,7 +28,11 @@ static inline int64_t InterlockedIncrement64(int64_t * v) { return (*v)++; }    
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
 
 #ifndef NOT_IMPLEMENTED
-#define NOT_IMPLEMENTED LogicError("Not implemented")
+#define NOT_IMPLEMENTED \
+	do { \
+		printf("%s:%d Not implemented.\n", __FILE__, __LINE__); \
+		std::logic_error(__FILE__); \
+	}while(0)
 #endif
 
 #pragma warning (disable: 4267)
@@ -67,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_inStack;
         int m_indexInLoop;
         vector<size_t> m_sentenceEnd;
-    public:
+public:
         ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
         {
             m_deviceId = deviceId;

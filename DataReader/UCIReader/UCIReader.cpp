@@ -362,13 +362,13 @@ void UCIReader<ElemType, LabelType>::StartMinibatchLoop(size_t mbSize, size_t ep
         if (m_epochSize != requestDataSize)
         {
             m_randomizeRange = m_epochSize;
-			m_randomordering.resize(m_randomizeRange, m_randomizeRange);
+            m_randomordering.resize(m_randomizeRange, m_randomizeRange);
         } 
         else if (m_randomizeRange < mbSize)
-		{
-			m_randomizeRange = max(m_randomizeRange, m_mbSize);
-			m_randomordering.resize(m_randomizeRange, m_randomizeRange);
-		}
+        {
+            m_randomizeRange = max(m_randomizeRange, m_mbSize);
+            m_randomordering.resize(m_randomizeRange, m_randomizeRange);
+        }
     }
 
     m_epoch = epoch;

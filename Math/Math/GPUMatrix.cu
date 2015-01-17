@@ -40,7 +40,7 @@ bool do_sync = true;
 // thread local storage to access the current stream, initalize to default stream
 __declspec (thread) 
 #endif
-cudaStream_t t_stream = cudaStreamDefault;
+static cudaStream_t t_stream = cudaStreamDefault;
 
 extern int _ConvertSMVer2Cores(int major, int minor);   // forward declaration
 
@@ -160,8 +160,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static int chosenDeviceId = AUTOPLACEMATRIX;
         if (chosenDeviceId != AUTOPLACEMATRIX)
             return chosenDeviceId;
-
+#ifdef __WINDOWS__
         __try
+#endif
         {
             // stash previous device state
             // if there was one on entry:
@@ -202,10 +203,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             chosenDeviceId = curDev;
             return curDev;
         }
+#ifdef __WINDOWS__
         __except (1)
         {
             return -1; // CPU
         }
+#endif
     }
 
     // PrepareDevice - Setup the correct cuda context for an operation

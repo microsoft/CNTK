@@ -21,8 +21,8 @@ namespace Microsoft {
     template<> int64_t ComputationNode<float>::s_timeStampCounter = 0;
     template<> int64_t ComputationNode<double>::s_timeStampCounter = 0;
 
-    template<> std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes;
-    template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes;
+    template<> std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes{};
+    template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
 
     template<class ElemType>
     TaskDescriptor<ElemType>* LearnableParameter<ElemType>::GetPTaskDescriptor(TaskType taskType, size_t /*inputIndex=0*/) const

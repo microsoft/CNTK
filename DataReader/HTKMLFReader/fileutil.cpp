@@ -19,7 +19,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#ifndef __unix__
 #include "windows.h"    // for FILETIME
+#endif
 #include <algorithm>    // for std::find
 
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h

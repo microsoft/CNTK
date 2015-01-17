@@ -737,3 +737,22 @@ int wmain(int argc, wchar_t* argv[])
 #endif
     return EXIT_SUCCESS;
 }
+
+#ifdef __UNIX__
+int main(int argc, char* argv[])
+{
+    wchar_t **wargs = new wchar_t*[argc];
+    for (int i = 0; i < argc; ++i)
+    {
+        wargs[i] = new wchar_t[strlen(argv[i]) + 1];
+        size_t ans = ::mbstowcs(wargs[i], argv[i], strlen(argv[i]) + 1);
+        assert(ans == strlen(argv[i]));
+    }
+    int ret = wmain(argc, wargs);
+    for (int i = 0; i < argc; ++i)
+        delete[] wargs[i];
+    delete[] wargs;
+    return ret;
+}
+#endif
+

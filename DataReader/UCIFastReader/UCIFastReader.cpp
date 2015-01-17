@@ -666,8 +666,8 @@ void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, si
         {
             m_labelsBuffer = new ElemType[m_labelDim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*m_labelDim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
         }
         else if (m_labelType != labelNone)
         {
@@ -790,7 +790,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
     if (m_labelType == labelCategory)
     {
         memset(m_labelsBuffer,0,sizeof(ElemType)*m_labelDim*actualmbsize);
-        memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*actualmbsize);
+        memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*actualmbsize);
     }
     else if (m_labelType != labelNone)
     {
@@ -923,7 +923,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {

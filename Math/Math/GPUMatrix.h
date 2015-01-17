@@ -5,7 +5,7 @@
 //
 
 #pragma once
-
+#include "Platform.h"
 #include <string>
 #include <vector>
 #include <ctime>
@@ -69,6 +69,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // without this, base members would require to use thi-> in GCC
     public:
         static const int MaxGpus = 8;  // support up to 8 GPUs
+		using BaseMatrix<ElemType>::m_computeDevice;
+		using BaseMatrix<ElemType>::m_elemSizeAllocated;
+		using BaseMatrix<ElemType>::m_matrixName;
+		using BaseMatrix<ElemType>::m_format;
+		using BaseMatrix<ElemType>::m_externalBuffer;
+		using BaseMatrix<ElemType>::OwnBuffer;
+		using BaseMatrix<ElemType>::GetNumElements;
+		using BaseMatrix<ElemType>::IsEmpty;
+		using BaseMatrix<ElemType>::GetNumRows;
+		using BaseMatrix<ElemType>::GetNumCols;
+		using BaseMatrix<ElemType>::SetMatrixName;
     private:
         static cublasHandle_t s_cuHandle[MaxGpus];
         static void *s_curandGenerator;

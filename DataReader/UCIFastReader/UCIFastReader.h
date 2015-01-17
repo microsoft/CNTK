@@ -5,6 +5,7 @@
 //
 // UCIFastReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
+#include "stdafx.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "UCIParser.h"
@@ -12,6 +13,12 @@
 #include <map>
 #include <vector>
 #include "minibatchsourcehelpers.h"
+
+static inline size_t RoundUp(size_t m, size_t n)
+{
+	if (m % n == 0) return m / n;
+	else return m / n + 1;
+}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -26,9 +33,11 @@ enum LabelKind
 template<class ElemType>
 class UCIFastReader : public IDataReader<ElemType>
 {
-//public:
-//    typedef std::string LabelType;
-//    typedef unsigned LabelIdType;
+public:
+	using LabelType = typename IDataReader<ElemType>::LabelType;
+	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+    //typedef std::string LabelType;
+    //typedef unsigned LabelIdType;
 private:
     UCIParser<ElemType, LabelType> m_parser;
     size_t m_mbSize;    // size of minibatch requested
@@ -99,7 +108,7 @@ public:
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
     void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/){};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
