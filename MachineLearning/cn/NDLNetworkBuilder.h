@@ -45,10 +45,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             IExecutionEngine<ElemType>* executionEngine,
             const std::wstring& networkConfig, 
             const std::string& configParams,
+            const std::wstring& dumpFileName,
             DEVICEID_TYPE deviceId=AUTOPLACEMATRIX) 
         {
             m_executionEngine=executionEngine;
             m_networkConfig=networkConfig;
+            m_dumpFileName = dumpFileName;
             m_initialConfig=configParams;
             m_deviceId=deviceId;
             m_net=&(executionEngine->GetComputationNetwork());
@@ -69,6 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ConfigParameters newConfig;
             ConfigValue networkConfig = config("networkDescription","");
+            ConfigValue dumpFileName = config("dumpFileName", "");
             DEVICEID_TYPE deviceId = DeviceFromConfig(config);
             unsigned long randomSeedOffset = config("randomSeedOffset","0");
             auto executionEngine = new SynchronousExecutionEngine<ElemType>(deviceId, randomSeedOffset);
@@ -142,7 +145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            Init(executionEngine, networkConfig, newConfig, deviceId);
+            Init(executionEngine, networkConfig, newConfig, dumpFileName, deviceId);
         }
 
         virtual ~NDLBuilder()
@@ -196,7 +199,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_script.FileParse(fileContents);
 
             NDLUtil<ElemType> ndlUtil(m_net);
-            ndlUtil.ProcessNDLScript(&m_script, ndlPassAll, nullptr, true);
+            ndlUtil.ProcessNDLScript(&m_script, ndlPassAll, nullptr, true, m_dumpFileName);
         }
 
         // SetFromConfig - Set the NDL script from a configuration string value
@@ -222,6 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNetwork<ElemType>* m_net;
         IExecutionEngine<ElemType>* m_executionEngine;
         std::wstring m_networkConfig;
+        std::wstring m_dumpFileName;
         std::string m_initialConfig;
 
         DEVICEID_TYPE m_deviceId;

@@ -64,6 +64,7 @@ template<class ElemType>
 void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(m_config);
+    fprintf(stderr, "DeviceID=%d\n", (int)deviceId);
     if (m_net != NULL)
         delete m_net;
     m_net = new ComputationNetwork<ElemType>(deviceId);

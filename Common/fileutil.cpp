@@ -78,8 +78,10 @@ template <>     const wchar_t* GetFormatString(unsigned int) {return L" %u";}
 //template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
 template <>            const wchar_t* GetFormatString(float) {return L" %.9g";}
 template <>           const wchar_t* GetFormatString(double) {return L" %.17g";}
-template <>           const wchar_t* GetFormatString(size_t) { return L" %llu"; }
+template <>           const wchar_t* GetFormatString(size_t) {return L" %llu";}
 template <>        const wchar_t* GetFormatString(long long) {return L" %lli";}
+template <>      const wchar_t* GetFormatString(const char*) {return L" %hs";}
+template <>   const wchar_t* GetFormatString(const wchar_t*) {return L" %ls";}
 
 // ----------------------------------------------------------------------------
 // fgetText() specializations for fwscanf differences: get a value from a text file

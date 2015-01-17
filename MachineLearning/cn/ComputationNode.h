@@ -4743,14 +4743,18 @@ protected:  \
         virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
         {
             Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if(m_dropoutRate > 0)
             {
-                m_maskOfDropout.Resize(m_functionValues.GetNumRows(), m_functionValues.GetNumCols());
+				FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+				m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
                 sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            }
+			}
+			
+			sliceOutputValue = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+			
 
             EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }

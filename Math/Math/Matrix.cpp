@@ -925,7 +925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, ElemType val)
     {
-        DISPATCH_MATRIX_ON_FLAG(this,
+        DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
             this,
             (*m_CPUMatrix)(rIdx, cIdx) = val, 
             NOT_IMPLEMENTED, 
@@ -1150,26 +1150,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
+    void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->Resize(numRows,numCols,growOnly), 
             m_GPUMatrix->Resize(numRows,numCols,growOnly), 
-            NOT_IMPLEMENTED,
-            NOT_IMPLEMENTED
-            );
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t allocatedSize)
-    {
-        DISPATCH_MATRIX_ON_FLAG(this,
-            this,
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
-            m_CPUSparseMatrix->Resize(numRows,numCols, allocatedSize), 
-            m_GPUSparseMatrix->Resize(numRows,numCols, allocatedSize)
+            m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly),
+            m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly)
             );
     }
 
@@ -3069,11 +3057,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     delete m_CPUSparseMatrix;
                     m_CPUSparseMatrix = NULL;
-                    SetDataLocation(GPU, DENSE);
+                    SetDataLocation(GPU, SPARSE);
                 }
                 else
                 {
-                    SetDataLocation(BOTH, DENSE);
+                    SetDataLocation(BOTH, SPARSE);
                 }
             }
             else //from GPU

@@ -116,10 +116,10 @@ At the center of the CNTK is the ComputationNetwork class, which manages
  the life span of computation nodes comprising the network and all the functions
  operating at the network level such as forward computations and gradient
  calculations.
- To build a computational network you need to use one of the ComputationNetBuild
-er classes that implement the IComputationNetBuilder interface.
+ To build a computational network you need to use one of the computational
+ network builder classes that implement the IComputationNetBuilder interface.
  These classes include SimpleNetworkBuilder that supports building simple
- layer-by-layer fully connected networks, 
+ layer-by-layer fully connected networks and 
 \begin_inset Index idx
 status open
 
@@ -149,8 +149,7 @@ LSTM
 
 \end_inset
 
-) neural networks.
- It also includes NDLNetworkBuilder that can build neural network, using
+) RNNs, as well as NDLNetworkBuilder that builds neural networks, using
  any computation node we have described in Section 
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -181,7 +180,7 @@ IDataReader
 \end_inset
 
  is an interface for loading data and its transcriptions.
- Different data file format requires different data readers.
+ Different data file formats require different data readers.
  CNTK already implements the UCIFastReader and the BinaryReader that reads
  in UCI data in either text or binary format, the HTKMLFReader that reads
  in HTK/MLF speech data, the SequenceReader that is designed for language

@@ -166,3 +166,4 @@ bin/
 LOG
 *.log
 core	
+*.lyx#

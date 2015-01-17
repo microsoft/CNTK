@@ -86,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, size_t size = 0);
+        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 0, const bool growOnly = true, const bool keepExistingValues = true);
         void Reset();
 
     public:
@@ -133,6 +133,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         int m_colIdx; //used to SetValue()
+        size_t m_compIndexSize;
+
         //non-zero values are stored in m_pArray
         size_t *m_unCompIndex; //row/col ids in CSC/CSR format
         size_t *m_compIndex; //begin ids of col/row in CSC/CSR format

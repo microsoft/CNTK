@@ -146,9 +146,6 @@
     <Text Include="modelEditorFromScratch.txt">
       <Filter>Model Editing</Filter>
     </Text>
-    <Text Include="config.txt">
-      <Filter>Main</Filter>
-    </Text>
     <Text Include="DefaultMacros.txt">
       <Filter>Main</Filter>
     </Text>
