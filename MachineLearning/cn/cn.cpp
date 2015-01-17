@@ -663,7 +663,11 @@ int wmain(int argc, wchar_t* argv[])
                 oss << myRank;
                 logpath += L"rank" + oss.str();
             }
-            RedirectStdErr(logpath);
+#ifndef _DEBUG
+			RedirectStdErr(logpath);
+#else
+			printf("INFO: in debug mode, do not redirect output\n");
+#endif
         }
 
         std::string timestamp = TimeDateStamp();

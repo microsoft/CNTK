@@ -207,13 +207,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
 
+			bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
+
             Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB, gradientClippingWithTruncation, 
                 clippingThresholdPerSample,autoAdjustLRType, increaseLearnRateIfImproveMoreThan, learnRateIncreaseFactor, 
                 reduceLearnRateIfImproveLessThan, continueReduce, learnRateDecreaseFactor, dropoutRates,
                 loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, usePtask, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
-                rpi, learnRateAdjustInterval);
+                rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode);
         }
     
         void setMomentum(float momentum)
@@ -235,7 +237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
-            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1)
+            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed=true)
         {
             numPrevLearnRates;
             m_mbSize=mbSize;
@@ -273,6 +275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_trainCriterionNodeName = trainCriterionNodeName;
             m_evalCriterionNodeName = evalCriterionNodeName;
+			m_useAllDataForPreComputedNode = UsingAllDataForPreComputed;
 
             for (size_t i=0; i<m_mbSize.size(); i++)
                 if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -801,7 +804,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //compute
             //trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize); 
-            trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
+            // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
+			// [1/12/2015 erw] to support large dataset, we usually paritition whole dataset into several epoches, so we need to use all the data to do precomputing
+			if (m_useAllDataForPreComputedNode)
+				trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0); // using all the data
+			else 
+				trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0, m_epochSize); // using all the data
 
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
@@ -1558,6 +1566,8 @@ protected:
         ElemType m_gradientCheckSigDigit;
 
         bool m_validateAfterModelReloading;
+
+		bool m_useAllDataForPreComputedNode;
     };
     template class SGD<float>; 
     template class SGD<double>;
