@@ -176,6 +176,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, TanhNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, ExpNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, LogNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, CosineNode<ElemType>::TypeName(), L"Cos"))
