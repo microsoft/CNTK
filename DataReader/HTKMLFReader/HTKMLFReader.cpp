@@ -50,6 +50,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_convertLabelsToTargets = false;
 
         m_numberOfuttsPerMinibatch = readerConfig("nbruttsineachrecurrentiter", "1");
+
+        if (m_numberOfuttsPerMinibatch < 1)
+        {
+            LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
+        }
+
+        if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
+        {
+            LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.");
+        }
+
         m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
         m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
         m_processedFrame.assign(m_numberOfuttsPerMinibatch, 0);

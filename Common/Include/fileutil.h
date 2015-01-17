@@ -379,6 +379,8 @@ template <>            const wchar_t* GetFormatString(float);
 template <>           const wchar_t* GetFormatString(double);
 template <>           const wchar_t* GetFormatString(size_t);
 template <>        const wchar_t* GetFormatString(long long);
+template <>      const wchar_t* GetFormatString(const char*);
+template <>   const wchar_t* GetFormatString(const wchar_t*);
 
 // GetScanFormatString - get the format string for a particular type
 template <typename T>

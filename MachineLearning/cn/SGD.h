@@ -31,15 +31,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb)
     {
+        size_t rv = 0;
         if ( numProcs > 1 ) for (auto it = mb.begin(); it != mb.end(); ++it)
         {
             MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
             size_t nCols = mat.GetNumCols();
-            size_t col_start = (nCols * myRank)/ numProcs;
+            size_t col_start = (nCols * myRank) / numProcs;
             size_t col_end = (nCols*(myRank + 1)) / numProcs;
             if (col_end > nCols) col_end = nCols; // this shouldn't happen
-            MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
-            mat.SetValue(tmp);
+            if (col_end == col_start)
+            {
+                MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), 0, AUTOPLACEMATRIX, DENSE);
+                mat.SetValue(tmp);
+            }
+            else
+            {
+                MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
+                mat.SetValue(tmp);
+            }
+            if (0 == rv)
+            {
+                rv = mat.GetNumCols();
+            }
+            else
+            {
+                if (rv != mat.GetNumCols())
+                    throw std::logic_error("Uneven number of columns among inputs.");
+            }
         }
     }
 
@@ -537,9 +555,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 net.BuildPTaskGraph();
             }
 
-            for (int i=int(startEpoch); i<int(m_maxEpochs); i++)
+            for (int i = int(startEpoch); i < int(m_maxEpochs); i++)
             {
-                auto t_start_epoch = clock();                
+                auto t_start_epoch = clock();
 
                 // set other information to inputMatrices that can contrain information
                 // used for class-based LM for clustring information
@@ -547,24 +565,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
-            
+
                 //learning rate adjustment
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
-                {    
-                    learnRatePerSample = m_learningRatesPerSample[i]; 
+                {
+                    learnRatePerSample = m_learningRatesPerSample[i];
                     setMomentum(m_momentumInputPerMB[i]);
-                }    
-                else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)    
+                }
+                else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
                 {
                     ElemType largestPrevLearnRatePerSample = prevLearnRates[0];
-                    for (int j=1; j<m_numPrevLearnRates; j++)
+                    for (int j = 1; j < m_numPrevLearnRates; j++)
                     {
                         largestPrevLearnRatePerSample = max(largestPrevLearnRatePerSample, prevLearnRates[j]);
                     }
 
                     //return a reasonable  learning rate based on the initial mbsize
                     learnRatePerSample = SearchLearnRateBeforeEpoch(net, refNet, refNode, i, learnRatePerSample, trainSetDataReader, FeatureNodes,
-                            labelNodes,criterionNodes,evaluationNodes, inputMatrices,learnableNodes,smoothedGradients, learnRateInitialized, largestPrevLearnRatePerSample);
+                        labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients, learnRateInitialized, largestPrevLearnRatePerSample);
 
                     prevLearnRates[i % m_numPrevLearnRates] = learnRatePerSample;  //save per sample learn rate to support changeable mbsize
                 }
@@ -573,18 +591,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (learnRatePerSample < m_minLearnRate)
                 {
-                    fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n", i+1, learnRatePerSample, m_minLearnRate);
+                    fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n", i + 1, learnRatePerSample, m_minLearnRate);
                     if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                         net.SaveToFile(m_modelPath);
                     break;
                 }
 
-                TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample,FeatureNodes,labelNodes,
-                    criterionNodes,evaluationNodes,inputMatrices, learnableNodes,smoothedGradients,
+#ifdef MPI_SUPPORT
+                INT32 mySamples = (INT32)
+#endif
+                TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample, FeatureNodes, labelNodes,
+                    criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
                     epochCriterion, epochEvalErrors, totalSamplesSeen);
 
                 auto t_end_epoch = clock();
-                ElemType epochTime = ElemType(1.0)*(t_end_epoch-t_start_epoch)/(CLOCKS_PER_SEC);
+                ElemType epochTime = ElemType(1.0)*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
 
                 fprintf(stderr, "Finished Epoch[%d]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
                 if (epochEvalErrors.size() == 1)
@@ -604,21 +625,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef MPI_SUPPORT
                 // model reduction and averaging
-                if ( numProcs > 0 )
-                for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                if (numProcs > 0)
                 {
-                    ComputationNodePtr node = (*nodeIter);
-                    Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
-                    ElemType *px = mat.CopyToArray();
-                    size_t nx = mat.GetNumElements();
-                    vector<ElemType> py = vector<ElemType>(nx, ElemType(0));
-                    // TODO: Replace this with the reduction-shuffle-dance
-                    MPI_Reduce(px, &(py[0]), (int)nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                    if (myRank == 0)
-                        transform(py.begin(), py.end(), py.begin(), [](ElemType&val)->ElemType{return val / (ElemType)numProcs; });
-                    MPI_Bcast(&(py[0]), nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, 0, MPI_COMM_WORLD);
-                    mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), &(py[0]));
-                    delete px;
+                    ElemType factor; // weight for the parameter of my model
+                    {
+                        // compute total minibatch size
+                        INT32 allSamples = 0;
+                        MPI_Allreduce(&mySamples, &allSamples, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                        if (allSamples == 0) allSamples = 1;
+
+                        factor = (ElemType)mySamples / (ElemType)allSamples;
+                    }
+
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    {
+                        ComputationNodePtr node = (*nodeIter);
+                        Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
+
+                        // weight model by relative size of minibatch samples (and number of processors, for averaging)
+                        ElemType *px = mat.CopyToArray();
+                        size_t nx = mat.GetNumElements();
+                        transform(px, px + nx, px, [factor](ElemType&val)->ElemType{return val * factor; });
+
+                        // TODO: Replace default Allreduce with the reduction-shuffle-dance
+                        vector<ElemType> py = vector<ElemType>(nx, ElemType(0));
+                        MPI_Allreduce(px, &(py[0]), (int)nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                        mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), &(py[0]));
+                        delete px;
+                    }
                 }
 #endif
 
@@ -932,7 +966,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, learnRate, smoothedGradients, prevCriterion);  
         }
 
-        void TrainOneEpoch(ComputationNetwork<ElemType>& net, ComputationNetwork<ElemType>& refNet, const ComputationNodePtr refNode, 
+        size_t TrainOneEpoch(ComputationNetwork<ElemType>& net, ComputationNetwork<ElemType>& refNet, const ComputationNodePtr refNode, 
             const int epochNumber, const size_t epochSize, 
             IDataReader<ElemType>* trainSetDataReader, const ElemType learnRatePerSample,
             const std::vector<ComputationNodePtr>& FeatureNodes,
@@ -1006,6 +1040,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UpdateEvalTimeStamps(labelNodes);
 
                 size_t actualMBSize = net.GetActualMBSize();
+                if (0 == actualMBSize)
+                    continue;
 
                 net.SetActualMiniBatchSize(actualMBSize);
                 net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
@@ -1151,6 +1187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0,i);
                 }
             }
+            return totalEpochSamples;
         }
 public:
         // UpdateWeightsS - static version of UpdateWeights()

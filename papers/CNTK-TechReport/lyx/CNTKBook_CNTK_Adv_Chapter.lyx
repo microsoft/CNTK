@@ -3265,12 +3265,24 @@ status open
 
 \begin_layout Plain Layout
 
-Delay(m, [delayTime=1, defaultPastValue=0.1])
+Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1])
 \end_layout
 
 \end_inset
 
 
+\end_layout
+
+\begin_layout Itemize
+rows - the number of rows in the delay node (and in the input matrix).
+ This parameter is needed because under some loopy conditions the dimensions
+ cannot be automatically inferred from the input matrix.
+\end_layout
+
+\begin_layout Itemize
+cols - the number of columns in the delay node (and in the input matrix).
+ This parameter is optional since it will be set based on the minibatch
+ size during training and testing.
 \end_layout
 
 \begin_layout Itemize
