@@ -1,0 +1,113 @@
+# WORK IN PROGRESS, not currently complete nor usable
+
+# makefile for a Linux/GCC build of CNTK
+# This needs ACML_PATH. E.g. in tcsh, say: setenv ACML_PATH C:/AMD/acml5.3.1/ifort64_mp
+
+# This is work in progress and not at all complete or usable.
+#
+# The Linux and Windows versions are not different branches, but rather build off the same
+# source files, using different makefiles. This current makefile has the purpose of enabling
+# work to make all sources compile with GCC, and also to check for GCC-compat regressions due to
+# modifications which are currently done under Windows.
+#
+# The planned steps are:
+#  - runnable non-GPU GCC-built version under Cygwin
+#     - get all CPU-only sources to compile with GCC/x64 under Cygwin    --currently ongoing work
+#     - port the dynamic-loading mechanism
+#  - runnable non-GPU version on actual Linux
+#  - enable CUDA on Linux (=makefile code and figuring out the right compiler options)
+#
+# Any help is welcome, of course!
+#
+# This makefile will be extended/completed as we go.
+
+CC = g++
+
+NVCC = nvcc
+
+CUDA_PATH = /usr/local/cuda-6.5
+
+MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080/mkl
+
+MKL_COMPILER_PATH = /opt/intel/composer_xe_2013_sp1.0.080/compiler
+
+CUDA_INC = -I $(CUDA_PATH)/include
+
+MKL_INCLUDE = -I$(MKL_PATH)/include
+
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn $(CUDA_INC) $(MKL_INCLUDE)
+
+COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
+             Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp
+
+MATH_SRC = Math/Math/Matrix.cpp Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKernels.cu Math/Math/GPUSparseMatrix.cu Math/Math/GPUWatcher.cu \
+		   Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp #Math/Math/InstantiateTemplates.cu
+
+CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
+          MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
+          MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
+
+BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
+
+HTKMLFREADER_SRC = #DataReader/HTKMLFReader/HTKMLFWriter.cpp DataReader/HTKMLFReader/latticearchive.cpp DataReader/HTKMLFReader/HTKMLFReader.cpp
+
+SEQUENCEREADER_SRC = DataReader/SequenceReader/SequenceReader.cpp DataReader/SequenceReader/SequenceParser.cpp DataReader/SequenceReader/Exports.cpp
+
+LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
+
+UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
+
+READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC)
+
+CORE_SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
+
+CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
+
+MKL_LIB = -L$(MKL_COMPILER_PATH)/lib/intel64 -L$(MKL_PATH)/lib/intel64 -L$(MKL_COMPILER_PATH)/lib/mic -L$(MKL_PATH)/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread -lm
+
+CFLAGS = -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -DUSE_MKL -fopenmp -fpermissive 
+
+NVCCFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -arch=compute_20
+
+DEBUG = -g
+
+GPU_DEBUG = -G
+
+all: cn.exe UCIFastReader SequenceReader LUSequenceReader
+	mkdir -p bin
+	mv cn.exe *.so bin/
+
+tmp = ${CORE_SRC:.cpp=.o}
+
+UCIFastReader: ${UCIFASTREADER_SRC:.cpp=.o} ${tmp:.cu=.o}
+	$(CC) $(DEBUG) -fPIC -shared -o $(addsuffix .so, $@) $^  
+
+SequenceReader: ${SEQUENCEREADER_SRC:.cpp=.o} ${tmp:.cu=.o}
+	$(CC) $(DEBUG) -fPIC -shared -o $(addsuffix .so, $@) $^
+
+LUSequenceReader: ${LUSEQUENCEREADER_SRC:.cpp=.o} ${tmp:.cu=.o}
+	$(CC) $(DEBUG) -fPIC -shared -o $(addsuffix .so, $@) $^
+
+#HTKMLFReader: ${HTKMLFREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
+#	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
+
+#BinaryReader: ${BINARYREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
+#	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
+
+cn.exe: ${tmp:.cu=.o}
+	$(CC) $(DEBUG) -o $@ $^ $(CUDA_LIB) $(MKL_LIB) -fopenmp -ldl -fPIC
+
+-include ${SRC:.cpp=.d}
+
+${MATH_SRC:.cu=.o}:%.o: %.cu
+	$(NVCC) -c $< -o $@ $(DEBUG) $(GPU_DEBUG) $(NVCCFLAGS) $(INCFLAGS) -Xcompiler -fPIC
+
+%.o: %.cpp
+	$(CC) -c $< -o $@ $(DEBUG) $(CFLAGS) $(INCFLAGS) -fPIC -MD -MP -MF ${@:.o=.d}
+
+.PHONY: clean
+	
+clean:
+	find . -name "*.o" -type f -delete
+	find . -name "*.d" -type f -delete
+	rm -rf bin

@@ -12,8 +12,10 @@
 
 #include "basetypes.h"
 #include <stdio.h>
+#ifdef __WINDOWS__
 #include <windows.h>    // for mmreg.h and FILETIME
 #include <mmreg.h>
+#endif
 #include <stdint.h>
 using namespace std;
 

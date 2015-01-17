@@ -26,7 +26,7 @@
 // thread local storage to access the current stream, initalize to default stream
 extern __declspec (thread)
 #endif
-cudaStream_t t_stream;
+static cudaStream_t t_stream;
 
 void CUDACALL(cudaError_t x) 
 {

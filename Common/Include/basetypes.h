@@ -66,6 +66,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #pragma warning(disable : 4702) // unreachable code
 #endif
 
+#include "Platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>     // include here because we redefine some names later
@@ -80,6 +81,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <locale>       // std::wstring_convert
 #include <string>
 #include <algorithm>    // for transform()
+#include <unordered_map>
 #ifdef _MSC_VER
 #include <codecvt>      // std::codecvt_utf8
 #endif
@@ -92,6 +94,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <thread>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <dlfcn.h>
 #endif
 
 using namespace std;
@@ -159,7 +162,7 @@ static inline int _wcsnicmp (const wchar_t * a, const wchar_t * b, size_t n) { r
 static inline int64_t  _strtoi64  (const char * s, char ** ep, int r) { return strtoll (s, ep, r); }    // TODO: check if correct
 static inline uint64_t _strtoui64 (const char * s, char ** ep, int r) { return strtoull (s, ep, r); }   // TODO: correct for size_t?
 // -- other
-static inline void memcpy_s(void * dst, size_t dstsize, const void * src, size_t maxcount) { assert (maxcount <= dstsize); memcpy (dst, src, maxcount); }
+//static inline void memcpy_s(void * dst, size_t dstsize, const void * src, size_t maxcount) { assert (maxcount <= dstsize); memcpy (dst, src, maxcount); }
 static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono::milliseconds (ms)); }
 #define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
 #endif
@@ -567,13 +570,21 @@ namespace msra { namespace strfun {
 
 #ifndef BASETYPES_NO_STRPRINTF
 
+/*
+#ifdef __UNIX__
+static FILE *dummyf = fopen("tmp", "wb");
+#endif
+*/
 // [w]strprintf() -- like sprintf() but resulting in a C++ string
 template<class _T> struct _strprintf : public std::basic_string<_T>
 {   // works for both wchar_t* and char*
     _strprintf (const _T * format, ...)
     {
-        va_list args; va_start (args, format);  // varargs stuff
+        va_list args; 
+		va_start (args, format);  // varargs stuff
         size_t n = _cprintf (format, args);     // num chars excl. '\0'
+		va_end(args);
+		va_start(args, format);
         const int FIXBUF_SIZE = 128;            // incl. '\0'
         if (n < FIXBUF_SIZE)
         {
@@ -588,8 +599,36 @@ template<class _T> struct _strprintf : public std::basic_string<_T>
     }
 private:
     // helpers
-    inline size_t _cprintf (const wchar_t * format, va_list args) { return vswprintf (nullptr, 0, format, args); }
-    inline size_t _cprintf (const  char   * format, va_list args) { return vsprintf  (nullptr, format, args); }
+    inline size_t _cprintf (const wchar_t * format, va_list args) 
+	{ 
+#ifdef __WINDOWS__
+		return vswprintf (nullptr, 0, format, args);
+#elif defined(__UNIX__)
+		FILE *dummyf = fopen("/dev/null", "w");
+		if (dummyf == NULL)
+			perror("The following error occurred in basetypes.h:cprintf");
+		int n = vfwprintf (dummyf, format, args);
+		if (n < 0)
+			perror("The following error occurred in basetypes.h:cprintf");
+		fclose(dummyf);
+		return n;
+#endif
+	}
+    inline size_t _cprintf (const  char   * format, va_list args) 
+	{ 
+#ifdef __WINDOWS__
+		return vsprintf (nullptr, format, args);
+#elif defined(__UNIX__)
+		FILE *dummyf = fopen("/dev/null", "wb");
+		if (dummyf == NULL)
+			perror("The following error occurred in basetypes.h:cprintf");
+		int n = vfprintf (dummyf, format, args);
+		if (n < 0)
+			perror("The following error occurred in basetypes.h:cprintf");
+		fclose(dummyf);
+		return n;
+#endif
+	}
     inline const wchar_t * _sprintf (wchar_t * buf, size_t bufsiz,  const wchar_t * format, va_list args) { vswprintf (buf, bufsiz, format, args); return buf; }
     inline const  char   * _sprintf ( char   * buf, size_t /*bufsiz*/, const char * format, va_list args) { vsprintf  (buf, format, args); return buf; }
 };
@@ -913,15 +952,15 @@ public:
     const wchar_t * shift() { if (size() == 0) return NULL; num--; return *args++; }
     const wchar_t * operator[] (int i) const { return (i < 0 || i >= size()) ? NULL : args[i]; }
 };
-
+ 
 // byte-reverse a variable --reverse all bytes (intended for integral types and float)
-//template<typename T> static inline void bytereverse (T & v)  throw()
-//{   // note: this is more efficient than it looks because sizeof (v[0]) is a constant
-//    char * p = (char *) &v;
-//    const size_t elemsize = sizeof (v);
-//    for (int k = 0; k < elemsize / 2; k++)  // swap individual bytes
-//        swap (p[k], p[elemsize-1 - k]);
-//}
+template<typename T> static inline void bytereverse (T & v)  throw()
+{   // note: this is more efficient than it looks because sizeof (v[0]) is a constant
+    char * p = (char *) &v;
+    const size_t elemsize = sizeof (v);
+    for (int k = 0; k < elemsize / 2; k++)  // swap individual bytes
+        swap (p[k], p[elemsize-1 - k]);
+}
 
 // byte-swap an entire array
 template<class V> static inline void byteswap (V & v)  throw()
@@ -930,7 +969,7 @@ template<class V> static inline void byteswap (V & v)  throw()
         bytereverse (v[i]);
 }
 
-#if 0
+//#if 0
 // execute a block with retry
 // Block must be restartable.
 // Use this when writing small files to those unreliable Windows servers.
@@ -954,7 +993,7 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
         }
     }
 }
-#endif
+//#endif
 
 };};    // namespace
 
@@ -1026,13 +1065,29 @@ public:
 #else
 class Plugin
 {
+private:
+	void *handle;
 public:
+	Plugin() 
+	{ 
+		handle = NULL; 
+	}
+
     template<class STRING>  // accepts char (UTF-8) and wide string 
     void * Load(const STRING & plugin, const std::string & proc)
     {
-        RuntimeError("Plugins not implemented on Linux yet");
-        return nullptr;
+		string soName = msra::strfun::utf8(plugin);
+		soName = soName + ".so";
+		void *handle = dlopen(soName.c_str(), RTLD_LAZY);
+		if (handle == NULL)
+            RuntimeError("Plugin not found: %s", soName.c_str());
+		return dlsym(handle, proc.c_str());
     }
+
+	~Plugin() {
+		if (handle != NULL)
+			dlclose(handle);
+	}
 };
 #endif
 

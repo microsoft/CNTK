@@ -231,8 +231,8 @@ template <typename ElemType>
 NDLScript<ElemType> NDLScript<ElemType>::s_global("global");
 
 // declare the static variables from the classes
-template<> NDLScript<float> NDLScript<float>::s_global;
-template<> NDLScript<double> NDLScript<double>::s_global;
+template<> NDLScript<float> NDLScript<float>::s_global{};
+template<> NDLScript<double> NDLScript<double>::s_global{};
 
 template<> int NDLNode<float>::s_nameCounter = 0;
 template<> int NDLNode<double>::s_nameCounter = 0;

@@ -55,7 +55,7 @@ size_t SequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
 template<class ElemType>
-/*IDataReader<ElemType>::LabelIdType*/ unsigned SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
+typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
 
@@ -805,7 +805,7 @@ void SequenceReader<ElemType>::LMSetupEpoch()
 }
 
 // utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size) 
+inline size_t RoundUp(size_t value, size_t size) 
 {
     return ((value + size -1)/size)*size;
 }
@@ -847,8 +847,8 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -1104,7 +1104,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     if (labelInfo.type == labelCategory)
     {
         memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*actualmbsize);
-        memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*actualmbsize);
+        memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*actualmbsize);
     }
     else if (labelInfo.type != labelNone)
     {
@@ -1208,7 +1208,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         }
     }catch(...)
     {
-        RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut]);
+        RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut].c_str());
     }
 
     // we read some records, so process them
@@ -1255,7 +1255,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {
@@ -1504,8 +1504,8 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {

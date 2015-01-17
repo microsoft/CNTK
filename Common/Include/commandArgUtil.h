@@ -488,7 +488,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Parse(configString);
         }
 
-    private:
+    //private:
         // copy and move constructors
         ConfigParameters(const ConfigParameters& configValue) : ConfigParser(configValue)
         {

@@ -5,7 +5,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
-
+#include "Platform.h"
 #include "BestGpu.h"
 #include "commandArgUtil.h" // for ConfigParameters
 #ifndef CPUONLY
@@ -21,9 +21,14 @@
 
 // CUDA-C includes
 #include <cuda.h>
+#ifdef __WINDOWS__
 #include <windows.h>
 #include <delayimp.h>
 #include <Shlobj.h>
+#define PATH_DELIMITER '\\'
+#elif defined(__UNIX__)
+#define PATH_DELIMITER '/'
+#endif//__WINDOWS__
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------
@@ -91,7 +96,7 @@ public:
     
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
 //Symbol - Meaning
-// Auto - automatically pick a single GPU based on “BestGpu” score
+// Auto - automatically pick a single GPU based on ?BestGpu? score
 // CPU  - use the CPU
 // 0    - or some other single number, use a single GPU with CUDA ID same as the number
 // 0:2:3- an array of ids to use, (PTask will only use the specified IDs)
@@ -509,7 +514,7 @@ void BestGpu::QueryNvmlData()
                 unsigned len = (unsigned)name.length();
                 nvmlSystemGetProcessName(info.pid, (char*)name.data(), len);
                 name.resize(strlen(name.c_str()));
-                size_t pos = name.find_last_of('\\');
+                size_t pos = name.find_last_of(PATH_DELIMITER);
                 if (pos != std::string::npos)
                     name = name.substr(pos + 1);
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)

@@ -12,6 +12,7 @@
 #include <fstream>
 #include <map>
 #include <stdint.h>
+#include "fileutil.h"
 
 using namespace std;
 
@@ -489,6 +490,26 @@ protected:
     std::wstring mFileName; 
 
 public:
+	using SequenceParser<NumType, LabelType>::m_dimFeatures;
+	using SequenceParser<NumType, LabelType>::m_dimLabelsIn;
+	using SequenceParser<NumType, LabelType>::m_beginSequenceIn;
+	using SequenceParser<NumType, LabelType>::m_endSequenceIn;
+	using SequenceParser<NumType, LabelType>::m_beginSequenceOut;
+	using SequenceParser<NumType, LabelType>::m_endSequenceOut;
+	using SequenceParser<NumType, LabelType>::m_parseMode;
+	using SequenceParser<NumType, LabelType>::m_traceLevel;
+	using SequenceParser<NumType, LabelType>::m_bufferSize;
+	using SequenceParser<NumType, LabelType>::m_beginTag;
+	using SequenceParser<NumType, LabelType>::m_endTag;
+	using SequenceParser<NumType, LabelType>::m_fileSize;
+	using SequenceParser<NumType, LabelType>::m_fileBuffer;
+	using SequenceParser<NumType, LabelType>::m_numbers;
+	using SequenceParser<NumType, LabelType>::m_labels;
+	using SequenceParser<NumType, LabelType>::m_beginSequence;
+	using SequenceParser<NumType, LabelType>::m_endSequence;
+	using SequenceParser<NumType, LabelType>::m_totalNumbersConverted;
+	using SequenceParser<NumType, LabelType>::m_dimLabelsOut;
+	using SequenceParser<NumType, LabelType>::m_bufferStart;
     LMSequenceParser() { 
         mFile = nullptr; 
     };

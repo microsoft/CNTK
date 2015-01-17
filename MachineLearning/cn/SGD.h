@@ -236,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_learnRateIncreaseFactor=learnRateIncreaseFactor;
             m_reduceLearnRateIfImproveLessThan=reduceLearnRateIfImproveLessThan;
              m_continueReduce=continueReduce;
-             m_learnRateAdjustInterval = max(1, learnRateAdjustInterval); //minimum interval is 1 epoch
+             m_learnRateAdjustInterval = max((size_t) 2, learnRateAdjustInterval); //minimum interval is 1 epoch
             m_learnRateDecreaseFactor=learnRateDecreaseFactor;
             m_clippingThresholdPerSample=abs(clippingThresholdPerSample);
             m_numMiniBatch4LRSearch=numMiniBatch4LRSearch;
@@ -1305,8 +1305,10 @@ protected:
             int epoch1Base = epoch + 1;
             if (epoch1Base == m_maxEpochs || bLastModel) 
                 return m_modelPath;          
-            else 
-                return msra::strfun::wstrprintf (L"%s.%d", m_modelPath.c_str(), (int) epoch1Base);
+            else {
+				wstring w = msra::strfun::wstrprintf (L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
+				return w;
+			}
         } 
 
         //return -1 if nothing exists

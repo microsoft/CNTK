@@ -223,6 +223,20 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
     }
 }
 
+long fseekOrDie (FILE * f, long offset, int mode)
+{
+    long curPos = ftell (f);
+    if (curPos == -1L)
+    {
+    RuntimeError ("error seeking: %s", strerror (errno));
+    }
+    int rc = fseek (f, offset, mode);
+    if (rc != 0)
+    {
+    RuntimeError ("error seeking: %s", strerror (errno));
+    }
+    return curPos;
+}
 
 // ----------------------------------------------------------------------------
 // fprintfOrDie(): like fprintf() but terminate with err msg in case of error
@@ -421,6 +435,35 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
 #else
     renameOrDie (charpath(from), charpath(to));
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// fputstring(): write a 0-terminated string
+// ----------------------------------------------------------------------------
+
+void fputstring (FILE * f, const char * str)
+{
+    fwriteOrDie ((void *) str, sizeof (*str), strnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+}
+
+void fputstring (const HANDLE f, const char * str)
+{
+    fwriteOrDie ((void *) str, sizeof (*str), strnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+}
+
+void fputstring (FILE * f, const std::string & str)
+{
+    fputstring (f, str.c_str());
+}
+
+void fputstring (FILE * f, const wchar_t * str)
+{
+    fwriteOrDie ((void *) str, sizeof (*str), wcsnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+}
+
+void fputstring (FILE * f, const std::wstring & str)
+{
+    fputstring (f, str.c_str());
 }
 
 // ----------------------------------------------------------------------------
@@ -648,6 +691,25 @@ const char * fgetstring (FILE * f, __out_z_cap(size) char * buf, int size)
         buf[i] = (char)c;
     }
     assert (i < size);
+    buf[i] = 0;
+    return buf;
+}
+
+const char * fgetstring (const HANDLE f, __out_z_cap(size) char * buf, int size)
+{
+    int i;
+    for (i = 0; ; i++)
+    {
+        char c; 
+        freadOrDie((void*) &c, sizeof(char), 1, f);
+        if (c == (char) 0) break;
+        if (i >= size -1)
+        {
+            RuntimeError ("input line too long (max. %d characters allowed)", size -1);
+        }
+        buf[i] = (char) c;
+    }
+    ASSERT (i < size);
     buf[i] = 0;
     return buf;
 }
@@ -920,31 +982,6 @@ wstring fgetwtoken (FILE * f)
 {
     wchar_t buf[80];
     return fgettoken(f, buf, sizeof(buf) / sizeof(*buf));
-}
-
-// ----------------------------------------------------------------------------
-// fputstring(): write a 0-terminated string
-// ----------------------------------------------------------------------------
-
-void fputstring (FILE * f, const char * str)
-{
-    fwriteOrDie ((void *) str, sizeof (*str), strlen (str)+1, f);
-}
-
-void fputstring (FILE * f, const std::string & str)
-{
-    fputstring (f, str.c_str());
-}
-
-void fputstring (FILE * f, const wchar_t * str)
-{
-    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    fwriteOrDie((void *)str, sizeof (*str), wcslen(str) + 1, f);
-}
-
-void fputstring (FILE * f, const std::wstring & str)
-{
-    fputstring (f, str.c_str());
 }
 
 template <>

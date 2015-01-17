@@ -60,7 +60,9 @@ template<typename FUNCTION> static void attempt(int retries, const FUNCTION & bo
         }
         catch (const std::exception & e)
         {
+#ifdef _WIN32
             void sleep(size_t ms);
+#endif
             if (attempt >= retries)
                 throw;      // failed N times --give up and rethrow the error
             fprintf (stderr, "attempt: %s, retrying %d-th time out of %d...\n", e.what(), attempt+1, retries);
@@ -68,7 +70,7 @@ template<typename FUNCTION> static void attempt(int retries, const FUNCTION & bo
 #ifdef _WIN32
             ::Sleep(1000);
 #else       // assuming __unix__
-            sleep(1);
+            ::sleep(1);
 #endif
         }
     }
