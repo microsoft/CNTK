@@ -101,14 +101,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_nz = 0;
         m_matrixName = NULL;   
 
-        if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
+        //if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
             m_colIdx = -1;
             m_pArray = NULL;
             m_unCompIndex = NULL;
             m_compIndex = NULL;
         } 
-        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        //else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
             m_blockSize = 0;      
             m_blockVal = NULL;
@@ -247,8 +247,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t *unCompIndex = new size_t[numNZElemToReserve];
                 size_t *compIndex = new size_t[newCompIndexSize];
                 
+                if (keepExistingValues && (m_nz > numNZElemToReserve || m_compIndexSize > newCompIndexSize))
+                    throw std::logic_error("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
+
                 if (keepExistingValues && m_nz > 0)
                 {
+                    assert(m_compIndexSize > 0 && m_nz < numNZElemToReserve);
                     memcpy(pArray, m_pArray, sizeof(ElemType)*m_nz);
                     memcpy(unCompIndex, m_unCompIndex, sizeof(size_t)*m_nz);
                     memcpy(compIndex, m_compIndex, sizeof(size_t)*m_compIndexSize);
@@ -270,9 +274,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType *blockVal = new ElemType[numNZElemToReserve];
                 size_t *blockIds = new size_t[newCompIndexSize];
 
+                if (keepExistingValues && (m_nz > numNZElemToReserve || m_compIndexSize > newCompIndexSize))
+                    throw std::logic_error("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
+
                 if (keepExistingValues && m_elemSizeAllocated > 0)
                 {
-                    memcpy(blockVal, m_blockVal, sizeof(ElemType)*m_elemSizeAllocated);
+                    assert(m_compIndexSize > 0 && m_elemSizeAllocated < numNZElemToReserve);
+                    memcpy(blockVal, m_blockVal, sizeof(ElemType)*m_nz);
                     memcpy(blockIds, m_blockIds, sizeof(size_t)*m_compIndexSize);
                 }
 
@@ -296,18 +304,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {                
         m_nz = 0;
         m_colIdx = -1;
-        m_compIndexSize = 0;
         m_blockSize = 0;
     }
 
-    //c = op(a) * op(this) or c += op(a) * op(this) 
+    //c = alpha*op(lhs) * op(rhs) + beta*c
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
         const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
 
     {
         if (lhs.IsEmpty() || rhs.IsEmpty())
-            throw std::logic_error("LeftMultiplyAndAdd:  one of the input matrix is empty.");
+            throw std::logic_error("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
 
         int m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
         int k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
@@ -318,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert (k == l);
         if (k != l) 
         {
-            throw std::invalid_argument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
+            throw std::invalid_argument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
         }
 
         if (c.GetNumRows() != m || c.GetNumCols() != n) 
@@ -330,7 +337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             memset(c.GetArray(), 0, sizeof(ElemType) * c.GetNumElements());
         }
-        else 
+        else if (beta != 1)
         {
 #pragma omp parallel for
             foreach_coord(i,j,c)
@@ -339,15 +346,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             } 
         }
 
+        if (rhs.GetFormat() != matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
         if (!transposeA && !transposeB)
         {
             for(size_t j = 0; j < rhs.GetNumCols(); j++) 
             {
-                size_t start = rhs.m_compIndex[j];
+                size_t start = rhs.m_compIndex[j];  //ColLocation
                 size_t end = rhs.m_compIndex[j+1];
                 for(size_t p = start; p < end; p++)
                 { 
-                    size_t i = rhs.m_unCompIndex[p];
+                    size_t i = rhs.m_unCompIndex[p]; //RowLocation
                     ElemType val = rhs.m_pArray[p];
 
                     for(size_t h = 0; h < lhs.GetNumRows(); h++)
@@ -385,7 +395,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    //c = alpha * op(a) * op(this)
+    //c = alpha * op(lhs) * op(rhs)
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
         const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c)
@@ -414,10 +424,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (!transposeA && transposeB)
         {           
             //allocate enough memory
-            if(c.m_elemSizeAllocated < lhs.GetNumElements()) 
-            {
-                c.Resize(c.GetNumRows(), c.GetNumCols(), lhs.GetNumElements());
-            }
+            c.SetFormat(matrixFormatSparseBlockCol);
+            c.Resize(c.GetNumRows(), c.GetNumCols(), lhs.GetNumElements());
 
             map<size_t, size_t> w2Id;
             for(size_t j = 0; j < rhs.GetNumCols(); j++)
@@ -460,7 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 throw std::logic_error("sparse matrix out of range.");
             }
-            c.SetFormat(matrixFormatSparseBlockCol);
+            //c.SetFormat(matrixFormatSparseBlockCol);
         }
         else if (transposeA && !transposeB)
         {
@@ -552,8 +560,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //allocate enough memory
         if(etp.m_elemSizeAllocated < etp.GetNumElements()) 
         {
-            etp.Resize(etp.GetNumRows(), etp.GetNumCols(), etp.GetNumElements());
+            etp.Resize(etp.GetNumRows(), etp.GetNumCols(), etp.GetNumElements(), true, false);
         }
+        etp.Reset();
+
         entropyScore(0, 0) = 0;
         for(size_t j = 0; j < label.GetNumCols(); j++)
         {
@@ -655,11 +665,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const CPUMatrix<ElemType>& /*idx2cls*/,
         CPUSparseMatrix<ElemType>& grd) 
     {   
+        grd.SetFormat(matrixFormatSparseBlockRow);
         //allocate enough memory
-        if(grd.m_elemSizeAllocated < error.m_nz*input.GetNumRows()) 
-        {
-            grd.Resize(grd.GetNumRows(), grd.GetNumCols(), error.m_nz*input.GetNumRows());
-        }
+        grd.Resize(grd.GetNumRows(), grd.GetNumCols(), error.m_nz*input.GetNumRows(), true, false);
+
         grd.Reset();
         map<size_t, size_t> w2Id;
         for(size_t j = 0; j < error.GetNumCols(); j++)
@@ -701,7 +710,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             throw std::logic_error("sparse matrix out of range.");
         }
-        grd.SetFormat(matrixFormatSparseBlockRow);
+        //grd.SetFormat(matrixFormatSparseBlockRow);
     }
 
     // normal update for smoothed gradients c and current gradients (this)

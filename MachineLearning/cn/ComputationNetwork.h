@@ -811,10 +811,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        //sparse matrix size is optionally specified
-        ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols, const size_t size = 0)
+        ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
         {
-            ComputationNodePtr newNode(new SparseInputValue<ElemType>(rows, cols, size, m_deviceId, inputName));
+            ComputationNodePtr newNode(new SparseInputValue<ElemType>(rows, cols, m_deviceId, inputName));
             AddNodeToNet(newNode);
             return newNode;
         }
