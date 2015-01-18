@@ -1154,112 +1154,38 @@ protected:  \
     template class InputValue<double>;
 
     template<class ElemType>
-    class SparseInputValue : public ComputationNode<ElemType>
+    class SparseInputValue : public InputValue<ElemType>
     {
         UsingComputationNodeMembers;
     public:
-        SparseInputValue (size_t rows, size_t cols, size_t size, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        SparseInputValue (size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(rows, cols, deviceId, name) 
         {
-            if (rows * cols == 0) 
-                throw std::logic_error("This InputValue dimension is 0.");
-
-            m_outputWidth = 1;
-            m_outputHeight = rows;
-            m_outputChannels = 1;
-
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC);
-            m_functionValues.Resize(rows, cols, size);
-            m_needGradient = false;
-            InitRecurrentNode();
+            ConvertToSparseMatrix();
         }
         
         SparseInputValue (size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : ComputationNode<ElemType>(deviceId) 
+            : InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, deviceId, name)
         {
-            size_t rows = imageWidth * imageHeight * imageChannels;
-            size_t cols = numImages;
-
-            if (rows * cols == 0) 
-                throw std::logic_error("This InputValue dimension is 0.");
-
-            m_outputWidth = imageWidth;
-            m_outputHeight = imageHeight;
-            m_outputChannels = imageChannels;
-
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_functionValues.SwitchToMatrixType(MatrixType::SPARSE);
-            m_functionValues.Resize(rows, cols);
-            m_needGradient = false;
-            InitRecurrentNode();
-        }        
-
-        SparseInputValue (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
+                ConvertToSparseMatrix();
         }
 
-        virtual void SaveToFile(File& fstream) const
+        SparseInputValue (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(fstream, modelVersion, deviceId, name)
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
-
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
-            fstream << FunctionValues().GetAllocatedSize();
-            fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
+            ConvertToSparseMatrix();
         }
 
         virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
-            size_t rows, cols;
-            fstream >> rows >> cols;
-            if (rows * cols == 0) 
-                throw std::logic_error("This InputValue dimension is 0.");
-
-            size_t size; //sparse matrix size
-            fstream >> size;
-
-            fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
-                        
-            m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC);
-            m_functionValues.Resize(rows, cols, size);
-            m_needGradient = false;
+            InputValue<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+            ConvertToSparseMatrix();
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"SparseInputValue";} 
 
-        virtual void EvaluateThisNode()  {} 
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
-        
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
-
-        virtual void Validate() 
-        {
-            PrintSelfBeforeValidation();
-            //CopyImageSizeFromInputs(); //not necessary since InputValue are leafs. put it here for consistent
-        }
-
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
-        {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
-
-            char str[4096];
-            sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << string(str);        
-        }
-
         // copy constructor
-        SparseInputValue (const SparseInputValue <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        SparseInputValue (const SparseInputValue <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : InputValue<ElemType>(node, newName, flags)
         {
-            node->CopyTo(this, newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1270,11 +1196,15 @@ protected:  \
             return node;
         }
 
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
+    private:
+        void ConvertToSparseMatrix()
         {
-            inputIndex;
-            return nullptr;
+            size_t rows = m_functionValues.GetNumRows();
+            size_t cols = m_functionValues.GetNumCols();
+            m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC);
+            m_functionValues.Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
         }
+
     };
 
 

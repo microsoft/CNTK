@@ -376,10 +376,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             stream << s << format;
 
             stream<<us.m_numRows<<us.m_numCols;
-            ElemType *m_pArray = us.CopyToArray();
+            ElemType *pArray = us.CopyToArray();
             for (size_t i=0;i<us.GetNumElements();++i) 
-                stream<<m_pArray[i];
-            delete[] m_pArray;
+                stream<<pArray[i];
+            delete[] pArray;
             stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
             return stream;
         }
