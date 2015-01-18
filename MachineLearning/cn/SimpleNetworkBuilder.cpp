@@ -28,8 +28,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t numRecurrentLayers = m_recurrentLayers.size();
 
                 ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-                //TODO: to figure out sparse matrix size
-                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize, 0);
+
+                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 m_net->FeatureNodes().push_back(input);
 
                 if (m_applyMeanVarNorm)
@@ -628,8 +628,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, gt=nullptr, ct=nullptr, ht=nullptr;
                 ComputationNodePtr delayXI = nullptr, delayXII = nullptr, delayXIII = nullptr, delayXIV = nullptr;
 
-                //TODO: to figure out sparse matrix size
-                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize, 0);
+                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 m_net->FeatureNodes().push_back(input);
 
                 if (m_applyMeanVarNorm)
@@ -739,8 +738,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 w = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers], 0);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 //                b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
-                //TODO: to figure out sparse matrix size
-                label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize, 0);
+                label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
                 AddTrainAndEvalCriterionNodes(input, label, w);
                 
                 output = m_net->Times(w, input);   
@@ -1102,7 +1100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodePtr directWIO = nullptr, directInput=nullptr, directOutput=nullptr;
                 ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = {nullptr}; 
 
-                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize, m_layerSizes[0] * mbSize);
+                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 m_net->FeatureNodes().push_back(input);
 
                 if (m_applyMeanVarNorm)
