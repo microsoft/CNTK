@@ -723,6 +723,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new SigmoidNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TanhNode<ElemType>::TypeName())
                 newNode = new TanhNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == ExpNode<ElemType>::TypeName())
+                newNode = new ExpNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == LogNode<ElemType>::TypeName())
                 newNode = new LogNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CosineNode<ElemType>::TypeName())
@@ -878,6 +880,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new SigmoidNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == TanhNode<ElemType>::TypeName())
                 newNode = new TanhNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == ExpNode<ElemType>::TypeName())
+                newNode = new ExpNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == LogNode<ElemType>::TypeName())
                 newNode = new LogNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CosineNode<ElemType>::TypeName())
@@ -1113,7 +1117,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"") 
+        ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new ExpNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new LogNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(a);
