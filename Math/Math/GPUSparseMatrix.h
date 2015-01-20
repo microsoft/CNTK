@@ -42,6 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		using B::IsEmpty;
 		using B::SetComputeDeviceId;
 		using B::SetMatrixName;
+		using B::SetNzCount;
 		// without this, base members would require to use thi-> in GCC
 
     public:
