@@ -1,0 +1,34 @@
+== Author of the README ==
+	Wengong Jin,
+	Shanghai Jiao Tong University
+	email: acmgokun@gmail.com
+
+== Preeliminaries ==
+To build the cpu version, you have to install intel mkl blas library first:
+	https://software.intel.com/en-us/intel-mkl
+You can modify variable MKL_PATH in makefile.cpu to change your mkl path.
+Then add ${MKL_PATH}/mkl/lib/intel64, ${MKL_PATH}/mkl/lib/mic, ${MKL_PATH}/compiler/lib/intel64. ${MKL_PATH}/compiler/lib/mic to your ${LD_LIBRARY_PATH} to make sure the program links the library correctly.
+
+To build the gpu version, you have to install NIVIDIA CUDA first
+You can modify the path CUDA_PATH in makefile.cpu to change your cuda path
+We use cuda-6.5 as default.
+Then add ${CUDA_PATH}/lib, ${CUDA_PATH}/lib64 to your ${LD_LIBRARY_PATH} to make sure the program links to the library correctly.
+
+
+== Build ==
+To build the cpu version, run
+	make -f Makefile.cpu 
+To build the gpu version, run
+	make -f Makefile.gpu
+To clean the compile, just run
+	make -f Makefile.cpu clean
+or
+	make -f Makefile.gpu clean
+
+== Run ==
+All executables are in bin/ directory:
+	cn.exe: The main executable for CNTK
+	*.so: shared library for corresponding reader, these readers will be linked and loaded dynamically at runtime.
+
+To run the executable, make sure bin/ is in your ${LD_LIBRARY_PATH}, if not, running cn.exe will fail when cn.exe tries to link the corresponding reader. Once it's done, run in command line:
+	./cn.exe configFile=${your config file}

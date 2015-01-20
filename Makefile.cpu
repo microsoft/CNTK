@@ -23,9 +23,11 @@
 
 CC = g++
 
-MKL_INCLUDE = /opt/intel/composer_xe_2013_sp1.0.080/mkl/include
+MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
+MKL_INCLUDE = $(MKL_PATH)/mkl/include
+MKL_LIB = -L$(MKL_PATH)/compiler/lib/intel64 -L$(MKL_PATH)/mkl/lib/intel64 -L$(MKL_PATH)/compiler/lib/mic -L$(MKL_PATH)/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread -lm
 
-INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(ACML_PATH)/include -I $(MKL_INCLUDE)  
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(MKL_INCLUDE)  
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp
@@ -51,8 +53,6 @@ READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(
 CORE_SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 
 SRC =  $(READER_SRC) $(CORE_SRC)
-
-MKL_LIB = -L/opt/intel/composer_xe_2013_sp1.0.080/compiler/lib/intel64 -L/opt/intel/composer_xe_2013_sp1.0.080/mkl/lib/intel64 -L/opt/intel/composer_xe_2013_sp1.0.080/compiler/lib/mic -L/opt/intel/composer_xe_2013_sp1.0.080/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread -lm
 
 CFLAGS = -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -DUSE_MKL -fopenmp -fpermissive -fPIC
 
