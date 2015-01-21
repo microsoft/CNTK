@@ -352,6 +352,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // now get the frame source. This has better randomization and doesn't create temp files
             m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, framemode);
+			m_frameSource->setverbosity(verbosity);
             //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, framemode);
 
         }

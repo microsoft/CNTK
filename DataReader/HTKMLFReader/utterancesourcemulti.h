@@ -568,6 +568,7 @@ private:
             return sweep;
 
         currentsweep = sweep;
+		if (verbosity>0)
         fprintf (stderr, "lazyrandomization: re-randomizing for sweep %d in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
 
         const size_t sweepts = sweep * _totalframes;     // first global frame index for this sweep
@@ -1029,7 +1030,8 @@ public:
                 }
             }
             // return these utterances
-            fprintf (stderr, "getbatch: getting utterances %d..%d (%d frames out of %d requested) in sweep %d\n", spos, epos -1, mbframes, framesrequested, sweep);
+			if (verbosity > 0)
+				fprintf (stderr, "getbatch: getting utterances %d..%d (%d frames out of %d requested) in sweep %d\n", spos, epos -1, mbframes, framesrequested, sweep);
             size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
@@ -1107,6 +1109,7 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[0][firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[0][lastchunk].windowend;
+			if (verbosity)
             fprintf (stderr, "getbatch: getting randomized frames [%d..%d] (%d frames out of %d requested) in sweep %d; chunks [%d..%d] -> chunk window [%d..%d)\n",
                      globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
             // release all data outside, and page in all data inside
@@ -1230,3 +1233,4 @@ public:
 };
 
 };};
+
