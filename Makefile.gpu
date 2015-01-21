@@ -24,15 +24,27 @@
 CC = g++
 NVCC = nvcc
 
+# comment following and uncomment the next one to enable MKL library
+USE_ACML=1
+#USE_MKL=1
+
+ifdef USE_MKL
+MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
+MATHLIB_INCLUDE = $(MKL_PATH)/include
+MATHLIB_LIB = -L$(MKL_PATH)/compiler/lib/intel64 -L$(MKL_PATH)/mkl/lib/intel64 -L$(MKL_PATH)/compiler/lib/mic -L$(MKL_PATH)/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
+MATHLIB_DEFINE = -DUSE_MKL
+else
+ACML_PATH = /usr/local/acml5.3.0/gfortran64
+MATHLIB_INCLUDE = $(ACML_PATH)/include
+MATHLIB_LIB = -L$(ACML_PATH)/lib -lacml -lm
+MATHLIB_DEFINE = -DUSE_ACML
+endif
+
 CUDA_PATH = /usr/local/cuda-6.5
 CUDA_INCLUDE = $(CUDA_PATH)/include
 CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
-MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
-MKL_INCLUDE = $(MKL_PATH)/include
-MKL_LIB = -L$(MKL_PATH)/compiler/lib/intel64 -L$(MKL_PATH)/mkl/lib/intel64 -L$(MKL_PATH)/compiler/lib/mic -L$(MKL_PATH)/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread -lm
-
-INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(CUDA_INCLUDE) -I $(MKL_INCLUDE)
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(CUDA_INCLUDE) -I $(MATHLIB_INCLUDE)
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp
@@ -58,7 +70,7 @@ READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(
 
 CORE_SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 
-CFLAGS = -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -DUSE_MKL -fopenmp -fpermissive 
+CFLAGS = -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(MATHLIB_DEFINE) -fopenmp -fpermissive 
 
 NVCCFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -arch=compute_20
 
@@ -67,8 +79,9 @@ DEBUG = -g
 GPU_DEBUG = -G
 
 all: cn.exe UCIFastReader SequenceReader LUSequenceReader
-	mkdir -p bin
-	mv cn.exe *.so bin/
+	mkdir -p bin.gpu
+	mv cn.exe *.so bin.gpu/
+	ln -sf bin.gpu bin
 
 tmp = ${CORE_SRC:.cpp=.o}
 
@@ -88,7 +101,7 @@ LUSequenceReader: ${LUSEQUENCEREADER_SRC:.cpp=.o} ${tmp:.cu=.o}
 #	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
 
 cn.exe: ${tmp:.cu=.o}
-	$(CC) $(DEBUG) -o $@ $^ $(CUDA_LIB) $(MKL_LIB) -fopenmp -ldl -fPIC
+	$(CC) $(DEBUG) -o $@ $^ $(CUDA_LIB) $(MATHLIB_LIB) -fopenmp -ldl -fPIC 
 
 -include ${SRC:.cpp=.d}
 
