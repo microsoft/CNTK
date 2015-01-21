@@ -22,68 +22,73 @@
 # This makefile will be extended/completed as we go.
 
 CC = g++
-OBJDIR = .obj.cpu
+OBJDIR = .build_cpu
+BINDIR = bin_cpu
+ARCH = x86_64
+BUILDTYPE = debug
+#BUILDTYPE = release
+
+ifeq ($(BUILDTYPE),debug)
+	BUILDTYPE_OPT = -g
+else
+	BUILDTYPE_OPT = -O4
+endif
 
 # comment following and uncomment the next one to enable MKL library
 USE_ACML=1
 #USE_MKL=1
 
 ifdef USE_MKL
-MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
-MATHLIB_INCLUDE = $(MKL_PATH)/mkl/include
-MATHLIB_LIB = -L$(MKL_PATH)/compiler/lib/intel64 -L$(MKL_PATH)/mkl/lib/intel64 -L$(MKL_PATH)/compiler/lib/mic -L$(MKL_PATH)/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
-MATHLIB_DEFINE = -DUSE_MKL
+	MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
+	MATHLIB_INCLUDE = $(MKL_PATH)/mkl/include
+	MATHLIB_LIB = -L$(MKL_PATH)/compiler/lib/intel64 -L$(MKL_PATH)/mkl/lib/intel64 -L$(MKL_PATH)/compiler/lib/mic -L$(MKL_PATH)/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
+	MATHLIB_DEFINE = -DUSE_MKL
 else
-ACML_PATH = /usr/local/acml5.3.0/gfortran64
-MATHLIB_INCLUDE = $(ACML_PATH)/include
-MATHLIB_LIB = -L$(ACML_PATH)/lib -lacml -lm
-MATHLIB_DEFINE = -DUSE_ACML
+	ACML_PATH = /usr/local/acml5.3.0/gfortran64
+	MATHLIB_INCLUDE = $(ACML_PATH)/include
+	MATHLIB_LIB = -L$(ACML_PATH)/lib -lacml -lm -lpthread
+	MATHLIB_DEFINE = -DUSE_ACML
 endif
 
 INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(MATHLIB_INCLUDE)  
 
+CFLAGS = -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(MATHLIB_DEFINE) -fopenmp -fpermissive -fPIC
+
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp
-
 MATH_SRC = Math/Math/Matrix.cpp Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp Math/Math/NoGPU.cpp
-
 CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
           MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
           MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
-
 BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
-
 HTKMLFREADER_SRC = #DataReader/HTKMLFReader/HTKMLFWriter.cpp DataReader/HTKMLFReader/latticearchive.cpp DataReader/HTKMLFReader/HTKMLFReader.cpp
-
 SEQUENCEREADER_SRC = DataReader/SequenceReader/SequenceReader.cpp DataReader/SequenceReader/SequenceParser.cpp DataReader/SequenceReader/Exports.cpp
-
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
-
 UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
-
 READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC)
-
 CORE_SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
-
 SRC =  $(READER_SRC) $(CORE_SRC)
 
-CFLAGS = -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(MATHLIB_DEFINE) -fopenmp -fpermissive -fPIC
+VPATH := $(sort  $(dir $(SRC)))
 
-DEBUG = -g
+OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(SRC))
+CORE_OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(CORE_SRC))
+UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(UCIFASTREADER_SRC))
+LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(LUSEQUENCEREADER_SRC))
+SEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(SEQUENCEREADER_SRC))
+DEP := $(patsubst %.o, %.d, $(OBJ))
 
-all: cn.exe UCIFastReader SequenceReader LUSequenceReader
-	mkdir -p bin.cpu
-	mv cn.exe *.so bin.cpu/
-	ln -sf bin.cpu bin
+all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so
+	ln -sfn $(BINDIR) bin
 
-UCIFastReader: ${UCIFASTREADER_SRC:.cpp=.o} ${CORE_SRC:.cpp=.o}
-	$(CC) $(DEBUG) -fPIC -shared -o $(addsuffix .so, $@) $^  
+$(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^  
 
-SequenceReader: ${SEQUENCEREADER_SRC:.cpp=.o} ${CORE_SRC:.cpp=.o} 
-	$(CC) $(DEBUG) -fPIC -shared -o $(addsuffix .so, $@) $^
+$(BINDIR)/SequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
-LUSequenceReader: ${LUSEQUENCEREADER_SRC:.cpp=.o} ${CORE_SRC:.cpp=.o}
-	$(CC) $(DEBUG) -fPIC -shared -o $(addsuffix .so, $@) $^
+$(BINDIR)/LUSequenceReader.so: $(LUSEQUENCEREADER_OBJ) $(CORE_OBJ)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
 #HTKMLFReader: ${HTKMLFREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
 #	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
@@ -91,17 +96,23 @@ LUSequenceReader: ${LUSEQUENCEREADER_SRC:.cpp=.o} ${CORE_SRC:.cpp=.o}
 #BinaryReader: ${BINARYREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
 #	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
 
-cn.exe: ${CORE_SRC:.cpp=.o}
-	$(CC) $(DEBUG) -o $@ $^ $(MATHLIB_LIB) -fopenmp -ldl
+$(BINDIR)/cn.exe: $(CORE_OBJ)
+	@echo "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
+	@mkdir -p $(dir $@)
+	@echo building output for $(ARCH) with build type $(BUILDTYPE) ...
+	$(CC) $(BUILDTYPE_OPT) -o $@ $^ $(MATHLIB_LIB) -fopenmp -ldl
 
--include ${SRC:.cpp=.d}
+-include $(DEP)
 
-${SRC:.cpp=.o}:%.o: %.cpp
-	$(CC) -c $< -o $@ $(DEBUG) $(CPPFLAGS) $(CFLAGS) $(INCFLAGS) -MD -MP -MF ${@:.o=.d}
+$(OBJDIR)/%$(ARCH)$(BUILDTYPE).o : %.cpp Makefile
+	@echo "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@mkdir -p $(dir $@)
+	$(CC) -c $< -o $@ $(BUILDTYPE_OPT) $(CPPFLAGS) $(CFLAGS) $(INCFLAGS) -MD -MP -MF ${@:.o=.d}
 
 .PHONY: clean
 	
 clean:
-	find . -name "*.o" -type f -delete
-	find . -name "*.d" -type f -delete
-	rm -rf bin
+	rm -rf $(OBJDIR)
+	rm -rf $(BINDIR) 
+	rm -f bin
