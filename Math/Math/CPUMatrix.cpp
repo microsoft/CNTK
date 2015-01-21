@@ -3561,16 +3561,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const char flag = 'A';
         if (sizeof(ElemType) == sizeof(double))
         {
+#ifndef USE_MKL
+            dgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <double*>(A.m_pArray), (int)lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), (int)ldu, reinterpret_cast <double*>(VT.m_pArray), (int)ldvt, &info);
+#else
             //missing arguments fixed! --author Wengong Jin 2014/12/15
             double *work = new double[lwork];
             dgesvd(&flag, &flag, (int *) &m, (int *) &n, reinterpret_cast <double*>(A.m_pArray), (int *) &lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), (int *) &ldu, reinterpret_cast <double*>(VT.m_pArray), (int *) &ldvt, work, &lwork, &info);
+#endif
         }
         else
         {
 #pragma warning (suppress: 4244)
+#ifndef USE_MKL
+           sgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <float*>(A.m_pArray), (int)lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), (int)ldu, reinterpret_cast <float*>(VT.m_pArray), (int)ldvt, &info);
+#else
             //missing arguments fixed! --author Wengong Jin 2014/12/15
             float *work = new float[lwork];
             sgesvd(&flag, &flag, (int *) &m, (int *) &n, reinterpret_cast <float*>(A.m_pArray), (int *) &lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), (int *) &ldu, reinterpret_cast <float*>(VT.m_pArray), (int *) &ldvt, work, &lwork, &info);
+#endif
         }
     }
 
