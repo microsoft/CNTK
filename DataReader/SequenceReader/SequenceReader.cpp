@@ -1518,7 +1518,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     m_featuresBufferRow = new size_t[mbSize];
     m_featuresBufferRowIdx = new size_t[mbSize];
 
-    m_labelsIdBufferRow = new size_t[2*mbSize];
+    m_labelsIdBufferRow = new CPUSPARSE_INDEX_TYPE[2 * mbSize];
     m_labelsBlock2Id = new size_t[2*mbSize];
     m_labelsBlock2UniqId = new size_t[2*mbSize];
 
@@ -1758,34 +1758,33 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
-        if (matrices.find(m_featuresName) != matrices.end())
-        {
-            if(features.GetMatrixType() == MatrixType::DENSE) 
-            {
-                features.Resize(labelInfo.dim, actualmbsize, false);
-                features.SetValue(0);
-            }
-            else 
-            {
-                features.Resize(labelInfo.dim, actualmbsize, actualmbsize);
-                features.Reset();
-            }
-        };
       
         // copy m_featureData to matrix
         // we always copy it to cpu first and then convert to gpu if gpu is desired.
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
+        if (features.GetMatrixType() == MatrixType::DENSE)
+        {
+            features.Resize(labelInfo.dim, actualmbsize);
+            features.SetValue(0);
+        }
+        else
+        {
+            features.Resize(labelInfo.dim, actualmbsize, actualmbsize);
+            features.Reset();
+        }
+
         for (size_t j = 0; j < actualmbsize; ++j)
         {
             // vector of feature data goes into matrix column
             size_t idx = (size_t)m_featureData[j];
 
-            if (matrices.find(m_featuresName) != matrices.end())
-                features.SetValue(idx, j, (ElemType)1); 
+            //if (matrices.find(m_featuresName) != matrices.end())
+                features.SetValue(idx, j, (ElemType)1);
         }
-        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, true,false, false);
+        
+        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
 
         //else // for GPU
         //{
