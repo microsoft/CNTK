@@ -20,14 +20,29 @@
 # Any help is welcome, of course!
 #
 # This makefile will be extended/completed as we go.
+#
+# You may need to do the following or something similar for all this to work
+# export LD_LIBRARY_PATH=/usr/local/acml5.3.0/gfortran64/lib:/usr/local/cuda/lib64:/usr/local/lib
+# export PATH=$PATH:/usr/local/bin:/usr/local/cuda/bin
 
 CC = g++
 NVCC = nvcc
-OBJDIR = .build_gpu
-BINDIR = bin_gpu
 ARCH = x86_64
+DEVICE = gpu
 BUILDTYPE = debug
 #BUILDTYPE = release
+# comment following and uncomment the next one to enable MKL library
+MATHLIB = acml
+#MATHLIB = mkl
+# modify relevant path below for your system
+MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
+ACML_PATH = /usr/local/acml5.3.0/gfortran64
+#######
+
+BUILDFOR = $(ARCH).$(DEVICE).$(BUILDTYPE).$(MATHLIB)
+
+OBJDIR = .build/$(BUILDFOR)
+BINDIR = bin/$(BUILDFOR)
 
 ifeq ($(BUILDTYPE),debug)
 	BUILDTYPE_OPT = -g
@@ -37,17 +52,11 @@ else
 	GPU_BUILDTYPE_OPT =
 endif
 
-# comment following and uncomment the next one to enable MKL library
-USE_ACML=1
-#USE_MKL=1
-
-ifdef USE_MKL
-	MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
+ifeq ($(MATHLIB),mkl)
 	MATHLIB_INCLUDE = $(MKL_PATH)/mkl/include
 	MATHLIB_LIB = -L$(MKL_PATH)/compiler/lib/intel64 -L$(MKL_PATH)/mkl/lib/intel64 -L$(MKL_PATH)/compiler/lib/mic -L$(MKL_PATH)/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
 	MATHLIB_DEFINE = -DUSE_MKL
 else
-	ACML_PATH = /usr/local/acml5.3.0/gfortran64
 	MATHLIB_INCLUDE = $(ACML_PATH)/include
 	MATHLIB_LIB = -L$(ACML_PATH)/lib -lacml -lm -lpthread
 	MATHLIB_DEFINE = -DUSE_ACML
@@ -81,25 +90,30 @@ SRC =  $(READER_SRC) $(CORE_SRC)
 
 VPATH := $(sort  $(dir $(SRC)))
 
-OBJ_TMP := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(SRC))
-OBJ := $(patsubst %.cu, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(OBJ_TMP))
-CORE_OBJ_TMP := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(CORE_SRC))
-CORE_OBJ := $(patsubst %.cu, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(CORE_OBJ_TMP))
-UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(UCIFASTREADER_SRC))
-LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(LUSEQUENCEREADER_SRC))
-SEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o, $(SEQUENCEREADER_SRC))
+OBJ_TMP := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SRC))
+OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(OBJ_TMP))
+CORE_OBJ_TMP := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CORE_SRC))
+CORE_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(CORE_OBJ_TMP))
+UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
+LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
+SEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SEQUENCEREADER_SRC))
 DEP := $(patsubst %.o, %.d, $(OBJ))
 
+SEPARATOR = "=-----------------------------------------------------------="
+
 all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so
-	ln -sfn $(BINDIR) bin
+	ln -sf $(CURDIR)/$(BINDIR)/* bin
 
 $(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^  
 
 $(BINDIR)/SequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
+	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
 $(BINDIR)/LUSequenceReader.so: $(LUSEQUENCEREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 	
 #HTKMLFReader: ${HTKMLFREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
@@ -109,21 +123,21 @@ $(BINDIR)/LUSequenceReader.so: $(LUSEQUENCEREADER_OBJ) $(CORE_OBJ)
 #	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
 
 $(BINDIR)/cn.exe: $(CORE_OBJ)
-	@echo "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
+	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
-	@echo building output for $(ARCH) with build type $(BUILDTYPE) ...
+	@echo building output for $(ARCH) with build type $(BUILDTYPE)
 	$(CC) $(BUILDTYPE_OPT) -o $@ $^ $(CUDA_LIB) $(MATHLIB_LIB) -fopenmp -ldl -fPIC 
 
 -include ${DEP}
 
-$(OBJDIR)/%$(ARCH)$(BUILDTYPE).o : %.cu Makefile
-	@echo "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
+$(OBJDIR)/%.o : %.cu Makefile
+	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@ $(BUILDTYPE_OPT) $(GPU_BUILDTYPE_OPT) $(NVCCFLAGS) $(INCFLAGS) -Xcompiler -fPIC
 
-$(OBJDIR)/%$(ARCH)$(BUILDTYPE).o : %.cpp Makefile
-	@echo "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
+$(OBJDIR)/%.o : %.cpp Makefile
+	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
 	$(CC) -c $< -o $@ $(BUILDTYPE_OPT) $(CPPFLAGS) $(CFLAGS) $(INCFLAGS) -fPIC -MD -MP -MF ${@:.o=.d}
@@ -133,4 +147,3 @@ $(OBJDIR)/%$(ARCH)$(BUILDTYPE).o : %.cpp Makefile
 clean:
 	rm -rf $(OBJDIR)
 	rm -rf $(BINDIR)
-	rm -f bin
