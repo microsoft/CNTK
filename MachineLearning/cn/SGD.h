@@ -1314,9 +1314,9 @@ protected:
             File fstream(checkPointFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
             fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
+            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
             fstream >> totalSamplesSeen >> learnRatePerSample >> prevCriterion;
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
 
             fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
