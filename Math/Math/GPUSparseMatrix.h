@@ -152,7 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
         void SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
-        void SetMatrixFromLabelAndClass(size_t *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
+        void SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
         //Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
         void GetMatrixFromCSRFormat(GPUSPARSE_INDEX_TYPE*& h_CSRRow, GPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
 
@@ -249,13 +249,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         friend MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemTypeDummy>& us);
 
      private:
+         void* ReserveTempHostBuffer(const size_t sizeInByte) const;
          template <class OutType, class InType>
          static void CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size);
-         //caller needs to release the returned pointer
-         static GPUSPARSE_INDEX_TYPE * ConvertCPUBuffer(const size_t * inBuffer, const size_t size);
-         //caller needs to release the returned pointer
-         static size_t * ConvertCPUBuffer(const GPUSPARSE_INDEX_TYPE * inBuffer, const size_t size);
-
     private:
         void ZeroInit(const MatrixFormat matrixFormat, const DEVICEID_TYPE deviceId);
 
@@ -263,10 +259,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void performInplaceFunction(const int kind);
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void Clear();
-        void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(int* csrRowPtrC)> func);
+        void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);
         size_t ElemCountFromBufferSize(const size_t totalBufferSize) const;
         size_t ElemCountFromBufferSize() const;
-        void PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;
+        DEVICEID_TYPE PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;
 
      private:
 
@@ -275,11 +271,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_blockSize; //block size        
         ElemType *m_blockVal; //block values
         size_t *m_blockIds; //block ids
+        size_t *m_rowToId; //the id showing the order row number is observed in the nnz values.
 
         size_t m_expandedSize; // expanded label size
         size_t* m_block2Id; // label block id to first word location
         size_t* m_block2UniqId; // label block id to unique first word location        
 
+        mutable void* m_tempHostBuffer; //used to copy values.
+        mutable size_t m_tempHostBufferSize;
+
+        static bool do_sync; 
     };
 }}}    
 

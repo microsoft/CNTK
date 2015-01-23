@@ -104,7 +104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static int GetBestGPUDeviceId();  
         int GetComputeDeviceId() const;
-        void PrepareDevice(DEVICEID_TYPE deviceId=-1) const;
+        DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
         static cublasHandle_t GetCublasHandle(int computeDevice=-1);
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller

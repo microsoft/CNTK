@@ -101,7 +101,7 @@ protected:
     size_t* m_featuresBufferRowIdx;
 
 
-    size_t* m_labelsIdBufferRow;
+    CPUSPARSE_INDEX_TYPE* m_labelsIdBufferRow;
     size_t* m_labelsBlock2Id;
     size_t* m_labelsBlock2UniqId;
 

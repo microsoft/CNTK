@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // PrepareDevice - Setup the correct cuda context for an operation
     // deviceId - the device on which the operation will take place
     //            defaults to -1, which means use matrices current device
-    template<class ElemType> void GPUSparseMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const {}
+    template<class ElemType> DEVICEID_TYPE GPUSparseMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const { return deviceId; }
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::DeepCopy(const GPUSparseMatrix<ElemType>& deepCopy) { }
 
@@ -95,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
        
-    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromLabelAndClass(size_t *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize) { }
+    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize) { }
 
     // forward pass from feature to hidden layer
     template<class ElemType> void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, 
@@ -336,6 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma endregion
 
 #pragma region Helper Functions
+    template<class ElemType> void* GPUSparseMatrix<ElemType>::ReserveTempHostBuffer(const size_t sizeInByte) const { return nullptr; }
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::performInplaceFunction(int kind) { }
 
@@ -351,10 +352,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> template <class OutType, class InType>
     static void GPUSparseMatrix<ElemType>::CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size){}
-    //caller needs to release the returned pointer
-    template<class ElemType>  GPUSPARSE_INDEX_TYPE * GPUSparseMatrix<ElemType>::ConvertCPUBuffer(const size_t * inBuffer, const size_t size) { return nullptr; }
-    //caller needs to release the returned pointer
-    template<class ElemType>  size_t * GPUSparseMatrix<ElemType>::ConvertCPUBuffer(const GPUSPARSE_INDEX_TYPE * inBuffer, const size_t size) { return nullptr; }
 
 #pragma endregion Helper Functions
 
@@ -410,8 +407,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // PrepareDevice - Setup the correct cuda context for an operation
     // deviceId - the device on which the operation will take place
     //            defaults to -1, which means use matrices current device
-    template<class ElemType> void GPUMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const
-    {}
+    template<class ElemType> DEVICEID_TYPE GPUMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const
+    {
+        return deviceId;
+    }
 
     template<class ElemType> ElemType* GPUMatrix<ElemType>::CopyToArray() const
     {

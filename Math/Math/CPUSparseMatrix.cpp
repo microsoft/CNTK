@@ -175,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //make sure call order in colume wise for CSC and row wise for CSR
     template<class ElemType>
-    void CPUSparseMatrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, const ElemType v)
+    void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, const ElemType v)
     {
         if(m_format != MatrixFormat::matrixFormatSparseCSC && m_format != MatrixFormat::matrixFormatSparseCSR) 
         {
@@ -187,20 +187,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(m_numRows, m_numCols, m_nz + 100);  //allocate 100 more elelemnts and keep existing values
         }
 
-        if(rIdx < 0 || rIdx >= m_numRows) 
+        if(row < 0 || row >= m_numRows) 
         {
             throw std::logic_error("CPUSparseMatrix: SetValue() invalid row id");
         }
 
-        if(cIdx < 0 || cIdx >= m_numCols) {
+        if(col < 0 || col >= m_numCols) {
             throw std::logic_error("CPUSparseMatrix: SetValue() invalid column id");
         }
 
-        size_t r = (m_format == matrixFormatSparseCSC) ? rIdx: cIdx;
-        size_t c = (m_format == matrixFormatSparseCSC) ? cIdx: rIdx;
+        size_t r = (m_format == matrixFormatSparseCSC) ? row: col;
+        size_t c = (m_format == matrixFormatSparseCSC) ? col: row;
 
         m_pArray[m_nz] = v;
-        m_unCompIndex[m_nz] = r;
+        m_unCompIndex[m_nz] = (CPUSPARSE_INDEX_TYPE)r;
 
         //consistency check
         if(c == m_colIdx && r <= m_unCompIndex[m_nz-1]) 
@@ -210,10 +210,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (c != m_colIdx) 
         {
-            m_compIndex[c] = m_nz;
+            m_compIndex[c] = CPUSPARSE_INDEX_TYPE(m_nz);
             m_colIdx = (int) c;
         } 
-        m_compIndex[c+1] = m_nz+1;
+        m_compIndex[c + 1] = CPUSPARSE_INDEX_TYPE(m_nz + 1);
         m_nz++;
     }
 
@@ -244,8 +244,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
             {
                 ElemType *pArray = new ElemType[numNZElemToReserve];
-                size_t *unCompIndex = new size_t[numNZElemToReserve];
-                size_t *compIndex = new size_t[newCompIndexSize];
+                CPUSPARSE_INDEX_TYPE *unCompIndex = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve];
+                CPUSPARSE_INDEX_TYPE *compIndex = new CPUSPARSE_INDEX_TYPE[newCompIndexSize];
                 
                 if (keepExistingValues && (m_nz > numNZElemToReserve || m_compIndexSize > newCompIndexSize))
                     throw std::logic_error("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
@@ -253,9 +253,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (keepExistingValues && m_nz > 0)
                 {
                     assert(m_compIndexSize > 0 && m_nz < numNZElemToReserve);
-                    memcpy(pArray, m_pArray, sizeof(ElemType)*m_nz);
-                    memcpy(unCompIndex, m_unCompIndex, sizeof(size_t)*m_nz);
-                    memcpy(compIndex, m_compIndex, sizeof(size_t)*m_compIndexSize);
+                    memcpy(pArray, m_pArray, NzSize());
+                    memcpy(unCompIndex, m_unCompIndex, MajorIndexSize());
+                    memcpy(compIndex, m_compIndex, SecondaryIndexSize());
                 }
 
                 if (m_pArray != NULL)
@@ -280,7 +280,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (keepExistingValues && m_elemSizeAllocated > 0)
                 {
                     assert(m_compIndexSize > 0 && m_elemSizeAllocated < numNZElemToReserve);
-                    memcpy(blockVal, m_blockVal, sizeof(ElemType)*m_nz);
+                    memcpy(blockVal, m_blockVal, NzSize());
                     memcpy(blockIds, m_blockIds, sizeof(size_t)*m_compIndexSize);
                 }
 
@@ -423,9 +423,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (!transposeA && transposeB)
         {           
+            if (rhs.GetFormat() != matrixFormatSparseCSC)
+                NOT_IMPLEMENTED;
+
             //allocate enough memory
             c.SetFormat(matrixFormatSparseBlockCol);
-            c.Resize(c.GetNumRows(), c.GetNumCols(), lhs.GetNumElements());
+            c.Resize(m, n, m*min(n, rhs.m_nz));
 
             map<size_t, size_t> w2Id;
             for(size_t j = 0; j < rhs.GetNumCols(); j++)
@@ -463,7 +466,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
             }   
-            c.m_nz = c.m_blockSize * lhs.GetNumRows();
+            c.m_nz = c.m_blockSize * m;
             if(c.m_nz > c.GetSizeAllocated()) 
             {
                 throw std::logic_error("sparse matrix out of range.");
@@ -860,8 +863,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t compressedSize = (us.GetFormat() == matrixFormatSparseCSC) ? colnum + 1 : rownum + 1;
             ElemType* dataBuffer = us.NzValues();
-            size_t* unCompressedIndex = us.MajorIndexLocation();
-            size_t* compressedIndex = us.SecondaryIndexLocation();
+            CPUSPARSE_INDEX_TYPE* unCompressedIndex = us.MajorIndexLocation();
+            CPUSPARSE_INDEX_TYPE* compressedIndex = us.SecondaryIndexLocation();
 
             // read in the sparse matrix info
             for (size_t i = 0; i < nz; ++i)
@@ -914,8 +917,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (nz > 0)
         {
             ElemType* dataBuffer = us.NzValues();
-            size_t* unCompressedIndex = us.MajorIndexLocation();
-            size_t* compressedIndex = us.SecondaryIndexLocation();
+            CPUSPARSE_INDEX_TYPE* unCompressedIndex = us.MajorIndexLocation();
+            CPUSPARSE_INDEX_TYPE* compressedIndex = us.SecondaryIndexLocation();
 
             for (size_t i = 0; i < nz; ++i)
             {

@@ -215,12 +215,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // deviceId - the device on which the operation will take place
     //            defaults to -1, which means use matrices current device
     template<class ElemType>
-    void GPUMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const
+    DEVICEID_TYPE GPUMatrix<ElemType>::PrepareDevice(DEVICEID_TYPE deviceId /*=-1*/) const
     {
         // if default value use current compute device
-        if (deviceId == -1)
-            deviceId = (DEVICEID_TYPE)m_computeDevice;
-        Microsoft::MSR::CNTK::PrepareDevice(deviceId);
+        DEVICEID_TYPE newId = deviceId >= 0 ? deviceId : m_computeDevice;
+
+        Microsoft::MSR::CNTK::PrepareDevice(newId);
+        return newId;
     }
 
     template<class ElemType>

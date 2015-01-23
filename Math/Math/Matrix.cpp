@@ -105,6 +105,63 @@
         } \
     }
 
+//before calling the following macro the current matrix location and matrix type on MatrixPointerToCheck must have been set correctly
+#define DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
+    { \
+        CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation(); \
+        if (curLocation == CurrentDataLocation::BOTH)   \
+        { \
+            if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE) \
+            { \
+                CPUDense; \
+                GPUDense; \
+                if (MatrixPointerToSetFlag != nullptr) \
+                    ((Matrix*)MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::BOTH, MatrixType::DENSE); \
+            } \
+            else \
+            { \
+                CPUSparse; \
+                GPUSparse; \
+                if (MatrixPointerToSetFlag != nullptr) \
+                    ((Matrix*)MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::BOTH, MatrixType::SPARSE); \
+            } \
+        } \
+        else if (curLocation == CurrentDataLocation::GPU)   \
+        { \
+            if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE) \
+            { \
+                GPUDense; \
+                if (MatrixPointerToSetFlag != nullptr) \
+                    ((Matrix*)MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE); \
+            } \
+            else \
+            { \
+                GPUSparse; \
+                if (MatrixPointerToSetFlag != nullptr) \
+                    ((Matrix*)MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::SPARSE); \
+            } \
+        } \
+        else if (curLocation == CurrentDataLocation::CPU) \
+        { \
+            if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE) \
+            { \
+                CPUDense; \
+                if (MatrixPointerToSetFlag != nullptr) \
+                    ((Matrix*)MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE); \
+            } \
+            else \
+            { \
+                CPUSparse; \
+                if (MatrixPointerToSetFlag != nullptr) \
+                    ((Matrix*)MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::CPU, MatrixType::SPARSE); \
+            } \
+        } \
+        else \
+        { \
+            throw std::runtime_error("Matrices do not exist in either CPU or GPU."); \
+        } \
+    }
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Constructors, destructors and other static matrix builders
 
@@ -951,7 +1008,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
     // read labels
     template<class ElemType>
-    void Matrix<ElemType>::SetMatrixFromLabelAndClass(size_t *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize)
+    void Matrix<ElemType>::SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize)
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1152,7 +1209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
-        DISPATCH_MATRIX_ON_FLAG(this,
+        DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
             m_CPUMatrix->Resize(numRows,numCols,growOnly), 
             m_GPUMatrix->Resize(numRows,numCols,growOnly), 
@@ -1172,7 +1229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::Reset()
     {
-        DISPATCH_MATRIX_ON_FLAG(this,
+        DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
@@ -3047,8 +3104,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (m_GPUSparseMatrix == NULL)
                     m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(m_CPUSparseMatrix->GetFormat(), to_id);
+                else
+                    m_GPUSparseMatrix->ChangeDeviceTo(to_id);
 
-                if (m_CPUMatrix->GetNumElements() != 0 && !emptyTransfer)
+                if (m_CPUSparseMatrix->GetNumElements() != 0 && !emptyTransfer)
                 {
                     m_GPUSparseMatrix->SetValue(*m_CPUSparseMatrix);
                 }
@@ -3083,11 +3142,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         delete m_GPUSparseMatrix;
                         m_GPUSparseMatrix = NULL;
-                        SetDataLocation(CPU, DENSE);
+                        SetDataLocation(CPU, SPARSE);
                     }
                     else
                     {
-                        SetDataLocation(BOTH, DENSE);
+                        SetDataLocation(BOTH, SPARSE);
                     }
                 }
                 else //to another GPU
