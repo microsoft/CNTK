@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         using B::GetNumCols; using B::GetNumRows;
 
-        void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); 
+        void SetValue(const size_t row, const size_t col, ElemType val); 
         void SetValue(const CPUSparseMatrix& /*val*/) { NOT_IMPLEMENTED; }
 
         void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
@@ -106,11 +106,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* NzValues() { return m_pArray; }
         size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
-        size_t* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
+        CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
         size_t MajorIndexCount() const { return m_nz; }
-        size_t MajorIndexSize() const { return sizeof(size_t)*MajorIndexCount(); } // actual number of major index bytes in use
+        size_t MajorIndexSize() const { return sizeof(CPUSPARSE_INDEX_TYPE)*MajorIndexCount(); } // actual number of major index bytes in use
 
-        size_t* SecondaryIndexLocation() const { return m_compIndex; } //this is the compressed index, col/row in CSC/CSR format
+        CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const { return m_compIndex; } //this is the compressed index, col/row in CSC/CSR format
         size_t SecondaryIndexCount() const
         {
             if (m_format&matrixFormatCompressed)
@@ -123,12 +123,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return m_nz; // COO format
         }
         // get size for compressed index
-        size_t SecondaryIndexSize() const { return (SecondaryIndexCount())*sizeof(size_t); }
+        size_t SecondaryIndexSize() const { return (SecondaryIndexCount())*sizeof(CPUSPARSE_INDEX_TYPE); }
 
         // the column and row locations will swap based on what format we are in. Full index always follows the data array
-        size_t* RowLocation() const { return (m_format&matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation(); }
+        CPUSPARSE_INDEX_TYPE* RowLocation() const { return (m_format&matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation(); }
         size_t RowSize() const { return (m_format&matrixFormatRowMajor) ? SecondaryIndexSize() : MajorIndexSize(); }
-        size_t* ColLocation() const { return (m_format&matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation(); }
+        CPUSPARSE_INDEX_TYPE* ColLocation() const { return (m_format&matrixFormatRowMajor) ? MajorIndexLocation() : SecondaryIndexLocation(); }
         size_t ColSize() const { return (m_format&matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize(); } // actual number of bytes in use
 
     private:
@@ -136,8 +136,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_compIndexSize;
 
         //non-zero values are stored in m_pArray
-        size_t *m_unCompIndex; //row/col ids in CSC/CSR format
-        size_t *m_compIndex; //begin ids of col/row in CSC/CSR format
+        CPUSPARSE_INDEX_TYPE *m_unCompIndex; //row/col ids in CSC/CSR format
+        CPUSPARSE_INDEX_TYPE *m_compIndex; //begin ids of col/row in CSC/CSR format
 
         size_t m_blockSize; //block size        
         ElemType *m_blockVal; //block values

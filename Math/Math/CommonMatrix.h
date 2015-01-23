@@ -27,7 +27,7 @@
 
 #define DEVICEID_TYPE int
 #define GPUSPARSE_INDEX_TYPE int  //cuSparse only supports int array indexes
-
+#define CPUSPARSE_INDEX_TYPE int  //to be consistent with cuSparse but limited the possible size of the matrix.
 
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
