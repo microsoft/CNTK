@@ -1,0 +1,534 @@
+# Network Description Language (NDL) Scripts
+# the following root level commands exists:
+# load=section1:section2:section3 - loads macro collections, but does not execute anything
+# NOTE: standard macros should already be defined by now, only load extra macros here
+# run=sectionName - this will parse and run the sectionName
+#run=ndlRnnNetwork
+#run=ndlMacroUse
+#run=ndlMacroUseCNNAuto
+run=ndlDotNameTest
+
+ndlFull=[
+    SDim=784
+    HDim=256
+    LDim=10
+    B0=Parameter(HDim, init=fixedvalue, value=0)
+    W0=Parameter(HDim, SDim)
+    features=Input(SDim)
+    labels=Input(LDim)
+    #mean0=Mean(features)
+    #invstd0=InvStdDev(features)
+    #normInput=PerDimMeanVarNormalization(features, mean0, invstd0)
+    Times1=Times(W0, features)
+    Plus1=Plus(Times1, B0)
+    RL1=RectifiedLinear(Plus1)
+    B1=Parameter(LDim, 1, init=fixedvalue, value=0)
+    W1=Parameter(LDim, HDim)
+    Times2=Times(W1, RL1)
+    Plus2=Plus(Times2, B1)
+    CE=CrossEntropyWithSoftmax(labels, Plus2)
+    ErrPredict=ErrorPrediction(labels, Plus2)
+    FeatureNodes=(features)
+    LabelNodes=(labels)
+    CriteriaNodes=(CE)
+    EvalNodes=(ErrPredict)
+    OutputNodes=(Plus2)
+]
+
+ndlMacroDefine=[
+    # Macro definitions
+    #inline Rectified Linear Feed Forward
+    RFF_R(x1, w1, b1)=RectifiedLinear(Plus(Times(w1,x1),b1))
+    #Feed Forward
+    FF(X1, W1, B1)
+    [
+        T=Times(W1,X1);
+        P=Plus(T, B1);
+    ]
+    #Base feed Forward network, defines Bias and wieght parameters
+    BFF(in, rows, cols)
+    {
+        B=Parameter(rows, init=fixedvalue, value=0)
+        W=Parameter(rows, cols)
+        FF = FF(in, w, b)
+    }
+    #RectifiedLinear Base Feed Forward
+    RBFF(in,rowCount,colCount)
+    {
+        BFF = BFF(in, rowCount, colCount);
+        RL = RectifiedLinear(BFF);
+    }
+    #Rectified Linear Feed Forward
+    RFF(X2,W2,B2)=[
+        FF = FF(X2, W2, B2);  
+        RL = RectifiedLinear(FF);
+    ]
+    #RectifiedLinear Feed Forward with Dropout
+    RFFD(X3,W3,B3)
+    {
+        RFF=RFF(X3, W3, B3)
+        DO=Dropout(RFF)
+    }
+    #Sigmoid Base Feed Forward
+    SBFF(in,rowCount,colCount)
+    {
+        BFF = BFF(in, rowCount, colCount);
+        S = Sigmoid(BFF);
+    }
+    #Sigmoid Feed Forward
+    SFF(X2,W2,B2)=[
+        FF = FF(X2, W2, B2);  
+        S = Sigmoid(FF);
+    ]
+    #Sigmoid Feed Forward with Dropout
+    SFFD(X3,W3,B3)
+    {
+        SFF=SFF(X3, W3, B3)
+        DO=Dropout(SFF)
+    }
+    #Sigmoid Feed Forward with Dropout
+    SBFFD(input,rowCount,colCount)
+    {
+        SBFF=SBFF(input,rowCount,colCount)
+        DO=Dropout(SBFF)
+    }
+    #SoftMax Feed Forward
+    SMFF(x,y,z, labels)
+    {
+        FF = FF(x,y,z);  
+        SM = CrossEntropyWithSoftmax(labels, FF)
+    }
+    #SoftMax Base Feed Forward
+    SMBFF(x,r,c, labels)
+    {
+        BFF = BFF(x,r,c);  
+        SM = CrossEntropyWithSoftmax(labels, BFF)
+    }
+    RFFD_R(x1, w1, b1)={Dropout(RectifiedLinear(Plus(Times(w1,x1),b1)))}
+]
+
+ndlMacroUse=[
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    SDim=784
+    HDim=256
+    LDim=10
+
+    features=Input(SDim, tag=feature)
+    labels=Input(LDim, tag=label)
+
+    # compute mean/stddev for mean/stddev normalization
+    meanVal = Mean(features);
+    stddev=InvStdDev(features)
+    normInput=PerDimMeanVarNormalization(features, meanVal, stddev)
+
+    # Layer operations
+    L1 = RBFF(normInput, HDim, SDim)
+    L2 = RBFF(L1, HDim, HDim)
+    L3 = RBFF(L2, HDim, HDim)
+    CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+
+    # rootNodes defined here
+    OutputNodes=(CE.BFF.FF.P)
+]
+
+ndlDotNameTest=[
+
+    TM(W,X)
+    [
+        T=Times(W,X);
+    ]
+    #Feed Forward
+    FF2(X1, W1, B1)
+    [
+        T=TM(W1,X1);
+        P=Plus(T.T, B1);
+    ]
+    #Base feed Forward network, defines Bias and wieght parameters
+    BFF2(in, rows, cols)
+    {
+        B=Parameter(rows, init=fixedvalue, value=0)
+        W=Parameter(rows, cols)
+        FF = FF2(in, w, b)
+    }
+    #RectifiedLinear Base Feed Forward
+    RBFF2(in,rowCount,colCount)
+    {
+        BFF = BFF2(in, rowCount, colCount);
+        RL = RectifiedLinear(BFF.FF.P);
+    }
+    #SoftMax Base Feed Forward
+    SMBFF2(x,r,c, labels)
+    {
+        BFF = BFF2(x,r,c);  
+        SM = CrossEntropyWithSoftmax(labels, BFF.FF.P)
+    }
+
+
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    myconst()
+    {
+        SDim=784
+        HDim=256
+        LDim=10
+    }
+
+    inputs(SDim, LDim)
+    {
+        features=Input(SDim, tag=feature)
+        labels=Input(LDim, tag=label)
+    }
+    # compute mean/stddev for mean/stddev normalization
+    meanVarNorm(features)=[
+        meanVal = Mean(features);
+        stddev=InvStdDev(features)
+        normInput=PerDimMeanVarNormalization(features, meanVal, stddev)
+    ]
+
+    # Layer operations
+    layers(in, labels, SDim, HDim, LDim)=[
+        L1 = RBFF2(in, HDim, SDim)
+        L2 = RBFF2(L1.RL, HDim, HDim)
+        L3 = RBFF2(L2, HDim, HDim)
+        CE = SMBFF2(L3.RL, LDim, HDim, labels, tag=Criteria)
+        Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+    ]
+
+    con=myconst()
+    in = inputs(con.SDim, con.LDim)
+    inNorm = meanVarNorm(in.features)
+    layers1 = layers(inNorm.normInput, in.labels, con.SDim, con.HDim, con.LDim)
+    # rootNodes defined here
+    FeatureNodes=(in.features)
+    LabelNodes=(in.labels)
+    OutputNodes=(layers1.CE.BFF.FF.P)
+]
+
+ndlMacroUseNoBase=[
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    SDim=784
+    HDim=256
+    LDim=10
+
+    # Weight, Bias, features and label inputs
+    B1=Parameter(HDim, init=fixedvalue, value=0)
+    W1=Parameter(HDim, SDim, init=uniform)
+    B2=Parameter(HDim, init=fixedvalue, value=0)
+    W2=Parameter(HDim, HDim, init=uniform)
+    B3=Parameter(HDim, init=fixedvalue, value=0)
+    W3=Parameter(HDim, HDim, init=uniform)BTop=Parameter(LDim, init=fixedvalue, value=0)
+    WTop=Parameter(LDim, HDim, init=uniform)
+
+    features=Input(SDim, tag=feature)
+    labels=Input(LDim, tag=label)
+
+    # Layer operations
+    L1 = RFFD(features, W1, B1)
+    L2 = RFFD(L1, W2, B2)
+    L3 = RFFD(L2, W3, B3)
+    CE = SMFF(L3, WTop, BTop, labels, tag=Criteria)
+    Err=ErrorPrediction(labels, CE.FF, tag=Eval)
+    # rootNodes defined here
+    OutputNodes=(CE.FF)
+]
+
+ndlDenoise=[
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    SDim=784
+    HDim=256
+    LDim=10
+
+    features=Input(SDim, tag=feature)
+    labels=Input(LDim, tag=label)
+
+    # compute mean/stddev for mean/stddev normalization
+    fmean = Mean(features);
+    finvstd=InvStdDev(features)
+    finput=PerDimMeanVarNormalization(features, fmean, finvstd)
+
+    # recursive denoiser operations
+    F1 = SBFFD(finput, HDim, SDim)
+    F2 = SBFFD(F1, HDim, HDim)
+    F3 = BFF(F2, SDim, HDim)
+    
+    #second time
+    F1A = SFFD(F3, F1.SBFF.BFF.W, F1.SBFF.BFF.B)
+    F2A = SFFD(F1A, F2.SBFF.BFF.W, F2.SBFF.BFF.B)
+    F3A = FF(F2A, F3.W, F3.B)
+
+    #third time
+    F1B = SFFD(F3A, F1.SBFF.BFF.W, F1.SBFF.BFF.B)
+    F2B = SFFD(F1B, F2.SBFF.BFF.W, F2.SBFF.BFF.B)
+    F3B = FF(F2B, F3.W, F3.B)
+   
+    # Layer operations
+    L1 = SBFFD(F3B, HDim, SDim)
+    L2 = SBFFD(L1, HDim, HDim)
+    L3 = SBFFD(L2, HDim, HDim)
+    L4 = SBFFD(L3, HDim, HDim)
+   
+    CE = SMBFF(L4, LDim, HDim, labels, tag=Criteria)
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+    
+    # output nodes
+    Prior=Mean(labels)
+    LP=Log(Prior)
+    O=Minus(CE.BFF.FF.P, LP, tag=output)
+]
+
+# denoise with a denoise macro instead of multiple implementation
+ndlDenoiseMacros=[
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    SDim=784
+    HDim=256
+    LDim=10
+
+    features=Input(SDim, tag=feature)
+    labels=Input(LDim, tag=label)
+
+    # compute mean/stddev for mean/stddev normalization
+    meanVarNorm(features)=[
+        meanVal = Mean(features);
+        stddev=InvStdDev(features)
+        normInput=PerDimMeanVarNormalization(features, meanVal, stddev)
+    ]
+
+    finput=meanVarNorm(features)
+
+    # recursive denoiser operations
+    denoise(in, SDim, HDim)=[
+        F1 = SBFFD(in, HDim, SDim)
+        F2 = SBFFD(F1, HDim, HDim)
+        F3 = BFF(F2, SDim, HDim)
+    ]
+    
+    #denoiser that takes and input, and a source of Weight/Bias to reuse
+    denoiseWB(in, wbSource)=[
+        F1 = SFFD(in, wbSource.F1.SBFF.BFF.W, wbSource.F1.SBFF.BFF.B)
+        F2 = SFFD(F1, wbSource.F2.SBFF.BFF.W, wbSource.F2.SBFF.BFF.B)
+        F3 = FF(F2, wbSource.F3.W, wbSource.F3.B)
+    ]
+
+    D1 = denoise(finput, SDim, HDim)
+    D2 = denoiseWB(D1, D1)
+    D3 = denoiseWB(D2, D1)
+
+    # Layer operations
+    L1 = SBFFD(D3, HDim, SDim)
+    L2 = SBFFD(L1, HDim, HDim)
+    L3 = SBFFD(L2, HDim, HDim)
+    L4 = SBFFD(L3, HDim, HDim)
+   
+    CE = SMBFF(L4, LDim, HDim, labels, tag=Criteria)
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+    
+    # output nodes
+    Prior=Mean(labels)
+    LP=Log(Prior)
+    O=Minus(CE.BFF.FF.P, LP, tag=Output)
+]
+
+# denoise with a denoise macro instead of multiple implementation
+ndlDenoiseMacros2=[
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    SDim=784
+    HDim=256
+    LDim=10
+
+    # Weight, Bias, features and label inputs
+    B1=Parameter(HDim)
+    W1=Parameter(HDim, SDim, init=uniform)
+    B2=Parameter(HDim)
+    W2=Parameter(HDim, HDim, init=uniform)
+    B3=Parameter(SDim)
+    W3=Parameter(SDim, HDim, init=uniform)
+
+    features=Input(SDim, tag=feature)
+    labels=Input(LDim, tag=label)
+
+    # compute mean/stddev for mean/stddev normalization
+    meanVarNorm(features)=[
+        meanVal = Mean(features);
+        stddev=InvStdDev(features)
+        normInput=PerDimMeanVarNormalization(features, meanVal, stddev)
+    ]
+
+    finput=meanVarNorm(features)
+
+    # recursive denoiser operations
+    denoise(in, W1, B1, W2, B2, W3, B3)=[
+        F1 = SFFD(in, W1, B1)
+        F2 = SFFD(F1, W2, B2)
+        F3 = FF(F2, W3, B3)
+    ]
+    
+    D1 = denoise(finput, W1, B1, W2, B2, W3, B3)
+    D2 = denoise(D1, W1, B1, W2, B2, W3, B3)
+    D3 = denoise(D2, W1, B1, W2, B2, W3, B3)
+    
+    # Layer operations
+    L1 = SBFFD(D3, HDim, SDim)
+    L2 = SBFFD(L1, HDim, HDim)
+    L3 = SBFFD(L2, HDim, HDim)
+    L4 = SBFFD(L3, HDim, HDim)
+    
+    CE = SMBFF(L4, LDim, HDim, labels, tag=Criteria)
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+    
+    # output nodes
+    Prior=Mean(labels)
+    LP=Log(Prior)
+    O=Minus(CE.BFF.FF.P, LP, tag=Output)
+]
+
+ndlMacroUseCNN=[
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    inputWidth=28
+    inputHeight=28
+    inputChannels=1
+    
+    SDim=784
+    LDim=10
+
+    features=ImageInput(inputWidth, inputHeight, inputChannels, 1, tag=feature)
+    labels=Input(LDim, tag=label)
+    
+    #convolution
+    kernelWidth=5
+    kernelHeight=5
+    outputChannels=24
+    horizontalSubsample=1
+    verticalSubsample=1
+    
+    # weight[outputChannels, kernelWidth * kernelHeight * inputChannels]
+    cvweight=Parameter(outputChannels, 25)
+    cv = Convolution(cvweight, features, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample, zeroPadding=false)
+    
+    #one bias per channel
+    cvbias=Parameter(outputChannels, 1)
+    
+    cvplusbias=Plus(cv, cvbias);
+    nlcv=Sigmoid(cvplusbias);
+    
+    #maxpooling
+    windowWidth=2
+    windowHeight=2
+    stepW=2
+    stepH=2
+    mp=MaxPooling(nlcv, windowWidth, windowHeight, stepW, stepH)
+    
+    #m_outputWidth = (m_inputWidth-m_windowWidth)/m_horizontalSubsample + 1;
+    mpoutputWidth=12
+    #m_outputHeight = (m_inputHeight-m_windowHeight)/m_verticalSubsample + 1;
+    mpoutputHeight=12
+    #m_outputSizePerSample = m_outputWidth * m_outputHeight * m_channels;
+    mpoutputSizePerSample=3456
+    # Layer operations
+    
+    HDim=128
+    L1 = SBFF(mp, HDim, mpoutputSizePerSample)
+    CE = SMBFF(L1, LDim, HDim, labels, tag=Criteria)
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+
+    # rootNodes defined here
+    OutputNodes=(CE.BFF.FF.P)
+]
+
+ndlMacroUseCNNAuto=[
+    # constants defined
+    # Sample, Hidden, and Label dimensions
+    inputWidth=28
+    inputHeight=28
+    inputChannels=1
+    
+    SDim=784
+    LDim=10
+
+    features=ImageInput(inputWidth, inputHeight, inputChannels, 1, tag=feature)
+    labels=Input(LDim, tag=label)
+    
+    #convolution
+    kernelWidth=5
+    kernelHeight=5
+    outputChannels=24
+    horizontalSubsample=1
+    verticalSubsample=1
+    
+    # weight[outputChannels, kernelWidth * kernelHeight * inputChannels]
+    cvweight=Parameter(outputChannels, 25)
+    cv = Convolution(cvweight, features, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample, zeroPadding=false)
+    
+    #one bias per channel
+    cvbias=Parameter(outputChannels, 1)
+    
+    cvplusbias=Plus(cv, cvbias);
+    nlcv=Sigmoid(cvplusbias);
+    
+    #maxpooling
+    windowWidth=2
+    windowHeight=2
+    stepW=2
+    stepH=2
+    mp=MaxPooling(nlcv, windowWidth, windowHeight, stepW, stepH)
+   
+    HDim=128
+    L1 = SBFF(mp, HDim, 0)
+    CE = SMBFF(L1, LDim, HDim, labels, tag=Criteria)
+    Err=ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+
+    # rootNodes defined here
+    OutputNodes=(CE.BFF.FF.P)
+]
+
+ndlRnnNetwork=[
+	#define basic i/o
+	featDim=1845
+	labelDim=183
+	hiddenDim=2048
+	features=Input(featDim, tag=feature)
+    labels=Input(labelDim, tag=label)
+
+    MeanVarNorm(x)=[
+        xMean = Mean(x);
+        xStdDev = InvStdDev(x)
+        xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    ]
+                                   
+     # define network
+	 featNorm = MeanVarNorm(features)
+     W0 = Parameter(hiddenDim, featDim)
+	 L1 = Times(W0,featNorm)
+
+     W = Parameter(hiddenDim, hiddenDim)
+     
+     Dout = Sigmoid(Plus(L1, Times(W,D1)))
+     D1 = Delay(hiddenDim, Dout, delayTime=1);
+
+     W2 = Parameter(labelDim, hiddenDim)
+     Output = Times(W2, Dout)
+     criterion = CrossEntropyWithSoftmax(labels, Output, tag=Criteria)
+
+	 #CE = SMBFF(Dout,labelDim,hiddenDim,labels,tag=Criteria)
+	 #Err = ErrorPrediction(labels,CE.BFF.FF.P,tag=Eval)
+
+    LogPrior(labels)
+    {
+        Prior=Mean(labels)
+        LogPrior=Log(Prior)
+    }
+
+     # define output (scaled loglikelihood)
+         logPrior = LogPrior(labels)	 
+	 #ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
+    # rootNodes defined here temporarily so we pass
+    OutputNodes=(criterion)
+    EvalNodes=(criterion)
+
+]
