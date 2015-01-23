@@ -241,6 +241,16 @@ public:
             m_indexInLoop = index;
         }
 
+		void clearCache()
+		{
+			m_loopId = -1;
+			m_visitedOrder = -1;
+			m_index = -1;
+			m_lowlink = -1;
+			m_indexInLoop = 0;
+			m_visited = false;
+			m_inStack = false;
+		}
         size_t GetIndex()
         {
             return m_index;

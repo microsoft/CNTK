@@ -886,6 +886,7 @@ void PTaskGraphBuilder<ElemType>::CreateTaskDescriptorsForComputationNodes()
             opName == ElementTimesNode<ElemType>::TypeName() ||
             opName == DiagTimesNode<ElemType>::TypeName() ||
             opName == DropoutNode<ElemType>::TypeName() ||
+            opName == ExpNode<ElemType>::TypeName() ||
             opName == LogNode<ElemType>::TypeName() ||
             opName == CosineNode<ElemType>::TypeName() ||
             opName == MinusNode<ElemType>::TypeName() ||
