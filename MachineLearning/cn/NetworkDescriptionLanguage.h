@@ -529,19 +529,17 @@ public:
     // returns - node this symbol references
     NDLNode<ElemType>* FindSymbol(const std::string& symbol, bool searchForDotNames=true)
     {
-        // handle the no dot names case
-        if (!searchForDotNames)
-        {
-            auto found = m_symbols.find(symbol);
-            if (found == m_symbols.end())
-                return nullptr;
+        auto found = m_symbols.find(symbol);  //search symbol directly first
+        if (found != m_symbols.end())
             return found->second;
-        }
 
-        // handle dot names
+        // if not found, handle dot names by move up the hierarchy
         size_t firstDot = symbol.find_first_of('.');
+        if (firstDot == npos)
+            return nullptr;
+
         std::string search = symbol.substr(0,firstDot);
-        auto found = m_symbols.find(search);
+        found = m_symbols.find(search);
         if (found == m_symbols.end())
         {
             return NULL;
