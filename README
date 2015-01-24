@@ -3,17 +3,27 @@
 	Shanghai Jiao Tong University
 	email: acmgokun@gmail.com
 
+	Hakan Erdogan
+	MERL, Sabanci University
+	email: haerdogan@sabanciuniv.edu
+
 == Preeliminaries ==
-To build the cpu version, you have to install intel mkl blas library first:
-	https://software.intel.com/en-us/intel-mkl
-You can modify variable MKL_PATH in makefile.cpu to change your mkl path.
+To build the cpu version, you have to install intel MKL blas library or ACML library first. Note that ACML is free, where MKL may not be.
+
+for MKL:
+1. Download from https://software.intel.com/en-us/intel-mkl
+2. You can modify variable MKL_PATH in makefile.cpu to change your mkl path.
 Then add ${MKL_PATH}/mkl/lib/intel64, ${MKL_PATH}/mkl/lib/mic, ${MKL_PATH}/compiler/lib/intel64. ${MKL_PATH}/compiler/lib/mic to your ${LD_LIBRARY_PATH} to make sure the program links the library correctly.
+
+for ACML:
+1. Download from http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/
+2. Modify ACML_PATH in the makefile.cpu and makefile.gpu to provide your ACML library path.
+You need to add ${ACML_PATH}/lib to your ${LD_LIBRARY_PATH}.
 
 To build the gpu version, you have to install NIVIDIA CUDA first
 You can modify the path CUDA_PATH in makefile.cpu to change your cuda path
 We use cuda-6.5 as default.
 Then add ${CUDA_PATH}/lib, ${CUDA_PATH}/lib64 to your ${LD_LIBRARY_PATH} to make sure the program links to the library correctly.
-
 
 == Build ==
 To build the cpu version, run
