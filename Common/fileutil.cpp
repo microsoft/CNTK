@@ -460,7 +460,22 @@ void fputstring (FILE * f, const std::string & str)
 
 void fputstring (FILE * f, const wchar_t * str)
 {
-    fwriteOrDie ((void *) str, sizeof (*str), wcsnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+    if (sizeof (*str) == 2)
+    {
+        fwriteOrDie ((void *) str, sizeof (*str), wcsnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+    } else if (sizeof (*str) == 4)
+    {
+        char16_t str16[wcsnlen(str, SIZE_MAX)+1];
+        for (int i = 0; i < wcsnlen(str, SIZE_MAX); i++)
+        {
+            str16[i] = (char16_t) str[i];
+        }
+        str16[wcsnlen(str, SIZE_MAX)] = 0;
+        fwriteOrDie ((void *) str16, sizeof (*str)/2, wcsnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+    } else
+    {
+        RuntimeError("error: unknown encoding\n");
+    }
 }
 
 void fputstring (FILE * f, const std::wstring & str)
