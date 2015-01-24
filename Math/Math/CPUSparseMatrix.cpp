@@ -403,10 +403,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (lhs.IsEmpty() || rhs.IsEmpty())
             throw std::logic_error("LeftMultiplyAndAdd:  one of the input matrix is empty.");
 
-        int m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
-        int k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
-        int l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
-        int n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
+        size_t m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
+        size_t k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
+        size_t l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
+        size_t n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
 
         assert (m>0 && k>0 && l>0 && n>0); m; n;  //converting from size_t to int may cause overflow
         assert (k == l);
