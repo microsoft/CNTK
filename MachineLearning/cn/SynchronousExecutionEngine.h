@@ -228,7 +228,7 @@ public:
                 nodePtr = m_net.CreateLearnableParameter(name, rows, cols);
                 nodePtr->NeedGradient() = false;
             }
-            else if (pass == ndlPassFinal)
+            else if (pass == ndlPassFinal || nodePtr->FunctionValues().GetNumElements() != 0)
             {
                 ElemType val = parameter[0]->GetScalar();
                 nodePtr->FunctionValues().SetValue(val);
