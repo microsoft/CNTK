@@ -1169,4 +1169,10 @@ void __stdcall PTaskGraphBuilder<ElemType>::ApplicationContextCallback(
 template class PTaskGraphBuilder<float>;
 template class PTaskGraphBuilder<double>;
 
+template class TaskDescriptor<float>;
+template class TaskDescriptor<double>;
+
+template ParamData<float>* TaskDescriptor<float>::GradientParam(int, UINT,float);
+template ParamData<double>* TaskDescriptor<double>::GradientParam(int,UINT,double);
+
 }}}
