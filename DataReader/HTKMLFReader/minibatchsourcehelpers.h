@@ -135,6 +135,14 @@ template<class INMATRIX, class OUTMATRIX> static void augmentneighbors (const IN
     augmentneighbors (frames, boundaryflags, t, v_j);
 }
 
+// augment neighbor frames for one frame t in frames[] according to boundaryflags[]; result returned in column j of v
+template<class INMATRIX, class OUTMATRIX> static void augmentneighbors(const INMATRIX & frames, const std::vector<char> & boundaryflags, size_t t, size_t leftextent, size_t rightextent,
+    OUTMATRIX & v, size_t j)
+{
+    auto v_j = v.col(j); // the vector to fill in
+    augmentneighbors(frames, boundaryflags, t, leftextent, rightextent, v_j);
+}
+
 // augment neighbor frames for a sequence of frames (part of an utterance, possibly spanning across boundaries)
 template<class MATRIX> static void augmentneighbors (const std::vector<std::vector<float>> & frames, const std::vector<char> & boundaryflags,
                                                      size_t ts, size_t te,  // range [ts,te)
@@ -144,6 +152,19 @@ template<class MATRIX> static void augmentneighbors (const std::vector<std::vect
     {
         auto v_t = v.col(t-ts); // the vector to fill in
         augmentneighbors (frames, boundaryflags, t, v_t);
+    }
+}
+
+
+// augment neighbor frames for a sequence of frames (part of an utterance, possibly spanning across boundaries)
+template<class MATRIX> static void augmentneighbors(const std::vector<std::vector<float>> & frames, const std::vector<char> & boundaryflags, size_t leftextent, size_t rightextent,
+    size_t ts, size_t te,  // range [ts,te)
+    MATRIX & v)
+{
+    for (size_t t = ts; t < te; t++)
+    {
+        auto v_t = v.col(t - ts); // the vector to fill in
+        augmentneighbors(frames, boundaryflags, t, leftextent, rightextent, v_t);
     }
 }
 

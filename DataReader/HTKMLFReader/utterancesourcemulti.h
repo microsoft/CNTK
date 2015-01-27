@@ -25,6 +25,8 @@ class minibatchutterancesourcemulti : public minibatchsource
 {
     void operator=(const minibatchutterancesourcemulti & other); // non-assignable
     std::vector<size_t> vdim;                    // feature dimension after augmenting neighhors
+    std::vector<size_t> leftcontext;                // number of frames to the left of the target frame in the context window
+    std::vector<size_t> rightcontext;               // number of frames to the right of the target frame in the context window
     std::vector<unsigned int> sampperiod;        // (for reference and to check against model)
     std::vector<string> featkind;
     std::vector<size_t> featdim;
@@ -283,9 +285,9 @@ public:
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     // This mode requires utterances with time stamps.
     minibatchutterancesourcemulti (const std::vector<std::vector<wstring>> & infiles, const std::vector<map<wstring,std::vector<msra::asr::htkmlfentry>>> & labels,
-                              std::vector<size_t> vdim, std::vector<size_t> udim, size_t randomizationrange,
+                              std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                               const latticesource & lattices, const map<wstring,msra::lattices::lattice::htkmlfwordsequence> & allwordtranscripts, const bool framemode)
-        : vdim (vdim), sampperiod (0), featdim (0), randomizationrange (randomizationrange), currentsweep (SIZE_MAX),
+        : vdim (vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod (0), featdim (0), randomizationrange (randomizationrange), currentsweep (SIZE_MAX),
           lattices (lattices), allwordtranscripts (allwordtranscripts), framemode (framemode), chunksinram (0), timegetbatch (0), verbosity(2)    
         // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
         // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
@@ -1046,7 +1048,19 @@ public:
                     // copy the frames and class labels
                     for (size_t t = 0; t < n; t++)          // t = time index into source utterance
                     {
-                        augmentneighbors (uttframevectors, noboundaryflags, t, feat[i], t + tspos);
+                        size_t leftextent, rightextent;
+                        // page in the needed range of frames
+                        if (leftcontext[i] == 0 && rightcontext[i] == 0)
+                        {
+                            leftextent = rightextent = augmentationextent(uttframevectors[t].size(), vdim[i]);
+                        }
+                        else
+                        {
+                            leftextent = leftcontext[i];
+                            rightextent = rightcontext[i];
+                        }
+                        augmentneighbors(uttframevectors, noboundaryflags, t, leftextent, rightextent, feat[i], t + tspos);
+                        //augmentneighbors(uttframevectors, noboundaryflags, t, feat[i], t + tspos);
                     }
 
                     // copy the frames and class labels
@@ -1147,8 +1161,22 @@ public:
 
                     // copy frame and class labels
                     const size_t t = frameref.frameindex;
-                    augmentneighbors (uttframevectors, noboundaryflags, t, feat[i], j);
-                    if (issupervised() && i==0)
+                    
+                    size_t leftextent, rightextent;
+                    // page in the needed range of frames
+                    if (leftcontext[i] == 0 && rightcontext[i] == 0)
+                    {
+                        leftextent = rightextent = augmentationextent(uttframevectors[t].size(), vdim[i]);
+                    }
+                    else
+                    {
+                        leftextent = leftcontext[i];
+                        rightextent = rightcontext[i];
+                    }
+                    augmentneighbors(uttframevectors, noboundaryflags, t, leftextent, rightextent, feat[i], j);
+                    
+                    //augmentneighbors(uttframevectors, noboundaryflags, t, feat[i], j);
+                    if (issupervised() && i == 0)
                     {
                         auto frameclassids = getclassids(frameref);
                         foreach_index(k, uids)

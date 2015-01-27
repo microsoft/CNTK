@@ -25,6 +25,8 @@ class minibatchutterancesource : public minibatchsource
 {
     void operator=(const minibatchutterancesource & other); // non-assignable
     size_t vdim;                    // feature dimension after augmenting neighhors
+    size_t leftcontext;
+    size_t rightcontext;
     unsigned int sampperiod;        // (for reference and to check against model)
     string featkind;
     size_t featdim;
@@ -270,8 +272,8 @@ public:
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     // This mode requires utterances with time stamps.
     minibatchutterancesource (const std::vector<wstring> & infiles, const map<wstring,std::vector<msra::asr::htkmlfentry>> & labels,
-                              size_t vdim, size_t udim, size_t randomizationrange, const latticesource & lattices, const map<wstring,msra::lattices::lattice::htkmlfwordsequence> & allwordtranscripts, const bool framemode)
-        : vdim (vdim), sampperiod (0), featdim (0), randomizationrange (randomizationrange), currentsweep (SIZE_MAX),
+                              size_t vdim, size_t udim, size_t leftcontext, size_t rightcontext, size_t randomizationrange, const latticesource & lattices, const map<wstring,msra::lattices::lattice::htkmlfwordsequence> & allwordtranscripts, const bool framemode)
+        : vdim (vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod (0), featdim (0), randomizationrange (randomizationrange), currentsweep (SIZE_MAX),
           lattices (lattices), allwordtranscripts (allwordtranscripts), framemode (framemode), chunksinram (0), timegetbatch (0), verbosity(2)    
         // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
         // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
@@ -868,8 +870,20 @@ public:
                 matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                 const size_t n = uttframevectors.size();
                 assert (n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes (uttref.utteranceindex) == n);
-
+                /*
                 // copy the frames and class labels
+                size_t leftextent, rightextent;
+                // page in the needed range of frames
+                if (leftcontext == 0 && rightcontext == 0)
+                {
+                    leftextent = rightextent = augmentationextent(feat.col(0).size(), vdim);
+                }
+                else
+                {
+                    leftextent = leftcontext;
+                    rightextent = rightcontext;
+                }
+                */
                 auto uttclassids = getclassids (uttref);
                 for (size_t t = 0; t < n; t++)          // t = time index into source utterance
                 {
@@ -943,6 +957,19 @@ public:
 
                 // copy frame and class labels
                 const size_t t = frameref.frameindex;
+                /*
+                size_t leftextent, rightextent;
+                // page in the needed range of frames
+                if (leftcontext == 0 && rightcontext == 0)
+                {
+                    leftextent = rightextent = augmentationextent(feat.col(0).size(), vdim);
+                }
+                else
+                {
+                    leftextent = leftcontext;
+                    rightextent = rightcontext;
+                }
+                */
                 augmentneighbors (uttframevectors, noboundaryflags, t, feat, j);
                 if (issupervised())
                     uids[j] = getclassids (frameref)[t];
