@@ -28,11 +28,11 @@
 CC = g++
 ARCH = x86_64
 DEVICE = cpu
-BUILDTYPE = debug
-#BUILDTYPE = release
+#BUILDTYPE = debug
+BUILDTYPE = release
 # comment following and uncomment the next one to enable MKL library
-MATHLIB = acml
-#MATHLIB = mkl
+#MATHLIB = acml
+MATHLIB = mkl
 # modify relevant path below for your system
 MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
 ACML_PATH = /usr/local/acml5.3.0/gfortran64
@@ -46,7 +46,7 @@ BINDIR = bin/$(BUILDFOR)
 ifeq ($(BUILDTYPE),debug)
 	BUILDTYPE_OPT = -g
 else
-	BUILDTYPE_OPT = -O4
+	BUILDTYPE_OPT = -O3
 endif
 
 ifeq ($(MATHLIB),mkl)
