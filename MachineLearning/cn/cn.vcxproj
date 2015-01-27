@@ -216,6 +216,7 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\nvml.h" />
+    <ClInclude Include="..\..\Common\TimerUtility.h" />
     <ClInclude Include="CompositeComputationNode.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkHelper.h" />
@@ -249,6 +250,7 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="cn.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />

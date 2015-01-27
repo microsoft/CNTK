@@ -17,6 +17,7 @@
 #include "commandArgUtil.h"
 #include <chrono> 
 #include <random>
+#include "TimerUtility.h"
 
 #ifdef MPI_SUPPORT
 #include "mpi.h"
@@ -557,7 +558,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = int(startEpoch); i < int(m_maxEpochs); i++)
             {
-                auto t_start_epoch = clock();
+                auto t_start_epoch = Timer::MilliSecondElapsed();
 
                 // set other information to inputMatrices that can contrain information
                 // used for class-based LM for clustring information
@@ -604,8 +605,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
                     epochCriterion, epochEvalErrors, totalSamplesSeen);
 
-                auto t_end_epoch = clock();
-                ElemType epochTime = ElemType(1.0)*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
+                auto t_end_epoch = Timer::MilliSecondElapsed();
+                ElemType epochTime = (t_end_epoch - t_start_epoch) / ElemType(MS_PER_SEC);
 
                 fprintf(stderr, "Finished Epoch[%d]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
                 if (epochEvalErrors.size() == 1)
@@ -983,8 +984,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<ElemType> epochEvalErrorsLastMBs(epochEvalErrors.size(),0);
             PTaskGraphBuilder<ElemType>* ptaskGraphBuilder = NULL;
             
-            clock_t startReadMBTime = 0, startComputeMBTime=0;
-            clock_t endReadMBTime=0, endComputeMBTime=0; 
+            unsigned long long startReadMBTime = 0, startComputeMBTime=0;
+            unsigned long long  endReadMBTime = 0, endComputeMBTime = 0;
 
             //initialize statistics
             size_t totalEpochSamples = 0;
@@ -1027,14 +1028,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
             
-            startReadMBTime=clock();
+            startReadMBTime=Timer::MilliSecondElapsed();
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
 #ifdef MPI_SUPPORT
                 DecimateMinibatch(inputMatrices);
 #endif
-                endReadMBTime=clock();
-                startComputeMBTime=clock();
+                endReadMBTime=Timer::MilliSecondElapsed();
+                startComputeMBTime=Timer::MilliSecondElapsed();
 
                 UpdateEvalTimeStamps(FeatureNodes);
                 UpdateEvalTimeStamps(labelNodes);
@@ -1113,12 +1114,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 
-                endComputeMBTime=clock();
+                endComputeMBTime=Timer::MilliSecondElapsed();
                 numMBsRun ++;
                 if (m_traceLevel > 0)
                 {
-                    ElemType MBReadTime = (ElemType)(endReadMBTime-startReadMBTime)/(CLOCKS_PER_SEC);
-                    ElemType MBComputeTime = (ElemType)(endComputeMBTime-startComputeMBTime)/CLOCKS_PER_SEC;
+                    ElemType MBReadTime = (ElemType)(endReadMBTime-startReadMBTime)/(MS_PER_SEC);
+                    ElemType MBComputeTime = (ElemType)(endComputeMBTime-startComputeMBTime)/MS_PER_SEC;
 
                     readTimeInMBs += MBReadTime;
                     ComputeTimeInMBs += MBComputeTime;
@@ -1149,7 +1150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
                     }
                 }
-                startReadMBTime=clock();
+                startReadMBTime=Timer::MilliSecondElapsed();
                 totalEpochSamples += actualMBSize;
                 totalSamplesSeen += actualMBSize;
 
