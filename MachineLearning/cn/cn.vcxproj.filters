@@ -43,6 +43,9 @@
     <ClCompile Include="NetworkDescriptionLanguage.cpp">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\TimerUtility.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -137,6 +140,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\hostname.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\TimerUtility.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
