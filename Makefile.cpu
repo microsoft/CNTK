@@ -31,8 +31,8 @@ DEVICE = cpu
 #BUILDTYPE = debug
 BUILDTYPE = release
 # comment following and uncomment the next one to enable MKL library
-#MATHLIB = acml
-MATHLIB = mkl
+MATHLIB = acml
+#MATHLIB = mkl
 # modify relevant path below for your system
 MKL_PATH = /opt/intel/composer_xe_2013_sp1.0.080
 ACML_PATH = /usr/local/acml5.3.0/gfortran64
@@ -46,7 +46,7 @@ BINDIR = bin/$(BUILDFOR)
 ifeq ($(BUILDTYPE),debug)
 	BUILDTYPE_OPT = -g
 else
-	BUILDTYPE_OPT = -O3
+	BUILDTYPE_OPT = -O4
 endif
 
 ifeq ($(MATHLIB),mkl)
@@ -69,8 +69,8 @@ MATH_SRC = Math/Math/Matrix.cpp Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatri
 CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
           MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
           MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
-BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
-HTKMLFREADER_SRC = #DataReader/HTKMLFReader/HTKMLFWriter.cpp DataReader/HTKMLFReader/latticearchive.cpp DataReader/HTKMLFReader/HTKMLFReader.cpp
+BINARYREADER_SRC = DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
+HTKMLFREADER_SRC = DataReader/HTKMLFReader/HTKMLFWriter.cpp DataReader/HTKMLFReader/latticearchive.cpp DataReader/HTKMLFReader/HTKMLFReader.cpp
 SEQUENCEREADER_SRC = DataReader/SequenceReader/SequenceReader.cpp DataReader/SequenceReader/SequenceParser.cpp DataReader/SequenceReader/Exports.cpp
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
 UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
@@ -84,11 +84,14 @@ OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SRC))
 CORE_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CORE_SRC))
 UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
 LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
+HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
+BINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARYREADER_SRC))
 SEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SEQUENCEREADER_SRC))
 DEP := $(patsubst %.o, %.d, $(OBJ))
 
 SEPARATOR = "=-----------------------------------------------------------="
 
+#all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/BinaryReader.so
 all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so
 	ln -sf $(CURDIR)/$(BINDIR)/* bin
 	
@@ -104,11 +107,13 @@ $(BINDIR)/LUSequenceReader.so: $(LUSEQUENCEREADER_OBJ) $(CORE_OBJ)
 	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
-#HTKMLFReader: ${HTKMLFREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
-#	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
+$(BINDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
-#BinaryReader: ${BINARYREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
-#	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
+$(BINDIR)/BinaryReader.so: $(BINARYREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
 $(BINDIR)/cn.exe: $(CORE_OBJ)
 	@echo $(SEPARATOR)
