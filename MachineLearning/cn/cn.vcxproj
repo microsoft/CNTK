@@ -216,7 +216,7 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\nvml.h" />
-    <ClInclude Include="..\..\Common\TimerUtility.h" />
+    <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="CompositeComputationNode.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkHelper.h" />
