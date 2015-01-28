@@ -3111,6 +3111,9 @@ protected:  \
             inputGradientValues.Print("child Gradient-in/out");
             inputFunctionValues.Print("child Function values");
 #endif
+            //currently we only support one combination when the input is sparse.
+            if (inputFunctionValues.GetMatrixType() == SPARSE && inputGradientValues.GetMatrixType() == DENSE && gradientValues.GetMatrixType() == DENSE)
+                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol);
 
                 Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, inputFunctionValues, true, inputGradientValues);
 #if DUMPOUTPUT
