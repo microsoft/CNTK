@@ -141,8 +141,8 @@
     <ClInclude Include="..\..\Common\Include\hostname.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\TimerUtility.h">
-      <Filter>Common</Filter>
+    <ClInclude Include="..\..\Common\Include\TimerUtility.h">
+      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
