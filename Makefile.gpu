@@ -73,7 +73,7 @@ CFLAGS = -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN
 NVCCFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -arch=compute_20
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
-             Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp
+             Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp Common/TimerUtility.cpp
 MATH_SRC = Math/Math/Matrix.cpp Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKernels.cu Math/Math/GPUSparseMatrix.cu Math/Math/GPUWatcher.cu \
 		   Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp #Math/Math/InstantiateTemplates.cu
 CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
