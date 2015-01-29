@@ -64,7 +64,8 @@ INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(MATHLIB_INC
 CFLAGS = -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(MATHLIB_DEFINE) -fopenmp -fpermissive -fPIC
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
-             Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp
+             Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp  Common/TimerUtility.cpp
+
 MATH_SRC = Math/Math/Matrix.cpp Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp Math/Math/NoGPU.cpp
 CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
           MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
