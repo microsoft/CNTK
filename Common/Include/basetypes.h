@@ -95,6 +95,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
+typedef unsigned char byte;
 #endif
 
 using namespace std;
