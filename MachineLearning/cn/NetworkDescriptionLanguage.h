@@ -257,7 +257,12 @@ public:
             bool optParam = param->GetType() == ndlTypeOptionalParameter;
             if (optParam && !_stricmp(param->GetName().c_str(), name.c_str()))
             {
-                return param->GetValue();
+                auto paramValue = param->GetValue();
+                auto resolveParamNode = m_parent->ParseVariable(paramValue, false);
+                if (resolveParamNode != nullptr)
+                    return resolveParamNode->GetScalar();
+                else
+                    return paramValue;
             }
         }
         return ConfigValue(deflt);
