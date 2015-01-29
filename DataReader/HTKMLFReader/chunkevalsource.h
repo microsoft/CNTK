@@ -269,6 +269,8 @@ namespace msra { namespace dbn {
         std::vector<size_t> numFrames;          // [k] number of frames for all appended files
         std::vector<std::vector<unsigned int>> sampPeriods;  // [k] and sample periods (they should really all be the same...)
         std::vector<size_t> vdims; // input dimension
+        std::vector<size_t> leftcontext;
+        std::vector<size_t> rightcontext;
         bool minibatchReady;
         size_t minibatchSize;
         size_t frameIndex;
@@ -290,7 +292,7 @@ namespace msra { namespace dbn {
         }
 
     public:
-        FileEvalSource (std::vector<size_t> vdims, size_t chunksize):vdims(vdims),chunksize(chunksize)
+        FileEvalSource(std::vector<size_t> vdims, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t chunksize) :vdims(vdims), leftcontext(leftcontext), rightcontext(rightcontext), chunksize(chunksize)
         {     
             foreach_index(i, vdims)
             {
@@ -336,7 +338,8 @@ namespace msra { namespace dbn {
                 const size_t framesInBlock = framesMulti[i].size();
                 feat[i].resize(vdims[i], framesInBlock);   // input features for whole utt (col vectors)
                 // augment the features
-                msra::dbn::augmentneighbors (framesMulti[i], boundaryFlags, 0, framesInBlock, feat[i]);
+                //msra::dbn::augmentneighbors(framesMulti[i], boundaryFlags, 0, leftcontext[i], rightcontext[i],)
+                msra::dbn::augmentneighbors (framesMulti[i], boundaryFlags, leftcontext[i], rightcontext[i], 0, framesInBlock, feat[i]);
             }
             minibatchReady=true;
         }
