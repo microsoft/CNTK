@@ -1061,7 +1061,9 @@ public:
         // create a variable of each type just to call the proper templated version
         return GetProcAddress(m_hModule, proc.c_str());
     }
-    ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
+    ~Plugin(){} 
+    // removed because this causes the exception messages to be lost  (exception vftables are unloaded when DLL is unloaded) 
+    // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
 };
 #else
 class Plugin

@@ -228,7 +228,7 @@ public:
                 nodePtr = m_net.CreateLearnableParameter(name, rows, cols);
                 nodePtr->NeedGradient() = false;
             }
-            else if (pass == ndlPassFinal)
+            else if (pass == ndlPassFinal || nodePtr->FunctionValues().GetNumElements() != 0)
             {
                 ElemType val = parameter[0]->GetScalar();
                 nodePtr->FunctionValues().SetValue(val);
@@ -549,7 +549,7 @@ public:
                 std::string name = nodeResolve->GetName();
                 // we need to start from the parent script, because that is the namespace of the parameter being passed in
                 NDLScript<ElemType>* parentScript = nodeResolve->GetParentScript();
-                nodeResolve = parentScript->FindSymbol(name, true);
+                nodeResolve = parentScript->FindSymbol(name);
 
                 // if we still didn't get a value
                 if (nodeResolve == nullptr || nodeResolve->GetEvalValue() == nullptr)
