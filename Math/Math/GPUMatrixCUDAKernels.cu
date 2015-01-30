@@ -2312,11 +2312,13 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
 
 // backward pass from hidden layer to feature weight
 template<class ElemType>
-__global__ void _denseMulSparseToSparse(    
+__global__ void _denseMulSparseCSCTransposeToSparseBlockCol(    
+	ElemType alpha,
     ElemType* lhs,
     size_t nrs,
+	ElemType* rhsNZValues,
     const GPUSPARSE_INDEX_TYPE* row,
-    const GPUSPARSE_INDEX_TYPE* rowIdx,
+    const size_t* rowIdx,
     ElemType* blockVal,
     size_t* blockIds)
 {
@@ -2331,7 +2333,7 @@ __global__ void _denseMulSparseToSparse(
 
     for(int h = pStart; h < pEnd; h++) 
     {        
-        ElemType temp = lhs[IDX2C(h, j, nrs)];    
+        ElemType temp = alpha*lhs[IDX2C(h, j, nrs)]*rhsNZValues[p];    
         atomicAdd(&blockVal[ii*nrs+h], temp);
         blockIds[ii] = i;
     }

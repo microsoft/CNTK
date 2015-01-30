@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static int GetBestGPUDeviceId();  
         int GetComputeDeviceId() const;
-        void PrepareDevice(DEVICEID_TYPE deviceId=-1) const;
+        DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
         static cublasHandle_t GetCublasHandle(int computeDevice=-1);
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
@@ -365,10 +365,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             stream << s << format;
 
             stream<<us.m_numRows<<us.m_numCols;
-            ElemType *m_pArray = us.CopyToArray();
+            ElemType *pArray = us.CopyToArray();
             for (size_t i=0;i<us.GetNumElements();++i) 
-                stream<<m_pArray[i];
-            delete[] m_pArray;
+                stream<<pArray[i];
+            delete[] pArray;
             stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
             return stream;
         }

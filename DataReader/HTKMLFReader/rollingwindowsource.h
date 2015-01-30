@@ -480,7 +480,9 @@ namespace msra { namespace dbn {
     // ---------------------------------------------------------------------------
     class minibatchframesourcemulti : public minibatchsource
     {
-        std::vector<size_t> vdim;                        // feature dimension after augmenting neighhors (0: don't read features)
+        std::vector<size_t> vdim;                       // feature dimension after augmenting neighhors (0: don't read features)
+        std::vector<size_t> leftcontext;                // number of frames to the left of the target frame in the context window
+        std::vector<size_t> rightcontext;               // number of frames to the right of the target frame in the context window
         unsigned int sampperiod;            // (for reference and to check against model)
         string featkind;
         size_t featdim;
@@ -499,8 +501,8 @@ namespace msra { namespace dbn {
         // constructor
         // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
         minibatchframesourcemulti (const std::vector<std::vector<wstring>> & infiles, const std::vector<map<std::wstring,std::vector<msra::asr::htkmlfentry>>> & labels,
-            std::vector<size_t> vdim, std::vector<size_t> udim, size_t randomizationrange, const std::vector<wstring> & pagepath, const bool mayhavenoframe=false, int addEnergy=0)
-            : vdim (vdim), sampperiod (0), featdim (0), numframes (0), timegetbatch (0), verbosity(2), maxvdim(0)
+            std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange, const std::vector<wstring> & pagepath, const bool mayhavenoframe=false, int addEnergy=0)
+            : vdim (vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod (0), featdim (0), numframes (0), timegetbatch (0), verbosity(2), maxvdim(0)
         {
 
             if (vdim[0] == 0 && labels.empty())
@@ -749,9 +751,18 @@ namespace msra { namespace dbn {
             uids.resize(classids.size());
             foreach_index(i, feat)
             {
+                size_t leftextent, rightextent;
                 // page in the needed range of frames
-                const size_t extent = augmentationextent (pframes[i]->dim(), vdim[i]);
-                readfromdisk = pframes[i]->require (randomordering.bounds (max (ts, extent) - extent, te + 1 + extent));
+                if (leftcontext[i] == 0 && rightcontext[i] == 0)
+                {
+                    leftextent = rightextent = augmentationextent(pframes[i]->dim(), vdim[i]);
+                }
+                else
+                {
+                    leftextent = leftcontext[i];
+                    rightextent = rightcontext[i];
+                }
+                readfromdisk = pframes[i]->require (randomordering.bounds (max (ts, leftextent) - leftextent, te + 1 + rightextent));
                 // generate features and uids
                 feat[i].resize (vdim[i], te - ts);    // note: special mode vdim == 0 means no features to be loaded
                 if (issupervised())             // empty means unsupervised training -> return empty uids
@@ -766,7 +777,7 @@ namespace msra { namespace dbn {
                     if (vdim[i] != 0)
                     {
                         auto v_t = feat[i].col(t-ts); // the vector to fill in
-                        augmentneighbors (*pframes[i], boundaryflags, trand, v_t);
+                        augmentneighbors (*pframes[i], boundaryflags, trand, leftextent, rightextent, v_t);
                     }
                     if (i==0){ // read labels for all outputs on first pass thru features. this guarantees they will be read if only one feature set but > 1 label set
                         if (issupervised())
