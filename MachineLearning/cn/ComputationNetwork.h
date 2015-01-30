@@ -723,6 +723,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new SigmoidNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TanhNode<ElemType>::TypeName())
                 newNode = new TanhNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == ExpNode<ElemType>::TypeName())
+                newNode = new ExpNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == LogNode<ElemType>::TypeName())
                 newNode = new LogNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CosineNode<ElemType>::TypeName())
@@ -811,10 +813,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        //sparse matrix size is optionally specified
-        ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols, const size_t size = 0)
+        ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
         {
-            ComputationNodePtr newNode(new SparseInputValue<ElemType>(rows, cols, size, m_deviceId, inputName));
+            ComputationNodePtr newNode(new SparseInputValue<ElemType>(rows, cols, m_deviceId, inputName));
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -879,6 +880,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new SigmoidNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == TanhNode<ElemType>::TypeName())
                 newNode = new TanhNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == ExpNode<ElemType>::TypeName())
+                newNode = new ExpNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == LogNode<ElemType>::TypeName())
                 newNode = new LogNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CosineNode<ElemType>::TypeName())
@@ -1114,7 +1117,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"") 
+        ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new ExpNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new LogNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(a);
@@ -1844,6 +1855,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ClearCalcOrderCaches()
         {
+			for (std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>::iterator it = m_cacheEvalOrders.begin(); it != m_cacheEvalOrders.end(); ++it)
+			{
+				for (auto iter2 = m_cacheEvalOrders[it->first].begin(); iter2 != m_cacheEvalOrders[it->first].end(); iter2++)
+				{
+					(*iter2)->clearCache();
+				}
+			}
             m_cacheEvalOrders.clear();
             m_cacheGradientCalcOrders.clear();
         } 
@@ -2044,6 +2062,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void FormRecurentLoops(const ComputationNodePtr rootNode)
         {
             std::vector<ComputationNodePtr> sourceLoopNodes; 
+
             getStrongSCC(rootNode);
             std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode, sourceLoopNodes);
 			std::list<ComputationNodePtr> nodesForGrad;

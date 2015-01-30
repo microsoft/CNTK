@@ -127,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
         void SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
-        void SetMatrixFromLabelAndClass(size_t *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
+        void SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const ElemType val, size_t colInd);
         void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);

@@ -623,7 +623,6 @@ int wmain(int argc, wchar_t* argv[])
 {
     try
     {
-
 #ifdef MPI_SUPPORT
         {
             int rc;
@@ -716,7 +715,7 @@ int wmain(int argc, wchar_t* argv[])
         else
             RuntimeError("invalid precision specified: %s", type.c_str());
     }
-    catch(std::exception &err)
+    catch(const std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s", err.what());
 #ifdef _DEBUG
