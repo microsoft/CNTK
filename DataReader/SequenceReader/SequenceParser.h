@@ -15,7 +15,7 @@
 
 using namespace std;
 
-#define MAXSTRING 2048
+#define MAXSTRING 8192
 // UCI label location types
 enum LabelMode
 {
