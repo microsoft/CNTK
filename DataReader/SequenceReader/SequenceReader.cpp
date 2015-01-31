@@ -62,10 +62,7 @@ typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromL
     // not yet found, add to the map
     if (found == labelInfo.mapLabelToId.end())
     {
-        labelInfo.mapLabelToId[labelValue] = labelInfo.idMax;
-        labelInfo.mapIdToLabel[labelInfo.idMax] = labelValue;
-        found = labelInfo.mapLabelToId.find(labelValue);
-        labelInfo.idMax++;
+        RuntimeError("%s not in vocabulary", labelValue.c_str());
     }
     return found->second;
 }
