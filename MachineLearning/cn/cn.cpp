@@ -666,6 +666,8 @@ int wmain(int argc, wchar_t* argv[])
 
         // get the command param set they want
         wstring logpath = config("stderr", L"");
+		//  [1/26/2015 erw, add done file so that it can be used on HPC]
+		wstring DoneFile = config("DoneFile", L"");
         ConfigArray command = config("command", "train");
 
         if (logpath != L"")
@@ -741,9 +743,16 @@ int wmain(int argc, wchar_t* argv[])
             DoCommand<double>(config);
         else
             RuntimeError("invalid precision specified: %s", type.c_str());
-    }
-    catch(const std::exception &err)
-    {
+
+		// still here , write a DoneFile if necessary 
+		if (!DoneFile.empty()){
+			FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
+			fprintf(fp, "successfully finished at %s on %s\n",  TimeDateStamp().c_str(),GetHostName().c_str());
+			fcloseOrDie(fp);
+		}
+	}
+	catch (const std::exception &err)
+	{
         fprintf(stderr, "EXCEPTION occurred: %s", err.what());
 #ifdef _DEBUG
         DebugBreak();
