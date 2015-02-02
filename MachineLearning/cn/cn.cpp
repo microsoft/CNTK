@@ -28,6 +28,7 @@
 #include "io.h"
 #endif
 #include "hostname.h"
+#include "buildinfo.h"
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection
 #endif
@@ -619,8 +620,26 @@ int MPIAPI MPI_Init(_In_opt_ int *argc, _Inout_count_(*argc) wchar_t*** argv)
 }
 #endif
 
+void PrintBuiltInfo()
+{
+	fprintf(stderr, "-------------------------------------------------------------------\n");
+	fprintf(stderr, "Build info: \n\n");
+	fprintf(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+	fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+	fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+	fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+#ifdef _GIT_EXIST
+	fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+	fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+#endif
+	fprintf(stderr, "-------------------------------------------------------------------\n");
+
+}
+
+
 int wmain(int argc, wchar_t* argv[])
 {
+
     try
     {
 #ifdef MPI_SUPPORT
@@ -669,6 +688,10 @@ int wmain(int argc, wchar_t* argv[])
 			printf("INFO: in debug mode, do not redirect output\n");
 #endif
         }
+
+
+		PrintBuiltInfo();
+
 
         std::string timestamp = TimeDateStamp();
 

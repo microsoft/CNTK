@@ -160,3 +160,9 @@ $RECYCLE.BIN/
 *.lyx~
 *.bak
 *.lyx#
+
+# =========================
+# prebuild file 
+# =========================
+MachineLearning/cn/buildinfo.h
+

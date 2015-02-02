@@ -139,6 +139,9 @@
       <TreatOutputAsContent>true</TreatOutputAsContent>
       <Message>Copy content files to target directory</Message>
     </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>prebuild.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -199,6 +202,9 @@
       <Message>
       </Message>
     </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>prebuild.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="DefaultMacros.txt" />
