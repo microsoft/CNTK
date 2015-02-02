@@ -534,13 +534,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool CPUSparseMatrix<ElemType>::AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold)
     {
         if (a.IsEmpty() || b.IsEmpty())
-        throw std::logic_error("AreEqual: one of the input matrices is empty.");
+            throw std::logic_error("AreEqual: one of the input matrices is empty.");
 
         if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
-        return false;
+            return false;
 
         bool result = true;
-        #pragma omp parallel for
+
+//#pragma omp parallel for
         foreach_coord(i, j, a)
         {
             if (abs(a(i, j) - b(i, j)) > threshold)
