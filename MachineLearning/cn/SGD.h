@@ -581,7 +581,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
                 //learning rate adjustment
-			
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
                 {
                     learnRatePerSample = m_learningRatesPerSample[i];
@@ -613,8 +612,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 #ifdef MPI_SUPPORT
-                INT32 mySamples = (INT32)
+				INT32 mySamples = (INT32)
 #endif
+					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", (int)startEpoch,  learnRatePerSample, m_momentumPerMB);
                 TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample, FeatureNodes, labelNodes,
                     criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
                     epochCriterion, epochEvalErrors, totalSamplesSeen);
