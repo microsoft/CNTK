@@ -920,6 +920,7 @@ private:
             {
                 auto & chunk = randomizedchunks[m][chunkindex];
                 auto & chunkdata = chunk.getchunkdata();
+				if (verbosity)
                 fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
