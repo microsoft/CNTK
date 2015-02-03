@@ -768,6 +768,7 @@ private:
         if (chunkdata.isinram())
             return false;
 
+		if (verbosity)
         fprintf (stderr, "requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
         msra::util::attempt (5, [&]()   // (reading from network)
         {
@@ -858,6 +859,7 @@ public:
             transcripts.clear();
 
             // return these utterances
+			if (verbosity > 0)
             fprintf (stderr, "getbatch: getting utterances %d..%d (%d frames out of %d requested) in sweep %d\n", spos, epos -1, mbframes, framesrequested, sweep);
             size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
@@ -922,6 +924,7 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[lastchunk].windowend;
+			if (verbosity > 0)
             fprintf (stderr, "getbatch: getting randomized frames [%d..%d] (%d frames out of %d requested) in sweep %d; chunks [%d..%d] -> chunk window [%d..%d)\n",
                      globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
             // release all data outside, and page in all data inside

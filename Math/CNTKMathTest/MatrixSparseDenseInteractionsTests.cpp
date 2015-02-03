@@ -78,6 +78,53 @@ namespace CNTKMathTest
             Assert::IsTrue(C1.IsEqualTo(C,0.00005)); //Seems like bad precision
         }
 
+        TEST_METHOD(CPUMatrixDenseTimesSparse)
+        {
+            Matrix<float> Ad(CPUDEVICE);
+            Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(1024, 2048, -3, 0.1, 0), 0);
+            Matrix<float> As(Ad);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC);
+
+            Matrix<float> B = Matrix<float>::RandomGaussian(2048, 1024, 1, 4, USE_TIME_BASED_SEED, CPUDEVICE);
+            Matrix<float> C = Matrix<float>::RandomGaussian(2048, 2048, 1, 2, USE_TIME_BASED_SEED, CPUDEVICE);
+            Matrix<float> C1(C);
+
+            float alpha = 0.3, beta = 0;
+            bool transposeA = false, transposeB = false;
+            Matrix<float>::MultiplyAndWeightedAdd(alpha, B, transposeA, Ad, transposeB, beta, C);
+            Matrix<float>::MultiplyAndWeightedAdd(alpha, B, transposeA, As, transposeB, beta, C1);
+            Assert::IsTrue(C1.IsEqualTo(C, 0.0001));
+
+            alpha = 3.3, beta = 1.3;
+            Matrix<float>::MultiplyAndWeightedAdd(alpha, B, transposeA, Ad, transposeB, beta, C);
+            Matrix<float>::MultiplyAndWeightedAdd(alpha, B, transposeA, As, transposeB, beta, C1);
+
+            // TODO IsEqualTo NYI
+            // Assert::IsTrue(C1.IsEqualTo(C, 0.00005));
+        }
+        
+        TEST_METHOD(CPUMatrixDenseTimesSparseAsSparse)
+        {
+            Matrix<float> Ad(CPUDEVICE);
+            Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(2048, 1024, -3, 0.1, 0), 0);
+
+            Matrix<float> As(Ad);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC);
+
+            Matrix<float> B = Matrix<float>::RandomGaussian(2048, 1024, 1, 4, USE_TIME_BASED_SEED, CPUDEVICE);
+            Matrix<float> AsCsc = Matrix<float>::RandomGaussian(2048, 2048, 1, 2, USE_TIME_BASED_SEED, CPUDEVICE);
+            Matrix<float> AsBlock(CPUDEVICE);
+            AsBlock.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
+
+            float alpha = 0.3, beta = 0;
+            bool transposeA = false, transposeB = true;
+            Matrix<float>::MultiplyAndWeightedAdd(alpha, B, transposeA, As, transposeB, beta, AsBlock);
+            Matrix<float>::MultiplyAndWeightedAdd(alpha, B, transposeA, As, transposeB, beta, AsCsc);
+
+            // TODO IsEqualTo NYI
+            // Assert::IsTrue(AsBlock.IsEqualTo(AsCsc, 0.0001));
+        }
+
         TEST_METHOD(MatrixSparseTimesSparse)
         {
             Matrix<float> Ad;

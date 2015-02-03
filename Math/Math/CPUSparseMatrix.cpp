@@ -111,7 +111,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
             m_blockSize = 0;      
-            m_blockVal = NULL;
+            m_pArray = NULL;
             m_blockIds = NULL;
         }
     }
@@ -125,6 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("CPUSparseMatrix:  unsupported sparse matrix format");
         }
         m_format = format;
+        m_default = defaultElem();
         ZeroInit();
     }
 
@@ -160,8 +161,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }  
         else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
-            if(m_blockVal != NULL) 
-                delete[] m_blockVal;
+            if (m_pArray != NULL)
+                delete[] m_pArray;
             if(m_blockIds != NULL) 
                 delete[] m_blockIds;
         }
@@ -220,14 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType* CPUSparseMatrix<ElemType>::BufferPointer() const
     {
-        if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
-        {
-            return m_pArray;
-        }  
-        else
-        {
-            return m_blockVal;
-        }
+        return m_pArray;
     }
 
     template<class ElemType>
@@ -280,16 +274,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (keepExistingValues && m_elemSizeAllocated > 0)
                 {
                     assert(m_compIndexSize > 0 && m_elemSizeAllocated < numNZElemToReserve);
-                    memcpy(blockVal, m_blockVal, NzSize());
+                    memcpy(blockVal, m_pArray, NzSize());
                     memcpy(blockIds, m_blockIds, sizeof(size_t)*m_compIndexSize);
                 }
 
-                if (m_blockVal != NULL)
-                    delete[] m_blockVal;
+                if (m_pArray != NULL)
+                    delete[] m_pArray;
                 if(m_blockIds != NULL) 
                     delete[] m_blockIds;
 
-                m_blockVal = blockVal;
+                m_pArray = blockVal;
                 m_blockIds = blockIds;
             }
 
@@ -457,10 +451,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     { // h range over hidden layer 
                         if(first == true) 
                         {
-                            c.m_blockVal[pos] = alpha*lhs(h, j)*val;
+                            c.m_pArray[pos] = alpha*lhs(h, j)*val;
                         } else 
                         {
-                            c.m_blockVal[pos] += alpha*lhs(h, j)*val;
+                            c.m_pArray[pos] += alpha*lhs(h, j)*val;
                         }
                         pos++;
                     }
@@ -522,7 +516,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t start = j * len;
                 for(size_t p = start; p < start+len; p++) 
                 {
-                    ElemType val = lhs.m_blockVal[p];
+                    ElemType val = lhs.m_pArray[p];
 
                     size_t r = (lhs.m_format == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
                     size_t c = (lhs.m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
@@ -536,6 +530,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+
+    template<class ElemType>
+    bool CPUSparseMatrix<ElemType>::AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("AreEqual: one of the input matrices is empty.");
+
+        if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+            return false;
+
+        bool result = true;
+
+        #pragma omp parallel for
+        foreach_coord(i, j, a)
+        {
+            if (abs(a(i, j) - b(i, j)) > threshold)
+            {
+                result = false;
+                break;
+            }
+        }
+
+        return result;
+    }
 
     // a: H x No: H is hidden layer size and No is mini-batch size
     // weight: V x H, V is vocab size
@@ -698,11 +716,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 { // h range over hidden layer 
                     if(first == true) 
                     {
-                        grd.m_blockVal[pos] = input(h, j)*error.m_pArray[p];
+                        grd.m_pArray[pos] = input(h, j)*error.m_pArray[p];
                     } 
                     else 
                     {
-                        grd.m_blockVal[pos] += input(h, j)*error.m_pArray[p];
+                        grd.m_pArray[pos] += input(h, j)*error.m_pArray[p];
                     }
                     pos++;
                 }
@@ -735,11 +753,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t start = j* len;
                 for(size_t p = start; p < start+len; p++) 
                 {
-                    ElemType val = m_blockVal[p];
+                    ElemType val = m_pArray[p];
                     size_t row = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
                     c(row, col) = (1-momentum)*val + momentum*c(row, col);
-                    m_blockVal[p] = c(row, col);
+                    m_pArray[p] = c(row, col);
                 }
             }
         } 
@@ -790,14 +808,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t start = j* len;
                 for(size_t p = start; p < start+len; p++) 
                 {
-                    ElemType val = m_blockVal[p];
+                    ElemType val = m_pArray[p];
 
                     size_t row = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
                     ElemType adenorm = c(row, col); 
                     adenorm += val * val; 
                     val = val / (floor + sqrt(adenorm)); 
-                    m_blockVal[p] = val;
+                    m_pArray[p] = val;
                     c(row, col) = adenorm; 
                 }
             }
@@ -818,13 +836,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t start = j* len;
                 for (size_t p = start; p < start+len; p++)
                 {
-                    if (m_blockVal[p] > locThresholdPos)
+                    if (m_pArray[p] > locThresholdPos)
                     {
-                        m_blockVal[p] = locThresholdPos;
+                        m_pArray[p] = locThresholdPos;
                     }
-                    else if (m_blockVal[p] < locTHresholdNeg)
+                    else if (m_pArray[p] < locTHresholdNeg)
                     {
-                        m_blockVal[p] = locTHresholdNeg;
+                        m_pArray[p] = locTHresholdNeg;
                     }
                 }
             }
