@@ -49,17 +49,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_truncated = readerConfig("Truncated", "false");
         m_convertLabelsToTargets = false;
 
-        m_numberOfuttsPerMinibatch = readerConfig("nbruttsineachrecurrentiter", "1");
+        ConfigArray numberOfuttsPerMinibatchForAllEpochs = readerConfig("nbruttsineachrecurrentiter", "1");
+        m_numberOfuttsPerMinibatchForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
 
-        if (m_numberOfuttsPerMinibatch < 1)
+        for (int i = 0; i < m_numberOfuttsPerMinibatchForAllEpochs.size(); i++)
         {
-            LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
+            m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[i];
+            if (m_numberOfuttsPerMinibatch < 1)
+            {
+                LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
+            }
+
+            if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
+            {
+                LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.");
+            }
         }
 
-        if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
-        {
-            LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.");
-        }
+        m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[0];
 
         m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
         m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
@@ -263,6 +270,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
         std::string readMethod(readerConfig("readMethod","blockRandomize"));
+
+        if (readMethod == "blockRandomize" && randomize == randomizeNone)
+        {
+            fprintf(stderr, "WARNING: Randomize cannot be set to None when readMethod is set to blockRandomize. Change it Auto");
+            randomize = randomizeAuto;
+        }
 
         // see if they want to use readAhead
         m_readAhead = readerConfig("readAhead", "false");
@@ -562,6 +575,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void HTKMLFReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
     {
         m_mbSize = mbSize;
+
+        m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[epoch];
+
+        m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
+        m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
+        m_processedFrame.assign(m_numberOfuttsPerMinibatch, 0);
+        m_toProcess.assign(m_numberOfuttsPerMinibatch, 0);
+        m_switchFrame.assign(m_numberOfuttsPerMinibatch, 0);
 
         if (m_trainOrTest)
         {

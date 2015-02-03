@@ -6,6 +6,7 @@
 // HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
 #include "DataReader.h"
+#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -24,6 +25,7 @@ private:
     bool m_readAhead;
     bool m_truncated;
     vector<size_t> m_processedFrame;
+    intargvector m_numberOfuttsPerMinibatchForAllEpochs;
     size_t m_numberOfuttsPerMinibatch;
     size_t m_actualnumberOfuttsPerMinibatch;
     size_t m_mbSize;
