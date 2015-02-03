@@ -125,6 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("CPUSparseMatrix:  unsupported sparse matrix format");
         }
         m_format = format;
+        m_default = defaultElem();
         ZeroInit();
     }
 
@@ -541,7 +542,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool result = true;
 
-//#pragma omp parallel for
+        #pragma omp parallel for
         foreach_coord(i, j, a)
         {
             if (abs(a(i, j) - b(i, j)) > threshold)

@@ -92,18 +92,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 0, const bool growOnly = true, const bool keepExistingValues = true);
         void Reset();
 
-        inline ElemType& operator() (const size_t row, const size_t col)
+        inline ElemType defaultElem()
         {
-            row;
-            col;
-            NOT_IMPLEMENTED;
+            ElemType default;
+            memset(&default, 0, sizeof(ElemType));
+            return default;
         }
 
-        inline const ElemType& operator() (const size_t row, const size_t col) const
+        const ElemType& operator() (const size_t row, const size_t col) const
         {
-            row;
-            col;
-            NOT_IMPLEMENTED;
+            if (col >= m_numCols || row >= m_numRows)
+            {
+                throw std::runtime_error("Position outside matrix dimensions");
+            }
+
+            if (m_format == MatrixFormat::matrixFormatSparseCSC)
+            {
+                size_t start = m_compIndex[col];
+                size_t end = m_compIndex[col + 1];
+                for (size_t p = start; p < end; p++)
+                {
+                    size_t i = m_unCompIndex[p];
+                    if (i == row)
+                    {
+                        return m_pArray[p];
+                    }
+                }
+
+                return m_default;
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
         }
 
     public:
@@ -158,6 +179,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t m_blockSize; //block size
         size_t *m_blockIds; //block ids
+
+        ElemType m_default;
     };
 
     typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;
