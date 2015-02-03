@@ -102,7 +102,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 evalResultsLastMBs.push_back((ElemType)0);
 
             dataReader.StartMinibatchLoop(mbSize, 0, testSize);
-            dataReader.SetNbrSlicesEachRecurrentIter(1);
 
             for (int i=0; i<evalNodes.size(); i++)
             {
