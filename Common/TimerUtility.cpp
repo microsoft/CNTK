@@ -16,12 +16,12 @@ namespace Microsoft{
                 FILETIME ft;
                 LARGE_INTEGER li;
 
-                GetSystemTimeAsFileTime(&ft);
+                GetSystemTimeAsFileTime(&ft); //ideally we should use GetSystemTimePreciseAsFileTime. But it's only avaiable with Win8+ and Win Server 2012+
                 li.LowPart = ft.dwLowDateTime;
                 li.HighPart = ft.dwHighDateTime;
 
                 unsigned long long ret = li.QuadPart;
-                ret -= 116444736000000000LL; // Convert from file time to UNIX epoch time. 
+                ret -= 116444736000000000LL; // Make the values consistent with Linux. 
                 ret /= 10000; // From 100 nano seconds (10^-7) to 1 millisecond (10^-3) 
 
                 return ret;
