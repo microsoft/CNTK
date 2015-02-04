@@ -183,6 +183,7 @@
     <ClInclude Include="DSSMParser.h" />
     <ClInclude Include="DSSMReader.h" />
     <ClInclude Include="minibatchsourcehelpers.h" />
+    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\ConfigFile.cpp">
@@ -207,6 +208,7 @@
     <ClCompile Include="DSSMParser.cpp" />
     <ClCompile Include="DSSMReader.cpp" />
     <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
