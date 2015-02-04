@@ -360,6 +360,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void ZeroInit(); //should only be used by constructors.
         void Clear();
+
+	public:
+		CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);
+		static void InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
+		// extract out a row from a, assign it to [this]. 
+		CPUMatrix<ElemType>& GetARowByIndex(const CPUMatrix<ElemType>& a, const size_t index);
+		static void ConductRowElementMultiplyWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const size_t shift, bool bFirstmatrixfixed);
+		CPUMatrix<ElemType>& AssignElementProductOfWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const size_t shift);
+
     };
 
     typedef CPUMatrix<float> CPUSingleMatrix;

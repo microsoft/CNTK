@@ -220,6 +220,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, GMMLogLikelihoodNode<ElemType>::TypeName(), L"GMMLL"))
         ret = true;
+	else if (EqualInsensitive(nodeType, CosDistanceWithNegativeSamplesNode<ElemType>::TypeName()))
+		ret = true;
     
     // return the actual node name in the parameter if we found something
     if (ret)
