@@ -3263,4 +3263,147 @@ d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((
 }
 */
 
+
+template<class ElemType>
+__global__ void _assignElementProductOfWithShiftNeg(
+	ElemType* us,
+	const ElemType* a,
+	const ElemType* b,
+	const int shift,
+	const int NTPlusOne,
+	const int BS)
+{
+	LONG64 idx = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 idy = blockDim.y * blockIdx.y + threadIdx.y;
+
+	if (idx >= NTPlusOne || idy >= BS)
+		return;
+
+	if (idx == 0)
+	{
+		// this is row-0. No need to shift
+		us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[idy];
+	}
+	else
+	{
+		int cs = shift + idx - 1;
+		int tmpidy = (idy + cs) % BS;
+		us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[tmpidy];
+	}
+}
+
+template<class ElemType>
+__global__ void _innerProductWithShiftNeg(
+	ElemType* c,
+	const ElemType* a,
+	const ElemType* b,
+	const long N, //a.GetNumRows();
+	const long M, //a.GetNumCols();
+	const long shift,
+	const long NTPlusOne
+	)
+{
+	LONG64 idx = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 idy = blockDim.y * blockIdx.y + threadIdx.y;
+
+	if (idx >= NTPlusOne || idy >= M)
+		return;
+
+	ElemType sum = 0;
+	long index_a = 0;
+	long index_b = 0;
+	long col_a = 0;
+	long col_b = 0;
+	if (idx == 0)
+	{
+		// this is row 0. No need to shift
+		// the product of a(:,idy) dot b(:,idy)
+		col_a = idy;
+		for (long i = 0; i < N; ++i)
+		{
+			index_a = IDX2C(i, col_a, N);
+			sum += a[index_a] * b[index_a];
+		}
+	}
+	else
+	{
+		int cs = shift + idx - 1;
+		col_a = idy;
+		col_b = (idy + cs) % M;
+		for (int i = 0; i < N; ++i)
+		{
+			index_a = IDX2C(i, col_a, N);
+			index_b = IDX2C(i, col_b, N);
+			sum += a[index_a] * b[index_b];
+		}
+	}
+	c[IDX2C(idx, idy, NTPlusOne)] = sum;
+
+}
+
+template<class ElemType>
+__global__ void _getARowByIndex(
+	ElemType* us,
+	const ElemType* a,
+	const int O, // a's rows
+	const int P, // a's cols
+	const int m // the m-th row of a
+	)
+{
+	LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= P)
+		return;
+	//	us[id] = a[id] * b[id];
+	us[id] = a[IDX2C(m, id, O)];
+}
+
+
+template<class ElemType>
+__global__ void _conductRowElementMultiplyWithShift(
+	ElemType* us,
+	const ElemType* a,
+	const ElemType* b,
+	const int O, // b's rows
+	const int P, // b's cols
+	const int shift,
+	const bool isafixed)
+{
+	LONG64 idx = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 idy = blockDim.y * blockIdx.y + threadIdx.y;
+
+	if (idx >= O || idy >= P)
+		return;
+
+	int tmpidy = (idy + shift) % P;
+	if (isafixed)
+	{
+		// we fix a, and shift b
+		us[IDX2C(idx, idy, O)] = a[idy] * b[IDX2C(idx, tmpidy, O)];
+	}
+	else
+	{
+		// we fix b, but shift a
+		us[IDX2C(idx, idy, O)] = a[tmpidy] * b[IDX2C(idx, idy, O)];
+	}
+
+}
+
+template<class ElemType>
+__global__ void _assignElementProductOfWithShift(
+	ElemType* us,
+	const ElemType* a,
+	const ElemType* b,
+	const int shift,
+	const LONG64 N)
+{
+	LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+
+	int tmpidb = (id + shift) % N;
+	us[id] = a[id] * b[tmpidb];
+}
+
+
+
 #endif // !CPUONLY

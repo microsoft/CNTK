@@ -433,6 +433,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType>* idx2cls, 
             Matrix<ElemType>& grd);
 
+		public:
+			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
+			Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
+			static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
+			Matrix<ElemType>& GetARowByIndex(const Matrix<ElemType>& a, size_t index);
+			static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
+			Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
+
+
     };
 
     typedef Matrix<float> SingleMatrix;
