@@ -94,9 +94,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         inline ElemType defaultElem()
         {
-            ElemType default;
-            memset(&default, 0, sizeof(ElemType));
-            return default;
+            ElemType defaultValue;
+            memset(&defaultValue, 0, sizeof(ElemType));
+            return defaultValue;
         }
 
         const ElemType& operator() (const size_t row, const size_t col) const
