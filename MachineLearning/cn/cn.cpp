@@ -26,9 +26,9 @@
 #include <algorithm>
 #if defined(_WIN32)
 #include "io.h"
+#include "buildinfo.h"
 #endif
 #include "hostname.h"
-#include "buildinfo.h"
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection
 #endif
@@ -620,6 +620,7 @@ int MPIAPI MPI_Init(_In_opt_ int *argc, _Inout_count_(*argc) wchar_t*** argv)
 }
 #endif
 
+#ifdef _WIN32
 void PrintBuiltInfo()
 {
 	fprintf(stderr, "-------------------------------------------------------------------\n");
@@ -635,7 +636,7 @@ void PrintBuiltInfo()
 	fprintf(stderr, "-------------------------------------------------------------------\n");
 
 }
-
+#endif
 
 int wmain(int argc, wchar_t* argv[])
 {
@@ -691,9 +692,9 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         }
 
-
+#ifdef _WIN32
 		PrintBuiltInfo();
-
+#endif
 
         std::string timestamp = TimeDateStamp();
 
