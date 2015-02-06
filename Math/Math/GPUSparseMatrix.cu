@@ -828,7 +828,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             rowToId[i] = indexer[row];
         }  
-
+        m_blockSize = indexer.size();
         CUDACALL(cudaMemcpy(m_rowToId, rowToId, sizeof(size_t)*nz, cudaMemcpyHostToDevice));
     }
 
@@ -928,7 +928,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (do_sync)    CUDACALL(cudaEventCreate(&done));
                 _denseMultSparseCSCAndWeightedAddToDense<ElemType> <<< blocksPerGrid, threadsPerBlock >>> (
                     m, //rowDense
-                    k,  //colDense = rowSparse
                     n,   //colSparse
                     alpha,
                     reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
@@ -991,25 +990,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rhs.GetFormat() != matrixFormatSparseCSC)
                 NOT_IMPLEMENTED;
 
+            lhs.PrepareDevice();
+
             c.SetFormat(matrixFormatSparseBlockCol);
-            c.m_blockSize = n < rhs.m_nz ? n : rhs.m_nz;
+            //c.m_blockSize = n < rhs.m_nz ? n : rhs.m_nz;
+            c.m_blockSize = rhs.m_blockSize;
             c.m_nz = m*c.m_blockSize;
             c.Resize(m, n, c.m_nz);
             CUDACALL(cudaMemset(c.m_blockVal, 0, sizeof(ElemType)*(c.m_nz)));
             CUDACALL(cudaMemset(c.m_blockIds, 0, sizeof(size_t)*(c.m_blockSize)));
 
+            LONG64 N = (LONG64)lhs.GetNumElements();  //here we process for each row in lhs and each column in rhs (==columns in lhs)
+            int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
             cudaEvent_t done = nullptr;
             if (do_sync)    CUDACALL(cudaEventCreate(&done));
-            int blocksPerGrid = rhs.GetNumNZElements();
-            _denseMulSparseCSCTransposeToSparseBlockCol<ElemType> << <blocksPerGrid, threadsPerBlock >> >(
-                alpha,
-                lhs.BufferPointer(),
-                m,
-                rhs.BufferPointer(),
-                rhs.RowLocation(),
-                rhs.m_rowToId,
-                c.m_blockVal, 
-                c.m_blockIds);
+            _denseMulSparseCSCTransposeToSparseBlockCol<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
+                    alpha,
+                    lhs.BufferPointer(),
+                    m,
+                    l,
+                    rhs.BufferPointer(),
+                    rhs.RowLocation(),
+                    rhs.ColLocation(),
+                    rhs.m_rowToId,
+                    c.BufferPointer(),
+                    c.m_blockIds);
+
             if (do_sync)    CUDACALL(cudaEventRecord(done));
             if (do_sync)    CUDACALL(cudaEventSynchronize(done));
             if (do_sync)    CUDACALL(cudaEventDestroy(done));
@@ -1028,25 +1034,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& rhs)
     {
-        if (lhs.GetComputeDeviceId()!=rhs.GetComputeDeviceId())
+        if (lhs.GetNumRows() != rhs.GetNumRows() || lhs.GetNumCols() != rhs.GetNumCols())
+            throw std::logic_error("ScaleAndAdd: dimension mismatch");
+
+        if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId())
             throw std::runtime_error("GPUSparseMatrix::ScaleAndAdd: All matrices must be on the same GPU");
 
         if (lhs.m_format == matrixFormatSparseBlockCol || lhs.m_format == matrixFormatSparseBlockRow) 
         {
-            size_t len = (lhs.m_format == matrixFormatSparseBlockCol) ? lhs.GetNumRows(): lhs.GetNumCols();
             bool blockCol = (lhs.m_format == matrixFormatSparseBlockCol);
 
             cudaEvent_t done = nullptr;
             if (do_sync)    CUDACALL(cudaEventCreate(&done));
-            size_t blocksPerGrid = lhs.m_blockSize;
-            _scaleSparseAndAddToDense<ElemType> << <blocksPerGrid, threadsPerBlock >> >(
+            LONG64 N = (LONG64)lhs.GetNumNZElements(); 
+            int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+            _scaleSparseBlockAndAddToDense<ElemType> << <blocksPerGrid, threadsPerBlock >> >(
                 alpha,
                 blockCol,
+                lhs.GetNumRows(),
+                lhs.GetNumCols(),
+                lhs.m_blockSize,
                 lhs.m_blockVal,
                 lhs.m_blockIds,
-                len,
-                rhs.BufferPointer(),
-                rhs.GetNumRows());
+                rhs.BufferPointer());
+
             if (do_sync)    CUDACALL(cudaEventRecord(done));
             if (do_sync)    CUDACALL(cudaEventSynchronize(done));
             if (do_sync)    CUDACALL(cudaEventDestroy(done));
@@ -1247,19 +1258,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow) 
         {
-            size_t blocksPerGrid = m_blockSize;
             bool isBlockCol = (m_format == MatrixFormat::matrixFormatSparseBlockCol);
-            size_t len = isBlockCol ? GetNumRows(): GetNumCols();
             cudaEvent_t done = nullptr;
             if (do_sync)    CUDACALL(cudaEventCreate(&done));
-            _normalGrad<ElemType><<<blocksPerGrid,threadsPerBlock>>>(
-                isBlockCol,
-                len,
+            LONG64 N = (LONG64)GetNumNZElements();
+            int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+
+            _normalGradForSparseBlock<ElemType> << <blocksPerGrid, threadsPerBlock >> >(
                 momentum,
+                isBlockCol,
+                GetNumRows(),
+                GetNumCols(),
+                m_blockSize,
+                BufferPointer(),
                 m_blockIds,
-                m_blockVal,
-                c.BufferPointer(),
-                c.GetNumRows());                        
+                c.BufferPointer());
+
             if (do_sync)    CUDACALL(cudaEventRecord(done));
             if (do_sync)    CUDACALL(cudaEventSynchronize(done));
             if (do_sync)    CUDACALL(cudaEventDestroy(done));
