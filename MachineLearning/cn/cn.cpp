@@ -28,6 +28,7 @@
 #include "io.h"
 #endif
 #include "hostname.h"
+#include "buildinfo.h"
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection
 #endif
@@ -619,8 +620,26 @@ int MPIAPI MPI_Init(_In_opt_ int *argc, _Inout_count_(*argc) wchar_t*** argv)
 }
 #endif
 
+void PrintBuiltInfo()
+{
+	fprintf(stderr, "-------------------------------------------------------------------\n");
+	fprintf(stderr, "Build info: \n\n");
+	fprintf(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+	fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+	fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+	fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+#ifdef _GIT_EXIST
+	fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+	fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+#endif
+	fprintf(stderr, "-------------------------------------------------------------------\n");
+
+}
+
+
 int wmain(int argc, wchar_t* argv[])
 {
+
     try
     {
 #ifdef MPI_SUPPORT
@@ -647,6 +666,8 @@ int wmain(int argc, wchar_t* argv[])
 
         // get the command param set they want
         wstring logpath = config("stderr", L"");
+		//  [1/26/2015 erw, add done file so that it can be used on HPC]
+		wstring DoneFile = config("DoneFile", L"");
         ConfigArray command = config("command", "train");
 
         if (logpath != L"")
@@ -663,8 +684,16 @@ int wmain(int argc, wchar_t* argv[])
                 oss << myRank;
                 logpath += L"rank" + oss.str();
             }
-            RedirectStdErr(logpath);
+#ifndef _DEBUG
+			RedirectStdErr(logpath);
+#else
+			printf("INFO: in debug mode, do not redirect output\n");
+#endif
         }
+
+
+		PrintBuiltInfo();
+
 
         std::string timestamp = TimeDateStamp();
 
@@ -714,9 +743,16 @@ int wmain(int argc, wchar_t* argv[])
             DoCommand<double>(config);
         else
             RuntimeError("invalid precision specified: %s", type.c_str());
-    }
-    catch(const std::exception &err)
-    {
+
+		// still here , write a DoneFile if necessary 
+		if (!DoneFile.empty()){
+			FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
+			fprintf(fp, "successfully finished at %s on %s\n",  TimeDateStamp().c_str(),GetHostName().c_str());
+			fcloseOrDie(fp);
+		}
+	}
+	catch (const std::exception &err)
+	{
         fprintf(stderr, "EXCEPTION occurred: %s", err.what());
 #ifdef _DEBUG
         DebugBreak();

@@ -167,3 +167,9 @@ LOG
 *.log
 core	
 *.lyx#
+
+# =========================
+# prebuild file 
+# =========================
+MachineLearning/cn/buildinfo.h
+
