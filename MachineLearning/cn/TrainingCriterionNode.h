@@ -1143,8 +1143,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 3) 
                 throw std::logic_error("ClassBasedCrossEntropyWithSoftmaxNode criterion requires three inputs.");
 
-            if (Inputs(0)->OperationName() != L"SparseInputValue" 
-                && Inputs(0)->OperationName() != L"InputValue")
+            if (Inputs(0)->OperationName() != SparseInputValue<ElemType>::TypeName()
+                && Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
                 throw std::logic_error("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
 
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumCols()  &&  // input and matrix can be timed

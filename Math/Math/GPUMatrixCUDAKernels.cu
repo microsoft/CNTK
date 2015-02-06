@@ -2290,11 +2290,11 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
 //assume resultValues are 0-initialized
 template<class ElemType>
 __global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
-    ElemType alpha,
-    ElemType* lhsValues,
-    size_t numRowsLhs,
-    size_t numColsRhs,
-    ElemType* rhsNZValues,
+    const ElemType alpha,
+    const ElemType* lhsValues,
+    const size_t numRowsLhs,
+    const size_t numColsRhs,
+    const ElemType* rhsNZValues,
     const GPUSPARSE_INDEX_TYPE* rhsRows,
     const GPUSPARSE_INDEX_TYPE* rhsCols,
     const size_t* rhsRowIdx,

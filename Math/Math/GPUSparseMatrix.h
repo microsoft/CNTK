@@ -49,9 +49,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // in memory format is always in the following order:
         // Non-zero data elements, Full index locations, compressed index locations
         // In CSR row data is compressed, in CSC col data is compressed
-        const ElemType* NzValues() const {return m_pArray;}
-        ElemType* NzValues() {return m_pArray;}
-        size_t NzSize() const {return sizeof(ElemType)*m_nz;} // actual number of element bytes in use
+        inline const ElemType* NzValues() const {return m_pArray;}
+        inline ElemType* NzValues() {return m_pArray;}
+        inline size_t NzSize() const {return sizeof(ElemType)*m_nz;} // actual number of element bytes in use
 
         GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return (GPUSPARSE_INDEX_TYPE*)(m_pArray + m_elemSizeAllocated); } //this is the major index, row/col ids in CSC/CSR format
         size_t MajorIndexCount() const { return m_nz; }
@@ -82,8 +82,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t BufferSizeNeeded(const size_t numNZ) const 
         { return sizeof(ElemType)*numNZ + sizeof(GPUSPARSE_INDEX_TYPE)*(numNZ + SecondaryIndexCount(numNZ)); }
 
-        size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
-        ElemType* BufferPointer() const;
+        inline size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
+        inline ElemType* BufferPointer() const { return m_pArray; }
 
         // the column and row locations will swap based on what format we are in. Full index always follows the data array
         GPUSPARSE_INDEX_TYPE* RowLocation() const { return (m_format&matrixFormatRowMajor) ? SecondaryIndexLocation() : MajorIndexLocation(); }
@@ -125,7 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
     public:
         virtual DEVICEID_TYPE GetComputeDeviceId(void) const;
-        size_t GetNumNZElements() const {return m_nz;}
+        inline size_t GetNumNZElements() const {return m_nz;}
 
         //Sets sparse matrix in CSR format. this acts as deep copy
         void SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE *h_CSRRow, const GPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val, 
@@ -249,7 +249,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_totalBufferSizeAllocated;
 
         size_t m_blockSize; //block size        
-        ElemType *m_blockVal; //block values
         size_t *m_blockIds; //block ids
         size_t *m_rowToId; //the id showing the order row number is observed in the nnz values.
 
