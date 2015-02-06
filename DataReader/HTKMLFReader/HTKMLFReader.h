@@ -13,6 +13,10 @@ template<class ElemType>
 class HTKMLFReader : public IDataReader<ElemType>
 {
 private:
+
+    const static size_t m_htkRandomizeAuto = 0;
+    const static size_t m_htkRandomizeDisable = (size_t)-1;
+
     msra::dbn::minibatchiterator* m_mbiter;
     msra::dbn::minibatchsource* m_frameSource;
     msra::dbn::minibatchreadaheadsource* m_readAheadSource;

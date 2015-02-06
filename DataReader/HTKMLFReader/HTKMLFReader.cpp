@@ -234,11 +234,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::string& randomizeString = readerConfig("randomize");
             if (randomizeString == "None")
             {
-                randomize = randomizeNone;
+                randomize = m_htkRandomizeDisable; // randomizeNone;
             }
             else if (randomizeString == "Auto")
             {
-                randomize = randomizeAuto;
+                randomize = m_htkRandomizeAuto; // randomizeAuto;
             }
             else
             {
