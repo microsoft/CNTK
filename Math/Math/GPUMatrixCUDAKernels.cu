@@ -2250,37 +2250,12 @@ __global__ void _sparseCSRElemMulDense(
     }
 }
 
-// forward pass from feature to hidden layer
-/*template<class ElemType>
-__global__ void _denseMulSparseCSCToDense(
-    ElemType alpha,
-    const ElemType* lhs,
-    int numrows,
-    int numcols,
-    const GPUSPARSE_INDEX_TYPE* row,
-    ElemType* c)
-{
-    int loadPerThread = (numrows+blockDim.x-1)/blockDim.x;
-    int tStart = loadPerThread * threadIdx.x;
-    int tEnd = min(numrows, loadPerThread + tStart);
-
-    int p = blockIdx.x;
-    int i = row[p];
-    int j = blockIdx.x;
-
-    for (int h = tStart; h < tEnd; h++) 
-    {
-        ElemType res = alpha * lhs[IDX2C(h, i, numrows)]; 
-        atomicAdd(&c[IDX2C(h,j,numrows)], res);
-    }
-}*/
 
 //c = alpha * op(a) * op(b) + beta*c
 //this function can be further improved by using shared memory
 template<class ElemType>
 __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     int m, //rowDense
-    int k,  //colDense = rowSparse
     int n,   //colSparse
     ElemType alpha,
     const ElemType* a,  //dense
@@ -2311,62 +2286,77 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
 }
 
 // backward pass from hidden layer to feature weight
+//result (sparse BlockCol)= alpha * (lhs (dense) X rhs^T (sparse CSC)
+//assume resultValues are 0-initialized
 template<class ElemType>
-__global__ void _denseMulSparseCSCTransposeToSparseBlockCol(    
-	ElemType alpha,
-    ElemType* lhs,
-    size_t nrs,
-	ElemType* rhsNZValues,
-    const GPUSPARSE_INDEX_TYPE* row,
-    const size_t* rowIdx,
-    ElemType* blockVal,
-    size_t* blockIds)
+__global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
+    ElemType alpha,
+    ElemType* lhsValues,
+    size_t numRowsLhs,
+    size_t numColsRhs,
+    ElemType* rhsNZValues,
+    const GPUSPARSE_INDEX_TYPE* rhsRows,
+    const GPUSPARSE_INDEX_TYPE* rhsCols,
+    const size_t* rhsRowIdx,
+    ElemType* resultValues,
+    size_t* resultBlockIds)
 {
-    int p = blockIdx.x;
-    int i = row[p];
-    int ii = rowIdx[p];
-    int j = blockIdx.x;
+    const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
+    const LONG64 lhsCol = index / numRowsLhs; //rhsCol == lhsCol
+    if (lhsCol >= numColsRhs)
+        return;
+    const LONG64 lhsRow = index - numRowsLhs*lhsCol; //resultRow == lhsRow
 
-    int load = (nrs+blockDim.x-1)/blockDim.x;
-    int pStart = load * threadIdx.x;
-    int pEnd = min((int)nrs, load + pStart);
+    //each thread handles one [row, col] combination
+    ElemType lhsValue = alpha*lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
 
-    for(int h = pStart; h < pEnd; h++) 
-    {        
-        ElemType temp = alpha*lhs[IDX2C(h, j, nrs)]*rhsNZValues[p];    
-        atomicAdd(&blockVal[ii*nrs+h], temp);
-        blockIds[ii] = i;
+    LONG64 start = rhsCols[lhsCol]; //rhsCol == lhsCol
+    LONG64 end = rhsCols[lhsCol + 1];
+
+    for (LONG64 p = start; p < end; p++)
+    {
+        LONG64 rhsRow = rhsRows[p]; 
+        ElemType rhsVal = rhsNZValues[p];
+        LONG64 resultCol = rhsRowIdx[p]; //resultCol == rhsRow maps to columnid 
+        resultBlockIds[resultCol] = rhsRow;  //indicate which colmn it actually points to
+
+        //assume resultValues are 0-initialized
+        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
     }
 }
 
+
 // gradients update
 template<class ElemType>
-__global__ void _scaleSparseAndAddToDense(    
-    ElemType alpha,
-    bool blockCol,
-    ElemType* blockVal,
-    size_t* blockIds,
-    size_t len,
-    ElemType* rhs,
-    size_t numrows)
+__global__ void _scaleSparseBlockAndAddToDense(    
+    const ElemType alpha,
+    const bool blockCol, //true if blockRow
+    const size_t numRows,
+    const size_t numCols,
+    const size_t numBlocks,
+    const ElemType* lhsValues,  //lhs is blockCol or blockRow
+    const size_t* blockIds,
+    ElemType* rhs)
 {
-    int ii = blockIdx.x;
-    int i = blockIds[ii];
-    int load = (len+blockDim.x-1)/blockDim.x;
-    int pStart = load * threadIdx.x;
-    int pEnd = min((int)len, load + pStart);
-
-    for(int h = pStart; h < pEnd; h++) 
-    {   ElemType temp = alpha*blockVal[ii*len + h];
-        if(blockCol)
-        {
-            atomicAdd(&rhs[IDX2C(h, i, numrows)], temp);
-        }
-        else
-        {
-            atomicAdd(&rhs[IDX2C(i, h, numrows)], temp);
-        }
+    const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
+    LONG64 row, col;
+    if (blockCol)
+    {
+        const LONG64 blockId = index / numRows;
+        if (blockId >= numBlocks)
+            return;
+        row = index - numRows* blockId;
+        col = blockIds[blockId];
     }
+    else
+    {
+        const LONG64 blockId = index / numCols;
+        if (blockId >= numBlocks)
+            return;
+        col = index - numCols* blockId;
+        row = blockIds[blockId];
+    }
+    rhs[IDX2C(row, col, numRows)] += alpha * lhsValues[index];
 }
 
 // compute predictions in cross entory node
@@ -2638,30 +2628,36 @@ __global__ void _inplaceTruncate(
 }
 
 template<class ElemType>
-__global__ void _normalGrad(
-    bool isBlockCol,
-    size_t len,
+__global__ void _normalGradForSparseBlock(
     const ElemType momentum,
-    size_t* blockIds,
-    ElemType* blockVal,
-    ElemType* c,
-    size_t numrows)
+    const bool blockCol, //true if blockRow
+    const size_t numRows,
+    const size_t numCols,
+    const size_t numBlocks,
+    ElemType* lhsValues,  //lhs is blockCol or blockRow
+    const size_t* blockIds,
+    ElemType* rhs)
 {
-    int j = blockIdx.x;
-    int i = blockIds[j];
-    int start = j * len;
-
-    int load = (len+blockDim.x-1)/blockDim.x;
-    int pStart = load * threadIdx.x;
-    int pLen = min((int)len, load + pStart);
-
-    for(int p = start+pStart; p < start+pLen; p++) 
+    const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
+    LONG64 row, col;
+    if (blockCol)
     {
-        int row = isBlockCol ? (p - start) : i;
-        int col = isBlockCol ? i: (p - start);
-        c[IDX2C(row, col, numrows)] = (1-momentum)*blockVal[p] + momentum*c[IDX2C(row, col, numrows)];
-        blockVal[p] = c[IDX2C(row, col, numrows)];
+        const LONG64 blockId = index / numRows;
+        if (blockId >= numBlocks)
+            return;
+        row = index - numRows* blockId;
+        col = blockIds[blockId];
     }
+    else
+    {
+        const LONG64 blockId = index / numCols;
+        if (blockId >= numBlocks)
+            return;
+        col = index - numCols* blockId;
+        row = blockIds[blockId];
+    }
+    rhs[IDX2C(row, col, numRows)] = (1 - momentum)*lhsValues[index] + momentum*rhs[IDX2C(row, col, numRows)];
+    lhsValues[index] = rhs[IDX2C(row, col, numRows)];
 }
 
 static __inline__ __device__ double atomicAdd(double* address, double val)
@@ -3262,5 +3258,148 @@ d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((
 }
 }
 */
+
+
+template<class ElemType>
+__global__ void _assignElementProductOfWithShiftNeg(
+	ElemType* us,
+	const ElemType* a,
+	const ElemType* b,
+	const int shift,
+	const int NTPlusOne,
+	const int BS)
+{
+	LONG64 idx = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 idy = blockDim.y * blockIdx.y + threadIdx.y;
+
+	if (idx >= NTPlusOne || idy >= BS)
+		return;
+
+	if (idx == 0)
+	{
+		// this is row-0. No need to shift
+		us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[idy];
+	}
+	else
+	{
+		int cs = shift + idx - 1;
+		int tmpidy = (idy + cs) % BS;
+		us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[tmpidy];
+	}
+}
+
+template<class ElemType>
+__global__ void _innerProductWithShiftNeg(
+	ElemType* c,
+	const ElemType* a,
+	const ElemType* b,
+	const long N, //a.GetNumRows();
+	const long M, //a.GetNumCols();
+	const long shift,
+	const long NTPlusOne
+	)
+{
+	LONG64 idx = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 idy = blockDim.y * blockIdx.y + threadIdx.y;
+
+	if (idx >= NTPlusOne || idy >= M)
+		return;
+
+	ElemType sum = 0;
+	long index_a = 0;
+	long index_b = 0;
+	long col_a = 0;
+	long col_b = 0;
+	if (idx == 0)
+	{
+		// this is row 0. No need to shift
+		// the product of a(:,idy) dot b(:,idy)
+		col_a = idy;
+		for (long i = 0; i < N; ++i)
+		{
+			index_a = IDX2C(i, col_a, N);
+			sum += a[index_a] * b[index_a];
+		}
+	}
+	else
+	{
+		int cs = shift + idx - 1;
+		col_a = idy;
+		col_b = (idy + cs) % M;
+		for (int i = 0; i < N; ++i)
+		{
+			index_a = IDX2C(i, col_a, N);
+			index_b = IDX2C(i, col_b, N);
+			sum += a[index_a] * b[index_b];
+		}
+	}
+	c[IDX2C(idx, idy, NTPlusOne)] = sum;
+
+}
+
+template<class ElemType>
+__global__ void _getARowByIndex(
+	ElemType* us,
+	const ElemType* a,
+	const int O, // a's rows
+	const int P, // a's cols
+	const int m // the m-th row of a
+	)
+{
+	LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= P)
+		return;
+	//	us[id] = a[id] * b[id];
+	us[id] = a[IDX2C(m, id, O)];
+}
+
+
+template<class ElemType>
+__global__ void _conductRowElementMultiplyWithShift(
+	ElemType* us,
+	const ElemType* a,
+	const ElemType* b,
+	const int O, // b's rows
+	const int P, // b's cols
+	const int shift,
+	const bool isafixed)
+{
+	LONG64 idx = blockDim.x * blockIdx.x + threadIdx.x;
+	LONG64 idy = blockDim.y * blockIdx.y + threadIdx.y;
+
+	if (idx >= O || idy >= P)
+		return;
+
+	int tmpidy = (idy + shift) % P;
+	if (isafixed)
+	{
+		// we fix a, and shift b
+		us[IDX2C(idx, idy, O)] = a[idy] * b[IDX2C(idx, tmpidy, O)];
+	}
+	else
+	{
+		// we fix b, but shift a
+		us[IDX2C(idx, idy, O)] = a[tmpidy] * b[IDX2C(idx, idy, O)];
+	}
+
+}
+
+template<class ElemType>
+__global__ void _assignElementProductOfWithShift(
+	ElemType* us,
+	const ElemType* a,
+	const ElemType* b,
+	const int shift,
+	const LONG64 N)
+{
+	LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+
+	int tmpidb = (id + shift) % N;
+	us[id] = a[id] * b[tmpidb];
+}
+
+
 
 #endif // !CPUONLY

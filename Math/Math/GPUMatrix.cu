@@ -3356,45 +3356,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma endregion Static BLAS Functions
 
 
-    //#pragma region File << and >> operators
-    //    template<class ElemType>
-    //    File& operator>>(File& stream, GPUMatrix<ElemType> &us)
-    //    {
-    //        //auto& us = *this;
-    //
-    //        stream.GetMarker(fileMarkerBeginSection, std::string("BMAT"));
-    //        size_t elsize;
-    //        stream>>elsize;
-    //        if (sizeof(ElemType)!=elsize)
-    //            throw std::runtime_error("Template argument size doesn't match those in file");
-    //        std::wstring matrixName;
-    //        size_t numRows, numCols;
-    //        stream>>matrixName>>numRows>>numCols;
-    //        ElemType* d_array = new ElemType[numRows*numCols];
-    //        for (long i=0;i<numRows*numCols;++i)
-    //            stream>>d_array[i];
-    //        stream.GetMarker(fileMarkerEndSection, std::string("EMAT"));
-    //        us.SetValue(numRows,numCols,d_array, matrixFlagNormal);
-    //        us.m_matrixName = matrixName;
-    //        return stream;
-    //    }
-    //
-    //    template<class ElemType>
-    //    File& operator<<(File& stream, GPUMatrix<ElemType> &us)
-    //    {
-    //        //auto& us = *this;
-    //
-    //        stream.PutMarker(fileMarkerBeginSection, std::string("BMAT"));
-    //        stream<<sizeof(ElemType)<<us.m_matrixName<<us.m_numRows<<us.m_numCols;
-    //        ElemType *d_array = us.CopyToArray();
-    //        for (long i=0;i<us.GetNumElements();++i)
-    //            stream<<d_array[i];
-    //        stream.PutMarker(fileMarkerEndSection, std::string("EMAT"));
-    //        return stream;
-    //    }
-    //
-    //#pragma endregion File << and >> operators
-
     template class GPUMatrix<float>; 
     template class GPUMatrix<double>;
     template class DeviceBoundNumber<float>;
