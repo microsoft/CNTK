@@ -141,7 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         const ElemType* NzValues() const { return m_pArray; }
-        ElemType* NzValues() { return m_pArray; }
+        inline ElemType* NzValues() { return m_pArray; }
         size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
         CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
