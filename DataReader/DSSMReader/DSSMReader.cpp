@@ -283,7 +283,6 @@ void DSSMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
 
 	size_t fileRecord = m_totalSamples ? mbStartSample % m_totalSamples : 0;
 	fprintf(stderr, "starting epoch %lld at record count %lld, and file position %lld\n", m_epoch, mbStartSample, fileRecord);
-	size_t currentFileRecord = m_mbStartSample % m_totalSamples;
 
 
 
@@ -294,9 +293,9 @@ void DSSMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
 	m_epochSize = requestedEpochSamples;
 	dssm_queryInput.SetupEpoch(mbSize);
 	dssm_docInput.SetupEpoch(mbSize);
-	if (m_epochSize > dssm_queryInput.numRows)
+	if (m_epochSize > (size_t)dssm_queryInput.numRows)
 	{
-		m_epochSize = dssm_queryInput.numRows;
+		m_epochSize = (size_t)dssm_queryInput.numRows;
 	}
 	if (Randomize())
 	{
@@ -571,13 +570,13 @@ bool DSSM_BinaryInput<ElemType>::SetupEpoch( size_t minibatchSize){
 	return true;
 }
 template<class ElemType>
-bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, int cur, int numToRead, int* ordering){
+bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t cur, size_t numToRead, int* /*ordering*/){
 	/*
 	int devId = matrices.GetDeviceId();
 	matrices.TransferFromDeviceToDevice(devId, -1);
 	*/
 
-	int64_t cur_index = 0;
+	int32_t cur_index = 0;
 
 	for (int c = 0; c < numToRead; c++,cur++)
 	{
@@ -673,6 +672,7 @@ bool DSSMReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRe
     }
     throw runtime_error("GetData not supported in DSSMReader");
 }
+
 // instantiate all the combinations we expect to be used
 template class DSSMReader<double>; 
 template class DSSMReader<float>;

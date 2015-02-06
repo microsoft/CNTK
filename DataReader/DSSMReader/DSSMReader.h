@@ -7,7 +7,6 @@
 #pragma once
 #include "DataReader.h"
 #include "DataWriter.h"
-#include "DSSMParser.h"
 #include <string>
 #include <map>
 #include <vector>
@@ -59,7 +58,7 @@ public:
 	~DSSM_BinaryInput();
 	void Init(std::wstring fileName, size_t dim);
 	bool SetupEpoch( size_t minibatchSize);
-	bool Next_Batch(Matrix<ElemType>& matrices, int cur, int numToRead, int* ordering);
+	bool Next_Batch(Matrix<ElemType>& matrices, size_t cur, size_t numToRead, int* ordering);
 	void Dispose();
 };
 
@@ -78,7 +77,6 @@ private:
 	DSSM_BinaryInput<ElemType> dssm_queryInput;
 	DSSM_BinaryInput<ElemType> dssm_docInput;
 
-	DSSMParser<ElemType, LabelType> m_parser;
     size_t m_mbSize;    // size of minibatch requested
     LabelIdType m_labelIdMax; // maximum label ID we have encountered so far
     LabelIdType m_labelDim; // maximum label ID we will ever see (used for array dimensions)
@@ -122,12 +120,10 @@ private:
     DataReader<ElemType>* m_cachingReader;
     DataWriter<ElemType>* m_cachingWriter;
     ConfigParameters m_readerConfig;
-    void InitCache(const ConfigParameters& config);
 
     size_t RandomizeSweep(size_t epochSample);
     //bool Randomize() {return m_randomizeRange != randomizeNone;}
 	bool Randomize() { return false; }
-    size_t UpdateDataVariables(size_t mbStartSample);
     void SetupEpoch();
     void StoreLabel(ElemType& labelStore, const LabelType& labelValue);
     size_t RecordsToRead(size_t mbStartSample, bool tail=false);
