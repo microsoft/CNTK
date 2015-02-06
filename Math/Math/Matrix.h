@@ -45,6 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void _transferToDevice(int id_to, bool ismoved=true, bool emptyTransfer=false) const; 
         static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
         static void DecideAndMoveToRightDevice(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c);
+        static void CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest);
 
     public:
         //Constructors, destructors and other static matrix builders

@@ -733,6 +733,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_CPUSparseMatrix == nullptr)
                 {
                     m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(newMatrixFormat); 
+
+                    if (GetMatrixType() == MatrixType::DENSE && m_CPUMatrix != nullptr)
+                    {
+                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols());
+                        CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
+                    }
+                    else
+                    {
+                        // TODO: Assign Sparse from Sparse!
+                    }
+
                     delete m_CPUMatrix;
                     m_CPUMatrix = nullptr;
                 }
@@ -801,6 +812,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    template<class ElemType>
+    void Matrix<ElemType>::CopyElementsFromDenseToSparse(CPUMatrix<ElemType>& from, CPUSparseMatrix<ElemType>& dest)
+    {
+        foreach_coord(row, col, from)
+        {
+            auto val = from(row, col);
+            dest.SetValue(row, col, val);
+        }
+    }
 
     template<class ElemType>
     ElemType Matrix<ElemType>::Get00Element() const
@@ -3992,7 +4012,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nullptr,
                 return CPUMatrix<ElemType>::AreEqual(*a.m_CPUMatrix, *b.m_CPUMatrix, threshold),
                 return GPUMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUMatrix, threshold),
-                NOT_IMPLEMENTED; return false ,
+                return CPUSparseMatrix<ElemType>::AreEqual(*a.m_CPUSparseMatrix, *b.m_CPUSparseMatrix, threshold),
                 return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, threshold)
                 );                
             }
