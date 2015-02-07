@@ -17,6 +17,7 @@
 #include "commandArgUtil.h"
 #include <chrono> 
 #include <random>
+#include "TimerUtility.h"
 
 #ifdef MPI_SUPPORT
 #include "mpi.h"
@@ -121,6 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SGD(const ConfigParameters& configSGD)
         {
             ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
+			m_needToNormalizeLRByParallUtterance = false;
             floatargvector learningRatesPerMB = learningRatesPerMBStr;
 
             ConfigArray learningRatesPerSampleStr = configSGD("learningRatesPerSample", "");
@@ -206,13 +208,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
 
+			bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
+
             Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB, gradientClippingWithTruncation, 
                 clippingThresholdPerSample,autoAdjustLRType, increaseLearnRateIfImproveMoreThan, learnRateIncreaseFactor, 
                 reduceLearnRateIfImproveLessThan, continueReduce, learnRateDecreaseFactor, dropoutRates,
                 loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, usePtask, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
-                rpi, learnRateAdjustInterval);
+                rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode);
         }
     
         void setMomentum(float momentum)
@@ -234,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
-            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1)
+            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed=true)
         {
             numPrevLearnRates;
             m_mbSize=mbSize;
@@ -272,6 +276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_trainCriterionNodeName = trainCriterionNodeName;
             m_evalCriterionNodeName = evalCriterionNodeName;
+			m_useAllDataForPreComputedNode = UsingAllDataForPreComputed;
 
             for (size_t i=0; i<m_mbSize.size(); i++)
                 if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -298,6 +303,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     m_learningRatesPerSample[i] = learningRatesPerMB[i]/m_mbSize[i];
                 }
+				m_needToNormalizeLRByParallUtterance = true; 
             }
             m_momentumPerMB = 0.9f;
             if  (momentumPerMB.size() >0)
@@ -521,6 +527,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (0 == myRank) // only needs to be done by one process
                     net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
 
+			// first, we need to normalize the effect of nbruttsineachrecurrentiter
+			if (trainSetDataReader->NumberSlicesInEachRecurrentIter()>1 && m_needToNormalizeLRByParallUtterance)
+			{
+				for (auto & x : m_learningRatesPerSample)
+				{
+					x /= trainSetDataReader->NumberSlicesInEachRecurrentIter();
+				}
+			}
             bool learnRateInitialized = false;
             if (startEpoch > 0)
             {
@@ -557,7 +571,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = int(startEpoch); i < int(m_maxEpochs); i++)
             {
-                auto t_start_epoch = clock();
+                auto t_start_epoch = Timer::MilliSecondElapsed();
 
                 // set other information to inputMatrices that can contrain information
                 // used for class-based LM for clustring information
@@ -598,14 +612,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 #ifdef MPI_SUPPORT
-                INT32 mySamples = (INT32)
+				INT32 mySamples = (INT32)
 #endif
+					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", (int)startEpoch,  learnRatePerSample, m_momentumPerMB);
                 TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample, FeatureNodes, labelNodes,
                     criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
                     epochCriterion, epochEvalErrors, totalSamplesSeen);
 
-                auto t_end_epoch = clock();
-                ElemType epochTime = ElemType(1.0)*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
+                auto t_end_epoch = Timer::MilliSecondElapsed();
+                ElemType epochTime = (t_end_epoch - t_start_epoch) / ElemType(MS_PER_SEC);
 
                 fprintf(stderr, "Finished Epoch[%d]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
                 if (epochEvalErrors.size() == 1)
@@ -800,7 +815,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //compute
             //trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize); 
-            trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
+            // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
+			// [1/12/2015 erw] to support large dataset, we usually paritition whole dataset into several epoches, so we need to use all the data to do precomputing
+			if (m_useAllDataForPreComputedNode)
+				trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0); // using all the data
+			else 
+				trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0, m_epochSize); // using all the data
 
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
@@ -983,8 +1003,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<ElemType> epochEvalErrorsLastMBs(epochEvalErrors.size(),0);
             PTaskGraphBuilder<ElemType>* ptaskGraphBuilder = NULL;
             
-            clock_t startReadMBTime = 0, startComputeMBTime=0;
-            clock_t endReadMBTime=0, endComputeMBTime=0; 
+            unsigned long long startReadMBTime = 0, startComputeMBTime=0;
+            unsigned long long  endReadMBTime = 0, endComputeMBTime = 0;
 
             //initialize statistics
             size_t totalEpochSamples = 0;
@@ -1027,14 +1047,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
             
-            startReadMBTime=clock();
+            startReadMBTime=Timer::MilliSecondElapsed();
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
 #ifdef MPI_SUPPORT
                 DecimateMinibatch(inputMatrices);
 #endif
-                endReadMBTime=clock();
-                startComputeMBTime=clock();
+                endReadMBTime=Timer::MilliSecondElapsed();
+                startComputeMBTime=Timer::MilliSecondElapsed();
 
                 UpdateEvalTimeStamps(FeatureNodes);
                 UpdateEvalTimeStamps(labelNodes);
@@ -1113,12 +1133,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 
-                endComputeMBTime=clock();
+                endComputeMBTime=Timer::MilliSecondElapsed();
                 numMBsRun ++;
                 if (m_traceLevel > 0)
                 {
-                    ElemType MBReadTime = (ElemType)(endReadMBTime-startReadMBTime)/(CLOCKS_PER_SEC);
-                    ElemType MBComputeTime = (ElemType)(endComputeMBTime-startComputeMBTime)/CLOCKS_PER_SEC;
+                    ElemType MBReadTime = (ElemType)(endReadMBTime-startReadMBTime)/(MS_PER_SEC);
+                    ElemType MBComputeTime = (ElemType)(endComputeMBTime-startComputeMBTime)/MS_PER_SEC;
 
                     readTimeInMBs += MBReadTime;
                     ComputeTimeInMBs += MBComputeTime;
@@ -1149,7 +1169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
                     }
                 }
-                startReadMBTime=clock();
+                startReadMBTime=Timer::MilliSecondElapsed();
                 totalEpochSamples += actualMBSize;
                 totalSamplesSeen += actualMBSize;
 
@@ -1506,6 +1526,7 @@ protected:
     protected:
 
         floatargvector m_learningRatesPerSample; /// learning rate per sample provided outside
+		bool			m_needToNormalizeLRByParallUtterance;			// only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
         intargvector m_mbSize;
         size_t m_epochSize;
         size_t m_maxEpochs;
@@ -1557,6 +1578,8 @@ protected:
         ElemType m_gradientCheckSigDigit;
 
         bool m_validateAfterModelReloading;
+
+		bool m_useAllDataForPreComputedNode;
     };
     template class SGD<float>; 
     template class SGD<double>;

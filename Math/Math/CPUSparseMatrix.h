@@ -33,7 +33,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         CPUSparseMatrix(const MatrixFormat format);
         CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
-
+        
+        
         ~CPUSparseMatrix();
 
     public:
@@ -76,6 +77,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         static void ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& c);
 
+        static bool AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold = 1e-8);
+
         /// sum(vec(a).*vec(b))
         static ElemType InnerProductOfMatrices(const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/) { NOT_IMPLEMENTED; }
         
@@ -88,6 +91,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 0, const bool growOnly = true, const bool keepExistingValues = true);
         void Reset();
+
+        inline ElemType defaultElem()
+        {
+            ElemType default;
+            memset(&default, 0, sizeof(ElemType));
+            return default;
+        }
+
+        const ElemType& operator() (const size_t row, const size_t col) const
+        {
+            if (col >= m_numCols || row >= m_numRows)
+            {
+                throw std::runtime_error("Position outside matrix dimensions");
+            }
+
+            if (m_format == MatrixFormat::matrixFormatSparseCSC)
+            {
+                size_t start = m_compIndex[col];
+                size_t end = m_compIndex[col + 1];
+                for (size_t p = start; p < end; p++)
+                {
+                    size_t i = m_unCompIndex[p];
+                    if (i == row)
+                    {
+                        return m_pArray[p];
+                    }
+                }
+
+                return m_default;
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
 
     public:
         void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
@@ -103,7 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         const ElemType* NzValues() const { return m_pArray; }
-        ElemType* NzValues() { return m_pArray; }
+        inline ElemType* NzValues() { return m_pArray; }
         size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
         CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
@@ -139,9 +177,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUSPARSE_INDEX_TYPE *m_unCompIndex; //row/col ids in CSC/CSR format
         CPUSPARSE_INDEX_TYPE *m_compIndex; //begin ids of col/row in CSC/CSR format
 
-        size_t m_blockSize; //block size        
-        ElemType *m_blockVal; //block values
+        size_t m_blockSize; //block size
         size_t *m_blockIds; //block ids
+
+        ElemType m_default;
     };
 
     typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;
