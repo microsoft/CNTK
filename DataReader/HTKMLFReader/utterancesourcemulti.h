@@ -102,7 +102,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         bool isinram() const { return !frames.empty(); }
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
-        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource) const
+        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource, int verbosity=0) const
         {
             if (numutterances() == 0)
                 throw std::logic_error ("requiredata: cannot page in virgin block");
@@ -132,6 +132,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                         latticesource.getlattices (utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
                 //fprintf (stderr, "\n");
+				if (verbosity)
                 fprintf (stderr, "requiredata: %d utterances read\n", utteranceset.size());
             }
             catch (...)
@@ -568,6 +569,7 @@ private:
             return sweep;
 
         currentsweep = sweep;
+		if (verbosity>0)
         fprintf (stderr, "lazyrandomization: re-randomizing for sweep %d in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
 
         const size_t sweepts = sweep * _totalframes;     // first global frame index for this sweep
@@ -919,10 +921,11 @@ private:
             {
                 auto & chunk = randomizedchunks[m][chunkindex];
                 auto & chunkdata = chunk.getchunkdata();
+				if (verbosity)
                 fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
-                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices);
+                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices, verbosity);
                 });
             }
             chunksinram++;
@@ -1029,7 +1032,8 @@ public:
                 }
             }
             // return these utterances
-            fprintf (stderr, "getbatch: getting utterances %d..%d (%d frames out of %d requested) in sweep %d\n", spos, epos -1, mbframes, framesrequested, sweep);
+			if (verbosity > 0)
+				fprintf (stderr, "getbatch: getting utterances %d..%d (%d frames out of %d requested) in sweep %d\n", spos, epos -1, mbframes, framesrequested, sweep);
             size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
@@ -1107,6 +1111,7 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[0][firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[0][lastchunk].windowend;
+			if (verbosity)
             fprintf (stderr, "getbatch: getting randomized frames [%d..%d] (%d frames out of %d requested) in sweep %d; chunks [%d..%d] -> chunk window [%d..%d)\n",
                      globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
             // release all data outside, and page in all data inside
@@ -1230,3 +1235,4 @@ public:
 };
 
 };};
+
