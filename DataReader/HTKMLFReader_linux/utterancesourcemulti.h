@@ -498,17 +498,13 @@ public:
                 // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
                 if (thisallchunks.empty() || thisallchunks.back().totalframes > chunkframes || thisallchunks.back().numutterances() >= frameref::maxutterancesperchunk)
                 {
-                    //fprintf(stderr, "hahahahahaahhaha %d %d %d %d %d\n", chunkframes,_totalframes, i, thisallchunks.back().totalframes,thisallchunks.back().numutterances());
-                    //fprintf(stderr, "hahahahahaahahah %d\n", thisallchunks.size());
                     thisallchunks.push_back (utterancechunkdata());
 
-                fprintf(stderr, "after  hahahahahaahhaha %d %d %d %d %d %d\n", chunkframes,_totalframes, i, thisallchunks.back().totalframes,thisallchunks.back().numutterances(),utteranceset.size());
 
                 }
                 // append utterance to last chunk
                 utterancechunkdata & currentchunk = thisallchunks.back();
                     //std::move(utteranceset[i]);
-                //fprintf(stderr, "after  hahahahahaahhaha %d %d %d %d %d %d\n", chunkframes,_totalframes, i, thisallchunks.back().totalframes,thisallchunks.back().numutterances(),utteranceset.size());
 
                 currentchunk.push_back (std::move (utteranceset[i]));    // move it out from our temp array into the chunk
                 // TODO: above push_back does not actually 'move' because the internal push_back does not accept that
