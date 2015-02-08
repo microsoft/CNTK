@@ -612,7 +612,7 @@ public:
 struct htkmlfentry
 {
     unsigned int firstframe;    // range [firstframe,firstframe+numframes)
-    unsigned short numframes;
+    unsigned int numframes;
     //unsigned short classid;     // numeric state id
     unsigned int classid;     // numeric state id - mseltzer changed from ushort to uint for untied cd phones > 2^16
     
@@ -623,7 +623,7 @@ private:
         if (te < ts) throw std::runtime_error ("htkmlfentry: end time below start time??");
         // save
         firstframe = (unsigned int) ts;
-        numframes = (unsigned short) (te - ts);
+        numframes = (unsigned int) (te - ts);
         classid = (unsigned int) uid;
         // check for numeric overflow
         if (firstframe != ts || firstframe + numframes != te || classid != uid)

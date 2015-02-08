@@ -4,7 +4,10 @@
 // </copyright>
 //
 
-#define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#endif
+
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 #pragma warning (disable: 4996)     // ^^ this does not seem to work--TODO: make it work
 #define _FILE_OFFSET_BITS 64        // to force fseeko() and ftello() 64 bit in Linux
