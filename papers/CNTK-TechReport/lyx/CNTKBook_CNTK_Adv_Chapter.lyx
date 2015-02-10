@@ -1980,6 +1980,46 @@ m - input matrix.
 \end_layout
 
 \begin_layout Subsubsection
+LogSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LogSoftmax
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the log of softmax of the input matrix for each column.
+ The resulting matrix has the same dimensions as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+LogSoftmax(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+ 
+\end_layout
+
+\begin_layout Subsubsection
 SumElements
 \begin_inset Index idx
 status open
