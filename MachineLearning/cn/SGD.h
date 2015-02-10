@@ -240,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
             RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed=true)
         {
-            numPrevLearnRates;
+            m_numPrevLearnRates = numPrevLearnRates;
             m_mbSize=mbSize;
             m_epochSize=epochSize;
             if (m_epochSize == 0)
@@ -516,11 +516,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t totalSamplesSeen = 0;
             ElemType learnRatePerSample = 0.5f / m_mbSize[startEpoch];
 
-            int m_numPrevLearnRates = 5; //used to control the upper learnining rate in LR search to reduce computation
             vector<ElemType> prevLearnRates;
             prevLearnRates.resize(m_numPrevLearnRates);
             for (int i=0; i<m_numPrevLearnRates; i++)
-                prevLearnRates[i] = std::numeric_limits<ElemType>::infinity();
+                prevLearnRates[i] = ElemType(-1);
 
             //precompute mean and invStdDev nodes and save initial model
             if (PreCompute(net, trainSetDataReader, FeatureNodes, labelNodes, inputMatrices) || startEpoch == 0)
@@ -539,6 +538,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (startEpoch > 0)
             {
                 learnRateInitialized = LoadCheckPointInfo(startEpoch-1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);  
+                if (learnRateInitialized)
+                    prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample; 
+
                 setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size()-1]);
             }
 
@@ -858,7 +860,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::vector<ComputationNodePtr>& evaluationNodes,
             std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
             const std::list<ComputationNodePtr>& learnableNodes,
-            std::list<Matrix<ElemType>>& smoothedGradients, const bool /*learnRateInitialized*/, const ElemType largestPrevLearnRatePerSample)
+            std::list<Matrix<ElemType>>& smoothedGradients, const bool learnRateInitialized, const ElemType largestPrevLearnRatePerSample)
         {
             ElemType epochCriterion = std::numeric_limits<ElemType>::infinity(), prevCriterion = std::numeric_limits<ElemType>::infinity();
             vector<ElemType> epochEvalErrors(evaluationNodes.size(),std::numeric_limits<ElemType>::infinity());
@@ -877,7 +879,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType minLearnRate = m_minLearnRate * 0.3f;
             ElemType learnRatePerSample = 1.0f / 8.0f / 0.618f /sqrt((ElemType)m_mbSize[epochNumber]);
 
-            if (largestPrevLearnRatePerSample != std::numeric_limits<ElemType>::infinity())
+            if (learnRateInitialized && largestPrevLearnRatePerSample > 0)
                 learnRatePerSample = largestPrevLearnRatePerSample / 0.618f / 0.618f;  //largestPrevLearnRatePerSample is per sample, first 0.618f is for compensation, second one is for safety
 
             int baseModelEpoch =  epochNumber-1;

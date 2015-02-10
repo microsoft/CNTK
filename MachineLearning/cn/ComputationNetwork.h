@@ -731,6 +731,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new CosineNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == SoftmaxNode<ElemType>::TypeName())
                 newNode = new SoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())
+                newNode = new LogSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == SumElementsNode<ElemType>::TypeName())
                 newNode = new SumElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ScaleNode<ElemType>::TypeName())
@@ -888,6 +890,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new CosineNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == SoftmaxNode<ElemType>::TypeName())
                 newNode = new SoftmaxNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())
+                newNode = new LogSoftmaxNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == SumElementsNode<ElemType>::TypeName())
                 newNode = new SumElementsNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ScaleNode<ElemType>::TypeName())
@@ -1149,7 +1153,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"") 
+        ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new LogSoftmaxNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new SumElementsNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(a);
