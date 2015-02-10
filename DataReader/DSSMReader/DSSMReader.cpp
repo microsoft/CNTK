@@ -391,16 +391,19 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
 	if (actualMBSize > m_mbSize || m_labelsBuffer == NULL) {
 		size_t rows = labels.GetNumRows();
-		labels.Resize(rows, actualMBSize);
-		labels.SetValue(0.0);
 		m_labelsBuffer = new ElemType[rows * actualMBSize];
 		memset(m_labelsBuffer, 0, sizeof(ElemType)* rows * actualMBSize);
 		for (int i = 0; i < actualMBSize; i++)
 		{
 			m_labelsBuffer[i * rows] = 1;
 		}
+	}
+	if (actualMBSize != labels.GetNumCols()) 
+	{
+		size_t rows = labels.GetNumRows();
+		labels.Resize(rows, actualMBSize);
+		labels.SetValue(0.0);
 		labels.SetValue(rows, actualMBSize, m_labelsBuffer, 0, labels.GetDeviceId());
-
 	}
 	/*
 	featuresQ.Print("featuresQ");
@@ -583,9 +586,10 @@ bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t c
 		//int64_t cur_offset = offsets[ordering[cur]];
 		int64_t cur_offset = offsets[cur];
 		//int64_t cur_offset = offsets[ordering[c]];
-		int32_t nnz;
+		//int32_t nnz;
 		colIndices[c] = cur_index;
-		memcpy(&nnz, (char*)data_buffer + cur_offset, sizeof(int32_t));
+		int32_t nnz = *(int32_t*)((char*)data_buffer + cur_offset);
+		//memcpy(&nnz, (char*)data_buffer + cur_offset, sizeof(int32_t));
 		memcpy(values+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t), sizeof(ElemType)*nnz);
 		memcpy(rowIndices+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t)+sizeof(ElemType)*nnz, sizeof(int32_t)*nnz);
 		/**
