@@ -434,7 +434,6 @@ void DoCreateLabelMap(const ConfigParameters& config)
 template <typename ElemType>
 void DoWriteWordAndClassInfo(const ConfigParameters& config)
 {
-#define MAXSTRING 2048
     string inputFile = config("inputFile");
     string outputWord2Cls = config("outputWord2Cls");
     string outputCls2Index = config("outputCls2Index");
@@ -454,14 +453,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     cls2idx.Resize(nbrCls, 1);
 
     /// get line
-    char ch2[MAXSTRING];
+    char ch2[2048];
     string str;
     vector<string> vstr;
     int maxWordIdx = -1;
     int maxClsIdx = -1;
     int prevClsIdx = -1;
 
-    while (fgets(ch2, MAXSTRING, fp) != nullptr)
+    while (fgets(ch2, 2048, fp) != nullptr)
     {
         str = ch2;
         str = trim(str);
