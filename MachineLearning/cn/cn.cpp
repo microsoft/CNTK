@@ -19,6 +19,7 @@
 #include "ModelEditLanguage.h"
 #include "SGD.h"
 #include <string>
+#include <basetypes.h>
 #include "commandArgUtil.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
@@ -409,6 +410,113 @@ void DoCreateLabelMap(const ConfigParameters& config)
         fprintf(stderr, "%f seconds elapsed\n", (float)(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count())/1000);
 }
 
+///
+/// for action writeWordAndClass
+///
+/// read inforamtion file
+/// format of the information file is as follows
+/// 0	     42068	</s>	0
+/// 1	     50770	the	0
+/// 2	     45020	<unk>	1
+/// the first column is word index
+/// the last column is class index of the word
+/// the second column and the third column are for information purpose and 
+/// are not really used in generating outputs for later process in the neural networks training
+///
+/// the outputs are the word2class and class2idx file with the information below
+///    wrd2cls in dense matrix in[vocab_size X 1].it maps a word to its class id.
+///    cls2idx in dense matrix in[nbr_cls X 1].it maps a class to its first word index.
+///
+/// to be used for class-based entropy, the outputs have the following assumptions
+/// A1 : words are sorted so that words that are in the same class are together
+///    i.e., wrds2cls[0] <= wrd2cls[1] <= ... <= wrd2cls[vocab_size - 1]
+/// A2 : class ids are sorted so that cls2idx[0] < cls2idx[1] < cls2idx[2] < ... < cls2idx[nbr_cls - 1]
+template <typename ElemType>
+void DoWriteWordAndClassInfo(const ConfigParameters& config)
+{
+    string inputFile = config("inputFile");
+    string outputWord2Cls = config("outputWord2Cls");
+    string outputCls2Index = config("outputCls2Index");
+    size_t  vocabSize = config("vocabSize");
+    size_t  nbrCls = config("nbrClass");
+
+    DEVICEID_TYPE deviceId = CPUDEVICE;
+
+    Matrix<ElemType> wrd2cls(deviceId);
+    Matrix<ElemType> cls2idx(deviceId);
+
+    FILE *fp = fopen(inputFile.c_str(), "rt");
+    if (fp == nullptr)
+        RuntimeError("inputFile cannot be read");
+
+    wrd2cls.Resize(vocabSize, 1);
+    cls2idx.Resize(nbrCls, 1);
+
+    /// get line
+    char ch2[2048];
+    string str;
+    vector<string> vstr;
+    int maxWordIdx = -1;
+    int maxClsIdx = -1;
+    int prevClsIdx = -1;
+
+    while (fgets(ch2, 2048, fp) != nullptr)
+    {
+        str = ch2;
+        str = trim(str);
+        vstr = msra::strfun::split(str, "\t ");
+
+        int wrdIdx = atoi(vstr[0].c_str());
+        if (wrdIdx > maxWordIdx)
+            maxWordIdx = wrdIdx;
+
+        int clsIdx = atoi(vstr[vstr.size() - 1].c_str());
+        if (clsIdx > maxClsIdx)
+            maxClsIdx = clsIdx;
+
+        wrd2cls(wrdIdx,0) = (ElemType)clsIdx;
+
+        if (clsIdx != prevClsIdx)
+        {
+            cls2idx(clsIdx,0) = (ElemType)wrdIdx; /// the left boundary of clsIdx
+            prevClsIdx = clsIdx;
+        }
+    }
+
+    fclose(fp);
+
+    if (maxClsIdx >= nbrCls || maxWordIdx >= vocabSize)
+        RuntimeError("DoWriteWordAndClassInfo::number of class and|or vocabulary size are not matching what are specified");
+
+    /// check assumptions
+    for (size_t r = 0; r < wrd2cls.GetNumRows() - 1; r++)
+    {
+        if (wrd2cls(r, 0) > wrd2cls(r + 1, 0))
+            RuntimeError("words should be sorted so that words that are in the same class are together. i.e., wrds2cls[0] <= wrd2cls[1] <= ... <= wrd2cls[vocab_size - 1]");
+    }
+
+    for (size_t r = 0; r < cls2idx.GetNumRows() - 1; r++)
+    {
+        if (cls2idx(r, 0) >= cls2idx(r + 1, 0))
+            RuntimeError("class ids are sorted so that cls2idx[0] < cls2idx[1] < cls2idx[2] < ... < cls2idx[nbr_cls - 1]");
+    }
+
+    /// write the outputs
+    fp = fopen(outputWord2Cls.c_str(), "wt");
+    if (fp == nullptr)
+        RuntimeError("cannot write to %s", outputWord2Cls.c_str());
+
+    for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
+        fprintf(fp, "%d\n", (int)wrd2cls(r, 0));
+    fclose(fp);
+
+    fp = fopen(outputCls2Index.c_str(), "wt");
+    if (fp == nullptr)
+        RuntimeError("cannot write to %s", outputCls2Index.c_str());
+    for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
+        fprintf(fp, "%d\n", (int)cls2idx(r, 0));
+    fclose(fp);
+}
 
 template <typename ElemType>
 void DoTrain(const ConfigParameters& config)
@@ -550,6 +658,8 @@ void DoCommand(const ConfigParameters& config)
                 DoConvertFromDbn<ElemType>(commandParams);
             else if (action[j] == "createLabelMap")
                 DoCreateLabelMap<ElemType>(commandParams);
+            else if (action[j] == "writeWordAndClass")
+                DoWriteWordAndClassInfo<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
                 

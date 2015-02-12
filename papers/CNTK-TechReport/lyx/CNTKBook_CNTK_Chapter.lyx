@@ -2534,6 +2534,25 @@ frameMode=false
 \begin_layout Itemize
 
 \emph on
+pageFilePath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+pageFilePath
+\end_layout
+
+\end_inset
+
+
+\emph default
+: specify where the temporary page file of the features should be stored.
+ By default it will use system provided temp file.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
 randomize
 \begin_inset Index idx
 status open

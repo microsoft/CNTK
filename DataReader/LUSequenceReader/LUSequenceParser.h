@@ -279,6 +279,24 @@ public:
         if (mFile) fseek(mFile, 0, SEEK_SET);
     }
 
+    void AddOneItem(std::vector<LabelType> *labels, std::vector<vector<LabelType>> *input, std::vector<SequencePosition> *seqPos, long& lineCount,
+        long & recordCount, long orgRecordCount, SequencePosition& sequencePositionLast)
+    {
+        SequencePosition sequencePos(input->size(), labels->size(),
+            m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
+        seqPos->push_back(sequencePos);
+        sequencePositionLast = sequencePos;
+
+        recordCount = (long)labels->size() - orgRecordCount;
+        lineCount++;
+    }
+
+    // Parse - Parse the data
+    // recordsRequested - number of records requested
+    // labels - pointer to vector to return the labels 
+    // numbers - pointer to vector to return the numbers 
+    // seqPos - pointers to the other two arrays showing positions of each sequence
+    // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     // Parse - Parse the data
     // recordsRequested - number of records requested
     // labels - pointer to vector to return the labels 
@@ -287,56 +305,64 @@ public:
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
     long Parse(size_t recordsRequested, std::vector<LabelType> *labels, std::vector<vector<LabelType>> *input, std::vector<SequencePosition> *seqPos)
     {
-        assert(labels != NULL || m_dimLabelsIn == 0 && m_dimLabelsOut == 0|| m_parseMode == ParseLineCount);
+        assert(labels != NULL || m_dimLabelsIn == 0 && m_dimLabelsOut == 0 || m_parseMode == ParseLineCount);
 
         // transfer to member variables
         m_inputs = input;
         m_labels = labels;
 
-        long TickStart = GetTickCount( );
+        long TickStart = GetTickCount();
         long recordCount = 0;
         long orgRecordCount = (long)labels->size();
         long lineCount = 0;
-        SequencePosition sequencePositionLast(0,0,seqFlagNull);
+        bool bAtEOS = false; /// whether the reader is at the end of sentence position
+        SequencePosition sequencePositionLast(0, 0, seqFlagNull);
         /// get line
-        char ch2[MAXSTRING]; 
-        while (recordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
+        char ch2[MAXSTRING];
+        while (lineCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
         {
-            
-            string ch = ch2; 
-            std::vector<string> vstr; 
+
+            string ch = ch2;
+            std::vector<string> vstr;
+            bool bBlankLine = (trim(ch).length() == 0);
+            if (bBlankLine && !bAtEOS && input->size() > 0 && labels->size() > 0)
+            {
+                AddOneItem(labels, input, seqPos, lineCount, recordCount, orgRecordCount, sequencePositionLast);
+                bAtEOS = true;
+                continue;
+            }
+
             vstr = sep_string(ch, " ");
-            if (vstr.size() < 2) 
+            if (vstr.size() < 2)
                 continue;
 
+            bAtEOS = false;
             vector<LabelType> vtmp;
-            for (size_t i = 0; i < vstr.size()-1; i++)
+            for (size_t i = 0; i < vstr.size() - 1; i++)
             {
                 vtmp.push_back(vstr[i]);
             }
             labels->push_back(vstr[vstr.size() - 1]);
             input->push_back(vtmp);
-            if (vstr[0] == m_endTag) 
+            if ((vstr[vstr.size() - 1] == m_endSequenceOut ||
+                /// below is for backward support
+                vstr[0] == m_endTag) && input->size() > 0 && labels->size() > 0)
             {
-                SequencePosition sequencePos(input->size(), labels->size(), 
-                    m_beginSequence?seqFlagStartLabel:0 | m_endSequence?seqFlagStopLabel:0 | seqFlagLineBreak);
-                seqPos->push_back(sequencePos);
-                sequencePositionLast = sequencePos;
-
-                recordCount = (long)labels->size() - orgRecordCount;
-                lineCount ++;
+                AddOneItem(labels, input, seqPos, lineCount, recordCount, orgRecordCount, sequencePositionLast);
+                bAtEOS = true;
             }
 
         } // while
 
-        long TickStop = GetTickCount( );
+        long TickStop = GetTickCount();
 
         long TickDelta = TickStop - TickStart;
 
         if (m_traceLevel > 2)
-            fprintf(stderr, "\n%d ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
+            fprintf(stderr, "\n%d ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted);
         return lineCount;
     }
+
 
 };
 
