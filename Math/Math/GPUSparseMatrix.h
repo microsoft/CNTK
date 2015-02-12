@@ -58,11 +58,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t MajorIndexSize() const { return sizeof(GPUSPARSE_INDEX_TYPE)*MajorIndexCount(); } // actual number of major index bytes in use
 
         GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const { return MajorIndexLocation() + m_elemSizeAllocated; } //this is the compressed index, col/row in CSC/CSR format
-        size_t SecondaryIndexCount(const size_t numNZ) const 
+        size_t SecondaryIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
         {
-            if (m_format&matrixFormatCompressed)
+            if (format&matrixFormatCompressed)
             {
-                size_t cnt = (m_format&matrixFormatRowMajor)?m_numRows:m_numCols;
+                size_t cnt = (format&matrixFormatRowMajor) ? numRows : numCols;
                 if (cnt > 0) cnt++; // add an extra element on the end for the "max" value
                 return cnt;
             }
@@ -72,15 +72,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t SecondaryIndexCount() const
         {
-            return SecondaryIndexCount(m_nz);
+            return SecondaryIndexCount(m_numRows, m_numCols, m_nz, m_format);
         }
 
         // get size for compressed index
         size_t SecondaryIndexSize() const { return (SecondaryIndexCount())*sizeof(GPUSPARSE_INDEX_TYPE); }
 
         size_t BufferSizeNeeded() const { return NzSize() + MajorIndexSize() + SecondaryIndexSize(); }
-        size_t BufferSizeNeeded(const size_t numNZ) const 
-        { return sizeof(ElemType)*numNZ + sizeof(GPUSPARSE_INDEX_TYPE)*(numNZ + SecondaryIndexCount(numNZ)); }
+        size_t BufferSizeNeeded(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const 
+        { return sizeof(ElemType)*numNZ + sizeof(GPUSPARSE_INDEX_TYPE)*(numNZ + SecondaryIndexCount(numRows, numCols, numNZ, format)); }
 
         inline size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
         inline ElemType* BufferPointer() const { return m_pArray; }
@@ -97,8 +97,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const GPUMatrix<ElemType>& denseMatrix);
 
         void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true); //matrix format will affect the size to allocate
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly = true);
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); //matrix format will affect the size to allocate
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly = true, bool keepExistingValues = true);
 
         GPUSparseMatrix<ElemType> Transpose() const;
         void InplaceTranspose();
@@ -240,17 +240,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void Clear();
         void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);
-        size_t ElemCountFromBufferSize(const size_t totalBufferSize) const;
+        size_t ElemCountFromBufferSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const size_t totalBufferSize) const;
         size_t ElemCountFromBufferSize() const;
         DEVICEID_TYPE PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;
+        size_t IdentifyRowsWithValues() const;
 
      private:
 
         size_t m_totalBufferSizeAllocated;
 
+        //used by the blockCol and blockRow format
         size_t m_blockSize; //block size        
-        size_t *m_blockIds; //block ids
-        size_t *m_rowToId; //the id showing the order row number is observed in the nnz values.
+        GPUSPARSE_INDEX_TYPE *m_blockId2col; //block id to col
+        GPUSPARSE_INDEX_TYPE *m_col2blockId; //block id to col
+        mutable GPUSPARSE_INDEX_TYPE *m_rowToId; //the id showing the order row number is observed in the nnz values.
 
         size_t m_expandedSize; // expanded label size
         size_t* m_block2Id; // label block id to first word location

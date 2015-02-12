@@ -599,9 +599,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //return a reasonable  learning rate based on the initial mbsize
                     learnRatePerSample = SearchLearnRateBeforeEpoch(net, refNet, refNode, i, learnRatePerSample, trainSetDataReader, FeatureNodes,
                         labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients, learnRateInitialized, largestPrevLearnRatePerSample);
-
-                    prevLearnRates[i % m_numPrevLearnRates] = learnRatePerSample;  //save per sample learn rate to support changeable mbsize
                 }
+
+                prevLearnRates[i % m_numPrevLearnRates] = learnRatePerSample;  //save per sample learn rate to support changeable mbsize
 
                 learnRateInitialized = true;
 
@@ -903,7 +903,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     ratio = pow(((ElemType)epochSize) / m_epochSize, 1.0f/2);
                 }
-                baseCriterion = max(ratio * prevCriterion + (1-ratio) * baseCriterion, baseCriterion);
+                baseCriterion = min(ratio * prevCriterion + (1-ratio) * baseCriterion, baseCriterion);
             }
 
             do
