@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
-        void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat = matrixFormatSparseCSR); //sets matrix type between dense and sparse
+        void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat = matrixFormatSparseCSR, const bool keepValues = true); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;
@@ -436,6 +436,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType>* cls, 
             const Matrix<ElemType>* idx2cls, 
             Matrix<ElemType>& grd);
+
+		public:
+			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
+			Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
+			static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
+			Matrix<ElemType>& GetARowByIndex(const Matrix<ElemType>& a, size_t index);
+			static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
+			Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
+
 
     };
 

@@ -718,7 +718,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //         However, the convertion functions are not implemented yet and so it will always create 
     //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked. 
     template<class ElemType>
-    void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat)
+    void Matrix<ElemType>::SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues)
     {
         if (m_matrixType==newMatrixType)
             return;
@@ -744,7 +744,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (GetMatrixType() == MatrixType::DENSE && m_CPUMatrix != nullptr)
                     {
                         m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols());
-                        CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
+                        if (keepValues)
+                            CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
                     }
                     else
                     {
@@ -781,16 +782,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else 
                     {
-                        // Ideally the following two cases should be combined. The else case is legacy code
-                        // and it is used for the legacy unit tests.
-                        if (m_GPUMatrix->GetNumElements() == 0)
+                        m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
+                        if (m_GPUMatrix->GetNumElements() != 0)
                         {
-                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
-                        } 
-                        else
-                        {
-                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(*m_GPUMatrix, newMatrixFormat); //this is deep copy in legacy code
+                            if (keepValues)
+                                m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
+                            else
+                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), 0);
                         }
+
                         delete m_GPUMatrix;
                         m_GPUMatrix = nullptr;
                     }
@@ -801,17 +801,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_GPUMatrix == nullptr)
                 {
-                    if (m_GPUSparseMatrix != nullptr)
-                    {
-                        m_GPUMatrix = new GPUMatrix<ElemType>(m_GPUSparseMatrix->CopyToDenseMatrix());
-                        delete m_GPUSparseMatrix;
-                        m_GPUSparseMatrix = nullptr;
-                    }
-                    else
-                    {
-                        m_GPUMatrix = new GPUMatrix<ElemType>(GetDeviceId());
-                    }
+                    m_GPUMatrix = new GPUMatrix<ElemType>(GetDeviceId());
                 }
+
+                if (m_GPUSparseMatrix != nullptr)
+                {
+                    if (keepValues)
+                        m_GPUSparseMatrix->CopyToDenseMatrix(*m_GPUMatrix);
+                    else
+                        m_GPUMatrix->Resize(m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols());
+
+                    delete m_GPUSparseMatrix;
+                    m_GPUSparseMatrix = nullptr;
+                }
+                
                 SetDataLocation(GPU, DENSE);
             }
             else
@@ -4228,7 +4231,142 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 *grd.m_GPUSparseMatrix)
             );                
     }
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            throw std::invalid_argument("The input matrix dimensions do not match.");
+
+        if (a.GetNumRows() != 1)
+            throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+
+        DecideAndMoveToRightDevice(a, b, *this);
+        if (!(a.GetMatrixType() == b.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        this->SwitchToMatrixType(a.GetMatrixType());
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, shift, negnumber),
+            this->m_GPUMatrix->AssignElementProductOfWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, shift, negnumber),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+        return *this;
+    }
+
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber)
+    {
+        InnerProductWithShiftNeg(a, b, *this, isColWise, shift, negnumber);
+        return *this;
+    }
+    template<class ElemType>
+    void Matrix<ElemType>::InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("InnerProduct:  one of the input matrix is empty.");
+
+        DecideAndMoveToRightDevice(a, b, c);
+
+        if (a.GetMatrixType() != b.GetMatrixType())
+            NOT_IMPLEMENTED;
+
+        c.SwitchToMatrixType(a.GetMatrixType());
+
+        DISPATCH_MATRIX_ON_FLAG(&c,
+            &c,
+            CPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise, shift, negnumber),
+            GPUMatrix<ElemType>::InnerProductWithShiftNeg(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, negnumber),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+    }
+
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::GetARowByIndex(const Matrix<ElemType>& a, size_t index)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("GetARowByIndex: Matrix is empty.");
+
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        SwitchToMatrixType(a.GetMatrixType());
+
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->GetARowByIndex(*a.m_CPUMatrix, index),
+            this->m_GPUMatrix->GetARowByIndex(*a.m_GPUMatrix, index),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("InnerProduct:  one of the input matrix is empty.");
+
+        DecideAndMoveToRightDevice(a, b, c);
+
+        if (a.GetMatrixType() != b.GetMatrixType())
+            NOT_IMPLEMENTED;
+
+        c.SwitchToMatrixType(a.GetMatrixType());
+
+        DISPATCH_MATRIX_ON_FLAG(&c,
+            &c,
+            CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, shift, bFirstmatrixfixed),
+            GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, shift, bFirstmatrixfixed),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("AssignElementProductOfWithShift: Matrix is empty.");
+
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            throw std::invalid_argument("The input matrix dimensions do not match.");
+
+        if (a.GetNumRows() != 1)
+            throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+
+        DecideAndMoveToRightDevice(a, b, *this);
+        if (!(a.GetMatrixType() == b.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        this->SwitchToMatrixType(a.GetMatrixType());
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AssignElementProductOfWithShift(*a.m_CPUMatrix, *b.m_CPUMatrix, shift),
+            this->m_GPUMatrix->AssignElementProductOfWithShift(*a.m_GPUMatrix, *b.m_GPUMatrix, shift),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+        return *this;
+    }
 #pragma endregion Static BLAS Functions
 
     template class Matrix<float>; 
