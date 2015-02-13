@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 0, const bool growOnly = true, const bool keepExistingValues = true);
+        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 0, const bool growOnly = true, bool keepExistingValues = true);
         void Reset();
 
         inline ElemType defaultElem()
@@ -141,7 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         const ElemType* NzValues() const { return m_pArray; }
-        ElemType* NzValues() { return m_pArray; }
+        inline ElemType* NzValues() { return m_pArray; }
         size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
 		void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,

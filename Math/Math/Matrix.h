@@ -39,6 +39,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mutable MatrixType m_matrixType;
         mutable CurrentDataLocation m_currentDataLocation; //Indicates which matrix is current        
         mutable DEVICEID_TYPE m_preferredDeviceId;
+
+        mutable size_t m_numTimesDeviceChanged;
+        mutable size_t m_numTimesMatrixTypeChanged;
+
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
         //Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
@@ -89,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
-        void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat = matrixFormatSparseCSR); //sets matrix type between dense and sparse
+        void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat = matrixFormatSparseCSR, const bool keepValues = true); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;

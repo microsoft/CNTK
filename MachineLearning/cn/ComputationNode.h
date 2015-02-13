@@ -1001,21 +1001,21 @@ protected:  \
         SparseLearnableParameter(size_t rows, size_t cols, const size_t size, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : LearnableParameter<ElemType>(rows, cols, deviceId, name)
         {
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(rows, cols, size);
         }
 
         SparseLearnableParameter (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") 
             : LearnableParameter<ElemType>(fstream, modelVersion, deviceId, name)
         {
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
 
         virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             LearnableParameter<ElemType>::LoadFromFile(fstream,   modelVersion, deviceId);
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
 
@@ -2380,8 +2380,8 @@ protected:  \
     {
         UsingComputationNodeMembers;
     public:
-        SoftmaxNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"", const bool isColWise = true)
-            : ComputationNode<ElemType>(deviceId), m_gradientDotValue(deviceId), m_diff(deviceId), m_isColWise(isColWise)
+        SoftmaxNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_gradientDotValue(deviceId), m_diff(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -2489,8 +2489,6 @@ protected:  \
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             CopyImageSizeFromInputs(); 
-            m_gradientDotValue.Resize(GradientValues().GetNumRows(), GradientValues().GetNumCols());
-            m_diff.Resize(GradientValues().GetNumRows(), GradientValues().GetNumCols());
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -2540,13 +2538,181 @@ protected:  \
         }
 
     private:
-        bool m_isColWise;
         Matrix<ElemType> m_gradientDotValue;
         Matrix<ElemType> m_diff;
     };
 
     template class SoftmaxNode<float>; 
     template class SoftmaxNode<double>;
+
+    template<class ElemType>
+    class LogSoftmaxNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        LogSoftmaxNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_gradientDotValue(deviceId), m_softmax(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        LogSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_gradientDotValue(deviceId), m_softmax(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"LogSoftmax"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("Softmax only has one input.");
+            ComputeInputPartialS(m_gradientDotValue, m_softmax, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("Softmax only has one input.");
+
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            ComputeInputPartialS(m_gradientDotValue, m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& softmax, Matrix<ElemType>& inputGradientValues,
+            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+        {
+            softmax.AssignExpOf(functionValues);
+            gradientDotValue.AssignInnerProductOf(gradientValues, softmax, true);
+            softmax.AssignDifferenceOf(gradientValues, gradientDotValue);
+            inputGradientValues += softmax;
+        }
+
+        // GetTaskDescriptor - Get a task descriptor for this node
+        // taskType - task type we are generating a task for
+        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
+        {
+            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
+            switch (taskType)
+            {
+            case taskComputeInputPartial:
+                descriptor->MatrixParam(m_gradientDotValue, "GradientDotValue", paramOptionsInput | paramOptionsTemporary);
+                descriptor->MatrixParam(m_softmax, "softmax", paramOptionsInput | paramOptionsTemporary);
+                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
+                descriptor->GradientParam();
+                descriptor->FunctionParam(-1, paramOptionsInput);
+                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
+                break;
+            case taskEvaluate:
+                descriptor->FunctionParam();
+                descriptor->FunctionParam(0, paramOptionsInput);
+                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
+                break;
+            default:
+                assert(false);
+                throw std::logic_error("Unsupported task requested");
+            }
+            return descriptor;
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
+#if NANCHECK
+            functionValues.HasNan("LogSoftMax");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("LogSoftmaxNode operation should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("LogSoftmaxNode operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_gradientDotValue.GetDeviceId() != deviceId)
+                    m_gradientDotValue.TransferFromDeviceToDevice(m_gradientDotValue.GetDeviceId(), deviceId);
+                if (m_softmax.GetDeviceId() != deviceId)
+                    m_softmax.TransferFromDeviceToDevice(m_softmax.GetDeviceId(), deviceId);
+            }
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            LogSoftmaxNode<ElemType>* node = (LogSoftmaxNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_gradientDotValue = m_gradientDotValue;
+                node->m_softmax = m_softmax;
+            }
+        }
+
+        // copy constructor
+        LogSoftmaxNode(const LogSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_softmax(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new LogSoftmaxNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    private:
+        Matrix<ElemType> m_gradientDotValue;
+        Matrix<ElemType> m_softmax;
+    };
+
+    template class LogSoftmaxNode<float>;
+    template class LogSoftmaxNode<double>;
 
     template<class ElemType>
     class SumElementsNode : public ComputationNode<ElemType>
@@ -3113,8 +3279,7 @@ protected:  \
 #endif
             //currently we only support one combination when the input is sparse.
             if (inputFunctionValues.GetMatrixType() == SPARSE && inputGradientValues.GetMatrixType() == DENSE && gradientValues.GetMatrixType() == DENSE)
-                //inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol);
-                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseCSC);
+                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
 
                 Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, inputFunctionValues, true, inputGradientValues);
 #if DUMPOUTPUT
