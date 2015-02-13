@@ -1001,21 +1001,21 @@ protected:  \
         SparseLearnableParameter(size_t rows, size_t cols, const size_t size, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : LearnableParameter<ElemType>(rows, cols, deviceId, name)
         {
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(rows, cols, size);
         }
 
         SparseLearnableParameter (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") 
             : LearnableParameter<ElemType>(fstream, modelVersion, deviceId, name)
         {
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
 
         virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             LearnableParameter<ElemType>::LoadFromFile(fstream,   modelVersion, deviceId);
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol);
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
 
@@ -2594,7 +2594,8 @@ protected:  \
         {
             softmax.AssignExpOf(functionValues);
             gradientDotValue.AssignInnerProductOf(gradientValues, softmax, true);
-            Matrix<ElemType>::AddScaledDifference(1, gradientValues, gradientDotValue, inputGradientValues);
+            softmax.AssignDifferenceOf(gradientValues, gradientDotValue);
+            inputGradientValues += softmax;
         }
 
         // GetTaskDescriptor - Get a task descriptor for this node
@@ -3278,8 +3279,7 @@ protected:  \
 #endif
             //currently we only support one combination when the input is sparse.
             if (inputFunctionValues.GetMatrixType() == SPARSE && inputGradientValues.GetMatrixType() == DENSE && gradientValues.GetMatrixType() == DENSE)
-                //inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol);
-                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseCSC);
+                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
 
                 Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, inputFunctionValues, true, inputGradientValues);
 #if DUMPOUTPUT

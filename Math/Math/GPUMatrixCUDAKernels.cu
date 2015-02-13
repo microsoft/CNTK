@@ -2294,8 +2294,8 @@ template<class ElemType>
 __global__ void _findColsWithValues(
     const GPUSPARSE_INDEX_TYPE* rowIndexes, GPUSPARSE_INDEX_TYPE* blockIds, const size_t nnz)
 {
-    const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index > nnz)
+    const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= nnz)
         return;
 
     blockIds[rowIndexes[index]] = 1; //this row has value.
@@ -2312,8 +2312,8 @@ template<class ElemType>
 __global__ void _determineBlockIds(
     GPUSPARSE_INDEX_TYPE* blockId2Col, GPUSPARSE_INDEX_TYPE*col2BlockId, const size_t numCols, size_t* blockSize)
 {
-    const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index > numCols)
+    const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= numCols)
         return;
 
     size_t blockIndex = numCols;
