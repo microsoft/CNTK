@@ -6,7 +6,6 @@
 // HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
 #include "DataReader.h"
-#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -14,6 +13,10 @@ template<class ElemType>
 class HTKMLFReader : public IDataReader<ElemType>
 {
 private:
+
+    const static size_t m_htkRandomizeAuto = 0;
+    const static size_t m_htkRandomizeDisable = (size_t)-1;
+
     msra::dbn::minibatchiterator* m_mbiter;
     msra::dbn::minibatchsource* m_frameSource;
     msra::dbn::minibatchreadaheadsource* m_readAheadSource;
@@ -32,7 +35,6 @@ private:
     vector<size_t> m_toProcess;
     vector<size_t> m_switchFrame;
     bool m_noData;
-
     bool m_trainOrTest; // if false, in file writing mode
  
     std::map<LabelIdType, LabelType> m_idToLabelMap;

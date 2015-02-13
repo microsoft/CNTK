@@ -184,6 +184,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, SoftmaxNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, LogSoftmaxNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, SquareErrorNode<ElemType>::TypeName(), L"SE"))
         ret = true;
     else if (EqualInsensitive(nodeType, CrossEntropyWithSoftmaxNode<ElemType>::TypeName(), L"CEWithSM"))
