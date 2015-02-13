@@ -1020,7 +1020,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
+			m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols),
             m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols)
             );
 

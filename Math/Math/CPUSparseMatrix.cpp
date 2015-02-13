@@ -956,6 +956,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return stream;
     }
 
+	template<class ElemType>
+	void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+		const size_t nz, const size_t numRows, const size_t numCols, const bool , const DEVICEID_TYPE ) {
+		Resize(numRows, numCols, nz);
+		Reset();
+		int col = 0;
+		for (int ele = 0; ele < nz; ele++)
+		{
+			while (h_CSCCol[col + 1] == ele)
+			{
+				col++;
+			}
+			SetValue(h_Row[ele], col, h_Val[ele]);
+		}
+	}
+
+
+
     template class CPUSparseMatrix<float>;
     template class CPUSparseMatrix<double>;
 
