@@ -2074,6 +2074,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void GPUMatrix<ElemType>::VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c, const bool isColWise)
+    {
+        if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
+        {
+            throw std::invalid_argument("All matrices must be on the same GPU");
+        }
+
+        a.PrepareDevice();
+
+        if (a.IsEmpty())
+            throw std::logic_error("VectorSum:  Input matrix is empty.");
+
+        const long n = (long)a.GetNumRows();
+        const long m = (long)a.GetNumCols();
+        assert(m>0 && n>0); //converting from size_t to int may cause overflow
+
+        cudaEvent_t done;
+
+        int blocksPerGrid = 0;
+        if (isColWise)  //col-wise
+        {
+            c.Resize(1, m);
+            blocksPerGrid = (int)ceil(1.0*m / threadsPerBlock);
+        }
+        else
+        {
+            c.Resize(n, 1);
+            blocksPerGrid = (int)ceil(1.0*n / threadsPerBlock);
+        }
+
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _vectorSum<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(a.m_pArray, c.m_pArray, n, m, isColWise);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+    }
+    template<class ElemType>
     void GPUMatrix<ElemType>::VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWise) const
     {
         if (IsEmpty())
@@ -2096,7 +2133,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             c.Resize(n, 1);
-            c.ChangeDeviceTo(GetComputeDeviceId());
             blocksPerGrid =(int)ceil(1.0*n/threadsPerBlock);                        
         }       
 

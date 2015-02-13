@@ -228,6 +228,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType Max () const;
         bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
+        static void VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c, const bool isColWise);
+
         void VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWise) const;
         GPUMatrix<ElemType>& AssignVectorNorm1Of(GPUMatrix<ElemType>& a, const bool isColWise);
 

@@ -2593,9 +2593,9 @@ protected:  \
             const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             softmax.AssignExpOf(functionValues);
-            gradientDotValue.AssignInnerProductOf(gradientValues, softmax, true);
-            softmax.AssignDifferenceOf(gradientValues, gradientDotValue);
-            inputGradientValues += softmax;
+            Matrix<ElemType>::VectorSum(gradientValues, gradientDotValue, true);
+            softmax.RowElementMultiplyWith(gradientDotValue);
+            Matrix<ElemType>::AddScaledDifference(1.0, gradientValues, softmax, inputGradientValues);
         }
 
         // GetTaskDescriptor - Get a task descriptor for this node

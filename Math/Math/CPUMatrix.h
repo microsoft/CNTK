@@ -205,6 +205,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
+        static void VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c, const bool isColWise);
+
         void VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWise) const;
         CPUMatrix<ElemType>& AssignVectorNorm1Of(CPUMatrix<ElemType>& a, const bool isColWise);
 
