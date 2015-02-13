@@ -1084,6 +1084,37 @@ __global__ void _setMaskAndScale(
 }
 
 template<class ElemType>
+__global__ void _vectorSum(
+    ElemType* c, //output
+    const ElemType* a, //input
+    const long n, //a.numRows
+    const long m, //a.numCols
+    const bool isColWise)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if ((isColWise && id >= m) || (!isColWise && id >= n))
+        return;
+
+    ElemType sum = 0;
+
+    if (isColWise)
+    {
+        for (long i = 0; i<n; ++i)
+        {
+            sum += a[IDX2C(i, id, n)];
+        }
+    }
+    else
+    {
+        for (long j = 0; j<m; ++j)
+        {
+            sum += a[IDX2C(id, j, n)];
+        }
+    }
+    c[id] = sum;
+}
+
+template<class ElemType>
 __global__ void _vectorNorm1(
     ElemType* c, //output
     const ElemType* a, //input

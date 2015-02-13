@@ -2443,6 +2443,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     template<class ElemType>
+    void CPUMatrix<ElemType>::VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c, const bool isColWise)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("VectorSum:  Input matrix a is empty.");
+
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+
+        assert(m>0 && n>0); //converting from size_t to int may cause overflow
+
+        if (isColWise)  //col-wise
+        {
+            c.Resize(1, n);
+
+#pragma omp parallel for
+            foreach_column(j, a)
+            {
+                ElemType v = 0;
+                foreach_row(i, a)
+                {
+#pragma omp atomic
+                    v += a(i, j);
+                }
+                c(0, j) = v;
+            }
+        }
+        else
+        {
+            c.Resize(m, 1);
+
+#pragma omp parallel for
+            foreach_row(i, a)
+            {
+                ElemType v = 0;
+                foreach_column(j, a)
+                {
+#pragma omp atomic
+                    v += a(i, j);
+                }
+                c(i, 0) = v;
+            }
+        }
+    }
+
+    template<class ElemType>
     void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWise) const
     {
         if (IsEmpty())

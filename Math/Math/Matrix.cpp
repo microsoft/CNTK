@@ -2652,6 +2652,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return AreEqual(*this, a, threshold);
     }
 
+    template<class ElemType>
+    void Matrix<ElemType>::VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise)
+    {
+        DecideAndMoveToRightDevice(c, a);
+        if (!(a.GetMatrixType() == c.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        DISPATCH_MATRIX_ON_FLAG(&c,
+            &c,
+            CPUMatrix<ElemType>::VectorSum(*a.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
+            GPUMatrix<ElemType>::VectorSum(*a.m_GPUMatrix, *c.m_GPUMatrix, isColWise),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::VectorNorm1(Matrix<ElemType>& c, const bool isColWise) const
