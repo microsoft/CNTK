@@ -718,7 +718,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //         However, the convertion functions are not implemented yet and so it will always create 
     //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked. 
     template<class ElemType>
-    void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat)
+    void Matrix<ElemType>::SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues)
     {
         if (m_matrixType==newMatrixType)
             return;
@@ -744,7 +744,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (GetMatrixType() == MatrixType::DENSE && m_CPUMatrix != nullptr)
                     {
                         m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols());
-                        CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
+                        if (keepValues)
+                            CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
                     }
                     else
                     {
@@ -781,16 +782,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else 
                     {
-                        // Ideally the following two cases should be combined. The else case is legacy code
-                        // and it is used for the legacy unit tests.
-                        if (m_GPUMatrix->GetNumElements() == 0)
+                        m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
+                        if (m_GPUMatrix->GetNumElements() != 0)
                         {
-                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(newMatrixFormat, GetDeviceId());
-                        } 
-                        else
-                        {
-                            m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(*m_GPUMatrix, newMatrixFormat); //this is deep copy in legacy code
+                            if (keepValues)
+                                m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
+                            else
+                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), 0);
                         }
+
                         delete m_GPUMatrix;
                         m_GPUMatrix = nullptr;
                     }
@@ -801,17 +801,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_GPUMatrix == nullptr)
                 {
-                    if (m_GPUSparseMatrix != nullptr)
-                    {
-                        m_GPUMatrix = new GPUMatrix<ElemType>(m_GPUSparseMatrix->CopyToDenseMatrix());
-                        delete m_GPUSparseMatrix;
-                        m_GPUSparseMatrix = nullptr;
-                    }
-                    else
-                    {
-                        m_GPUMatrix = new GPUMatrix<ElemType>(GetDeviceId());
-                    }
+                    m_GPUMatrix = new GPUMatrix<ElemType>(GetDeviceId());
                 }
+
+                if (m_GPUSparseMatrix != nullptr)
+                {
+                    if (keepValues)
+                        m_GPUSparseMatrix->CopyToDenseMatrix(*m_GPUMatrix);
+                    else
+                        m_GPUMatrix->Resize(m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols());
+
+                    delete m_GPUSparseMatrix;
+                    m_GPUSparseMatrix = nullptr;
+                }
+                
                 SetDataLocation(GPU, DENSE);
             }
             else
