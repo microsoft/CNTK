@@ -36,6 +36,8 @@ bool do_sync = false;
 bool do_sync = true;
 #endif
 
+#define DEFAULT_THREAD_PER_DIM		16
+
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
 __declspec (thread) 
@@ -2074,6 +2076,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void GPUMatrix<ElemType>::VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c, const bool isColWise)
+    {
+        if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
+        {
+            throw std::invalid_argument("All matrices must be on the same GPU");
+        }
+
+        a.PrepareDevice();
+
+        if (a.IsEmpty())
+            throw std::logic_error("VectorSum:  Input matrix is empty.");
+
+        const long n = (long)a.GetNumRows();
+        const long m = (long)a.GetNumCols();
+        assert(m>0 && n>0); //converting from size_t to int may cause overflow
+
+        cudaEvent_t done;
+
+        int blocksPerGrid = 0;
+        if (isColWise)  //col-wise
+        {
+            c.Resize(1, m);
+            blocksPerGrid = (int)ceil(1.0*m / threadsPerBlock);
+        }
+        else
+        {
+            c.Resize(n, 1);
+            blocksPerGrid = (int)ceil(1.0*n / threadsPerBlock);
+        }
+
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _vectorSum<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(a.m_pArray, c.m_pArray, n, m, isColWise);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+    }
+    template<class ElemType>
     void GPUMatrix<ElemType>::VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWise) const
     {
         if (IsEmpty())
@@ -2096,7 +2135,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             c.Resize(n, 1);
-            c.ChangeDeviceTo(GetComputeDeviceId());
             blocksPerGrid =(int)ceil(1.0*n/threadsPerBlock);                        
         }       
 
@@ -3354,43 +3392,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaFree(d_res));
         return res;
     }
+    // The inputs are two row vectors [a1 a2 a3 a4] [b1 b2 b3 b4]
+    // The outputs are one matrix of size (nt+1)*4
+    // The first row is just element multiplication
+    // The rest rows will be with shift
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("AssignElementProductOf: Matrix is empty.");
 
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            throw std::invalid_argument("The input matrix dimensions do not match.");
 
-	// The inputs are two row vectors [a1 a2 a3 a4] [b1 b2 b3 b4]
-	// The outputs are one matrix of size (nt+1)*4
-	// The first row is just element multiplication
-	// The rest rows will be with shift
-	template<class ElemType>
-	GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt)
-	{
-		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("AssignElementProductOf: Matrix is empty.");
+        if (!(a.GetNumRows() == 1))
+            throw std::invalid_argument("The input matrix must be a row vector.");
 
-		assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-		if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-			throw std::invalid_argument("The input matrix dimensions do not match.");
+        Resize(nt + 1, a.GetNumCols());
+        int BS = a.GetNumCols();
 
-		if (!(a.GetNumRows() == 1))
-			throw std::invalid_argument("The input matrix must be a row vector.");
+        // the output matrix is of size (nt+1, BS)
+        dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+        dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-		Resize(nt + 1, a.GetNumCols());
-		int BS = a.GetNumCols();
-
-		// the output matrix is of size (nt+1, BS)
-		dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
-		dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-
-		a.PrepareDevice();
+        a.PrepareDevice();
         cudaEvent_t done = nullptr;;
-		if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-		_assignElementProductOfWithShiftNeg<ElemType> << < block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, shift, nt + 1, BS);
-		//		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignElementProductOfWithShiftNeg<ElemType> << < block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, shift, nt + 1, BS);
+        //		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
 
-		if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-		if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-		if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		return *this;
-	}
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
 
 	template<class ElemType>
 	void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt)
