@@ -1020,11 +1020,8 @@ void SequenceReader<ElemType>::GetInputToClass(std::map<std::wstring, Matrix<Ele
 }
 
 template<class ElemType>
-void SequenceReader<ElemType>::GetClassInfo(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void SequenceReader<ElemType>::GetClassInfo()
 {
-    Matrix<ElemType>* clsinfo = matrices[CLASSINFO];
-    if (clsinfo == nullptr) return;
-
     if (m_clsinfoRead) return;
 
     // populate local CPU matrix
@@ -1051,11 +1048,6 @@ void SequenceReader<ElemType>::GetClassInfo(std::map<std::wstring, Matrix<ElemTy
     (*m_classInfoLocal)(1, prvcls) = (float)nwords;
 
     m_classInfoLocal->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
-
-    int oldDeviceId = clsinfo->GetDeviceId();
-    // caution, SetValue changes m_classInfoLocal from GPU to CPU, may change this behavior later
-    clsinfo->SetValue(*m_classInfoLocal); 
-    clsinfo->TransferFromDeviceToDevice(clsinfo->GetDeviceId(), oldDeviceId, true);
 
     m_clsinfoRead = true;
 }
@@ -1153,7 +1145,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
         GetLabelOutput(matrices, m_mbStartSample, actualmbsize);
         GetInputToClass(matrices);
-        GetClassInfo(matrices);
+        GetClassInfo();
 
         // make sure that the sequence index matches our end index
         assert(m_sequence[m_seqIndex] == m_mbStartSample+actualmbsize);
@@ -1813,7 +1805,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
                 
         // TODO: move these two methods to startMiniBatchLoop()
         GetInputToClass(matrices);
-        GetClassInfo(matrices);
+        GetClassInfo();
         GetLabelOutput(matrices, 0, actualmbsize);
 
         // go to the next sequence
