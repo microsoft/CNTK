@@ -114,7 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
         }
         virtual void Validate() = 0;
-        
+
         virtual void Reset() {}
         virtual void NotReset() {}
 
@@ -138,10 +138,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("This operation does not support four inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
             const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
             throw std::logic_error("This operation does not support five inputs.");
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
+            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
+        {
+            throw std::logic_error("This operation does not support six inputs.");
         }
 
         virtual void DetachInputs()
@@ -2593,8 +2599,9 @@ protected:  \
             const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             softmax.AssignExpOf(functionValues);
-            gradientDotValue.AssignInnerProductOf(gradientValues, softmax, true);
-            Matrix<ElemType>::AddScaledDifference(1, gradientValues, gradientDotValue, inputGradientValues);
+            Matrix<ElemType>::VectorSum(gradientValues, gradientDotValue, true);
+            softmax.RowElementMultiplyWith(gradientDotValue);
+            Matrix<ElemType>::AddScaledDifference(1.0, gradientValues, softmax, inputGradientValues);
         }
 
         // GetTaskDescriptor - Get a task descriptor for this node
@@ -3278,7 +3285,8 @@ protected:  \
 #endif
             //currently we only support one combination when the input is sparse.
             if (inputFunctionValues.GetMatrixType() == SPARSE && inputGradientValues.GetMatrixType() == DENSE && gradientValues.GetMatrixType() == DENSE)
-                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol);
+                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseCSC);
+    /// to-do : should be             inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol);
 
                 Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, inputFunctionValues, true, inputGradientValues);
 #if DUMPOUTPUT

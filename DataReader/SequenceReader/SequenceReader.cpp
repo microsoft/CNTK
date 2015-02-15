@@ -955,6 +955,9 @@ bool SequenceReader<ElemType>::SentenceEnd()
     return false; 
 }
 
+/// the output label is a [2 x T] matrix.
+/// the first row is the word index
+/// the second row is the class id of this word
 template<class ElemType>
 void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                                               size_t m_mbStartSample, size_t actualmbsize)
@@ -963,7 +966,7 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr) return;
     
-    labels->Resize(nwords + class_size, actualmbsize, false);
+    labels->Resize(4, actualmbsize);
         
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
@@ -973,10 +976,15 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
         int    wrd = m_labelIdData[jRand];
         int    clsidx = idx4class[wrd]; 
         
-        labels->SetValue(wrd, j, 1); 
+        labels->SetValue(0, j, (ElemType)wrd); 
 
-        if (class_size > 0)
-            labels->SetValue(nwords + clsidx, j, 1); 
+        if (class_size > 0){
+            labels->SetValue(1, j, (ElemType)clsidx);
+            
+            /// save the [begining ending_indx) of the class 
+            labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
+            labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+        }
     }
 
 }
@@ -1923,13 +1931,11 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     
     if(labels->GetMatrixType() == MatrixType::DENSE) 
     {
-        labels->Resize(nwords + class_size, actualmbsize, false);
-        labels->SetValue(0);
+        labels->Resize(4, actualmbsize, false);
     }
     else 
     {
-        labels->Resize(nwords + class_size, actualmbsize, 2*actualmbsize);
-        labels->Reset();
+        RuntimeError("GetLabelOutput::should use dense matrix for labels which only save index of words"); 
     }
 
     if(labels->GetCurrentMatrixLocation() == CPU) {
@@ -1941,63 +1947,25 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
             int    wrd = m_labelIdData[jRand];
             int    clsidx = idx4class[wrd]; 
 
-            labels->SetValue(wrd, j, 1); 
+            labels->SetValue(0, j, (ElemType)wrd); 
 
             SetSentenceEnd(wrd, j, actualmbsize);
             SetSentenceBegin(wrd, j, actualmbsize);
 
             if (class_size > 0)
-                labels->SetValue(nwords + clsidx, j, 1); 
+            {
+                labels->SetValue(1, j, (ElemType)clsidx);
+
+                /// save the [begining ending_indx) of the class 
+                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
+                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+            }
         }
     }
     else // GPU
     {
-        m_indexer.clear();
-        int p = 0;
-        int b = 0; 
-        int nz = 0;
-        
-        for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
-        {
-            // pick the right sample with randomization if desired
-            size_t jRand = jSample;         
-            int    wrd = m_labelIdData[jRand];
-            int    clsidx = idx4class[wrd];         
-            SetSentenceEnd(wrd, j, actualmbsize);
-            SetSentenceBegin(wrd, j, actualmbsize);
+        RuntimeError("GetLabelOutput::should use CPU for labels ");
 
-            int start[2];
-            int end[2];
-            int target[2];
-            int blockId[2];
-
-            start[0] = (int)(*m_classInfoLocal)(0, clsidx);
-            end[0] = (int)(*m_classInfoLocal)(1, clsidx);
-            target[0] = wrd;
-            blockId[0] = clsidx;
-            start[1] = nwords;
-            end[1] = nwords + (int)(*m_classInfoLocal).GetNumCols();
-            target[1] = nwords + clsidx;
-            blockId[1] = -1;
-
-            for(int i = 0; i < 2; i++) 
-            {
-                m_labelsIdBufferRow[p] = target[i];
-                int len = end[i] - start[i];
-                
-                if(m_indexer.find(blockId[i]) == m_indexer.end()) 
-                {
-                    m_indexer[blockId[i]] = b;                    
-                    b += len;
-                }   
-                m_labelsBlock2Id[p] = nz;
-                m_labelsBlock2UniqId[p] = m_indexer[blockId[i]];
-                nz += len;
-                p++;
-            }
-        }
-        
-        labels->SetMatrixFromLabelAndClass(m_labelsIdBufferRow, m_labelsBlock2Id, m_labelsBlock2UniqId, 2*actualmbsize, nz, b);
     }
 }
 

@@ -3401,5 +3401,20 @@ __global__ void _assignElementProductOfWithShift(
 }
 
 
+/// minus 1 at a specific position
+template<class ElemType>
+__global__ void _minusOneAt(
+    ElemType *c,
+    LONG64 position, 
+    LONG64 N)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    if (id == position)
+        c[id] = c[id] - 1.0; 
+}
+
+
 
 #endif // !CPUONLY

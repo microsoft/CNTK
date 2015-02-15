@@ -316,6 +316,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void AddElementToElement(const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj); 
 
+        /// minus one at a specific position
+        static void MinusOneAt(GPUMatrix<ElemType>& c, const size_t position);
+
         static void Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
         static void Scale(GPUMatrix<ElemType> &alpha, GPUMatrix<ElemType>& a); //In this case matrix alpha must be 1x1
         static void Scale(ElemType alpha, GPUMatrix<ElemType>& a);       

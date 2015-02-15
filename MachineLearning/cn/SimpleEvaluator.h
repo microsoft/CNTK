@@ -103,21 +103,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             dataReader.StartMinibatchLoop(mbSize, 0, testSize);
 
-            for (int i=0; i<evalNodes.size(); i++)
-            {
-                if (evalNodes[i]->OperationName() == L"ClassBasedCrossEntropyWithSoftmax")
-                {
-                    size_t vSz = FeatureNodes[0]->FunctionValues().GetNumRows();
-                    if(inputMatrices.find(L"classinfo") == inputMatrices.end())
-                    {
-                        inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, m_net.GetDeviceID()); 
-                        inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, m_net.GetDeviceID()); 
-                    }
-                    ClassBasedCrossEntropyWithSoftmaxNodePtr crtNode = (ClassBasedCrossEntropyWithSoftmaxNodePtr) evalNodes[i];
-                    crtNode->AddClassInfo(inputMatrices[L"classinfo"], inputMatrices[L"idx2cls"]);
-                }
-            }
-
             while (dataReader.GetMinibatch(inputMatrices))
             {
                 UpdateEvalTimeStamps(FeatureNodes);
