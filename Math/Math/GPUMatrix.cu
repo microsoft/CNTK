@@ -637,6 +637,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    /// c = c - 1.0 for a specific position
+    template<class ElemType>
+    void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t position)
+    {
+        assert(position < c.GetNumElements());
+
+        cudaEvent_t done = nullptr;
+        LONG64 n = (LONG64)c.GetNumElements();
+        LONG64 p = (LONG64)position;
+
+        int blocksPerGrid = (int)ceil(1.0*n / threadsPerBlock);
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _minusOneAt<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(c.m_pArray, p, n);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+    }
+
     template<class ElemType>
     GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
     {

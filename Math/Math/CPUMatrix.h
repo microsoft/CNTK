@@ -296,6 +296,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //static void AddLogElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj); 
         static void AssignElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj); 
 
+        static void MinusOneAt(CPUMatrix<ElemType>& c, const size_t position);
+
         static void Scale(ElemType alpha, CPUMatrix<ElemType>& a);
         static void Scale(CPUMatrix<ElemType> alpha, CPUMatrix<ElemType>& a); //In this case Matrix alpha must be 1x1
         static void Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);

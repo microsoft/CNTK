@@ -575,10 +575,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto t_start_epoch = Timer::MilliSecondElapsed();
 
-                // set other information to inputMatrices that can contrain information
-                // used for class-based LM for clustring information
-                SetOtherInfo(net, trainSetDataReader, validationSetDataReader, inputMatrices);
-
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
@@ -1454,6 +1450,10 @@ protected:
             {
                 ComputationNodePtr node = (*nodeIter);
 
+                /// no support to sparse matrix yet
+                if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
+                    continue;
+
                 int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows()-1);
                 int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols()-1);
                 irow = max(0, irow);
@@ -1498,31 +1498,6 @@ protected:
             }
 
             return true;
-        }
-
-        void SetOtherInfo(ComputationNetwork<ElemType>& net , IDataReader<ElemType>* /*trainSetDataReader*/, IDataReader<ElemType>* /*validSetDataReader*/, std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
-        {
-            std::vector<ComputationNodePtr> criterionNodes = net.FinalCriterionNodes();
-            std::vector<ComputationNodePtr> evaluationNodes = net.EvaluationNodes();
-
-            //initializing weights and gradient holder
-            for (size_t i = 0; i < criterionNodes.size(); i++)
-            {
-                if (criterionNodes[i]->OperationName() == L"ClassBasedCrossEntropyWithSoftmax")
-                {
-                    ClassBasedCrossEntropyWithSoftmaxNodePtr crtNode = (ClassBasedCrossEntropyWithSoftmaxNodePtr) criterionNodes[i];
-                    crtNode->AddClassInfo(inputMatrices[L"classinfo"], inputMatrices[L"idx2cls"]);
-                }
-            }
-
-            for (size_t i=0;i<evaluationNodes.size(); i++)
-            {
-                if (evaluationNodes[i]->OperationName() == L"ClassBasedCrossEntropyWithSoftmax")
-                {
-                    ClassBasedCrossEntropyWithSoftmaxNodePtr crtNode = (ClassBasedCrossEntropyWithSoftmaxNodePtr) evaluationNodes[i];
-                    crtNode->AddClassInfo(inputMatrices[L"classinfo"], inputMatrices[L"idx2cls"]);
-                }
-            }
         }
 
     protected:
