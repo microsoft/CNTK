@@ -1031,10 +1031,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr ClassCrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr matrix, const std::wstring nodeName = L"")
+        ComputationNodePtr ClassCrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, 
+            const ComputationNodePtr input_weight, const ComputationNodePtr cls_log_post_prob, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
-            newNode->AttachInputs(label, prediction, matrix);
+            newNode->AttachInputs(label, prediction, input_weight, cls_log_post_prob);
             AddNodeToNet(newNode);
             return newNode;
         }

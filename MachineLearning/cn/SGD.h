@@ -461,17 +461,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();
             }
             
-            // special handling of classed based softmax node. Need a better solution to it.
-            if (criterionNodes[0]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
-                evaluationNodes[0]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-            {
-                size_t vSz = FeatureNodes[0]->FunctionValues().GetNumRows();
-                int deviceId = FeatureNodes[0]->FunctionValues().GetDeviceId();
-                inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId); 
-                inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId);
-            }
-
-
             //used for KLD regularized adaptation. For all other adaptation techniques use MEL to edit the model and using normal training algorithm
             std::vector<ComputationNodePtr> refFeatureNodes;
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
@@ -553,10 +542,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto t_start_epoch = Timer::MilliSecondElapsed();
 
-                // set other information to inputMatrices that can contrain information
-                // used for class-based LM for clustring information
-                SetOtherInfo(net, trainSetDataReader, validationSetDataReader, inputMatrices);
-
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
@@ -577,9 +562,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //return a reasonable  learning rate based on the initial mbsize
                     learnRatePerSample = SearchLearnRateBeforeEpoch(net, refNet, refNode, i, learnRatePerSample, trainSetDataReader, FeatureNodes,
                         labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients, learnRateInitialized, largestPrevLearnRatePerSample);
-                }
 
-                prevLearnRates[i % m_numPrevLearnRates] = learnRatePerSample;  //save per sample learn rate to support changeable mbsize
+                    prevLearnRates[i % m_numPrevLearnRates] = learnRatePerSample;  //save per sample learn rate to support changeable mbsize
+                }
 
                 learnRateInitialized = true;
 
@@ -756,17 +741,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (inputMatrices[L"classinfo"])
-            {
-                delete inputMatrices[L"classinfo"];
-                inputMatrices.erase(L"classinfo");
-            }
-            if (inputMatrices[L"idx2cls"])
-            {
-                delete inputMatrices[L"idx2cls"];
-                inputMatrices.erase(L"idx2cls");
-            }
-
         }
 
     protected:
@@ -881,7 +855,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     ratio = pow(((ElemType)epochSize) / m_epochSize, 1.0f/2);
                 }
-                baseCriterion = min(ratio * prevCriterion + (1-ratio) * baseCriterion, baseCriterion);
+                baseCriterion = max(ratio * prevCriterion + (1-ratio) * baseCriterion, baseCriterion);
             }
 
             do
@@ -1359,80 +1333,78 @@ protected:
             const std::list<ComputationNodePtr>& learnableNodes,
             int npos)
         {
+            vector<string> errMsgs; 
+
             // gradient checking
             for (auto nodeIter=learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = (*nodeIter);
+                char wstrtmp[2048];
 
-                int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows()-1);
-                int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols()-1);
-                irow = max(0, irow);
-                icol = max(0, icol);
-
-                fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
-                // node->FunctionValues().Print();
-                ElemType eOrg = node->FunctionValues()(irow,icol);
-
-                node->UpdateEvalTimeStamp();
-                net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
-                //ElemType mbEvalCri =
-                criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-                ElemType eGradErr = node->GradientValues()(irow, icol); 
-
-                ElemType ePos = eOrg + ElemType(EPSILON);
-                ElemType eNeg = eOrg - ElemType(EPSILON);
-
-                node->FunctionValues()(irow, icol) = ePos;
-                node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]); 
-                ElemType mbEvalCriPos = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-                
-                node->FunctionValues()(irow, icol) = eNeg;
-                node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]); 
-                ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-
-                // back to its orginal parameter value
-                node->FunctionValues()(irow, icol) = eOrg; 
-
-                // check if they are consistent
-                ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
-                ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
-                ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
-                bool wrong = (std::isnan(diff) || diff > threshold);
-                if (wrong)
+                for (size_t itry = 0; itry < min(50, node->FunctionValues().GetNumElements()); itry++)
                 {
-                    fprintf (stderr, "\nd%ls Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
-                    return false; 
+                    /// no support to sparse matrix yet
+                    int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
+                    int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                    irow = max(0, irow);
+                    icol = max(0, icol);
+
+                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
+                        continue;
+
+                    fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
+                    // node->FunctionValues().Print();
+                    ElemType eOrg = node->FunctionValues()(irow, icol);
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    node->UpdateEvalTimeStamp();
+                    net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
+                    //ElemType mbEvalCri =
+                    criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+                    ElemType eGradErr = node->GradientValues()(irow, icol);
+                    if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
+                        node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    ElemType ePos = eOrg + ElemType(EPSILON);
+                    ElemType eNeg = eOrg - ElemType(EPSILON);
+
+                    node->FunctionValues()(irow, icol) = ePos;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+                    node->UpdateEvalTimeStamp();
+                    net.Evaluate(criterionNodes[npos]);
+                    ElemType mbEvalCriPos = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+
+                    node->FunctionValues()(irow, icol) = eNeg;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+                    node->UpdateEvalTimeStamp();
+                    net.Evaluate(criterionNodes[npos]);
+                    ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+
+                    // back to its orginal parameter value
+                    node->FunctionValues()(irow, icol) = eOrg;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    // check if they are consistent
+                    ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
+                    ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                    ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
+                    bool wrong = (std::isnan(diff) || diff > threshold);
+                    if (wrong)
+                    {
+                        fprintf(stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        sprintf(wstrtmp, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        errMsgs.push_back(wstrtmp);
+                    }
                 }
             }
 
+            if (errMsgs.size() > 0)
+                return false;
             return true;
-        }
-
-        void SetOtherInfo(ComputationNetwork<ElemType>& net , IDataReader<ElemType>* /*trainSetDataReader*/, IDataReader<ElemType>* /*validSetDataReader*/, std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
-        {
-            std::vector<ComputationNodePtr> criterionNodes = net.FinalCriterionNodes();
-            std::vector<ComputationNodePtr> evaluationNodes = net.EvaluationNodes();
-
-            //initializing weights and gradient holder
-            for (size_t i = 0; i < criterionNodes.size(); i++)
-            {
-                if (criterionNodes[i]->OperationName() == L"ClassBasedCrossEntropyWithSoftmax")
-                {
-                    ClassBasedCrossEntropyWithSoftmaxNodePtr crtNode = (ClassBasedCrossEntropyWithSoftmaxNodePtr) criterionNodes[i];
-                    crtNode->AddClassInfo(inputMatrices[L"classinfo"], inputMatrices[L"idx2cls"]);
-                }
-            }
-
-            for (size_t i=0;i<evaluationNodes.size(); i++)
-            {
-                if (evaluationNodes[i]->OperationName() == L"ClassBasedCrossEntropyWithSoftmax")
-                {
-                    ClassBasedCrossEntropyWithSoftmaxNodePtr crtNode = (ClassBasedCrossEntropyWithSoftmaxNodePtr) evaluationNodes[i];
-                    crtNode->AddClassInfo(inputMatrices[L"classinfo"], inputMatrices[L"idx2cls"]);
-                }
-            }
         }
 
     protected:

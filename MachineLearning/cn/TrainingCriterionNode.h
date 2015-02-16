@@ -870,68 +870,146 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MatrixL2RegNode<double>;
 
     //calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
+    // need to provide class probabilty from external node
     template<class ElemType>
-    class ClassBasedCrossEntropyWithSoftmaxNode: public ComputationNode<ElemType>
+    class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNode<ElemType>
     {
         UsingComputationNodeMembers;
     public:
-        ClassBasedCrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId)
+        ClassBasedCrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        ClassBasedCrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
+
+        /**
+        compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+        */
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
+                throw std::invalid_argument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
+
+            size_t nT = Inputs(0)->FunctionValues().GetNumCols();
+            Matrix<ElemType> grd_t;
+            Matrix<ElemType> grd_to_wgt_t;
+
+            ComputeSoftMaxPartial();
+
+            size_t sz = 0;
+            for (size_t t = 0; t < nT; t++)
+            {
+                /// compute prb - 1 and prb
+                Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
+                assert(lbl_t.GetDeviceId() == CPUDEVICE);
+                size_t c_t = (size_t)lbl_t(1, 0);
+                size_t lft_bnd = (size_t)lbl_t(2, 0);
+                size_t rgt_bnd = (size_t)lbl_t(3, 0);
+                size_t nbr_wrd = rgt_bnd - lft_bnd; // number of words in the class
+
+                Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
+
+                Matrix<ElemType> obs = Inputs(1)->FunctionValues().ColumnSlice(t, 1);
+
+                Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
+
+                Matrix<ElemType> grd_to_cls_prob = m_clsLogSoftmax.ColumnSlice(t, 1);
+
+                switch (inputIndex){
+                case 1:
+                    /// gradient to input
+                    grd_t = Inputs(1)->GradientValues().ColumnSlice(t, 1);
+                    ComputeInputPartialRight(input_weight_t, grd_t, grd_to_soft_max_input);
+                    break;
+                case 2:
+                    /// gradient to input weight
+                    grd_to_wgt_t = Inputs(2)->GradientValues().ColumnSlice(lft_bnd, nbr_wrd);
+                    ComputeInputPartialLeft(obs, grd_to_wgt_t, grd_to_soft_max_input);
+                    break;
+                case 3:
+                    grd_t = Inputs(3)->GradientValues().ColumnSlice(t, 1);
+                    grd_t.SetValue(m_clsSoftmax.ColumnSlice(t, 1));
+                    ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
+                    break;
+                default:
+                    throw std::runtime_error("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
+                }
+
+                sz += nbr_wrd;
+            }
+
         }
 
-        ClassBasedCrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-                
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"ClassBasedCrossEntropyWithSoftmax";} 
-
-        virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
-        {
-            if (inputIndex != 1 && inputIndex != 2)
-                throw std::invalid_argument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input and weight.");
-
-            if (inputIndex == 1)
-                ComputeClassEntropyGradientOfInput(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_ptrClsinfo, m_ptrIdx2Cls, m_logSoftmax, Inputs(inputIndex)->GradientValues());
-            else
-                ComputeClassEntropyGradientOfWeight(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_ptrClsinfo, m_ptrIdx2Cls, m_logSoftmax, Inputs(inputIndex)->GradientValues());
-
-        }
-
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
         {
             throw std::logic_error("ClassCrossEntropyWithSoftmax node should never be in a loop.");
         }
 
-        static void ComputeClassEntropyGradientOfInput(const Matrix<ElemType>& /*inputFunctionValues0*/, const Matrix<ElemType>& /*inputFunctionValues1*/,
-            const Matrix<ElemType>& inputFunctionValues2, const Matrix<ElemType>* /*clsInfo*/, const Matrix<ElemType>* /*idx2Cls*/,
-            const Matrix<ElemType>& logSoftmax, Matrix<ElemType>& grd)  
+        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
-            logSoftmax.ClassEntropyError(logSoftmax);
-            logSoftmax.ClassEntropyGradientOfInput(logSoftmax, inputFunctionValues2, grd);
+            Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, true, inputGradientValues);
         }
 
-        static void ComputeClassEntropyGradientOfWeight(const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            const Matrix<ElemType>& inputFunctionValues2, const Matrix<ElemType>* clsInfo, const Matrix<ElemType>* idx2Cls, 
-            const Matrix<ElemType>& logSoftmax, Matrix<ElemType>& grd)  
+        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& obs, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
-            logSoftmax.ClassEntropyGradientOfWeight(logSoftmax, 
-                    inputFunctionValues1, inputFunctionValues2, 
-                    inputFunctionValues0, 
-                    clsInfo, idx2Cls, grd);
+            Matrix<ElemType>::MultiplyAndAdd(obs, false, gradientValues, false, inputGradientValues);
+        }
+
+        static void WINAPI ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
+        {
+            Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
+            Matrix<ElemType>::Scale(gradientValues, inputGradientValues);
+        }
+
+        /// gradient of cross entropy w.r.t. to input to softmax
+        void ComputeSoftMaxPartial()
+        {
+            if (m_needRecomputeGradientToSoftmaxInput)
+            {
+                m_grdToSoftMaxInput.Resize(1, m_totalNbrWords);
+
+                size_t nT = Inputs(1)->FunctionValues().GetNumCols();
+                size_t sz = 0;
+                for (size_t t = 0; t < nT; t++)
+                {
+                    /// compute prb - 1 and prb
+                    Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
+                    size_t y_t = (size_t)lbl_t(0, 0);
+                    size_t lft_bnd = (size_t)lbl_t(2, 0);
+                    size_t rgt_bnd = (size_t)lbl_t(3, 0);
+                    size_t nbr_wrd = rgt_bnd - lft_bnd;// number of words in the class
+
+                    Matrix<ElemType> softMax = m_softMax.ColumnSlice(sz, nbr_wrd);
+
+                    ComputeCEPartialToSoftmaxInputs(softMax, GradientValues(), y_t - lft_bnd);
+
+                    m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd).SetValue(softMax);
+
+                    sz += nbr_wrd;
+                }
+
+                m_needRecomputeGradientToSoftmaxInput = false;
+            }
         }
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_ptrClsinfo, m_ptrIdx2Cls, m_logSoftmax);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(),
+                Inputs(3)->FunctionValues(), m_logSoftmax, m_softMax, m_clsLogSoftmax, m_clsSoftmax, m_totalNbrWords);
+            m_needRecomputeGradientToSoftmaxInput = true;
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -939,37 +1017,120 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("ClassCrossEntropyWithSoftmax node should never be in a loop.");
         }
 
-        static void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, 
-            const Matrix<ElemType>& inputFunctionValues1, const Matrix<ElemType>& inputFunctionValues2, 
-            const Matrix<ElemType>* clsInfo, const Matrix<ElemType>* idx2Cls, Matrix<ElemType>& logSoftmax)  
-        {            
-            logSoftmax.Resize(inputFunctionValues0.GetNumRows(), inputFunctionValues0.GetNumCols());
-            logSoftmax.ClassEntropy(inputFunctionValues1, inputFunctionValues2, inputFunctionValues0, clsInfo, idx2Cls, logSoftmax, functionValues);
+        static void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>& inputs, const Matrix<ElemType>& input_weight, const Matrix<ElemType>& input_cls_log_post_prob,
+            Matrix<ElemType>& logSoftmax,
+            Matrix<ElemType>& softMax, Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords)
+        {
+            totalWords = 0;
+            size_t nT = lbls.GetNumCols();
+
+            for (size_t t = 0; t < lbls.GetNumCols(); t++)
+            {
+                Matrix<ElemType> lblInfo = lbls.ColumnSlice(t, 1);
+                size_t lft_bnd = (size_t)lblInfo(2, 0);
+                size_t rgt_bnd = (size_t)lblInfo(3, 0);
+                totalWords += (rgt_bnd - lft_bnd);
+            }
+
+            size_t nRow = inputs.GetNumRows();
+
+            size_t sz = totalWords;
+            softMax.Resize(1, sz);
+            logSoftmax.Resize(1, sz);
+            clsLogSoftmax.Resize(input_cls_log_post_prob.GetNumRows(), nT);
+            clsSoftmax.Resize(input_cls_log_post_prob.GetNumRows(), nT);
+
+            /// loop over time
+            functionValues.SetValue(0);
+            sz = 0;
+            for (size_t t = 0; t < lbls.GetNumCols(); t++)
+            {
+                Matrix<ElemType> lblInfo = lbls.ColumnSlice(t, 1);
+                size_t y_t = (size_t)lblInfo(0, 0);
+                size_t c_t = (size_t)lblInfo(1, 0);
+                size_t lft_bnd = (size_t)lblInfo(2, 0);
+                size_t rgt_bnd = (size_t)lblInfo(3, 0);
+                size_t nbr_wrd = rgt_bnd - lft_bnd;
+
+                /// e.g., 200 x 148
+                Matrix<ElemType> weightForClass = input_weight.ColumnSlice(lft_bnd, nbr_wrd);
+
+                /// W x_t 
+                Matrix<ElemType> softMax_t = softMax.ColumnSlice(sz, nbr_wrd);
+                Matrix<ElemType> logSoftMax_t = logSoftmax.ColumnSlice(sz, nbr_wrd);
+                Matrix<ElemType> obs = inputs.ColumnSlice(t, 1);  /// e.g., 200 x 1
+                obs.Reshape(1, nRow);  /// 1 x 200
+
+                logSoftMax_t.AssignProductOf(obs, false, weightForClass, false); /// 1 x 148
+
+                // log softmax(W x_t)
+                logSoftMax_t.InplaceLogSoftmax(false); /// 1 x 148
+                softMax_t.SetValue(logSoftMax_t);
+                // softmax(W x_t)
+                softMax_t.InplaceExp();  /// 1 x 148
+
+                /// add the word log posterior probability
+                size_t idx_in_class = y_t - lft_bnd;
+                Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
+
+                /// add the class log posterior probability
+                Matrix<ElemType> clsLogSoftmax_t = clsLogSoftmax.ColumnSlice(t, 1);
+                clsLogSoftmax_t.SetValue(input_cls_log_post_prob.ColumnSlice(t, 1));
+                clsLogSoftmax_t.InplaceLogSoftmax(true); /// 50 x 1
+                Matrix<ElemType> clsSoftmax_t = clsSoftmax.ColumnSlice(t, 1);
+                clsSoftmax_t.AssignExpOf(clsLogSoftmax_t);
+                Matrix<ElemType>::AddElementToElement(clsLogSoftmax_t, c_t, 0, functionValues, 0, 0);
+
+                sz += nbr_wrd;
+            }
+
+            functionValues *= (-1);
+
 #if NANCHECK
             functionValues.HasNan("ClassBasedCrossEntropyWithSoftmax");
 #endif
         }
 
+        /**
+        Inputs: [0] label in dense matrix in [4 x T]
+        the first row is the word index, the second row is the class index, the third row is the first word index of the class
+        the last row is the first word index of the next class
+        [1] hidden layer activity to the node in [hdsize x T]. for a simple rnn, this is the hidden layer activty
+        [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
+        [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
+        */
         virtual void Validate()
         {
             PrintSelfBeforeValidation();
 
-            if (m_children.size() != 3) 
-                throw std::logic_error("ClassBasedCrossEntropyWithSoftmaxNode criterion requires three inputs.");
+            if (m_children.size() != 4)
+                throw std::logic_error("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
 
-            if (Inputs(0)->OperationName() != SparseInputValue<ElemType>::TypeName()
-                && Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
+            if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
                 throw std::logic_error("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
 
-            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumCols()  &&  // input and matrix can be timed
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() &&  // label and input same obs numbers
-                Inputs(0)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() ) ) // label and matrix match output size
+            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
             {
-                throw std::logic_error("The Matrix<ElemType>  dimension in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-            }       
+                throw std::logic_error("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
+            }
+            if (!(Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols())) // label and input same obs numbers
+            {
+                throw std::logic_error("The Matrix<ElemType>  dimension for label and observation in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
+            }
+            if (!(Inputs(0)->FunctionValues().GetNumRows() == 4)) // label needs to be 4 rows
+            {
+                throw std::logic_error("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
+            }
+            if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
+            {
+                throw std::logic_error("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
+            }
 
-            FunctionValues().Resize(1,1);
-            CopyImageSizeFromInputs(); 
+            FunctionValues().Resize(1, 1);
+            CopyImageSizeFromInputs();
+
+            m_nbrCls = Inputs(3)->FunctionValues().GetNumRows();
         }
 
         virtual void CopyImageSizeFromInputs()
@@ -978,82 +1139,58 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputChannels = 1;
             m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputHeight = 1;
         }
 
-        //leftNode should be the empirical
-        // classinfo is a matrix of N columns and 2 rows. N columns correspond to N class
-        // the first row indicates the starting row and the second row indicates the end row of a class
-        virtual void AddClassInfo(Matrix<ElemType>* classinfo,
-            Matrix<ElemType>* idx2cls) 
+        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
+            const ComputationNodePtr inputweight, const ComputationNodePtr clsLogPostProbability)
         {
-            m_ptrClsinfo = classinfo;
-            m_ptrIdx2Cls = idx2cls;
-        }
-
-        //leftNode should be the empirical
-        // classinfo is a matrix of N columns and 2 rows. N columns correspond to N class
-        // the first row indicates the starting row and the second row indicates the end row of a class
-        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input, 
-            const ComputationNodePtr matrix) 
-        {
-            m_children.resize(3);
+            m_children.resize(4);
             m_children[0] = label;
             m_children[1] = input;
-            m_children[2] = matrix;
-
-            //initializes m_logSoftmax
-            m_logSoftmax.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
-            m_logSoftmax.Resize(label->FunctionValues().GetNumRows(), label->FunctionValues().GetNumCols());
+            m_children[2] = inputweight;
+            m_children[3] = clsLogPostProbability;
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_logSoftmax.GetDeviceId() != deviceId)
-                {
-                    m_logSoftmax.TransferFromDeviceToDevice(m_logSoftmax.GetDeviceId(), deviceId,true);
-                }
-            }
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* node = (ClassBasedCrossEntropyWithSoftmaxNode<ElemType>*) nodeP;
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_logSoftmax = m_logSoftmax;                
-            }
         }
 
         // copy constructor
         ClassBasedCrossEntropyWithSoftmaxNode(const ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
             ComputationNodePtr node = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(this, name, flags);
             return node;
         }
 
     protected:
         Matrix<ElemType> m_logSoftmax;
+        Matrix<ElemType> m_softMax;
 
-        Matrix<ElemType>* m_ptrClsinfo;
-        Matrix<ElemType>* m_ptrIdx2Cls;
+        Matrix<ElemType> m_clsLogSoftmax;
+        Matrix<ElemType> m_clsSoftmax;
+
+        /// gradient of cross entropy with respect to the input of softmax
+        /// a 1 row by \sum_t m_nbrWordsInEachTime[t] vector
+        /// one slice of size m_nbrWordsInEachTime[t] saves the input to softmax for word y_t
+        Matrix<ElemType> m_grdToSoftMaxInput;
+        bool m_needRecomputeGradientToSoftmaxInput;
+
+        size_t           m_nbrCls;
+        size_t           m_totalNbrWords;
     };
 
-    template class ClassBasedCrossEntropyWithSoftmaxNode<float>; 
+    template class ClassBasedCrossEntropyWithSoftmaxNode<float>;
     template class ClassBasedCrossEntropyWithSoftmaxNode<double>;
+
 
 }}}

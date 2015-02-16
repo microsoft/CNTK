@@ -165,6 +165,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ConfigArray rDirect = config("directConnect", "");
             m_directConnect = rDirect;
 
+            m_word2class = config("word2cls", "");
+            m_cls2index = config("cls2index", "");
+            m_vocabSize = (int)config("vocabSize", "-1");
+            m_nbrCls = (int)config("nbrClass", "-1");
+ 
             Init(layers, trainingCriterion, evalCriterion, nonlinearFunctions, addDropoutNodes,
                 uniformInit, initValueScale, applyMeanVarNorm, needPrior, deviceId);   
 
@@ -551,7 +556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return output;
         }
 
-        void AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"")        
+        ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr)
         {
             m_net->LabelNodes().push_back(label);
 
@@ -571,7 +576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 output = m_net->SquareError(label, tinput, (trainNodeName == L"")?L"SquareError":trainNodeName);
                 break;
             case TrainingCriterion::ClassCrossEntropyWithSoftmax:
-                output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
+                output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
                 break;
          default:
                 throw std::logic_error("Unsupported training criterion.");
@@ -588,7 +593,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"CrossEntropyWithSoftmax":evalNodeName);
                     break;
                 case EvalCriterion::ClassCrossEntropyWithSoftmax:
-                    output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, (evalNodeName == L"")?L"ClassCrossEntropyWithSoftmax":evalNodeName);
+                    output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);
                     break;
                 case EvalCriterion::SquareError:
                     output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"SquareError":evalNodeName);
@@ -602,6 +607,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_net->EvaluationNodes().push_back(output);
+
+            return output;
        }
 
         Matrix<ElemType> ReadMatrixFromDbnFile(File &fstream, const std::string expectedName)
@@ -696,6 +703,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
   
         int m_lookupTableOrder;
         int m_labelEmbeddingSize;
+
+        /// these are the file names for word 2 class mapping and class to word index mapping
+        /// these are used for class-based language modeling
+        string m_cls2index;
+        string m_word2class;
+        int m_nbrCls;  /// number of classes
+        int m_vocabSize; /// vocabulary size
+
     };
 
 }}}

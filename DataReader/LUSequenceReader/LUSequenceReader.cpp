@@ -90,7 +90,7 @@ bool LUSequenceReader<ElemType>::GetIdFromLabel(const vector<string>& labelValue
             val.push_back(found->second);
         }
         else
-            RuntimeError("LUSequenceReader::GetIdFromLabel: cannot find value");
+            RuntimeError("LUSequenceReader::GetIdFromLabel: cannot find value %s to map to id. Check input and output mapping file. Check if all input/output symbols are defined in the input/output mapping/list files.", labelValue[i].c_str());
     }
     return true;
 }

@@ -143,6 +143,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("This operation does not support five inputs.");
         }
 
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
+            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
+        {
+            throw std::logic_error("This operation does not support six inputs.");
+        }
+
         virtual void DetachInputs()
         {
             m_children.resize(0);

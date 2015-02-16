@@ -3861,6 +3861,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
     }
 
+    //for each column of this, we add row slice of a starting from startIndex
+    template<class ElemType>
+    void Matrix<ElemType>::MinusOneAt(Matrix<ElemType>& a, const size_t position)
+    {
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            &a,
+            CPUMatrix<ElemType>::MinusOneAt(*a.m_CPUMatrix, position),
+            GPUMatrix<ElemType>::MinusOneAt(*a.m_GPUMatrix, position),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
     /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a</summary>
     /// <param name="alpha">Scalar</param>
     /// <param name="a">Input matrix</param>
