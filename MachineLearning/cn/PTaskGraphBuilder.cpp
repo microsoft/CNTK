@@ -14,7 +14,7 @@
 //#include <cuda_runtime.h>
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
-#include "PTaskGraphBuilder.h"
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

@@ -2092,7 +2092,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const long m = (long)a.GetNumCols();
         assert(m>0 && n>0); //converting from size_t to int may cause overflow
 
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
 
         int blocksPerGrid = 0;
         if (isColWise)  //col-wise
