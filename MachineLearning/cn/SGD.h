@@ -1423,58 +1423,77 @@ protected:
             const std::list<ComputationNodePtr>& learnableNodes,
             int npos)
         {
+            vector<string> errMsgs; 
+
             // gradient checking
             for (auto nodeIter=learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = (*nodeIter);
+                char wstrtmp[2048];
 
-                /// no support to sparse matrix yet
-                if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
-                    continue;
-
-                int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows()-1);
-                int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols()-1);
-                irow = max(0, irow);
-                icol = max(0, icol);
-
-                fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
-                // node->FunctionValues().Print();
-                ElemType eOrg = node->FunctionValues()(irow,icol);
-
-                node->UpdateEvalTimeStamp();
-                net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
-                //ElemType mbEvalCri =
-                criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-                ElemType eGradErr = node->GradientValues()(irow, icol); 
-
-                ElemType ePos = eOrg + ElemType(EPSILON);
-                ElemType eNeg = eOrg - ElemType(EPSILON);
-
-                node->FunctionValues()(irow, icol) = ePos;
-                node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]); 
-                ElemType mbEvalCriPos = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-                
-                node->FunctionValues()(irow, icol) = eNeg;
-                node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]); 
-                ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-
-                // back to its orginal parameter value
-                node->FunctionValues()(irow, icol) = eOrg; 
-
-                // check if they are consistent
-                ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
-                ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
-                ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
-                bool wrong = (std::isnan(diff) || diff > threshold);
-                if (wrong)
+                for (size_t itry = 0; itry < min(50, node->FunctionValues().GetNumElements()); itry++)
                 {
-                    fprintf (stderr, "\nd%ls Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
-                    return false; 
+                    /// no support to sparse matrix yet
+                    int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
+                    int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                    irow = max(0, irow);
+                    icol = max(0, icol);
+
+                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
+                        continue;
+
+                    fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
+                    // node->FunctionValues().Print();
+                    ElemType eOrg = node->FunctionValues()(irow, icol);
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    node->UpdateEvalTimeStamp();
+                    net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
+                    //ElemType mbEvalCri =
+                    criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+                    ElemType eGradErr = node->GradientValues()(irow, icol);
+                    if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
+                        node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    ElemType ePos = eOrg + ElemType(EPSILON);
+                    ElemType eNeg = eOrg - ElemType(EPSILON);
+
+                    node->FunctionValues()(irow, icol) = ePos;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+                    node->UpdateEvalTimeStamp();
+                    net.Evaluate(criterionNodes[npos]);
+                    ElemType mbEvalCriPos = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+
+                    node->FunctionValues()(irow, icol) = eNeg;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+                    node->UpdateEvalTimeStamp();
+                    net.Evaluate(criterionNodes[npos]);
+                    ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+
+                    // back to its orginal parameter value
+                    node->FunctionValues()(irow, icol) = eOrg;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    // check if they are consistent
+                    ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
+                    ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                    ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
+                    bool wrong = (std::isnan(diff) || diff > threshold);
+                    if (wrong)
+                    {
+                        fprintf(stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        sprintf(wstrtmp, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        errMsgs.push_back(wstrtmp);
+                    }
                 }
             }
 
+            if (errMsgs.size() > 0)
+                return false;
             return true;
         }
 
