@@ -1930,6 +1930,11 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         RuntimeError("GetLabelOutput::should use dense matrix for labels which only save index of words"); 
     }
 
+    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    int curDevId = labels->GetDeviceId();
+    labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+
+
     if(labels->GetCurrentMatrixLocation() == CPU) {
         for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
