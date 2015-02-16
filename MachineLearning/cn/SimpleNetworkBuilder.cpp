@@ -159,7 +159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int recur_idx = 0; 
                 if (numHiddenLayers > 0)
                 {
-                    u = m_net->CreateSparseLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
+                    u = m_net->CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
                     m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
