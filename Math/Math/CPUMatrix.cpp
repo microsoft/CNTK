@@ -389,6 +389,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t position)
+    {
+        if (position < c.GetNumElements())
+            c.m_pArray[position] -= 1.0;
+        else
+            RuntimeError("MinusOneAt: position is out of CPU matrix size");
+    }
+        
+    template<class ElemType>
     CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
     {
         if (this == &a)

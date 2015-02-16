@@ -347,6 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void AddElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
         //static void AddLogElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
         static void AssignElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
+        static void MinusOneAt(Matrix<ElemType>& c, const size_t position);
 
         static void Scale(ElemType alpha, Matrix<ElemType>& a);
         static void Scale(Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
@@ -426,6 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
+
         static void ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& weight,
             const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
             const Matrix<ElemType>* idx2cls, Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore);
