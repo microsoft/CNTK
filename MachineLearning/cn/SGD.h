@@ -468,17 +468,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();
             }
             
-            // special handling of classed based softmax node. Need a better solution to it.
-            if (criterionNodes[0]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
-                evaluationNodes[0]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-            {
-                size_t vSz = FeatureNodes[0]->FunctionValues().GetNumRows();
-                int deviceId = FeatureNodes[0]->FunctionValues().GetDeviceId();
-                inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId); 
-                inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId);
-            }
-
-
             //used for KLD regularized adaptation. For all other adaptation techniques use MEL to edit the model and using normal training algorithm
             std::vector<ComputationNodePtr> refFeatureNodes;
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
@@ -772,17 +761,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     refNet.ChangeNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]); //note we need to handle deletion carefully
                 }
-            }
-
-            if (inputMatrices[L"classinfo"])
-            {
-                delete inputMatrices[L"classinfo"];
-                inputMatrices.erase(L"classinfo");
-            }
-            if (inputMatrices[L"idx2cls"])
-            {
-                delete inputMatrices[L"idx2cls"];
-                inputMatrices.erase(L"idx2cls");
             }
 
         }
