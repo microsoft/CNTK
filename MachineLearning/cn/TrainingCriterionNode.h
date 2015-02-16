@@ -71,33 +71,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddWithScaleOf(-gradientValues.Get00Element(), leftMinusRight);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->MatrixParam(m_leftMinusRight, "leftMinusRight", paramOptionsInput);
-                descriptor->SetFunction(inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->MatrixParam(m_leftMinusRight, "leftMinusRight", paramOptionsOutput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight);
@@ -295,41 +268,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                if (inputIndex == 0)
-                {
-                    descriptor->MatrixParam(m_logSoftmaxOfRight, "logSoftmaxOfRight", paramOptionsInput);
-                }
-                else
-                {
-                    descriptor->MatrixParam(m_softmaxOfRight, "softmaxOfRight", paramOptionsInput);
-                    descriptor->FunctionParam(0, paramOptionsInput);
-                }
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction(inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->MatrixParam(m_softmaxOfRight, "softmaxOfRight", paramOptionsOutput);
-                descriptor->MatrixParam(m_logSoftmaxOfRight, "logSoftmaxOfRight", paramOptionsOutput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
@@ -531,43 +469,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                if (inputIndex == 0)
-                {
-                    descriptor->MatrixParam(m_logOfRight, "logOfRight", paramOptionsInput);
-                }
-                else
-                {
-                    descriptor->MatrixParam(m_leftDivRight, "leftDivRight", paramOptionsInput | paramOptionsTemporary);
-                    descriptor->FunctionParam(0, paramOptionsInput);
-                    descriptor->FunctionParam(1, paramOptionsInput);
-                }
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction(inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->MatrixParam(m_logOfRight, "logOfRight", paramOptionsOutput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
-
         virtual void EvaluateThisNode()   //-sum(left_i * log(right_i))
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight);
@@ -747,32 +648,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), gradientOfL1Norm);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfL1Norm, "gradientOfL1Norm", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
@@ -910,33 +785,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);
             inputGradientValues.AddWithScaleOf(v, gradientValues);
         }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
 
         virtual void EvaluateThisNode()  
         {
@@ -1081,40 +929,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     clsInfo, idx2Cls, grd);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->FunctionParam(2, paramOptionsInput);
-                descriptor->MatrixParam(*m_ptrClsinfo, "clsInfo", paramOptionsInput | paramOptionsConstant);
-                descriptor->MatrixParam(*m_ptrIdx2Cls, "idx2Cls", paramOptionsInput | paramOptionsConstant);
-                descriptor->MatrixParam(m_logSoftmax, "logSoftmax", paramOptionsInput);
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->SetFunction(inputIndex==1?(FARPROC)ComputeClassEntropyGradientOfInput:(FARPROC)ComputeClassEntropyGradientOfWeight);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->FunctionParam(2, paramOptionsInput);
-                descriptor->MatrixParam(*m_ptrClsinfo, "clsInfo", paramOptionsInput | paramOptionsConstant);
-                descriptor->MatrixParam(*m_ptrIdx2Cls, "idx2Cls", paramOptionsInput | paramOptionsConstant);
-                descriptor->MatrixParam(m_logSoftmax, "logSoftmax", paramOptionsOutput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_ptrClsinfo, m_ptrIdx2Cls, m_logSoftmax);
@@ -1189,7 +1003,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[2] = matrix;
 
             //initializes m_logSoftmax
-            m_logSoftmax.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC);
+            m_logSoftmax.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
             m_logSoftmax.Resize(label->FunctionValues().GetNumRows(), label->FunctionValues().GetNumCols());
         }
 

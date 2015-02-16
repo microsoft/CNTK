@@ -990,7 +990,7 @@ void SequenceReader<ElemType>::GetInputToClass(std::map<std::wstring, Matrix<Ele
     if (m_idx2clsRead) return;
 
     // populate local CPU matrix
-    m_id2classLocal->SwitchToMatrixType(MatrixType::DENSE);
+    m_id2classLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
     m_id2classLocal->Resize(nwords , 1, false);        
 
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
@@ -1020,7 +1020,7 @@ void SequenceReader<ElemType>::GetClassInfo(std::map<std::wstring, Matrix<ElemTy
     if (m_clsinfoRead) return;
 
     // populate local CPU matrix
-    m_classInfoLocal->SwitchToMatrixType(MatrixType::DENSE);
+    m_classInfoLocal->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
     m_classInfoLocal->Resize(2, class_size);        
 
     //move to CPU since element-wise operation is expensive and can go wrong in GPU

@@ -215,7 +215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Init(deviceID);
 
         if (!(GetDeviceId() == MANAGEDEXTERN || (matrixFlags & matrixFlagDontOwnBuffer)))
-            SwitchToMatrixType(matrixType, matrixFormat);
+            SwitchToMatrixType(matrixType, matrixFormat, false);
     }
 
 
@@ -226,7 +226,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Init(deviceID);
 
         if (!(GetDeviceId() == MANAGEDEXTERN || (matrixFlags & matrixFlagDontOwnBuffer)))
-            SwitchToMatrixType(matrixType, matrixType == MatrixType::DENSE? MatrixFormat::matrixFormatDense : MatrixFormat::matrixFormatSparseCSC);
+            SwitchToMatrixType(matrixType, matrixType == MatrixType::DENSE? MatrixFormat::matrixFormatDense : MatrixFormat::matrixFormatSparseCSC, false);
     }
 
     //this is a private constructor only used internally to initialize a blank matrix
@@ -236,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Init(deviceID);
 
         if (!(GetDeviceId() == MANAGEDEXTERN || (matrixFlags & matrixFlagDontOwnBuffer)))
-            SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
+            SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
     }
 
     template<class ElemType>
@@ -245,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Init(deviceID);
 
         if (!(GetDeviceId() == MANAGEDEXTERN))
-            SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
+            SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
     }
 
     // constructor for Matrix class to wrap an externally managed BaseMatrix
@@ -389,7 +389,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 //m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows,numCols,nnz, pArray,matrixFlags,m_preferredDeviceId);
                 m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(MatrixFormat(matrixFlags & MatrixFormat::matrixFormatMask), m_preferredDeviceId);
-                m_GPUSparseMatrix->Resize(numRows, numCols, nnz);
+                m_GPUSparseMatrix->Resize(numRows, numCols, nnz, true, false);
                 SetDataLocation(GPU, SPARSE);
             }
             else
@@ -743,7 +743,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (GetMatrixType() == MatrixType::DENSE && m_CPUMatrix != nullptr)
                     {
-                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols());
+                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols(), 1, true, false);
                         if (keepValues)
                             CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
                     }
@@ -788,7 +788,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (keepValues)
                                 m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
                             else
-                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), 0);
+                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), 0, true, false);
                         }
 
                         delete m_GPUMatrix;
@@ -888,7 +888,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignTransposeOf (const Matrix<ElemType>& a)
     {
         DecideAndMoveToRightDevice(a, *this);
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -981,7 +981,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         this->m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
         DecideAndMoveToRightDevice(deepCopyFrom, *this);
-        this->SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format);
+        this->SwitchToMatrixType(deepCopyFrom.GetMatrixType(), format, false);
 
         DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
             this,
@@ -1023,14 +1023,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // read features
     template<class ElemType>
-    void Matrix<ElemType>::SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+    void Matrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols)
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
+            m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols),
             m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols)
             );
 
@@ -1243,8 +1243,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             m_CPUMatrix->Resize(numRows,numCols,growOnly), 
             m_GPUMatrix->Resize(numRows,numCols,growOnly), 
-            m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly),
-            m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly)
+            m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
+            m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
     }
 
@@ -1317,7 +1317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignSumOf: Matrix a is empty.");        
 
         DecideAndMoveToRightDevice(a, *this);
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -1428,7 +1428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
         DecideAndMoveToRightDevice(a, *this);
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1509,7 +1509,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignDifferenceOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1529,7 +1529,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignDifferenceOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1755,7 +1755,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        this->SwitchToMatrixType(a.GetMatrixType());
+        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1812,7 +1812,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1840,7 +1840,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -1866,7 +1866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (! (GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
        
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1892,7 +1892,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1920,7 +1920,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -1956,7 +1956,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignElementInverseOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        this->SwitchToMatrixType(a.GetMatrixType());
+        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -1987,7 +1987,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignSigmoidOf (const Matrix<ElemType>& a)
     {
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2019,7 +2019,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignLinearRectifierDerivativeOf (const Matrix<ElemType>& a)
     {
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2051,7 +2051,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignSigmoidDerivativeOf (const Matrix<ElemType>& a)
     {
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2072,7 +2072,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
                 NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -2103,7 +2103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignTanhOf (const Matrix<ElemType>& a)
     {
         DecideAndMoveToRightDevice(a, *this);    
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2137,7 +2137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             throw std::logic_error("AssignLogSoftmaxOf: Matrix a is empty.");
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2171,7 +2171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignSqrtOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2207,7 +2207,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignExpOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2242,7 +2242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignAbsOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2292,7 +2292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignLogOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2312,7 +2312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignLogOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2347,7 +2347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignCosineOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2382,7 +2382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignNegativeSineOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2477,7 +2477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2543,7 +2543,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
         DecideAndMoveToRightDevice(a, *this);        
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2601,7 +2601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2675,7 +2675,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("VectorNormInf: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, c);
-        c.SwitchToMatrixType(GetMatrixType());
+        c.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &c,
@@ -2700,7 +2700,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("VectorNorm2: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, c);
-        c.SwitchToMatrixType(GetMatrixType());
+        c.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &c,
@@ -2725,7 +2725,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("VectorNormInf: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, c);
-        c.SwitchToMatrixType(GetMatrixType());
+        c.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &c,
@@ -2766,7 +2766,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -2845,7 +2845,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (! (GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2915,7 +2915,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(GetMatrixType() == a.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             this,
@@ -2957,8 +2957,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("VectorMax: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, maxIndexes, maxValues);
-        maxIndexes.SwitchToMatrixType(GetMatrixType());
-        maxValues.SwitchToMatrixType(GetMatrixType());
+        maxIndexes.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
+        maxValues.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &maxValues,
@@ -2977,8 +2977,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("VectorMin: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, minIndexes, minValues);
-        minIndexes.SwitchToMatrixType(GetMatrixType());
-        minValues.SwitchToMatrixType(GetMatrixType());
+        minIndexes.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
+        minValues.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &minValues,
@@ -3312,7 +3312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const bool zeroPadding)
     {
         DecideAndMoveToRightDevice(inputSubBatch, *this);        
-        SwitchToMatrixType(inputSubBatch.GetMatrixType());
+        SwitchToMatrixType(inputSubBatch.GetMatrixType(), inputSubBatch.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&inputSubBatch,
             this,
@@ -3342,7 +3342,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const bool zeroPadding) const
     {
         DecideAndMoveToRightDevice(*this, inputSubBatch);        
-        inputSubBatch.SwitchToMatrixType(GetMatrixType());
+        inputSubBatch.SwitchToMatrixType(GetMatrixType(), inputSubBatch.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &inputSubBatch,
@@ -3370,7 +3370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
     {
         DecideAndMoveToRightDevice(inputBatch, *this);        
-        SwitchToMatrixType(inputBatch.GetMatrixType());
+        SwitchToMatrixType(inputBatch.GetMatrixType(), inputBatch.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&inputBatch,
             this,
@@ -3428,7 +3428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
     {
         DecideAndMoveToRightDevice(inputBatch, *this);        
-        SwitchToMatrixType(inputBatch.GetMatrixType());
+        SwitchToMatrixType(inputBatch.GetMatrixType(), inputBatch.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&inputBatch,
             this,
@@ -3489,9 +3489,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DecideAndMoveToRightDevice(A, SIGMA, U);    
         VT._transferToDevice(A.GetDeviceId());
 
-        SIGMA.SwitchToMatrixType(A.GetMatrixType());
-        U.SwitchToMatrixType(A.GetMatrixType());
-        VT.SwitchToMatrixType(A.GetMatrixType());
+        SIGMA.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
+        U.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
+        VT.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
 
 
         DISPATCH_MATRIX_ON_FLAG(&A,
@@ -3546,7 +3546,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                c.SwitchToMatrixType(MatrixType::DENSE);
+                c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
                 CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha,*a.m_CPUMatrix,transposeA,*b.m_CPUMatrix,transposeB,beta,*c.m_CPUMatrix);
                 c.SetDataLocation(CPU, DENSE);
             }
@@ -3761,7 +3761,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        c.SwitchToMatrixType(a.GetMatrixType());
+        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&c,
             &c,
@@ -3812,7 +3812,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(a.GetMatrixType() == b.GetMatrixType() && a.GetMatrixType() == alpha.GetMatrixType()))
             NOT_IMPLEMENTED;
 
-        c.SwitchToMatrixType(a.GetMatrixType());       
+        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&c,
             nullptr,
@@ -3869,7 +3869,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::Scale(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
     {
         DecideAndMoveToRightDevice(c, a);      
-        c.SwitchToMatrixType(a.GetMatrixType());
+        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&c,
             &c,
@@ -3935,7 +3935,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.GetMatrixType() != b.GetMatrixType())
             NOT_IMPLEMENTED;
 
-        c.SwitchToMatrixType(a.GetMatrixType());
+        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&c,
             &c,
@@ -3989,7 +3989,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
         if (a.GetMatrixType() == b.GetMatrixType())
             {
-            SwitchToMatrixType(a.GetMatrixType());
+            SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
             DISPATCH_MATRIX_ON_FLAG(&a,
                 this,
@@ -4014,7 +4014,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("Scale:  The input matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, c);        
-        c.SwitchToMatrixType(a.GetMatrixType());
+        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&c,
             nullptr,
@@ -4264,7 +4264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		if (!(a.GetMatrixType() == b.GetMatrixType()))
 			NOT_IMPLEMENTED;
 
-		this->SwitchToMatrixType(a.GetMatrixType());
+        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
 		DISPATCH_MATRIX_ON_FLAG(this,
 			this,
@@ -4294,7 +4294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		if (a.GetMatrixType() != b.GetMatrixType())
 			NOT_IMPLEMENTED;
 
-		c.SwitchToMatrixType(a.GetMatrixType());
+        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
 		DISPATCH_MATRIX_ON_FLAG(&c,
 			&c,
@@ -4318,7 +4318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		if (!(GetMatrixType() == a.GetMatrixType()))
 			NOT_IMPLEMENTED;
 
-		SwitchToMatrixType(a.GetMatrixType());
+        SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
 
 		DISPATCH_MATRIX_ON_FLAG(this,
@@ -4343,7 +4343,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		if (a.GetMatrixType() != b.GetMatrixType())
 			NOT_IMPLEMENTED;
 
-		c.SwitchToMatrixType(a.GetMatrixType());
+        c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
 		DISPATCH_MATRIX_ON_FLAG(&c,
 			&c,
@@ -4372,7 +4372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		if (!(a.GetMatrixType() == b.GetMatrixType()))
 			NOT_IMPLEMENTED;
 
-		this->SwitchToMatrixType(a.GetMatrixType());
+        this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
 		DISPATCH_MATRIX_ON_FLAG(this,
 			this,

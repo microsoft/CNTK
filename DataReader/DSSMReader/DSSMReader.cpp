@@ -335,8 +335,8 @@ bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 	size_t actualMBSize = ( m_readNextSample + m_mbSize > m_totalSamples ) ? m_totalSamples - m_readNextSample : m_mbSize;
 
 
-	featuresQ.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
-	featuresD.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
+	featuresQ.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+	featuresD.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
 
 	/*
 	featuresQ.Resize(dssm_queryInput.numRows, actualMBSize);
