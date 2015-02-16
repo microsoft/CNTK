@@ -228,6 +228,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType Max () const;
         bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
+        static void VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c, const bool isColWise);
+
         void VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWise) const;
         GPUMatrix<ElemType>& AssignVectorNorm1Of(GPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -335,6 +337,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static GPUMatrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
 
         static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType> &Gradients, const GPUMatrix<ElemType> &SmoothedGradients);
+
+    public:
+        GPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt);
+        static void InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt);
+        GPUMatrix<ElemType>& GetARowByIndex(const GPUMatrix<ElemType>& a, const size_t m);
+        static void ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed);
+
+        GPUMatrix<ElemType>& AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift);
+
     public:
         friend File& operator>>(File& stream, GPUMatrix<ElemType>& us)
         {

@@ -1084,6 +1084,37 @@ __global__ void _setMaskAndScale(
 }
 
 template<class ElemType>
+__global__ void _vectorSum(
+    ElemType* c, //output
+    const ElemType* a, //input
+    const long n, //a.numRows
+    const long m, //a.numCols
+    const bool isColWise)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if ((isColWise && id >= m) || (!isColWise && id >= n))
+        return;
+
+    ElemType sum = 0;
+
+    if (isColWise)
+    {
+        for (long i = 0; i<n; ++i)
+        {
+            sum += a[IDX2C(i, id, n)];
+        }
+    }
+    else
+    {
+        for (long j = 0; j<m; ++j)
+        {
+            sum += a[IDX2C(id, j, n)];
+        }
+    }
+    c[id] = sum;
+}
+
+template<class ElemType>
 __global__ void _vectorNorm1(
     ElemType* c, //output
     const ElemType* a, //input
@@ -2285,6 +2316,88 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     c[IDX2C(rowInC, colInC, m)] = alpha * s + beta * c[IDX2C(rowInC, colInC, m)];
 }
 
+//called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
+//what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
+//input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
+//blockIDs: the blockID mapping in the resulting matrix; 
+//nnz: number of nonzero value or the size of rowIndexes;
+template<class ElemType>
+__global__ void _findColsWithValues(
+    const GPUSPARSE_INDEX_TYPE* rowIndexes, GPUSPARSE_INDEX_TYPE* blockIds, const size_t nnz)
+{
+    const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= nnz)
+        return;
+
+    blockIds[rowIndexes[index]] = 1; //this row has value.
+}
+
+//called before _denseMulSparseCSCTransposeToSparseBlockCol and after _findColsWithValuesto determine which columns have values and
+//what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
+//input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
+//blockId2Col: the blockID to colum id mapping in the resulting matrix; 
+//col2BlockId: the col2BlockId to blockID mapping in the resulting matrix; 
+//numCols: number of columns in the resulting matrix or the size of blockIDs
+//blockSize: return the blockSize with values, *blockSize must be zero before passed in.
+template<class ElemType>
+__global__ void _determineBlockIds(
+    GPUSPARSE_INDEX_TYPE* blockId2Col, GPUSPARSE_INDEX_TYPE*col2BlockId, const size_t numCols, size_t* blockSize)
+{
+    const size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= numCols)
+        return;
+
+    size_t blockIndex = numCols;
+    if (blockId2Col[index] > 0)
+    {
+        blockIndex = atomicAdd(blockSize, 1);
+        col2BlockId[index] = blockIndex;
+    }
+
+    __syncthreads();
+
+    if (blockIndex < numCols)
+        blockId2Col[blockIndex] = index;
+}
+
+// backward pass from hidden layer to feature weight
+//result (sparse BlockCol)= alpha * (lhs (dense) X rhs^T (sparse CSC)
+//assume resultValues are 0-initialized
+template<class ElemType>
+__global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
+    const ElemType alpha,
+    const ElemType* lhsValues,
+    const size_t numRowsLhs,
+    const size_t numColsRhs,
+    const ElemType* rhsNZValues,
+    const GPUSPARSE_INDEX_TYPE* rhsRows,
+    const GPUSPARSE_INDEX_TYPE* rhsCols,
+    const GPUSPARSE_INDEX_TYPE* col2blockIds,
+    ElemType* resultValues)
+{
+    const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
+    const LONG64 lhsCol = index / numRowsLhs; //rhsCol == lhsCol
+    if (lhsCol >= numColsRhs)
+        return;
+    const LONG64 lhsRow = index - numRowsLhs*lhsCol; //resultRow == lhsRow
+
+    //each thread handles one [row, col] combination
+    ElemType lhsValue = alpha*lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
+
+    LONG64 start = rhsCols[lhsCol]; //rhsCol == lhsCol
+    LONG64 end = rhsCols[lhsCol + 1];
+
+    for (LONG64 p = start; p < end; p++)
+    {
+        LONG64 rhsRow = rhsRows[p];
+        ElemType rhsVal = rhsNZValues[p];
+        LONG64 resultCol = col2blockIds[rhsRow]; //resultCol == rhsRow maps to columnid 
+
+        //assume resultValues are 0-initialized
+        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
+    }
+}
+
 // backward pass from hidden layer to feature weight
 //result (sparse BlockCol)= alpha * (lhs (dense) X rhs^T (sparse CSC)
 //assume resultValues are 0-initialized
@@ -2297,9 +2410,9 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
     const ElemType* rhsNZValues,
     const GPUSPARSE_INDEX_TYPE* rhsRows,
     const GPUSPARSE_INDEX_TYPE* rhsCols,
-    const size_t* rhsRowIdx,
+    const GPUSPARSE_INDEX_TYPE* rhsRowIdx,
     ElemType* resultValues,
-    size_t* resultBlockIds)
+    GPUSPARSE_INDEX_TYPE* resultBlockIds)
 {
     const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
     const LONG64 lhsCol = index / numRowsLhs; //rhsCol == lhsCol
@@ -2335,7 +2448,7 @@ __global__ void _scaleSparseBlockAndAddToDense(
     const size_t numCols,
     const size_t numBlocks,
     const ElemType* lhsValues,  //lhs is blockCol or blockRow
-    const size_t* blockIds,
+    const GPUSPARSE_INDEX_TYPE* blockIds,
     ElemType* rhs)
 {
     const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -2558,7 +2671,7 @@ __global__ void _computeGradientOfWeight(
     ElemType* input,
     size_t nrs,
     ElemType* blockVal,
-    size_t* blockIds)
+    GPUSPARSE_INDEX_TYPE* blockIds)
 {
     int p = blockIdx.x;
     ElemType v = val[p];
@@ -2635,7 +2748,7 @@ __global__ void _normalGradForSparseBlock(
     const size_t numCols,
     const size_t numBlocks,
     ElemType* lhsValues,  //lhs is blockCol or blockRow
-    const size_t* blockIds,
+    const GPUSPARSE_INDEX_TYPE* blockIds,
     ElemType* rhs)
 {
     const LONG64 index = blockIdx.x * blockDim.x + threadIdx.x;
