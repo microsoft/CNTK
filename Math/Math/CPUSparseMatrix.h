@@ -147,9 +147,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         inline ElemType* NzValues() { return m_pArray; }
         size_t NzSize() const { return sizeof(ElemType)*m_nz; } // actual number of element bytes in use
 
-		void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
-			const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
-
         CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const { return m_unCompIndex; } //this is the major index, row/col ids in CSC/CSR format
         size_t MajorIndexCount() const { return m_nz; }
         size_t MajorIndexSize() const { return sizeof(CPUSPARSE_INDEX_TYPE)*MajorIndexCount(); } // actual number of major index bytes in use
