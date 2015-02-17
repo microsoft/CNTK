@@ -442,6 +442,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
+    {
+        a; posNumber;  negNumber; shiftNumber;
+        NOT_IMPLEMENTED;
+    }
+    
+    template<class ElemType>
+    CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AddFoldedPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
+    {
+        a; posNumber;  negNumber; shiftNumber;
+        NOT_IMPLEMENTED;
+    }
+
+    template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::Transpose()
     {
         if (IsEmpty())
