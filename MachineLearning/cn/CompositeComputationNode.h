@@ -487,27 +487,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::invalid_argument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput | paramOptionsConstant);
-                descriptor->FunctionParam(2, paramOptionsInput | paramOptionsConstant);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()   //(feature-mean).*InvStdDev
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
@@ -651,27 +630,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
         {
             throw std::invalid_argument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput | paramOptionsConstant);
-                descriptor->FunctionParam(2, paramOptionsInput | paramOptionsConstant);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()   //(feature-mean).*InvStdDev
@@ -935,37 +893,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                 ComputeInputPartialOverInputFeature(this, sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
             }
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->Param(paramTypeNode, "ConvolutionNodePointer", paramOptionsInput | paramOptionsConstant);
-                descriptor->GradientParam();
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->MatrixParam(m_tempMatrix, "tempMatrix", paramOptionsOutput);
-                descriptor->SetFunction(inputIndex==0?(FARPROC)ComputeInputPartialOverWeight:(FARPROC)ComputeInputPartialOverInputFeature);
-                break;
-            case taskEvaluate:
-                descriptor->Param(paramTypeNode, "ConvolutionNodePointer", paramOptionsInput | paramOptionsConstant);
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->MatrixParam(m_tempMatrix, "tempMatrix", paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -1393,34 +1320,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                     poolParams.windowWidth, poolParams.windowHeight, poolParams.horizontalSubsample, poolParams.verticalSubsample);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->Param(paramTypeNode, "MaxPoolNodePointer", paramOptionsInput | paramOptionsConstant);
-                descriptor->GradientParam();
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(-1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->Param(paramTypeNode, "MaxPoolNodePointer", paramOptionsInput | paramOptionsConstant);
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
 #if NANCHECK
@@ -1653,32 +1552,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                     poolParams.inputWidth, poolParams.inputHeight, poolParams.inputSizePerSample, 
                                                     poolParams.outputWidth, poolParams.outputHeight, poolParams.outputSizePerSample, 
                                                     poolParams.windowWidth, poolParams.windowHeight, poolParams.horizontalSubsample, poolParams.verticalSubsample);
-        }
-
-                // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->Param(paramTypeNode, "AveragePoolNodePointer", paramOptionsInput | paramOptionsConstant);
-                descriptor->GradientParam();
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->Param(paramTypeNode, "AveragePoolNodePointer", paramOptionsInput | paramOptionsConstant);
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -2000,15 +1873,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = 0; i < numComponent; i++)
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t /*inputIndex = 0*/) const
-        {
-            NOT_IMPLEMENTED;
-           // TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-           // return descriptor;
         }
 
         virtual void SetFunctionAndGradientSize(const int numSamples)

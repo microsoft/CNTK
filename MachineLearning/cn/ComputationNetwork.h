@@ -23,13 +23,9 @@
 #include "EvaluationCriterionNode.h"
 #include "File.h"
 #include "Matrix.h"
-#include "PTaskGraphBuilder.h"
 #include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-    template<class ElemType>
-    class PTaskGraphBuilder;
-
     template<class ElemType>
     class ComputationNetwork
     {
@@ -59,7 +55,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_actMiniBSize = 0;
             if (m_deviceId == AUTOPLACEMATRIX)
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-            m_PTaskGraphBuilder = NULL;
             m_nbrSlicesInEachRecurrentIteration = 1; 
         }
 
@@ -93,8 +88,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter=m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
                 delete nodeIter->second;      
             m_nameToNodeMap.clear();
-            delete m_PTaskGraphBuilder;
-            m_PTaskGraphBuilder = nullptr;
         }
 
         //if node name is not found, dump all nodes
@@ -431,13 +424,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
 
             ValidateNetwork();  //some internal values in the nodes are computed during validation
-
-            // now check to see if we want to create a PTask graph out of this
-            if (m_PTaskGraphBuilder != NULL)
-            {
-                m_PTaskGraphBuilder->BuildFromComputationNetwork(this);
-                // TODO: may need to not start it here.
-            }
         }
 
 #pragma region Network Modification
@@ -1045,10 +1031,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr ClassCrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr matrix, const std::wstring nodeName = L"")
+        ComputationNodePtr ClassCrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, 
+            const ComputationNodePtr input_weight, const ComputationNodePtr cls_log_post_prob, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
-            newNode->AttachInputs(label, prediction, matrix);
+            newNode->AttachInputs(label, prediction, input_weight, cls_log_post_prob);
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -1834,24 +1821,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // build a PTaskGraph for training
-        // TODO: build graphs for other purposes (i.e. recurrant?)
-        void BuildPTaskGraph()
-        {
-            if (m_PTaskGraphBuilder == NULL)
-                m_PTaskGraphBuilder = new PTaskGraphBuilder<ElemType>();
-            m_PTaskGraphBuilder->BuildFromComputationNetwork(this);
-        }
-
-        void RunPTaskGraph()
-        {
-            if (m_PTaskGraphBuilder == NULL)
-                throw std::runtime_error("No Output nodes specified");
-                
-            m_PTaskGraphBuilder->StartPTaskGraph();
-        }
-
-        PTaskGraphBuilder<ElemType>* GetPTaskGraphBuilder() {return m_PTaskGraphBuilder;}
     protected:
         // Copy constructor, should never be called.
 #pragma warning (push)
@@ -2368,8 +2337,6 @@ protected:
             }
             return orderMap[key];
         }
-
-        PTaskGraphBuilder<ElemType>* m_PTaskGraphBuilder;
 
         DEVICEID_TYPE m_deviceId;
         unsigned long m_randomSeedOffset;

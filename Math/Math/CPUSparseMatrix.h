@@ -69,7 +69,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const CPUMatrix<ElemType>& idx2cls, 
             CPUSparseMatrix<ElemType>& grd);
 
-        static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
+        void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+            const size_t nz, const size_t numRows, const size_t numCols);
+
+        static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
             const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
        
         static void MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
@@ -89,7 +92,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 0, const bool growOnly = true, bool keepExistingValues = true);
+        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
         void Reset();
 
         inline ElemType defaultElem()

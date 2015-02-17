@@ -17,7 +17,6 @@
 #include "basetypes.h"
 
 #include <Matrix.h>
-#include "PTaskGraphBuilder.h"
 
 #ifndef _WIN32
 static inline int64_t InterlockedIncrement64(int64_t * v) { return (*v)++; }          // BUGBUG: find the Linux equivalent
@@ -142,6 +141,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
             throw std::logic_error("This operation does not support five inputs.");
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
+            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
+        {
+            throw std::logic_error("This operation does not support six inputs.");
         }
 
         virtual void DetachInputs()
@@ -832,12 +837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t /*inputIndex=0*/) const
-        {
-            assert(false);
-            NOT_IMPLEMENTED;
-            //return NULL;
-        }
+
     protected:
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
@@ -872,7 +872,7 @@ public: \
         using B::CopyImageSizeFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DerivativeName; using B::DetachInputs; \
         using B::DumpNodeInfo; using B::Duplicate; using B::EnumerateNodes; using B::EnumerateNodesForEval; \
         using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
-        using B::GetPTaskDescriptor; using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
+        using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
         using B::IsChildAnImage; using B::IsEqualTo; using B::IsFuncValueOlderThanInputs; using B::IsLeaf; using B::IsSmaller; \
         using B::LoadFromFile; using B::MoveMatricesToDevice; using B::NeedGradient; using B::NodeName; using B::NotReset; \
         using B::OperationName; using B::PrintNodeValuesToFile; using B::PrintSelf; using B::PrintSelfBeforeValidation; \
@@ -989,10 +989,10 @@ protected:  \
             ComputationNodePtr node = new LearnableParameter<ElemType>(this, name, flags);
             return node;
         }
-
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const;
     };
 
+    //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
+    //WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {
@@ -1149,11 +1149,6 @@ protected:  \
             return node;
         }
 
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType /*taskType*/, size_t inputIndex=0) const
-        {
-            inputIndex;
-            return nullptr;
-        }
     };
 
     template class InputValue<float>; 
@@ -1207,7 +1202,7 @@ protected:  \
         {
             size_t rows = m_functionValues.GetNumRows();
             size_t cols = m_functionValues.GetNumCols();
-            m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC);
+            m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
             m_functionValues.Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
         }
 
@@ -1274,31 +1269,6 @@ protected:  \
         static void WINAPI ComputeInputPartialS(Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& gradientValues)
         {
             childGradientValues -= gradientValues;
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // forward - EvalutateThisNode() if set otherwise ComputeInputPartial()
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            if (taskType == taskEvaluate)
-            {
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-            }
-            else if (taskType == taskComputeInputPartial)
-            {
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-            }
-            else
-            {
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -1399,32 +1369,6 @@ protected:  \
 #if DUMPOUTPUT
             inputGradientValues.Print("RecitifiedLinearNode-Partial-out");
 #endif
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - type of task we are making a descriptor for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfRectifiedLinear, "GradientOfRectifiedLinear", paramOptionsInput | paramOptionsTemporary);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -1569,48 +1513,6 @@ protected:  \
             inputGradientValues.AddElementProductOf(gradientValues, gradientOfSigmoid);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            //case taskComputeInputPartialRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->MatrixParam(m_gradientOfSigmoid, "GradientOfSigmoid", paramOptionsInput | paramOptionsTemporary);
-            //    descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-            //    descriptor->GradientParam();
-            //    descriptor->FunctionParam(-1, paramOptionsInput);
-            //    descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-            //    descriptor->SetFunction((FARPROC)ComputeInputPartialSR);
-                //break;
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfSigmoid, "GradientOfSigmoid", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->FunctionParam(-1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            //case taskEvaluateRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam();
-            //    descriptor->FunctionParam(0, paramOptionsInput);
-            //    descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-            //    descriptor->SetFunction((FARPROC)EvaluateThisNodeSR);
-                //break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
@@ -1750,49 +1652,6 @@ protected:  \
         }
 
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            //case taskComputeInputPartialRecurrent:
-            //    recurrant = true;
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->MatrixParam(m_gradientOfTanh, "GradientOfTanh", paramOptionsInput | paramOptionsTemporary);
-            //    descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-            //    descriptor->GradientParam();
-            //    descriptor->FunctionParam(-1, paramOptionsInput);
-            //    descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-            //    descriptor->SetFunction((FARPROC)ComputeInputPartialSR);
-                //break;
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfTanh, "GradientOfTanh", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->FunctionParam(-1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            //case taskEvaluateRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam();
-            //    descriptor->FunctionParam(0, paramOptionsInput);
-            //    descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-            //    descriptor->SetFunction((FARPROC)EvaluateThisNodeSR);
-            //    break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
@@ -1929,32 +1788,6 @@ protected:  \
             gradientOfLog.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
 
             inputGradientValues.AddElementProductOf(gradientValues, gradientOfLog);
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch (taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfLog, "GradientOfLog", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()
@@ -2096,32 +1929,6 @@ protected:  \
             inputGradientValues.AddElementProductOf(gradientValues, gradientOfExp);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch (taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfExp, "GradientOfExp", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
@@ -2257,32 +2064,6 @@ protected:  \
         {
             gradientOfCosine.AssignNegativeSineOf(inputFunctionValues); // -sin(x) (x is input to Cosine(x))
             inputGradientValues.AddElementProductOf(gradientValues, gradientOfCosine);
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientOfCosine, "GradientOfCosine", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -2428,33 +2209,6 @@ protected:  \
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientDotValue, "GradientDotValue", paramOptionsInput | paramOptionsTemporary);
-                descriptor->MatrixParam(m_diff, "Diff", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->FunctionParam(-1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
@@ -2593,36 +2347,9 @@ protected:  \
             const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             softmax.AssignExpOf(functionValues);
-            gradientDotValue.AssignInnerProductOf(gradientValues, softmax, true);
-            softmax.AssignDifferenceOf(gradientValues, gradientDotValue);
-            inputGradientValues += softmax;
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch (taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_gradientDotValue, "GradientDotValue", paramOptionsInput | paramOptionsTemporary);
-                descriptor->MatrixParam(m_softmax, "softmax", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->FunctionParam(-1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
+            Matrix<ElemType>::VectorSum(gradientValues, gradientDotValue, true);
+            softmax.RowElementMultiplyWith(gradientDotValue);
+            Matrix<ElemType>::AddScaledDifference(1.0, gradientValues, softmax, inputGradientValues);
         }
 
         virtual void EvaluateThisNode()
@@ -2771,30 +2498,6 @@ protected:  \
         static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             inputGradientValues += gradientValues; //here the assumption is that gradientValues are 1x1 matrix
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -2948,30 +2651,6 @@ protected:  \
             inputGradientValues.AddToRowSliceValuesOf(gradientValues, startIndex, numRows); 
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->GradientParam(0, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), m_startIndex, m_numRows);
@@ -3115,32 +2794,6 @@ protected:  \
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             Matrix<ElemType>::ScaleAndAdd(inputFunctionValues.Get00Element(), gradientValues, inputGradientValues);
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction(inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -3300,45 +2953,6 @@ protected:  \
 #endif
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            //case taskComputeInputPartialRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-            //    descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-            //    descriptor->GradientParam();
-            //    descriptor->SetFunction((inputIndex?(FARPROC)ComputeInputPartialRightR:(FARPROC)ComputeInputPartialLeftR));
-            //    break;
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft));
-                break;
-            //case taskEvaluateRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam();
-            //    descriptor->FunctionParam(0, paramOptionsInput);
-            //    descriptor->FunctionParam(1, paramOptionsInput);
-            //    descriptor->Param(paramTypeSizet, "mNbrSlicesInEachRecurrentIter", paramOptionsInput);
-            //    break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
 
         virtual void EvaluateThisNode()  
         {
@@ -3488,45 +3102,6 @@ protected:  \
 #endif
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            //case taskComputeInputPartialRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-            //    descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-            //    descriptor->GradientParam();
-            //    descriptor->SetFunction((FARPROC)ComputeInputPartialSR);
-            //    break;
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            //case taskEvaluateRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam();
-            //    descriptor->FunctionParam(0, paramOptionsInput);
-            //    descriptor->FunctionParam(1, paramOptionsInput);
-            //    descriptor->SetFunction((FARPROC)EvaluateThisNodeSR);
-            //    break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
 
         virtual void EvaluateThisNode()  
         {
@@ -3705,48 +3280,6 @@ protected:  \
             inputGradientValues.Print("child Gradient-out");
 #endif
                 }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            //case taskComputeInputPartialRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam(-1, paramOptionsInput); // only used to check dimensions
-            //    descriptor->GradientParam();
-            //    descriptor->FunctionParam(inputIndex, paramOptionsInput); // only used to check dimensions
-            //    descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-            //    descriptor->SetFunction((FARPROC)ComputeInputPartialSR);
-            //    break;
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(-1, paramOptionsInput); // only used to check dimensions
-                descriptor->GradientParam();
-                descriptor->FunctionParam(inputIndex, paramOptionsInput); // only used to check dimensions
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            //case taskEvaluateRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam();
-            //    descriptor->FunctionParam(0, paramOptionsInput);
-            //    descriptor->FunctionParam(1, paramOptionsInput);
-            //    descriptor->SetFunction((FARPROC)EvaluateThisNodeSR);
-            //    break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }       
 
 
         virtual void EvaluateThisNode()  
@@ -4057,40 +3590,6 @@ protected:  \
                 throw std::runtime_error("Minus partial: unexpected condition.");
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                {
-                descriptor->FunctionParam(inputIndex, paramOptionsInput);
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->FunctionParam(-1, paramOptionsInput);
-                descriptor->GradientParam();
-
-                // use dimensions of functionValues, will always be big enough
-                ParamData<ElemType>* param = descriptor->MatrixParam(m_functionValues, "ones", paramOptionsInput | paramOptionsTemporary | paramOptionsInitialize);
-                ElemType val(1.0);
-                param->SetInitialize(val);
-
-                descriptor->SetFunction(inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft);
-                break;
-                }
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
 
         virtual void EvaluateThisNode()  
         {
@@ -4295,48 +3794,6 @@ protected:  \
             temp.SetValue(gradientValues);
             temp.ColumnElementMultiplyWith(inputFunctionValues);
             inputGradientValues += temp;
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            //case taskComputeInputPartialRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-            //    descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-            //    descriptor->GradientParam();
-            //    descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-            //    descriptor->SetFunction((inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft));
-            //    break;
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-                descriptor->GradientParam(inputIndex,paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft));
-                break;
-            //case taskEvaluateRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam();
-            //    descriptor->FunctionParam(0, paramOptionsInput);
-            //    descriptor->FunctionParam(1, paramOptionsInput);
-            //    descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-            //    descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-            //    break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
 
@@ -4566,41 +4023,6 @@ protected:  \
             //Matrix<ElemType>::AddScaledDifference(1, leftTerm, rightTerm, inputGradientValues);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->MatrixParam(m_invNorm0, "invNorm0", paramOptionsInput);
-                descriptor->MatrixParam(m_invNorm1, "invNorm1", paramOptionsInput);
-                descriptor->FunctionParam(-1, paramOptionsInput);
-                descriptor->MatrixParam(m_temp, "temp", paramOptionsInput | paramOptionsTemporary);
-                descriptor->MatrixParam(m_rightTerm, "rightTerm", paramOptionsInput | paramOptionsTemporary);
-                descriptor->MatrixParam(m_leftTerm, "leftTerm", paramOptionsInput | paramOptionsTemporary);
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->GradientParam(-1, paramOptionsInput);
-                descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->SetFunction(inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft);
-                break;
-            case taskEvaluate:
-                descriptor->MatrixParam(m_invNorm0, "invNorm0", paramOptionsOutput);
-                descriptor->MatrixParam(m_invNorm1, "invNorm1", paramOptionsOutput);
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(m_invNorm0, m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
@@ -4812,33 +4234,6 @@ protected:  \
             {   
                 inputGradientValues += gradientValues;
             }
-        }
-
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->Param(paramTypeLong, "dropoutRate");
-                descriptor->GradientParam(inputIndex,paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->MatrixParam(m_maskOfDropout, "maskOfDropout", paramOptionsInput | paramOptionsTemporary);
-                descriptor->GradientParam();
-                descriptor->SetFunction((FARPROC)ComputeInputPartialS);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
         }
 
         virtual void EvaluateThisNode()  
@@ -5069,32 +4464,6 @@ protected:  \
             childGradientValues.AddColumnReshapeProductOf(gradientValues, childFunctionValues, true);
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-                descriptor->GradientParam(inputIndex,paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction(inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft);
-                break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
@@ -5305,45 +4674,6 @@ protected:  \
             CopyImageSizeFromInputs(); 
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-        {
-            //case taskComputeInputPartialRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-            //    descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-            //    descriptor->GradientParam();
-            //    descriptor->SetFunction((inputIndex?(FARPROC)ComputeInputPartialRightR:(FARPROC)ComputeInputPartialLeftR));
-            //    break;
-            case taskComputeInputPartial:
-                descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
-                descriptor->GradientParam(inputIndex,paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->SetFunction((inputIndex?(FARPROC)ComputeInputPartialRight:(FARPROC)ComputeInputPartialLeft));
-                break;
-            //case taskEvaluateRecurrent:
-            //    descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-            //    descriptor->FunctionParam();
-            //    descriptor->FunctionParam(0, paramOptionsInput);
-            //    descriptor->FunctionParam(1, paramOptionsInput);
-            //    descriptor->Param(paramTypeSizet, "mNbrSlicesInEachRecurrentIter", paramOptionsInput);
-            //    break;
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-        }
-            return descriptor;
-        }
         virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
         {
             m_children.resize(2);
@@ -5499,37 +4829,6 @@ protected:  \
             }
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskComputeInputPartialRecurrent:
-                descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-                descriptor->Param(paramTypeInteger, "delay", paramOptionsInput | paramOptionsOutput);
-                descriptor->GradientParam(inputIndex,paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-                descriptor->GradientParam();
-                descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-                descriptor->SetFunction((FARPROC)ComputeInputPartialSR);
-                break;
-            case taskEvaluateRecurrent:
-                descriptor->Param(paramTypeInteger, "RecurrantIterator", paramOptionsInput | paramOptionsRecurrantIterator);
-                descriptor->Param(paramTypeInteger, "delay", paramOptionsInput | paramOptionsOutput);
-                descriptor->Param(paramTypeBool, "reset", paramOptionsInput | paramOptionsOutput);
-                descriptor->Param(sizeof(ElemType)==4?paramTypeSingle:paramTypeDouble, "default_activity", paramOptionsInput);
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->Param(paramTypeLongLong, "nbrSlicesInEachIter");
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeSR);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
 
         virtual void EvaluateThisNode()  
         {
@@ -5743,18 +5042,18 @@ protected:  \
 		CosDistanceWithNegativeSamplesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
 			: ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
 		{
-				m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-				m_deviceId = deviceId;
-				MoveMatricesToDevice(deviceId);
-				InitRecurrentNode();
-			}
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			m_deviceId = deviceId;
+			MoveMatricesToDevice(deviceId);
+			InitRecurrentNode();
+		}
 
 		CosDistanceWithNegativeSamplesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
 			: ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
 		{
-				m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-				LoadFromFile(fstream, modelVersion, deviceId);
-			}
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			LoadFromFile(fstream, modelVersion, deviceId);
+		}
 
 		virtual const std::wstring OperationName() const { return TypeName(); }
 		static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
@@ -5762,7 +5061,7 @@ protected:  \
 		virtual void ComputeInputPartial(const size_t inputIndex)
 		{
 			if (inputIndex > 1)
-				throw std::invalid_argument("CosDistanceWithNegativeSamples operation only takes two inputs.");
+                throw std::invalid_argument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
 			if (inputIndex == 0)  //left derivative
 			{
@@ -5779,7 +5078,7 @@ protected:  \
 		virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
 		{
 			if (inputIndex > 1)
-				throw std::invalid_argument("CosDistanceWithNegativeSamples operation only takes two inputs.");
+				throw std::invalid_argument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
 			Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 			Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -6193,39 +5492,6 @@ protected:  \
 		}
 
 
-		// GetTaskDescriptor - Get a task descriptor for this node
-		// taskType - task type we are generating a task for
-		virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex = 0) const
-		{
-			TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-			switch (taskType)
-			{
-			case taskComputeInputPartial:
-				descriptor->MatrixParam(m_invNorm0, "invNorm0", paramOptionsInput);
-				descriptor->MatrixParam(m_invNorm1, "invNorm1", paramOptionsInput);
-				descriptor->FunctionParam(-1, paramOptionsInput);
-				descriptor->MatrixParam(m_temp, "temp", paramOptionsInput | paramOptionsTemporary);
-				descriptor->MatrixParam(m_rightTerm, "rightTerm", paramOptionsInput | paramOptionsTemporary);
-				descriptor->MatrixParam(m_leftTerm, "leftTerm", paramOptionsInput | paramOptionsTemporary);
-				descriptor->FunctionParam(0, paramOptionsInput);
-				descriptor->FunctionParam(1, paramOptionsInput);
-				descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
-				descriptor->SetFunction(inputIndex ? (FARPROC)ComputeInputPartialRight : (FARPROC)ComputeInputPartialLeft);
-				break;
-			case taskEvaluate:
-				descriptor->MatrixParam(m_invNorm0, "invNorm0", paramOptionsOutput);
-				descriptor->MatrixParam(m_invNorm1, "invNorm1", paramOptionsOutput);
-				descriptor->FunctionParam();
-				descriptor->FunctionParam(0, paramOptionsInput);
-				descriptor->FunctionParam(1, paramOptionsInput);
-				descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-				break;
-			default:
-				assert(false);
-				throw std::logic_error("Unsupported task requested");
-			}
-			return descriptor;
-		}
 
 		virtual void EvaluateThisNode()
 		{
@@ -6238,7 +5504,7 @@ protected:  \
 			Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 			Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-			//			EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value);
+            EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
 		}
 
 		static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1,

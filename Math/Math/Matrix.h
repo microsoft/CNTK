@@ -85,6 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         MatrixType GetMatrixType() const {return m_matrixType;};
+        MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
         bool OwnBuffer() const {return m_baseMatrix->OwnBuffer();}
         int GetDeviceId() const; //-1 if CPU, otherwise GPU CUDA device id
         DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; //-1 if CPU, otherwise GPU CUDA device id
@@ -93,7 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
-        void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat = matrixFormatSparseCSR, const bool keepValues = true); //sets matrix type between dense and sparse
+        void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;
@@ -130,7 +131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
-        void SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+        void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
         void SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
         void SetColumn(const ElemType* colPointer, size_t colInd);
@@ -251,6 +252,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
+        static void VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise);
+
         void VectorNorm1(Matrix<ElemType>& c, const bool isColWise) const;
         Matrix<ElemType>& AssignVectorNorm1Of(Matrix<ElemType>& a, const bool isColWise);
 
@@ -344,6 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void AddElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
         //static void AddLogElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
         static void AssignElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
+        static void MinusOneAt(Matrix<ElemType>& c, const size_t position);
 
         static void Scale(ElemType alpha, Matrix<ElemType>& a);
         static void Scale(Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
@@ -423,6 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
+
         static void ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& weight,
             const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
             const Matrix<ElemType>* idx2cls, Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore);
