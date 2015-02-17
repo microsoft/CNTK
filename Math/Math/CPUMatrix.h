@@ -205,6 +205,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
+        static void VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c, const bool isColWise);
+
         void VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWise) const;
         CPUMatrix<ElemType>& AssignVectorNorm1Of(CPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -296,6 +298,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //static void AddLogElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj); 
         static void AssignElementToElement(const CPUMatrix<ElemType>& a, const size_t ai, const size_t aj, CPUMatrix<ElemType>& c, const size_t ci, const size_t cj); 
 
+        static void MinusOneAt(CPUMatrix<ElemType>& c, const size_t position);
+
         static void Scale(ElemType alpha, CPUMatrix<ElemType>& a);
         static void Scale(CPUMatrix<ElemType> alpha, CPUMatrix<ElemType>& a); //In this case Matrix alpha must be 1x1
         static void Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
@@ -310,6 +314,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static CPUMatrix<ElemType> Eye(const size_t rows);
         static CPUMatrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED);
         static CPUMatrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
+
+        public:
+            CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);
+            static void InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
+            // extract out a row from a, assign it to [this]. 
+            CPUMatrix<ElemType>& GetARowByIndex(const CPUMatrix<ElemType>& a, const size_t index);
+            static void ConductRowElementMultiplyWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const size_t shift, bool bFirstmatrixfixed);
+            CPUMatrix<ElemType>& AssignElementProductOfWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const size_t shift);
 
     public:
         friend File& operator>>(File& stream, CPUMatrix<ElemType>& us)
@@ -360,15 +372,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void ZeroInit(); //should only be used by constructors.
         void Clear();
-
-	public:
-		CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);
-		static void InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
-		// extract out a row from a, assign it to [this]. 
-		CPUMatrix<ElemType>& GetARowByIndex(const CPUMatrix<ElemType>& a, const size_t index);
-		static void ConductRowElementMultiplyWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const size_t shift, bool bFirstmatrixfixed);
-		CPUMatrix<ElemType>& AssignElementProductOfWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const size_t shift);
-
     };
 
     typedef CPUMatrix<float> CPUSingleMatrix;

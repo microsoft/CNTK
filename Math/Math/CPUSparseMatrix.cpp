@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
     {
         CheckInit(format);
-        Resize(numRows, numCols, size);
+        Resize(numRows, numCols, size, true, false);
     }
 
     template<class ElemType>
@@ -185,7 +185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if(m_elemSizeAllocated < m_nz +1) //automatic resize
         {
-            Resize(m_numRows, m_numCols, m_nz + 100);  //allocate 100 more elelemnts and keep existing values
+            Resize(m_numRows, m_numCols, m_nz + 100, true, true);  //allocate 100 more elelemnts and keep existing values
         }
 
         if(row < 0 || row >= m_numRows) 
@@ -216,6 +216,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         m_compIndex[c + 1] = CPUSPARSE_INDEX_TYPE(m_nz + 1);
         m_nz++;
+    }
+
+    template<class ElemType>
+    void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+        const size_t nz, const size_t numRows, const size_t numCols)
+    {
+        m_format = matrixFormatSparseCSC;
+        Resize(numRows, numCols, nz, true, false);
+        SetNzCount(nz);
+
+        memcpy(RowLocation(), h_Row, RowSize());
+        memcpy(ColLocation(), h_CSCCol, ColSize());
+        memcpy(NzValues(), h_Val, NzSize());
     }
 
     template<class ElemType>
@@ -425,7 +438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //allocate enough memory
             c.SetFormat(matrixFormatSparseBlockCol);
-            c.Resize(m, n, m*min(n, rhs.m_nz));
+            c.Resize(m, n, m*min(n, rhs.m_nz), true, false);
 
             map<size_t, size_t> w2Id;
             for(size_t j = 0; j < rhs.GetNumCols(); j++)
@@ -878,7 +891,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
 
-        us.Resize(rownum, colnum, nz);
+        us.Resize(rownum, colnum, nz, true, false);
 
         if (nz > 0)
         {
@@ -958,24 +971,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return stream;
     }
-
-	template<class ElemType>
-	void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
-		const size_t nz, const size_t numRows, const size_t numCols, const bool , const DEVICEID_TYPE ) {
-		Resize(numRows, numCols, nz);
-		Reset();
-		int col = 0;
-		for (int ele = 0; ele < nz; ele++)
-		{
-			while (h_CSCCol[col + 1] == ele)
-			{
-				col++;
-			}
-			SetValue(h_Row[ele], col, h_Val[ele]);
-		}
-	}
-
-
 
     template class CPUSparseMatrix<float>;
     template class CPUSparseMatrix<double>;
