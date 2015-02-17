@@ -373,10 +373,45 @@ __global__ void _assignRepeatOf(ElemType * dest, ElemType * src, const LONG64 N,
 
     long destCol = id / destRows;
     long destRow = id - (destCol * destRows);
+
     long srcRow = destRow % srcRows;
     long srcCol = destCol % srcCols;
 
     dest[id] = src[IDX2C(srcRow,srcCol,srcRows)];
+}
+
+template<class ElemType>
+__global__ void _assignPositiveAndShiftedNegSample(ElemType * dest, const ElemType * src, const LONG64 N, const long srcRows, const long srcCols, const long destRows, const long posNumber, const long shiftNumber)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long destCol = id / destRows;
+    long destRow = id - (destCol * destRows);
+
+    long sampleInDestCol = destRow / srcRows;
+    long srcRow = destRow - srcRows * sampleInDestCol;
+    long srcCol = sampleInDestCol < posNumber ? destCol : (destCol + shiftNumber + sampleInDestCol - posNumber) % srcCols;
+
+    dest[id] = src[IDX2C(srcRow, srcCol, srcRows)];
+}
+
+template<class ElemType>
+__global__ void _addFoldedPositiveAndShiftedNegSample(ElemType * folded, const ElemType * unfolded, const LONG64 unfoldedN, const long unfoldedRows, const long unfoldedCols, const long foldedRows, const long posNumber, const long shiftNumber)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= unfoldedN)
+        return;
+
+    long unfoldedCol = id / unfoldedRows;
+    long unfoldedRow = id - (unfoldedCol * unfoldedRows);
+
+    long sampleInUnfoldedCol = unfoldedRow / foldedRows;
+    long foldedRow = unfoldedRow - foldedRows * sampleInUnfoldedCol;
+    long foldedCol = sampleInUnfoldedCol < posNumber ? unfoldedCol : (unfoldedCol + shiftNumber + sampleInUnfoldedCol - posNumber) % unfoldedCols;
+
+    atomicAdd(&folded[IDX2C(foldedRow, foldedCol, foldedRows)], unfolded[id]);
 }
 
 template<class ElemType>
