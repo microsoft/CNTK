@@ -30,11 +30,11 @@ namespace CNTKMathTest
             A.AssignTruncateBottomOf(Matrix<float>::RandomUniform(4096,2048,-3,0.1,0),0);
             long n0 = A.MatrixNorm0();
             Assert::IsTrue(MatrixType::DENSE==A.GetMatrixType()); 
-            A.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);
+            A.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
             Assert::IsTrue(MatrixType::SPARSE==A.GetMatrixType());
             long n1 = A.MatrixNorm0();
             Assert::AreEqual<long>(n0,n1);
-            A.SwitchToMatrixType(MatrixType::DENSE,MatrixFormat::matrixFormatDense,false);
+            A.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
             Assert::IsTrue(MatrixType::DENSE==A.GetMatrixType());            
         }
 
@@ -43,7 +43,7 @@ namespace CNTKMathTest
             Matrix<float> Ad; //DENSE
             Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(4096,2048,-3,0.1,0),0);//DENSE
             Matrix<float> As(Ad);//DENSE
-            As.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);  //!!! MATRIX As becomes sparse
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);  //!!! MATRIX As becomes sparse
             Matrix<float> B = Matrix<float>::RandomGaussian(2048,128,1,4); //DENSE
             Matrix<float> C = Matrix<float>::RandomGaussian(4096,128,1,2); //DENSE
             Matrix<float> C1(C); //DENSE
@@ -60,7 +60,7 @@ namespace CNTKMathTest
             Matrix<float> Ad;
             Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(1024,2048,-3,0.1,0),0);
             Matrix<float> As(Ad);
-            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC,true);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
 
             Matrix<float> B = Matrix<float>::RandomGaussian(2048,1024,1,4);
             Matrix<float> C = Matrix<float>::RandomGaussian(2048,2048,1,2);
@@ -83,7 +83,7 @@ namespace CNTKMathTest
             Matrix<float> Ad(CPUDEVICE);
             Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(1024, 2048, -3, 0.1, 0), 0);
             Matrix<float> As(Ad);
-            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC,true);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
             Matrix<float> B = Matrix<float>::RandomGaussian(2048, 1024, 1, 4, USE_TIME_BASED_SEED, CPUDEVICE);
             Matrix<float> C = Matrix<float>::RandomGaussian(2048, 2048, 1, 2, USE_TIME_BASED_SEED, CPUDEVICE);
@@ -109,12 +109,12 @@ namespace CNTKMathTest
             Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(2048, 1024, -3, 0.1, 0), 0);
 
             Matrix<float> As(Ad);
-            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC,true);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
 
             Matrix<float> B = Matrix<float>::RandomGaussian(2048, 1024, 1, 4, USE_TIME_BASED_SEED, CPUDEVICE);
             Matrix<float> AsCsc = Matrix<float>::RandomGaussian(2048, 2048, 1, 2, USE_TIME_BASED_SEED, CPUDEVICE);
             Matrix<float> AsBlock(CPUDEVICE);
-            AsBlock.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol,true);
+            AsBlock.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
 
             float alpha = 0.3, beta = 0;
             bool transposeA = false, transposeB = true;
@@ -143,25 +143,25 @@ namespace CNTKMathTest
             bool transposeA = false, transposeB=false;
             Matrix<float>::MultiplyAndWeightedAdd(alpha,Ad,transposeA,Bd,transposeB,beta,Cd);
 
-            As.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,true);
-            Bs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,true);
-            Cs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,true);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
+            Bs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
+            Cs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
             Matrix<float>::MultiplyAndWeightedAdd(alpha,As,transposeA,Bs,transposeB,beta,Cs);
-            Cs.SwitchToMatrixType(MatrixType::DENSE,MatrixFormat::matrixFormatDense,true);
+            Cs.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);
             Assert::IsTrue(Cs.IsEqualTo(Cd,0.00001));  
 
 
             alpha = 2.4, beta=3.4; 
-            Cs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,true);            
+            Cs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
             Matrix<float>::MultiplyAndWeightedAdd(alpha,Ad,transposeA,Bd,transposeB,beta,Cd);
 
-            As.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,true);
-            Bs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,true);
-            Cs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,true);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
+            Bs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
+            Cs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
             Matrix<float>::MultiplyAndWeightedAdd(alpha,As,transposeA,Bs,transposeB,beta,Cs);
-            Cs.SwitchToMatrixType(MatrixType::DENSE,MatrixFormat::matrixFormatDense,true);
+            Cs.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);
             Assert::IsTrue(Cs.IsEqualTo(Cd,0.00001)); 
         }
 
@@ -178,11 +178,11 @@ namespace CNTKMathTest
             float alpha = 1.0*rand() / RAND_MAX;
             Matrix<float>::ScaleAndAdd(alpha,Ad,Bd);
 
-            As.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);
-            Bs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
+            Bs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
             Matrix<float>::ScaleAndAdd(alpha,As,Bs);
 
-            Bs.SwitchToMatrixType(MatrixType::DENSE,MatrixFormat::matrixFormatDense,false);
+            Bs.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);
             Assert::IsTrue(Bs.IsEqualTo(Bd,0.00001));
         }
 
@@ -198,10 +198,10 @@ namespace CNTKMathTest
             float alpha = 1.0*rand() / RAND_MAX;
             Matrix<float>::ScaleAndAdd(alpha,Ad,Bd);
 
-            Bs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);
+            Bs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
             Matrix<float>::ScaleAndAdd(alpha,Ad,Bs);
 
-            Bs.SwitchToMatrixType(MatrixType::DENSE,MatrixFormat::matrixFormatDense,false);
+            Bs.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, true);
             Assert::IsTrue(Bs.IsEqualTo(Bd,0.00001));
         }
 
@@ -218,7 +218,7 @@ namespace CNTKMathTest
             float alpha = 1.0*rand() / RAND_MAX;
             Matrix<float>::ScaleAndAdd(alpha,Ad,Bd);
 
-            As.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
             Matrix<float>::ScaleAndAdd(alpha,As,Bd1);
 
             Assert::IsTrue(Bd1.IsEqualTo(Bd,0.00001));
@@ -229,12 +229,12 @@ namespace CNTKMathTest
             Matrix<float> Ad;
             Ad.AssignTruncateBottomOf(Matrix<float>::RandomUniform(1024,2048,-3,0.1,0),0);            
             Matrix<float> As(Ad);
-            As.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);
+            As.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
             
             Matrix<float> Bd;
             Bd.AssignTruncateBottomOf(Matrix<float>::RandomUniform(1024,2048,-5,0.4,0),0);
             Matrix<float> Bs(Bd);
-            Bs.SwitchToMatrixType(MatrixType::SPARSE,MatrixFormat::matrixFormatSparse,false);
+            Bs.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
             Ad^=2.3; //DENSE
             As^=2.3; //SPARSE

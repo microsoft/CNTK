@@ -685,6 +685,58 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
         
     template<class ElemType>
+    GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
+    {
+        if (this == &a)
+            throw std::logic_error("AssignPositiveAndShiftedNegSample: a is the same as [this]. Does not support inplace assignment.");
+
+        if (a.IsEmpty())
+            throw std::logic_error("AssignPositiveAndShiftedNegSample: Matrix a is empty.");
+
+        Resize(a.GetNumRows() * (posNumber + negNumber), a.GetNumCols());
+
+        LONG64 N = (LONG64)GetNumElements();
+        long n = (long)a.GetNumCols(), m = (long)a.GetNumRows();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignPositiveAndShiftedNegSample<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, m, n, (long)GetNumRows(), posNumber, shiftNumber);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+    
+    template<class ElemType>
+    GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AddFoldedPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
+    {
+        if (this == &a)
+            throw std::logic_error("AddFoldedPositiveAndShiftedNegSample: a is the same as [this]. Does not support inplace assignment.");
+
+        if (a.IsEmpty())
+            throw std::logic_error("AddFoldedPositiveAndShiftedNegSample: Matrix a is empty.");
+
+        if (a.GetNumRows() != GetNumRows() * (posNumber + negNumber) || a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddFoldedPositiveAndShiftedNegSample: dimensions mismatch.");
+
+        LONG64 N = (LONG64)a.GetNumElements();
+        long n = (long)a.GetNumCols(), m = (long)a.GetNumRows();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _addFoldedPositiveAndShiftedNegSample<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, m, n, (long)GetNumRows(), posNumber, shiftNumber);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+
+    template<class ElemType>
     GPUMatrix<ElemType> GPUMatrix<ElemType>::Transpose() const
     {
         if (IsEmpty())
