@@ -816,7 +816,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ElemType epochCriterion = std::numeric_limits<ElemType>::infinity(), prevCriterion = std::numeric_limits<ElemType>::infinity();
             vector<ElemType> epochEvalErrors(evaluationNodes.size(),std::numeric_limits<ElemType>::infinity());
-            //ElemType epochEvalError = std::numeric_limits<ElemType>::infinity();
             size_t totalSamplesSeen = 0;
             ElemType bestLearnRatePerSample = curLearnRate;
 
@@ -831,8 +830,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType minLearnRate = m_minLearnRate * 0.3f;
             ElemType learnRatePerSample = 1.0f / 8.0f / 0.618f /sqrt((ElemType)m_mbSize[epochNumber]);
 
+            //largestPrevLearnRatePerSample is per sample, 2/0.618f is for compensation, second one is for safety
             if (learnRateInitialized && largestPrevLearnRatePerSample > 0)
-                learnRatePerSample = largestPrevLearnRatePerSample / 0.618f / 0.618f;  //largestPrevLearnRatePerSample is per sample, first 0.618f is for compensation, second one is for safety
+                learnRatePerSample = largestPrevLearnRatePerSample * 2.0f / 0.618f / 0.618f;  
 
             int baseModelEpoch =  epochNumber-1;
             net.LoadPersistableParametersFromFile(GetModelNameForEpoch(baseModelEpoch), m_validateAfterModelReloading);
@@ -845,18 +845,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber, epochSize, trainSetDataReader, 0,
                 FeatureNodes,labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
                 smoothedGradients, baseCriterion, epochEvalErrors, totalSamplesSeen);
-
-            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
-            {
-                if (prevCriterion == std::numeric_limits<ElemType>::infinity())
-                    prevCriterion = baseCriterion;
-                ElemType ratio = 0.3f;
-                if (m_epochSize != requestDataSize)
-                {
-                    ratio = pow(((ElemType)epochSize) / m_epochSize, 1.0f/2);
-                }
-                baseCriterion = max(ratio * prevCriterion + (1-ratio) * baseCriterion, baseCriterion);
-            }
 
             do
             {
@@ -899,6 +887,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 bestLearnRatePerSample =  (leftCriterion < rightCriterion)? leftLearnRatePerSample : rightLearnRatePerSample;
+            }
+            else
+            {
+                bestLearnRatePerSample /= 2.0f; //half the learning rate that is sufficient to perform better than do nothing.
             }
 
             fprintf(stderr, "Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n", epochNumber+1, bestLearnRatePerSample, baseCriterion);
