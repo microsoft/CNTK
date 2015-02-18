@@ -1245,7 +1245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType>& gradientValues)  
         {
 #if DUMPOUTPUT
-            logSoftmaxOfRight.Print("Logistic Partial-logSoftmaxOfRight");
+            logProbabilities.Print("Logistic Partial-logSoftmaxOfRight");
             gradientValues.Print("Logistic Partial-gradientValues");
             inputGradientValues.Print("LogisticNode Partial-Left-in");
 #endif
