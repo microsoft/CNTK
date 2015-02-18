@@ -28,10 +28,10 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="Exports.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Exports.cpp" />
     <ClCompile Include="LibSVMBinaryReader.cpp" />
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -49,9 +49,8 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="minibatchsourcehelpers.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
     <ClInclude Include="LibSVMBinaryReader.h" />
+    <ClInclude Include="minibatchsourcehelpers.h" />
+    <ClInclude Include="targetver.h" />
   </ItemGroup>
 </Project>
