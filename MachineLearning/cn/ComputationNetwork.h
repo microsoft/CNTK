@@ -771,8 +771,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-            else if (nodeType == LogisticNode<ElemType>::TypeName())
-                newNode = new LogisticNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -932,8 +930,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
 			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
-            else if (nodeType == LogisticNode<ElemType>::TypeName())
-                newNode = new LogisticNode<ElemType>(m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1015,14 +1011,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNodePtr newNode(new PerDimMeanVarDeNormalizationNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(feature, mean, InvStdDev);
-            AddNodeToNet(newNode);
-            return newNode;
-        }
-
-        ComputationNodePtr Logistic (const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
-        {
-            ComputationNodePtr newNode(new LogisticNode<ElemType>(m_deviceId, nodeName));
-            newNode->AttachInputs(a, b);
             AddNodeToNet(newNode);
             return newNode;
         }
