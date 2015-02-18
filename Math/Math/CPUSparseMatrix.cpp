@@ -218,6 +218,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_nz++;
     }
 
+	template<class ElemType>
+	void CPUSparseMatrix<ElemType>::Print(const char* matrixName) const {
+		Print(matrixName, 0, 0, 0, 0);
+	}
+
+	template<class ElemType>
+	void CPUSparseMatrix<ElemType>::Print(const char* matrixName, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const {
+
+		if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+		{
+			return;
+			//NOT_IMPLEMENTED;
+		}
+
+		fprintf(stderr, "%s\n", matrixName);
+
+		const ElemType* dataBuffer = NzValues();
+		const size_t nz = MajorIndexCount();
+		CPUSPARSE_INDEX_TYPE* unCompressedIndex = MajorIndexLocation();
+		CPUSPARSE_INDEX_TYPE* compressedIndex = SecondaryIndexLocation();
+
+		for (size_t i = 0, j = 0; i < nz; ++i)
+		{
+			if (i >= compressedIndex[j]){
+				fprintf(stderr, "\n");
+				j++;
+			}
+			fprintf(stderr, "%d:%.f ", unCompressedIndex[i], dataBuffer[i]);
+		}
+		fprintf(stderr, "\n");
+	}
+
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols)

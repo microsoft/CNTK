@@ -140,7 +140,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType /*threshold*/);
 
     public:
-        void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
+        //void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
+		void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
+		void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
+
 
     public:
         const ElemType* NzValues() const { return m_pArray; }
