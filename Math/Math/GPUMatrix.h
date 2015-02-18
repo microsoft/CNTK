@@ -259,6 +259,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
         GPUMatrix<ElemType>&  AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+        GPUMatrix<ElemType>&  AssignPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
+        GPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
 
         void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const;
         void VectorMin(GPUMatrix<ElemType>& mainndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;

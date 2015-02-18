@@ -236,7 +236,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
         CPUMatrix<ElemType>&  AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
-
+        CPUMatrix<ElemType>&  AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
+        CPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
+        
         void VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise) const;
         void VectorMin(CPUMatrix<ElemType>& mainndexes, CPUMatrix<ElemType>& minValues, const bool isColWise) const;
 

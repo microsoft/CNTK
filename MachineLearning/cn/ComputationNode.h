@@ -4083,12 +4083,6 @@ protected:  \
                 throw std::logic_error("The Matrix dimension in the CosDistance operation does not match.");
 
             FunctionValues().Resize(1, Inputs(1)->FunctionValues().GetNumCols());
-            size_t rowsp = FunctionValues().GetNumRows(), colsp = FunctionValues().GetNumCols();
-            m_invNorm0.Resize(rowsp, colsp);
-            m_invNorm1.Resize(rowsp, colsp);
-            m_leftTerm.Resize(rowsp, colsp);
-            m_rightTerm.Resize(rowsp, colsp);
-            m_temp.Resize(rowsp, colsp);
 
             CopyImageSizeFromInputs(); 
         }
@@ -5029,640 +5023,315 @@ protected:  \
     template class DelayNode<float>; 
     template class DelayNode<double>;
 
+    template<class ElemType>
+    class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
+    {
+        //typedef ComputationNode<ElemType>* ComputationNodePtr;
+        UsingComputationNodeMembers;
 
+    public:
+        CosDistanceWithNegativeSamplesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
+            m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
 
-	template<class ElemType>
-	class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
-	{
-		//typedef ComputationNode<ElemType>* ComputationNodePtr;
-		UsingComputationNodeMembers;
+        CosDistanceWithNegativeSamplesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
+            m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
 
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
 
-	public:
-		CosDistanceWithNegativeSamplesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-			: ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
-		{
-			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-			m_deviceId = deviceId;
-			MoveMatricesToDevice(deviceId);
-			InitRecurrentNode();
-		}
-
-		CosDistanceWithNegativeSamplesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-			: ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
-		{
-			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-			LoadFromFile(fstream, modelVersion, deviceId);
-		}
-
-		virtual const std::wstring OperationName() const { return TypeName(); }
-		static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
-
-		virtual void ComputeInputPartial(const size_t inputIndex)
-		{
-			if (inputIndex > 1)
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 1)
                 throw std::invalid_argument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
-			if (inputIndex == 0)  //left derivative
-			{
-				//				ComputeInputPartialLeft(m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-				ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-			}
-			else  //right derivative
-			{
-				//				ComputeInputPartialRight(m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues());
-				ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-			}
-		}
-
-		virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
-		{
-			if (inputIndex > 1)
-				throw std::invalid_argument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
-
-			Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-			Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-			Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-			Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-			if (inputIndex == 0)  //left derivative
-			{
-				ComputeInputPartialLeft(m_invNorm0, m_invNorm1, sliceOutputValue, m_temp, m_rightTerm, m_leftTerm, sliceInput0Value, sliceInput1Value, sliceInputGrad);
-			}
-			else  //right derivative
-			{
-				ComputeInputPartialRight(m_invNorm0, m_invNorm1, sliceOutputValue, m_temp, m_rightTerm, m_leftTerm, sliceInput0Value, sliceInput1Value, sliceInputGrad);
-			}
-		}
-
-		static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
-			Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, // the temporary variables
-			const Matrix<ElemType>& in0, const Matrix<ElemType>& in1,
-			Matrix<ElemType>& inputGradientValues)
-		{
-			ComputeInputPartialS(0, invNorm0, invNorm1, functionValues, temp, rightTerm, leftTerm, in0, in1, inputGradientValues);
-		}
-
-
-		static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
-			Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, // the temporary variables
-			const Matrix<ElemType>& in0, const Matrix<ElemType>& in1,
-			Matrix<ElemType>& inputGradientValues)
-		{
-			ComputeInputPartialS(1, invNorm0, invNorm1, functionValues, temp, rightTerm, leftTerm, in0, in1, inputGradientValues);
-		}
-
-		// functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
-		// temp, rightTerm, leftTerm - temporary matrices
-		// in0, in1 - input functionValues from other nodes
-		// inputGradientValues(x) - gradients to update, where x matches inputIndex
-		static void WINAPI ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
-			Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, // the temporary variables
-			const Matrix<ElemType>& in0, const Matrix<ElemType>& in1,
-			Matrix<ElemType>& inputGradientValues)
-		{
-			if (inputIndex == 0)  //left derivative
-			{
-				temp.AssignElementProductOf(invNorm0, invNorm0);
-			}
-			else  //right derivative
-			{
-				temp.AssignElementProductOf(invNorm1, invNorm1);
-			}
-
-			temp.ElementMultiplyWith(functionValues);
-			rightTerm.SetValue(inputIndex ? in1 : in0);
-			rightTerm.RowElementMultiplyWith(temp);
-
-			temp.AssignElementProductOf(invNorm0, invNorm1);
-			leftTerm.SetValue(inputIndex ? in0 : in1);
-			leftTerm.RowElementMultiplyWith(temp);
-
-			Matrix<ElemType>::AddScaledDifference(1, leftTerm, rightTerm, inputGradientValues);
-		}
-
-
-		// functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
-		// temp, rightTerm, leftTerm - temporary matrices
-		// in0, in1, in2, in3 - input functionValues from other nodes
-		// inputGradientValues(x) - gradients to update, where x matches inputIndex
-		static void WINAPI ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
-			Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, // the temporary variables
-			const Matrix<ElemType>& in0, const Matrix<ElemType>& in1, const Matrix<ElemType>& in2, const Matrix<ElemType>& in3,
-			Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& thisGradientValues)
-		{
-			size_t shift = (size_t)in2.Get00Element();
-			size_t negnumber = (size_t)in3.Get00Element();
-			size_t cc = in0.GetNumCols(); // used in computing right child's graident
-
-			DEVICE_TYPE deviceId = in0.GetDeviceId();
-			Matrix<ElemType> cumulatematrix(deviceId), invNorm0SquareMatrix(deviceId), invNorm1SquareMatrix(deviceId), tmpRowMatrix(deviceId), currgradientrow(deviceId), finalmatrix(deviceId);
-			cumulatematrix.Resize(in0.GetNumRows(), in0.GetNumCols());
-			cumulatematrix.SetValue(0);
-
-			//			thisGradientValues.Print("thisGradientValues");
-			//			in0.Print("in0");
-			//			in1.Print("in1");
-			//thisGradientValues.TransferFromDeviceToDevice(thisGradientValues.GetDeviceId(), -1);
-			//thisGradientValues.Print("thisGradientValues");
-			//thisGradientValues.TransferFromDeviceToDevice(-1, deviceId);
-
-			/*
-			in0.TransferFromDeviceToDevice(in0.GetDeviceId(), -1);
-			in0.Print("in0");
-			in0.TransferFromDeviceToDevice(-1, deviceId);
-
-			in1.TransferFromDeviceToDevice(in1.GetDeviceId(), -1);
-			in1.Print("in1");
-			in1.TransferFromDeviceToDevice(-1, deviceId);
-			*/
-#ifdef GPU_DEBUGGING2
-			in0.Print("in0");
-			fprintf(stderr, "\n");
-			in1.Print("in1");
-			fprintf(stderr, "\n");
-#endif
-
-			if (inputIndex == 0) // left derivative
-			{
-				invNorm0SquareMatrix.AssignElementProductOf(invNorm0, invNorm0);  //this matrix should be save and unchanged. It should not be changed
-#ifdef GPU_DEBUGGING
-				invNorm0SquareMatrix.TransferFromDeviceToDevice(invNorm0SquareMatrix.GetDeviceId(), -1);
-				invNorm0SquareMatrix.Print("invNorm0SquareMatrix");
-				fprintf(stderr, "\n");
-				invNorm0SquareMatrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-
-				for (long m = 0; m < negnumber + 1; m++)
-				{
-					tmpRowMatrix.GetARowByIndex(functionValues, m); // set this matrx to be the m-th row in functionValues
-#ifdef GPU_DEBUGGING
-					tmpRowMatrix.TransferFromDeviceToDevice(tmpRowMatrix.GetDeviceId(), -1);
-					tmpRowMatrix.Print("tmpRowMatrix");
-					tmpRowMatrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-					tmpRowMatrix.ElementMultiplyWith(invNorm0SquareMatrix);
-#ifdef GPU_DEBUGGING
-					tmpRowMatrix.TransferFromDeviceToDevice(tmpRowMatrix.GetDeviceId(), -1);
-					tmpRowMatrix.Print("tmpRowMatrix");
-					tmpRowMatrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-
-					/*
-					rightTerm.SetValue(inputIndex ? in1 : in0); // Here,inputIndex = 0, so in0 is picked
-					#ifdef GPU_DEBUGGING
-					rightTerm.TransferFromDeviceToDevice(rightTerm.GetDeviceId(), -1);
-					rightTerm.Print("rightTerm");
-					rightTerm.TransferFromDeviceToDevice(-1, deviceId);
-					#endif
-					rightTerm.RowElementMultiplyWith(tmpRowMatrix);
-					//#ifdef GPU_DEBUGGING
-					rightTerm.TransferFromDeviceToDevice(rightTerm.GetDeviceId(), -1);
-					rightTerm.Print("rightTerm");
-					rightTerm.TransferFromDeviceToDevice(-1, deviceId);
-					//#endif
-					*/
-
-					Matrix<ElemType>::ConductRowElementMultiplyWithShift(tmpRowMatrix, in0, rightTerm, 0, true);
-#ifdef GPU_DEBUGGING
-					rightTerm.TransferFromDeviceToDevice(rightTerm.GetDeviceId(), -1);
-					rightTerm.Print("rightTerm");
-					fprintf(stderr, "\n");
-					rightTerm.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-
-					if (m == 0)
-					{
-						temp.AssignElementProductOf(invNorm0, invNorm1);
-#ifdef GPU_DEBUGGING
-						temp.TransferFromDeviceToDevice(temp.GetDeviceId(), -1);
-						temp.Print("temp");
-						temp.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						/*
-						leftTerm.SetValue(inputIndex ? in0 : in1);
-						#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						leftTerm.RowElementMultiplyWith(temp);
-						#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						*/
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, leftTerm, 0, true);
-
-					}
-					else
-					{
-						size_t currshift = m + shift - 1;  // for current line, how much should we shift
-
-						temp.AssignElementProductOfWithShift(invNorm0, invNorm1, currshift); // this is a row vector
-#ifdef GPU_DEBUGGING
-						temp.TransferFromDeviceToDevice(temp.GetDeviceId(), -1);
-						temp.Print("temp");
-						temp.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, leftTerm, currshift, true);
-#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-					}
-
-					leftTerm = leftTerm - rightTerm;
-#ifdef GPU_DEBUGGING
-					leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-					leftTerm.Print("leftTerm");
-					leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-					currgradientrow.GetARowByIndex(thisGradientValues, m);
-#ifdef GPU_DEBUGGING
-					currgradientrow.TransferFromDeviceToDevice(currgradientrow.GetDeviceId(), -1);
-					currgradientrow.Print("currgradientrow");
-					currgradientrow.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-					/*
-					leftTerm.RowElementMultiplyWith(currgradientrow); // now, we have computed the whole update amount of current m value
-					#ifdef GPU_DEBUGGING
-					leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-					leftTerm.Print("leftTerm");
-					leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-					#endif
-					*/
-					Matrix<ElemType>::ConductRowElementMultiplyWithShift(currgradientrow, leftTerm, finalmatrix, 0, true);
-
-					cumulatematrix += finalmatrix;
-#ifdef GPU_DEBUGGING
-					cumulatematrix.TransferFromDeviceToDevice(cumulatematrix.GetDeviceId(), -1);
-					cumulatematrix.Print("cumulatematrix");
-					cumulatematrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-				}
-
-				// Now, use cumulate matrix to do upgrade
-				inputGradientValues += cumulatematrix;
-#ifdef GPU_DEBUGGING2
-				//inputGradientValues.TransferFromDeviceToDevice(inputGradientValues.GetDeviceId(), -1);
-				inputGradientValues.Print("Left Derivative");
-				fprintf(stderr, "\n\n");
-				//inputGradientValues.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-			}
-			else // right part
-			{
-				invNorm1SquareMatrix.AssignElementProductOf(invNorm1, invNorm1);  //this matrix should be save and unchanged. It should not be changed
-#ifdef GPU_DEBUGGING
-				invNorm1SquareMatrix.TransferFromDeviceToDevice(invNorm1SquareMatrix.GetDeviceId(), -1);
-				invNorm1SquareMatrix.Print("invNorm1SquareMatrix");
-				invNorm1SquareMatrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-				for (long m = 0; m < negnumber + 1; m++)
-				{
-					tmpRowMatrix.GetARowByIndex(functionValues, m); // set this matrx to be the m-th row in functionValues
-#ifdef GPU_DEBUGGING
-					tmpRowMatrix.TransferFromDeviceToDevice(tmpRowMatrix.GetDeviceId(), -1);
-					tmpRowMatrix.Print("tmpRowMatrix");
-					tmpRowMatrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-					if (m == 0) // this is the first line. computation should be symmetric
-					{
-						// the following is for the right part
-						tmpRowMatrix.ElementMultiplyWith(invNorm1SquareMatrix);
-#ifdef GPU_DEBUGGING
-						tmpRowMatrix.TransferFromDeviceToDevice(tmpRowMatrix.GetDeviceId(), -1);
-						tmpRowMatrix.Print("tmpRowMatrix");
-						tmpRowMatrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						/*
-						rightTerm.SetValue(inputIndex ? in1 : in0);
-						#ifdef GPU_DEBUGGING
-						rightTerm.TransferFromDeviceToDevice(rightTerm.GetDeviceId(), -1);
-						rightTerm.Print("rightTerm");
-						rightTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						rightTerm.RowElementMultiplyWith(tmpRowMatrix);
-						#ifdef GPU_DEBUGGING
-						rightTerm.TransferFromDeviceToDevice(rightTerm.GetDeviceId(), -1);
-						rightTerm.Print("rightTerm");
-						rightTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						*/
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(tmpRowMatrix, in1, rightTerm, 0, true);
-
-
-						// the following is for the left part
-						temp.AssignElementProductOf(invNorm0, invNorm1);
-#ifdef GPU_DEBUGGING
-						temp.TransferFromDeviceToDevice(temp.GetDeviceId(), -1);
-						temp.Print("temp");
-						temp.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						/*
-						leftTerm.SetValue(inputIndex ? in0 : in1);
-						#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						leftTerm.RowElementMultiplyWith(temp);
-						#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						*/
-
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in0, leftTerm, 0, true);
-
-						leftTerm = leftTerm - rightTerm;
-#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						currgradientrow.GetARowByIndex(thisGradientValues, m);
-#ifdef GPU_DEBUGGING
-						currgradientrow.TransferFromDeviceToDevice(currgradientrow.GetDeviceId(), -1);
-						currgradientrow.Print("currgradientrow");
-						currgradientrow.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-
-						/*
-						leftTerm.RowElementMultiplyWith(currgradientrow); // now, we have computed the whole update amount of current m value
-						#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						*/
-
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(currgradientrow, leftTerm, finalmatrix, 0, true);
-
-						cumulatematrix += finalmatrix;
-#ifdef GPU_DEBUGGING
-						cumulatematrix.TransferFromDeviceToDevice(cumulatematrix.GetDeviceId(), -1);
-						cumulatematrix.Print("cumulatematrix");
-						cumulatematrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-
-					}
-					else // this requires shift
-					{
-						//size_t currshift = (m + shift - 1);
-						size_t currshift = (m + shift - 1) % cc;
-						size_t reverseshift = cc - currshift;
-
-						temp.AssignElementProductOfWithShift(invNorm1SquareMatrix, tmpRowMatrix, reverseshift);
-#ifdef GPU_DEBUGGING
-						temp.TransferFromDeviceToDevice(temp.GetDeviceId(), -1);
-						temp.Print("temp");
-						temp.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						/*
-						rightTerm = in1;
-						#ifdef GPU_DEBUGGING
-						rightTerm.TransferFromDeviceToDevice(rightTerm.GetDeviceId(), -1);
-						rightTerm.Print("rightTerm");
-						rightTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						rightTerm.RowElementMultiplyWith(temp);
-						#ifdef GPU_DEBUGGING
-						rightTerm.TransferFromDeviceToDevice(rightTerm.GetDeviceId(), -1);
-						rightTerm.Print("rightTerm");
-						rightTerm.TransferFromDeviceToDevice(-1, deviceId);
-						#endif
-						*/
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, rightTerm, 0, true);
-
-						temp.AssignElementProductOfWithShift(invNorm1, invNorm0, reverseshift);
-#ifdef GPU_DEBUGGING
-						temp.TransferFromDeviceToDevice(temp.GetDeviceId(), -1);
-						temp.Print("temp");
-						temp.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in0, leftTerm, reverseshift, true);
-#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						leftTerm = leftTerm - rightTerm;
-#ifdef GPU_DEBUGGING
-						leftTerm.TransferFromDeviceToDevice(leftTerm.GetDeviceId(), -1);
-						leftTerm.Print("leftTerm");
-						leftTerm.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						currgradientrow.GetARowByIndex(thisGradientValues, m);
-#ifdef GPU_DEBUGGING
-						currgradientrow.TransferFromDeviceToDevice(currgradientrow.GetDeviceId(), -1);
-						currgradientrow.Print("currgradientrow");
-						currgradientrow.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-
-						Matrix<ElemType>::ConductRowElementMultiplyWithShift(currgradientrow, leftTerm, finalmatrix, reverseshift, false);
-#ifdef GPU_DEBUGGING
-						finalmatrix.TransferFromDeviceToDevice(finalmatrix.GetDeviceId(), -1);
-						finalmatrix.Print("finalmatrix");
-						finalmatrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-						cumulatematrix += finalmatrix;
-#ifdef GPU_DEBUGGING
-						cumulatematrix.TransferFromDeviceToDevice(cumulatematrix.GetDeviceId(), -1);
-						cumulatematrix.Print("cumulatematrix");
-						cumulatematrix.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-					}
-				}
-
-				// Now, use cumulate matrix to do upgrade
-				inputGradientValues += cumulatematrix;
-#ifdef GPU_DEBUGGING2
-				//inputGradientValues.TransferFromDeviceToDevice(inputGradientValues.GetDeviceId(), -1);
-				inputGradientValues.Print("Right derivative");
-				fprintf(stderr, "\n");
-				//inputGradientValues.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-			}
-		}
-
-
-
-		virtual void EvaluateThisNode()
-		{
-			EvaluateThisNodeS(m_invNorm0, m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
-		}
-
-		virtual void EvaluateThisNode(const size_t timeIdxInSeq)
-		{
-			Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-			Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-			Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
-		}
-
-		static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1,
-			Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& in3)
-		{
-			invNorm0.AssignVectorNorm2Of(in0, true); // seems to modify input (in0)
-			invNorm0.AssignElementInverseOf(invNorm0);
-
-			invNorm1.AssignVectorNorm2Of(in1, true); // seems to modify the input (in1)
-			invNorm1.AssignElementInverseOf(invNorm1);
-
-			// create local matrices, and then move them to the right device
-			DEVICE_TYPE deviceId = in0.GetDeviceId();
-			Matrix<ElemType> tmpLeftValues(deviceId);
-			Matrix<ElemType> tmpRightValues(deviceId);
-
-			size_t shift = (size_t)in2.Get00Element();
-			size_t negnumber = (size_t)in3.Get00Element();
-
-			// In the next line, we mutiply invNorm0 and invNorm1 with shift and neg. 
-			// The result is a matrix of (numberneg+1, invNorm0.Cols), save it in tmpLeftValues.
-			tmpLeftValues.AssignElementProductOfWithShiftNeg(invNorm0, invNorm1, shift, negnumber);
-
-			// next, compute the right values
-			// Again, the ouput is a matrix of (negnumber+1, invNorm0.cols)
-			tmpRightValues.AssignInnerProductOfWithShiftNeg(in0, in1, true, shift, negnumber);
-
-			// now we can compute the evaluation result matrix by multiply these two matrices, element by element
-			// we get a (negnumber+1, n) matrix
-			functionValues.AssignElementProductOf(tmpLeftValues, tmpRightValues);
-#ifdef GPU_DEBUGGING
-			functionValues.TransferFromDeviceToDevice(functionValues.GetDeviceId(), -1);
-			functionValues.Print("sim");
-			functionValues.TransferFromDeviceToDevice(-1, deviceId);
-#endif
-		}
-
-		virtual void Validate()
-		{
-			PrintSelfBeforeValidation();
-
-			if (m_children.size() != 4)
-				throw std::logic_error("CosDistanceWithNegativeSamples operation requires 4 inputs.");
-
-			//if dimention is missing make the two operatants to have same size
-			size_t index = 0;
-			if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
-			{
-				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-				Inputs(index)->FunctionValues().Resize(rows, cols);
-			}
-
-			index = 1;
-			if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
-			{
-				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-				Inputs(index)->FunctionValues().Resize(rows, cols);
-			}
-
-			if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
-				throw std::logic_error("CosDistanceWithNegativeSamples operation: one of the operants has 0 element.");
-
-			if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
-				Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-				throw std::logic_error("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
-
-			// input(2) is shift, input(3) is the #neg
-			size_t negnumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
-
-			FunctionValues().Resize(negnumber + 1, Inputs(1)->FunctionValues().GetNumCols());
-			size_t rowsp = FunctionValues().GetNumRows(), colsp = FunctionValues().GetNumCols();
-			m_invNorm0.Resize(rowsp, colsp);
-			m_invNorm1.Resize(rowsp, colsp);
-			m_leftTerm.Resize(rowsp, colsp);
-			m_rightTerm.Resize(rowsp, colsp);
-			m_temp.Resize(rowsp, colsp);
-
-			CopyImageSizeFromInputs();
-		}
-
-		virtual void CopyImageSizeFromInputs()
-		{
-			CopyImageSizeFromInput(0, false);
-
-			m_outputChannels = 1;
-			m_outputWidth = 1;
-			m_outputHeight = 1;
-		}
-
-		virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
-		{
-			m_children.resize(4);
-			m_children[0] = leftNode;
-			m_children[1] = rightNode;
-			m_children[2] = shiftNode;
-			m_children[3] = negNode;
-		}
-
-		virtual void MoveMatricesToDevice(const short deviceId)
-		{
-			ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-			if (deviceId != AUTOPLACEMATRIX)
-			{
-				if (m_invNorm0.GetDeviceId() != deviceId)
-					m_invNorm0.TransferFromDeviceToDevice(m_invNorm0.GetDeviceId(), deviceId);
-				if (m_invNorm1.GetDeviceId() != deviceId)
-					m_invNorm1.TransferFromDeviceToDevice(m_invNorm1.GetDeviceId(), deviceId);
-				if (m_leftTerm.GetDeviceId() != deviceId)
-					m_leftTerm.TransferFromDeviceToDevice(m_leftTerm.GetDeviceId(), deviceId);
-				if (m_rightTerm.GetDeviceId() != deviceId)
-					m_rightTerm.TransferFromDeviceToDevice(m_rightTerm.GetDeviceId(), deviceId);
-				if (m_temp.GetDeviceId() != deviceId)
-					m_temp.TransferFromDeviceToDevice(m_temp.GetDeviceId(), deviceId);
-			}
-		}
-
-		virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-		{
-			ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-			CosDistanceWithNegativeSamplesNode<ElemType>* node = (CosDistanceWithNegativeSamplesNode<ElemType>*) nodeP;
-
-			if (flags & CopyNodeFlags::copyNodeValue)
-			{
-				node->m_invNorm0 = m_invNorm0;
-				node->m_invNorm1 = m_invNorm1;
-				node->m_leftTerm = m_leftTerm;
-				node->m_rightTerm = m_rightTerm;
-				node->m_temp = m_temp;
-			}
-		}
-
-		// copy constructor
-		CosDistanceWithNegativeSamplesNode(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-			: ComputationNode(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
-		{
-			node->CopyTo(this, newName, flags);
-		}
-
-		virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-		{
-			const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-			ComputationNodePtr node = new CosDistanceWithNegativeSamplesNode<ElemType>(this, name, flags);
-			return node;
-		}
-
-	private:
-		// invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
-		Matrix<ElemType> m_invNorm0;
-		Matrix<ElemType> m_invNorm1;
-		// the rest are temporaries, values don't need to be maintained
-		Matrix<ElemType> m_leftTerm;
-		Matrix<ElemType> m_rightTerm;
-		Matrix<ElemType> m_temp;
-	};
+            ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, m_invNormSquare, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 1)
+                throw std::invalid_argument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
+
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceThisGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, sliceOutputValue, m_temp, m_rightTerm, m_leftTerm, m_invNormSquare, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), sliceInputGrad, sliceThisGrad);
+        }
+
+        // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
+        // temp, rightTerm, leftTerm - temporary matrices
+        // in0, in1, in2, in3 - input functionValues from other nodes
+        // inputGradientValues(x) - gradients to update, where x matches inputIndex
+        static void WINAPI ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
+            Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, Matrix<ElemType>& invNormSquare, // the temporary variables
+            const Matrix<ElemType>& in0, const Matrix<ElemType>& in1, const Matrix<ElemType>& in2, const Matrix<ElemType>& in3,
+            Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& thisGradientValues)
+        {
+            size_t shift = (size_t)in2.Get00Element();
+            size_t negNumber = (size_t)in3.Get00Element();
+            size_t numCols = in0.GetNumCols(); // used in computing right child's graident
+
+            if (inputIndex == 0) // left derivative
+            {
+                invNormSquare.AssignElementProductOf(invNorm0, invNorm0);
+
+                for (long m = 0; m < negNumber + 1; m++)
+                {
+                    temp.GetARowByIndex(functionValues, m); // set this matrx to be the m-th row in functionValues
+                    temp.ElementMultiplyWith(invNormSquare);
+
+                    Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in0, rightTerm, 0, true);
+
+                    if (m == 0)
+                    {
+                        temp.AssignElementProductOf(invNorm0, invNorm1);
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, leftTerm, 0, true);
+                    }
+                    else
+                    {
+                        size_t currshift = m + shift - 1;  // for current line, how much should we shift
+
+                        temp.AssignElementProductOfWithShift(invNorm0, invNorm1, currshift); // this is a row vector
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, leftTerm, currshift, true);
+                    }
+
+                    leftTerm = leftTerm - rightTerm;
+
+                    temp.GetARowByIndex(thisGradientValues, m);
+
+                    Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, leftTerm, rightTerm, 0, true);
+
+                    inputGradientValues += rightTerm;
+                }
+            }
+            else // right part
+            {
+                invNormSquare.AssignElementProductOf(invNorm1, invNorm1);  //this matrix should be save and unchanged. It should not be changed
+
+                for (long m = 0; m < negNumber + 1; m++)
+                {
+                    temp.GetARowByIndex(functionValues, m); // set this matrx to be the m-th row in functionValues
+
+                    if (m == 0) // this is the first line. computation should be symmetric
+                    {
+                        // the following is for the right part
+                        temp.ElementMultiplyWith(invNormSquare);
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in1, rightTerm, 0, true);
+
+                        // the following is for the left part
+                        temp.AssignElementProductOf(invNorm0, invNorm1);
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in0, leftTerm, 0, true);
+
+                        leftTerm = leftTerm - rightTerm;
+
+                        temp.GetARowByIndex(thisGradientValues, m);
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, leftTerm, rightTerm, 0, true);
+
+                        inputGradientValues += rightTerm;
+                    }
+                    else // this requires shift
+                    {
+                        size_t currshift = (m + shift - 1) % numCols;
+                        size_t reverseshift = numCols - currshift;
+
+                        leftTerm.AssignElementProductOfWithShift(invNormSquare, temp, reverseshift);  //use leftTerm as a temp variable here
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(leftTerm, in1, rightTerm, 0, true);
+
+                        temp.AssignElementProductOfWithShift(invNorm1, invNorm0, reverseshift);
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, in0, leftTerm, reverseshift, true);
+
+                        leftTerm = leftTerm - rightTerm;
+
+                        temp.GetARowByIndex(thisGradientValues, m);
+
+                        Matrix<ElemType>::ConductRowElementMultiplyWithShift(temp, leftTerm, rightTerm, reverseshift, false);
+
+                        inputGradientValues += rightTerm;
+                    }
+                }
+            }
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_invNorm0, m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_leftTerm, m_rightTerm);
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_leftTerm, m_rightTerm);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1,
+            Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& in3, Matrix<ElemType>& leftTermTemp, Matrix<ElemType>& rightTermTemp)
+        {
+            invNorm0.AssignVectorNorm2Of(in0, true); // seems to modify input (in0)
+            invNorm0.AssignElementInverseOf(invNorm0);
+
+            invNorm1.AssignVectorNorm2Of(in1, true); // seems to modify the input (in1)
+            invNorm1.AssignElementInverseOf(invNorm1);
+
+            size_t shift = (size_t)in2.Get00Element();
+            size_t negNumber = (size_t)in3.Get00Element();
+
+            // mutiply invNorm0 and invNorm1 with shift and neg. 
+            // The result is a matrix of (numberneg+1, invNorm0.Cols)
+            leftTermTemp.AssignElementProductOfWithShiftNeg(invNorm0, invNorm1, shift, negNumber);
+
+            // compute the right values
+            // Again, the ouput is a matrix of (negNumber+1, invNorm0.cols)
+            rightTermTemp.AssignInnerProductOfWithShiftNeg(in0, in1, true, shift, negNumber);
+
+            // compute the evaluation result matrix by multiply these two matrices, element by element
+            // we get a (negNumber+1, n) matrix
+            functionValues.AssignElementProductOf(leftTermTemp, rightTermTemp);
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 4)
+                throw std::logic_error("CosDistanceWithNegativeSamples operation requires 4 inputs.");
+
+            //if dimention is missing make the two operatants to have same size
+            size_t index = 0;
+            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            {
+                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+                Inputs(index)->FunctionValues().Resize(rows, cols);
+            }
+
+            index = 1;
+            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            {
+                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+                Inputs(index)->FunctionValues().Resize(rows, cols);
+            }
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("CosDistanceWithNegativeSamples operation: one of the operants has 0 element.");
+
+            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
+                Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
+                throw std::logic_error("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
+
+            // input(2) is shift, input(3) is the #neg
+            size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
+
+            FunctionValues().Resize(negNumber + 1, Inputs(1)->FunctionValues().GetNumCols());
+
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, false);
+
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
+        {
+            m_children.resize(4);
+            m_children[0] = leftNode;
+            m_children[1] = rightNode;
+            m_children[2] = shiftNode;
+            m_children[3] = negNode;
+        }
+
+        virtual void MoveMatricesToDevice(const short deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_invNorm0.GetDeviceId() != deviceId)
+                    m_invNorm0.TransferFromDeviceToDevice(m_invNorm0.GetDeviceId(), deviceId);
+                if (m_invNorm1.GetDeviceId() != deviceId)
+                    m_invNorm1.TransferFromDeviceToDevice(m_invNorm1.GetDeviceId(), deviceId);
+                if (m_invNormSquare.GetDeviceId() != deviceId)
+                    m_invNormSquare.TransferFromDeviceToDevice(m_invNormSquare.GetDeviceId(), deviceId);
+                if (m_leftTerm.GetDeviceId() != deviceId)
+                    m_leftTerm.TransferFromDeviceToDevice(m_leftTerm.GetDeviceId(), deviceId);
+                if (m_rightTerm.GetDeviceId() != deviceId)
+                    m_rightTerm.TransferFromDeviceToDevice(m_rightTerm.GetDeviceId(), deviceId);
+                if (m_temp.GetDeviceId() != deviceId)
+                    m_temp.TransferFromDeviceToDevice(m_temp.GetDeviceId(), deviceId);
+            }
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            CosDistanceWithNegativeSamplesNode<ElemType>* node = (CosDistanceWithNegativeSamplesNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_invNorm0 = m_invNorm0;
+                node->m_invNorm1 = m_invNorm1;
+                node->m_invNormSquare = m_invNormSquare;
+                node->m_leftTerm = m_leftTerm;
+                node->m_rightTerm = m_rightTerm;
+                node->m_temp = m_temp;
+            }
+        }
+
+        // copy constructor
+        CosDistanceWithNegativeSamplesNode(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new CosDistanceWithNegativeSamplesNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    private:
+        // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
+        Matrix<ElemType> m_invNorm0;
+        Matrix<ElemType> m_invNorm1;
+        // the rest are temporaries, values don't need to be maintained
+        Matrix<ElemType> m_leftTerm;
+        Matrix<ElemType> m_rightTerm;
+        Matrix<ElemType> m_invNormSquare;
+        Matrix<ElemType> m_temp;
+    };
 
 	template class CosDistanceWithNegativeSamplesNode<float>;
 	template class CosDistanceWithNegativeSamplesNode<double>;
