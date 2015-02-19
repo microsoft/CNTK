@@ -245,7 +245,7 @@ Plus2=Plus(Times2, B1)
 
 \begin_layout Plain Layout
 
-CrossEntropy=CrossEntropyWithSoftmax(labels, Plus2)
+CE=CrossEntropyWithSoftmax(labels, Plus2)
 \end_layout
 
 \begin_layout Plain Layout
@@ -283,7 +283,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CrossEntropy)
+CriteriaNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
@@ -602,7 +602,7 @@ status open
 
 \begin_layout Plain Layout
 
-CrossEntropy=CrossEntropyWithSoftmax(labels, Plus2)
+CE=CrossEntropyWithSoftmax(labels, Plus2)
 \end_layout
 
 \begin_layout Plain Layout
@@ -645,8 +645,7 @@ ErrorPrediction
 
 () to compute the testing criterion.
  These operators are internally represented as computation nodes CrossEntropyWit
-hSoftmaxNode and ErrorPredictionNode with names CrossEntropy and ErrPredict,
- respectively.
+hSoftmaxNode and ErrorPredictionNode with names CE and ErrPredict, respectively.
 \end_layout
 
 \begin_layout Subsubsection
@@ -680,7 +679,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CrossEntropy)
+CriteriaNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1247,7 +1246,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CrossEntropy)
+CriteriaNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
