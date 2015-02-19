@@ -6318,7 +6318,7 @@ m_{j}\left(\mathbf{X}\right) & \leftarrow & \max_{i}x_{ij}\\
 e_{ij}\left(\mathbf{X}\right) & \leftarrow & e^{x_{ij-m_{j}\left(\mathbf{X}\right)}}\\
 s_{j}\left(\mathbf{X}\right) & \leftarrow & \sum_{i}e_{ij}\left(\mathbf{X}\right)\\
 \upsilon_{ij}\left(\mathbf{X}\right) & \leftarrow log & \frac{e_{ij}\left(\mathbf{X}\right)}{s_{j}\left(\mathbf{X}\right)}\\
-\nabla_{\mathbf{X}}^{J} & \leftarrow & \nabla_{\mathbf{X}}^{J}+\left[\mathbf{\nabla_{n}^{\mathit{J}}}-\mathbf{\nabla_{n}^{\mathit{J}}}\circ exp\left(\mathbf{\boldsymbol{V}}\right)\right].
+\nabla_{\mathbf{X}}^{J} & \leftarrow & \nabla_{\mathbf{X}}^{J}+\left[\mathbf{\nabla_{n}^{\mathit{J}}}-exp\left(\mathbf{\boldsymbol{V}}\right)Diag\left(VectorSum\left(\mathbf{\nabla_{n}^{\mathit{J}}}\right)\right)\right],
 \end{eqnarray}
 
 \end_inset
@@ -6327,7 +6327,68 @@ s_{j}\left(\mathbf{X}\right) & \leftarrow & \sum_{i}e_{ij}\left(\mathbf{X}\right
 \end_layout
 
 \begin_layout Standard
-The gradient can be derived by observing
+where 
+\begin_inset Formula $VectorSum\left(\mathbf{.}\right)$
+\end_inset
+
+ sums each column vector, and 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $Diag\left(\mathbf{x}\right)$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ is a diagonal matrix formed by vector 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\mathbf{x}$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+.
+ The gradient can be derived by observing
 \end_layout
 
 \begin_layout Standard
@@ -6376,7 +6437,7 @@ we have
 \color none
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial J}{\partial x_{ij}}=\sum_{m,n}\frac{\partial J}{\partial\upsilon_{mn}}\frac{\partial\upsilon_{mn}}{\partial x_{ij}}=\left(\frac{\partial J}{\partial\upsilon{}_{ij}}-\sum_{m}\frac{\partial J}{\partial\upsilon_{mj}}exp\left(\upsilon_{mj}\right)\right).
+\frac{\partial J}{\partial x_{ij}}=\sum_{m,n}\frac{\partial J}{\partial\upsilon_{mn}}\frac{\partial\upsilon_{mn}}{\partial x_{ij}}=\left(\frac{\partial J}{\partial\upsilon{}_{ij}}-\sum_{m}\frac{\partial J}{\partial\upsilon_{mj}}exp\left(\upsilon_{ij}\right)\right).
 \end{equation}
 
 \end_inset
