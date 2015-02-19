@@ -1035,20 +1035,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
 
     }
-    
-    // read labels
-    template<class ElemType>
-    void Matrix<ElemType>::SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize)
-    {
-        DISPATCH_MATRIX_ON_FLAG(this,
-            this,
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
-            m_GPUSparseMatrix->SetMatrixFromLabelAndClass(h_row, h_block2Id, h_block2UniqId, labelSize, expandedSize, blockSize)
-            );
-
-    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
@@ -4194,116 +4180,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             z = exp(diff);
                         return (ElemType) (x + log(1.0 + z));
         }
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& wgt,
-        const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
-        const Matrix<ElemType>* idx2cls,  Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore)
-    {
-        DecideAndMoveToRightDevice(a,label,entropyScore); 
-        wgt._transferToDevice(a.GetDeviceId());
-        cls->_transferToDevice(a.GetDeviceId());
-        idx2cls->_transferToDevice(a.GetDeviceId());
-        etp._transferToDevice(a.GetDeviceId());
-
-        if (!(a.GetMatrixType() == entropyScore.GetMatrixType() && a.GetMatrixType() == wgt.GetMatrixType()
-              && a.GetMatrixType() == cls->GetMatrixType() && a.GetMatrixType() == idx2cls->GetMatrixType()
-              && label.GetMatrixType() == etp.GetMatrixType()))
-              NOT_IMPLEMENTED; 
-
-        if (a.GetMatrixType() == label.GetMatrixType())
-            {
-            NOT_IMPLEMENTED;       
-            }
-            else
-            {
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                &entropyScore,
-                CPUSparseMatrix<ElemType>::ClassEntropy(*a.m_CPUMatrix,*wgt.m_CPUMatrix,*label.m_CPUSparseMatrix,
-                    *(cls->m_CPUMatrix), *(idx2cls->m_CPUMatrix), 
-                    *etp.m_CPUSparseMatrix, *entropyScore.m_CPUMatrix), 
-                GPUSparseMatrix<ElemType>::ClassEntropy(*a.m_GPUMatrix,*wgt.m_GPUMatrix,*label.m_GPUSparseMatrix,
-                    *(cls->m_GPUMatrix), *(idx2cls->m_GPUMatrix), 
-                     *etp.m_GPUSparseMatrix, *entropyScore.m_GPUMatrix), 
-                NOT_IMPLEMENTED, 
-                NOT_IMPLEMENTED
-                );                
-        }
-        
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::ClassEntropyError(const Matrix<ElemType>& a)
-    {
-        DISPATCH_MATRIX_ON_FLAG(&a,
-            &a,
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
-            CPUSparseMatrix<ElemType>::ClassEntropyError(*a.m_CPUSparseMatrix), 
-            GPUSparseMatrix<ElemType>::ClassEntropyError(*a.m_GPUSparseMatrix)
-            );                
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::ClassEntropyGradientOfInput(
-        const Matrix<ElemType>& error,
-        const Matrix<ElemType>& weight,
-        Matrix<ElemType>& grd) 
-    {
-        DecideAndMoveToRightDevice(error,weight, grd); 
-
-        if (weight.GetMatrixType() != DENSE || grd.GetMatrixType() != DENSE)
-            NOT_IMPLEMENTED;
-
-        DISPATCH_MATRIX_ON_FLAG(&error,
-            nullptr,
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
-            CPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(*error.m_CPUSparseMatrix, *weight.m_CPUMatrix, *grd.m_CPUMatrix); grd.SetDataLocation(CPU), 
-            GPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(*error.m_GPUSparseMatrix, *weight.m_GPUMatrix, *grd.m_GPUMatrix); grd.SetDataLocation(GPU)
-            );               
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::ClassEntropyGradientOfWeight( 
-        const Matrix<ElemType>& error, 
-        const Matrix<ElemType>& input, 
-        const Matrix<ElemType>& weight,
-        const Matrix<ElemType> & label, 
-        const Matrix<ElemType>* cls, 
-        const Matrix<ElemType>* idx2cls, 
-        Matrix<ElemType>& grd)
-    {
-        DecideAndMoveToRightDevice(error,input,weight);  
-        label._transferToDevice(error.GetDeviceId());
-        cls->_transferToDevice(error.GetDeviceId());
-        idx2cls->_transferToDevice(error.GetDeviceId());
-        grd._transferToDevice(error.GetDeviceId());
-
-        if (!(error.GetMatrixType() == SPARSE && label.GetMatrixType() == SPARSE && grd.GetMatrixType() == SPARSE 
-            && input.GetMatrixType() == DENSE && cls->GetMatrixType() == DENSE && idx2cls->GetMatrixType() == DENSE))
-            NOT_IMPLEMENTED;
-
-        DISPATCH_MATRIX_ON_FLAG(&error,
-            &grd,
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED, 
-            CPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(
-                *error.m_CPUSparseMatrix,
-                *input.m_CPUMatrix, 
-                *label.m_CPUSparseMatrix, 
-                *(cls->m_CPUMatrix), 
-                *(idx2cls->m_CPUMatrix),
-                *grd.m_CPUSparseMatrix), 
-            GPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(
-                *error.m_GPUSparseMatrix,
-                *input.m_GPUMatrix, 
-                *label.m_GPUSparseMatrix,
-                *(cls->m_GPUMatrix), 
-                *(idx2cls->m_GPUMatrix),
-                *grd.m_GPUSparseMatrix)
-            );                
     }
 
 	template<class ElemType>

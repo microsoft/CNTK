@@ -80,10 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_blockSize = 0;
 
-        m_expandedSize = 0;
         m_rowToId = nullptr;
-        m_block2Id = nullptr;
-        m_block2UniqId = nullptr;
 
         m_tempHostBuffer = nullptr;
         m_tempHostBufferSize = 0;
@@ -544,10 +541,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_blockSize = moveFrom.m_blockSize;
 
-        m_expandedSize = moveFrom.m_expandedSize;
         m_rowToId = moveFrom.m_rowToId;
-        m_block2Id = moveFrom.m_block2Id;
-        m_block2UniqId = moveFrom.m_block2UniqId;
 
         m_tempHostBuffer = moveFrom.m_tempHostBuffer;
         m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
@@ -573,10 +567,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_blockSize = moveFrom.m_blockSize;
 
-        m_expandedSize = moveFrom.m_expandedSize;
         m_rowToId = moveFrom.m_rowToId;
-        m_block2Id = moveFrom.m_block2Id;
-        m_block2UniqId = moveFrom.m_block2UniqId;
 
         m_tempHostBuffer = moveFrom.m_tempHostBuffer;
         m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
@@ -606,10 +597,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (m_rowToId != nullptr)
             CUDACALL(cudaFree(m_rowToId));
-        if (m_block2Id != nullptr)
-            CUDACALL(cudaFree(m_block2Id));
-        if (m_block2UniqId != nullptr)
-            CUDACALL(cudaFree(m_block2UniqId));
 
         if (m_tempHostBuffer != nullptr)
             delete[] m_tempHostBuffer;
@@ -686,14 +673,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //following are generated dynamically and no need to save
             if (m_rowToId != nullptr)
                 CUDACALL(cudaFree(m_rowToId));
-            if (m_block2Id != nullptr)
-                CUDACALL(cudaFree(m_block2Id));
-            if (m_block2UniqId != nullptr)
-                CUDACALL(cudaFree(m_block2UniqId));
 
             CUDACALL(cudaMalloc((void **)&m_rowToId, sizeof(GPUSPARSE_INDEX_TYPE)*numNZElemToReserve));
-            CUDACALL(cudaMalloc((void **)&m_block2Id, sizeof(size_t)*numNZElemToReserve));
-            CUDACALL(cudaMalloc((void **)&m_block2UniqId, sizeof(size_t)*numNZElemToReserve));
 
             m_totalBufferSizeAllocated = bufferSizeNeeded;
             m_elemSizeAllocated = numNZElemToReserve;
@@ -865,35 +846,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }       
     }
-
-
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize)
-    {
-        m_format = matrixFormatSparseCSC;
-        Resize(m_numRows, m_numCols, labelSize, true, false);
-        SetNzCount(labelSize);
-
-        m_expandedSize = expandedSize;
-        m_blockSize = blockSize;
-
-        PrepareDevice();
-
-        if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
-        {
-            CUDACALL(cudaMemcpy(MajorIndexLocation(), h_row, sizeof(GPUSPARSE_INDEX_TYPE)*labelSize, cudaMemcpyHostToDevice));
-        }
-        else
-        {
-            //convert from CPUSPARSE_INDEX_TYPE to GPUSPARSE_INDEX_TYPE
-            GPUSPARSE_INDEX_TYPE* pRow = (GPUSPARSE_INDEX_TYPE*)ReserveTempHostBuffer(sizeof(GPUSPARSE_INDEX_TYPE)*labelSize);
-            CopyBuffer(pRow, h_row, labelSize);
-            CUDACALL(cudaMemcpy(MajorIndexLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE)*labelSize, cudaMemcpyHostToDevice));
-        }
-        CUDACALL(cudaMemcpy(m_block2Id, h_block2Id, sizeof(size_t)*labelSize, cudaMemcpyHostToDevice));
-        CUDACALL(cudaMemcpy(m_block2UniqId, h_block2UniqId, sizeof(size_t)*labelSize, cudaMemcpyHostToDevice));
-    }
-
 
 #pragma endregion Constructors and Destructor
 
@@ -1151,159 +1103,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ScaleAndAdd(alpha, lhs, 1, rhs, rhs);
         }
-    }
-
-    // a: H x No: H is hidden layer size and No is mini-batch size
-    // weight: V x H, V is vocab size
-    // label: V x No
-    // cls: 2 x Nc, Nc is number of classes, each col is start and end word ids of a class
-    // idx2cls: V x 1, mapping from word to class id
-    // etp: V x No, stores predicted values
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropy(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& weight,
-        const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-        const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& etp, GPUMatrix<ElemType>& entropyScore)
-    {
-        int deviceId = a.GetComputeDeviceId();
-        if (weight.GetComputeDeviceId()!=deviceId || label.GetComputeDeviceId()!=deviceId || cls.GetComputeDeviceId()!=deviceId 
-            || idx2cls.GetComputeDeviceId()!=deviceId || etp.GetComputeDeviceId()!=deviceId )
-            throw std::runtime_error("GPUSparseMatrix:: ClassEntropy() All matrices must be on the same GPU");  
-
-        size_t nC = cls.GetNumCols();
-        size_t nV = label.GetNumRows() - nC;
-
-        if (nV != idx2cls.GetNumRows() || idx2cls.GetNumCols() != 1 || cls.GetNumCols() + idx2cls.GetNumRows() != label.GetNumRows())
-            throw std::logic_error("ClassEntropy: check matrix dimension");        
-        
-        //allocate enough memory
-        if(etp.m_elemSizeAllocated < label.m_expandedSize) 
-        {
-            etp.Resize(etp.GetNumRows(), etp.GetNumCols(), label.m_expandedSize, true, false);
-        }
-        etp.m_nz = label.m_expandedSize;
-        CUDACALL(cudaMemset(etp.m_pArray,0,sizeof(ElemType)*(etp.m_nz)));
-        entropyScore.SetValue((ElemType)0);     
-
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-        size_t blocksPerGrid = label.m_expandedSize;
-
-        //_computePrediction<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-        _computePrediction<ElemType><<<blocksPerGrid, 20>>>(
-            idx2cls.GetNumRows(),
-            a.BufferPointer(),
-            a.GetNumRows(),
-            weight.BufferPointer(),
-            weight.GetNumRows(),
-            label.m_nz,
-            label.MajorIndexLocation(),
-            label.m_block2Id,
-            cls.BufferPointer(),
-            idx2cls.BufferPointer(),            
-            etp.NzValues(),
-            etp.MajorIndexLocation(),
-            etp.SecondaryIndexLocation());
-
-        blocksPerGrid = label.m_nz;
-        _normalizePrediction<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-            label.m_nz,
-            label.m_expandedSize,
-            label.MajorIndexLocation(),
-            label.m_block2Id, 
-            etp.MajorIndexLocation(),
-            etp.m_pArray,
-            entropyScore.BufferPointer());
-
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
-   }
-
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropyError(GPUSparseMatrix<ElemType>& a)
-    {
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-
-        int N = a.m_nz;
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock); 
-
-        _computePredictionError<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-            a.m_pArray,
-            N);
-
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
-    }
-
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(const GPUSparseMatrix<ElemType>& error, const GPUMatrix<ElemType>& weight,  GPUMatrix<ElemType>& grd)
-    {
-        int deviceId = error.GetComputeDeviceId();
-        if (weight.GetComputeDeviceId()!=deviceId || grd.GetComputeDeviceId()!=deviceId )
-            throw std::runtime_error("GPUSparseMatrix::ClassEntropyGradientOfInput() All matrices must be on the same GPU");
-
-        grd.SetValue((ElemType)0); 
-        cudaEvent_t done = nullptr; 
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-
-        size_t blocksPerGrid = grd.GetNumElements();
-        //_computeGradientOfInput<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-        _computeGradientOfInput<ElemType><<<blocksPerGrid, 20>>>(
-            error.m_pArray,
-            error.MajorIndexLocation(),
-            error.SecondaryIndexLocation(),
-            weight.BufferPointer(),
-            weight.GetNumRows(),
-            grd.BufferPointer(), 
-            grd.GetNumRows());
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
-    }
-    
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(const GPUSparseMatrix<ElemType>& error,  const GPUMatrix<ElemType>& input, const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-        const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& grd)
-    {
-        int deviceId = error.GetComputeDeviceId();
-        if (input.GetComputeDeviceId()!=deviceId || label.GetComputeDeviceId()!=deviceId || cls.GetComputeDeviceId()!=deviceId  || idx2cls.GetComputeDeviceId()!=deviceId || grd.GetComputeDeviceId()!=deviceId )
-            throw std::runtime_error("GPUSparseMatrix::ClassEntropyGradientOfWeight() All matrices must be on the same GPU");
-
-        grd.SetFormat(matrixFormatSparseBlockRow);  
-        size_t nz = label.m_blockSize * grd.GetNumCols();        
-        //allocate enough memory
-        if(grd.m_elemSizeAllocated < nz) 
-        {
-            grd.Resize(grd.GetNumRows(), grd.GetNumCols(), nz, true, false);
-        }
-        grd.m_blockSize = label.m_blockSize;      
-        grd.m_nz = nz;
-        CUDACALL(cudaMemset(grd.BufferPointer(),0,sizeof(ElemType)*(grd.m_nz)));
-        CUDACALL(cudaMemset(grd.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE)*(grd.m_blockSize)));
-
-        cudaEvent_t done = nullptr;  
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-
-        size_t blocksPerGrid = error.m_nz;
-        _computeGradientOfWeight<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-            error.m_pArray,
-            error.MajorIndexLocation(),
-            error.SecondaryIndexLocation(),
-            input.GetNumCols(),
-            idx2cls.GetNumRows(),
-            label.MajorIndexLocation(),
-            label.m_block2UniqId,
-            cls.BufferPointer(),
-            idx2cls.BufferPointer(),              
-            input.BufferPointer(),
-            input.GetNumRows(),
-            grd.BufferPointer(), 
-            grd.BlockId2ColOrRow());
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
     }
 
     template<class ElemType>
