@@ -197,7 +197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
-        void SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
+
         //Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
         void GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const;
 
@@ -255,14 +255,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, const GPUSparseMatrix<ElemType>& rhs, 
             const bool transposeB, GPUSparseMatrix<ElemType>& c);
         static void ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& c);
-        
-        static void ClassEntropy(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& weight,
-            const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-            const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& etp, GPUMatrix<ElemType>& entropyScore);
-        static void ClassEntropyError(GPUSparseMatrix<ElemType>& a);
-        static void ClassEntropyGradientOfInput(const GPUSparseMatrix<ElemType>& error, const GPUMatrix<ElemType>& weight,  GPUMatrix<ElemType>& grd);
-        static void ClassEntropyGradientOfWeight(const GPUSparseMatrix<ElemType>& error,  const GPUMatrix<ElemType>& input, const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-        const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& grd);
 
         void NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum);
         
@@ -316,13 +308,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //used by the blockCol and blockRow format
         size_t m_blockSize; //block size        
-        GPUSPARSE_INDEX_TYPE *m_blockId2col; //block id to col
-        GPUSPARSE_INDEX_TYPE *m_col2blockId; //block id to col
-        mutable GPUSPARSE_INDEX_TYPE *m_rowToId; //the id showing the order row number is observed in the nnz values.
-
-        size_t m_expandedSize; // expanded label size
-        size_t* m_block2Id; // label block id to first word location
-        size_t* m_block2UniqId; // label block id to unique first word location        
+        mutable GPUSPARSE_INDEX_TYPE *m_rowToId; //the id showing the order row number is observed in the nnz values.  
 
         mutable void* m_tempHostBuffer; //used to copy values.
         mutable size_t m_tempHostBufferSize;

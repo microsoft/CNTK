@@ -50,25 +50,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/) { NOT_IMPLEMENTED; }
         
-        static void ClassEntropy(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& weight,
-            const CPUSparseMatrix<ElemType> & label, const CPUMatrix<ElemType>& cls, 
-            const CPUMatrix<ElemType>& idx2cls, CPUSparseMatrix<ElemType>& etp, CPUMatrix<ElemType>& entropyScore);
-
-        static void ClassEntropyError(CPUSparseMatrix<ElemType>& a);
-
-        static void ClassEntropyGradientOfInput(
-            const CPUSparseMatrix<ElemType>& error, 
-            const CPUMatrix<ElemType>& weight,
-            CPUMatrix<ElemType>& grd);
-
-        static void ClassEntropyGradientOfWeight(
-            const CPUSparseMatrix<ElemType>& error,             
-            const CPUMatrix<ElemType>& input,
-            const CPUSparseMatrix<ElemType> & label, 
-            const CPUMatrix<ElemType>& cls, 
-            const CPUMatrix<ElemType>& idx2cls, 
-            CPUSparseMatrix<ElemType>& grd);
-
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
 
@@ -95,14 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
         void Reset();
 
-        inline ElemType defaultElem()
-        {
-            ElemType default;
-            memset(&default, 0, sizeof(ElemType));
-            return default;
-        }
-
-        const ElemType& operator() (const size_t row, const size_t col) const
+        const ElemType operator() (const size_t row, const size_t col) const
         {
             if (col >= m_numCols || row >= m_numRows)
             {
@@ -122,7 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                return m_default;
+                return 0;
             }
             else
             {
@@ -185,8 +159,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t m_blockSize; //block size
         size_t *m_blockIds; //block ids
-
-        ElemType m_default;
     };
 
     typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

@@ -133,7 +133,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
-        void SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
+
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const ElemType val, size_t colInd);
         void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
@@ -429,20 +429,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
-
-        static void ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& weight,
-            const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
-            const Matrix<ElemType>* idx2cls, Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore);
-        static void ClassEntropyError(const Matrix<ElemType>& a);
-        static void ClassEntropyGradientOfInput(const Matrix<ElemType>& error, const Matrix<ElemType>& weight, Matrix<ElemType>& grd);
-        static void ClassEntropyGradientOfWeight(
-            const Matrix<ElemType>& error, 
-            const Matrix<ElemType>& input,
-            const Matrix<ElemType>& weight,
-            const Matrix<ElemType> & label, 
-            const Matrix<ElemType>* cls, 
-            const Matrix<ElemType>* idx2cls, 
-            Matrix<ElemType>& grd);
 
 		public:
 			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
