@@ -1155,6 +1155,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_logSoftmax.GetDeviceId() != deviceId)
+                    m_logSoftmax.TransferFromDeviceToDevice(m_logSoftmax.GetDeviceId(), deviceId, true);
+                if (m_softMax.GetDeviceId() != deviceId)
+                    m_softMax.TransferFromDeviceToDevice(m_softMax.GetDeviceId(), deviceId, true);
+                if (m_clsLogSoftmax.GetDeviceId() != deviceId)
+                    m_clsLogSoftmax.TransferFromDeviceToDevice(m_clsLogSoftmax.GetDeviceId(), deviceId, true);
+                if (m_clsSoftmax.GetDeviceId() != deviceId)
+                    m_clsSoftmax.TransferFromDeviceToDevice(m_clsSoftmax.GetDeviceId(), deviceId, true);
+                if (m_grdToSoftMaxInput.GetDeviceId() != deviceId)
+                    m_grdToSoftMaxInput.TransferFromDeviceToDevice(m_grdToSoftMaxInput.GetDeviceId(), deviceId, true);
+            }
         }
 
         // copy constructor
