@@ -8662,6 +8662,125 @@ and get
 
 \end_layout
 
+\begin_layout Itemize
+
+\emph on
+ClassBasedCrossEntropyWithSoftmax
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! ClassBasedCrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ClassBasedCrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+:
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ same as 
+\family default
+\series default
+\shape default
+\size default
+\emph on
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+CrossEntropyWithSoftmax
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ except that label 
+\begin_inset Formula $\mathbf{Y}$
+\end_inset
+
+ is a 4 bye T dense matrix.
+ The first row is the word id, the second row is the class id of this word
+ id, the third row is the first word id in this class, and the last row
+ is the first word id of the next class.
+ The last two rows provide the left and right boundary of a slice that correspon
+d to softmax of label given its observation 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+.
+ It also takes a weight matrix 
+\begin_inset Formula $\mathbf{W}$
+\end_inset
+
+ for computing with observation 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+.
+ It also takes outputs 
+\begin_inset Formula $\mathbf{Q}$
+\end_inset
+
+ from Times node that provides inputs for computing posterior probability
+ given class.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+for & t=1 & :T\\
+z_{t} & \leftarrow & Y(0,t)\\
+\mathbf{Z_{t}} & \leftarrow & [0\cdots\delta(i=z_{t})\cdots0]^{T}\\
+c_{t} & \leftarrow & Y(1,t)\\
+\mathbf{C_{t}} & \leftarrow & [0\cdots\delta(i=c_{t})\cdots0]^{T}\\
+l_{t} & \leftarrow & Y(2,t)\\
+r_{t} & \leftarrow & Y(3,t)\\
+\mathbf{W_{t}} & \leftarrow & W[:,l_{t}:r_{t}-1]\\
+\mathbf{P_{t}} & \leftarrow & \mathrm{Softmax}\left(\mathbf{W_{t}^{T}X}\right)\\
+\mathbf{R_{t}} & \leftarrow & \log\left(\mathbf{P_{t}}\right)\\
+v\left(\mathbf{X},\mathbf{\mathbf{Y}}\right) & += & \mathbf{Z_{t}}\circ\mathbf{R_{t}}\\
+\mathbf{U_{t}} & \leftarrow & logSoftmax(\mathbf{Q_{t}})\\
+v\left(\mathbf{X},\mathbf{\mathbf{Y}}\right) & += & \mathbf{C_{t}}\mathbf{\circ U_{t}}\\
+\nabla_{\mathbf{Q}}^{J} & \leftarrow\nabla_{\mathbf{Q}}^{J}+ & \mathbf{\nabla_{n}^{\mathit{J}}}\left(\mathbf{\mathbf{exp(U}_{t})}-\mathbf{C_{t}}\right)\\
+\nabla_{\mathbf{\mathbf{P}}}^{J} & \leftarrow & \mathbf{\nabla_{n}^{\mathit{J}}}\left(\mathbf{\mathbf{P}_{t}}-\mathbf{Z_{t}}\right)\\
+\nabla_{\mathbf{W}}^{J} & \leftarrow\nabla_{\mathbf{W}}^{J}+ & \mathbf{X_{t}\nabla_{P}^{\mathit{J}T}}\\
+\nabla_{\mathbf{X}}^{J} & \leftarrow\nabla_{\mathbf{X}}^{J}+ & \mathbf{W_{t}}\mathbf{\nabla_{P}^{\mathit{J}}}
+\end{eqnarray}
+
+\end_inset
+
+Soft
+\end_layout
+
 \begin_layout Subsection
 Computation Node Types for Computing Statistics
 \end_layout

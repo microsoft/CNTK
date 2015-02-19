@@ -75,7 +75,7 @@ namespace CNTKMathTest
             //Test Matrix in Sparse mode
             Matrix<float> MS = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
             Matrix<float> MScopy=MS;
-            MS.SwitchToMatrixType(MatrixType::SPARSE);            
+            MS.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
             std::wstring filenameS(L"MS.txt");            
             File fileS(filenameS,fileOptionsText|fileOptionsReadWrite);            
             fileS<<MS;
