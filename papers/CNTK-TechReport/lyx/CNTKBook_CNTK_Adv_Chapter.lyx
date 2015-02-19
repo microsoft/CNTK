@@ -2723,6 +2723,85 @@ m1, m2 - input matrices.
 \end_layout
 
 \begin_layout Subsubsection
+CosDistanceWithNegativeSamples
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosDistanceWithNegativeSamples
+\end_layout
+
+\end_inset
+
+, CosWithNegSamples
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosWithNegSamples
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Evaluate the cosine distance between each column of two input matrices as
+ the distance of positive samples, and the cosine distance between each
+ column of the left matrix (m1) and 
+\emph on
+numNegSamples
+\emph default
+ of samples in the right matrix (m2) selected by shifting the column 
+\emph on
+numShifts
+\emph default
+ times as the negative samples.
+ The resulting matrix is 
+\emph on
+numNegSamples+1
+\emph default
+ by m1.cols matrix.
+ Often used in the deep structured semantic model (DSSM).
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+CosDistanceWithNegativeSamples(m1, m2, numShifts, numNegSamples)
+\end_layout
+
+\begin_layout Plain Layout
+
+CosWithNegSamples(m1, m2, numShifts, numNegSamples)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ The matrices should have same dimensions.
+\end_layout
+
+\begin_layout Itemize
+numShifts - number of shifts in m2 for choosing negative samples, a 1 by
+ 1 matrix
+\end_layout
+
+\begin_layout Itemize
+numNegSamples- number of negative samples to use in m2, a 1 by 1 matrix
+\end_layout
+
+\begin_layout Subsubsection
 MatrixL1Reg
 \begin_inset Index idx
 status open
