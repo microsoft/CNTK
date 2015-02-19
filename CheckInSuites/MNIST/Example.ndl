@@ -18,11 +18,11 @@ ndlFull=[
     W1=Parameter(LDim, HDim)
     Times2=Times(W1, RL1)
     Plus2=Plus(Times2, B1)
-    CrossEntropy=CrossEntropyWithSoftmax(labels, Plus2)
+    CE=CrossEntropyWithSoftmax(labels, Plus2)
     ErrPredict=ErrorPrediction(labels, Plus2)
     FeatureNodes=(features)
     LabelNodes=(labels)
-    CriteriaNodes=(CrossEntropy)
+    CriteriaNodes=(CE)
     EvalNodes=(ErrPredict)
     OutputNodes=(Plus2)
 ]

@@ -130,12 +130,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::string executionEngineValue = configSGD("executionEngine", "synchronous");
 
-#ifdef USE_PTASK
-            // use PTask if we have more than one GPU or the MultiGPU flag is set
-            bool usePtask = (g_bestGpu != NULL && g_bestGpu->UseMultiple()) || (bool)configSGD("MultiGPU", "false");
-#else
-            bool usePtask = false;
-#endif
             // AutoAdjust Parameters
             ConfigParameters configAALR (configSGD("AutoAdjust",""));
             LearningRateSearchAlgorithm autoAdjustLRType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
@@ -214,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 clippingThresholdPerSample,autoAdjustLRType, increaseLearnRateIfImproveMoreThan, learnRateIncreaseFactor, 
                 reduceLearnRateIfImproveLessThan, continueReduce, learnRateDecreaseFactor, dropoutRates,
                 loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
-                maxTempMemSizeInSamplesForCNN, gUpdateInfo, usePtask, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
+                maxTempMemSizeInSamplesForCNN, gUpdateInfo, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
                 rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode);
         }
@@ -235,7 +229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool loadBestModel=true, const intargvector& numMiniBatch4LRSearch=intargvector(L"500"), const size_t numPrevLearnRates = 5, 
             const size_t numBestSearchEpoch = 1, const int traceLevel = 0,
             const size_t numMBsToShowResult = 10, const size_t maxTempMemSizeInSamplesForCNN = 0,
-            const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool usePtask = false, const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
+            const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
             RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed=true)
@@ -268,7 +262,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxTempMemSizeInSamplesForCNN=maxTempMemSizeInSamplesForCNN;
             m_gradType = gradUpdateType;
             m_rpi = rpi;
-            m_usePtask = usePtask;
             m_keepCheckPointFiles = keepCheckPointFiles;
 
             m_adaptationRegType = adaptationRegType;
@@ -468,17 +461,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();
             }
             
-            // special handling of classed based softmax node. Need a better solution to it.
-            if (criterionNodes[0]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
-                evaluationNodes[0]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-            {
-                size_t vSz = FeatureNodes[0]->FunctionValues().GetNumRows();
-                int deviceId = FeatureNodes[0]->FunctionValues().GetDeviceId();
-                inputMatrices[L"idx2cls"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId); 
-                inputMatrices[L"classinfo"] = new Matrix<ElemType>(vSz, 1, (DEVICEID_TYPE)deviceId);
-            }
-
-
             //used for KLD regularized adaptation. For all other adaptation techniques use MEL to edit the model and using normal training algorithm
             std::vector<ComputationNodePtr> refFeatureNodes;
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
@@ -556,28 +538,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr) 
                 SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
 
-            // build the PTask graph if they want to use ptask
-            // NOTE: the graph is currently only for training, so other operations will still use the usual method, 
-            // (i.e rate adjustment and other custom operations still use the non PTask method)
-            if (m_usePtask)
-            {
-                // set the minibatch size to the largest thing we will ever see
-                int maxMbSize = 0;
-                for (int val : m_mbSize)
-                {
-                    maxMbSize = max(val, maxMbSize);
-                }
-                net.SetActualMiniBatchSize(maxMbSize);
-                net.BuildPTaskGraph();
-            }
-
             for (int i = int(startEpoch); i < int(m_maxEpochs); i++)
             {
                 auto t_start_epoch = Timer::MilliSecondElapsed();
-
-                // set other information to inputMatrices that can contrain information
-                // used for class-based LM for clustring information
-                SetOtherInfo(net, trainSetDataReader, validationSetDataReader, inputMatrices);
 
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
@@ -778,17 +741,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (inputMatrices[L"classinfo"])
-            {
-                delete inputMatrices[L"classinfo"];
-                inputMatrices.erase(L"classinfo");
-            }
-            if (inputMatrices[L"idx2cls"])
-            {
-                delete inputMatrices[L"idx2cls"];
-                inputMatrices.erase(L"idx2cls");
-            }
-
         }
 
     protected:
@@ -851,9 +803,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //return a reasonable initial learning rate based on the initial mbsize
-        ElemType SearchLearnRateBeforeEpoch(ComputationNetwork<ElemType>& net, ComputationNetwork<ElemType>& refNet, const ComputationNodePtr refNode, 
-            const int epochNumber, const ElemType curLearnRate, 
-            IDataReader<ElemType>* trainSetDataReader, 
+        ElemType SearchLearnRateBeforeEpoch(ComputationNetwork<ElemType>& net, ComputationNetwork<ElemType>& refNet, const ComputationNodePtr refNode,
+            const int epochNumber, const ElemType curLearnRate,
+            IDataReader<ElemType>* trainSetDataReader,
             const std::vector<ComputationNodePtr>& FeatureNodes,
             const std::vector<ComputationNodePtr>& labelNodes,
             const std::vector<ComputationNodePtr>& criterionNodes,
@@ -863,7 +815,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<Matrix<ElemType>>& smoothedGradients, const bool learnRateInitialized, const ElemType largestPrevLearnRatePerSample)
         {
             ElemType epochCriterion = std::numeric_limits<ElemType>::infinity(), prevCriterion = std::numeric_limits<ElemType>::infinity();
-            vector<ElemType> epochEvalErrors(evaluationNodes.size(),std::numeric_limits<ElemType>::infinity());
+            vector<ElemType> epochEvalErrors(evaluationNodes.size(), std::numeric_limits<ElemType>::infinity());
             //ElemType epochEvalError = std::numeric_limits<ElemType>::infinity();
             size_t totalSamplesSeen = 0;
             ElemType bestLearnRatePerSample = curLearnRate;
@@ -877,21 +829,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType baseCriterion;
 
             ElemType minLearnRate = m_minLearnRate * 0.3f;
-            ElemType learnRatePerSample = 1.0f / 8.0f / 0.618f /sqrt((ElemType)m_mbSize[epochNumber]);
+            ElemType learnRatePerSample = 1.0f / 8.0f / 0.618f / sqrt((ElemType)m_mbSize[epochNumber]);
 
             if (learnRateInitialized && largestPrevLearnRatePerSample > 0)
                 learnRatePerSample = largestPrevLearnRatePerSample / 0.618f / 0.618f;  //largestPrevLearnRatePerSample is per sample, first 0.618f is for compensation, second one is for safety
 
-            int baseModelEpoch =  epochNumber-1;
+            int baseModelEpoch = epochNumber - 1;
             net.LoadPersistableParametersFromFile(GetModelNameForEpoch(baseModelEpoch), m_validateAfterModelReloading);
             net.ResetEvalTimeStamp();
 
-            ElemType learnRate =learnRatePerSample;
-            LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, learnRate, smoothedGradients, prevCriterion);  
+            ElemType learnRate = learnRatePerSample;
+            LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, learnRate, smoothedGradients, prevCriterion);
 
             //if model is not changed this is what we will get
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber, epochSize, trainSetDataReader, 0,
-                FeatureNodes,labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
+                FeatureNodes, labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
                 smoothedGradients, baseCriterion, epochEvalErrors, totalSamplesSeen);
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
@@ -901,21 +853,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType ratio = 0.3f;
                 if (m_epochSize != requestDataSize)
                 {
-                    ratio = pow(((ElemType)epochSize) / m_epochSize, 1.0f/2);
+                    ratio = pow(((ElemType)epochSize) / m_epochSize, 1.0f / 2);
                 }
-                baseCriterion = max(ratio * prevCriterion + (1-ratio) * baseCriterion, baseCriterion);
+                baseCriterion = max(ratio * prevCriterion + (1 - ratio) * baseCriterion, baseCriterion);
             }
 
             do
             {
                 learnRatePerSample *= 0.618f;
                 TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber, epochSize, trainSetDataReader, learnRatePerSample,
-                    FeatureNodes,labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
+                    FeatureNodes, labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
                     smoothedGradients, epochCriterion, epochEvalErrors, totalSamplesSeen);
 
             } while (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate);
 
-            bestLearnRatePerSample =  learnRatePerSample;
+            bestLearnRatePerSample = learnRatePerSample;
 
             if (epochNumber < m_numBestSearchEpoch) //grid search for the first m_numBestSearchEpoch  epochs
             {
@@ -923,17 +875,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType leftCriterion, rightCriterion = epochCriterion;
 
                 TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber, epochSize, trainSetDataReader, leftLearnRatePerSample,
-                    FeatureNodes,labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
+                    FeatureNodes, labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
                     smoothedGradients, leftCriterion, epochEvalErrors, totalSamplesSeen);
 
                 while (rightLearnRatePerSample > leftLearnRatePerSample * 1.2f)
-                {   
+                {
                     if (rightCriterion > leftCriterion)
                     {
                         rightLearnRatePerSample *= 0.618f;
 
                         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber, epochSize, trainSetDataReader, rightLearnRatePerSample,
-                            FeatureNodes,labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
+                            FeatureNodes, labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
                             smoothedGradients, rightCriterion, epochEvalErrors, totalSamplesSeen);
                     }
                     else
@@ -941,15 +893,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         leftLearnRatePerSample /= 0.618f;
 
                         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber, epochSize, trainSetDataReader, leftLearnRatePerSample,
-                            FeatureNodes,labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
+                            FeatureNodes, labelNodes, criterionNodes, evaluationNodes, inputMatrices, learnableNodes,
                             smoothedGradients, leftCriterion, epochEvalErrors, totalSamplesSeen);
                     }
                 }
 
-                bestLearnRatePerSample =  (leftCriterion < rightCriterion)? leftLearnRatePerSample : rightLearnRatePerSample;
+                bestLearnRatePerSample = (leftCriterion < rightCriterion) ? leftLearnRatePerSample : rightLearnRatePerSample;
             }
 
-            fprintf(stderr, "Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n", epochNumber+1, bestLearnRatePerSample, baseCriterion);
+            fprintf(stderr, "Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n", epochNumber + 1, bestLearnRatePerSample, baseCriterion);
 
             return bestLearnRatePerSample;
         }
@@ -1003,7 +955,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType readTimeInMBs = 0, ComputeTimeInMBs = 0, epochCriterionLastMBs = 0;
             int numSamplesLastMBs = 0;
             std::vector<ElemType> epochEvalErrorsLastMBs(epochEvalErrors.size(),0);
-            PTaskGraphBuilder<ElemType>* ptaskGraphBuilder = NULL;
             
             unsigned long long startReadMBTime = 0, startComputeMBTime=0;
             unsigned long long  endReadMBTime = 0, endComputeMBTime = 0;
@@ -1012,42 +963,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t totalEpochSamples = 0;
 
             int numMBsRun = 0;
-            bool beginEpoch = true;
 
             size_t numEvalNodes = epochEvalErrors.size();
 
-            // NOTE: the following two local matrices are not used in PTask path
             Matrix<ElemType> localEpochCriterion(1,1,net.GetDeviceID()); //assume only one training criterion node for each epoch
             Matrix<ElemType> localEpochEvalErrors(1,numEvalNodes,net.GetDeviceID());
 
             localEpochCriterion.SetValue(0);
             localEpochEvalErrors.SetValue(0);
 
-            if (m_usePtask)
-            {
-                epochCriterion = ElemType(0.0);
-                epochEvalErrors.assign(numEvalNodes, ElemType(0.0));
-            }
-
             trainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
-
-            // build the PTask graph if they want to use ptask
-            // NOTE: the graph is currently only for training, so other operations will still use the usual method, 
-            // (i.e rate adjustment, regularization and other custom operations still use the non PTask method)
-            if (m_usePtask)
-            {
-                ptaskGraphBuilder = net.GetPTaskGraphBuilder();
-                ptaskGraphBuilder->UpdateParameters(this, learnRatePerSample, m_mbSize[epochNumber]);
-                ptaskGraphBuilder->StartPTaskGraph();
-
-                // currently CNTK likes to keep things on the GPU, and PTask expects things to be on the CPU, so tell CNTK to keep data on the CPU
-                for (std::pair<std::wstring, Matrix<ElemType>*> inpair : inputMatrices)
-                {
-                    Matrix<ElemType>* mat = inpair.second;
-                    mat->SetPreferredDeviceId(CPUDEVICE);
-                    mat->TransferFromDeviceToDevice(mat->GetDeviceId(), CPUDEVICE, true);
-                }
-            }
             
             startReadMBTime=Timer::MilliSecondElapsed();
             while (trainSetDataReader->GetMinibatch(inputMatrices))
@@ -1083,55 +1008,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight, refNode->FunctionValues(), 1-m_adaptationRegWeight, labelNodes[0]->FunctionValues()); 
                 }
                    
-                if (m_usePtask)
-                {
-                    // Pushing data in the graph starts things going
-                    bool endOfEpoch = trainSetDataReader->DataEnd(endDataEpoch);
-                    CONTROLSIGNAL signal = beginEpoch?DBCTLC_BOF:DBCTLC_NONE;
-                    if (endOfEpoch)
-                        signal |= DBCTLC_EOF;
-
-                    ptaskGraphBuilder->PushData(inputMatrices, signal);
-                    ptaskGraphBuilder->PushActualMBSize(learnableNodes, net.GetActualMBSize(), signal);
-                    beginEpoch = false; // clear this out after first epoch
-
-                    // pull the values from the graph for the totals
-                    epochCriterion += ptaskGraphBuilder->GetValue(criterionNodes[0]);
-                    for (size_t i=0; i<numEvalNodes; i++)
-                    {
-                        epochEvalErrors[i] += ptaskGraphBuilder->GetValue(evaluationNodes[i]);
-                    }
-
-                    // NOTE: update model parameters is part of the graph, so nothing to do here
-                }
+                if (learnRatePerSample > m_minLearnRate * 0.01)  //only compute gradient when learning rate is large enough
+                    net.ComputeGradient(criterionNodes[0]);  //use only the first criterion. Is there any possibility to use more?
                 else
+                    net.Evaluate(criterionNodes[0]); //use only the first criterion. Is there any possibility to use more?
+
+                Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+
+                std::vector<ElemType>mbEvalErrors(numEvalNodes,0);
+                for (size_t i=0; i<numEvalNodes; i++)
                 {
-                    if (learnRatePerSample > m_minLearnRate * 0.01)  //only compute gradient when learning rate is large enough
-                        net.ComputeGradient(criterionNodes[0]);  //use only the first criterion. Is there any possibility to use more?
-                    else
-                        net.Evaluate(criterionNodes[0]); //use only the first criterion. Is there any possibility to use more?
+                    net.Evaluate(evaluationNodes[i]);
+                    Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                }
 
-                    Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
-
-                    std::vector<ElemType>mbEvalErrors(numEvalNodes,0);
-                    for (size_t i=0; i<numEvalNodes; i++)
+                //update model parameters
+                if (learnRatePerSample > m_minLearnRate * 0.01)
+                {
+                    auto smoothedGradientIter=smoothedGradients.begin();
+                    for (auto nodeIter=learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                     {
-                        net.Evaluate(evaluationNodes[i]);
-                        Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
-                    }
+                        ComputationNodePtr node = (*nodeIter);
+                        Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                    //update model parameters
-                    if (learnRatePerSample > m_minLearnRate * 0.01)
-                    {
-                        auto smoothedGradientIter=smoothedGradients.begin();
-                        for (auto nodeIter=learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
-                        {
-                            ComputationNodePtr node = (*nodeIter);
-                            Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
-
-                            UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber]);
-                        }                    
-                    }
+                        UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber]);
+                    }                    
                 }
 
 
@@ -1148,16 +1049,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (numMBsRun % m_numMBsToShowResult == 0)
                     {
-                        if (!m_usePtask)
-                        {   // get the epoch Values updated, in PTask don't use the loclEpoch* temporary matrices
-                            epochCriterion = localEpochCriterion.Get00Element();
-                            for (size_t i=0; i< numEvalNodes; i++)
-                                epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0,i);
-                        }
+                        // get the epoch Values updated
+                        epochCriterion = localEpochCriterion.Get00Element();
+                        for (size_t i=0; i< numEvalNodes; i++)
+                            epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0,i);
 
                         fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d    Train Loss Per Sample = %.8g    ",epochNumber+1, numMBsRun-m_numMBsToShowResult+1, numMBsRun, numSamplesLastMBs,
                             (epochCriterion-epochCriterionLastMBs)/numSamplesLastMBs);
-                        for (size_t i=0; i<numEvalNodes; i++){
+                        for (size_t i=0; i<numEvalNodes; i++)
+                        {
                             fprintf(stderr, "EvalErr[%lu] Per Sample = %.8g    ",i,(epochEvalErrors[i]-epochEvalErrorsLastMBs[i])/numSamplesLastMBs);
                         }
                         fprintf(stderr, "ReadData Time = %.8g Computing Time=%.8g Total Time Per Sample=%.8g\n", readTimeInMBs, ComputeTimeInMBs, (readTimeInMBs + ComputeTimeInMBs)/numSamplesLastMBs);
@@ -1184,31 +1084,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             }
 
-            if (m_usePtask)
-            {
-                // when the epoch is complete, we need to transfer all the values back to the LearnableNodes, which will be saved off as the model
-                std::list<ComputationNodePtr> learnableNodes = net.LearnableNodes(criterionNodes[0]);
-                for (ComputationNodePtr node : learnableNodes)
-                {
-                    ptaskGraphBuilder->GetValue(node, node->FunctionValues());
-                }
-                epochCriterion /= float(totalEpochSamples);
-                for (size_t i=0; i< numEvalNodes; i++)
-                {
-                    epochEvalErrors[i] /= float(totalEpochSamples);
-                }
-            }
-            else
-            {
-                localEpochCriterion /= float(totalEpochSamples);
-                localEpochEvalErrors /= float(totalEpochSamples);
+            localEpochCriterion /= float(totalEpochSamples);
+            localEpochEvalErrors /= float(totalEpochSamples);
 
-                epochCriterion = localEpochCriterion.Get00Element();
-                for (size_t i=0; i< numEvalNodes; i++)
-                {
-                    epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0,i);
-                }
+            epochCriterion = localEpochCriterion.Get00Element();
+            for (size_t i=0; i< numEvalNodes; i++)
+            {
+                epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0,i);
             }
+
             return totalEpochSamples;
         }
 public:
@@ -1449,80 +1333,78 @@ protected:
             const std::list<ComputationNodePtr>& learnableNodes,
             int npos)
         {
+            vector<string> errMsgs; 
+
             // gradient checking
             for (auto nodeIter=learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = (*nodeIter);
+                char wstrtmp[2048];
 
-                int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows()-1);
-                int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols()-1);
-                irow = max(0, irow);
-                icol = max(0, icol);
-
-                fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
-                // node->FunctionValues().Print();
-                ElemType eOrg = node->FunctionValues()(irow,icol);
-
-                node->UpdateEvalTimeStamp();
-                net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
-                //ElemType mbEvalCri =
-                criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-                ElemType eGradErr = node->GradientValues()(irow, icol); 
-
-                ElemType ePos = eOrg + ElemType(EPSILON);
-                ElemType eNeg = eOrg - ElemType(EPSILON);
-
-                node->FunctionValues()(irow, icol) = ePos;
-                node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]); 
-                ElemType mbEvalCriPos = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-                
-                node->FunctionValues()(irow, icol) = eNeg;
-                node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]); 
-                ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
-
-                // back to its orginal parameter value
-                node->FunctionValues()(irow, icol) = eOrg; 
-
-                // check if they are consistent
-                ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
-                ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
-                ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
-                bool wrong = (std::isnan(diff) || diff > threshold);
-                if (wrong)
+                for (size_t itry = 0; itry < min(50, node->FunctionValues().GetNumElements()); itry++)
                 {
-                    fprintf (stderr, "\nd%ls Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
-                    return false; 
+                    /// no support to sparse matrix yet
+                    int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
+                    int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                    irow = max(0, irow);
+                    icol = max(0, icol);
+
+                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
+                        continue;
+
+                    fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
+                    // node->FunctionValues().Print();
+                    ElemType eOrg = node->FunctionValues()(irow, icol);
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    node->UpdateEvalTimeStamp();
+                    net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
+                    //ElemType mbEvalCri =
+                    criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+                    ElemType eGradErr = node->GradientValues()(irow, icol);
+                    if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
+                        node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    ElemType ePos = eOrg + ElemType(EPSILON);
+                    ElemType eNeg = eOrg - ElemType(EPSILON);
+
+                    node->FunctionValues()(irow, icol) = ePos;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+                    node->UpdateEvalTimeStamp();
+                    net.Evaluate(criterionNodes[npos]);
+                    ElemType mbEvalCriPos = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+
+                    node->FunctionValues()(irow, icol) = eNeg;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+                    node->UpdateEvalTimeStamp();
+                    net.Evaluate(criterionNodes[npos]);
+                    ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+
+                    // back to its orginal parameter value
+                    node->FunctionValues()(irow, icol) = eOrg;
+                    if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
+                        node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), net.GetDeviceID(), true);
+
+                    // check if they are consistent
+                    ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
+                    ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(eGradErr), fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                    ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
+                    bool wrong = (std::isnan(diff) || diff > threshold);
+                    if (wrong)
+                    {
+                        fprintf(stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        sprintf(wstrtmp, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        errMsgs.push_back(wstrtmp);
+                    }
                 }
             }
 
+            if (errMsgs.size() > 0)
+                return false;
             return true;
-        }
-
-        void SetOtherInfo(ComputationNetwork<ElemType>& net , IDataReader<ElemType>* /*trainSetDataReader*/, IDataReader<ElemType>* /*validSetDataReader*/, std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
-        {
-            std::vector<ComputationNodePtr> criterionNodes = net.FinalCriterionNodes();
-            std::vector<ComputationNodePtr> evaluationNodes = net.EvaluationNodes();
-
-            //initializing weights and gradient holder
-            for (size_t i = 0; i < criterionNodes.size(); i++)
-            {
-                if (criterionNodes[i]->OperationName() == L"ClassBasedCrossEntropyWithSoftmax")
-                {
-                    ClassBasedCrossEntropyWithSoftmaxNodePtr crtNode = (ClassBasedCrossEntropyWithSoftmaxNodePtr) criterionNodes[i];
-                    crtNode->AddClassInfo(inputMatrices[L"classinfo"], inputMatrices[L"idx2cls"]);
-                }
-            }
-
-            for (size_t i=0;i<evaluationNodes.size(); i++)
-            {
-                if (evaluationNodes[i]->OperationName() == L"ClassBasedCrossEntropyWithSoftmax")
-                {
-                    ClassBasedCrossEntropyWithSoftmaxNodePtr crtNode = (ClassBasedCrossEntropyWithSoftmaxNodePtr) evaluationNodes[i];
-                    crtNode->AddClassInfo(inputMatrices[L"classinfo"], inputMatrices[L"idx2cls"]);
-                }
-            }
         }
 
     protected:
@@ -1569,8 +1451,6 @@ protected:
 
         GradientUpdateInfo m_gradType;
         RMSPropInfo m_rpi;
-
-        bool m_usePtask;
 
         bool m_keepCheckPointFiles;
 

@@ -125,7 +125,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("CPUSparseMatrix:  unsupported sparse matrix format");
         }
         m_format = format;
-        m_default = defaultElem();
         ZeroInit();
     }
 
@@ -139,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
     {
         CheckInit(format);
-        Resize(numRows, numCols, size);
+        Resize(numRows, numCols, size, true, false);
     }
 
     template<class ElemType>
@@ -185,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if(m_elemSizeAllocated < m_nz +1) //automatic resize
         {
-            Resize(m_numRows, m_numCols, m_nz + 100);  //allocate 100 more elelemnts and keep existing values
+            Resize(m_numRows, m_numCols, m_nz + 100, true, true);  //allocate 100 more elelemnts and keep existing values
         }
 
         if(row < 0 || row >= m_numRows) 
@@ -218,6 +217,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_nz++;
     }
 
+	template<class ElemType>
+	void CPUSparseMatrix<ElemType>::Print(const char* matrixName) const {
+		Print(matrixName, 0, 0, 0, 0);
+	}
+
+	template<class ElemType>
+	void CPUSparseMatrix<ElemType>::Print(const char* matrixName, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const {
+
+		if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+		{
+			return;
+			//NOT_IMPLEMENTED;
+		}
+
+		fprintf(stderr, "%s\n", matrixName);
+
+		const ElemType* dataBuffer = NzValues();
+		const size_t nz = MajorIndexCount();
+		CPUSPARSE_INDEX_TYPE* unCompressedIndex = MajorIndexLocation();
+		CPUSPARSE_INDEX_TYPE* compressedIndex = SecondaryIndexLocation();
+
+		for (size_t i = 0, j = 0; i < nz; ++i)
+		{
+			if (i >= compressedIndex[j]){
+				fprintf(stderr, "\n");
+				j++;
+			}
+			fprintf(stderr, "%d:%.f ", unCompressedIndex[i], dataBuffer[i]);
+		}
+		fprintf(stderr, "\n");
+	}
+
+    template<class ElemType>
+    void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+        const size_t nz, const size_t numRows, const size_t numCols)
+    {
+        m_format = matrixFormatSparseCSC;
+        Resize(numRows, numCols, nz, true, false);
+        SetNzCount(nz);
+
+        memcpy(RowLocation(), h_Row, RowSize());
+        memcpy(ColLocation(), h_CSCCol, ColSize());
+        memcpy(NzValues(), h_Val, NzSize());
+    }
+
     template<class ElemType>
     ElemType* CPUSparseMatrix<ElemType>::BufferPointer() const
     {
@@ -225,8 +269,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, const bool keepExistingValues)
+    void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
     {               
+        if (m_numRows != numRows || m_numCols != numCols)
+            keepExistingValues = false;  
+
         size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
         bool reallocate = (m_elemSizeAllocated < numNZElemToReserve || (m_elemSizeAllocated > numNZElemToReserve && !growOnly) || m_compIndexSize < newCompIndexSize);
 
@@ -242,7 +289,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 CPUSPARSE_INDEX_TYPE *compIndex = new CPUSPARSE_INDEX_TYPE[newCompIndexSize];
                 
                 if (keepExistingValues && (m_nz > numNZElemToReserve || m_compIndexSize > newCompIndexSize))
-                    throw std::logic_error("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
+                    LogicError("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
 
                 if (keepExistingValues && m_nz > 0)
                 {
@@ -422,7 +469,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //allocate enough memory
             c.SetFormat(matrixFormatSparseBlockCol);
-            c.Resize(m, n, m*min(n, rhs.m_nz));
+            c.Resize(m, n, m*min(n, rhs.m_nz), true, false);
 
             map<size_t, size_t> w2Id;
             for(size_t j = 0; j < rhs.GetNumCols(); j++)
@@ -553,185 +600,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         return result;
-    }
-
-    // a: H x No: H is hidden layer size and No is mini-batch size
-    // weight: V x H, V is vocab size
-    // label: V x No
-    // cls: 2 x Nc, Nc is number of classes, each col is start and end word ids of a class
-    // idx2cls: V x 1, mapping from word to class id
-    // etp: V x No, stores predicted values
-    template<class ElemType>
-    void CPUSparseMatrix<ElemType>::ClassEntropy(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& weight,
-        const CPUSparseMatrix<ElemType> & label, const CPUMatrix<ElemType>& cls, 
-        const CPUMatrix<ElemType>& idx2cls, CPUSparseMatrix<ElemType>& etp, CPUMatrix<ElemType>& entropyScore)
-    {
-        if (a.IsEmpty() || cls.IsEmpty() || label.IsEmpty() || idx2cls.IsEmpty())
-            throw std::logic_error("AssignSoftmaxOf: Matrix a, class, idx2cls or label is empty.");
-
-        if(etp.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
-            throw std::runtime_error("CPUSparseMatrix:: ClassEntropy() only support CSC");  
-
-        size_t nC = cls.GetNumCols();
-        size_t nV = label.GetNumRows() - nC;
-
-        if (nV != idx2cls.GetNumRows() || idx2cls.GetNumCols() != 1 || cls.GetNumCols() + idx2cls.GetNumRows() != label.GetNumRows())
-            throw std::logic_error("ClassEntropy: check matrix dimension");
-        
-        //allocate enough memory
-        if(etp.m_elemSizeAllocated < etp.GetNumElements()) 
-        {
-            etp.Resize(etp.GetNumRows(), etp.GetNumCols(), etp.GetNumElements(), true, false);
-        }
-        etp.Reset();
-
-        entropyScore(0, 0) = 0;
-        for(size_t j = 0; j < label.GetNumCols(); j++)
-        {
-            size_t start = label.m_compIndex[j];
-            size_t end = label.m_compIndex[j + 1];
-            for (size_t p = start; p < end; p++)
-            {
-                size_t i = label.m_unCompIndex[p];
-                size_t iStt, iEnd;
-                if (i < nV)
-                {
-                    size_t clsid = (size_t)idx2cls(i, 0);
-                    iStt = (size_t) cls(0, clsid); //class start word id
-                    iEnd = (size_t) cls(1, clsid); //class end word id
-                }
-                else
-                {
-                    iStt = nV;
-                    iEnd = nV + nC;
-                }
-
-                size_t b = etp.m_nz;
-                for(size_t ii = iStt; ii < iEnd; ii++) //ii ranges over sub-vocab or class ids
-                {
-                    ElemType val = 0.0;
-                    foreach_row(rw, a) //rw ranges over hidden units
-                    {
-                        val += weight(ii,rw) * a(rw,j); 
-                    }
-                    etp.SetValue(ii, j, val); 
-                }
-                ElemType maxV = LZERO;
-                for(size_t ii = b; ii < etp.m_nz; ii++)
-                {
-                    maxV = (ElemType) logadd(maxV, etp.m_pArray[ii]);
-                }
-
-                for(size_t ii = b; ii < etp.m_nz; ii++)
-                {
-                    etp.m_pArray[ii] = etp.m_pArray[ii] - maxV;
-                }
-
-                entropyScore(0, 0) -= etp.m_pArray[b+i-iStt];
-                //negate positive data points
-                etp.m_pArray[b+i-iStt] *=-1;
-            }
-        }
-    }
-
-
-    template<class ElemType>
-    void CPUSparseMatrix<ElemType>::ClassEntropyError(CPUSparseMatrix<ElemType>& a)
-    {        
-        for(int i = 0; i < a.m_nz; i++) 
-        {
-            if(a.m_pArray[i] < 0) 
-            {
-                a.m_pArray[i] = exp(a.m_pArray[i]); //negative;
-            } 
-            else 
-            { 
-                a.m_pArray[i] = exp(-a.m_pArray[i])-1; //positive
-            }
-        }       
-    }
-
-
-    template<class ElemType>
-    void CPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(
-        const CPUSparseMatrix<ElemType>& error, 
-        const CPUMatrix<ElemType>& weight,
-        CPUMatrix<ElemType>& grd) 
-    {
-        grd.SetValue(0);
-
-        for(size_t j = 0; j < error.GetNumCols(); j++) 
-        {
-            size_t start = error.m_compIndex[j];
-            size_t end = error.m_compIndex[j+1];
-            for(size_t p = start; p < end; p++)
-            {
-                size_t i = error.m_unCompIndex[p];
-                for(size_t h = 0; h < grd.GetNumRows(); h++)
-                { // h ranges over hidden units
-                    grd(h,j) += weight(i, h) * error.m_pArray[p];
-                }
-            }
-        }
-    }
-
-
-
-    template<class ElemType>
-    void CPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(
-        const CPUSparseMatrix<ElemType>& error, 
-        const CPUMatrix<ElemType>& input,
-        const CPUSparseMatrix<ElemType> & /*label*/,
-        const CPUMatrix<ElemType>& /*cls*/, 
-        const CPUMatrix<ElemType>& /*idx2cls*/,
-        CPUSparseMatrix<ElemType>& grd) 
-    {   
-        grd.SetFormat(matrixFormatSparseBlockRow);
-        //allocate enough memory
-        grd.Resize(grd.GetNumRows(), grd.GetNumCols(), error.m_nz*input.GetNumRows(), true, false);
-
-        grd.Reset();
-        map<size_t, size_t> w2Id;
-        for(size_t j = 0; j < error.GetNumCols(); j++)
-        {
-            size_t start = error.m_compIndex[j];
-            size_t end = error.m_compIndex[j+1];
-
-            for(size_t p = start; p < end; p++)
-            {
-                size_t i = error.m_unCompIndex[p]; // i ranges over words
-                bool first = true;
-                if(w2Id.find(i) == w2Id.end()) 
-                {
-                    w2Id[i] = w2Id.size();
-                    grd.m_blockIds[grd.m_blockSize]=i;
-                    grd.m_blockSize++;
-                } 
-                else 
-                {
-                    first = false;
-                }
-                size_t pos = w2Id[i]*input.GetNumRows();
-                for(size_t h = 0; h < input.GetNumRows(); h++)
-                { // h range over hidden layer 
-                    if(first == true) 
-                    {
-                        grd.m_pArray[pos] = input(h, j)*error.m_pArray[p];
-                    } 
-                    else 
-                    {
-                        grd.m_pArray[pos] += input(h, j)*error.m_pArray[p];
-                    }
-                    pos++;
-                }
-            }
-        }
-        grd.m_nz = grd.m_blockSize * input.GetNumRows();
-        if(grd.m_nz > grd.GetSizeAllocated()) 
-        {
-            throw std::logic_error("sparse matrix out of range.");
-        }
-        //grd.SetFormat(matrixFormatSparseBlockRow);
     }
 
     // normal update for smoothed gradients c and current gradients (this)
@@ -875,7 +743,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
 
-        us.Resize(rownum, colnum, nz);
+        us.Resize(rownum, colnum, nz, true, false);
 
         if (nz > 0)
         {

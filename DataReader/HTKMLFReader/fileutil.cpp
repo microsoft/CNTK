@@ -236,31 +236,38 @@ void fflushOrDie (FILE * f)
 
 // ----------------------------------------------------------------------------
 // filesize(): determine size of the file in bytes (with open file)
-// BUGBUG: how about files > 4 GB?
+// BUGBUG: how about files > 4 GB? 
+//  [2/10/2015 erw]  update with _ftelli64 and _fseeki64, still a possible BUG in some platform, 
+//  as size(size_t) is not guaranteed to be 64bit under 64bit OS 
+//  but in practice, this is quite rare 
 // ----------------------------------------------------------------------------
 size_t filesize (FILE * f)
 {
-    long curPos = ftell (f);
+#ifdef WIN32
+    size_t curPos = _ftelli64 (f);
     if (curPos == -1L)
     {
     RuntimeError ("error determining file position: %s", strerror (errno));
     }
-    int rc = fseek (f, 0, SEEK_END);
+    int rc = _fseeki64 (f, 0, SEEK_END);
     if (rc != 0)
     {
     RuntimeError ("error seeking to end of file: %s", strerror (errno));
     }
-    long len = ftell (f);
+    size_t len = _ftelli64 (f);
     if (len == -1L)
     {
     RuntimeError ("error determining file position: %s", strerror (errno));
     }
-    rc = fseek (f, curPos, SEEK_SET);
+    rc = _fseeki64 (f, curPos, SEEK_SET);
     if (rc != 0)
     {
     RuntimeError ("error resetting file position: %s", strerror (errno));
     }
-    return (size_t) len;
+    return len;
+#else
+	// linux version 
+#endif 
 }
 
 // filesize(): determine size of the file in bytes (with pathname)
