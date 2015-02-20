@@ -1177,37 +1177,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //both this and gradients will be changed
     template<class ElemType>
-    void Matrix<ElemType>::Adagrad(Matrix<ElemType>& gradients)
+    ElemType Matrix<ElemType>::Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier)
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
+        ElemType aveMultiplier = 1.0f;
+
         DISPATCH_MATRIX_ON_FLAG(&gradients,
             &gradients,
-            m_CPUMatrix->Adagrad(*gradients.m_CPUMatrix); SetDataLocation(CPU), 
-            m_GPUMatrix->Adagrad(*gradients.m_GPUMatrix); SetDataLocation(GPU), 
-            gradients.m_CPUSparseMatrix->Adagrad(*this->m_CPUMatrix); SetDataLocation(CPU), 
+            aveMultiplier = m_CPUMatrix->Adagrad(*gradients.m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
+            aveMultiplier = m_GPUMatrix->Adagrad(*gradients.m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU),
+            aveMultiplier = gradients.m_CPUSparseMatrix->Adagrad(*this->m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
             NOT_IMPLEMENTED
             );
+
+        return aveMultiplier;
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
+    ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
         ElemType RMS_WGT_MAX,
         ElemType RMS_WGT_DEC,
-        ElemType RMS_WGT_MIN
+        ElemType RMS_WGT_MIN, 
+        const bool needAveMultiplier
         )
     {
         DecideAndMoveToRightDevice(*this, gradients);
 
+        ElemType aveMultiplier = 1.0f;
+
         DISPATCH_MATRIX_ON_FLAG(this,
             &gradients,
-            m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(CPU), 
-            m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN); SetDataLocation(GPU),
+            aveMultiplier = m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(CPU),
+            aveMultiplier = m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
+
+        return aveMultiplier;
     }
 
     template<class ElemType>

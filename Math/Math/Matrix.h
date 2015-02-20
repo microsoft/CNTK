@@ -114,8 +114,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ShiftBy(int numShift) ;
 
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
-        void Adagrad(Matrix<ElemType>& gradients);
-        void RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN);
+        ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
+        ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 0, bool growOnly = true);  //by default we only reallocate if need to grow        

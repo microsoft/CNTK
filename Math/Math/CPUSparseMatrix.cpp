@@ -637,13 +637,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // update smoothed gradients c and current gradients (this)
     template<class ElemType> 
-    void CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c)
+    ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier)
     {
         if (c.IsEmpty())
         {
             c.Resize(GetNumRows(), GetNumCols());
             c.SetValue(0.0);
         }
+
+        ElemType aveMultiplier = 0;
 
         const ElemType floor = 1e-16f;
         if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
@@ -662,9 +664,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                     ElemType adenorm = c(row, col); 
                     adenorm += val * val; 
-                    val = val / (floor + sqrt(adenorm)); 
-                    m_pArray[p] = val;
+                    ElemType a = (floor + sqrt(adenorm));
+                    m_pArray[p] = val / a;
                     c(row, col) = adenorm; 
+
+                    if (needAveMultiplier)
+                        aveMultiplier += 1 / a;
                 }
             }
         } else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
@@ -682,12 +687,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
                     ElemType adenorm = c(row, col); 
                     adenorm += val * val; 
-                    val = val / (floor + sqrt(adenorm)); 
-                    m_pArray[p] = val;
+                    ElemType a = (floor + sqrt(adenorm));
+                    m_pArray[p] = val / a;
                     c(row, col) = adenorm; 
+
+                    if (needAveMultiplier)
+                        aveMultiplier += 1 / a;
                 }
             }
         } 
+
+        if (needAveMultiplier && m_nz > 0)
+            return aveMultiplier / m_nz;
+        else
+            return 1;
     }
 
     template<class ElemType>

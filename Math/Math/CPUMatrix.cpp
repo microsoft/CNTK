@@ -914,8 +914,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }  
 
     template<class ElemType>
-    void CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients)
+    ElemType CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier)
     {
+        ElemType aveMultiplier = 0;
+
         if (IsEmpty())
         {
             Resize(gradients.GetNumRows(), gradients.GetNumCols());
@@ -929,6 +931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long nLoop = (long)n - n%4;
 
         const ElemType floor = 1e-16f;
+        ElemType a0, a1, a2, a3;
 
 #pragma omp parallel for
         // unwrap this loop for efficiency
@@ -939,10 +942,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             a[i+2] += d_v[i+2] * d_v[i+2];
             a[i+3] += d_v[i+3] * d_v[i+3];
 
-            d_v[i] /= (sqrt(a[i]) + floor);
-            d_v[i+1] /= (sqrt(a[i+1]) + floor);
-            d_v[i+2] /= (sqrt(a[i+2]) + floor);
-            d_v[i+3] /= (sqrt(a[i+3]) + floor);
+            a0 = (sqrt(a[i]) + floor);
+            a1 = (sqrt(a[i + 1]) + floor);
+            a2 = (sqrt(a[i + 2]) + floor);
+            a3 = (sqrt(a[i + 3]) + floor);
+
+            d_v[i] /= a0;
+            d_v[i+1] /= a1;
+            d_v[i+2] /= a2;
+            d_v[i+3] /= a3;
+
+            if (needAveMultiplier)
+            {
+                aveMultiplier += 1 / a0 + 1 / a1 + 1 / a2 + 1 / a3;
+            }
         }
 
         // get the last few elements if any
@@ -950,18 +963,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             a[i] += d_v[i] * d_v[i];
 
-            d_v[i] /= (sqrt(a[i]) + floor);
+            a0 = (sqrt(a[i]) + floor);
+            d_v[i] /= a0;
+
+            if (needAveMultiplier)
+            {
+                aveMultiplier += 1 / a0;
+            }
         }
 
+        if (needAveMultiplier)
+            return aveMultiplier / n;
+        else
+            return 1;
     }
 
     template<class ElemType>
-    void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
+    ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
         ElemType RMS_WGT_MAX,
         ElemType RMS_WGT_DEC,
-        ElemType RMS_WGT_MIN
+        ElemType RMS_WGT_MIN,
+        const bool needAveMultiplier
         )
     {
         const ElemType floor = 1e-6f;
@@ -1026,6 +1050,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //    curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
   //      }
 
+        ElemType aveMultiplier = 0, a;
         for (long i=0; i<n; i++)
         {
             avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
@@ -1036,9 +1061,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-            curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+            a = steps[i] / sqrt(avars[i] + floor);
+            curr_grad[i] *= a;
             signs[i] = (ElemType)grad_sign;
+
+            if (needAveMultiplier)
+                aveMultiplier += a;
         }
+
+        if (needAveMultiplier)
+            return aveMultiplier / n;
+        else
+            return 1;
     }
 
     template<class ElemType>
