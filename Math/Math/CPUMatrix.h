@@ -64,13 +64,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
-        void Adagrad(CPUMatrix<ElemType>& gradients);
-        void RmsProp(CPUMatrix<ElemType>& gradients,
+        ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
+        ElemType RmsProp(CPUMatrix<ElemType>& gradients,
             ElemType RMS_GAMMA,
             ElemType RMS_WGT_INC,
             ElemType RMS_WGT_MAX,
             ElemType RMS_WGT_DEC,
-            ElemType RMS_WGT_MIN
+            ElemType RMS_WGT_MIN,
+            const bool needAveMultiplier
             );
 
         void Reshape(const size_t numRows, const size_t numCols);
