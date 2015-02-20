@@ -67,10 +67,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Start of new GPU Sparse Matrix code 
     //-------------------------------------------------------------------------
 
-    template<class ElemType> ElemType* GPUSparseMatrix<ElemType>::BufferPointer() const
+/*    template<class ElemType> ElemType* GPUSparseMatrix<ElemType>::BufferPointer() const
     {
         return this->m_blockVal;
-    }
+    }*/
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const bool growOnly = true) {}//matrix format will affect the size to allocate
     template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZ, const bool growOnly = true) {}
@@ -350,8 +350,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat) {}
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const {}
 
-    template<class ElemType> template <class OutType, class InType>
-    static void GPUSparseMatrix<ElemType>::CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size){}
+//    template<class ElemType> template <class OutType, class InType>
+//    static void GPUSparseMatrix<ElemType>::CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size){}
 
 #pragma endregion Helper Functions
 
