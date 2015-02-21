@@ -1128,8 +1128,8 @@ public:
             }
 
             // L2 regularizer
-            if (L2RegWeight > 0)
-                Matrix<ElemType>::ScaleAndAdd(L2RegWeight, functionValues, gradientValues);
+            if (L2RegWeight > 0) //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
+                Matrix<ElemType>::ScaleAndAdd(L2RegWeight*actualMBSize, functionValues, gradientValues);
 
             if (adpType == GradientsUpdateType::None)
             {
