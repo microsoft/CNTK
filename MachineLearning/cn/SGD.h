@@ -184,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             rpi.max = (double)configSGD("rms_wgt_max", "10.0");
             rpi.gamma = (double)configSGD("rms_gamma", "0.99");
 
-            bool needAveMultiplier = (bool)configSGD("needAveMultiplier", "true");
+            bool needAveMultiplier = (bool)configSGD("normWithAveMultiplier", "true");
             ElemType L2RegWeight = (ElemType)configSGD("L2RegWeight", "0");
 
             /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of 
