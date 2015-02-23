@@ -509,9 +509,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //scaleValue: which scale value to set to the left ones (unmasked items).
     template<class ElemType> void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed) { }
 
-    template<class ElemType> void GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients) { }
+    template<class ElemType> ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier) { }
 
-    template<class ElemType> void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN) { }
+    template<class ElemType> ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier) { }
 
     template<class ElemType> void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols) { }
 
