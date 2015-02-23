@@ -1013,7 +1013,8 @@ template<class ElemType>
 __global__ void _adagrad(
     ElemType* a,
     ElemType* d_v,
-    const LONG64 N)
+    const LONG64 N,
+	ElemType* multipliers)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -1022,7 +1023,11 @@ __global__ void _adagrad(
     const ElemType floor = 1e-16f;
 
     a[id] += d_v[id] * d_v[id];
-    d_v[id] /= sqrt(a[id]+floor);
+	ElemType temp = sqrt(a[id]+floor);
+    d_v[id] /= temp;
+
+	if (multipliers != nullptr)
+		multipliers[id] = 1/temp;
 }
 
 template<class ElemType>
@@ -1049,7 +1054,8 @@ __global__ void _rmsprop(
     const LONG64 N,
     ElemType RMS_GAMMA,ElemType RMS_WGT_INC,ElemType RMS_WGT_MAX,ElemType RMS_WGT_DEC,ElemType RMS_WGT_MIN,
     ElemType floor,
-    ElemType *upd_gpu
+    ElemType *upd_gpu,
+	ElemType* multipliers
     )
 {
     LONG64 i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -1087,9 +1093,12 @@ __global__ void _rmsprop(
     else
         steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-    curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+	ElemType temp = steps[i] / sqrt(avars[i] + floor);
+    curr_grad[i] *= temp;
     signs[i] = grad_sign;
 
+	if (multipliers != nullptr)
+		multipliers[i] = temp;
 }
 
 template<class ElemType>

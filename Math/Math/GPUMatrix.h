@@ -109,8 +109,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
         ElemType* BufferPointer() const {return m_pArray;}
 
-        void Adagrad(GPUMatrix<ElemType>& gradients);
-        void RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN);
+        ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
+        ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
+
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 

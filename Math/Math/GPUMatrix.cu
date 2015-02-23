@@ -1075,27 +1075,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients)
+    ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier)
     {
-        if (IsEmpty())
+        size_t numColsNeeded = gradients.GetNumCols();
+        if (needAveMultiplier)
+            numColsNeeded += gradients.GetNumCols();
+
+        if (IsEmpty() || GetNumCols() < numColsNeeded)
         {
-            Resize(gradients.GetNumRows(), gradients.GetNumCols());
+            Resize(gradients.GetNumRows(), numColsNeeded);
             SetValue(0.0);
         }
 
-        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols());
+        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == numColsNeeded);
 
-        int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
-        _adagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(m_pArray, gradients.m_pArray, GetNumElements());
+        size_t n = gradients.GetNumElements();
+
+        ElemType *multipliers = nullptr;
+        if (needAveMultiplier)
+            multipliers = m_pArray + n; // temp memory used to store multipliers,
+
+        int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+        _adagrad<ElemType> << <blocksPerGrid, threadsPerBlock >> >(m_pArray, gradients.m_pArray, GetNumElements(), multipliers);
+
+        if (!needAveMultiplier)
+            return 1;
+
+        cublasHandle_t cuHandle = GetCublasHandle(GetComputeDeviceId());
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            float aveMultiplier = 0;
+            CUBLAS_CALL(cublasSasum(cuHandle, (LONG64)n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
+            return aveMultiplier / n;
+        }
+        else
+        {
+            double aveMultiplier = 0;
+            CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
+            return aveMultiplier / n;
+        }
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
+    ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
         ElemType RMS_WGT_MAX,
         ElemType RMS_WGT_DEC,
-        ElemType RMS_WGT_MIN
+        ElemType RMS_WGT_MIN,
+        const bool needAveMultiplier
         )
     {
         const ElemType floor = 1e-6f;
@@ -1104,24 +1132,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t n = gradients.GetNumElements();
         int blocksPerGrid = (GetNumElements() + threadsPerBlock -1 )/threadsPerBlock;
 
-        if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
+        size_t numColsNeeded = gradients.GetNumCols() * 3;
+        if (needAveMultiplier)
+            numColsNeeded += gradients.GetNumCols();
+
+        if (IsEmpty() || GetNumCols() < numColsNeeded)
         {
-            Resize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+            Resize(gradients.GetNumRows(), numColsNeeded);
             SetValue(0.0);
 
             ElemType *avars=m_pArray; // accumulated variances for RMS scaling
             ElemType *signs=m_pArray+n; // sign of previous gradient
             ElemType *steps=m_pArray+2*n; // current step size
+            //m_pArray+3*n is temp memory used to store multipliers, no need to initialize
 
             _rmsprop_init<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n);
 
         }
+        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == numColsNeeded);
 
         ElemType *avars=m_pArray; // accumulated variances for RMS scaling
         ElemType *signs=m_pArray+n; // sign of previous gradient
         ElemType *steps=m_pArray+2*n; // current step size
 
-        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
+        ElemType *multipliers = nullptr;
+        if (needAveMultiplier)
+            multipliers = m_pArray + 3 * n; // temp memory used to store multipliers,
 
         if( !upd_gpu )
         {
@@ -1141,9 +1177,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDA_CALL(cudaMemcpy(upd_gpu,upd,sizeof(ElemType)*27,cudaMemcpyHostToDevice));
         }
 
-        _rmsprop<ElemType><<<blocksPerGrid, threadsPerBlock>>>(avars,signs,steps,gradients.m_pArray,n,
-            RMS_GAMMA,RMS_WGT_INC,RMS_WGT_MAX,RMS_WGT_DEC,RMS_WGT_MIN,
-            floor,upd_gpu);
+        _rmsprop<ElemType> << <blocksPerGrid, threadsPerBlock >> >(avars, signs, steps, gradients.m_pArray, n,
+            RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN,
+            floor, upd_gpu, multipliers);
+
+        if (!needAveMultiplier)
+            return 1;
+
+        cublasHandle_t cuHandle = GetCublasHandle(GetComputeDeviceId());
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            float aveMultiplier = 0;
+            CUBLAS_CALL(cublasSasum(cuHandle, (LONG64)n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
+            return aveMultiplier / n;
+        }
+        else
+        {
+            double aveMultiplier = 0;
+            CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
+            return aveMultiplier / n;
+        }
     }
 
     template<class ElemType>
@@ -1977,13 +2030,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (sizeof(ElemType)==sizeof(float))
         {
             float res=0;
-            cublasSasum(cuHandle,(LONG64)GetNumElements(),reinterpret_cast<float*>(m_pArray),1,&res);
+            CUBLAS_CALL(cublasSasum(cuHandle, (LONG64)GetNumElements(), reinterpret_cast<float*>(m_pArray), 1, &res));
             return res;
         }
         else
         {
             double res=0;
-            cublasDasum(cuHandle,(LONG64)GetNumElements(),reinterpret_cast<double*>(m_pArray),1,&res);
+            CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)GetNumElements(), reinterpret_cast<double*>(m_pArray), 1, &res));
             return ElemType(res);
         }         
     }
