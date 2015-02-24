@@ -227,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 clsweight = m_net->CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
                 m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
-                clslogpostprob = m_net->LogSoftmax(m_net->Times(clsweight, input), L"ClassPostProb");
+                clslogpostprob = m_net->Times(clsweight, input, L"ClassPostProb");
 
                 output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy", 
                     clslogpostprob);
