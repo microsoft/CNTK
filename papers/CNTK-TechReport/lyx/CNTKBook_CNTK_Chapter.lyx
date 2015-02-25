@@ -1772,6 +1772,42 @@ clippingThresholdPerSample
 \end_layout
 
 \begin_layout Itemize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+L2RegWeight
+\end_layout
+
+\end_inset
+
+
+\emph on
+L2RegWeight
+\emph default
+: the L2 regularization weight.
+ Default is 0.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+L1RegWeight
+\end_layout
+
+\end_inset
+
+
+\emph on
+L1RegWeight
+\emph default
+: the L1 regularization weight.
+ Default is 0.
+\end_layout
+
+\begin_layout Itemize
 
 \emph on
 gradUpdateType
@@ -1789,11 +1825,33 @@ gradUpdateType
 : gradient update type.
  Valid values are None (default, no special treatment to the gradient),
  AdaGrad, and RmsProp.
- When gradUpdateType equals to RmsProp, you can control the behavior of
- the gradient update using following parameters:
+ When gradUpdateType equals to AdaGrad or RmsProp, you can control the behavior
+ of the gradient update using following parameters: 
 \end_layout
 
 \begin_deeper
+\begin_layout Itemize
+normWithAveMultiplier
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+normWithAveMultiplier
+\end_layout
+
+\end_inset
+
+ : normalize the gradient with the average multipliers applied to the gradients
+ by the AdaGrad/RmsProp algorithm.
+ Default is true (default).
+ 
+\end_layout
+
+\begin_layout Standard
+When gradUpdateType equals to RmsProp, you can control the behavior of the
+ gradient update using following parameters:
+\end_layout
+
 \begin_layout Itemize
 
 \emph on
