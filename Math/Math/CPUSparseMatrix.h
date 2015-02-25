@@ -108,10 +108,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
         ElemType Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier);
 
-        public:
-        CPUSparseMatrix<ElemType>& InplaceTruncateTop (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType /*threshold*/);
+    public:
+        CPUSparseMatrix<ElemType>& InplaceTruncateTop(const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceTruncateBottom(const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
+
+        ElemType FrobeniusNorm() const; //useful for comparing CPU and GPU results
+
+        ElemType SumOfAbsElements() const; //sum of all abs(elements)
+        ElemType SumOfElements() const; //sum of all elements
 
     public:
         //void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }

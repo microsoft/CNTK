@@ -232,6 +232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUSparseMatrix<ElemType>& AssignAbsOf (const GPUSparseMatrix<ElemType>& a);
 
         GPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        GPUSparseMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         GPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType threshold);
         GPUSparseMatrix<ElemType>& AssignTruncateBottomOf (const GPUSparseMatrix<ElemType>& a, const ElemType threshold);
