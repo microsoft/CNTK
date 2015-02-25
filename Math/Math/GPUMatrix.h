@@ -218,6 +218,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignTruncateBottomOf (const GPUMatrix<ElemType>& a, const ElemType threshold);
         GPUMatrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         GPUMatrix<ElemType>& AssignTruncateTopOf (const GPUMatrix<ElemType>& a, const ElemType threshold);
+        GPUMatrix<ElemType>& InplaceTruncate(const ElemType threshold);
+        GPUMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         GPUMatrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
