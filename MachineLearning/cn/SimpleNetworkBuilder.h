@@ -330,7 +330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildClassEntropyNetwork(size_t mbSize = 1);
 
-        ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, bool inputWeightSparse = false);
+        ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
         ComputationNode<ElemType>* BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
