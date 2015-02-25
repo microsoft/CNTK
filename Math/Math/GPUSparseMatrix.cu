@@ -1108,25 +1108,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
-        if(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow ||
-            m_format == matrixFormatSparseCSR || m_format == matrixFormatSparseCSC)
-        {
-            long N=(long)GetNumNZElements();
-            int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-            cudaEvent_t done = nullptr;
-            if (do_sync)    CUDACALL(cudaEventCreate(&done));
-            ElemType * values = NzValues();
-            _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(values,threshold,N);
-            if (do_sync)    CUDACALL(cudaEventRecord(done));
-            if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-            if (do_sync)    CUDACALL(cudaEventDestroy(done));
-        } 
-        else 
-        {
-            NOT_IMPLEMENTED;
-        }
+        long N=(long)GetNumNZElements();
+
+        long blocksPerGrid = (long)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        ElemType * values = NzValues();
+        _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(values,threshold,N);
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+
         return *this;
     } 
+
+    template<class ElemType>
+    GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        long N = (long)GetNumNZElements();
+
+        long blocksPerGrid = (long)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        ElemType * values = NzValues();
+        _inplaceSoftThreshold<ElemType> << <blocksPerGrid, threadsPerBlock >> >(values, threshold, N);
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+
+        return *this;
+    }
 
     // normal update for smoothed gradients c and current gradients (this)
     template<class ElemType> 

@@ -186,6 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             bool needAveMultiplier = (bool)configSGD("normWithAveMultiplier", "true");
             ElemType L2RegWeight = (ElemType)configSGD("L2RegWeight", "0");
+            ElemType L1RegWeight = (ElemType)configSGD("L1RegWeight", "0");
 
             /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of 
             /// useAdagrad=true
@@ -213,7 +214,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
-                rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode, needAveMultiplier, L2RegWeight);
+                rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode, needAveMultiplier, L2RegWeight, L1RegWeight);
         }
     
         void setMomentum(float momentum)
@@ -235,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
-            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed = true, const bool needAveMultiplier = true, const ElemType L2RegWeight = 0)
+            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed = true, const bool needAveMultiplier = true, const ElemType L2RegWeight = 0, const ElemType L1RegWeight = 0)
         {
             m_numPrevLearnRates = numPrevLearnRates;
             m_mbSize=mbSize;
@@ -276,6 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_needAveMultiplier = needAveMultiplier;
             m_L2RegWeight = L2RegWeight;
+            m_L1RegWeight = L1RegWeight;
 
             for (size_t i=0; i<m_mbSize.size(); i++)
                 if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -1037,7 +1039,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ComputationNodePtr node = (*nodeIter);
                         Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                        UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber], m_L2RegWeight, m_needAveMultiplier);
+                        UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber], m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
                     }                    
                 }
 
@@ -1103,7 +1105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 public:
         // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const bool needAveMultiplier)
+    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const ElemType L1RegWeight, const bool needAveMultiplier)
         {
 #if DUMPOUTPUT
             fprintf(stderr, "learnRatePerSample=%0.8f, actualMBSize=%ld, expectedMBSize=%ld\n",learnRatePerSample, actualMBSize, expectedMBSize);
@@ -1155,18 +1157,23 @@ public:
             {
                 Matrix<ElemType>::ScaleAndAdd(1.0, sgdUpdateNoise, functionValues);
             }
+
+            // L1 regularizer with proximal gradient descent method
+            if (L1RegWeight > 0) //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
+                functionValues.InplaceSoftThreshold(learnRatePerSample*L1RegWeight*actualMBSize);
+
 #if DUMPOUTPUT
             functionValues.Print("Parameter Update");
 #endif
         }
 protected:
         // UpdateWeights - update the weights in 
-    void UpdateWeights(const ComputationNodePtr node, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, const size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const bool needAveMultiplier) const
+    void UpdateWeights(const ComputationNodePtr node, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, const size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const ElemType L1RegWeight, const bool needAveMultiplier) const
         {
 #if DUMPOUTPUT
             fprintf(stderr, "Update_%ls\n",node->NodeName().c_str());
 #endif
-            UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(), smoothedGradient, learnRatePerSample, actualMBSize, expectedMBSize, L2RegWeight, needAveMultiplier);
+            UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(), smoothedGradient, learnRatePerSample, actualMBSize, expectedMBSize, L2RegWeight, L1RegWeight, needAveMultiplier);
             node->UpdateEvalTimeStamp();
         }
 
@@ -1473,6 +1480,7 @@ protected:
 
         bool m_needAveMultiplier;
         ElemType m_L2RegWeight;
+        ElemType m_L1RegWeight;
     };
     template class SGD<float>; 
     template class SGD<double>;
