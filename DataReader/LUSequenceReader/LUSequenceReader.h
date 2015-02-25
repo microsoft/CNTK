@@ -44,6 +44,9 @@ protected:
 public:
     int nwords, dims, nsamps, nglen, nmefeats;
 
+    int m_seed; 
+    bool mRandomize;
+
     int class_size;
     map<int, vector<int>> class_words;
     vector<int>class_cn;

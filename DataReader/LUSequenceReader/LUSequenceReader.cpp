@@ -15,6 +15,7 @@
 #include <vld.h> // leak detection
 #endif
 #include <fstream>
+#include <random>       // std::default_random_engine
 #include "fileutil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -353,16 +354,17 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_traceLevel = readerConfig("traceLevel","0");
     m_parser.SetTraceLevel(m_traceLevel);
 
+    mRandomize = false; 
     if (readerConfig.Exists("randomize"))
     {
         string randomizeString = readerConfig("randomize");
         if (randomizeString == "None")
         {
-            ;
+            mRandomize = false;
         }
         else if (randomizeString == "Auto")
         {
-            ;
+            mRandomize = true;
         }
         else
         {
@@ -373,6 +375,8 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     {
         ; //randomizeAuto;
     }
+
+    m_seed = 0;
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
@@ -1138,7 +1142,12 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
             mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
             if (mNumRead == 0) return false;
 
-            //            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+            if (mRandomize)
+            {
+                unsigned seed = m_seed;
+                std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), std::default_random_engine(seed));
+                m_seed++;
+            }
 
             m_readNextSampleLine += mNumRead;
             sLn = FindNextSentences(mNumRead);
