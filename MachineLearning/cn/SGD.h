@@ -1357,9 +1357,6 @@ protected:
                     irow = max(0, irow);
                     icol = max(0, icol);
 
-                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
-                        continue;
-
                     fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
                     // node->FunctionValues().Print();
                     ElemType eOrg = node->FunctionValues()(irow, icol);
@@ -1368,6 +1365,10 @@ protected:
 
                     node->UpdateEvalTimeStamp();
                     net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
+//                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE && node->GradientValues().GetDeviceId() != CPUDEVICE)
+                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
+                        break;
+
                     //ElemType mbEvalCri =
                     criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
                     ElemType eGradErr = node->GradientValues()(irow, icol);
