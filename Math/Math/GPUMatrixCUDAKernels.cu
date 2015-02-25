@@ -2785,6 +2785,29 @@ __global__ void _inplaceTruncate(
 }
 
 template<class ElemType>
+__global__ void _inplaceSoftThreshold(
+    ElemType* a,
+    const ElemType threshold,
+    const LONG64 N)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    if (a[id] > threshold)
+    {
+        a[id] -= threshold;
+    }
+    else if (a[id] < -threshold)
+    {
+        a[id] += threshold;
+    }
+    else
+        a[id] = 0;
+}
+
+
+template<class ElemType>
 __global__ void _normalGradForSparseBlock(
     const ElemType momentum,
     const bool blockCol, //true if blockRow

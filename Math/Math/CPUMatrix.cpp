@@ -2296,7 +2296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
 
         auto& us=*this;
         ElemType locThresholdPos = abs(threshold);
@@ -2339,6 +2339,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
             
+        return *this;
+    }
+
+    //x= x-threshold if x>threshold, x+threshold if x<-threshold, 0 otherwise
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
+
+        long m = (long)GetNumElements();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (m_pArray[i] > threshold)
+                m_pArray[i] -= threshold;
+            else if (m_pArray[i] < -threshold)
+                m_pArray[i] += threshold;
+            else
+                m_pArray[i] = 0;
+
+            if (m_pArray[i+1] > threshold)
+                m_pArray[i+1] -= threshold;
+            else if (m_pArray[i+1] < -threshold)
+                m_pArray[i+1] += threshold;
+            else
+                m_pArray[i+1] = 0;
+
+            if (m_pArray[i+2] > threshold)
+                m_pArray[i+2] -= threshold;
+            else if (m_pArray[i+2] < -threshold)
+                m_pArray[i+2] += threshold;
+            else
+                m_pArray[i+2] = 0;
+
+            if (m_pArray[i+3] > threshold)
+                m_pArray[i+3] -= threshold;
+            else if (m_pArray[i+3] < -threshold)
+                m_pArray[i+3] += threshold;
+            else
+                m_pArray[i+3] = 0;
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (m_pArray[i] > threshold)
+                m_pArray[i] -= threshold;
+            else if (m_pArray[i] < -threshold)
+                m_pArray[i] += threshold;
+            else
+                m_pArray[i] = 0;
+        }
+
         return *this;
     }
 
