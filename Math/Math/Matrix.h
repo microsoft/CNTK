@@ -236,6 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         Matrix<ElemType>& AssignTruncateTopOf (const Matrix<ElemType>& a, const ElemType threshold);
         Matrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        Matrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 

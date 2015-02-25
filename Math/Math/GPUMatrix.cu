@@ -2003,6 +2003,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;        
     }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncate(const ElemType threshold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(N*1.0 / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _inplaceTruncate<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, threshold, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("InplaceSoftThreshold: Matrix is empty.");
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(N*1.0 / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _inplaceSoftThreshold<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, threshold, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfAbsLessThan (const ElemType threshold)
     {

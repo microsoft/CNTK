@@ -2440,7 +2440,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::InplaceTruncate(const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -2456,7 +2456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->InplaceTruncate(threshold), 
-            this->m_GPUMatrix->InplaceTruncateTop(fabs(threshold)); this->m_GPUMatrix->InplaceTruncateBottom(-fabs(threshold)), 
+            this->m_GPUMatrix->InplaceTruncate(threshold),
             this->m_CPUSparseMatrix->InplaceTruncate(threshold),
             this->m_GPUSparseMatrix->InplaceTruncate(threshold)
             );
@@ -2464,6 +2464,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        assert(threshold >= 0);
+
+        if (IsEmpty())
+            throw std::logic_error("InplaceSoftThreshold: Matrix is empty.");
+        
+        if (threshold == 0)
+            return *this;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->InplaceSoftThreshold(threshold),
+            this->m_GPUMatrix->InplaceSoftThreshold(threshold),
+            this->m_CPUSparseMatrix->InplaceSoftThreshold(threshold),
+            this->m_GPUSparseMatrix->InplaceSoftThreshold(threshold)
+            );
+
+        return *this;
+    }
     //Threshold truncating: this[i] = max( this[i], threshold )
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
@@ -2486,7 +2507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             this->m_CPUMatrix->InplaceTruncateBottom(threshold), 
             this->m_GPUMatrix->InplaceTruncateBottom(threshold), 
-            NOT_IMPLEMENTED, 
+            this->m_CPUSparseMatrix->InplaceTruncateBottom(threshold),
             this->m_GPUSparseMatrix->InplaceTruncateBottom(threshold)
             );
                 
@@ -2542,18 +2563,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!isfinite((float)threshold))
                 return *this;
-            }
+        }
         else
         {
             if (!isfinite(threshold))
                 return *this;
-            }
+        }
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->InplaceTruncateTop(threshold), 
             this->m_GPUMatrix->InplaceTruncateTop(threshold), 
-            NOT_IMPLEMENTED, 
+            this->m_CPUSparseMatrix->InplaceTruncateTop(threshold),
             this->m_GPUSparseMatrix->InplaceTruncateTop(threshold)
             );
                 
@@ -2626,7 +2647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nullptr,
             return this->m_CPUMatrix->SumOfElements(), 
             return this->m_GPUMatrix->SumOfElements(), 
-            NOT_IMPLEMENTED, 
+            return this->m_CPUSparseMatrix->SumOfElements(),
             return this->m_GPUSparseMatrix->SumOfElements()
             );
                 
@@ -2869,7 +2890,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nullptr,
             return this->m_CPUMatrix->FrobeniusNorm(), 
             return this->m_GPUMatrix->FrobeniusNorm(), 
-            NOT_IMPLEMENTED, 
+            return this->m_CPUSparseMatrix->FrobeniusNorm(),
             return this->m_GPUSparseMatrix->FrobeniusNorm()
             );                
         }
