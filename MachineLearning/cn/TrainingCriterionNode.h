@@ -1041,6 +1041,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             clsLogSoftmax.Resize(input_cls_log_post_prob.GetNumRows(), nT);
             clsSoftmax.Resize(input_cls_log_post_prob.GetNumRows(), nT);
 
+            clsLogSoftmax = input_cls_log_post_prob;
+            clsLogSoftmax.InplaceLogSoftmax(true); /// 50 x nT
+            clsSoftmax.AssignExpOf(clsLogSoftmax);
+
             /// loop over time
             functionValues.SetValue(0);
             sz = 0;
@@ -1075,12 +1079,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
 
                 /// add the class log posterior probability
-                Matrix<ElemType> clsLogSoftmax_t = clsLogSoftmax.ColumnSlice(t, 1);
-                clsLogSoftmax_t.SetValue(input_cls_log_post_prob.ColumnSlice(t, 1));
-                clsLogSoftmax_t.InplaceLogSoftmax(true); /// 50 x 1
-                Matrix<ElemType> clsSoftmax_t = clsSoftmax.ColumnSlice(t, 1);
-                clsSoftmax_t.AssignExpOf(clsLogSoftmax_t);
-                Matrix<ElemType>::AddElementToElement(clsLogSoftmax_t, c_t, 0, functionValues, 0, 0);
+                Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
 
                 sz += nbr_wrd;
             }

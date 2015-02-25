@@ -197,6 +197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         CPUMatrix<ElemType>& AssignTruncateTopOf (const CPUMatrix<ElemType>& a, const ElemType threshold);
         CPUMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        CPUMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         CPUMatrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 

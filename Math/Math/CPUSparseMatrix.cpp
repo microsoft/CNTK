@@ -25,6 +25,7 @@
 #include "basetypes.h"
 #include "fileutil.h"
 
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
 #ifndef USE_MKL
 // use ACML as default. 
@@ -704,36 +705,242 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
+    {
+        long m = (long)NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] = threshold;
+
+            if (nzValues[i+1] > threshold)
+                nzValues[i+1] = threshold;
+
+            if (nzValues[i+2] > threshold)
+                nzValues[i+2] = threshold;
+
+            if (nzValues[i+3] > threshold)
+                nzValues[i+3] = threshold;
+
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] = threshold;
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
+    {
+        long m = (long)NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (nzValues[i] < threshold)
+                nzValues[i] = threshold;
+
+            if (nzValues[i + 1] < threshold)
+                nzValues[i + 1] = threshold;
+
+            if (nzValues[i + 2] < threshold)
+                nzValues[i + 2] = threshold;
+
+            if (nzValues[i + 3] < threshold)
+                nzValues[i + 3] = threshold;
+
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] < threshold)
+                nzValues[i] = threshold;
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
-        if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
-        {
-            ElemType locThresholdPos = abs(threshold);
-            ElemType locTHresholdNeg = -locThresholdPos; 
+        ElemType locThresholdPos = abs(threshold);
+        ElemType locTHresholdNeg = -locThresholdPos; 
 
-            for(size_t j = 0; j < m_blockSize; j++) 
-            {
-                size_t len = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
-                size_t start = j* len;
-                for (size_t p = start; p < start+len; p++)
-                {
-                    if (m_pArray[p] > locThresholdPos)
-                    {
-                        m_pArray[p] = locThresholdPos;
-                    }
-                    else if (m_pArray[p] < locTHresholdNeg)
-                    {
-                        m_pArray[p] = locTHresholdNeg;
-                    }
-                }
-            }
-        } 
-        else 
+        long m = (long)NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
         {
-            throw std::runtime_error("CPUSparseMatrix:: InplaceTruncate() only support block based sparse matrix");
+            if (nzValues[i] > locThresholdPos)
+                nzValues[i] = locThresholdPos;
+            else if (nzValues[i] < locTHresholdNeg)
+                nzValues[i] = locTHresholdNeg;
+
+            if (nzValues[i+1] > locThresholdPos)
+                nzValues[i+1] = locThresholdPos;
+            else if (nzValues[i+1] < locTHresholdNeg)
+                nzValues[i+1] = locTHresholdNeg;
+
+            if (nzValues[i+2] > locThresholdPos)
+                nzValues[i+2] = locThresholdPos;
+            else if (nzValues[i+2] < locTHresholdNeg)
+                nzValues[i+2] = locTHresholdNeg;
+
+            if (nzValues[i+3] > locThresholdPos)
+                nzValues[i+3] = locThresholdPos;
+            else if (nzValues[i+3] < locTHresholdNeg)
+                nzValues[i+3] = locTHresholdNeg;
         }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] > locThresholdPos)
+                nzValues[i] = locThresholdPos;
+            else if (nzValues[i] < locTHresholdNeg)
+                nzValues[i] = locTHresholdNeg;
+        }
+
         return *this;
     }    
+
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        long m = (long)NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] -= threshold;
+            else if (nzValues[i] < -threshold)
+                nzValues[i] += threshold;
+            else
+                nzValues[i] = 0;
+
+            if (nzValues[i + 1] > threshold)
+                nzValues[i + 1] -= threshold;
+            else if (nzValues[i + 1] < -threshold)
+                nzValues[i + 1] += threshold;
+            else
+                nzValues[i + 1] = 0;
+
+            if (nzValues[i + 2] > threshold)
+                nzValues[i + 2] -= threshold;
+            else if (nzValues[i + 2] < -threshold)
+                nzValues[i + 2] += threshold;
+            else
+                nzValues[i + 2] = 0;
+
+            if (nzValues[i + 3] > threshold)
+                nzValues[i + 3] -= threshold;
+            else if (nzValues[i + 3] < -threshold)
+                nzValues[i + 3] += threshold;
+            else
+                nzValues[i + 3] = 0;
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] -= threshold;
+            else if (nzValues[i] < -threshold)
+                nzValues[i] += threshold;
+            else
+                nzValues[i] = 0;
+        }
+        return *this;
+    }
+
+    template<class ElemType>
+    ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
+    {
+        if (IsEmpty())
+            throw std::logic_error("FrobeniusNorm: Matrix is empty.");
+
+        ElemType v = 0;
+
+        long m = (long)NzCount();
+        const ElemType *nzValues = NzValues();
+
+        //four-way unrolling
+#pragma omp parallel for reduction(+:v)
+        for (long i = 0; i<(m & ~3); i += 4)
+        {
+            v += nzValues[i] * nzValues[i] + nzValues[i + 1] * nzValues[i + 1] + nzValues[i + 2] * nzValues[i + 2] + nzValues[i + 3] * nzValues[i + 3];
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            v += nzValues[i] * nzValues[i];
+        }
+
+        return sqrt(v);
+    }
+
+    //sum of all abs(elements)
+    template<class ElemType>
+    ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
+    {
+        if (IsEmpty())
+            throw std::logic_error("SumOfAbsElements: Matrix is empty.");
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+#ifndef USE_MKL
+            return (ElemType)dasum((int)NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+#else  
+            return (ElemType)cblas_dasum((int)NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+#endif
+        }
+        else
+        {
+#pragma warning (suppress: 4244)
+#ifndef USE_MKL
+            return sasum((int)NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+#else
+            return cblas_sasum((int)NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+#endif
+        }
+    }
+
+
+    //sum of all elements
+    template<class ElemType>
+    ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
+    {
+        if (IsEmpty())
+            throw std::logic_error("SumOfElements: Matrix is empty.");
+
+        ElemType sum = 0;
+
+        long m = (long)NzCount();
+        const ElemType *nzValues = NzValues();
+
+        //four-way unrolling
+#pragma omp parallel for reduction(+:sum)
+        for (long i = 0; i<(m & ~3); i += 4)
+        {
+            sum += nzValues[i] + nzValues[i + 1] + nzValues[i + 2] + nzValues[i + 3];
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            sum += nzValues[i];
+        }
+
+        return sum;
+    }
 
     template <class ElemType>
     MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)

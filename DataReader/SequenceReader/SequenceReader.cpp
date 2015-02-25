@@ -1777,8 +1777,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             // vector of feature data goes into matrix column
             size_t idx = (size_t)m_featureData[j];
 
-            //if (matrices.find(m_featuresName) != matrices.end())
-                features.SetValue(idx, j, (ElemType)1);
+            features.SetValue(idx, j, (ElemType)1);
+            SetSentenceBegin(idx, j, actualmbsize);
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
@@ -1947,7 +1947,6 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
             labels->SetValue(0, j, (ElemType)wrd); 
 
             SetSentenceEnd(wrd, j, actualmbsize);
-            SetSentenceBegin(wrd, j, actualmbsize);
 
             if (class_size > 0)
             {
