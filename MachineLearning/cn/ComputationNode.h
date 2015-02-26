@@ -4855,13 +4855,13 @@ protected:  \
             
             if (m_samplesInRecurrentStep == 1)
             {
-                bool reset = (m_sentenceEnd[0] <= timeIdxInSeq);
+                bool reset = (m_sentenceEnd[0] == timeIdxInSeq);
                 EvaluateThisNodeSR(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
             } else
             {
                 for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
                 {
-                    bool reset = (m_sentenceEnd[i] <= timeIdxInSeq);
+                    bool reset = (m_sentenceEnd[i] == timeIdxInSeq);
                     EvaluateThisNodeSRP(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), i, m_samplesInRecurrentStep);
                 }
             }
@@ -4886,7 +4886,7 @@ protected:  \
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (iPastIndex < 0 && reset)
+            if (reset)
                 out.SetValue(default_activity);
             else
             {
