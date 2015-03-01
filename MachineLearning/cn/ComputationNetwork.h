@@ -25,6 +25,7 @@
 #include "Matrix.h"
 #include "PTaskGraphBuilder.h"
 #include "commandArgUtil.h"
+#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
@@ -580,7 +581,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             nodeToDelete->DetachInputs(); //nodeToDelete is a parent
+            auto search = std::find(m_labels.begin(), m_labels.end(), nodeToDelete);
 
+            if (search != m_labels.end())
+            {
+                m_labels.erase(search);
+            }
             //delete the node itself
             m_nameToNodeMap.erase(nodeName);
             delete nodeToDelete;
