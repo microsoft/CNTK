@@ -46,6 +46,9 @@ public:
 	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
     int nwords, dims, nsamps, nglen, nmefeats;
 
+    int m_seed; 
+    bool mRandomize;
+
     int class_size;
     map<int, vector<int>> class_words;
     vector<int>class_cn;
@@ -222,6 +225,8 @@ public:
 	using LUSequenceReader<ElemType>::GetIdFromLabel;
 	using LUSequenceReader<ElemType>::InitCache;
 	using LUSequenceReader<ElemType>::ReadLabelInfo;
+	using LUSequenceReader<ElemType>::mRandomize;
+	using LUSequenceReader<ElemType>::m_seed;
 private:
     size_t mLastProcssedSentenceId ; 
     size_t mBlgSize; 

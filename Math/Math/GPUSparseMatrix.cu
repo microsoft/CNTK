@@ -79,12 +79,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixName=nullptr;
 
         m_blockSize = 0;
-        m_blockIds = nullptr;
 
-        m_expandedSize = 0;
         m_rowToId = nullptr;
-        m_block2Id = nullptr;
-        m_block2UniqId = nullptr;
 
         m_tempHostBuffer = nullptr;
         m_tempHostBufferSize = 0;
@@ -94,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat /*= MatrixFormat::matrixFormatSparseCSR*/, const DEVICEID_TYPE computeDevice /*= AUTOPLACEMATRIX*/)
     {
         ZeroInit(matrixFormat, computeDevice);
-        Resize(numRows, numCols, numNZ);
+        Resize(numRows, numCols, numNZ, true, false);
     }
 
     template<class ElemType>
@@ -139,7 +135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ChangeDeviceTo(deepCopy.m_computeDevice);
         deepCopy.PrepareDevice();
 
-        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_nz, deepCopy.m_format);
+        Resize(deepCopy.m_numRows, deepCopy.m_numCols, deepCopy.m_nz, deepCopy.m_format, true, false);
         m_nz = deepCopy.m_nz;
         CUDACALL(cudaMemcpy(NzValues(), deepCopy.NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
         CUDACALL(cudaMemcpy(MajorIndexLocation(), deepCopy.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
@@ -169,38 +165,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (deepCopy.GetFormat() == matrixFormatSparseCSR)
         {
-            //we need to do conversion because CPUSparseMatrix uses CPUSPARSE_INDEX_TYPE for indexes while GPUSparseMatrix uses GPUSPARSE_INDEX_TYPE
-            if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
-            {
-                SetMatrixFromCSRFormat((GPUSPARSE_INDEX_TYPE*)deepCopy.RowLocation(), (GPUSPARSE_INDEX_TYPE*)deepCopy.ColLocation(), deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
-            }
-            else
-            {
-                GPUSPARSE_INDEX_TYPE * h_CSRRow = (GPUSPARSE_INDEX_TYPE *)ReserveTempHostBuffer(deepCopy.MajorIndexSize() + deepCopy.SecondaryIndexSize());
-                CopyBuffer(h_CSRRow, deepCopy.RowLocation(), deepCopy.SecondaryIndexCount());
+            SetMatrixFromCSRFormat(deepCopy.RowLocation(), deepCopy.ColLocation(), deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
 
-                GPUSPARSE_INDEX_TYPE *h_Col = h_CSRRow + deepCopy.SecondaryIndexCount();
-                CopyBuffer(h_Col, deepCopy.ColLocation(), deepCopy.MajorIndexCount());
-
-                SetMatrixFromCSRFormat(h_CSRRow, h_Col, deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
-            }
         }
         else if (deepCopy.GetFormat() == matrixFormatSparseCSC)
         {
-            if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
-            {
-                SetMatrixFromCSCFormat((GPUSPARSE_INDEX_TYPE*)deepCopy.ColLocation(), (GPUSPARSE_INDEX_TYPE*)deepCopy.RowLocation(), deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
-            }
-            else
-            {
-                GPUSPARSE_INDEX_TYPE * h_CSCCol = (GPUSPARSE_INDEX_TYPE *)ReserveTempHostBuffer(deepCopy.MajorIndexSize() + deepCopy.SecondaryIndexSize());
-                CopyBuffer(h_CSCCol, deepCopy.ColLocation(), deepCopy.SecondaryIndexCount());
-
-                GPUSPARSE_INDEX_TYPE *h_Row = h_CSCCol + deepCopy.SecondaryIndexCount();
-                CopyBuffer(h_Row, deepCopy.RowLocation(), deepCopy.MajorIndexCount());
-
-                SetMatrixFromCSCFormat(h_CSCCol, h_Row, deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
-            }
+            SetMatrixFromCSCFormat(deepCopy.ColLocation(), deepCopy.RowLocation(), deepCopy.NzValues(), deepCopy.NzCount(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
         }
         else
             NOT_IMPLEMENTED;
@@ -219,7 +189,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this->GetFormat() == matrixFormatSparseCSR)
         {
             //we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
-            cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements());
+            cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements(), true, false);
             cpuSparseMatrix.SetNzCount(GetNumNZElements());
 
             PrepareDevice();
@@ -246,7 +216,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (this->GetFormat() == matrixFormatSparseCSC)
         {
             //we need to do conversion because CPUSparseMatrix uses size_t for indexes while GPUSparseMatrix uses int
-            cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements());
+            cpuSparseMatrix.Resize(GetNumRows(), GetNumCols(), GetNumNZElements(), true, false);
             cpuSparseMatrix.SetNzCount(GetNumNZElements());
 
             PrepareDevice();
@@ -355,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUSPARSECALL(cusparseSetStream(cusparseHandle, t_stream));
 
         outMatrix.ChangeDeviceTo(GetComputeDeviceId());
-        outMatrix.Resize(m_numRows, m_numCols, m_nz,newFormat);
+        outMatrix.Resize(m_numRows, m_numCols, m_nz,newFormat, true, false);
         outMatrix.SetNzCount(m_nz);
 
         if (oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
@@ -508,7 +478,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDACALL(cudaEventSynchronize(done));
         if (do_sync)    CUDACALL(cudaEventDestroy(done));
 
-        Resize(numRows, numCols, nnzTotalDevHostPtr, matrixFormat);
+        Resize(numRows, numCols, nnzTotalDevHostPtr, matrixFormat, true, false);
         SetNzCount(nnzTotalDevHostPtr);
 
         if (do_sync)    CUDACALL(cudaEventCreate(&done));
@@ -570,12 +540,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixName=moveFrom.m_matrixName;
 
         m_blockSize = moveFrom.m_blockSize;
-        m_blockIds = moveFrom.m_blockIds;
 
-        m_expandedSize = moveFrom.m_expandedSize;
         m_rowToId = moveFrom.m_rowToId;
-        m_block2Id = moveFrom.m_block2Id;
-        m_block2UniqId = moveFrom.m_block2UniqId;
 
         m_tempHostBuffer = moveFrom.m_tempHostBuffer;
         m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
@@ -600,12 +566,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixName=moveFrom.m_matrixName;
 
         m_blockSize = moveFrom.m_blockSize;
-        m_blockIds = moveFrom.m_blockIds;
 
-        m_expandedSize = moveFrom.m_expandedSize;
         m_rowToId = moveFrom.m_rowToId;
-        m_block2Id = moveFrom.m_block2Id;
-        m_block2UniqId = moveFrom.m_block2UniqId;
 
         m_tempHostBuffer = moveFrom.m_tempHostBuffer;
         m_tempHostBufferSize = moveFrom.m_tempHostBufferSize;
@@ -633,14 +595,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if(m_pArray != nullptr) 
             CUDACALL(cudaFree(m_pArray));
 
-        if(m_blockIds != nullptr) 
-            CUDACALL(cudaFree(m_blockIds));
         if (m_rowToId != nullptr)
             CUDACALL(cudaFree(m_rowToId));
-        if (m_block2Id != nullptr)
-            CUDACALL(cudaFree(m_block2Id));
-        if (m_block2UniqId != nullptr)
-            CUDACALL(cudaFree(m_block2UniqId));
 
         if (m_tempHostBuffer != nullptr)
             delete[] m_tempHostBuffer;
@@ -654,7 +610,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly /*= true*/)
     {
-        Resize(a.m_numRows, a.m_numCols, a.m_nz, a.m_format, growOnly);
+        Resize(a.m_numRows, a.m_numCols, a.m_nz, a.m_format, growOnly, false);
         SetNzCount(a.m_nz);
 
         CUDACALL(cudaMemcpy(MajorIndexLocation(), a.MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
@@ -665,75 +621,73 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Start of new GPU Sparse Matrix code 
     //-------------------------------------------------------------------------
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly)
+    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
     {
-        Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly);
+        Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, keepExistingValues);
     }
 
     //WARNING: When memory is reallocated existing information will be lost, workaround is to allocte enough memory from start.
     //TODO: add keepExistingValues (default to true) argument so that the existing values are kept even after reallocation 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
+    void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*=true*/)
     {               
-        m_numRows = numRows;
-        m_numCols = numCols; 
+        if (matrixFormat != m_format || m_numRows != numRows || m_numCols != numCols)
+            keepExistingValues = false;  
 
+        size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
+        bool reallocate = (m_totalBufferSizeAllocated < bufferSizeNeeded || (!growOnly && m_totalBufferSizeAllocated > bufferSizeNeeded));
 
-        if (matrixFormat == MatrixFormat::matrixFormatSparseCSC || matrixFormat == MatrixFormat::matrixFormatSparseCSR)
+        if (reallocate)
         {
-            size_t bufferSizeNeeded = BufferSizeNeeded(numNZElemToReserve);
-            bool reallocate = (m_totalBufferSizeAllocated < bufferSizeNeeded || (!growOnly && m_totalBufferSizeAllocated > bufferSizeNeeded));
+            if (!OwnBuffer())
+                throw logic_error("Cannot Resize since the buffer is managed externally.");
 
-            if (reallocate)
+            PrepareDevice();
+
+            ElemType * pArray = nullptr;
+            CUDACALL(cudaMalloc((void **)&pArray, bufferSizeNeeded));
+
+            if (m_pArray != nullptr)
             {
-                if (!OwnBuffer())
-                    throw logic_error("Cannot Resize since the buffer is managed externally.");
+                if (keepExistingValues)
+                {
+                    if (m_nz > numNZElemToReserve || m_totalBufferSizeAllocated > bufferSizeNeeded)
+                        LogicError("Resize: To keep values m_nz should <= numNZElemToReserve.");
 
-                if (m_pArray != nullptr)
-                    CUDACALL(cudaFree(m_pArray));
-                if (m_rowToId != nullptr)
-                    CUDACALL(cudaFree(m_rowToId));
-                if (m_block2Id != nullptr)
-                    CUDACALL(cudaFree(m_block2Id));
-                if (m_block2UniqId != nullptr)
-                    CUDACALL(cudaFree(m_block2UniqId));
+                    CUDACALL(cudaMemcpy(pArray, NzValues(), NzSize(), cudaMemcpyDeviceToDevice));
 
-                PrepareDevice();
+                    GPUSPARSE_INDEX_TYPE* majorIndexInNewBuffer = (GPUSPARSE_INDEX_TYPE*)(pArray + numNZElemToReserve);
 
-                CUDACALL(cudaMalloc((void **)&m_pArray, bufferSizeNeeded));
-                CUDACALL(cudaMalloc((void **)&m_rowToId, sizeof(size_t)*numNZElemToReserve));
-                CUDACALL(cudaMalloc((void **)&m_block2Id, sizeof(size_t)*numNZElemToReserve));
-                CUDACALL(cudaMalloc((void **)&m_block2UniqId, sizeof(size_t)*numNZElemToReserve));
-                m_totalBufferSizeAllocated = bufferSizeNeeded;
-                m_elemSizeAllocated = numNZElemToReserve;
+                    CUDACALL(cudaMemcpy(majorIndexInNewBuffer, MajorIndexLocation(), MajorIndexSize(), cudaMemcpyDeviceToDevice));
+
+                    GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, numNZElemToReserve, matrixFormat);
+                    CUDACALL(cudaMemcpy(secondaryIndexInNewBuffer, SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
+                }
+                else
+                    m_nz = 0;
+
+                CUDACALL(cudaFree(m_pArray));
             }
-            else
-            {
-                m_elemSizeAllocated = ElemCountFromBufferSize();
-            }
-        } 
-        else if (matrixFormat == MatrixFormat::matrixFormatSparseBlockCol || matrixFormat == MatrixFormat::matrixFormatSparseBlockRow)
-        {
-            if (m_elemSizeAllocated < numNZElemToReserve || (m_elemSizeAllocated > numNZElemToReserve && !growOnly))
-            {
-                if (m_pArray != nullptr)
-                    CUDACALL(cudaFree(m_pArray));
-                if (m_blockIds != nullptr)
-                    CUDACALL(cudaFree(m_blockIds));
-                if (m_block2UniqId != nullptr)
-                    CUDACALL(cudaFree(m_block2UniqId));  
+            m_pArray = pArray;
 
-                PrepareDevice();
-                size_t newCompIndexSize = max(numRows, numCols) + 1;
-                CUDACALL(cudaMalloc((void **)&m_pArray, sizeof(ElemType)*numNZElemToReserve));
-                CUDACALL(cudaMalloc((void **)&m_blockIds, sizeof(size_t)*newCompIndexSize));
-                CUDACALL(cudaMalloc((void **)&m_block2UniqId, sizeof(size_t)*newCompIndexSize));
+            //following are generated dynamically and no need to save
+            if (m_rowToId != nullptr)
+                CUDACALL(cudaFree(m_rowToId));
 
-                m_elemSizeAllocated = numNZElemToReserve;
-            }
+            CUDACALL(cudaMalloc((void **)&m_rowToId, sizeof(GPUSPARSE_INDEX_TYPE)*numNZElemToReserve));
+
+            m_totalBufferSizeAllocated = bufferSizeNeeded;
+            m_elemSizeAllocated = numNZElemToReserve;
         }
-        else
-            NOT_IMPLEMENTED;
+        else  //if requested size is smaller, keeping original values does not make sense
+        {
+            m_elemSizeAllocated = ElemCountFromBufferSize(numRows, numCols, matrixFormat, m_totalBufferSizeAllocated);
+        }
+
+        
+        m_numRows = numRows;
+        m_numCols = numCols;
+        m_format = matrixFormat;
     }
 
     //Reset matrix so it can be reused
@@ -748,79 +702,117 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE *h_CSRRow, const GPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
     {
+        if (h_CSRRow == nullptr || h_Col == nullptr || h_Val == nullptr)
+            throw std::logic_error("SetMatrixFromCSRFormat: nullptr passed in.");
+
         SetComputeDeviceId(PrepareDevice(devId));
 
         m_format = matrixFormatSparseCSR;
-        Resize(numRows, numCols, nz);
+        Resize(numRows, numCols, nz, true, false);
         SetNzCount(nz);
 
         cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
-        CUDACALL(cudaMemcpy(RowLocation(), h_CSRRow, RowSize(), kind));
-        CUDACALL(cudaMemcpy(ColLocation(), h_Col, ColSize(), kind));
         CUDACALL(cudaMemcpy(NzValues(), h_Val, NzSize(), kind));
+
+        if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
+        {
+            CUDACALL(cudaMemcpy(RowLocation(), h_CSRRow, RowSize(), kind));
+            CUDACALL(cudaMemcpy(ColLocation(), h_Col, ColSize(), kind));
+        }
+        else
+        {
+            GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE *)ReserveTempHostBuffer(RowSize() + ColSize());
+            CopyBuffer(pCol, h_Col, MajorIndexCount());
+
+            GPUSPARSE_INDEX_TYPE* pRow = pCol + MajorIndexCount();
+            CopyBuffer(pRow, h_CSRRow, SecondaryIndexCount());
+
+            CUDACALL(cudaMemcpy(RowLocation(), pRow, RowSize(), kind));
+            CUDACALL(cudaMemcpy(ColLocation(), pCol, ColSize(), kind));
+        }
     }
 
-    // NOTE: we should change this to just use a single buffer, and return pointers into it
+    // this function will allocate memory while the caller needs to release it
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(GPUSPARSE_INDEX_TYPE*& h_CSRRow, GPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
+    void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
     {
         if (h_CSRRow != nullptr || h_Col != nullptr || h_Val != nullptr)
-            throw std::logic_error("Passed pointers must be nullptr");
+            throw std::logic_error("GetMatrixFromCSRFormat: Passed pointers must be nullptr");
+
         nz = GetNumNZElements();
         numRows = GetNumRows();
         numCols = GetNumCols();
 
-        if (IsEmpty())
+        if (IsEmpty() || nz == 0)
             return;
         else
         {
-            PrepareDevice();
             h_Val = new ElemType[nz];
-            h_CSRRow = new GPUSPARSE_INDEX_TYPE[m_numRows + 1];
-            h_Col = new GPUSPARSE_INDEX_TYPE[nz];
+            h_CSRRow = new CPUSPARSE_INDEX_TYPE[m_numRows + 1];
+            h_Col = new CPUSPARSE_INDEX_TYPE[nz];
 
-            CUDACALL(cudaMemcpy(h_CSRRow, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
-            CUDACALL(cudaMemcpy(h_Col, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+            PrepareDevice();
             CUDACALL(cudaMemcpy(h_Val, NzValues(), NzSize(), cudaMemcpyDeviceToHost));
+
+            if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
+            {
+                CUDACALL(cudaMemcpy(h_CSRRow, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
+                CUDACALL(cudaMemcpy(h_Col, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+            }
+            else
+            {
+                GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE *)ReserveTempHostBuffer(RowSize() + ColSize());
+                GPUSPARSE_INDEX_TYPE* pRow = pCol + MajorIndexCount();
+
+                CUDACALL(cudaMemcpy(pRow, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
+                CUDACALL(cudaMemcpy(pCol, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+
+                CopyBuffer(h_Col, pCol, MajorIndexCount());
+                CopyBuffer(h_CSRRow, pRow, SecondaryIndexCount());
+            }
         }
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+    void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
     {
+        if (h_CSCCol == nullptr || h_Row == nullptr || h_Val == nullptr)
+            throw std::logic_error("SetMatrixFromCSCFormat: nullptr passed in.");
+
         SetComputeDeviceId(PrepareDevice(devId));
         m_format = matrixFormatSparseCSC;
-        Resize(numRows, numCols, nz);
+        Resize(numRows, numCols, nz, true, false);
         SetNzCount(nz);
 
         cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
-        CUDACALL(cudaMemcpy(RowLocation(), h_Row, RowSize(), kind));
-        CUDACALL(cudaMemcpy(ColLocation(), h_CSCCol, ColSize(), kind));
         CUDACALL(cudaMemcpy(NzValues(), h_Val, NzSize(), kind));
 
-        map<size_t, size_t> indexer;
-        size_t *rowToId = (size_t*)ReserveTempHostBuffer(sizeof(size_t)*nz);
-
-        for (size_t i = 0; i < nz; i++)
+        if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
         {
-            size_t row = h_Row[i];                    
-            if (indexer.find(row) == indexer.end())
-            {
-                indexer[row] = indexer.size();
-            }
-            rowToId[i] = indexer[row];
-        }  
-        m_blockSize = indexer.size();
-        CUDACALL(cudaMemcpy(m_rowToId, rowToId, sizeof(size_t)*nz, cudaMemcpyHostToDevice));
+            CUDACALL(cudaMemcpy(RowLocation(), h_Row, RowSize(), kind));
+            CUDACALL(cudaMemcpy(ColLocation(), h_CSCCol, ColSize(), kind));
+        }
+        else
+        {
+            GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE *)ReserveTempHostBuffer(RowSize() + ColSize());
+            GPUSPARSE_INDEX_TYPE* pRow = pCol + SecondaryIndexCount();
+
+            CopyBuffer(pCol, h_CSCCol, SecondaryIndexCount());
+            CopyBuffer(pRow, h_Row, MajorIndexCount());
+
+            CUDACALL(cudaMemcpy(RowLocation(), pRow, RowSize(), kind));
+            CUDACALL(cudaMemcpy(ColLocation(), pCol, ColSize(), kind));
+        }
     }
 
-    // NOTE: we should change this to just use a single buffer, and return pointers into it
+    // this function will allocate memory while the caller needs to release it
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_CSCCol, GPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
     {
         if (h_CSCCol != nullptr || h_Row != nullptr || h_Val != nullptr)
-            throw std::logic_error("Passed pointers must be nullptr");
+            throw std::logic_error("GetMatrixFromCSCFormat: Passed pointers must be nullptr");
+
         nz = GetNumNZElements();
         numRows = GetNumRows();
         numCols = GetNumCols();
@@ -829,45 +821,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         else
         {
-            PrepareDevice();
             h_Val = new ElemType[nz];
             h_CSCCol = new GPUSPARSE_INDEX_TYPE[m_numRows + 1];
             h_Row = new GPUSPARSE_INDEX_TYPE[nz];
 
-            CUDACALL(cudaMemcpy(h_Row, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
-            CUDACALL(cudaMemcpy(h_CSCCol, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+            PrepareDevice();
             CUDACALL(cudaMemcpy(h_Val, NzValues(), NzSize(), cudaMemcpyDeviceToHost));
-        }
+
+            if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
+            {
+                CUDACALL(cudaMemcpy(h_Row, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
+                CUDACALL(cudaMemcpy(h_CSCCol, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+            }
+            else
+            {
+                GPUSPARSE_INDEX_TYPE* pCol = (GPUSPARSE_INDEX_TYPE *)ReserveTempHostBuffer(RowSize() + ColSize());
+                GPUSPARSE_INDEX_TYPE* pRow = pCol + SecondaryIndexCount();
+
+                CUDACALL(cudaMemcpy(pRow, RowLocation(), RowSize(), cudaMemcpyDeviceToHost));
+                CUDACALL(cudaMemcpy(pCol, ColLocation(), ColSize(), cudaMemcpyDeviceToHost));
+
+                CopyBuffer(h_CSCCol, pCol, SecondaryIndexCount());
+                CopyBuffer(h_Row, pRow, MajorIndexCount());
+            }
+        }       
     }
-
-
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize)
-    {
-        m_format = matrixFormatSparseCSC;
-        Resize(m_numRows, m_numCols, labelSize);
-        SetNzCount(labelSize);
-
-        m_expandedSize = expandedSize;
-        m_blockSize = blockSize;
-
-        PrepareDevice();
-
-        if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
-        {
-            CUDACALL(cudaMemcpy(MajorIndexLocation(), h_row, sizeof(GPUSPARSE_INDEX_TYPE)*labelSize, cudaMemcpyHostToDevice));
-        }
-        else
-        {
-            //convert from CPUSPARSE_INDEX_TYPE to GPUSPARSE_INDEX_TYPE
-            GPUSPARSE_INDEX_TYPE* pRow = (GPUSPARSE_INDEX_TYPE*)ReserveTempHostBuffer(sizeof(GPUSPARSE_INDEX_TYPE)*labelSize);
-            CopyBuffer(pRow, h_row, labelSize);
-            CUDACALL(cudaMemcpy(MajorIndexLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE)*labelSize, cudaMemcpyHostToDevice));
-        }
-        CUDACALL(cudaMemcpy(m_block2Id, h_block2Id, sizeof(size_t)*labelSize, cudaMemcpyHostToDevice));
-        CUDACALL(cudaMemcpy(m_block2UniqId, h_block2UniqId, sizeof(size_t)*labelSize, cudaMemcpyHostToDevice));
-    }
-
 
 #pragma endregion Constructors and Destructor
 
@@ -973,21 +951,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rhs.GetFormat() != matrixFormatSparseCSC)
                 NOT_IMPLEMENTED;
 
+            c.SetFormat(matrixFormatSparseBlockCol);
+            
             lhs.PrepareDevice();
 
-            c.SetFormat(matrixFormatSparseBlockCol);
-            //c.m_blockSize = n < rhs.m_nz ? n : rhs.m_nz;
-            c.m_blockSize = rhs.m_blockSize;
-            c.m_nz = m*c.m_blockSize;
-            c.Resize(m, n, c.m_nz);
-            CUDACALL(cudaMemset(c.NzValues(), 0, sizeof(ElemType)*(c.m_nz)));
-            CUDACALL(cudaMemset(c.m_blockIds, 0, sizeof(size_t)*(c.m_blockSize)));
-
-            LONG64 N = (LONG64)lhs.GetNumElements();  //here we process for each row in lhs and each column in rhs (==columns in lhs)
-            int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+            int blocksPerGrid = 0;
             cudaEvent_t done = nullptr;
             if (do_sync)    CUDACALL(cudaEventCreate(&done));
-            _denseMulSparseCSCTransposeToSparseBlockCol<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
+
+            //based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
+            if (n * 10 < threadsPerBlock * rhs.m_nz)
+            {
+                c.Resize(m, n, 1, true, false); //reserve memory for BlockId2ColOrRow() and ColOrRow2BlockId()
+
+                size_t *blockSize;
+                CUDACALL(cudaMalloc((void **)&blockSize, sizeof(size_t)));
+                CUDACALL(cudaMemset(blockSize, 0, sizeof(size_t)));
+
+                CUDACALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE)*(n)));
+
+                blocksPerGrid = (int)ceil(((double)rhs.m_nz) / threadsPerBlock);
+                _findColsWithValues<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
+                    rhs.RowLocation(), c.BlockId2ColOrRow(), rhs.m_nz);
+                if (do_sync)    CUDACALL(cudaEventRecord(done));
+                if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+
+                blocksPerGrid = (int)ceil(((double)n) / threadsPerBlock);
+                _determineBlockIds<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
+                    c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, blockSize);
+
+                if (do_sync)    CUDACALL(cudaEventRecord(done));
+                if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+
+                CUDACALL(cudaMemcpy(&c.m_blockSize, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
+                CUDACALL(cudaFree(blockSize));
+
+                size_t nnz = m*c.m_blockSize;
+                c.Resize(m, n, nnz, true, true);  //we need to keep the col2blockid and blockid2col info when resizing.
+                c.m_nz = nnz;
+                CUDACALL(cudaMemset(c.NzValues(), 0, sizeof(ElemType)*(c.m_nz)));
+
+                LONG64 N = (LONG64)lhs.GetNumElements();  //here we process for each row in lhs and each column in rhs (==columns in lhs)
+                blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+                _denseMulSparseCSCTransposeToSparseBlockCol2<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
+                    alpha,
+                    lhs.BufferPointer(),
+                    m,
+                    l,
+                    rhs.NzValues(),
+                    rhs.RowLocation(),
+                    rhs.ColLocation(),
+                    c.ColOrRow2BlockId(),
+                    c.NzValues());
+            }
+            else
+            {
+                c.m_blockSize = rhs.IdentifyRowsWithValues();
+                size_t nnz = m*c.m_blockSize;
+                c.Resize(m, n, nnz, true, false);
+                c.m_nz = nnz;
+                CUDACALL(cudaMemset(c.NzValues(), 0, sizeof(ElemType)*(c.m_nz)));
+                CUDACALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE)*(c.m_blockSize)));
+
+                LONG64 N = (LONG64)lhs.GetNumElements();  //here we process for each row in lhs and each column in rhs (==columns in lhs)
+                blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+                _denseMulSparseCSCTransposeToSparseBlockCol<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(
                     alpha,
                     lhs.BufferPointer(),
                     m,
@@ -997,7 +1025,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     rhs.ColLocation(),
                     rhs.m_rowToId,
                     c.NzValues(),
-                    c.m_blockIds);
+                    c.BlockId2ColOrRow());
+            }
 
             if (do_sync)    CUDACALL(cudaEventRecord(done));
             if (do_sync)    CUDACALL(cudaEventSynchronize(done));
@@ -1011,6 +1040,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             NOT_IMPLEMENTED;
         }
+    }
+
+    //find the rows of rhs with values
+    template<class ElemType>
+    size_t GPUSparseMatrix<ElemType>::IdentifyRowsWithValues() const
+    {
+        if (GetFormat() != matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        map<size_t, GPUSPARSE_INDEX_TYPE> indexer;
+        GPUSPARSE_INDEX_TYPE *rowToId = (GPUSPARSE_INDEX_TYPE*)ReserveTempHostBuffer(sizeof(GPUSPARSE_INDEX_TYPE)*m_nz*2);
+        GPUSPARSE_INDEX_TYPE *h_Row = rowToId + m_nz;
+        CUDACALL(cudaMemcpy(h_Row, RowLocation(), sizeof(GPUSPARSE_INDEX_TYPE)*m_nz, cudaMemcpyDeviceToHost));
+
+        for (size_t i = 0; i < m_nz; i++)
+        {
+            size_t row = h_Row[i];
+            if (indexer.find(row) == indexer.end())
+            {
+                indexer[row] = indexer.size();
+            }
+            rowToId[i] = indexer[row];
+        }
+        CUDACALL(cudaMemcpy(m_rowToId, rowToId, sizeof(GPUSPARSE_INDEX_TYPE)*m_nz, cudaMemcpyHostToDevice));
+        return indexer.size();
     }
 
     // used for gradients udpate
@@ -1038,7 +1092,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 lhs.GetNumCols(),
                 lhs.m_blockSize,
                 lhs.NzValues(),
-                lhs.m_blockIds,
+                lhs.BlockId2ColOrRow(),
                 rhs.BufferPointer());
 
             if (do_sync)    CUDACALL(cudaEventRecord(done));
@@ -1051,181 +1105,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // a: H x No: H is hidden layer size and No is mini-batch size
-    // weight: V x H, V is vocab size
-    // label: V x No
-    // cls: 2 x Nc, Nc is number of classes, each col is start and end word ids of a class
-    // idx2cls: V x 1, mapping from word to class id
-    // etp: V x No, stores predicted values
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropy(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& weight,
-        const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-        const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& etp, GPUMatrix<ElemType>& entropyScore)
-    {
-        int deviceId = a.GetComputeDeviceId();
-        if (weight.GetComputeDeviceId()!=deviceId || label.GetComputeDeviceId()!=deviceId || cls.GetComputeDeviceId()!=deviceId 
-            || idx2cls.GetComputeDeviceId()!=deviceId || etp.GetComputeDeviceId()!=deviceId )
-            throw std::runtime_error("GPUSparseMatrix:: ClassEntropy() All matrices must be on the same GPU");  
-
-        size_t nC = cls.GetNumCols();
-        size_t nV = label.GetNumRows() - nC;
-
-        if (nV != idx2cls.GetNumRows() || idx2cls.GetNumCols() != 1 || cls.GetNumCols() + idx2cls.GetNumRows() != label.GetNumRows())
-            throw std::logic_error("ClassEntropy: check matrix dimension");        
-        
-        //allocate enough memory
-        if(etp.m_elemSizeAllocated < label.m_expandedSize) 
-        {
-            etp.Resize(etp.GetNumRows(), etp.GetNumCols(), label.m_expandedSize);
-        }
-        etp.m_nz = label.m_expandedSize;
-        CUDACALL(cudaMemset(etp.m_pArray,0,sizeof(ElemType)*(etp.m_nz)));
-        entropyScore.SetValue((ElemType)0);     
-
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-        size_t blocksPerGrid = label.m_expandedSize;
-
-        //_computePrediction<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-        _computePrediction<ElemType><<<blocksPerGrid, 20>>>(
-            idx2cls.GetNumRows(),
-            a.BufferPointer(),
-            a.GetNumRows(),
-            weight.BufferPointer(),
-            weight.GetNumRows(),
-            label.m_nz,
-            label.MajorIndexLocation(),
-            label.m_block2Id,
-            cls.BufferPointer(),
-            idx2cls.BufferPointer(),            
-            etp.NzValues(),
-            etp.MajorIndexLocation(),
-            etp.SecondaryIndexLocation());
-
-        blocksPerGrid = label.m_nz;
-        _normalizePrediction<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-            label.m_nz,
-            label.m_expandedSize,
-            label.MajorIndexLocation(),
-            label.m_block2Id, 
-            etp.MajorIndexLocation(),
-            etp.m_pArray,
-            entropyScore.BufferPointer());
-
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
-   }
-
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropyError(GPUSparseMatrix<ElemType>& a)
-    {
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-
-        int N = a.m_nz;
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock); 
-
-        _computePredictionError<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-            a.m_pArray,
-            N);
-
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
-    }
-
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(const GPUSparseMatrix<ElemType>& error, const GPUMatrix<ElemType>& weight,  GPUMatrix<ElemType>& grd)
-    {
-        int deviceId = error.GetComputeDeviceId();
-        if (weight.GetComputeDeviceId()!=deviceId || grd.GetComputeDeviceId()!=deviceId )
-            throw std::runtime_error("GPUSparseMatrix::ClassEntropyGradientOfInput() All matrices must be on the same GPU");
-
-        grd.SetValue((ElemType)0); 
-        cudaEvent_t done = nullptr; 
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-
-        size_t blocksPerGrid = grd.GetNumElements();
-        //_computeGradientOfInput<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-        _computeGradientOfInput<ElemType><<<blocksPerGrid, 20>>>(
-            error.m_pArray,
-            error.MajorIndexLocation(),
-            error.SecondaryIndexLocation(),
-            weight.BufferPointer(),
-            weight.GetNumRows(),
-            grd.BufferPointer(), 
-            grd.GetNumRows());
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
-    }
-    
-    template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(const GPUSparseMatrix<ElemType>& error,  const GPUMatrix<ElemType>& input, const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-        const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& grd)
-    {
-        int deviceId = error.GetComputeDeviceId();
-        if (input.GetComputeDeviceId()!=deviceId || label.GetComputeDeviceId()!=deviceId || cls.GetComputeDeviceId()!=deviceId  || idx2cls.GetComputeDeviceId()!=deviceId || grd.GetComputeDeviceId()!=deviceId )
-            throw std::runtime_error("GPUSparseMatrix::ClassEntropyGradientOfWeight() All matrices must be on the same GPU");
-
-        grd.SetFormat(matrixFormatSparseBlockRow);  
-        size_t nz = label.m_blockSize * grd.GetNumCols();        
-        //allocate enough memory
-        if(grd.m_elemSizeAllocated < nz) 
-        {
-            grd.Resize(grd.GetNumRows(), grd.GetNumCols(), nz);
-        }
-        grd.m_blockSize = label.m_blockSize;      
-        grd.m_nz = nz;
-        CUDACALL(cudaMemset(grd.BufferPointer(),0,sizeof(ElemType)*(grd.m_nz)));
-        CUDACALL(cudaMemset(grd.m_blockIds,0,sizeof(size_t)*(grd.m_blockSize)));
-
-        cudaEvent_t done = nullptr;  
-        if (do_sync)    CUDACALL(cudaEventCreate(&done));
-
-        size_t blocksPerGrid = error.m_nz;
-        _computeGradientOfWeight<ElemType><<<blocksPerGrid, threadsPerBlock>>>(
-            error.m_pArray,
-            error.MajorIndexLocation(),
-            error.SecondaryIndexLocation(),
-            input.GetNumCols(),
-            idx2cls.GetNumRows(),
-            label.MajorIndexLocation(),
-            label.m_block2UniqId,
-            cls.BufferPointer(),
-            idx2cls.BufferPointer(),              
-            input.BufferPointer(),
-            input.GetNumRows(),
-            grd.BufferPointer(), 
-            grd.m_blockIds);
-        if (do_sync)    CUDACALL(cudaEventRecord(done));
-        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-        if (do_sync)    CUDACALL(cudaEventDestroy(done));
-    }
-
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
-        if(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow ||
-            m_format == matrixFormatSparseCSR || m_format == matrixFormatSparseCSC)
-        {
-            long N=(long)GetNumNZElements();
-            int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-            cudaEvent_t done = nullptr;
-            if (do_sync)    CUDACALL(cudaEventCreate(&done));
-            ElemType * values = NzValues();
-            _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(values,threshold,N);
-            if (do_sync)    CUDACALL(cudaEventRecord(done));
-            if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-            if (do_sync)    CUDACALL(cudaEventDestroy(done));
-        } 
-        else 
-        {
-            NOT_IMPLEMENTED;
-        }
+        long N=(long)GetNumNZElements();
+
+        long blocksPerGrid = (long)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        ElemType * values = NzValues();
+        _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(values,threshold,N);
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+
         return *this;
     } 
+
+    template<class ElemType>
+    GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        long N = (long)GetNumNZElements();
+
+        long blocksPerGrid = (long)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        ElemType * values = NzValues();
+        _inplaceSoftThreshold<ElemType> << <blocksPerGrid, threadsPerBlock >> >(values, threshold, N);
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+
+        return *this;
+    }
 
     // normal update for smoothed gradients c and current gradients (this)
     template<class ElemType> 
@@ -1252,7 +1164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 GetNumCols(),
                 m_blockSize,
                 NzValues(),
-                m_blockIds,
+                BlockId2ColOrRow(),
                 c.BufferPointer());
 
             if (do_sync)    CUDACALL(cudaEventRecord(done));
@@ -1338,12 +1250,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // totalBufferSize - total buffer we have to use
     // return: size of allocated elements/index slots available
     template<class ElemType>
-    size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize(const size_t totalBufferSize) const
+    size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const size_t totalBufferSize) const
     {
         size_t elemSizeAllocated;
-        if (m_format & matrixFormatCompressed)
+        if (format == matrixFormatSparseCSC)
         {
-            elemSizeAllocated = (totalBufferSize - SecondaryIndexSize()) / (sizeof(GPUSPARSE_INDEX_TYPE)+sizeof(ElemType));
+            elemSizeAllocated = (totalBufferSize - sizeof(GPUSPARSE_INDEX_TYPE)*(numCols + 1)) / (sizeof(GPUSPARSE_INDEX_TYPE)+sizeof(ElemType));
+        }
+        else if (format == matrixFormatSparseCSR)
+        {
+            elemSizeAllocated = (totalBufferSize - sizeof(GPUSPARSE_INDEX_TYPE)*(numRows + 1)) / (sizeof(GPUSPARSE_INDEX_TYPE)+sizeof(ElemType));
+        }
+        else if (format == matrixFormatSparseBlockCol)
+        {
+            elemSizeAllocated = (totalBufferSize - sizeof(GPUSPARSE_INDEX_TYPE)* 2 * numCols) / sizeof(ElemType);
+        }
+        else if (format == matrixFormatSparseBlockCol || format == matrixFormatSparseBlockRow)
+        {
+            elemSizeAllocated = (totalBufferSize - sizeof(GPUSPARSE_INDEX_TYPE)* 2 * numRows) / sizeof(ElemType);
         }
         else // uncompressed COO format
         {
@@ -1355,7 +1279,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize() const
     {
-        return ElemCountFromBufferSize(m_totalBufferSizeAllocated);
+        return ElemCountFromBufferSize(m_numRows, m_numCols, m_format, m_totalBufferSizeAllocated);
     }
 
     // PrepareBuffer - Get the dimensions start buffer, computes the starting row/column of each value
@@ -1392,7 +1316,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t nnzC = func(csrRowPtrC);
 
         // now we know the number of Non-zeros in the result set, set the output size
-        c.Resize(m, n, nnzC);
+        c.Resize(m, n, nnzC, true, false);
         c.m_nz = nnzC;
 
         CUDACALL(cudaMemcpy(c.SecondaryIndexLocation(),csrRowPtrC,c.SecondaryIndexSize(),cudaMemcpyDeviceToDevice));
@@ -1880,7 +1804,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(GetFormat()&matrixFormatCompressed); // for now this only supports compressed formats
         PrepareDevice();
         GPUSparseMatrix c(GetFormat(), GetComputeDeviceId());
-        c.Resize(n, m, nnz, GetFormat());
+        c.Resize(n, m, nnz, GetFormat(), true, false);
         c.m_nz = nnz;
 
         cusparseHandle_t cusparseHandle = 0;
@@ -2357,15 +2281,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (us.m_format != matrixFormatSparseCSC && us.m_format != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
 
-        us.Resize(rownum, colnum, nz);
+        us.Resize(rownum, colnum, nz, true, false);
         us.SetNzCount(nz);
 
         if (nz > 0)
         {
             size_t compressedSize = (us.m_format == matrixFormatSparseCSC) ? colnum + 1 : rownum + 1;
             ElemType* dataBuffer = new ElemType[nz];
-            GPUSPARSE_INDEX_TYPE * unCompressedIndex = new GPUSPARSE_INDEX_TYPE[nz];
-            GPUSPARSE_INDEX_TYPE * compressedIndex = new GPUSPARSE_INDEX_TYPE[compressedSize];
+            CPUSPARSE_INDEX_TYPE * unCompressedIndex = new CPUSPARSE_INDEX_TYPE[nz];
+            CPUSPARSE_INDEX_TYPE * compressedIndex = new CPUSPARSE_INDEX_TYPE[compressedSize];
 
             // read in the sparse matrix info
             for (size_t i = 0; i < nz; ++i)
@@ -2431,8 +2355,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (nz > 0)
         {
             ElemType *dataBuffer = nullptr;
-            GPUSPARSE_INDEX_TYPE* compressedIndex = nullptr;
-            GPUSPARSE_INDEX_TYPE* unCompressedIndex = nullptr;
+            CPUSPARSE_INDEX_TYPE* compressedIndex = nullptr;
+            CPUSPARSE_INDEX_TYPE* unCompressedIndex = nullptr;
 
             if (us.m_format == matrixFormatSparseCSC)
                 us.GetMatrixFromCSCFormat(compressedIndex, unCompressedIndex, dataBuffer, nz, numRows, numCols);

@@ -7,6 +7,7 @@
 #ifndef _BASETYPES_
 #define _BASETYPES_
 
+
 #ifndef UNDER_CE    // fixed-buffer overloads not available for wince
 #ifdef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES  // fixed-buffer overloads for strcpy() etc.
 #undef _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES

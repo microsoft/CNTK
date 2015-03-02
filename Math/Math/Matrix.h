@@ -39,6 +39,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mutable MatrixType m_matrixType;
         mutable CurrentDataLocation m_currentDataLocation; //Indicates which matrix is current        
         mutable DEVICEID_TYPE m_preferredDeviceId;
+
+        mutable size_t m_numTimesDeviceChanged;
+        mutable size_t m_numTimesMatrixTypeChanged;
+
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
         //Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
@@ -81,6 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         MatrixType GetMatrixType() const {return m_matrixType;};
+        MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
         bool OwnBuffer() const {return m_baseMatrix->OwnBuffer();}
         int GetDeviceId() const; //-1 if CPU, otherwise GPU CUDA device id
         DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; //-1 if CPU, otherwise GPU CUDA device id
@@ -89,7 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
-        void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat = matrixFormatSparseCSR); //sets matrix type between dense and sparse
+        void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;
@@ -109,8 +114,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ShiftBy(int numShift) ;
 
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
-        void Adagrad(Matrix<ElemType>& gradients);
-        void RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN);
+        ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
+        ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 0, bool growOnly = true);  //by default we only reallocate if need to grow        
@@ -126,9 +131,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
-        void SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+        void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
-        void SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize);
+
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const ElemType val, size_t colInd);
         void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
@@ -231,6 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         Matrix<ElemType>& AssignTruncateTopOf (const Matrix<ElemType>& a, const ElemType threshold);
         Matrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        Matrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
@@ -244,8 +250,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>&  AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
         Matrix<ElemType>&  AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
-
+        Matrix<ElemType>&  AssignPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
+        Matrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
+        
         bool IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold = 1e-8) const;
+
+        static void VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise);
 
         void VectorNorm1(Matrix<ElemType>& c, const bool isColWise) const;
         Matrix<ElemType>& AssignVectorNorm1Of(Matrix<ElemType>& a, const bool isColWise);
@@ -340,6 +350,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void AddElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
         //static void AddLogElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
         static void AssignElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
+        static void MinusOneAt(Matrix<ElemType>& c, const size_t position);
 
         static void Scale(ElemType alpha, Matrix<ElemType>& a);
         static void Scale(Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
@@ -419,19 +430,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
-        static void ClassEntropy(const Matrix<ElemType>& a, const Matrix<ElemType>& weight,
-            const Matrix<ElemType> & label, const Matrix<ElemType>* cls, 
-            const Matrix<ElemType>* idx2cls, Matrix<ElemType>& etp, Matrix<ElemType>& entropyScore);
-        static void ClassEntropyError(const Matrix<ElemType>& a);
-        static void ClassEntropyGradientOfInput(const Matrix<ElemType>& error, const Matrix<ElemType>& weight, Matrix<ElemType>& grd);
-        static void ClassEntropyGradientOfWeight(
-            const Matrix<ElemType>& error, 
-            const Matrix<ElemType>& input,
-            const Matrix<ElemType>& weight,
-            const Matrix<ElemType> & label, 
-            const Matrix<ElemType>* cls, 
-            const Matrix<ElemType>* idx2cls, 
-            Matrix<ElemType>& grd);
+
+		public:
+			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
+			Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
+			static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
+			Matrix<ElemType>& GetARowByIndex(const Matrix<ElemType>& a, size_t index);
+			static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
+			Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
+
 
     };
 

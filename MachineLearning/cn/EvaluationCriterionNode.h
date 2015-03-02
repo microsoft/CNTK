@@ -54,29 +54,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("ErrorPrediction is used for evaluation only.");
         }
 
-        // GetTaskDescriptor - Get a task descriptor for this node
-        // taskType - task type we are generating a task for
-        virtual TaskDescriptor<ElemType>* GetPTaskDescriptor(TaskType taskType, size_t inputIndex=0) const
-        {
-            TaskDescriptor<ElemType>* descriptor = new TaskDescriptor<ElemType>(this, taskType, inputIndex);
-            switch(taskType)
-            {
-            case taskEvaluate:
-                descriptor->FunctionParam();
-                descriptor->FunctionParam(0, paramOptionsInput);
-                descriptor->FunctionParam(1, paramOptionsInput);
-                descriptor->MatrixParam(m_maxIndexes0, "maxIndexes0", paramOptionsInput | paramOptionsTemporary);
-                descriptor->MatrixParam(m_maxIndexes1, "maxIndexes1", paramOptionsInput | paramOptionsTemporary);
-                descriptor->MatrixParam(m_maxValues, "maxValues", paramOptionsInput | paramOptionsTemporary);
-                descriptor->SetFunction((FARPROC)EvaluateThisNodeS);
-                break;
-            default:
-                assert(false);
-                throw std::logic_error("Unsupported task requested");
-            }
-            return descriptor;
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues);

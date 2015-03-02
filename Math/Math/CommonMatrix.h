@@ -11,10 +11,10 @@
 #define AUTOPLACEMATRIX 1000 // used in parameters only
 #define MANAGEDEXTERN -2 // managed externally (i.e. PTask)
 #define CPUDEVICE -1 // device is the CPU
-#define EPS_IN_INVERSE 1e-30f  // min float is 1.4e-45 and max float is 3.4e-38
-#define EPS_IN_LOG 1e-40f
-#define LOG_OF_EPS_IN_LOG -92.1f // log(EPS_IN_LOG)
-#define LOG10_OF_EPS_IN_LOG -40 // log_10(EPS_IN_LOG)
+#define EPS_IN_INVERSE 1e-30f  // 1e-37 is the only guaranteed precision
+#define EPS_IN_LOG 1e-37f  // 1e-37 is the only guaranteed precision
+#define LOG_OF_EPS_IN_LOG -85.1f // log(EPS_IN_LOG)
+#define LOG10_OF_EPS_IN_LOG -37 // log_10(EPS_IN_LOG)
 #define LZERO  -10e10
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10

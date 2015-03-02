@@ -389,6 +389,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t position)
+    {
+        if (position < c.GetNumElements())
+            c.m_pArray[position] -= 1.0;
+        else
+            RuntimeError("MinusOneAt: position is out of CPU matrix size");
+    }
+        
+    template<class ElemType>
     CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
     {
         if (this == &a)
@@ -430,6 +439,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         return *this;
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
+    {
+        a; posNumber;  negNumber; shiftNumber;
+        NOT_IMPLEMENTED;
+    }
+    
+    template<class ElemType>
+    CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AddFoldedPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
+    {
+        a; posNumber;  negNumber; shiftNumber;
+        NOT_IMPLEMENTED;
     }
 
     template<class ElemType>
@@ -891,8 +914,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }  
 
     template<class ElemType>
-    void CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients)
+    ElemType CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier)
     {
+        ElemType aveMultiplier = 0;
+
         if (IsEmpty())
         {
             Resize(gradients.GetNumRows(), gradients.GetNumCols());
@@ -906,6 +931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         long nLoop = (long)n - n%4;
 
         const ElemType floor = 1e-16f;
+        ElemType a0, a1, a2, a3;
 
 #pragma omp parallel for
         // unwrap this loop for efficiency
@@ -916,10 +942,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             a[i+2] += d_v[i+2] * d_v[i+2];
             a[i+3] += d_v[i+3] * d_v[i+3];
 
-            d_v[i] /= (sqrt(a[i]) + floor);
-            d_v[i+1] /= (sqrt(a[i+1]) + floor);
-            d_v[i+2] /= (sqrt(a[i+2]) + floor);
-            d_v[i+3] /= (sqrt(a[i+3]) + floor);
+            a0 = (sqrt(a[i]) + floor);
+            a1 = (sqrt(a[i + 1]) + floor);
+            a2 = (sqrt(a[i + 2]) + floor);
+            a3 = (sqrt(a[i + 3]) + floor);
+
+            d_v[i] /= a0;
+            d_v[i+1] /= a1;
+            d_v[i+2] /= a2;
+            d_v[i+3] /= a3;
+
+            if (needAveMultiplier)
+            {
+                aveMultiplier += 1 / a0 + 1 / a1 + 1 / a2 + 1 / a3;
+            }
         }
 
         // get the last few elements if any
@@ -927,18 +963,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             a[i] += d_v[i] * d_v[i];
 
-            d_v[i] /= (sqrt(a[i]) + floor);
+            a0 = (sqrt(a[i]) + floor);
+            d_v[i] /= a0;
+
+            if (needAveMultiplier)
+            {
+                aveMultiplier += 1 / a0;
+            }
         }
 
+        if (needAveMultiplier)
+            return aveMultiplier / n;
+        else
+            return 1;
     }
 
     template<class ElemType>
-    void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
+    ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
         ElemType RMS_WGT_MAX,
         ElemType RMS_WGT_DEC,
-        ElemType RMS_WGT_MIN
+        ElemType RMS_WGT_MIN,
+        const bool needAveMultiplier
         )
     {
         const ElemType floor = 1e-6f;
@@ -1003,6 +1050,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //    curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
   //      }
 
+        ElemType aveMultiplier = 0, a;
         for (long i=0; i<n; i++)
         {
             avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
@@ -1013,9 +1061,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-            curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+            a = steps[i] / sqrt(avars[i] + floor);
+            curr_grad[i] *= a;
             signs[i] = (ElemType)grad_sign;
+
+            if (needAveMultiplier)
+                aveMultiplier += a;
         }
+
+        if (needAveMultiplier)
+            return aveMultiplier / n;
+        else
+            return 1;
     }
 
     template<class ElemType>
@@ -2239,7 +2296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
 
         auto& us=*this;
         ElemType locThresholdPos = abs(threshold);
@@ -2282,6 +2339,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
             
+        return *this;
+    }
+
+    //x= x-threshold if x>threshold, x+threshold if x<-threshold, 0 otherwise
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
+
+        long m = (long)GetNumElements();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (m_pArray[i] > threshold)
+                m_pArray[i] -= threshold;
+            else if (m_pArray[i] < -threshold)
+                m_pArray[i] += threshold;
+            else
+                m_pArray[i] = 0;
+
+            if (m_pArray[i+1] > threshold)
+                m_pArray[i+1] -= threshold;
+            else if (m_pArray[i+1] < -threshold)
+                m_pArray[i+1] += threshold;
+            else
+                m_pArray[i+1] = 0;
+
+            if (m_pArray[i+2] > threshold)
+                m_pArray[i+2] -= threshold;
+            else if (m_pArray[i+2] < -threshold)
+                m_pArray[i+2] += threshold;
+            else
+                m_pArray[i+2] = 0;
+
+            if (m_pArray[i+3] > threshold)
+                m_pArray[i+3] -= threshold;
+            else if (m_pArray[i+3] < -threshold)
+                m_pArray[i+3] += threshold;
+            else
+                m_pArray[i+3] = 0;
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (m_pArray[i] > threshold)
+                m_pArray[i] -= threshold;
+            else if (m_pArray[i] < -threshold)
+                m_pArray[i] += threshold;
+            else
+                m_pArray[i] = 0;
+        }
+
         return *this;
     }
 
@@ -2441,6 +2552,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return AreEqual(*this, a, threshold);
     }
 
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c, const bool isColWise)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("VectorSum:  Input matrix a is empty.");
+
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+
+        assert(m>0 && n>0); //converting from size_t to int may cause overflow
+
+        if (isColWise)  //col-wise
+        {
+            c.Resize(1, n);
+
+#pragma omp parallel for
+            foreach_column(j, a)
+            {
+                ElemType v = 0;
+                foreach_row(i, a)
+                {
+#pragma omp atomic
+                    v += a(i, j);
+                }
+                c(0, j) = v;
+            }
+        }
+        else
+        {
+            c.Resize(m, 1);
+
+#pragma omp parallel for
+            foreach_row(i, a)
+            {
+                ElemType v = 0;
+                foreach_column(j, a)
+                {
+#pragma omp atomic
+                    v += a(i, j);
+                }
+                c(i, 0) = v;
+            }
+        }
+    }
 
     template<class ElemType>
     void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWise) const
@@ -4193,6 +4349,293 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         c.SetGaussianRandomValue(mean, sigma, seed);
         return c;
     }
+
+    //		CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);
+    //[this]=a .* b
+    // here, a and b must be two row vectors of the same size, i.e. [1,m]
+    // the inputs are two rwo vectors
+    // the output is a matrix of size(neg+1, col)
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("AssignElementProductOfWithShiftNeg: Matrix is empty.");
+
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
+
+        if (a.GetNumRows() != 1)
+            throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+
+        auto& us = *this;
+        if (this != &a)
+        {
+            Resize(negnumber + 1, a.GetNumCols());
+            //			Resize(a.GetNumRows(), a.GetNumCols());
+        }
+
+        long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
+        //#pragma omp parallel for     
+
+        for (long j = 0; j < n; j++)
+        {
+            us(0, j) = a(0, j) * b(0, j);
+        }
+        for (long j = 0; j<n; j++)
+        {
+            for (long i = 1; i < m; i++)
+            {
+                us(i, j) = a(0, j) * b(0, (j + shift + i - 1) % n);
+            }
+
+        }
+
+
+        return *this;
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("InnerProduct:  one of the input matrices is empty.");
+
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+        const int k = (int)b.GetNumRows();
+        const int l = (int)b.GetNumCols();
+
+        assert(m>0 && n>0 && k>0 && l>0); //converting from size_t to int may cause overflow
+        assert(m == k && n == l); //converting from size_t to int may cause overflow
+        if (m != k || n != l)
+            throw std::invalid_argument("InnerProduct: Matrices a and b should have same dimension.");
+
+        if ((isColWise && m == 1) || !isColWise && n == 1)  //in this case it's equivalent to element-wise product
+        {
+            throw std::invalid_argument("InnerProduct: Both matrices should be normal ones, not vectors");
+            //			c.AssignElementProductOf(a, b);
+        }
+        else if (isColWise)  //col-wise
+        {
+            c.Resize(negnumber + 1, n);  // this line ischanged
+
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                for (long j = 0; j < n; j++)
+                {
+                    c(0, j) = (ElemType)ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn(j)), 1);
+                }
+                for (long j = 0; j < n; j++)
+                {
+                    for (long i = 1; i < negnumber + 1; i++)
+                    {
+                        c(i, j) = (ElemType)ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+                    }
+                }
+
+            }
+            else
+            {
+                /*
+                #pragma omp parallel for
+                foreach_column(j, c)
+                {
+                #pragma warning (suppress: 4244)
+                #ifndef USE_MKL
+                c(0, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
+                #else
+                c(0, j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
+                #endif
+                }*/
+                for (long j = 0; j < n; j++)
+                {
+                    c(0, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
+                }
+                for (long j = 0; j < n; j++)
+                {
+                    for (long i = 1; i < negnumber + 1; i++)
+                    {
+                        c(i, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+
+                    }
+                }
+            }
+        }
+        else
+        {
+            throw std::invalid_argument("InnerProduct: Rowwise is not supported yet");
+
+            c.Resize(m, 1);
+
+            if (sizeof(ElemType) == sizeof(double))
+            {
+#pragma omp parallel for
+                foreach_row(i, c)
+                {
+#ifndef USE_MKL
+                    c(i, 0) = (ElemType)ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
+#else
+                    c(i, 0) = cblas_ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
+#endif
+                }
+            }
+            else
+            {
+#pragma omp parallel for
+                foreach_row(i, c)
+                {
+#pragma warning (suppress: 4244)
+#ifndef USE_MKL
+                    c(i, 0) = sdot(n, reinterpret_cast <float*>(a.m_pArray + i), m, reinterpret_cast <float*>(b.m_pArray + i), m);
+#else
+                    c(i, 0) = cblas_sdot(n, reinterpret_cast <float*>(a.m_pArray + i), m, reinterpret_cast <float*>(b.m_pArray + i), m);
+#endif                
+                }
+            }
+        }
+    }
+
+
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::GetARowByIndex(const CPUMatrix<ElemType>& a, size_t index)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("GetARowByIndex:  the input matrices is empty.");
+
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+
+        if (index <0 || index >= m)
+            throw std::logic_error("GetARowByIndex:  the row index is out of range.");
+
+        assert(m>0 && n>0); //converting from size_t to int may cause overflow
+
+        auto& us = *this;
+        this->Resize(1, n);
+        for (long j = 0; j < n; j++)
+        {
+            us(0, j) = a(index, j);
+        }
+
+        return *this;
+
+    }
+
+
+    // input: a, a row vector
+    // input: b, a matrix. b.col == a.col
+    // input firstmatrixfixed: If true, keep a's order. Otherwise, keep b's order
+    // output: c, a matrix. c.size == b.size
+    /*
+    Example, a = [a1 a2 a3]
+    b = [b11 b12 b13;
+    b21 b22 b23 ]
+
+    if true:
+    shift = 1
+
+    then c = [a1*b12 a2*b13 a3*b11
+    a1*b22 a2*b23 a3*b21]
+
+    if shift = 2
+    then c = [  a1*b13 a2*b11 a3*b12
+    a1*b23 a2*b21 a3*b22]
+    i.e. we do column-wise shift
+
+    if false:
+    shift = 1
+
+    then c = [a2*b11 a3*b12 a1*b13
+    a2*b21 a3*b22 a1*b23]
+
+    shift = 2
+
+    then c = [  a3*b11 a1*b12 a2*b13
+    a3*b21 a1*b22 a2*b23]
+
+
+    */
+    template<class ElemType>
+    void CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("InnerProduct:  one of the input matrices is empty.");
+
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+        const int k = (int)b.GetNumRows();
+        const int l = (int)b.GetNumCols();
+
+        assert(m>0 && n>0 && k>0 && l>0); //converting from size_t to int may cause overflow
+        assert(m == 1 && n == l); //converting from size_t to int may cause overflow
+        if (m != 1 || n != l)
+            throw std::invalid_argument("InnerProduct: Matrices a and b should have same dimension.");
+
+        c.Resize(k, l); // c must the the same size of b
+
+        if (bFirstmatrixfixed)
+        {
+            for (long j = 0; j < l; j++)
+            {
+                for (long i = 0; i < k; i++)
+                {
+                    c(i, j) = a(0, j) * b(i, (j + shift) % l);
+                }
+            }
+        }
+        else
+        {
+            for (long j = 0; j < l; j++)
+            {
+                for (long i = 0; i < k; i++)
+                {
+                    c(i, j) = a(0, (j + shift) % l) * b(i, j);
+                }
+            }
+        }
+
+
+
+    }
+
+
+    //		CPUMatrix<ElemType>& AssignElementProductOfWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift);
+    //[this]=a .* b
+    // here, a and b must be two row vectors of the same size, i.e. [1,m]. We will do element product with shift.
+    // inputs are 2 row vectors
+    // output is a row vector
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("AssignElementProductOfWithShiftNeg: Matrix is empty.");
+
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
+
+        if (a.GetNumRows() != 1)
+            throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+
+        auto& us = *this;
+        if (this != &a)
+        {
+            Resize(1, a.GetNumCols());
+            //			Resize(a.GetNumRows(), a.GetNumCols());
+        }
+
+        //long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
+        long n = (long)GetNumCols();  // a and b are of size (1,n)
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            us(0, j) = a(0, j) * b(0, (j + shift) % n);
+
+        }
+        return *this;
+    }
+
 
 #pragma endregion Static BLAS Functions
 

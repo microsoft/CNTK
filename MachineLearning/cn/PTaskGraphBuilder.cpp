@@ -16,6 +16,7 @@
 #include "ComputationNode.h"
 #include "PTaskGraphBuilder.h"
 
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>

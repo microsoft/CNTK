@@ -245,7 +245,7 @@ Plus2=Plus(Times2, B1)
 
 \begin_layout Plain Layout
 
-CrossEntropy=CrossEntropyWithSoftmax(labels, Plus2)
+CE=CrossEntropyWithSoftmax(labels, Plus2)
 \end_layout
 
 \begin_layout Plain Layout
@@ -283,7 +283,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CrossEntropy)
+CriteriaNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
@@ -602,7 +602,7 @@ status open
 
 \begin_layout Plain Layout
 
-CrossEntropy=CrossEntropyWithSoftmax(labels, Plus2)
+CE=CrossEntropyWithSoftmax(labels, Plus2)
 \end_layout
 
 \begin_layout Plain Layout
@@ -645,8 +645,7 @@ ErrorPrediction
 
 () to compute the testing criterion.
  These operators are internally represented as computation nodes CrossEntropyWit
-hSoftmaxNode and ErrorPredictionNode with names CrossEntropy and ErrPredict,
- respectively.
+hSoftmaxNode and ErrorPredictionNode with names CE and ErrPredict, respectively.
 \end_layout
 
 \begin_layout Subsubsection
@@ -680,7 +679,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CrossEntropy)
+CriteriaNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1247,7 +1246,7 @@ LabelNodes=(labels)
 
 \begin_layout Plain Layout
 
-CriteriaNodes=(CrossEntropy)
+CriteriaNodes=(CE)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1980,6 +1979,46 @@ m - input matrix.
 \end_layout
 
 \begin_layout Subsubsection
+LogSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LogSoftmax
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the log of softmax of the input matrix for each column.
+ The resulting matrix has the same dimensions as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+LogSoftmax(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+ 
+\end_layout
+
+\begin_layout Subsubsection
 SumElements
 \begin_inset Index idx
 status open
@@ -2681,6 +2720,85 @@ CosDist(m1, m2)
 \begin_layout Itemize
 m1, m2 - input matrices.
  The matrices should have same dimensions.
+\end_layout
+
+\begin_layout Subsubsection
+CosDistanceWithNegativeSamples
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosDistanceWithNegativeSamples
+\end_layout
+
+\end_inset
+
+, CosWithNegSamples
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosWithNegSamples
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Evaluate the cosine distance between each column of two input matrices as
+ the distance of positive samples, and the cosine distance between each
+ column of the left matrix (m1) and 
+\emph on
+numNegSamples
+\emph default
+ of samples in the right matrix (m2) selected by shifting the column 
+\emph on
+numShifts
+\emph default
+ times as the negative samples.
+ The resulting matrix is 
+\emph on
+numNegSamples+1
+\emph default
+ by m1.cols matrix.
+ Often used in the deep structured semantic model (DSSM).
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+CosDistanceWithNegativeSamples(m1, m2, numShifts, numNegSamples)
+\end_layout
+
+\begin_layout Plain Layout
+
+CosWithNegSamples(m1, m2, numShifts, numNegSamples)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ The matrices should have same dimensions.
+\end_layout
+
+\begin_layout Itemize
+numShifts - number of shifts in m2 for choosing negative samples, a 1 by
+ 1 matrix
+\end_layout
+
+\begin_layout Itemize
+numNegSamples- number of negative samples to use in m2, a 1 by 1 matrix
 \end_layout
 
 \begin_layout Subsubsection

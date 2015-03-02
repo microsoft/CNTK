@@ -92,10 +92,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Static BLAS Functions
     
     // copy features to GPU matrix 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const GPUSPARSE_INDEX_TYPE *h_CSCCol, const GPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
-       
-    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromLabelAndClass(CPUSPARSE_INDEX_TYPE *h_row, size_t *h_block2Id, size_t *h_block2UniqId, size_t labelSize, size_t expandedSize, size_t blockSize) { }
 
     // forward pass from feature to hidden layer
     template<class ElemType> void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, 
@@ -107,23 +105,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // used for gradients udpate
     template<class ElemType> void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& rhs) { }
-
-    // a: H x No: H is hidden layer size and No is mini-batch size
-    // weight: V x H, V is vocab size
-    // label: V x No
-    // cls: 2 x Nc, Nc is number of classes, each col is start and end word ids of a class
-    // idx2cls: V x 1, mapping from word to class id
-    // etp: V x No, stores predicted values
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ClassEntropy(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& weight,
-        const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-        const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& etp, GPUMatrix<ElemType>& entropyScore) { }
-
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ClassEntropyError(GPUSparseMatrix<ElemType>& a) { }
-
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ClassEntropyGradientOfInput(const GPUSparseMatrix<ElemType>& error, const GPUMatrix<ElemType>& weight,  GPUMatrix<ElemType>& grd) { }
-    
-    template<class ElemType> void GPUSparseMatrix<ElemType>::ClassEntropyGradientOfWeight(const GPUSparseMatrix<ElemType>& error,  const GPUMatrix<ElemType>& input, const GPUSparseMatrix<ElemType> & label, const GPUMatrix<ElemType>& cls, 
-        const GPUMatrix<ElemType>& idx2cls, GPUSparseMatrix<ElemType>& grd) { }
 
     template<class ElemType> GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold) { return *this; } 
 
@@ -340,12 +321,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::performInplaceFunction(int kind) { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE *h_CSRRow, const GPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
+    template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE *h_CSRRow, const CPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(GPUSPARSE_INDEX_TYPE*& h_CSRRow, GPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
 
-    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_CSCCol, GPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
+    template<class ElemType> void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(CPUSPARSE_INDEX_TYPE*& h_CSCCol, CPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const {}
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat) {}
     template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const {}
@@ -486,6 +467,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemType>& /*a*/, const size_t numRowRepeats, const size_t numColRepeats) { return *this; }
+    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber) { return *this; }
+    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AddFoldedPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::Transpose() const { return *this; }
 
@@ -526,9 +509,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //scaleValue: which scale value to set to the left ones (unmasked items).
     template<class ElemType> void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed) { }
 
-    template<class ElemType> void GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients) { }
+    template<class ElemType> ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier) { }
 
-    template<class ElemType> void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN) { }
+    template<class ElemType> ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier) { }
 
     template<class ElemType> void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols) { }
 

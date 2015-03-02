@@ -120,8 +120,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
         ElemType* BufferPointer() const {return m_pArray;}
 
-        void Adagrad(GPUMatrix<ElemType>& gradients);
-        void RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN);
+        ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
+        ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
+
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
@@ -228,6 +229,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignTruncateBottomOf (const GPUMatrix<ElemType>& a, const ElemType threshold);
         GPUMatrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         GPUMatrix<ElemType>& AssignTruncateTopOf (const GPUMatrix<ElemType>& a, const ElemType threshold);
+        GPUMatrix<ElemType>& InplaceTruncate(const ElemType threshold);
+        GPUMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         GPUMatrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
@@ -238,6 +241,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType Max () const;
         bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
+
+        static void VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c, const bool isColWise);
 
         void VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWise) const;
         GPUMatrix<ElemType>& AssignVectorNorm1Of(GPUMatrix<ElemType>& a, const bool isColWise);
@@ -268,6 +273,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
         GPUMatrix<ElemType>&  AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+        GPUMatrix<ElemType>&  AssignPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
+        GPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
 
         void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const;
         void VectorMin(GPUMatrix<ElemType>& mainndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;
@@ -327,6 +334,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void AddElementToElement(const GPUMatrix<ElemType>& a, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj); 
 
+        /// minus one at a specific position
+        static void MinusOneAt(GPUMatrix<ElemType>& c, const size_t position);
+
         static void Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
         static void Scale(GPUMatrix<ElemType> &alpha, GPUMatrix<ElemType>& a); //In this case matrix alpha must be 1x1
         static void Scale(ElemType alpha, GPUMatrix<ElemType>& a);       
@@ -343,6 +353,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static GPUMatrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
 
         static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType> &Gradients, const GPUMatrix<ElemType> &SmoothedGradients);
+
+    public:
+        GPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt);
+        static void InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt);
+        GPUMatrix<ElemType>& GetARowByIndex(const GPUMatrix<ElemType>& a, const size_t m);
+        static void ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed);
+
+        GPUMatrix<ElemType>& AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift);
+
     public:
         friend File& operator>>(File& stream, GPUMatrix<ElemType>& us)
         {
@@ -383,6 +402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
             return stream;
         }
+
     };
 
     typedef GPUMatrix<float> GPUSingleMatrix;
