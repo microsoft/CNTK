@@ -50,26 +50,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/) { NOT_IMPLEMENTED; }
         
-        static void ClassEntropy(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& weight,
-            const CPUSparseMatrix<ElemType> & label, const CPUMatrix<ElemType>& cls, 
-            const CPUMatrix<ElemType>& idx2cls, CPUSparseMatrix<ElemType>& etp, CPUMatrix<ElemType>& entropyScore);
+        void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
+            const size_t nz, const size_t numRows, const size_t numCols);
 
-        static void ClassEntropyError(CPUSparseMatrix<ElemType>& a);
-
-        static void ClassEntropyGradientOfInput(
-            const CPUSparseMatrix<ElemType>& error, 
-            const CPUMatrix<ElemType>& weight,
-            CPUMatrix<ElemType>& grd);
-
-        static void ClassEntropyGradientOfWeight(
-            const CPUSparseMatrix<ElemType>& error,             
-            const CPUMatrix<ElemType>& input,
-            const CPUSparseMatrix<ElemType> & label, 
-            const CPUMatrix<ElemType>& cls, 
-            const CPUMatrix<ElemType>& idx2cls, 
-            CPUSparseMatrix<ElemType>& grd);
-
-        static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
+        static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
             const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
        
         static void MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA, 
@@ -89,17 +73,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 0, const bool growOnly = true, const bool keepExistingValues = true);
+        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
         void Reset();
 
-        inline ElemType defaultElem()
-        {
-            ElemType defaultValue;
-            memset(&defaultValue, 0, sizeof(ElemType));
-            return defaultValue;
-        }
-
-        const ElemType& operator() (const size_t row, const size_t col) const
+        const ElemType operator() (const size_t row, const size_t col) const
         {
             if (col >= m_numCols || row >= m_numRows)
             {
@@ -119,7 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                return m_default;
+                return 0;
             }
             else
             {
@@ -129,15 +106,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
-        void Adagrad(CPUMatrix<ElemType>& c);
-
-        public:
-        CPUSparseMatrix<ElemType>& InplaceTruncateTop (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType /*threshold*/) { NOT_IMPLEMENTED; }
-        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType /*threshold*/);
+        ElemType Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier);
 
     public:
-        void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
+        CPUSparseMatrix<ElemType>& InplaceTruncateTop(const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceTruncateBottom(const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        CPUSparseMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
+
+        ElemType FrobeniusNorm() const; //useful for comparing CPU and GPU results
+
+        ElemType SumOfAbsElements() const; //sum of all abs(elements)
+        ElemType SumOfElements() const; //sum of all elements
+
+    public:
+        //void Print(const char* /*matrixName*/) const { NOT_IMPLEMENTED; }
+		void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
+		void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
+
 
     public:
         const ElemType* NzValues() const { return m_pArray; }
@@ -179,8 +165,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t m_blockSize; //block size
         size_t *m_blockIds; //block ids
-
-        ElemType m_default;
     };
 
     typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

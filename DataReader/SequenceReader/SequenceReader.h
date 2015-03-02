@@ -158,7 +158,7 @@ public:
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                        size_t m_mbStartSample, size_t actualmbsize);
     void GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices);
-    void GetClassInfo(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    void GetClassInfo();
 
     virtual void Destroy();
     SequenceReader() {

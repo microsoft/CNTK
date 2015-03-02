@@ -98,7 +98,8 @@ public:
     int GetDevice(BestGpuFlags flags = bestGpuNormal); // get a single device
     static const int AllDevices = -1;  // can be used to specify all GPUs in GetDevices() call
     static const int RequeryDevices = -2;  // Requery refreshing statistics and picking the same number as last query
-    std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal); // get multiple devices
+    std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal ); // get multiple devices
+	bool LockDevice(int deviceID, bool trial=true);
 };
     
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
@@ -115,6 +116,9 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     DEVICEID_TYPE deviceId = CPUDEVICE;
 
     ConfigValue val = config("deviceId", "auto");
+	ConfigValue bLockGPUstr = config("LockGPU", "true");
+	bool bLockGPU = bLockGPUstr;
+
     if (!_stricmp(val.c_str(), "CPU"))
     {
         return CPUDEVICE;
@@ -157,20 +161,49 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
             }
         }
 #else
-        std::vector<int> devices = g_bestGpu->GetDevices(1);
+        std::vector<int> devices = g_bestGpu->GetDevices(1,  bestGpuAvoidSharing);
+		// to return a vector of AVAILABLE devices and sorted by score 
         deviceId = (DEVICEID_TYPE)devices[0];
+		if (bLockGPU)
+		{
+			if (!g_bestGpu->LockDevice(deviceId, false)) // formally lock it 
+			{
+				string message = msra::strfun::strprintf("DeviceFromConfig: Cannot capture and lock Device %d\n", deviceId);
+				throw std::runtime_error(message.c_str());
+			}
+		}
 #endif
     }
     else if (!_stricmp(val.c_str(), "All"))
     {
-        std::vector<int> devices = g_bestGpu->GetDevices(BestGpu::AllDevices);
+        std::vector<int> devices = g_bestGpu->GetDevices(BestGpu::AllDevices, bestGpuNormal);
         deviceId = (DEVICEID_TYPE)devices[0];
+		if (bLockGPU) {
+			for (auto i : devices)
+			{
+				if (!g_bestGpu->LockDevice(i, false))
+				{
+					string message = msra::strfun::strprintf("DeviceFromConfig: Cannot capture and lock Device %d\n", i);
+					throw std::runtime_error(message.c_str());
+				}				
+			}
+		}
     }
     else if (val.size() == 2 && val[0] == '*' && isdigit(val[1]))
     {
         int number = (int)(val[1] - '0');
-        std::vector<int> devices = g_bestGpu->GetDevices(number);
+        std::vector<int> devices = g_bestGpu->GetDevices(number, bestGpuNormal);
         deviceId = (DEVICEID_TYPE)devices[0];
+		if (bLockGPU){
+			for (size_t i = 0; i < number; i++)
+			{
+				if (!g_bestGpu->LockDevice((int)i, false))
+				{
+					string message = msra::strfun::strprintf("DeviceFromConfig: Cannot capture and lock Device %d\n", i);
+					throw std::runtime_error(message.c_str());
+				}
+			}
+		}
     }
     else
     {
@@ -183,8 +216,19 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
         {
             argvector<int> allowed = arr;
             g_bestGpu->SetAllowedDevices(allowed);
-            std::vector<int> devices = g_bestGpu->GetDevices();
+            std::vector<int> devices = g_bestGpu->GetDevices(BestGpu::AllDevices, bestGpuNormal);
             deviceId = (DEVICEID_TYPE)devices[0];
+			if (bLockGPU)
+			{
+				for (auto i : devices)
+				{
+					if (!g_bestGpu->LockDevice(i, false))
+					{
+						string message = msra::strfun::strprintf("DeviceFromConfig: Cannot capture and lock Device %d\n", i);
+						throw std::runtime_error(message.c_str());
+					}
+				}
+			}
         }
     }
     return deviceId;
@@ -366,8 +410,8 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     }
 
     // create the initial array, initialized to all CPU
-    std::vector<int> best(number, -1);
-    std::vector<double> scores(number, -1.0);
+    std::vector<int> best(m_deviceCount, -1);
+    std::vector<double> scores(m_deviceCount, -1.0);
 
     // if no GPUs were found, we should use the CPU
     if (m_procData.size() == 0)
@@ -452,6 +496,26 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
         else
             break;
     }
+
+	{ 
+	// even if user do not want to lock the GPU, we still need to check whether a particular GPU is locked or not, 
+	// to respect other users' exclusive lock.
+
+		vector<int> bestAndAvaialbe; 
+		for (auto i : best)
+		{
+			if (LockDevice(i, true))
+			{
+				// available
+				bestAndAvaialbe.push_back(i);
+			}
+		}
+		best = bestAndAvaialbe;
+		if (best.size() > number)
+		{
+			best.resize(number);
+		}
+	}
 
     // save off the last values for future requeries
     m_lastFlags = bestFlags;
@@ -570,6 +634,62 @@ void BestGpu::QueryNvmlData()
     }
     m_nvmlData = true;
     return;
+}
+
+bool BestGpu::LockDevice(int deviceID, bool trial)
+{
+#ifdef WIN32 
+	// copied from dbn.exe, not perfect but it works in practice 
+	wchar_t buffer[80];
+	wsprintf (buffer, L"Global\\DBN.exe GPGPU exclusive lock for device %d", deviceID);
+	// we actually use a Windows-wide named mutex
+	HANDLE h = ::CreateMutex(NULL/*security attr*/, TRUE/*bInitialOwner*/, buffer);
+	DWORD res = ::GetLastError();
+	if (h == NULL)  // failure  --this should not really happen
+	{
+		if (res == ERROR_ACCESS_DENIED)    // no access: already locked by another process
+		{
+			fprintf(stderr, "LockDevice: mutex access denied, assuming already locked '%S'\n", buffer);
+			return false;
+		}
+		// fprintf(stderr, "LockDevice: failed to create '%S': %d\n", buffer, res);
+		// throw std::runtime_error("LockDevice: unexpected failure");
+		// don't need throw here, assuming lock fails (i.e., not available ) 
+		return false;
+	}
+	// got a handle
+	if (res == 0)   // no error
+	{
+		//fprintf(stderr, "lockdevicebymutex: created and acquired mutex '%S'\n", buffer);
+		fprintf(stderr, "LockDevice: device %d is available\n", deviceID);
+		if (trial) {
+			::CloseHandle(h);
+		}
+		else
+		{
+			fprintf(stderr, "LockDevice: Capture device %d and lock it for exclusive use\n", deviceID);
+		}
+		return true;
+	}
+	::CloseHandle(h);
+	if (res == ERROR_ALREADY_EXISTS)    // already locked by another process
+	{
+		fprintf(stderr, "LockDevice: device %d is not available \n", deviceID);
+		return false;
+	}
+	else if (res != 0)
+	{
+		fprintf(stderr, "LockDevice: unexpected error from CreateMutex() when attempting to create and acquire mutex '%S': %d\n", buffer, res);
+		// throw std::logic_error("lockdevicebymutex: unexpected failure");
+		return false;
+	}
+	return false;
+
+#else
+	// TODO: to implement a linux lock for GPU 
+	// a possible solution is to use nvmlDeviceSetComputeMode to set the compute mode to exclusive (but it requires admin permission)
+	return true;
+#endif 
 }
 
 }}}

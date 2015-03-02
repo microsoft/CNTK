@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\BestGpu.cpp" />
     <ClCompile Include="..\cn\ComputationNode.cpp" />
-    <ClCompile Include="..\cn\PTaskGraphBuilder.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="CNTKEval.cpp" />

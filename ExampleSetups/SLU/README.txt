@@ -16,7 +16,7 @@ Run the command line with both globals.config and the desired config, separated 
 
 * note that full paths to config files need to be provided if you are not inside the config directory
 * for example 
-* cn.exe configFile=C:\dev\cntk3\ExampleSetups\SLU\globals.config+C:\dev\cntk3\ExampleSetups\SLU\rnnlu.config
+* C:\dev\cntk5\CNTKSolution\x64\Release\cn.exe configFile=C:\dev\cntk5\ExampleSetups\SLU\globals.config+C:\dev\cntk5\ExampleSetups\SLU\rnnlu.config
 
 Scoring
 * ./score.sh 

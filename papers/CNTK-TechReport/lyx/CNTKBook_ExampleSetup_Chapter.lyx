@@ -2591,11 +2591,10 @@ layerSizes
 
 \end_inset
 
-=10000:200:10050.
+=10000:200:10000.
  Sizes of input, hidden and ouput layers.
  Input layer size is equal to vocabulary size, hidden layer is normally
- in the range of 50 to 500, output layer size is the sum of vocabulary size
- and class size.
+ in the range of 50 to 500, output layer size is the vocabulary size.
 \end_layout
 
 \begin_layout Itemize
@@ -2611,6 +2610,16 @@ uniformInit
 
 =true.
  Whether to use uniformly randomizied values for initial paramter weights.
+\end_layout
+
+\begin_layout Itemize
+vocabSize=10000.
+ The vocabulary size
+\end_layout
+
+\begin_layout Itemize
+nbrClass=50 .
+ number of word classes.
 \end_layout
 
 \end_deeper
@@ -3335,7 +3344,17 @@ layerSizes
 
 \end_inset
 
-=10000:200:10050 : this specifies input, hidden and output layer sizes.
+=10000:200:10000 : this specifies input, hidden and output layer sizes.
+\end_layout
+
+\begin_layout Itemize
+vocabSize=10000.
+ The vocabulary size
+\end_layout
+
+\begin_layout Itemize
+nbrClass=50 .
+ number of word classes.
 \end_layout
 
 \end_deeper
@@ -4171,50 +4190,6 @@ labels
 \end_layout
 
 \begin_deeper
-\begin_layout Itemize
-beginingSequence
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-beginingSequence
-\end_layout
-
-\end_inset
-
-=
-\begin_inset Quotes erd
-\end_inset
-
-O
-\begin_inset Quotes erd
-\end_inset
-
- : this specifies the symbol of output sequence begining.
-\end_layout
-
-\begin_layout Itemize
-endSequence
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-endSequence
-\end_layout
-
-\end_inset
-
-=
-\begin_inset Quotes erd
-\end_inset
-
-O
-\begin_inset Quotes erd
-\end_inset
-
- : this specifies the symbol of output sequence end.
-\end_layout
-
 \begin_layout Itemize
 token
 \begin_inset Index idx
