@@ -99,7 +99,7 @@ private:
 public:
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy();
-    UCIFastReader() { m_featuresBuffer=NULL; m_labelsBuffer=NULL; }
+    UCIFastReader() { m_featuresBuffer=NULL; m_labelsBuffer=NULL; m_labelsIdBuffer=NULL; }
     virtual ~UCIFastReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
