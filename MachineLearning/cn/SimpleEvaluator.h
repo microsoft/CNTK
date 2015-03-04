@@ -164,17 +164,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 evalResults[i] /= totalEpochSamples;
             }
 
-            if (inputMatrices[L"classinfo"])
-            {
-                delete inputMatrices[L"classinfo"];
-                inputMatrices.erase(L"classinfo");
-            }
-            if (inputMatrices[L"idx2cls"])
-            {
-                delete inputMatrices[L"idx2cls"];
-                inputMatrices.erase(L"idx2cls");
-            }
-
             return evalResults;
         }        
 
