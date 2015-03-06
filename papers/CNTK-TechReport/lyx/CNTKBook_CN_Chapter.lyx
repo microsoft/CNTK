@@ -1626,6 +1626,22 @@ DecideForwardComputationOrder
 
 \begin_layout Plain Layout
 \begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+EndFor
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset ERT
 status collapsed
 
 \begin_layout Plain Layout
@@ -1709,22 +1725,6 @@ status collapsed
 \end_inset
 
  
-\end_layout
-
-\begin_layout Plain Layout
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-EndFor
-\end_layout
-
-\end_inset
-
-
 \end_layout
 
 \begin_layout Plain Layout
