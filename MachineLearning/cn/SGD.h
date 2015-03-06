@@ -587,7 +587,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef MPI_SUPPORT
 				INT32 mySamples = (INT32)
 #endif
-					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", (int)startEpoch,  learnRatePerSample, m_momentumPerMB);
+					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", i,  learnRatePerSample, m_momentumPerMB);
                 TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample, FeatureNodes, labelNodes,
                     criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
                     epochCriterion, epochEvalErrors, totalSamplesSeen);
