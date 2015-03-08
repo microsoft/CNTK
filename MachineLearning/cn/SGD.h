@@ -531,7 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (learnRateInitialized)
                     prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample; 
 
-                setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size()-1]);
+                setMomentum(m_momentumInputPerMB[startEpoch]);
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
@@ -553,11 +553,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
+				setMomentum(m_momentumInputPerMB[i]);
                 //learning rate adjustment
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
                 {
                     learnRatePerSample = m_learningRatesPerSample[i];
-                    setMomentum(m_momentumInputPerMB[i]);
+                    
                 }
                 else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
                 {
