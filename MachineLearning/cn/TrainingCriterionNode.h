@@ -1097,7 +1097,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         the last row is the first word index of the next class
         [1] hidden layer activity to the node in [hdsize x T]. for a simple rnn, this is the hidden layer activty
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
-        [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
+        [3] clsprob in dense matrix in [nbr_cls x T]. this input, if applied softmax on, is the posterior probabilty of class given observations
         */
         virtual void Validate()
         {
@@ -1142,13 +1142,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
-            const ComputationNodePtr inputweight, const ComputationNodePtr clsLogPostProbability)
+            const ComputationNodePtr inputweight, const ComputationNodePtr clsProbBeforeSoftmax)
         {
             m_children.resize(4);
             m_children[0] = label;
             m_children[1] = input;
             m_children[2] = inputweight;
-            m_children[3] = clsLogPostProbability;
+            m_children[3] = clsProbBeforeSoftmax;
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)

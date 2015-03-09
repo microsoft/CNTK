@@ -536,7 +536,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delayXI->AttachInputs(input);
                     ((DelayNode<ElemType>*) delayXI)->SetDelay(ik);
                     //TODO: to figure out sparse matrix size
-                    Wxi = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"DD%d", ik), m_layerSizes[0], m_layerSizes[0], 0);
+                    Wxi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
                     m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
                     it = m_net->Plus(output, m_net->Times(Wxi, delayXI));
@@ -645,19 +645,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
                     {
                         //TODO: to figure out sparse matrix size
-                        Wxi2 = m_net->CreateSparseLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi2 = m_net->CreateLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi3 = m_net->CreateSparseLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi3 = m_net->CreateLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi4 = m_net->CreateSparseLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi4 = m_net->CreateLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi1 = m_net->CreateSparseLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi1 = m_net->CreateLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi = m_net->CreateSparseLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi = m_net->CreateLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
                         /// unless there is a good algorithm to detect loops, use this explicit setup
@@ -723,7 +723,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 //TODO: to figure out sparse matrix size
-                w = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers], 0);
+                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 //                b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
                 label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
