@@ -1059,7 +1059,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t row = h_Row[i];
             if (indexer.find(row) == indexer.end())
             {
-                indexer[row] = indexer.size();
+                size_t id = indexer.size();  //We need to assign size to a temp variable due to difference in Linux and Windows
+                indexer[row] = id;
             }
             rowToId[i] = indexer[row];
         }
