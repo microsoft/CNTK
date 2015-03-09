@@ -879,18 +879,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ClassBasedCrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                m_deviceId = deviceId;
-                MoveMatricesToDevice(deviceId);
-                InitRecurrentNode();
-            }
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
 
         ClassBasedCrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                LoadFromFile(fstream, modelVersion, deviceId);
-            }
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
