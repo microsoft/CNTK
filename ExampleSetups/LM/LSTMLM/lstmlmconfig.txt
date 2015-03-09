@@ -26,12 +26,11 @@ command=penntreebanklstmrndmb10lr01:penntreebanktestlstmrndmb10lr01
 # notice that Alex's paper doesn't use class for speed-up.
 # 
 
-type=double
 
 penntreebanklstmrndmb10lr01=[
     # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
 	# can be considered as the maximum length of a sentence
-	action=trainRNN
+	action=train
 
 # correspond to the number of words/characteres to train in a minibatch
     minibatchSize=6

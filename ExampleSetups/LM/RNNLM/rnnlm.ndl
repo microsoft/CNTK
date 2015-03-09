@@ -4,22 +4,38 @@ ndlCreateNetwork=[
     # vocabulary size
 	featDim=10000
 	# vocabulary size plus class size
-	labelDim=10050
+	labelDim=10000
 	# hidden layer size
 	hiddenDim=200
+	# number of classes
+	nbrClass=50
+	
+	initScale=6
+	
 	features=SparseInput(featDim, tag=feature)
-	labels=SparseInput(labelDim, tag=label)
+	
+	# labels in classbasedCrossEntropy is dense and contain 4 values for each sample
+	labels=Input(4, tag=label)
 
 	# define network
-    U0=SparseParameter(hiddenDim, featDim, init=uniform, initValueScale=6)
-	W0=Parameter(hiddenDim, hiddenDim, init=uniform, initValueScale=6)
-    W1=SparseParameter(labelDim, hiddenDim, init=uniform, initValueScale=6)	
-	DelayNode = Delay(hiddenDim, Sig, delayTime=1, needGradient=true)	
-	Times1 = Times(U0, features)
-	Times2 = Times(W0, DelayNode)
-	Plus1 = Plus(Times1, Times2)
-	Sig = Sigmoid(Plus1)
-	Out = Times(W1, Sig,tag=Output)
-	cr = ClassBasedCrossEntropyWithSoftmax(labels, Sig, W1, tag=Criteria)
-	Err = ClassBasedCrossEntropyWithSoftmax(labels, Sig, W1, tag=Eval)
+    WFeat2Hid=Parameter(hiddenDim, featDim, init=uniform, initValueScale=initScale)
+	WHid2Hid=Parameter(hiddenDim, hiddenDim, init=uniform, initValueScale=initScale)
+	
+	# WHid2Word is special that it is hiddenSize X labelSize
+    WHid2Word=Parameter(hiddenDim, labelDim, init=uniform, initValueScale=initScale)	
+ 	WHid2Class=Parameter(nbrClass, hiddenDim, init=uniform, initValueScale=initScale)
+   
+	PastHid = Delay(hiddenDim, HidAfterSig, delayTime=1, needGradient=true)	
+	HidFromHeat = Times(WFeat2Hid, features)
+	HidFromRecur = Times(WHid2Hid, PastHid)
+	HidBeforeSig = Plus(HidFromHeat, HidFromRecur)
+	HidAfterSig = Sigmoid(HidBeforeSig)
+	
+	Out = Times(WHid2Word, HidAfterSig)  #word part
+	
+	ClassProbBeforeSoftmax=Times(WHid2Class, HidAfterSig)
+	
+	cr = ClassBasedCrossEntropyWithSoftmax(labels, HidAfterSig, WHid2Word, ClassProbBeforeSoftmax, tag=Criteria)
+	EvalNodes=(Cr)
+	OutputNodes=(Cr)
 ]
