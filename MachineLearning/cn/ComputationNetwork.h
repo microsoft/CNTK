@@ -149,7 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         unsigned long GetRandomSeedOffset() {return m_randomSeedOffset;}
         void SetRandomSeedOffset(unsigned long value) {m_randomSeedOffset = value;}
 
-        void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary)
+        void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
         {
             File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
