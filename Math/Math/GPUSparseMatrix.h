@@ -258,7 +258,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& c);
 
         void NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum);
-        
+        ElemType Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier);
+
         static void Multiply(const GPUSparseMatrix<ElemType>& S, const GPUMatrix<ElemType>& D, GPUMatrix<ElemType>& C);
         static void Multiply(const GPUMatrix<ElemType>& D, const GPUSparseMatrix<ElemType>& S, GPUMatrix<ElemType>& C);
         static void Multiply(const GPUSparseMatrix<ElemType>& S1, bool transposeS1, const GPUSparseMatrix<ElemType>& S2, bool transposeS2, GPUSparseMatrix<ElemType> &C);
@@ -298,6 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void Clear();
         void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);
+
         size_t ElemCountFromBufferSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const size_t totalBufferSize) const;
         size_t ElemCountFromBufferSize() const;
         DEVICEID_TYPE PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;

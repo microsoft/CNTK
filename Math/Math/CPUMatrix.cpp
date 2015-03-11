@@ -918,7 +918,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ElemType aveMultiplier = 0;
 
-        if (IsEmpty())
+        if (IsEmpty() || gradients.GetNumCols() != GetNumCols() || gradients.GetNumRows() != GetNumRows())
         {
             Resize(gradients.GetNumRows(), gradients.GetNumCols());
             SetValue(0.0);
@@ -928,24 +928,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType *a=m_pArray, *d_v=gradients.m_pArray;
         size_t n = GetNumElements();
-        long nLoop = (long)n - n%4;
 
         const ElemType floor = 1e-16f;
         ElemType a0, a1, a2, a3;
 
-#pragma omp parallel for
-        // unwrap this loop for efficiency
-        for (long i=0; i<nLoop; i+=4)
+#pragma omp parallel for     
+        for (long i = 0; i<(n & ~3); i += 4)  //four-way unrolling
         {
             a[i] += d_v[i] * d_v[i];
             a[i+1] += d_v[i+1] * d_v[i+1];
             a[i+2] += d_v[i+2] * d_v[i+2];
             a[i+3] += d_v[i+3] * d_v[i+3];
 
-            a0 = (sqrt(a[i]) + floor);
-            a1 = (sqrt(a[i + 1]) + floor);
-            a2 = (sqrt(a[i + 2]) + floor);
-            a3 = (sqrt(a[i + 3]) + floor);
+            a0 = sqrt(a[i] + floor);
+            a1 = sqrt(a[i + 1] + floor);
+            a2 = sqrt(a[i + 2] + floor);
+            a3 = sqrt(a[i + 3] + floor);
 
             d_v[i] /= a0;
             d_v[i+1] /= a1;
@@ -959,11 +957,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get the last few elements if any
-        for (long i=nLoop; i<n; i++)
+        for (long i = n & ~3; i<n; i++)
         {
             a[i] += d_v[i] * d_v[i];
 
-            a0 = (sqrt(a[i]) + floor);
+            a0 = sqrt(a[i] + floor);
             d_v[i] /= a0;
 
             if (needAveMultiplier)
@@ -972,7 +970,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        if (needAveMultiplier)
+        if (needAveMultiplier && n > 0)
             return aveMultiplier / n;
         else
             return 1;

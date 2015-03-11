@@ -49,6 +49,15 @@ void CUSPARSECALL(cusparseStatus_t x)
     }    
 }
 
+void CUBLASCALL(cublasStatus_t x)
+{
+    if (x != CUBLAS_STATUS_SUCCESS)
+    {
+        std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
+        throw std::runtime_error("CUBLAS fail");
+    }
+}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Constructors and Destructor
@@ -1175,6 +1184,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else 
         {
             NOT_IMPLEMENTED;
+        }
+    }
+
+    template<class ElemType>
+    ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier)
+    {
+        size_t numColsNeeded = GetNumCols();
+        if (needAveMultiplier)
+            numColsNeeded += GetNumCols();
+
+        if (c.IsEmpty() || c.GetNumCols() < numColsNeeded)
+        {
+            c.Resize(GetNumRows(), numColsNeeded);
+            c.SetValue(0.0);
+        }
+
+        assert(c.GetNumRows() == GetNumRows() && c.GetNumCols() == numColsNeeded);
+
+        size_t n = GetNumElements();
+
+        ElemType *multipliers = nullptr;
+        if (needAveMultiplier)
+            multipliers = c.GetArray() + n; // temp memory used to store multipliers,
+
+        if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
+        {
+            NOT_IMPLEMENTED;
+        }
+        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
+        {
+            int blocksPerGrid = (m_nz + threadsPerBlock - 1) / threadsPerBlock;
+            bool colMajor = (m_format == MatrixFormat::matrixFormatSparseBlockCol ? true : false);
+            size_t len = colMajor ? GetNumRows() : GetNumCols();
+            _adagrad4BlockSparse<ElemType> << <blocksPerGrid, threadsPerBlock >> >(c.GetArray(), c.GetNumRows(), NzValues(), BlockId2ColOrRow(), multipliers, colMajor, len, m_nz);
+        }
+        else
+            NOT_IMPLEMENTED;
+
+        if (!needAveMultiplier)
+            return 1;
+
+        cublasHandle_t cuHandle = GPUMatrix<ElemType>::GetCublasHandle(GetComputeDeviceId());
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            float aveMultiplier = 0;
+            CUBLASCALL(cublasSasum(cuHandle, (LONG64)m_nz, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
+            return (ElemType)aveMultiplier / n;
+        }
+        else
+        {
+            double aveMultiplier = 0;
+            CUBLASCALL(cublasDasum(cuHandle, (LONG64)m_nz, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
+            return (ElemType)aveMultiplier / n;
         }
     }
 

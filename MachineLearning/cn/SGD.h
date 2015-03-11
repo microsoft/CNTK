@@ -1143,12 +1143,13 @@ public:
                 }
                 smoothedGradient.NormalGrad(gradientValues, functionValues, learnRatePerSample, momentum);
             }
-            if (adpType == GradientsUpdateType::AdaGrad)
+            else if (adpType == GradientsUpdateType::AdaGrad 
+                || (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType()== MatrixType::SPARSE)) //rmsprop for sparse is not implemented yet, delegate it with adagrad
             {
                 ElemType aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
             }
-            if (adpType == GradientsUpdateType::RmsProp)
+            else if (adpType == GradientsUpdateType::RmsProp)
             {
                 ElemType aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma, (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max, (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
@@ -1309,7 +1310,7 @@ protected:
         GradientsUpdateType ParseGradUpdateType(wstring s)
         {
             msra::strfun::tolower_ascii(s);
-            if (s == L"" || s == L"none")
+            if (s == L"" || s == L"none" || s == L"normal" || s== L"simple")
                 return GradientsUpdateType::None;
             else if (s == L"adagrad")
                 return GradientsUpdateType::AdaGrad;
