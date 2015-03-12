@@ -27,7 +27,11 @@ static inline int64_t InterlockedIncrement64(int64_t * v) { return (*v)++; }    
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
 
 #ifndef NOT_IMPLEMENTED
-#define NOT_IMPLEMENTED LogicError("Not implemented")
+#define NOT_IMPLEMENTED \
+{   \
+    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+    throw std::logic_error("Not Implemented"); \
+}
 #endif
 
 #pragma warning (disable: 4267)
