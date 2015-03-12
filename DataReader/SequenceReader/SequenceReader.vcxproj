@@ -22,7 +22,7 @@
     </SccProvider>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>UCIReader</RootNamespace>
-    <ProjectName>SequenceReader</ProjectName>
+    <ProjectName>LMSequenceReader</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

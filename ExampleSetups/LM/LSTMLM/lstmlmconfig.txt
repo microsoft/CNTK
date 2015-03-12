@@ -92,7 +92,7 @@ penntreebanklstmrndmb10lr01=[
 
     reader=[
       # reader to use
-      readerType=SequenceReader
+      readerType=LMSequenceReader
       randomize=None
 
       # word class info
@@ -195,7 +195,7 @@ penntreebanklstmrndmb10lr01=[
 
     cvReader=[
       # reader to use
-      readerType=SequenceReader
+      readerType=LMSequenceReader
       randomize=None
 
       # word class info
@@ -314,7 +314,7 @@ penntreebanktestlstmrndmb10lr01=[
 
     reader=[
       # reader to use
-      readerType=SequenceReader
+      readerType=LMSequenceReader
       randomize=None
 
       # word class info
