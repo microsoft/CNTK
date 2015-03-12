@@ -1230,13 +1230,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             float aveMultiplier = 0;
             CUBLASCALL(cublasSasum(cuHandle, (LONG64)m_nz, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
-            return (ElemType)aveMultiplier / n;
+            return (ElemType)aveMultiplier / m_nz;
         }
         else
         {
             double aveMultiplier = 0;
             CUBLASCALL(cublasDasum(cuHandle, (LONG64)m_nz, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-            return (ElemType)aveMultiplier / n;
+            return (ElemType)aveMultiplier / m_nz;
         }
     }
 

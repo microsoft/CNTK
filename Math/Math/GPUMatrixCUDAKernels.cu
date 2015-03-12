@@ -1051,7 +1051,7 @@ __global__ void _adagrad4BlockSparse(
     LONG64 col = colMajor ? blockId2ColOrRow[blockid] : id - blockid*len;
 
     size_t indexInA = row + col*numRows;
-    a[row+col*numRows] += d_v[id] * d_v[id];
+    a[indexInA] += d_v[id] * d_v[id];
     ElemType temp = sqrt(a[indexInA] + floor);
     d_v[id] /= temp;
 

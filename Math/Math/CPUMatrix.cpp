@@ -932,7 +932,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const ElemType floor = 1e-16f;
         ElemType a0, a1, a2, a3;
 
-#pragma omp parallel for     
+        //disable omp here because aveMultiper needs to be added atomically. however, it seems the result is incorrect even if rmp atomic and amp critical are used.
+//#pragma omp parallel for     
         for (long i = 0; i<(n & ~3); i += 4)  //four-way unrolling
         {
             a[i] += d_v[i] * d_v[i];
