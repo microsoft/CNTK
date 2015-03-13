@@ -15,13 +15,8 @@
 #include <algorithm>
 #include <assert.h>
 #include "basetypes.h"
-
+#include <atomic>
 #include <Matrix.h>
-
-#ifndef _WIN32
-static inline int64_t InterlockedIncrement64(int64_t * v) { return (*v)++; }          // BUGBUG: find the Linux equivalent
-#define WINAPI      // TODO: what is this needed for? If not needed, let's get rid of it
-#endif
 
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
@@ -297,7 +292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int64_t UpdateEvalTimeStamp()
         {
-            m_evalTimeStamp = InterlockedIncrement64(&s_timeStampCounter);
+            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, 1);
             return m_evalTimeStamp;
         }
 
@@ -700,7 +695,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               RpcStringFreeW((RPC_WSTR*)&szUuid);
             }
 #else
-            int64_t id = InterlockedIncrement64(&s_timeStampCounter);
+            int64_t id = atomic_fetch_add(&s_timeStampCounter, 1);
             msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
 #endif
 
@@ -855,7 +850,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_nodeName;
         Matrix<ElemType> m_functionValues, m_gradientValues;
 
-        static int64_t s_timeStampCounter;
+        static atomic_ullong s_timeStampCounter;
         int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
         static std::map<size_t, std::map<size_t, Matrix<ElemType>*>> s_constOnes;
@@ -4182,7 +4177,7 @@ protected:  \
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
             m_dropoutRate = 0;
-            m_randomSeed = (unsigned long) InterlockedIncrement64(&s_timeStampCounter);;
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, 1);
             InitRecurrentNode();
         }
 
@@ -4191,7 +4186,7 @@ protected:  \
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
-            m_randomSeed = (unsigned long) InterlockedIncrement64(&s_timeStampCounter);
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, 1);
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
