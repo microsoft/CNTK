@@ -530,12 +530,12 @@ BinaryReader
 \end_layout
 
 \begin_layout Itemize
-SequenceReader
+LMSequenceReader
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-SequenceReader
+LMSequenceReader
 \end_layout
 
 \end_inset
@@ -3105,12 +3105,12 @@ Finally, it is important to note that in most speech recognition applications,
 \end_layout
 
 \begin_layout Subsection
-SequenceReader
+LMSequenceReader
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-SequenceReader
+LMSequenceReader
 \end_layout
 
 \end_inset
@@ -3119,7 +3119,7 @@ SequenceReader
 \end_layout
 
 \begin_layout Standard
-SequenceReader is a reader that reads text string.
+LMSequenceReader is a reader that reads text string.
  It is mostly often used for language modeling tasks.
  An example of its setup is as follows
 \end_layout
@@ -3136,7 +3136,7 @@ status open
 
 \begin_layout Plain Layout
 
-    readerType=SequenceReader
+    readerType=LMSequenceReader
 \end_layout
 
 \begin_layout Plain Layout
@@ -3216,7 +3216,7 @@ penntreebank.train.txt
 \end_layout
 
 \begin_layout Standard
-In this example, the SequenceReader has following parameters: 
+In this example, the LMSequenceReader has following parameters: 
 \end_layout
 
 \begin_layout Itemize

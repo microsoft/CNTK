@@ -2461,7 +2461,7 @@ action
 
 \end_inset
 
-=trainRNN.
+=train.
  It indicates the section is for training.
 \end_layout
 
@@ -2477,10 +2477,9 @@ minibatchSize
 \end_inset
 
 =10.
- Mini batch size is 10.
- That is, 10 words are processed at the same time during forward (computing
- evaluation value) and backward (computing gradients) processes.
- 
+ In RNN training, the minibatch size is the truncation size of the truncated
+ BPTT.
+ That is, model parameters are updated after 10 words.
 \end_layout
 
 \begin_layout Itemize
@@ -2495,8 +2494,8 @@ deviceId
 \end_inset
 
 =-1.
- -1 is CPU device.
- One can change to GPU devices in non-negative intergers (0, 1, etc.).
+ -1 means CPU.
+ One can change to GPU by specifying a non-negative GPU id.
 \end_layout
 
 \begin_layout Itemize
@@ -2518,6 +2517,21 @@ epochSize
 \end_layout
 
 \begin_layout Itemize
+SimpleNetworkBuilder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SimpleNetworkBuilder
+\end_layout
+
+\end_inset
+
+ section
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
 rnnType
 \begin_inset Index idx
 status open
@@ -2536,21 +2550,6 @@ rnnType
 \end_layout
 
 \begin_layout Itemize
-SimpleNetworkBuilder
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-SimpleNetworkBuilder
-\end_layout
-
-\end_inset
-
- section
-\end_layout
-
-\begin_deeper
-\begin_layout Itemize
 trainingCriterion
 \begin_inset Index idx
 status open
@@ -2561,7 +2560,7 @@ trainingCriterion
 
 \end_inset
 
-=classcrossentropywithsoftmax.
+=classCrossEntropyWithSoftmax.
  Training criterion used in model training.
 \end_layout
 
@@ -2701,8 +2700,8 @@ gradientClippingWithTruncation
 \end_inset
 
 =true.
- Whether to truncate gradient values if their abosolute values are greater
- than clippingThresholdPerSample.
+ Whether to control the upper bound of the gradient values using simple
+ truncation or norm based approach (higher cost).
 \end_layout
 
 \begin_layout Itemize
@@ -2717,7 +2716,8 @@ clippingThresholdPerSample
 \end_inset
 
 =15.0.
- Used when gradientClippingWithTruncation=true.
+ Indicates that the absolute value of the gradient should never be larger
+ than 15.
 \end_layout
 
 \begin_layout Itemize
@@ -2764,7 +2764,7 @@ gradUpdateType
 
 =None.
  How the gradients are computed.
- None stands for standard gradient update.
+ None stands for standard gradient update (no special treatment).
  One can also choose adagrad or rmsprop.
 \end_layout
 
@@ -2788,7 +2788,7 @@ RNN
 log
 \backslash
 modelRnnCNTK.
- The RNN model file location.
+ The resulting RNN model file location.
 \end_layout
 
 \begin_layout Itemize
@@ -2803,7 +2803,7 @@ loadBestModel
 \end_inset
 
 =true.
- Wether to use the best of previous models to start training in each epoch.
+ Choose to use the best of previous models to start training in each epoch.
 \end_layout
 
 \begin_layout Itemize
@@ -2835,8 +2835,7 @@ continueReduce
 \end_inset
 
 =true.
- If true, the learning rate is always reduced per epoch once it is first
- reduced.
+ If true, the learning rate is always reduced per epoch once it is reduced.
 \end_layout
 
 \begin_layout Itemize
@@ -3075,8 +3074,8 @@ minibatchSize
 
 \end_inset
 
-=1.
- Mini batch size is 1.
+=100.
+ Evaluation truncation size is 100.
 \end_layout
 
 \begin_layout Itemize
@@ -3090,8 +3089,9 @@ deviceId
 
 \end_inset
 
-=-1.-1 is CPU device.
- One can change to GPU devices in non-negative intergers (0, 1, etc.).
+=-1.
+ Use CPU device.
+ 
 \end_layout
 
 \begin_layout Itemize
@@ -3161,35 +3161,6 @@ ptb.test.cntk.txt.
 \end_layout
 
 \end_deeper
-\begin_layout Subsection
-Results
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-Results
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Standard
-With the above configuration, we achieved the training speech of 2600 words/sec
- on CPU (Intel Xeon 2 processors with 2.60GHz).
- This setup resulted in perplexity of 130 on Penn Treebank test data after
- 12 epochs.
- We have GPU version running slightly slower (2400 words/sec) for this release
- with slightly different results (due to different randomization and slightly
- different implementation of prediction normalization).
- Currently the slowness of GPU is due to the data reader part which takes
- around 40% of total training time.
- Future release aims for training acceleration with a more efficient data
- reader.
- 
-\end_layout
-
 \begin_layout Section
 LSTM
 \begin_inset Index idx
@@ -3241,7 +3212,7 @@ action
 
 \end_inset
 
-=trainRNN : this informs CNTK to call RNN function.
+=train : this informs CNTK to train a model.
  
 \end_layout
 
@@ -3434,7 +3405,7 @@ readerType
 
 \end_inset
 
-=SequenceReader : specifies using sequence reader.
+=LMSequenceReader : specifies using language model sequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -3508,7 +3479,7 @@ readerType
 
 \end_inset
 
-=SequenceReader : specifies using sequence reader.
+=LMSequenceReader : specifies using language model sequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -3649,7 +3620,7 @@ readerType
 
 \end_inset
 
-=SequenceReader : specifies using sequence reader.
+=LMSequenceReader : specifies using sequence reader.
 \end_layout
 
 \begin_layout Itemize
@@ -3697,19 +3668,6 @@ ptb.test.cntk.txt : specifies testing file
 \end_layout
 
 \end_deeper
-\begin_layout Subsection
-Results
-\end_layout
-
-\begin_layout Standard
-LSTM converges very fast with this setup.
- Perplexities are 161.96 and 137.37 at the 1st and the 10-th iteration.
- Perplexies are not reduced after 10-th itreation.
- For comparison, simple RNN by Tomas Mikolov obtained 136 perplexity with
- 50 classes and LSTM by Alex Graves obtained 138 perplexity.
- 
-\end_layout
-
 \begin_layout Section
 Spoken Language Understanding
 \begin_inset Index idx
@@ -3773,7 +3731,7 @@ action
 
 \end_inset
 
-=trainRNN : this informs CNTK to call RNN function.
+=train : this informs CNTK to train a model.
  
 \end_layout
 
@@ -4551,20 +4509,5 @@ output.txt : this specifies the semantic labels.
 
 \end_deeper
 \end_deeper
-\begin_layout Subsection
-Results
-\end_layout
-
-\begin_layout Standard
-With this setup, F1 scores are 94.13%.
- It is possible to get improved F1 score with larger hidden layer size,
- and with more than one layer of LSTM.
- Using more than one layer with LSTMs with different dimensions can be easily
- done by setting recurrentLayer=2:3 and also setting layerSizes=2832:50:300:200:
-127 for instance.
- In this case, two layers of LSTMs are used.
- The lower layer LSTM has 300 dimension and the upper LSTM has 200 dimension.
-\end_layout
-
 \end_body
 \end_document
