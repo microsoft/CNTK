@@ -58,14 +58,17 @@ template<class ElemType>
 /*IDataReader<ElemType>::LabelIdType*/ unsigned SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
-
+    string unk = "<unk>";
     // not yet found, add to the map
     if (found == labelInfo.mapLabelToId.end())
     {
-        RuntimeError("%s not in vocabulary", labelValue.c_str());
+        found = labelInfo.mapLabelToId.find(unk);
+        if (found == labelInfo.mapLabelToId.end())
+            RuntimeError("%s not in vocabulary", labelValue.c_str());
     }
     return found->second;
 }
+
 
 template<class ElemType>
 /*IDataReader<ElemType>::LabelIdType*/ bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned & labelId)

@@ -3,7 +3,7 @@ run=ndlCreateNetwork
 ndlCreateNetwork=[
     # vocabulary size
 	featDim=10000
-	# vocabulary size plus class size
+	# vocabulary size
 	labelDim=10000
 	# hidden layer size
 	hiddenDim=200
