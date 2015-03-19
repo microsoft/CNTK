@@ -3918,7 +3918,7 @@ Train
 status open
 
 \begin_layout Plain Layout
-Train
+Train Command
 \end_layout
 
 \end_inset
@@ -4039,7 +4039,7 @@ Adapt
 status open
 
 \begin_layout Plain Layout
-Adapt
+Adapt Command
 \end_layout
 
 \end_inset
@@ -4186,7 +4186,7 @@ CV
 status open
 
 \begin_layout Plain Layout
-CV
+CV Command
 \end_layout
 
 \end_inset
@@ -4363,7 +4363,7 @@ Edit Command
 status open
 
 \begin_layout Plain Layout
-Command
+Edit Command
 \end_layout
 
 \end_inset
@@ -4420,7 +4420,7 @@ Dumpnode Command
 status open
 
 \begin_layout Plain Layout
-DumpNode
+DumpNode Command
 \end_layout
 
 \end_inset
@@ -4455,16 +4455,6 @@ status open
 
 \begin_layout Plain Layout
 nodeName
-\end_layout
-
-\end_inset
-
-
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-Node ! nodeName
 \end_layout
 
 \end_inset
@@ -4504,6 +4494,137 @@ printValues
  – determines whether to print the values associated with a node if the
  node's values are persisted in the model.
  Default is true.
+\end_layout
+
+\begin_layout Subsection
+WriteWordAndClass Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+WriteWordAndClass Command
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This command reads the text training data, counts the number of occurrences
+ of each each word in the training set, sorts the words in the descending
+ order of the counts, gives each word a unique id, assign each word to a
+ class, and generates a four column vocabulary file and a word-to-id mapping
+ file to be used by the LMSequenceReader to train class-based language models.
+ The related parameters are:
+\end_layout
+
+\begin_layout Itemize
+inputFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+inputFile
+\end_layout
+
+\end_inset
+
+ – the path to the text training file.
+\end_layout
+
+\begin_layout Itemize
+outputVocabFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputVocabFile
+\end_layout
+
+\end_inset
+
+ – the name of the generated four-column vocabulary file.
+ The first column is the word id, the second column is the count of the
+ word, the third column is the word, and the fourth column is the class
+ id.
+\end_layout
+
+\begin_layout Itemize
+outputWord2Cls
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputWord2Cls
+\end_layout
+
+\end_inset
+
+ – the path to the generated word-to-class mapping file.
+ 
+\end_layout
+
+\begin_layout Itemize
+outputCls2Index
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputCls2Index
+\end_layout
+
+\end_inset
+
+ – the path to the generated class-to-wordId mapping file.
+\end_layout
+
+\begin_layout Itemize
+vocabSize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+vocabSize
+\end_layout
+
+\end_inset
+
+ – the desired vocabulary size.
+ 
+\end_layout
+
+\begin_layout Itemize
+nbrClass
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+nbrClass
+\end_layout
+
+\end_inset
+
+ – the desired number of classes .
+\end_layout
+
+\begin_layout Itemize
+cutoff
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cutoff
+\end_layout
+
+\end_inset
+
+ – the cutoff count.
+ When a word's count is below or equal to this value the word will be treated
+ as <unk>.
+ Default is 2.
+ Note that this parameter is used only if the desired vocabulary size is
+ larger than the actual number of words exist in the training set.
 \end_layout
 
 \begin_layout Subsection
