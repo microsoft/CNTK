@@ -39,6 +39,7 @@
 #include <set>
 #include "BestGpu.h"
 
+
 // MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
 // HPC Pack 2012 R2 MS-MPI Redistributable Package
 // http://www.microsoft.com/en-us/download/details.aspx?id=41634
@@ -423,6 +424,96 @@ void DoCreateLabelMap(const ConfigParameters& config)
         fprintf(stderr, "%f seconds elapsed\n", (float)(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) / 1000);
 }
 
+//////////////////////////////////////////////////////////////////////////
+//  for action SVD
+//		An action "SVD" performs the following process to transform an existing model: 
+//			1.	For a Learnable Parameter A whose name matches with the user specified regex, 
+//			    A is approximated by two matrice multiplication B*C ; 
+//			2.	In order to keep the low-rank structure in training, 
+//				the original A node will be replaced by A' whose opertions is Times
+//				with its left children being B and right chilren being 
+//
+//		To use this command,
+//			user need to specify: 
+//					1)	modelPath			-- path to the existing model 
+//					2)  outputmodelPath		-- where to write the transformed model 
+//					3)  KeepRatio			-- how many percentage of energy we want to keep
+//					4)  ParameterName		-- name (regex) of the parameter node we want to perform a SVD decomposition 
+//				
+//////////////////////////////////////////////////////////////////////////
+template<typename ElemType> 
+void  DoParameterSVD(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 
+    wstring modelPath = config("modelPath");
+    wstring outputmodelPath = config("outputmodelPath");
+    map<wstring, float>     svdconfig; 
+
+    float keepratio = config("KeepRatio", "0.4");
+    wstring svdnodeRegex = config("NodeNameRegex", L"");
+    if (!svdnodeRegex.empty())
+    {
+        svdconfig[svdnodeRegex] = keepratio;
+    }
+    else
+    {
+        // alternatively, user can also use a config to specify KeepRatios for different groups of nodes 
+        wstring svdnodeConfigFile = config("SVDConfig", L"");
+        if (!ParseSVDConfigFile(svdnodeConfigFile, svdconfig))
+        {
+            SVDConfigFileUsage();
+            return; 
+        }
+    }
+
+
+    if (modelPath.empty())
+    {
+        fprintf(stderr, "ERROR: in DoParameterSVD, modelPath is empty!\n");
+        return;
+    }
+
+    
+    ComputationNetwork<ElemType> net(deviceID); 
+    net.LoadFromFile(modelPath);
+
+    net.PerformSVDecomposition(svdconfig);
+    if (!outputmodelPath.empty())
+        net.SaveToFile(outputmodelPath);
+
+}
+
+//////////////////////////////////////////////////////////////////////////
+//  helper function for DoParameterSVD 
+//////////////////////////////////////////////////////////////////////////
+bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
+{
+    msra::files::textreader reader(fn);
+    for (; reader;)
+    {
+        wstring line = reader.wgetline(); 
+        vector<wstring> tokens=msra::strfun::split(line, L"\t ");
+        if (tokens.size() != 2)
+            return false;
+        config[tokens[0]] = (float)msra::strfun::todouble(tokens[1]);
+    }
+    return true;
+}
+
+// a brief on the SVD config file usage 
+void SVDConfigFileUsage()
+{
+    fprintf(stderr, "usage of SVDConfigFile\n"); 
+    fprintf(stderr, "A SVDConfigFile is referred in main config by \"SVDConfig\"\n"); 
+    fprintf(stderr, "Each line in this file specifies a group of Learnable Parameter nodes using regex and the KeepRatio associated with that group\n");
+    fprintf(stderr, "An example: \n"); 
+    fprintf(stderr, "W0         1.0\n"); 
+    fprintf(stderr, "W[1-5]     0.4\n"); 
+    
+
+}
+
+
 ///
 /// for action writeWordAndClassInfo
 ///
@@ -806,7 +897,9 @@ void DoCommand(const ConfigParameters& config)
             else if (action[j] == "writeWordAndClass")
 	            DoWriteWordAndClassInfo<ElemType>(commandParams);
             else if (action[j] == "plot")
-	            DoTopologyPlot<ElemType>(commandParams);
+                DoTopologyPlot<ElemType>(commandParams);
+            else if (action[j] == "SVD")
+                DoParameterSVD<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 
