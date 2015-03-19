@@ -25,6 +25,8 @@
 #include "Matrix.h"
 #include "commandArgUtil.h"
 #include <iostream>
+#include <regex>
+#include <chrono>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
@@ -1938,7 +1940,28 @@ public:
                     m_outputNodes[i] = newNode;
             } 
         }
-
+    
+        // replace the old node with the current node, assuming the old node is a leaf node 
+        // need to update those nodes who use oldNode as their child 
+        void ReplaceLeafNode(wstring oldNodeName, ComputationNodePtr newNode)
+        {
+            ComputationNodePtr oldNode = GetNodeFromName(oldNodeName);
+            
+            // change the input of those nodes whose child is oldNode
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            {
+                ComputationNodePtr node = nodeIter->second;
+                for (int i = 0; i < node->ChildrenSize(); i++)
+                {
+                    if (node->Inputs(i) == oldNode)
+                        node->SetInput(i, newNode);
+                }
+            }
+            m_nameToNodeMap[newNode->GetName()] = newNode;
+            // now the old node becomes a orphan node , remove it 
+            DeleteNode(oldNodeName);
+            //RemoveOrphanNode(oldNode);
+        }
         std::vector<ComputationNodePtr> GetAllNodes() const
         {
             std::vector<ComputationNodePtr> nodes;
@@ -2085,6 +2108,140 @@ public:
                 ValidateNetwork(rootNode);
                 CollectInputAndLeanableParameters(rootNode);
             }
+        }
+
+        //========================================
+        // This function performs SVD decomposition for different groups of learnable  parameters 
+        // we perform SVD decomposition such that 
+        //  A \approx B*C, where rank(B)=rank(C)=r < rank(A)
+        // After SVD decomposition, the node A will become an intermediate node whose children are B,C ; 
+        // B and C are two learnable parameters 
+        //========================================
+        void PerformSVDecomposition(const map<wstring, float>& SVDConfig)   
+        {
+            vector<pair<vector<wstring>,float> > nodeGroups; 
+            wregex NameFilter; 
+
+            for (auto e : SVDConfig)
+            {
+                wstring regexStr = e.first; 
+                float   keepRatio = e.second; 
+                vector<wstring>     NamesInGroup;
+
+                NameFilter.assign(regexStr);
+
+                for (auto n = m_nameToNodeMap.begin(); n != m_nameToNodeMap.end(); n++)
+                {
+                    if (!regexStr.empty() && !regex_match(n->first, NameFilter))
+                        continue;           // if regexStr is not empty and the the node node does not match with the regexStr
+                    ComputationNodePtr ptr = n->second; 
+                    if (ptr->OperationName() != LearnableParameter<ElemType>::TypeName())
+                        continue;
+                    Matrix<ElemType>  W = ptr->FunctionValues();
+                    if (W.GetNumCols() == 1 || W.GetNumRows() == 1)
+                        continue;
+                    // still here ? 
+                    NamesInGroup.push_back(n->first);
+                }
+                nodeGroups.push_back(make_pair(NamesInGroup, keepRatio));
+            }
+
+            size_t groupID = 0;
+            for (auto& group : nodeGroups)
+            {
+                float keepratio = group.second; 
+                fprintf(stderr, "--------------------------------------------------------------------------------------------\n");
+                fprintf(stderr, "ParameterSVD: start to process group %d with KeepRatio=%.2f\n", groupID++, keepratio);
+                fprintf(stderr, "--------------------------------------------------------------------------------------------\n");
+                for (auto name : group.first)
+                {
+                    if (m_nameToNodeMap.find(name) == m_nameToNodeMap.end())
+                    {
+                        // could be deleted in the previous groups
+                        continue;
+                    }
+                    ComputationNodePtr pNode = m_nameToNodeMap[name];
+                    //========================================
+                    // Step 1. do SVD decomposition 
+                    //========================================
+                    Matrix<ElemType> A = pNode->FunctionValues();
+                    if (A.GetNumCols() == 1 || A.GetNumRows() == 1)       // it is a vector, no need to do it 
+                        continue;
+                    size_t m = A.GetNumRows();
+                    size_t n = A.GetNumCols();
+
+                    Matrix<ElemType> S(-1), U(-1), VT(-1), W(-1);
+                    std::chrono::time_point<std::chrono::system_clock> stTime = std::chrono::system_clock::now();
+                    Matrix<ElemType>::SVD(A, S, U, VT, W);
+                    std::chrono::time_point<std::chrono::system_clock> enTime = std::chrono::system_clock::now();
+                    // A \in R^{mXn} 
+                    // U \in R^{mXm} 
+                    // VT \in R^{nXn} 
+                    // S \in R^{min(m,n),1}  
+                    // S is in descending order 
+                    // 
+                    ElemType totalenergy = 0.0f;
+                    for (size_t i = 0; i < S.GetNumRows(); i++)
+                    {
+                        totalenergy += S(i, 0);
+                    }
+                    ElemType keepenergy = totalenergy*keepratio;
+                    ElemType runenergy = 0.0f;
+
+                    size_t r = 0;
+                    for (size_t indx = 0; indx < S.GetNumRows(); indx++)
+                    {
+                        runenergy += S(indx, 0);
+                        if (runenergy > keepenergy)
+                        {
+                            r = indx + 1;
+                            break;
+                        }
+                    }
+
+                    r = (r + 7) & (~7);             //  to keep the number of rows/cols of resultant matrix a multipier of 8 
+                    //  which can be helpful at runtime 
+
+                    std::chrono::duration<double>  elapsedtime = enTime - stTime;
+                    fprintf(stderr, "Performing SVD for a %5d-by-%-5d matrix (node name: %-20ls) ---  computation time %5.2f secs ;  keep %4.1f%% energy ===> keep %5d svd values (reduce to %4.1f%% parameters) \n",
+                        m, n, name.c_str(), elapsedtime.count(), keepratio*100, r, ((m+n)*r+0.0f)/m/n*100);
+
+
+                    Matrix<ElemType> redU = U.ColumnSlice(0, r);        // redU in R^ {mXr}
+                    Matrix<ElemType> redVT(-1); redVT.Resize(r, n);         // redVT in R^{rXn}
+                    redVT.AssignRowSliceValuesOf(VT, 0, r);
+
+                    Matrix<ElemType>    redS(r, (size_t)1);
+                    for (size_t i = 0; i < r; i++)
+                    {
+                        ElemType sqrtsigma = (ElemType)sqrt((double)S(i, 0));
+                        redS(i, 0) = sqrtsigma;
+                    }
+
+
+                    redU.RowElementMultiplyWith(redS.Transpose());
+                    redVT.ColumnElementMultiplyWith(redS);
+
+                    //========================================
+                    // Step 2. create two new Parameter nodes and one Times node
+                    //========================================
+                    wstring LeftChildName = name + L"-U";
+                    wstring rightChildName = name + L"-V";
+                    ComputationNodePtr pLeft = Parameter(m, r, LeftChildName);
+                    ComputationNodePtr pRight = Parameter(r, n, rightChildName);
+
+                    pLeft->FunctionValues() = redU;
+                    pRight->FunctionValues() = redVT;
+
+                    ComputationNodePtr pTimes = Times(pLeft, pRight, name + L"-SVD");
+
+                    //========================================
+                    // Step 3. remove old node 
+                    //========================================
+                    ReplaceLeafNode(name, pTimes);
+                }
+            }
+            RebuildNetwork(m_finalCriteria[0]);
         }
 
     protected:
