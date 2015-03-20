@@ -760,7 +760,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter=matrices.begin();iter!=matrices.end();iter++)
             {
                 if (m_nameToTypeMap.find(iter->first)==m_nameToTypeMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+                {
+                    //throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+                }
 
             }
             m_checkDictionaryKeys=false;
@@ -795,7 +797,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (!skip)
                     {
                         // copy the features over to our array type
-                        assert(feat.rows()==dim); // check feature dimension matches what's expected
+                        //assert(feat.rows()==dim); // check feature dimension matches what's expected
 
                         if (m_featuresBufferMultiIO[id]==NULL)
                         {
@@ -1240,6 +1242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
 
                     // copy the features over to our array type
+                    //
                     assert(feat.rows()==dim); dim; // check feature dimension matches what's expected
 
                     if (m_featuresBufferMultiIO[id]==NULL)

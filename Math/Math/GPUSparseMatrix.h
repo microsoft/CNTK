@@ -54,9 +54,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUSparseMatrix(const GPUMatrix<ElemType>&, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
-#ifndef    LINUX
+//#ifndef __unix__
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
-#endif    /* LINUX */
+//#endif    /* LINUX */
 
         ~GPUSparseMatrix();
 
@@ -194,9 +194,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ChangeDeviceTo(DEVICEID_TYPE toId);
 
         GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);
-#ifndef    LINUX
+//#ifndef __unix__
         GPUSparseMatrix<ElemType>& operator=(GPUSparseMatrix<ElemType>&& moveFrom);
-#endif    /* LINUX */
+//#endif    /* LINUX */
         GPUSparseMatrix<ElemType> operator+ (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType> operator- (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType>& operator^= (const ElemType alpha); //element-wise power        

@@ -15,6 +15,7 @@
 #include <vld.h> // leak detection
 #endif
 #include "fileutil.h"   // for fexists()
+#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -174,7 +175,9 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     m_sequence.push_back(epochSample);
                     if ((m_sequence.size() == 1 ? epochSample : epochSample - m_sequence[m_sequence.size()-2]) > m_mbSize)
                     {
-                        fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+                        //fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+
+                        std::wcerr << "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least " << epochSample << endl;
                         RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
                     }
 
@@ -332,7 +335,8 @@ void SequenceReader<ElemType>::WriteLabelFile()
             }
             else if (!m_cachingWriter)
             {
-                fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                //fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                std::wcerr << "WARNING: file " << labelInfo.fileToWrite.c_str() << " NOT written to disk, label files only written when starting at epoch zero!" << endl;
             }
         }
     }
@@ -555,7 +559,9 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
+    {
         fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+    }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
@@ -606,10 +612,9 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*fla
     int cnt, clsidx, b;
     class_size  = 0;
 
-    wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
-
+    //wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
     FILE * vin;
-    vin = fopen(strFileName, "rt") ;
+    vin = fopen(msra::strfun::utf8(vocfile.c_str()).c_str() , "rt") ;
 
     if (vin == nullptr)
     {
@@ -1443,7 +1448,10 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+    {
+        //fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
+        std::wcerr << "reading sequence file " << m_file.c_str() << endl;
+    }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];

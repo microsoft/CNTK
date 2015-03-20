@@ -108,10 +108,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetValue(deepCopy, matrixFormat);
     }
 
-
     template<class ElemType>
     GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deepCopy)
     {
+
         ZeroInit(deepCopy.GetFormat(), deepCopy.GetComputeDeviceId());
         DeepCopy(deepCopy);
     }
@@ -1059,7 +1059,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t row = h_Row[i];
             if (indexer.find(row) == indexer.end())
             {
-                indexer[row] = indexer.size();
+                size_t id = indexer.size();
+                indexer[row] = id;
             }
             rowToId[i] = indexer[row];
         }
