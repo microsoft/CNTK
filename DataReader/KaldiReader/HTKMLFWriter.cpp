@@ -183,6 +183,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int i=0; i<outputData.GetNumRows(); i++)
                     {
                         nnet_out_host(j,i) = (float)*pValue++;                
+                        if (nnet_out_host(j,i) > 50)
+                        {
+                            nnet_out_host(j,i)  = -(float)log(1.0/outputData.GetNumCols());
+                        }
+
+
                     }
                 }
                 

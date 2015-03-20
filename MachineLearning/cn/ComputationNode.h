@@ -15,7 +15,8 @@
 #include <algorithm>
 #include <assert.h>
 #include "basetypes.h"
-
+#include <iostream>
+#include <sstream>
 #include <Matrix.h>
 
 #ifndef _WIN32
@@ -701,7 +702,11 @@ public:
             }
 #else
             int64_t id = InterlockedIncrement64(&s_timeStampCounter);
-            msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
+            std::wstring base = L"AutoName";
+            std::wstringstream sstm;
+            sstm << base.c_str() << id;
+            std::wstring name = sstm.str();
+            //msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
 #endif
 
             return name;
@@ -4791,16 +4796,23 @@ protected:  \
             if (inputIndex > 0)
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
-            //if (m_samplesInRecurrentStep == 1)
-            //{
-            ComputeInputPartialSR(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
-            /*}else
+            if (m_samplesInRecurrentStep == 1)
+            {
+                ComputeInputPartialSR(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
+            }else
             {
                 for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
                 {
-                    ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), i, m_samplesInRecurrentStep);
+                    bool reset = false;
+
+                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
+                    {
+                        reset = true;
+                    }
+
+                    ComputeInputPartialSRP(timeIdxInSeq, m_delay, reset, Inputs(0)->GradientValues(), GradientValues(), i, m_samplesInRecurrentStep);
                 }
-            }*/
+            }
         }
 
         static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int delay,  
@@ -4815,11 +4827,11 @@ protected:  \
             }
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  bool reset,
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t indexInBatch, const size_t mNbr)
         {
             assert(timeIdxInSeq >= 0);
-            if ((timeIdxInSeq - delay) >= 0 && (timeIdxInSeq - delay) * mNbr <= inputGradientValues.GetNumCols())
+            if ((timeIdxInSeq - delay) >= 0 && (timeIdxInSeq - delay) * mNbr <= inputGradientValues.GetNumCols() && !reset)
             {
                 Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr + indexInBatch, 1);
                 Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + indexInBatch, 1);
@@ -4859,13 +4871,25 @@ protected:  \
             
             if (m_samplesInRecurrentStep == 1)
             {
-                bool reset = (m_sentenceEnd[0] == timeIdxInSeq);
+                //bool reset = (m_sentenceEnd[0] == timeIdxInSeq);
+                bool reset = false;
+
+                if ((((int)m_sentenceEnd[0] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[0] <= timeIdxInSeq))
+                {
+                    reset = true;
+                }
                 EvaluateThisNodeSR(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
             } else
             {
                 for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
                 {
-                    bool reset = (m_sentenceEnd[i] == timeIdxInSeq);
+                    // bool reset = (m_sentenceEnd[i] == timeIdxInSeq);
+                    bool reset = false;
+
+                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
+                    {
+                        reset = true;
+                    }
                     EvaluateThisNodeSRP(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), i, m_samplesInRecurrentStep);
                 }
             }
@@ -4920,7 +4944,7 @@ protected:  \
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr+indexInBatch, 1);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (iPastIndex < 0 && reset)
+            if (reset)
                 out.SetValue(default_activity);
             else
             {

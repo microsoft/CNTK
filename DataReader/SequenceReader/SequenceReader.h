@@ -163,7 +163,7 @@ public:
     virtual void Destroy();
     SequenceReader() {
         m_featuresBuffer=NULL; m_labelsBuffer=NULL; m_clsinfoRead = false; m_idx2clsRead = false;             
-
+        m_cachingReader=NULL; m_cachingWriter=NULL; m_labelsIdBuffer = NULL;
 		/*
         delete m_featuresBufferRow;
         delete m_featuresBufferRowIdx;
