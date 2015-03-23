@@ -3224,10 +3224,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fprintf (stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowStart, rowEnd, colStart, colEnd);
 
         const auto& us = *this;
-        foreach_row(i,us)
+        for (size_t i = rowStart; i <= rowEnd; i++)
         {
-            foreach_column(j,us)
-                fprintf (stderr, "%.10f\t",  us(i,j));
+            for (size_t j = colStart; j <= colEnd; j++)
+                fprintf(stderr, "%.10f\t", us(i, j));
             fprintf (stderr, "\n");
         }
     }

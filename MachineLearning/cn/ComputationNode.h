@@ -574,7 +574,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
         // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
         // should only need one memory block per device
-        static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const int deviceId)
+        static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId)
         {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
                 s_constOnes[rows].find(cols) == s_constOnes[rows].end()) //not found
