@@ -332,7 +332,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //static BLAS functions
 
         // singular value decomposition of A as A = U*SIGMA*VT
-        static void SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT);
+        static void SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W);
 
         static void MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, 
             ElemType beta, Matrix<ElemType>& c);
