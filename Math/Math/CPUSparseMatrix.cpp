@@ -37,6 +37,7 @@
 #include <acml.h>  // requires ACML 5.3.0 and above
 #else
 // requires MKL 10.0 and above
+#include <mkl.h>
 #endif
 
 // This is an example of an exported variable
