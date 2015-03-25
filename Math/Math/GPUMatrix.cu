@@ -1197,7 +1197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             double aveMultiplier = 0;
             CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-            return aveMultiplier / n;
+            return (ElemType) aveMultiplier / n;
         }
     }
 
