@@ -3543,26 +3543,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Static BLAS Functions
 
     template<class ElemType>
-    void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT)
+    void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W)
     {
         if (A.IsEmpty() )
             throw std::logic_error("SVD:  the input matrix is empty.");        
 
         DecideAndMoveToRightDevice(A, SIGMA, U);    
         VT._transferToDevice(A.GetDeviceId());
+        W._transferToDevice(A.GetDeviceId());
 
         SIGMA.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
         U.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
         VT.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
-
+        W.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&A,
             nullptr,
-        Matrix<ElemType> tA = A;
-                CPUMatrix<ElemType>::SVD(*tA.m_CPUMatrix, *SIGMA.m_CPUMatrix, *U.m_CPUMatrix, *VT.m_CPUMatrix);
+            Matrix<ElemType> tA = A;
+            CPUMatrix<ElemType>::SVD(*tA.m_CPUMatrix, *SIGMA.m_CPUMatrix, *U.m_CPUMatrix, *VT.m_CPUMatrix, *W.m_CPUMatrix);
                 SIGMA.SetDataLocation(CPU);
                 U.SetDataLocation(CPU);
-                VT.SetDataLocation(CPU), 
+                VT.SetDataLocation(CPU); 
+                W.SetDataLocation(CPU),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED

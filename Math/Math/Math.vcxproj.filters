@@ -52,6 +52,7 @@
     <None Include="GPUWatcher.h">
       <Filter>GPU</Filter>
     </None>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

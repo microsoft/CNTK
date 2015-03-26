@@ -1200,7 +1200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             double aveMultiplier = 0;
             CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-            return aveMultiplier / n;
+            return (ElemType) aveMultiplier / n;
         }
     }
 
@@ -3438,8 +3438,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (a.IsEmpty())
                 throw std::logic_error("ElementWisePower:  The input matrix a is empty.");
-            if (a.GetNumRows()!=c.GetNumRows() || a.GetNumCols()!=c.GetNumCols())
-                throw std::logic_error("ElementWisePower: matrices must be of the same size");
+
+            c.Resize(a.GetNumRows(), a.GetNumCols());
 
             cudaEvent_t done = nullptr;
             a.PrepareDevice();

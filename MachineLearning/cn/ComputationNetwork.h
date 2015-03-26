@@ -179,7 +179,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fstream << nodePtr->NodeName() << nodePtr->ChildrenSize();
                 for (size_t i=0; i<nodePtr->ChildrenSize(); i++)
                 {
-                    fstream << nodePtr->Inputs(i)->NodeName();
+					if (nodePtr->Inputs(i) == nullptr)
+					{
+						fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
+					}
+					else
+					{
+						fstream << nodePtr->Inputs(i)->NodeName();
+					}
                 }
             }
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
@@ -567,12 +574,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             nodeToDelete->DetachInputs(); //nodeToDelete is a parent
-            auto search = std::find(m_labels.begin(), m_labels.end(), nodeToDelete);
+			auto search = std::find(m_labels.begin(), m_labels.end(), nodeToDelete);
+			if (search != m_labels.end())
+			{
+				m_labels.erase(search);
+			}
+			search = std::find(m_features.begin(), m_features.end(), nodeToDelete);
+			if (search != m_features.end())
+			{
+				m_features.erase(search);
+			}
+			search = std::find(m_finalCriteria.begin(), m_finalCriteria.end(), nodeToDelete);
+			if (search != m_finalCriteria.end())
+			{
+				m_finalCriteria.erase(search);
+			}
+			search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
+			if (search != m_evalNodes.end())
+			{
+				m_evalNodes.erase(search);
+			}
 
-            if (search != m_labels.end())
-            {
-                m_labels.erase(search);
-            }
+			search = std::find(m_outputNodes.begin(), m_outputNodes.end(), nodeToDelete);
+			if (search != m_outputNodes.end())
+			{
+				m_outputNodes.erase(search);
+			}
+
+			// ? how to deal with m_recurrentInfo, when we delete a node.
+
             //delete the node itself
             m_nameToNodeMap.erase(nodeName);
             delete nodeToDelete;
