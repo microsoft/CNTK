@@ -416,7 +416,8 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     // if no GPUs were found, we should use the CPU
     if (m_procData.size() == 0)
     {
-        best.resize(1);
+        best.clear();
+        best.push_back(-1); // default to CPU
         return best;
     }
 

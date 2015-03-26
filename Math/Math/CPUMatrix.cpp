@@ -3224,10 +3224,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fprintf (stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowStart, rowEnd, colStart, colEnd);
 
         const auto& us = *this;
-        foreach_row(i,us)
+        for (size_t i = rowStart; i <= rowEnd; i++)
         {
-            foreach_column(j,us)
-                fprintf (stderr, "%.10f\t",  us(i,j));
+            for (size_t j = colStart; j <= colEnd; j++)
+                fprintf(stderr, "%.10f\t", us(i, j));
             fprintf (stderr, "\n");
         }
     }
@@ -3679,7 +3679,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             dgemm(transA, transB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
 #else
-            cblas_dgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
+            cblas_dgemm ((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
 #endif
         }
         else
@@ -3688,52 +3688,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             sgemm(BLAS_COLMAJOR transA, transB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #else
-            cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
+            cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #endif
         }
     }
 
     /* compute singular value decomposition as 
     A = U*SIGMA*VT
+    W is used as temp working memory
     */
     template<class ElemType>
-    void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT)
+    void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W)
     {
         if (A.IsEmpty())
             throw std::logic_error("SVD:  input matrix is empty.");
 
         int info;
-        size_t m, n, lda, ldu, ldvt;
-        m = A.GetNumRows();
-        n = A.GetNumCols();
-        lda = m; 
+        int m, n, lda, ldu, ldvt;
+        m = (int)A.GetNumRows();
+        n = (int)A.GetNumCols();
+        W.GetNumRows();  //W is used as temp working memory
+        lda = m;
         ldu = m;
-        ldvt= n;
-        U.Resize(m,m);
-        SIGMA.Resize(min(m,n),1);
-        VT.Resize(n,n);
-        int lwork = max(3 * min(m, n) + max(m, n), 5 * min(m, n));
-        const char flag = 'A';
+        ldvt = n;
+        U.Resize(m, m);
+        SIGMA.Resize(min(m, n), 1);
+        VT.Resize(n, n);
+
         if (sizeof(ElemType) == sizeof(double))
         {
 #ifndef USE_MKL
             dgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <double*>(A.m_pArray), (int)lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), (int)ldu, reinterpret_cast <double*>(VT.m_pArray), (int)ldvt, &info);
 #else
-            //missing arguments fixed! --author Wengong Jin 2014/12/15
-            double *work = new double[lwork];
-            dgesvd(&flag, &flag, (int *) &m, (int *) &n, reinterpret_cast <double*>(A.m_pArray), (int *) &lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), (int *) &ldu, reinterpret_cast <double*>(VT.m_pArray), (int *) &ldvt, work, &lwork, &info);
+            double  wkopt;
+            int lwork = -1;
+            dgesvd("All", "All", &m, &n, reinterpret_cast <double*>(A.m_pArray), &lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), &ldu, reinterpret_cast <double*>(VT.m_pArray), &ldvt, &wkopt, &lwork, &info);
+            lwork = (int)wkopt;
+            W.Resize(lwork, 1);
+            dgesvd("All", "All", &m, &n, reinterpret_cast <double*>(A.m_pArray), &lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), &ldu, reinterpret_cast <double*>(VT.m_pArray), &ldvt, reinterpret_cast <double*>(W.m_pArray), &lwork, &info);
 #endif
         }
         else
         {
-#pragma warning (suppress: 4244)
 #ifndef USE_MKL
-           sgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <float*>(A.m_pArray), (int)lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), (int)ldu, reinterpret_cast <float*>(VT.m_pArray), (int)ldvt, &info);
+#pragma warning (suppress: 4244)
+            sgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <float*>(A.m_pArray), (int)lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), (int)ldu, reinterpret_cast <float*>(VT.m_pArray), (int)ldvt, &info);
 #else
-            //missing arguments fixed! --author Wengong Jin 2014/12/15
-            float *work = new float[lwork];
-            sgesvd(&flag, &flag, (int *) &m, (int *) &n, reinterpret_cast <float*>(A.m_pArray), (int *) &lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), (int *) &ldu, reinterpret_cast <float*>(VT.m_pArray), (int *) &ldvt, work, &lwork, &info);
+            float  wkopt;
+            int lwork = -1;
+            sgesvd("All", "All", &m, &n, reinterpret_cast <float*>(A.m_pArray), &lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), &ldu, reinterpret_cast <float*>(VT.m_pArray), &ldvt, &wkopt, &lwork, &info);
+            lwork = (int)wkopt;
+            W.Resize(lwork, 1);
+            sgesvd("All", "All", &m, &n, reinterpret_cast <float*>(A.m_pArray), &lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), &ldu, reinterpret_cast <float*>(VT.m_pArray), &ldvt, reinterpret_cast <float*>(W.m_pArray), &lwork, &info);
 #endif
+        }
+
+        if (info > 0) 
+        {
+            RuntimeError("The algorithm computing SVD failed to converge.\n");
         }
     }
 
@@ -4423,40 +4435,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (long j = 0; j < n; j++)
                 {
+#ifndef USE_MKL
                     c(0, j) = (ElemType)ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn(j)), 1);
+#else
+                    c(0, j) = (ElemType)cblas_ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn(j)), 1);
+#endif
                 }
                 for (long j = 0; j < n; j++)
                 {
                     for (long i = 1; i < negnumber + 1; i++)
                     {
+#ifndef USE_MKL
                         c(i, j) = (ElemType)ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+#else
+                        c(i, j) = (ElemType)cblas_ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+#endif
                     }
                 }
 
             }
             else
             {
-                /*
-                #pragma omp parallel for
-                foreach_column(j, c)
-                {
-                #pragma warning (suppress: 4244)
-                #ifndef USE_MKL
-                c(0, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
-                #else
-                c(0, j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
-                #endif
-                }*/
                 for (long j = 0; j < n; j++)
                 {
+#ifndef USE_MKL
                     c(0, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
+#else
+                    c(0, j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
+#endif
                 }
                 for (long j = 0; j < n; j++)
                 {
                     for (long i = 1; i < negnumber + 1; i++)
                     {
+#ifndef USE_MKL
                         c(i, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
-
+#else
+                        c(i, j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+#endif
                     }
                 }
             }
@@ -4475,7 +4491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(i, 0) = (ElemType)ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
 #else
-                    c(i, 0) = cblas_ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
+                    c(i, 0) = (ElemType)cblas_ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
 #endif
                 }
             }

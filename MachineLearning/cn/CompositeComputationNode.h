@@ -13,6 +13,7 @@
 #include <list>
 #include "ComputationNode.h"
 #include "TrainingCriterionNode.h"
+#include <iostream> 
 
 #define TWO_PI 6.283185307f
 
@@ -75,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingPreComputedNodeMembers;
     public:
-        MeanNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)  
+        MeanNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -85,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        MeanNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)
+        MeanNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -103,12 +104,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_hasComputed = hasComputed;
 
-            if (m_hasComputed && m_numSamples > 0)  //m_numSamples>0 means it's not called from model loading
+            if (m_hasComputed) 
             {
                 m_numSamples = 0;
             }
-            //Matrix<ElemType> &avg =FunctionValues();
-            //avg.Print("mean",0,avg.GetNumRows()-1,0,avg.GetNumCols()-1);
         }
 
         virtual bool RequirePreCompute() const { return true;}
@@ -134,24 +133,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
                 samples.HasNan("Mean-Samples");
 #endif
-                
-                ones.SetPreferredDeviceId(samples.GetPreferredDeviceId());
 
-                if (samples.GetNumCols() != ones.GetNumRows())
-                {
-                    ones.Resize(samples.GetNumCols(), 1);
-                    ones.SetValue(1);
+                size_t numNewSamples = samples.GetNumCols();
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + samples.GetNumCols()), samples, false, 
+                    ConstOnes(numNewSamples, 1, samples.GetDeviceId()), false, (ElemType)m_numSamples / (m_numSamples + numNewSamples), avg);
 
-                }
-
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f/(m_numSamples + samples.GetNumCols()),samples, false, ones, false, (ElemType)m_numSamples/(m_numSamples + samples.GetNumCols()), avg);
 #if NANCHECK
                 avg.HasNan("Mean-avg");
                 ones.HasNan("Mean-ones");
 #endif
                 
-                m_numSamples += samples.GetNumCols();
-
+                m_numSamples += numNewSamples;
             }
         }
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -179,17 +171,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (ones.GetDeviceId() != deviceId)
-                    ones.TransferFromDeviceToDevice(ones.GetDeviceId(), deviceId);
-            }
-        }
-
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
@@ -199,13 +180,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 node->m_hasComputed = m_hasComputed;
                 node->m_numSamples = m_numSamples;
-                node->ones = ones;
             }
         }
 
         // copy constructor
         MeanNode(const MeanNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : PreComputedNode<ElemType>(node->m_deviceId), ones(node->m_deviceId)
+            : PreComputedNode<ElemType>(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
@@ -220,7 +200,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         size_t m_numSamples;
-        Matrix<ElemType> ones;
     };
 
     template class MeanNode<float>; 
@@ -232,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingPreComputedNodeMembers;
     public:
         InvStdDevNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : PreComputedNode<ElemType>(deviceId), avg(deviceId), avgsqr(deviceId), ones(deviceId), sampsqr(deviceId)
+            : PreComputedNode<ElemType>(deviceId), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -243,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         InvStdDevNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : PreComputedNode<ElemType>(deviceId), avg(deviceId), avgsqr(deviceId), ones(deviceId), sampsqr(deviceId)
+            : PreComputedNode<ElemType>(deviceId), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -266,36 +245,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ElemType sqrtFloor = 1e-10f;
 
+                m_var.InplaceTruncateBottom(sqrtFloor); //prevent too small variance (and negative square roots)
 #if NANCHECK
-                avg.HasNan("MarkComputed-avg");
+                m_var.HasNan("MarkComputed-InplaceTruncateBottom");
 #endif
-                avg ^= 2;
+                m_var.InplaceSqrt();
+
 #if NANCHECK
-                avg.HasNan("MarkComputed-avg^2");
+                m_var.HasNan("MarkComputed-InplaceSqrt");
 #endif
-                avgsqr -= avg;
+                m_var.ElementInverse();
+
 #if NANCHECK
-                avgsqr.HasNan("MarkComputed-(avgsqr-avg)");
+                m_var.HasNan("MarkComputed-ElementInverse()");
 #endif
-                // do a floor here, because we can get small negative numbers that will turn into QNAN if they make it to the SQRT call below
-                avgsqr.InplaceTruncateBottom(sqrtFloor); //prevent too small variance (and negative square roots)
-#if NANCHECK
-                avgsqr.HasNan("MarkComputed-InplaceTruncateBottom");
-#endif
-                avgsqr.InplaceSqrt();
-#if NANCHECK
-                avgsqr.HasNan("MarkComputed-InplaceSqrt");
-#endif
-                avgsqr.ElementInverse();
-#if NANCHECK
-                avgsqr.HasNan("MarkComputed-ElementInverse()");
-#endif
-                FunctionValues().SetValue(avgsqr);
+                FunctionValues().SetValue(m_var);
 
                 m_numSamples = 0;
-
-                //Matrix<ElemType> &invstddev =FunctionValues();
-                //invstddev.Print("invstddev",0,invstddev.GetNumRows()-1,0,invstddev.GetNumCols()-1);
             }
         }
         virtual bool RequirePreCompute() const { return true;}
@@ -320,32 +286,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
                 samples.HasNan("InvStdDev-Samples");
 #endif
+                m_temp.SetValue(m_mean);
+                size_t numNewSample = samples.GetNumCols();
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), samples, false, 
+                    ConstOnes(numNewSample, 1, samples.GetDeviceId()), false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_mean);
 
-                ones.SetPreferredDeviceId(samples.GetPreferredDeviceId());
-                sampsqr.SetPreferredDeviceId(samples.GetPreferredDeviceId());
+                m_temp -= m_mean;
+                m_temp.AssignElementPowerOf(m_temp, 2);
+                m_var += m_temp;
 
-                if (samples.GetNumCols() != ones.GetNumRows())
-                {
-                    //ones._decideDevices(ones); // if it's going to move do it before we resize
-                    ones.Resize(samples.GetNumCols(), 1);
-                    ones.SetValue(1);
-                }
+                m_temp.AssignDifferenceOf(samples, m_mean);
+                m_temp.AssignElementPowerOf(m_temp, 2);
 
-                if (samples.GetNumCols() != sampsqr.GetNumCols() || samples.GetNumRows() != sampsqr.GetNumRows())
-                {
-                    //sampsqr._decideDevices(sampsqr); // if it's going to move do it before we resize
-                    sampsqr.Resize(samples.GetNumRows(), samples.GetNumCols());
-                    sampsqr.SetValue(1); // value not needed, but need to get it to correct device (handled by SetValue())
-                }
-
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f/(m_numSamples + samples.GetNumCols()),samples, false, ones, false, (ElemType)m_numSamples/(m_numSamples + samples.GetNumCols()), avg);
-
-                sampsqr = samples^2;
-
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f/(m_numSamples + sampsqr.GetNumCols()), sampsqr, false, ones, false, (ElemType)m_numSamples/(m_numSamples + samples.GetNumCols()), avgsqr);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), m_temp, false,
+                    ConstOnes(numNewSample, 1, samples.GetDeviceId()), false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_var);
 
 #if NANCHECK
-                avgsqr.HasNan("InvStdDev-avgsqr");
+                m_var.HasNan("InvStdDev-m_var");
 #endif
 
                 m_numSamples += samples.GetNumCols();
@@ -368,8 +325,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("InvStdDev operation: the input node has 0 element.");
 
             size_t inputDim = Inputs(0)->FunctionValues().GetNumRows();
-            avg.Resize(inputDim, 1);        
-            avgsqr.Resize(inputDim, 1); 
+            m_mean.Resize(inputDim, 1);        
+            m_var.Resize(inputDim, 1); 
 
             FunctionValues().Resize(inputDim, 1);
             CopyImageSizeFromInputs(); 
@@ -387,15 +344,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (avg.GetDeviceId() != deviceId)
-                    avg.TransferFromDeviceToDevice(avg.GetDeviceId(), deviceId);
-                if (avgsqr.GetDeviceId() != deviceId)
-                    avgsqr.TransferFromDeviceToDevice(avgsqr.GetDeviceId(), deviceId);
-                if (ones.GetDeviceId() != deviceId)
-                    ones.TransferFromDeviceToDevice(ones.GetDeviceId(), deviceId);
-                if (sampsqr.GetDeviceId() != deviceId)
-                    sampsqr.TransferFromDeviceToDevice(sampsqr.GetDeviceId(), deviceId);
-
+                if (m_mean.GetDeviceId() != deviceId)
+                    m_mean.TransferFromDeviceToDevice(m_mean.GetDeviceId(), deviceId);
+                if (m_var.GetDeviceId() != deviceId)
+                    m_var.TransferFromDeviceToDevice(m_var.GetDeviceId(), deviceId);
+                if (m_temp.GetDeviceId() != deviceId)
+                    m_temp.TransferFromDeviceToDevice( m_temp.GetDeviceId(), deviceId);
             }
         }
 
@@ -409,19 +363,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_hasComputed = m_hasComputed;
                 node->m_numSamples = m_numSamples;
 
-                node->avg = avg;
-                node->avgsqr = avgsqr;
-                node->ones = ones;
-                node->sampsqr = sampsqr;
+                node->m_mean = m_mean;
+                node->m_var = m_var;
+                node-> m_temp =  m_temp;
             }
         }
 
         // copy constructor
         InvStdDevNode(const InvStdDevNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : PreComputedNode<ElemType>(node->m_deviceId), avg(node->m_deviceId), avgsqr(node->m_deviceId), ones(node->m_deviceId), sampsqr(node->m_deviceId)
-        {                                                                                                                                               
-            node->CopyTo(this, newName, flags);                                                                                                         
-        }                                                                                                                                               
+            : PreComputedNode<ElemType>(node->m_deviceId), m_mean(node->m_deviceId), m_var(node->m_deviceId),  m_temp(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }                                      
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -433,10 +386,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         size_t m_numSamples;
-        Matrix<ElemType> avg;
-        Matrix<ElemType> avgsqr;
-        Matrix<ElemType> ones;
-        Matrix<ElemType> sampsqr;
+        Matrix<ElemType> m_mean;
+        Matrix<ElemType> m_var;
+        Matrix<ElemType>  m_temp;
     };
 
     template class InvStdDevNode<float>;
