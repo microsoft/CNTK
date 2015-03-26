@@ -1031,6 +1031,35 @@ __global__ void _adagrad(
 }
 
 template<class ElemType>
+__global__ void _adagrad4BlockSparse(
+    ElemType* a,  //dense
+    const size_t numRows, //number of rows in a and in d_v
+    ElemType* d_v, //block sparse
+    const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow,
+    ElemType* multipliers,
+    const bool colMajor,
+    const size_t len, //major dim, numRows in colMajor and numcols in rowMajor
+    const LONG64 N) //total number of non-zero values
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    const ElemType floor = 1e-16f;
+    LONG64 blockid = id / len;  
+    LONG64 row = colMajor ? id - blockid*len : blockId2ColOrRow[blockid];
+    LONG64 col = colMajor ? blockId2ColOrRow[blockid] : id - blockid*len;
+
+    size_t indexInA = row + col*numRows;
+    a[indexInA] += d_v[id] * d_v[id];
+    ElemType temp = sqrt(a[indexInA] + floor);
+    d_v[id] /= temp;
+
+    if (multipliers != nullptr)
+        multipliers[id] = 1 / temp;
+}
+
+template<class ElemType>
 __global__ void _rmsprop_init(
     ElemType* avars, ElemType* signs, ElemType* steps,
     ElemType* curr_grad,

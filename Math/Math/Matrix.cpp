@@ -1188,7 +1188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             aveMultiplier = m_CPUMatrix->Adagrad(*gradients.m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
             aveMultiplier = m_GPUMatrix->Adagrad(*gradients.m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU),
             aveMultiplier = gradients.m_CPUSparseMatrix->Adagrad(*this->m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
-            NOT_IMPLEMENTED
+            aveMultiplier = gradients.m_GPUSparseMatrix->Adagrad(*this->m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU)
             );
 
         return aveMultiplier;

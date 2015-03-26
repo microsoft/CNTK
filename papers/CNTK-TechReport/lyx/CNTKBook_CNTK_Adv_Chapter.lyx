@@ -2605,6 +2605,89 @@ matrix - input matrix.
 \end_layout
 
 \begin_layout Subsubsection
+ClassBasedCrossEntropyWithSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ClassBasedCrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+, CBCEWithSM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CNCEWithSM
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the sum of the cross entropy value for all the columns (i.e., samples)
+ using the class-based evaluation trick to reduce the computation cost.
+ The result is a scalar (i.e., one by one matrix).
+ This is often used as a training criterion node when the number of classes
+ is huge (e.g., in language model).
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ClassBasedCrossEntropyWithSoftmax(labels, matrix)
+\end_layout
+
+\begin_layout Plain Layout
+
+CBCEWithSM(labels, mainInputInfo, mainWeight, classProbBeforeSoftmax)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+labels - the ground truth labels.
+ This is a 4 by T matrix, where T is the number of samples.
+ The first row is the ground truth output id.
+ The second row is the ground truth class id.
+ The third and fourth rows are the start (inclusive) and end (exclusive)
+ output ids corresponding to the ground trueth class id.
+\end_layout
+
+\begin_layout Itemize
+mainInputInfo - contains the main information to make the classfication
+ decision.
+ It's an inputDim by T matrix.
+ In language model, inputDim is often the hidden layer size.
+\end_layout
+
+\begin_layout Itemize
+mainWeight - the inputDim by outputDim weight matrix, where inputDim is
+ the number of rows in mainInputInfo and outputDim is the number of output
+ nodes (e.g., number of words in language model).
+ During the computation, only the column slice corresponding to the start
+ and end output ids of the class id is used to reduce the computation.
+\end_layout
+
+\begin_layout Itemize
+classProbBeforeSoftmax - applying softmax on this matrix will result in
+ class probabilities.
+ This is a numOfClass by T matrix, where numOfClass is the number of classes.
+\end_layout
+
+\begin_layout Subsubsection
 ErrorPrediction
 \begin_inset Index idx
 status open
