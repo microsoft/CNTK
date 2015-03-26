@@ -1202,7 +1202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         assert(c.GetNumRows() == GetNumRows() && c.GetNumCols() == numColsNeeded);
 
-        size_t n = GetNumElements();
+        size_t n = this->GetNumElements();
 
         ElemType *multipliers = nullptr;
         if (needAveMultiplier)

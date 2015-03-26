@@ -293,7 +293,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int64_t UpdateEvalTimeStamp()
         {
-            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, 1);
+            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
             return m_evalTimeStamp;
         }
 
@@ -696,7 +696,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               RpcStringFreeW((RPC_WSTR*)&szUuid);
             }
 #else
-            int64_t id = atomic_fetch_add(&s_timeStampCounter, 1);
+            int64_t id = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
             std::wstring base = L"AutoName";
             std::wstringstream sstm;
             sstm << base.c_str() << id;
@@ -4182,7 +4182,7 @@ protected:  \
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
             m_dropoutRate = 0;
-            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, 1);
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
             InitRecurrentNode();
         }
 
@@ -4191,7 +4191,7 @@ protected:  \
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
-            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, 1);
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
