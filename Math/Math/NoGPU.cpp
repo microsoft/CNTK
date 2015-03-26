@@ -108,6 +108,8 @@ namespace Microsoft {
             // normal update for smoothed gradients c and current gradients (this)
             template<class ElemType>
             void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum) { }
+            template<class ElemType>
+            ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier) {return 1;}
 
 #ifdef NO_SYNC
             template<class ElemType> bool GPUSparseMatrix<ElemType>::do_sync = false;

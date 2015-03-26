@@ -531,7 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (learnRateInitialized)
                     prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample; 
 
-                setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size()-1]);
+                setMomentum(m_momentumInputPerMB[startEpoch]);
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
@@ -553,11 +553,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
+				setMomentum(m_momentumInputPerMB[i]);
                 //learning rate adjustment
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
                 {
                     learnRatePerSample = m_learningRatesPerSample[i];
-                    setMomentum(m_momentumInputPerMB[i]);
+                    
                 }
                 else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
                 {
@@ -587,7 +588,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef MPI_SUPPORT
 				INT32 mySamples = (INT32)
 #endif
-					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", (int)startEpoch,  learnRatePerSample, m_momentumPerMB);
+					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", i,  learnRatePerSample, m_momentumPerMB);
                 TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample, FeatureNodes, labelNodes,
                     criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
                     epochCriterion, epochEvalErrors, totalSamplesSeen);
@@ -1143,12 +1144,13 @@ public:
                 }
                 smoothedGradient.NormalGrad(gradientValues, functionValues, learnRatePerSample, momentum);
             }
-            if (adpType == GradientsUpdateType::AdaGrad)
+            else if (adpType == GradientsUpdateType::AdaGrad 
+                || (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType()== MatrixType::SPARSE)) //rmsprop for sparse is not implemented yet, delegate it with adagrad
             {
                 ElemType aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
             }
-            if (adpType == GradientsUpdateType::RmsProp)
+            else if (adpType == GradientsUpdateType::RmsProp)
             {
                 ElemType aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma, (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max, (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
@@ -1312,7 +1314,7 @@ protected:
         GradientsUpdateType ParseGradUpdateType(wstring s)
         {
             msra::strfun::tolower_ascii(s);
-            if (s == L"" || s == L"none")
+            if (s == L"" || s == L"none" || s == L"normal" || s== L"simple")
                 return GradientsUpdateType::None;
             else if (s == L"adagrad")
                 return GradientsUpdateType::AdaGrad;

@@ -59,14 +59,17 @@ template<class ElemType>
 typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
-
+    string unk = "<unk>";
     // not yet found, add to the map
     if (found == labelInfo.mapLabelToId.end())
     {
-        RuntimeError("%s not in vocabulary", labelValue.c_str());
+        found = labelInfo.mapLabelToId.find(unk);
+        if (found == labelInfo.mapLabelToId.end())
+            RuntimeError("%s not in vocabulary", labelValue.c_str());
     }
     return found->second;
 }
+
 
 template<class ElemType>
 /*IDataReader<ElemType>::LabelIdType*/ bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned & labelId)
@@ -1790,26 +1793,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
-
-        //else // for GPU
-        //{
-        //    if (matrices.find(m_featuresName) != matrices.end())
-        //    {
-        //        m_indexer.clear();
-        //        size_t size = m_featureData.size();
-
-        //        for(int i = 0; i < size; i++) 
-        //        {
-        //            m_featuresBufferRow[i] = (size_t)m_featureData[i];                    
-        //            if(m_indexer.find(m_featuresBufferRow[i]) == m_indexer.end()) 
-        //            {
-        //                m_indexer[m_featuresBufferRow[i]] = m_indexer.size();
-        //            }
-        //            m_featuresBufferRowIdx[i] = m_indexer[m_featuresBufferRow[i]];
-        //        }               
-        //        features.SetMatrixFromCSCFormat(m_featuresBufferRow, m_featuresBufferRowIdx, size, m_indexer.size());
-        //    }
-        //}
                 
         // TODO: move these two methods to startMiniBatchLoop()
         GetInputToClass(matrices);

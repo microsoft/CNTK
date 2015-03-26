@@ -649,7 +649,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> 
     ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier)
     {
-        if (c.IsEmpty())
+        if (c.IsEmpty() || c.GetNumCols() != GetNumCols() || c.GetNumRows() != GetNumRows())
         {
             c.Resize(GetNumRows(), GetNumCols());
             c.SetValue(0.0);
@@ -674,7 +674,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                     ElemType adenorm = c(row, col); 
                     adenorm += val * val; 
-                    ElemType a = (floor + sqrt(adenorm));
+                    ElemType a = sqrt(floor + adenorm);
                     m_pArray[p] = val / a;
                     c(row, col) = adenorm; 
 
@@ -682,24 +682,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         aveMultiplier += 1 / a;
                 }
             }
-        } else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        } 
+        else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
-            for(size_t j = 0; j < m_blockSize; j++)
+            size_t len = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
+            size_t p = 0;
+            for (long j = 0; j < m_blockSize; j++)
             {
-                size_t i = m_blockIds[j];
-                size_t len = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
-                size_t start = j* len;
-                for(size_t p = start; p < start+len; p++) 
+                size_t colOrRow = m_blockIds[j];
+                for (long i = 0; i < len; i++, p++) 
                 {
                     ElemType val = m_pArray[p];
 
-                    size_t row = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
-                    size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
-                    ElemType adenorm = c(row, col); 
-                    adenorm += val * val; 
-                    ElemType a = (floor + sqrt(adenorm));
-                    m_pArray[p] = val / a;
-                    c(row, col) = adenorm; 
+                    size_t row = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : colOrRow;
+                    size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? colOrRow : i;
+                    c(row, col) += val * val;
+                    ElemType a = sqrt(floor + c(row, col));
+                    m_pArray[p] /= a;
 
                     if (needAveMultiplier)
                         aveMultiplier += 1 / a;

@@ -65,6 +65,7 @@ void CURAND_CALL(curandStatus x)
 {
     if(x!=CURAND_STATUS_SUCCESS) 
     { 
+        std::cerr << "!!!!!!!!CURAND EXCEPTION: " << std::endl;
         throw std::runtime_error("CURAND fail");
     }        
 }
@@ -73,6 +74,7 @@ void CUBLAS_CALL(cublasStatus_t x)
 {
     if(x!=CUBLAS_STATUS_SUCCESS) 
     { 
+        std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
         throw std::runtime_error("CUBLAS fail");
     }
 }
@@ -1099,7 +1101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             multipliers = m_pArray + n; // temp memory used to store multipliers,
 
         int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
-        _adagrad<ElemType> << <blocksPerGrid, threadsPerBlock >> >(m_pArray, gradients.m_pArray, GetNumElements(), multipliers);
+        _adagrad<ElemType> << <blocksPerGrid, threadsPerBlock >> >(m_pArray, gradients.m_pArray, n, multipliers);
 
         if (!needAveMultiplier)
             return 1;
@@ -1109,13 +1111,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             float aveMultiplier = 0;
             CUBLAS_CALL(cublasSasum(cuHandle, (LONG64)n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
-            return aveMultiplier / n;
+            return (ElemType)aveMultiplier / n;
         }
         else
         {
             double aveMultiplier = 0;
             CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-            return aveMultiplier / n;
+            return (ElemType)aveMultiplier / n;
         }
     }
 

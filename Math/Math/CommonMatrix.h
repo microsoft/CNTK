@@ -19,7 +19,11 @@
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
 
-#define NOT_IMPLEMENTED throw std::logic_error("Not implemented.")
+#define NOT_IMPLEMENTED \
+    {   \
+    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+    throw std::logic_error("Not Implemented"); \
+    }
 
 #define DEVICEID_TYPE int
 #define GPUSPARSE_INDEX_TYPE int  //cuSparse only supports int array indexes
