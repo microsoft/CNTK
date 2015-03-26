@@ -93,7 +93,7 @@ KALDI_SRC = DataReader/KaldiReader/base/kaldi-math.cc DataReader/KaldiReader/bas
 			DataReader/KaldiReader/util/text-utils.cc DataReader/KaldiReader/util/kaldi-io.cc \
          DataReader/KaldiReader/util/kaldi-table.cc DataReader/KaldiReader/util/parse-options.cc DataReader/KaldiReader/util/simple-options.cc DataReader/KaldiReader/util/simple-io-funcs.cc 
 
-SEQUENCEREADER_SRC = DataReader/SequenceReader/SequenceReader.cpp DataReader/SequenceReader/SequenceParser.cpp DataReader/SequenceReader/Exports.cpp
+SEQUENCEREADER_SRC = DataReader/LMSequenceReader/SequenceReader.cpp DataReader/LMSequenceReader/SequenceParser.cpp DataReader/LMSequenceReader/Exports.cpp
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
 UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
 READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC) $(KALDIREADER_SRC) 
@@ -118,7 +118,7 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 
 SEPARATOR = "=-----------------------------------------------------------="
 
-all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/KaldiReader.so $(BINDIR)/KaldiWriter.so
+all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/KaldiReader.so $(BINDIR)/KaldiWriter.so
 
 
 	ln -sf $(CURDIR)/$(BINDIR)/* bin
@@ -127,7 +127,7 @@ $(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
 	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^  
 
-$(BINDIR)/SequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
+$(BINDIR)/LMSequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
 	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 

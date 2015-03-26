@@ -51,7 +51,7 @@
 #ifndef USE_MKL  //MKL has one additional parameter for different matrix order
 #define BLAS_COLMAJOR 
 #else
-#define BLAS_COLMAJOR (int)MatrixOrder::ColMajor
+#define BLAS_COLMAJOR (int)MatrixOrder::ColMajor,
 #endif
 
 #define SWAP(a,b) {(a) ^= (b); (b) ^= (a); (a) ^= (b);}
