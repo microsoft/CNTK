@@ -454,7 +454,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     string outputCls2Index = config("outputCls2Index");
     size_t  vocabSize = config("vocabSize");
     size_t  nbrCls = config("nbrClass");
-    size_t  cutoff = config("cutoff", "2");
+    int  cutoff = config("cutoff", "1");
 
     DEVICEID_TYPE deviceId = CPUDEVICE;
     Matrix<ElemType> wrd2cls(deviceId);
