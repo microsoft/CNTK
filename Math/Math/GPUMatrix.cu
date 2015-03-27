@@ -40,9 +40,11 @@ bool do_sync = true;
 
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
-__declspec (thread) 
+__declspec (thread)
+#else
+static
 #endif
-static cudaStream_t t_stream = cudaStreamDefault;
+cudaStream_t t_stream = cudaStreamDefault;
 
 #define DEFAULT_THREAD_PER_DIM		16
 

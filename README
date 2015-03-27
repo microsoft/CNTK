@@ -22,7 +22,7 @@ You need to add ${ACML_PATH}/lib to your ${LD_LIBRARY_PATH}.
 
 To build the gpu version, you have to install NIVIDIA CUDA first
 You can modify the path CUDA_PATH in makefile.cpu to change your cuda path
-We use cuda-6.5 as default.
+We use cuda-7.0 as default.
 Then add ${CUDA_PATH}/lib, ${CUDA_PATH}/lib64 to your ${LD_LIBRARY_PATH} to make sure the program links to the library correctly.
 
 == Build ==

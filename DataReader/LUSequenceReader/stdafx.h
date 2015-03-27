@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "Platform.h"
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 #include "targetver.h"
 #ifdef __WINDOWS__
