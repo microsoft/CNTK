@@ -608,10 +608,8 @@ void SequenceReader<ElemType>::ReadWord(char *word, FILE *fin)
 template<class ElemType>
 void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*flatten*/) 
 {
-    char strFileName[MAX_STRING];
     char stmp[MAX_STRING];
     string strtmp; 
-    size_t sz;
     int cnt, clsidx, b;
     class_size  = 0;
 

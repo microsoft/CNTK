@@ -25,8 +25,10 @@
 #ifdef    _WIN32
 // thread local storage to access the current stream, initalize to default stream
 extern __declspec (thread)
+#else
+static
 #endif
-static cudaStream_t t_stream;
+cudaStream_t t_stream;
 
 
 void CUDACALL(cudaError_t x) 
