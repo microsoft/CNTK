@@ -63,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintNodeValuesToFile(printValues, fstream);
         }
 
-    protected:
+    public:
         bool m_hasComputed;
     };
 #define UsingPreComputedNodeMembers UsingComputationNodeMembers; using PreComputedNode<ElemType>::m_hasComputed
@@ -2056,4 +2056,306 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
+
+    /**
+    BatchModeNode is a derivative of ComputationNode.
+    It additionally check if needs to process data in batch before processing its parent
+    This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
+    It differs from PreComputeNode in that precompute done is done before the entire corpus.
+    This is done before forward computation of all nodes. 
+    This node is similar to the PreComputeNode, but is an abstract of it.
+    */
+    template<class ElemType>
+    class BatchModeNode : public ComputationNode<ElemType>
+        // all nodes require precomputation should derive from it
+    {
+        UsingComputationNodeMembers;
+
+    protected:
+        /// the memory of input or output
+        Matrix<ElemType> mMemory;
+
+    public:
+        BatchModeNode(DEVICEID_TYPE deviceId) : ComputationNode(deviceId), mMemory(deviceId) {}
+        virtual bool HasComputed() const = 0;
+        virtual void MarkComputed(const bool hasComputed) = 0;
+
+        virtual bool RequireBatchMode() const { return true; }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            assert(mMemory.GetNumCols() > 0);
+
+            FunctionValues().Resize(mMemory.GetNumRows(), m_samplesInRecurrentStep);
+            if (timeIdxInSeq == 0)
+            {
+                assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == mMemory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
+            }
+            FunctionValues().SetValue(mMemory.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+            assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
+        }
+
+        virtual void SaveToFile(File& fstream)  const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_hasComputed;
+            fstream << m_functionValues;
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+
+            fstream >> m_hasComputed;
+            fstream >> m_functionValues;
+        }
+
+
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        {
+            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+
+            WCHAR str[4096];
+            wsprintf(str, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << wstring(str);
+            wsprintf(str, L"HasComputed=%ws", HasComputed() ? L"true" : L"false");
+            fstream << wstring(str);
+
+            PrintNodeValuesToFile(printValues, fstream);
+        }
+
+    protected:
+        bool m_hasComputed;
+    };
+
+    template class BatchModeNode<float>;
+    template class BatchModeNode<double>;
+
+    template<class ElemType>
+    class TimeReverseNode : public BatchModeNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+    public:
+        TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        TimeReverseNode(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
+            : BatchModeNode(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            TimeReverseNode<ElemType>* node = (TimeReverseNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->mMemory = mMemory;
+            }
+        }
+
+        virtual void SaveToFile(File& fstream)  const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual bool HasComputed() const {
+            return m_hasComputed;
+        }
+
+        virtual void MarkComputed(const bool hasComputed)
+        {
+            m_hasComputed = hasComputed;
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new TimeReverseNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"TimeReverse"; }
+
+        virtual void MoveMatricesToDevice(const short deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (mMemory.GetDeviceId() != deviceId)
+            {
+                bool fEmpty = mMemory.GetNumElements() == 0;
+                mMemory.TransferFromDeviceToDevice(mMemory.GetDeviceId(), deviceId, true, fEmpty);
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("TimeReverse operation only takes one input.");
+            ComputationNodePtr child = Inputs(inputIndex);
+            ComputeInputPartialS(GradientValues(), child->GradientValues(), m_samplesInRecurrentStep);
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
+        {
+#if DUMPOUTPUT
+
+            functionValues.Print("TimeReverseNode");
+#endif
+            size_t nc = inputGradientValues.GetNumCols();
+            size_t nr = inputGradientValues.GetNumRows();
+            if (nc != gradientValues.GetNumCols() ||
+                nr != gradientValues.GetNumRows())
+            {
+                inputGradientValues.Resize(nr, nc);
+                inputGradientValues.SetValue(0);
+            }
+
+            for (size_t i = 0; i < nc; i += nSamples)
+            {
+                Matrix<ElemType> ig = gradientValues.ColumnSlice(i, nSamples);
+                Matrix<ElemType> ii = inputGradientValues.ColumnSlice(nc - i - nSamples, nSamples);
+                ii += ig;
+            }
+
+#if DUMPOUTPUT
+            inputGradientValues.Print("child Gradient-out");
+#endif
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            if (m_hasComputed == false)
+            {
+                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
+                mMemory.SetValue(FunctionValues());
+            }
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues, int nSamples)
+        {
+            /// this assumes this reverse node is called once, so it can set, instead add to, the function values
+            size_t rows0 = inputFunctionValues.GetNumRows(), cols0 = inputFunctionValues.GetNumCols();
+            functionValues.Resize(rows0, cols0);
+
+            for (size_t i = 0; i < cols0; i += nSamples)
+            {
+                Matrix<ElemType> ig = inputFunctionValues.ColumnSlice(i, nSamples);
+                functionValues.ColumnSlice(cols0 - i - nSamples, nSamples).SetValue(ig);
+            }
+
+#if NANCHECK
+            m_functionValues.HasNan("TimeReverse");
+#endif
+#if DUMPOUTPUT
+            functionValues.Print("TimeReverseNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("TimeReverse operation requires one input.");
+
+            size_t rows, cols;
+            rows = Inputs(0)->FunctionValues().GetNumRows();
+            cols = Inputs(0)->FunctionValues().GetNumCols();
+
+            FunctionValues().Resize(rows, cols);
+            CopyImageSizeFromInput(0);
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr cNode)
+        {
+            m_children.resize(1);
+            m_children[0] = cNode;
+        }
+
+    public:
+        bool UnitTest() {
+            size_t nT = 3;
+            size_t nInput = 3;
+            size_t nOutput = nInput;
+            /// backup 
+            Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
+
+            f0 = Inputs(0)->FunctionValues();
+            func = FunctionValues();
+
+            Inputs(0)->FunctionValues().Resize(nInput, nT);
+            Inputs(0)->FunctionValues().SetValue(0);
+            Inputs(0)->FunctionValues()(0, 0) = 1;
+            Inputs(0)->FunctionValues()(0, 1) = 2;
+            Inputs(0)->FunctionValues()(0, 2) = 3;
+            FunctionValues().Resize(nOutput, nT);
+            if (Inputs(0)->FunctionValues().GetDeviceId() != m_deviceId)
+                Inputs(0)->FunctionValues().TransferFromDeviceToDevice(Inputs(0)->FunctionValues().GetDeviceId(), m_deviceId, true);
+
+            EvaluateThisNode();
+
+            /// check with expected values
+            if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||
+                !ISCLOSE(FunctionValues()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(FunctionValues()(0, 2), 1, EPSILON))
+                return false;
+            if (FunctionValues().GetDeviceId() != m_deviceId)
+                FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+            Inputs(0)->GradientValues().Resize(nOutput, nT);
+            Inputs(0)->GradientValues().SetValue(1.0);
+            GradientValues().Resize(nOutput, nT);
+            GradientValues().SetValue(0);
+            GradientValues()(0, 0) = 1;
+            GradientValues()(0, 1) = 2;
+            GradientValues()(0, 2) = 3;
+            if (GradientValues().GetDeviceId() != m_deviceId)
+                GradientValues().TransferFromDeviceToDevice(GradientValues().GetDeviceId(), m_deviceId, true);
+
+            ComputeInputPartial(0);
+
+            /// check with expected values
+            if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 4, EPSILON)
+                || !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 3, EPSILON)
+                || !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 2, EPSILON))
+                return false;
+
+            if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+
+            if (GradientValues().GetDeviceId() != m_deviceId)
+                GradientValues().TransferFromDeviceToDevice(GradientValues().GetDeviceId(), m_deviceId, true);
+
+            return true;
+        }
+    };
+
+    template class TimeReverseNode<float>;
+    template class TimeReverseNode<double>;
+
+
 }}}
