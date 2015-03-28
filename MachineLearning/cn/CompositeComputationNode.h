@@ -2132,6 +2132,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class BatchModeNode<float>;
     template class BatchModeNode<double>;
 
+    /**
+    Developed by Kaisheng Yao. 
+    This node is used in the following work
+    K. Yao and G. Zweig, "Sequence-to-Sequence Neural Net Models for Grapheme-to-Phoneme Conversion", submitted to INTERSPEECH 2015
+    */
     template<class ElemType>
     class TimeReverseNode : public BatchModeNode<ElemType>
     {
