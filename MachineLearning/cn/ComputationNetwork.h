@@ -807,6 +807,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == TimeReverseNode<ElemType>::TypeName())
+                newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -964,7 +966,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
-			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
+            else if (nodeType == TimeReverseNode<ElemType>::TypeName())
+                newNode = new TimeReverseNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
             else
             {
@@ -1294,8 +1298,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AddNodeToNet(newNode);
             return newNode;
         }
-        
-        ComputationNodePtr LookupTable (const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
+
+        ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new TimeReverseNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(input);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(dictionary, input);
