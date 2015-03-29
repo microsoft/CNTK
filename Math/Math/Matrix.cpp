@@ -2708,6 +2708,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );                
             }
 
+    //sum of all elements
+    template<class ElemType>
+    ElemType Matrix<ElemType>::LogAddSumOfElements() const
+    {
+        if (IsEmpty())
+            throw std::logic_error("LogAddSumOfElements: Matrix is empty.");
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            nullptr,
+            return m_CPUMatrix->LogAddSumOfElements(),
+            return m_GPUMatrix->LogAddSumOfElements(),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
     template<class ElemType>
     bool Matrix<ElemType>::IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold /*= 1e-8*/) const
     {
@@ -4351,6 +4367,67 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		return *this;
 	}
 
+
+    template<class ElemType>
+    void Matrix<ElemType>::RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+        Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+        const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
+    {
+        DecideAndMoveToRightDevice(alpha, beta);
+        functionValues._transferToDevice(alpha.GetDeviceId());
+        beta._transferToDevice(alpha.GetDeviceId());
+
+        DISPATCH_MATRIX_ON_FLAG(&alpha,
+            &beta,
+            CPUMatrix<ElemType>::RCRFBackwardCompute(
+                *alpha.m_CPUMatrix,
+                *beta.m_CPUMatrix,
+                *lbls.m_CPUMatrix,
+                *pair_scores.m_CPUMatrix, shift),
+            GPUMatrix<ElemType>::RCRFBackwardCompute(
+                *alpha.m_GPUMatrix,
+                *beta.m_GPUMatrix,
+                *lbls.m_GPUMatrix,
+                *pos_scores.m_GPUMatrix,
+                *pair_scores.m_GPUMatrix, shift),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
+        const Matrix<ElemType>&   alpha,
+        const Matrix<ElemType>& beta,
+        const Matrix<ElemType>& pair_scores,
+        Matrix<ElemType>& grd,
+        const int startLbl,
+        const int shift)
+    {
+        DecideAndMoveToRightDevice(alpha, grd);
+        grd._transferToDevice(alpha.GetDeviceId());
+
+        DISPATCH_MATRIX_ON_FLAG(&alpha,
+            &grd,
+            CPUMatrix<ElemType>::RCRFTransGrdCompute(
+                *lbls.m_CPUMatrix,
+                *alpha.m_CPUMatrix,
+                *beta.m_CPUMatrix,
+                *pair_scores.m_CPUMatrix,
+                *grd.m_CPUMatrix,
+                shift),
+            GPUMatrix<ElemType>::RCRFTransGrdCompute(
+                *lbls.m_GPUMatrix,
+                *alpha.m_GPUMatrix,
+                *beta.m_GPUMatrix,
+                *pair_scores.m_GPUMatrix,
+                *grd.m_GPUMatrix,
+                startLbl,
+                shift),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
 
 #pragma endregion Static BLAS Functions

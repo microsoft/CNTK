@@ -354,6 +354,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType> &Gradients, const GPUMatrix<ElemType> &SmoothedGradients);
 
+        ElemType LogAddSumOfElements() const;
+
     public:
         GPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt);
         static void InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt);
@@ -361,6 +363,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed);
 
         GPUMatrix<ElemType>& AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift);
+
+    public:
+        static void RCRFBackwardCompute(
+            const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+            const GPUMatrix<ElemType>& lbls,
+            const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift = 1);
+        static void RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
+            const GPUMatrix<ElemType>&   alpha,
+            const GPUMatrix<ElemType>& beta,
+            const GPUMatrix<ElemType>& pair_scores,
+            GPUMatrix<ElemType>& grd,
+            const int startLbl, /// the time 0 start symbol in the output layer
+            const int shift);
 
     public:
         friend File& operator>>(File& stream, GPUMatrix<ElemType>& us)
