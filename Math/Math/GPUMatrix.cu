@@ -3732,7 +3732,106 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma endregion Static BLAS Functions
 
 
-    template class GPUMatrix<float>; 
+    /// f = logadd(f, vec) to get the logadd sum of vector elments
+    template<class ElemType>
+    ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const
+    {
+        if (this->IsEmpty())
+            throw std::logic_error("SumOfElements: Matrix is empty");
+
+        PrepareDevice();
+        ElemType* d_sum = NULL;
+        ElemType h_sum;
+        LONG64 N = (LONG64)GetNumElements();
+        CUDA_CALL(cudaMalloc((void**)&d_sum, sizeof(ElemType)));
+        int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+
+        _reductionLogAddSum<ElemType> << < blocksPerGrid, threadsPerBlock >> > (this->m_pArray,
+            d_sum, 1, N);
+        CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaFree(d_sum));
+
+        return h_sum;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::RCRFBackwardCompute(
+        const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+        const GPUMatrix<ElemType>& lbls,
+        const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift)
+    {
+        if (alpha.IsEmpty() || pos_scores.IsEmpty() || pair_scores.IsEmpty())
+            throw std::logic_error("RCRFBackwardCompute: one of the input matrices is empty.");
+
+        if (alpha.GetNumRows() != pos_scores.GetNumRows() || alpha.GetNumCols() != pos_scores.GetNumCols())
+            throw std::logic_error("RCRFBackwardCompute: matrix dimensions mismatched.");
+
+        size_t iNumLab = alpha.GetNumRows();
+        size_t iNumPos = alpha.GetNumCols();
+
+        alpha.PrepareDevice();
+        beta.Resize(iNumLab, iNumPos);
+
+        ElemType* d_zeta = NULL;
+        CUDA_CALL(cudaMalloc((void**)&d_zeta, sizeof(ElemType)* iNumLab)); //we allocate memory on the device
+
+        long N = iNumLab;
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        size_t szMemSize;
+        for (int t = iNumPos - 1; t >= 0; t--)
+        {
+            szMemSize = sizeof(ElemType)* iNumLab;
+            _rcrfBackwardComputeZeta<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t, iNumPos, alpha.m_pArray, d_zeta, pair_scores.m_pArray, iNumLab, shift);
+            szMemSize = iNumLab * 3;
+            szMemSize *= sizeof(ElemType);
+            _rcrfBackwardCompute<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t, iNumPos, alpha.m_pArray, beta.m_pArray,
+                d_zeta, pair_scores.m_pArray, iNumLab, shift);
+        }
+        /*
+        error = cudaGetErrorString(cudaPeekAtLastError());
+        printf("%s\n", error);
+        error = cudaGetErrorString(cudaThreadSynchronize());
+        printf("%s\n", error);
+        */
+
+        CUDA_CALL(cudaFree(d_zeta));
+    }
+
+    /**
+    Compute the gradient for the first order Markov transition probabilities
+    It uses equations derived in R. Collobert's paper "Natural lanugage processing (almost) from scratch"
+    */
+    template<class ElemType>
+    void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
+        const GPUMatrix<ElemType>&   alpha,
+        const GPUMatrix<ElemType>& beta,
+        const GPUMatrix<ElemType>& pair_scores,
+        GPUMatrix<ElemType>& grd,
+        const int startLbl,
+        const int shift)
+    {
+        assert(shift == 1);
+        int iNumPos = alpha.GetNumCols();
+        int iNumLab = alpha.GetNumRows();
+
+        ElemType* d_zeta = NULL;
+        CUDA_CALL(cudaMalloc((void**)&d_zeta, sizeof(ElemType)* iNumLab)); //we allocate memory on the device
+        long N = iNumLab;
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        size_t szMemSize;
+        for (int t = 0; t < iNumPos; t++)
+        {
+            szMemSize = sizeof(ElemType)* iNumLab;
+            _rcrfTransGrdComputeZeta<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t - 1, iNumPos, alpha.m_pArray, d_zeta, pair_scores.m_pArray, iNumLab, startLbl, shift);
+            szMemSize = iNumLab * 3;
+            szMemSize *= sizeof(ElemType);
+            _rcrfTransGrdCompute<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t, startLbl, alpha.m_pArray, beta.m_pArray,
+                d_zeta, pair_scores.m_pArray, lbls.m_pArray, grd.m_pArray, iNumPos, iNumLab, shift);
+        }
+        CUDA_CALL(cudaFree(d_zeta));
+    };
+
+    template class GPUMatrix<float>;
     template class GPUMatrix<double>;
     template class DeviceBoundNumber<float>;
     template class DeviceBoundNumber<double>;
@@ -3812,5 +3911,6 @@ int _ConvertSMVer2Cores(int major, int minor)
 //    else
 //        return (long)free;
 //}
+
 
 #endif // CPUONLY
