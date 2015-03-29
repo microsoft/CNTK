@@ -1205,5 +1205,348 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ClassBasedCrossEntropyWithSoftmaxNode<float>;
     template class ClassBasedCrossEntropyWithSoftmaxNode<double>;
 
+    /**
+        CRF training criterion 
+        It uses forward-backward algorithm within a minibatch to compute statistics for sequence level optimization 
+        This node can serve a base class for other sequence level optimization
+
+        Developed by Kaisheng Yao
+        This node is for replicating results of the following work
+        K. Yao, B. Peng, G. Zweig, D. Yu, X. Li and F. Gao, "Recurrent Conditional Random Fields", NIPS Deep Learning Workshop 2014
+        K. Yao, B. Peng, G. Zweig, D. Yu, X. Li and F. Gao, "Recurrent Conditional Random Fields for Language Understanding", ICASSP 2014 
+        http://research.microsoft.com/pubs/210167/rcrf_v9.pdf
+
+        The forward-backward algorithm follows the derivation in 
+        http://jmlr.org/papers/volume12/collobert11a/collobert11a.pdf
+
+    */
+    template<class ElemType>
+    class CRFNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    
+    private:
+        Matrix<ElemType> mAlpha;
+        Matrix<ElemType> mBeta;
+        Matrix<ElemType> mPostProb;
+
+        int mStartLbl;
+        int mEndLbl;
+
+    public:
+        CRFNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode(deviceId), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        CRFNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode(deviceId), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"CRF"; }
+
+        /// compute posterior probability of label y at position t
+        virtual void EvaluateThisNode()
+        {
+            size_t nrow = Inputs(0)->FunctionValues().GetNumRows();
+            size_t ncol = Inputs(0)->FunctionValues().GetNumCols();
+
+            mAlpha.Resize(nrow, ncol);
+            mBeta.Resize(nrow, ncol);
+            mPostProb.Resize(nrow, ncol);
+
+            FunctionValues().SetValue(0.0);
+            Matrix<ElemType> funcVal = FunctionValues();
+
+            size_t nstep = ncol / m_samplesInRecurrentStep;
+            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+            {
+                Matrix<ElemType> postProbSlice = mPostProb.ColumnSlice(i * nstep, nstep);
+                Matrix<ElemType> alphaSlice = mAlpha.ColumnSlice(i * nstep, nstep);
+                Matrix<ElemType> betaSlice = mBeta.ColumnSlice(i * nstep, nstep);
+                Matrix<ElemType> labelSlice = Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep);
+                Matrix<ElemType> posScoreSlice = Inputs(1)->FunctionValues().ColumnSlice(i * nstep, nstep);
+
+                EvaluateThisNodeS(postProbSlice,
+                    alphaSlice,
+                    betaSlice,
+                    funcVal,
+                    labelSlice, 
+                    posScoreSlice,
+                    Inputs(2)->FunctionValues(),
+                    mStartLbl, mEndLbl);
+
+                FunctionValues() += funcVal;
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        {
+            if (inputIndex != 1 && inputIndex != 2)
+                throw std::invalid_argument("CRFNode only takes with respect to input and weight.");
+
+            if (inputIndex == 1)
+                ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(),
+                mPostProb, Inputs(inputIndex)->GradientValues());
+            else if (inputIndex == 2)
+            {
+                size_t ncol = mAlpha.GetNumCols();
+                size_t nstep = ncol / m_samplesInRecurrentStep;
+                assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
+                for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+                {
+                    ErrorSignalToTransitionNode(
+                        Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep),
+                        mAlpha.ColumnSlice(i * nstep, nstep),
+                        mBeta.ColumnSlice(i * nstep, nstep),
+                        Inputs(inputIndex)->FunctionValues(),
+                        Inputs(inputIndex)->GradientValues(),
+                        mStartLbl, 1);
+                }
+            }
+            else
+                return;
+        }
+
+        static void ErrorSignalToPostitionDependentNode(const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& labls, const Matrix<ElemType>& postProb, Matrix<ElemType>& grd)
+        {
+            Matrix<ElemType>::AddScaledDifference(gradientValues, postProb, labls, grd);
+        }
+
+        static void ErrorSignalToTransitionNode(
+            const Matrix<ElemType>& labls, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta,
+            const Matrix<ElemType>& pair_scores, Matrix<ElemType>& grd,
+            const int startLbl, const size_t shift = 1)
+        {
+            TransGrdCompute(labls,
+                alpha,
+                beta,
+                pair_scores,
+                grd,
+                startLbl, shift);
+        }
+
+        /// compute forward backward algorithm
+        static void EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
+        {
+            /// to-do, each slice is for one sentence
+            /// to-do, number of slices correspond to number of frames 
+            /// this implementation only supports one sentence per minibatch
+
+            int nObs = lbls.GetNumCols();
+
+            /// change to other values so can support multiple sentences in each minibatch
+            assert(iStep == 1);
+            ForwardCompute(alpha, lbls, pos_scores, pair_scores, iStep);
+            BackwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, iStep);
+            PostProbCompute(postprob, alpha, beta, iStep);
+
+            firstLbl = -1;
+            for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+            if (lbls(ik, 0) != 0){
+                firstLbl = ik; break;
+            }
+
+            lastLbl = -1;
+            for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+            if (lbls(ik, nObs - 1) != 0){
+                lastLbl = ik; break;
+            }
+
+            functionValues.AssignInnerProductOfMatrices(lbls, pos_scores);
+
+            Matrix<ElemType> a = alpha.ColumnSlice(nObs - 1, 1);
+            ElemType fAlpha;
+            fAlpha = a.LogAddSumOfElements();
+
+            /// transition score
+            ElemType tscore = 0;
+            for (int t = 0; t < nObs - 1; t++){
+                int i = -1;
+                for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+                if (lbls(ik, t) != 0){
+                    i = ik; break;
+                }
+                int j = -1;
+                for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+                if (lbls(ik, t + 1) != 0){
+                    j = ik; break;
+                }
+                tscore += pair_scores(j, i);
+            }
+            tscore += functionValues.Get00Element();  /// correct path score
+            tscore -= fAlpha;  /// reduced by the scores from all paths
+            functionValues.SetValue(tscore);
+
+            functionValues *= (-1);
+        }
+
+        /// compute forward backward algorithm
+        static void ForwardCompute(Matrix<ElemType>& alpha,
+            const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift = 1)
+        {
+            /// to-do, shift more than 1 to support muliple sentences per minibatch
+            assert(shift == 1);
+            int iNumPos = lbls.GetNumCols();
+            int iNumLab = lbls.GetNumRows();
+
+            int firstLbl = -1;
+            for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+            if (lbls(ik, 0) != 0){
+                firstLbl = ik; break;
+            }
+
+            /// need to have 
+            alpha.Resize(iNumLab, iNumPos);
+
+            for (int t = 0; t < iNumPos; t++)
+            {
+                for (int k = 0; k < iNumLab; k++)
+                {
+                    ElemType fTmp = (ElemType)LZERO;
+                    for (int j = 0; j < iNumLab; j++)
+                    {
+                        ElemType fAlpha = (j == firstLbl) ? (ElemType) 0.0 : (ElemType)LZERO;
+                        if (t > 0)
+                            fAlpha = alpha(j, t - 1);
+                        fTmp = alpha.LogAdd(fTmp, fAlpha + pair_scores(k, j));
+                    }
+                    fTmp += pos_scores(k, t);  /// include position dependent score
+                    alpha(k, t) = fTmp;
+                }
+            }
+        }
+
+        /// compute backward algorithm
+        static void BackwardCompute( const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+            Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift = 1)
+        {
+            assert(shift == 1);
+
+            alpha.RCRFBackwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, shift);
+        }
+
+        static void TransGrdCompute(const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>&   alpha,
+            const Matrix<ElemType>& beta,
+            const Matrix<ElemType>& pair_scores,
+            Matrix<ElemType>& grd,
+            const int startLbl,
+            const int shift = 1)
+        {
+            assert(shift == 1);
+
+            alpha.RCRFTransGrdCompute(lbls,
+                alpha,
+                beta,
+                pair_scores,
+                grd,
+                startLbl, shift);
+        }
+
+        /// compute forward backward algorithm
+        static void PostProbCompute(Matrix<ElemType>& postprob, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta, const int shift = 1)
+        {
+            assert(shift == 1);
+            int iNumPos = alpha.GetNumCols();
+            int iNumLab = alpha.GetNumRows();
+
+            postprob.Resize(iNumLab, iNumPos);
+            postprob.SetValue(beta);
+            postprob.InplaceExp();
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 3)
+                throw std::logic_error("CRFNode requires three inputs.");
+
+            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
+                Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
+                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
+                Inputs(2)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumRows()))
+            {
+                throw std::logic_error("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
+            }
+
+            FunctionValues().Resize(1, 1);
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, false);
+
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;
+        }
+
+        /// label : output label vector of [0:T-1]
+        /// position_dependent_score : score from position dependent node,
+        /// in the R-CRF case, it is the RNN output score before softmax
+        /// transition score : score from the transition node, 
+        /// in the R-CRF case, it is the transition probability between labels
+        virtual void AttachInputs(const ComputationNodePtr label,
+            const ComputationNodePtr position_dependent_score,
+            const ComputationNodePtr transition_score)
+        {
+            m_children.resize(3);
+            m_children[0] = label;
+            m_children[1] = position_dependent_score;
+            m_children[2] = transition_score;
+        }
+
+        virtual void MoveMatricesToDevice(const short deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            CRFNode<ElemType>* node = (CRFNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->mAlpha = mAlpha;
+                node->mBeta= mBeta;
+                node->mPostProb = mPostProb;
+
+                node->mStartLbl = mStartLbl;
+                node->mEndLbl = mEndLbl;
+            }
+
+        }
+
+        // copy constructor
+        CRFNode(const CRFNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode(node->m_deviceId), mAlpha(node->m_deviceId), mBeta(node->m_deviceId), mPostProb(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new CRFNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    };
+
 
 }}}
