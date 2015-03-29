@@ -62,7 +62,7 @@ else
 	MATHLIB_DEFINE = -DUSE_ACML
 endif
 
-CUDA_PATH = /usr/local/cuda-6.5
+CUDA_PATH = /usr/local/cuda-7.0
 CUDA_INCLUDE = $(CUDA_PATH)/include
 CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
