@@ -334,7 +334,7 @@ namespace Microsoft {
             	else if (s == L"crf")
             		return TrainingCriterion::CRF;
                 LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax | CRF)");
-            }
+	    }
 
             EvalCriterion ParseEvalCriterionString(wstring s)
             {
