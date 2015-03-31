@@ -4689,9 +4689,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
         const CPUMatrix<ElemType>& lbls,
-        const CPUMatrix<ElemType>& pair_scores, const int shift)
+        const CPUMatrix<ElemType>& pair_scores)
     {
-        assert(shift == 1);
         int iNumPos = (int)lbls.GetNumCols();
         int iNumLab = (int)lbls.GetNumRows();
 
@@ -4708,7 +4707,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma omp parallel for
             for (int k = 0; k < iNumLab; k++)
             {
-                _rcrfBackwardCompute(t, k, alpha, beta, pair_scores, shift);
+                _rcrfBackwardCompute(t, k, alpha, beta, pair_scores);
             }
         }
 
@@ -4718,9 +4717,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
         CPUMatrix<ElemType>& beta,
-        const CPUMatrix<ElemType>& pair_scores, const int shift)
+        const CPUMatrix<ElemType>& pair_scores)
     {
-        assert(shift == 1);
         size_t iNumLab = alpha.GetNumRows();
         size_t iNumPos = alpha.GetNumCols();
 
@@ -4758,10 +4756,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const CPUMatrix<ElemType>&   alpha,
         const CPUMatrix<ElemType>& beta,
         const CPUMatrix<ElemType>& pair_scores,
-        CPUMatrix<ElemType>& grd,
-        const int shift)
+        CPUMatrix<ElemType>& grd)
     {
-        assert(shift == 1);
         int iNumPos = (int)alpha.GetNumCols();
         int iNumLab = (int)alpha.GetNumRows();
 
@@ -4780,7 +4776,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma omp parallel for
             for (int i = 0; i < iNumLab; i++){
-                _rcrfTransGrdCompute(i, lbls, alpha, beta, pair_scores, grd, tPos, shift);
+                _rcrfTransGrdCompute(i, lbls, alpha, beta, pair_scores, grd, tPos);
             }
 
             /// transition score
@@ -4811,10 +4807,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const CPUMatrix<ElemType>& beta,
         const CPUMatrix<ElemType>& pair_scores,
         CPUMatrix<ElemType>& grd,
-        const size_t tPos, /// position
-        const int shift)
+        const size_t tPos /// position
+        )
     {
-        assert(shift == 1);
         int iNumLab = (int)alpha.GetNumRows();
 
         int firstLbl = -1;
