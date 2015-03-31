@@ -781,6 +781,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CRFNode<ElemType>::TypeName())
                 newNode = new CRFNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == LSTMNode<ElemType>::TypeName())
+                newNode = new LSTMNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
                 newNode = new CrossEntropyNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
@@ -950,6 +952,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CRFNode<ElemType>::TypeName())
                 newNode = new CRFNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == LSTMNode<ElemType>::TypeName())
+                newNode = new LSTMNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
                 newNode = new MatrixL1RegNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
@@ -1102,6 +1106,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNodePtr newNode(new CRFNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, postDepScore, transition_score);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr LSTM(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new LSTMNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(obs, inputGate, forgetGate, outputGate, memoryCellWgt);
             AddNodeToNet(newNode);
             return newNode;
         }
