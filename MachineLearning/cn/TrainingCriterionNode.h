@@ -1345,9 +1345,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             /// change to other values so can support multiple sentences in each minibatch
             assert(iStep == 1);
-            ForwardCompute(alpha, lbls, pos_scores, pair_scores, iStep);
+            ForwardCompute(alpha, lbls, pos_scores, pair_scores);
             BackwardCompute(alpha, beta, functionValues, lbls, pos_scores, pair_scores, iStep);
-            PostProbCompute(postprob, alpha, beta, iStep);
+            PostProbCompute(postprob, alpha, beta);
 
             firstLbl = -1;
             for (int ik = 0; ik < lbls.GetNumRows(); ik++)
@@ -1392,10 +1392,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// compute forward backward algorithm
         static void ForwardCompute(Matrix<ElemType>& alpha,
             const Matrix<ElemType>& lbls,
-            const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift = 1)
+            const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores)
         {
             /// to-do, shift more than 1 to support muliple sentences per minibatch
-            assert(shift == 1);
             int iNumPos = lbls.GetNumCols();
             int iNumLab = lbls.GetNumRows();
 
@@ -1455,9 +1454,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// compute forward backward algorithm
-        static void PostProbCompute(Matrix<ElemType>& postprob, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta, const int shift = 1)
+        static void PostProbCompute(Matrix<ElemType>& postprob, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta)
         {
-            assert(shift == 1);
             int iNumPos = alpha.GetNumCols();
             int iNumLab = alpha.GetNumRows();
 
