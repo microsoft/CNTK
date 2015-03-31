@@ -1313,6 +1313,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return (ComputationNode<ElemType>*) output;
     }
 
+    /**
+    This is encoder LSTM described in the following papers:
+    H. Sutskever, O. Vinyals and Q. V. Le, "Sequence to sequence learning with neural networks", http://arxiv.org/abs/1409.3215
+
+    The following code constructs the encoder and, to construct decoder, use BuildLSTMNetworkFromDescription
+
+    Developed by Kaisheng Yao
+    This is used in the following works:
+    K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion, submitted to Interspeech 2015
+    */
     template<class ElemType>
     ComputationNetwork<ElemType>& SimpleNetworkBuilder<ElemType>::BuildLSTMEncoderNetworkFromDescription(size_t mbSize)
     {
