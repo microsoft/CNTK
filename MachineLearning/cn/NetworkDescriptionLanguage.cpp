@@ -226,6 +226,10 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, CosDistanceWithNegativeSamplesNode<ElemType>::TypeName(), L"CosWithNegSamples"))
         ret = true;
+    else if (EqualInsensitive(nodeType, TimeReverseNode<ElemType>::TypeName(), L"TimeReverse"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, CRFNode<ElemType>::TypeName(), L"CRF"))
+        ret = true;
 
     // return the actual node name in the parameter if we found something
     if (ret)
@@ -239,8 +243,8 @@ template <typename ElemType>
 NDLScript<ElemType> NDLScript<ElemType>::s_global("global");
 
 // declare the static variables from the classes
-template<> NDLScript<float> NDLScript<float>::s_global;
-template<> NDLScript<double> NDLScript<double>::s_global;
+template<> NDLScript<float> NDLScript<float>::s_global{};
+template<> NDLScript<double> NDLScript<double>::s_global{};
 
 template<> int NDLNode<float>::s_nameCounter = 0;
 template<> int NDLNode<double>::s_nameCounter = 0;

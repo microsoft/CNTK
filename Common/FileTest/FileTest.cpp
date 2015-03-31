@@ -134,7 +134,7 @@ int _tmain(int argc, _TCHAR* argv[])
     }
     TestFileAPI(filename, options);
 exit:
-	return 0;
+    return 0;
 }
 
 namespace Microsoft{ namespace MSR { namespace CNTK {

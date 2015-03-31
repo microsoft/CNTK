@@ -64,6 +64,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMathCUDA", "..\Math\Math\CNTKMathCUDA.vcxproj", "{B3DD765E-694E-4494-BAD7-37BBF2942517}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LMSequenceReader", "..\DataReader\LMSequenceReader\LMSequenceReader.vcxproj", "{9A2F2441-5972-4EA8-9215-4119FCE0FB68}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DSSMReader", "..\DataReader\DSSMReader\DSSMReader.vcxproj", "{014DA766-B37B-4581-BC26-963EA5507931}"
 EndProject

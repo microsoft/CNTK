@@ -25,6 +25,8 @@
 #ifdef    _WIN32
 // thread local storage to access the current stream, initalize to default stream
 extern __declspec (thread)
+#else
+static
 #endif
 cudaStream_t t_stream;
 
@@ -117,10 +119,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetValue(deepCopy, matrixFormat);
     }
 
-
     template<class ElemType>
     GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deepCopy)
     {
+
         ZeroInit(deepCopy.GetFormat(), deepCopy.GetComputeDeviceId());
         DeepCopy(deepCopy);
     }
@@ -1202,7 +1204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         assert(c.GetNumRows() == GetNumRows() && c.GetNumCols() == numColsNeeded);
 
-        size_t n = GetNumElements();
+        size_t n = this->GetNumElements();
 
         ElemType *multipliers = nullptr;
         if (needAveMultiplier)

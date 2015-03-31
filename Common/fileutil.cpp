@@ -35,6 +35,7 @@
 #endif
 #include <algorithm>    // for std::find
 #include <limits.h>
+#include <memory>
 
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -228,6 +229,20 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, FILE * f)
     }
 }
 
+long fseekOrDie (FILE * f, long offset, int mode)
+{
+    long curPos = ftell (f);
+    if (curPos == -1L)
+    {
+    RuntimeError ("error seeking: %s", strerror (errno));
+    }
+    int rc = fseek (f, offset, mode);
+    if (rc != 0)
+    {
+    RuntimeError ("error seeking: %s", strerror (errno));
+    }
+    return curPos;
+}
 
 // ----------------------------------------------------------------------------
 // fprintfOrDie(): like fprintf() but terminate with err msg in case of error
@@ -426,6 +441,53 @@ void renameOrDie (const std::wstring & from, const std::wstring & to)
 #else
     renameOrDie (charpath(from), charpath(to));
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// fputstring(): write a 0-terminated string
+// ----------------------------------------------------------------------------
+
+void fputstring (FILE * f, const char * str)
+{
+    fwriteOrDie ((void *) str, sizeof (*str), strnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+}
+
+void fputstring (FILE * f, const std::string & str)
+{
+    fputstring (f, str.c_str());
+}
+
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable : 4127)
+#endif
+void fputstring (FILE * f, const wchar_t * str)
+{
+    if (sizeof (*str) == 2)
+    {
+        fwriteOrDie ((void *) str, sizeof (*str), wcsnlen (str, SIZE_MAX)+1, f); // SECURITY NOTE: string use has been reviewed
+    } else if (sizeof (*str) == 4)
+    {
+        size_t strLen = wcsnlen(str, SIZE_MAX);
+        std::unique_ptr<char16_t[]> str16(new char16_t[strLen + 1]);
+        for (int i = 0; i < strLen; i++)
+        {
+            str16[i] = (char16_t) str[i];
+        }
+        str16[strLen] = 0;
+        fwriteOrDie((void *)str16.get(), sizeof (*str) / 2, strLen + 1, f); // SECURITY NOTE: string use has been reviewed
+    } else
+    {
+        RuntimeError("error: unknown encoding\n");
+    }
+}
+#ifdef _WIN32
+#pragma warning(pop)
+#endif
+
+void fputstring (FILE * f, const std::wstring & str)
+{
+    fputstring (f, str.c_str());
 }
 
 // ----------------------------------------------------------------------------
@@ -925,31 +987,6 @@ wstring fgetwtoken (FILE * f)
 {
     wchar_t buf[80];
     return fgettoken(f, buf, sizeof(buf) / sizeof(*buf));
-}
-
-// ----------------------------------------------------------------------------
-// fputstring(): write a 0-terminated string
-// ----------------------------------------------------------------------------
-
-void fputstring (FILE * f, const char * str)
-{
-    fwriteOrDie ((void *) str, sizeof (*str), strlen (str)+1, f);
-}
-
-void fputstring (FILE * f, const std::string & str)
-{
-    fputstring (f, str.c_str());
-}
-
-void fputstring (FILE * f, const wchar_t * str)
-{
-    // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    fwriteOrDie((void *)str, sizeof (*str), wcslen(str) + 1, f);
-}
-
-void fputstring (FILE * f, const std::wstring & str)
-{
-    fputstring (f, str.c_str());
 }
 
 template <>

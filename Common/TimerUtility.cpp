@@ -29,7 +29,7 @@ namespace Microsoft{
                 timespec ts;
                 clock_gettime(CLOCK_REALTIME, &ts); // Works on Linux
 
-                UINT64 ret = ts.tv_sec * 1000 + ts.tv_nsec/1000000;
+                unsigned long long ret = ts.tv_sec * 1000 + ts.tv_nsec/1000000;
 
                 return ret;
 #endif

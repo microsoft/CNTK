@@ -19,24 +19,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <class T>
     void CallEverythingInMatrix()
     {
-	    const size_t numRows = 1;
-	    const size_t numCols = 1;
-	    const bool srcIsColMajor = true;
-	    Matrix<T> matx;
+        const size_t numRows = 1;
+        const size_t numCols = 1;
+        const bool srcIsColMajor = true;
+        Matrix<T> matx;
         matx.GetCurrentMatrixLocation();        
         matx.TransferFromDeviceToDevice(matx.GetDeviceId(),0);
-	    Matrix<T> mat(numRows, numCols);
+        Matrix<T> mat(numRows, numCols);
         const Matrix<T> matt(numRows, numCols);
         T y = matt(0,0);
-	    Matrix<T> mat2(numRows, numCols, nullptr, srcIsColMajor);
-	    Matrix<T> mat3(mat);  //copy constructor, deep copy
-	    Matrix<T> mat4 = mat2;  //assignment operator, deep copy
-	    Matrix<T> mat5(mat3); 
+        Matrix<T> mat2(numRows, numCols, nullptr, srcIsColMajor);
+        Matrix<T> mat3(mat);  //copy constructor, deep copy
+        Matrix<T> mat4 = mat2;  //assignment operator, deep copy
+        Matrix<T> mat5(mat3); 
         mat5.ColumnElementMultiplyWith(mat3);
         FILE * f=0;
-	    Matrix<T> mat6(f, "test");
+        Matrix<T> mat6(f, "test");
         std::wstring s;
-	    File ff(s,fileOptionsText | fileOptionsReadWrite);
+        File ff(s,fileOptionsText | fileOptionsReadWrite);
         Matrix<T> MM;
         ff>>MM;
         ff<<MM;
@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat.Reshape(numRows, numCols);
         mat.Resize(numRows, numCols);
         mat.IsEmpty();
-	    size_t row = 0, col = 0;
+        size_t row = 0, col = 0;
         T val = (const T&)mat(row, col);
         mat(row, col) = 0;
         mat.SetValue(val);
@@ -65,28 +65,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat2.AssignTransposeOf(mat);
         //mat.InplaceTranspose();
 
-	    T alpha = (T)2;
-	    mat += alpha;
+        T alpha = (T)2;
+        mat += alpha;
         Matrix<T>& newmat2 = mat + alpha; //enable operator+ and move constructor
-	    mat += mat2;
+        mat += mat2;
         mat3 = mat + mat2;
         mat3.AssignSumOf(alpha, mat);
         mat3.AssignSumOf(mat, mat);
-	    mat -= alpha;
+        mat -= alpha;
         mat3 = mat - alpha;
         mat3.AssignDifferenceOf(alpha, mat);
         mat3.AssignDifferenceOf(mat, alpha);
-	    mat -= mat2;
+        mat -= mat2;
         mat3 = mat - mat2;
         mat3.AssignDifferenceOf(mat, mat2);
-	    mat *= alpha;
+        mat *= alpha;
         mat3 = mat * alpha;
         mat3.AssignProductOf(alpha, mat);
         mat3 = mat * mat2;
         mat = mat3.AssignProductOf(mat, true, mat2, false);
-	    mat /= alpha;
+        mat /= alpha;
         mat3 = mat / alpha;
-	    mat ^= alpha;
+        mat ^= alpha;
         mat3 = mat ^ alpha;
         mat3.AssignElementPowerOf(mat, alpha);
         mat3 = mat2.ElementMultiplyWith (mat);
@@ -102,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat3 = mat2.InplaceTanh ();
         mat3.AssignTanhOf (mat2);
 
-	    const bool isColWise = true;
+        const bool isColWise = true;
         mat3 = mat2.InplaceSoftmax (isColWise);
         mat3.AssignSoftmaxOf (mat2, isColWise);
 
@@ -151,9 +151,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat.ReadFromFile(f, "test");
         mat.WriteToFile(f, "test");
 
-	    T beta = (T)1.0;
-	    const bool transposeA = true;
-	    const bool transposeB = false;
+        T beta = (T)1.0;
+        const bool transposeA = true;
+        const bool transposeB = false;
         Matrix<T>::MultiplyAndWeightedAdd(alpha, mat2, transposeA, mat3, transposeB, beta, mat4);
         Matrix<T>::MultiplyAndAdd(mat2, transposeA, mat3, transposeB, mat4);
         Matrix<T>::Multiply(mat2, transposeA, mat3, transposeB, mat4);
@@ -177,19 +177,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template <class T>
     void CallEverythingInCPUMatrix()
     {
-	    const size_t numRows = 1;
-	    const size_t numCols = 1;
-	    const bool srcIsColMajor = true;
-	    CPUMatrix<T> matx;
-	    CPUMatrix<T> mat(numRows, numCols);
-	    CPUMatrix<T> mat2(numRows, numCols, nullptr, srcIsColMajor);
-	    CPUMatrix<T> mat3(mat);  //copy constructor, deep copy
-	    CPUMatrix<T> mat4 = mat2;  //assignment operator, deep copy
-	    CPUMatrix<T> mat5(mat3); 
+        const size_t numRows = 1;
+        const size_t numCols = 1;
+        const bool srcIsColMajor = true;
+        CPUMatrix<T> matx;
+        CPUMatrix<T> mat(numRows, numCols);
+        CPUMatrix<T> mat2(numRows, numCols, nullptr, srcIsColMajor);
+        CPUMatrix<T> mat3(mat);  //copy constructor, deep copy
+        CPUMatrix<T> mat4 = mat2;  //assignment operator, deep copy
+        CPUMatrix<T> mat5(mat3); 
         mat5.ColumnElementMultiplyWith(mat3);
         FILE * f=0;
         std::wstring s;
-	    File ff(s,fileOptionsText | fileOptionsReadWrite);
+        File ff(s,fileOptionsText | fileOptionsReadWrite);
         CPUMatrix<T> MM;
         ff>>MM;
         ff<<MM;
@@ -204,8 +204,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat.Reshape(numRows, numCols);
         mat.Resize(numRows, numCols);
         mat.IsEmpty();
-	    size_t row = 0, col = 0;
-	    T val = mat(row, col);
+        size_t row = 0, col = 0;
+        T val = mat(row, col);
         mat(row, col) = 0;
         mat.SetValue(val);
         mat.SetValue(mat2);
@@ -220,28 +220,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat2.AssignTransposeOf(mat);
         //mat.InplaceTranspose();
 
-	    T alpha = (T)2;
-	    mat += alpha;
+        T alpha = (T)2;
+        mat += alpha;
         CPUMatrix<T>& newmat2 = mat + alpha; //enable operator+ and move constructor
-	    mat += mat2;
+        mat += mat2;
         mat3 = mat + mat2;
         mat3.AssignSumOf(alpha, mat);
         mat3.AssignSumOf(mat2, mat);
-	    mat -= alpha;
+        mat -= alpha;
         mat3 = mat - alpha;
         mat3.AssignDifferenceOf(alpha, mat);
         mat3.AssignDifferenceOf(mat, alpha);
-	    mat -= mat2;
+        mat -= mat2;
         mat3 = mat - mat2;
         mat3.AssignDifferenceOf(mat, mat2);
-	    mat *= alpha;
+        mat *= alpha;
         mat3 = mat * alpha;
         mat3.AssignProductOf(alpha, mat);
         mat3 = mat * mat2;
         mat = mat3.AssignProductOf(mat, true, mat2, false);
-	    mat /= alpha;
+        mat /= alpha;
         mat3 = mat / alpha;
-	    mat ^= alpha;
+        mat ^= alpha;
         mat3 = mat ^ alpha;
         mat3.AssignElementPowerOf(mat, alpha);
         mat3 = mat2.ElementMultiplyWith (mat);
@@ -258,7 +258,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat3 = mat2.InplaceTanh ();
         mat3.AssignTanhOf (mat2);
 
-	    const bool isColWise = true;
+        const bool isColWise = true;
         mat3 = mat2.InplaceSoftmax (isColWise);
         mat3.AssignSoftmaxOf (mat2, isColWise);
 
@@ -311,9 +311,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mat.ReadFromFile(f, "test");
         mat.WriteToFile(f, "test");
 
-	    T beta = (T)1.0;
-	    const bool transposeA = true;
-	    const bool transposeB = false;
+        T beta = (T)1.0;
+        const bool transposeA = true;
+        const bool transposeB = false;
         CPUMatrix<T>::MultiplyAndWeightedAdd(alpha, mat2, transposeA, mat3, transposeB, beta, mat4);
         CPUMatrix<T>::MultiplyAndAdd(mat2, transposeA, mat3, transposeB, mat4);
         CPUMatrix<T>::Multiply(mat2, transposeA, mat3, transposeB, mat4);
@@ -336,11 +336,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void InstantiateAllCPUMatrixMethods()
     {
-	    CallEverythingInCPUMatrix<float>();
-	    CallEverythingInCPUMatrix<double>();
+        CallEverythingInCPUMatrix<float>();
+        CallEverythingInCPUMatrix<double>();
 
         CallEverythingInMatrix<float>();
-	    CallEverythingInMatrix<double>();
+        CallEverythingInMatrix<double>();
     }
 #pragma endregion instantiate all classes 
 }}}

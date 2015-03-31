@@ -14,6 +14,7 @@
 //#include <cuda_runtime.h>
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
+#include "PTaskGraphBuilder.h"
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -1168,5 +1169,11 @@ void __stdcall PTaskGraphBuilder<ElemType>::ApplicationContextCallback(
 // instantiate classes
 template class PTaskGraphBuilder<float>;
 template class PTaskGraphBuilder<double>;
+
+template class TaskDescriptor<float>;
+template class TaskDescriptor<double>;
+
+template ParamData<float>* TaskDescriptor<float>::GradientParam(int, UINT,float);
+template ParamData<double>* TaskDescriptor<double>::GradientParam(int,UINT,double);
 
 }}}

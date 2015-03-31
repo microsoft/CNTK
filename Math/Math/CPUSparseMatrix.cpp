@@ -24,7 +24,7 @@
 
 #include "basetypes.h"
 #include "fileutil.h"
-
+#include <iostream>
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
 #ifndef USE_MKL
@@ -133,19 +133,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format)
     {
+
         CheckInit(format);
     }
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
     {
+
         CheckInit(format);
         Resize(numRows, numCols, size, true, false);
     }
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
-    {       
+    {               
+
         if (m_matrixName!=NULL) 
         {
             delete[] m_matrixName;
@@ -205,9 +208,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_unCompIndex[m_nz] = (CPUSPARSE_INDEX_TYPE)r;
 
         //consistency check
-        if(c == m_colIdx && r <= m_unCompIndex[m_nz-1]) 
+        if (m_nz > 0)
         {
-            throw std::logic_error("CPUSparseMatrix:  SetValue is not called properly");
+            if(c == m_colIdx && r <= m_unCompIndex[m_nz-1]) 
+            {
+                throw std::logic_error("CPUSparseMatrix:  SetValue is not called properly");
+            }
         }
 
         if (c != m_colIdx) 
@@ -227,7 +233,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	template<class ElemType>
 	void CPUSparseMatrix<ElemType>::Print(const char* matrixName, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const {
 
-		if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+		if (this->GetFormat() != matrixFormatSparseCSC && this->GetFormat() != matrixFormatSparseCSR)
 		{
 			return;
 			//NOT_IMPLEMENTED;
@@ -257,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         m_format = matrixFormatSparseCSC;
         Resize(numRows, numCols, nz, true, false);
-        SetNzCount(nz);
+        this->SetNzCount(nz);
 
         memcpy(RowLocation(), h_Row, RowSize());
         memcpy(ColLocation(), h_CSCCol, ColSize());
@@ -446,10 +452,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (lhs.IsEmpty() || rhs.IsEmpty())
             throw std::logic_error("LeftMultiplyAndAdd:  one of the input matrix is empty.");
 
-        int m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
-        int k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
-        int l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
-        int n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
+        size_t m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
+        size_t k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
+        size_t l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
+        size_t n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
 
         assert (m>0 && k>0 && l>0 && n>0); m; n;  //converting from size_t to int may cause overflow
         assert (k == l);
@@ -487,7 +493,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     bool first = true;
                     if(w2Id.find(i) == w2Id.end()) 
                     {
-                        w2Id[i] = w2Id.size();
+                        size_t id = w2Id.size();
+                        w2Id[i] = id;
                         c.m_blockIds[c.m_blockSize]=i;
                         c.m_blockSize++;
                     } 
@@ -510,6 +517,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }   
             c.m_nz = c.m_blockSize * m;
+
             if(c.m_nz > c.GetSizeAllocated()) 
             {
                 throw std::logic_error("sparse matrix out of range.");
@@ -707,7 +715,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
     {
-        long m = (long)NzCount();
+        long m = (long)this->NzCount();
         ElemType *nzValues = NzValues();
 
 #pragma omp parallel for     
@@ -739,7 +747,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
     {
-        long m = (long)NzCount();
+        long m = (long)this->NzCount();
         ElemType *nzValues = NzValues();
 
 #pragma omp parallel for     
@@ -774,7 +782,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType locThresholdPos = abs(threshold);
         ElemType locTHresholdNeg = -locThresholdPos; 
 
-        long m = (long)NzCount();
+        long m = (long)this->NzCount();
         ElemType *nzValues = NzValues();
 
 #pragma omp parallel for     
@@ -815,7 +823,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
     {
-        long m = (long)NzCount();
+        long m = (long)this->NzCount();
         ElemType *nzValues = NzValues();
 
 #pragma omp parallel for     
@@ -865,12 +873,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
     {
-        if (IsEmpty())
+        if (this->IsEmpty())
             throw std::logic_error("FrobeniusNorm: Matrix is empty.");
 
         ElemType v = 0;
 
-        long m = (long)NzCount();
+        long m = (long)this->NzCount();
         const ElemType *nzValues = NzValues();
 
         //four-way unrolling
@@ -892,24 +900,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
     {
-        if (IsEmpty())
+        if (this->IsEmpty())
             throw std::logic_error("SumOfAbsElements: Matrix is empty.");
 
         if (sizeof(ElemType) == sizeof(double))
         {
 #ifndef USE_MKL
-            return (ElemType)dasum((int)NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+            return (ElemType)dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
 #else  
-            return (ElemType)cblas_dasum((int)NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+            return (ElemType)cblas_dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
 #endif
         }
         else
         {
 #pragma warning (suppress: 4244)
 #ifndef USE_MKL
-            return sasum((int)NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+            return sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
 #else
-            return cblas_sasum((int)NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+            return cblas_sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
 #endif
         }
     }
@@ -919,12 +927,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
     {
-        if (IsEmpty())
+        if (this->IsEmpty())
             throw std::logic_error("SumOfElements: Matrix is empty.");
 
         ElemType sum = 0;
 
-        long m = (long)NzCount();
+        long m = (long)this->NzCount();
         const ElemType *nzValues = NzValues();
 
         //four-way unrolling

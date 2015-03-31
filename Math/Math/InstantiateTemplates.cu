@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         T alpha = (T)2;
         mat += alpha;
-        GPUMatrix<T>& newmat2 = mat + alpha; //enable operator+ and move constructor
+        //GPUMatrix<T>& newmat2 = mat + alpha; //enable operator+ and move constructor
         mat += mat2;
         mat3 = mat + mat2;
         mat3.AssignSumOf(alpha, mat);

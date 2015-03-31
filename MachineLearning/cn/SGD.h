@@ -256,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_learnRateIncreaseFactor=learnRateIncreaseFactor;
             m_reduceLearnRateIfImproveLessThan=reduceLearnRateIfImproveLessThan;
              m_continueReduce=continueReduce;
-             m_learnRateAdjustInterval = max(1, learnRateAdjustInterval); //minimum interval is 1 epoch
+             m_learnRateAdjustInterval = max((size_t) 1, learnRateAdjustInterval); //minimum interval is 1 epoch
             m_learnRateDecreaseFactor=learnRateDecreaseFactor;
             m_clippingThresholdPerSample=abs(clippingThresholdPerSample);
             m_numMiniBatch4LRSearch=numMiniBatch4LRSearch;
@@ -799,6 +799,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     net.Evaluate( *nodeIter);
                 }
+
             }
 
             //mark done
@@ -1265,8 +1266,11 @@ protected:
             int epoch1Base = epoch + 1;
             if (epoch1Base == m_maxEpochs || bLastModel) 
                 return m_modelPath;          
-            else 
-                return msra::strfun::wstrprintf (L"%s.%d", m_modelPath.c_str(), (int) epoch1Base);
+            else {
+				wstring w = msra::strfun::wstrprintf (L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
+				return w;
+			}
+ 
         } 
 
         //return -1 if nothing exists
@@ -1342,7 +1346,6 @@ protected:
         ElemType MomentumPerMB() const {return m_momentumPerMB;}
 
     public:
-        #define EPSILON 1e-5
 
         bool GradientCheck(
             ComputationNetwork<ElemType>& net,
@@ -1358,7 +1361,7 @@ protected:
                 ComputationNodePtr node = (*nodeIter);
                 char wstrtmp[2048];
 
-                for (size_t itry = 0; itry < min(50, node->FunctionValues().GetNumElements()); itry++)
+                for (size_t itry = 0; itry < min((size_t)50, node->FunctionValues().GetNumElements()); itry++)
                 {
                     /// no support to sparse matrix yet
                     int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);

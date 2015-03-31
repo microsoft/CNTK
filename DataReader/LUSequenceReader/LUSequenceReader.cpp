@@ -57,7 +57,8 @@ size_t LUSequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
 template<class ElemType>
-/*IDataReader<ElemType>::LabelIdType*/ unsigned LUSequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
+/* return value used to be unsigned */
+typename IDataReader<ElemType>::LabelIdType LUSequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
 
@@ -603,7 +604,7 @@ void LUSequenceReader<ElemType>::LMSetupEpoch()
 }
 
 // utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size) 
+inline size_t RoundUp(size_t value, size_t size) 
 {
     return ((value + size -1)/size)*size;
 }
@@ -645,8 +646,8 @@ void LUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch,
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -752,7 +753,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {
@@ -1012,8 +1013,8 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
