@@ -807,6 +807,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
+                newNode = new SequenceDecoderNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TimeReverseNode<ElemType>::TypeName())
@@ -970,6 +972,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
+                newNode = new SequenceDecoderNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == TimeReverseNode<ElemType>::TypeName())
                 newNode = new TimeReverseNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
@@ -1308,6 +1312,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNodePtr newNode(new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(unnormedPrior, mean, logStddev, feature);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new SequenceDecoderNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(label, prediction, pairscore);
             AddNodeToNet(newNode);
             return newNode;
         }
