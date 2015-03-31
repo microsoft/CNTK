@@ -42,6 +42,8 @@ protected:
 
     std::wstring m_file; 
 public:
+	using LabelType = typename IDataReader<ElemType>::LabelType;
+	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
     int nwords, dims, nsamps, nglen, nmefeats;
 
     int m_seed; 
@@ -164,7 +166,7 @@ public:
     void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
     
 };
@@ -172,6 +174,59 @@ public:
 template<class ElemType>
 class BatchLUSequenceReader : public LUSequenceReader<ElemType>
 {
+public:
+	using LabelType = typename IDataReader<ElemType>::LabelType;
+	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+	using LUSequenceReader<ElemType>::mWordMappingFn;
+	using LUSequenceReader<ElemType>::m_cachingReader;
+	using LUSequenceReader<ElemType>::mWordMapping;
+	using LUSequenceReader<ElemType>::mUnkStr;
+	using LUSequenceReader<ElemType>::m_cachingWriter;
+	using LUSequenceReader<ElemType>::m_featuresName;
+	using LUSequenceReader<ElemType>::m_labelsName;
+	using LUSequenceReader<ElemType>::labelInfoMin;
+	using LUSequenceReader<ElemType>::labelInfoMax;
+	using LUSequenceReader<ElemType>::m_featureDim;
+	using LUSequenceReader<ElemType>::class_size;
+	using LUSequenceReader<ElemType>::m_labelInfo;
+//	using LUSequenceReader<ElemType>::m_labelInfoIn;
+	using LUSequenceReader<ElemType>::m_mbStartSample;
+	using LUSequenceReader<ElemType>::m_epoch;
+	using LUSequenceReader<ElemType>::m_totalSamples;
+	using LUSequenceReader<ElemType>::m_epochStartSample;
+	using LUSequenceReader<ElemType>::m_seqIndex;
+	using LUSequenceReader<ElemType>::m_endReached;
+	using LUSequenceReader<ElemType>::m_readNextSampleLine;
+	using LUSequenceReader<ElemType>::m_readNextSample;
+	using LUSequenceReader<ElemType>::m_traceLevel;
+	using LUSequenceReader<ElemType>::m_wordContext;
+	using LUSequenceReader<ElemType>::m_featureCount;
+	using typename LUSequenceReader<ElemType>::LabelInfo;
+	using LUSequenceReader<ElemType>::labelInfoIn;
+	using LUSequenceReader<ElemType>::labelInfoOut;
+//	using LUSequenceReader<ElemType>::arrayLabels;
+	using LUSequenceReader<ElemType>::m_readerConfig;
+	using LUSequenceReader<ElemType>::m_featuresBuffer;
+	using LUSequenceReader<ElemType>::m_labelsBuffer;
+	using LUSequenceReader<ElemType>::m_labelsIdBuffer;
+	using LUSequenceReader<ElemType>::m_mbSize;
+	using LUSequenceReader<ElemType>::m_epochSize;
+	using LUSequenceReader<ElemType>::m_featureData;
+	using LUSequenceReader<ElemType>::m_sequence;
+	using LUSequenceReader<ElemType>::m_labelData;
+	using LUSequenceReader<ElemType>::m_labelIdData;
+	using LUSequenceReader<ElemType>::m_idx2clsRead;
+	using LUSequenceReader<ElemType>::m_clsinfoRead;
+	using LUSequenceReader<ElemType>::m_featureWordContext;
+	using LUSequenceReader<ElemType>::LoadLabelFile;
+	using LUSequenceReader<ElemType>::ReleaseMemory;
+	using LUSequenceReader<ElemType>::LMSetupEpoch;
+	using LUSequenceReader<ElemType>::ChangeMaping;
+	using LUSequenceReader<ElemType>::GetIdFromLabel;
+	using LUSequenceReader<ElemType>::InitCache;
+	using LUSequenceReader<ElemType>::ReadLabelInfo;
+	using LUSequenceReader<ElemType>::mRandomize;
+	using LUSequenceReader<ElemType>::m_seed;
 private:
     size_t mLastProcssedSentenceId ; 
     size_t mBlgSize; 

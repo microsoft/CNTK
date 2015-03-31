@@ -548,6 +548,9 @@ void TestCn(const ConfigParameters& config)
     //TestBing<ElemType>(config);
 }
 
+template void TestCn<float>(const ConfigParameters& config);
+template void TestCn<double>(const ConfigParameters& config);
+
 // generate TestRoutines
 void GenerateTemplates()
 {
@@ -555,5 +558,4 @@ void GenerateTemplates()
     TestCn<float>(config);
     TestCn<double>(config);
 }
-
 

@@ -428,12 +428,12 @@ FILE * fopenOrDie (const STRING & pathname, const char * mode)
     FILE * f = (pathname[0] == '-') ? fopenStdHandle (mode) : fopen (pathname.c_str(), mode);
     if (f == NULL)
     {
-	ERROR ("error opening file '%s': %s", pathname.c_str(), strerror (errno));
+    ERROR ("error opening file '%s': %s", pathname.c_str(), strerror (errno));
         return NULL;    // keep OACR happy
     }
     if (strchr (mode, 'S'))
     {   // if optimized for sequential access then use large buffer
-	setvbuf (f, NULL, _IOFBF, 10000000);    // OK if it fails
+    setvbuf (f, NULL, _IOFBF, 10000000);    // OK if it fails
     }
     return f;
 }
@@ -472,7 +472,7 @@ void fsetmode (FILE * f, char type)
     int rc = _setmode (fd, mode);
     if (rc == -1)
     {
-	ERROR ("error changing file mode: %s", strerror (errno));
+    ERROR ("error changing file mode: %s", strerror (errno));
     }
 }
 
@@ -500,9 +500,9 @@ void freadOrDie (void * ptr, size_t size, size_t count, const HANDLE f)
     while (count > 0)
     {
         size_t chunkn = min (count * size, 15*1024*1024);  
-		DWORD n ;
-    	ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
-	    if (n != chunkn)
+        DWORD n ;
+        ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
+        if (n != chunkn)
             ERROR ("error number for reading from file: %s", GetLastError());
         count -= (size_t) (n / size);
         ptr = n + (char*) ptr;
@@ -553,7 +553,7 @@ void fwriteOrDie (const void * ptr, size_t size, size_t count, const HANDLE f)
         {
             wantWrite = LIMIT;
         }
-		DWORD byteWritten = 0 ;
+        DWORD byteWritten = 0 ;
         if (WriteFile(f, (const void *) p1, wantWrite, &byteWritten, NULL) == false)
         {
             ERROR ("error writing to file (ptr=0x%08lx, size=%d,"
@@ -595,7 +595,7 @@ void fflushOrDie (FILE * f)
     int rc = fflush (f);
     if (rc != 0)
     {
-	ERROR ("error flushing to file: %s", strerror (errno));
+    ERROR ("error flushing to file: %s", strerror (errno));
     }
 }
 
@@ -608,22 +608,22 @@ size_t filesize (FILE * f)
     long curPos = ftell (f);
     if (curPos == -1L)
     {
-	ERROR ("error determining file position: %s", strerror (errno));
+    ERROR ("error determining file position: %s", strerror (errno));
     }
     int rc = fseek (f, 0, SEEK_END);
     if (rc != 0)
     {
-	ERROR ("error seeking to end of file: %s", strerror (errno));
+    ERROR ("error seeking to end of file: %s", strerror (errno));
     }
     long len = ftell (f);
     if (len == -1L)
     {
-	ERROR ("error determining file position: %s", strerror (errno));
+    ERROR ("error determining file position: %s", strerror (errno));
     }
     rc = fseek (f, curPos, SEEK_SET);
     if (rc != 0)
     {
-	ERROR ("error resetting file position: %s", strerror (errno));
+    ERROR ("error resetting file position: %s", strerror (errno));
     }
     return (size_t) len;
 }
@@ -667,12 +667,12 @@ long fseekOrDie (FILE * f, long offset, int mode)
     long curPos = ftell (f);
     if (curPos == -1L)
     {
-	ERROR ("error seeking: %s", strerror (errno));
+    ERROR ("error seeking: %s", strerror (errno));
     }
     int rc = fseek (f, offset, mode);
     if (rc != 0)
     {
-	ERROR ("error seeking: %s", strerror (errno));
+    ERROR ("error seeking: %s", strerror (errno));
     }
     return curPos;
 }
@@ -725,12 +725,12 @@ void fsetpos (FILE * f, unsigned __int64 reqpos)
 void unlinkOrDie (const std::string & pathname)
 {
     if (_unlink (pathname.c_str()) != 0 && errno != ENOENT)     // if file is missing that's what we want
-	ERROR ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
+    ERROR ("error deleting file '%s': %s", pathname.c_str(), strerror (errno));
 }
 void unlinkOrDie (const std::wstring & pathname)
 {
     if (_wunlink (pathname.c_str()) != 0 && errno != ENOENT)    // if file is missing that's what we want
-	ERROR ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
+    ERROR ("error deleting file '%S': %s", pathname.c_str(), strerror (errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -741,14 +741,14 @@ void unlinkOrDie (const std::wstring & pathname)
 void renameOrDie (const std::string & from, const std::string & to)
 {
     if (!MoveFileA (from.c_str(),to.c_str()))
-	ERROR ("error renaming: %s", GetLastError());
+    ERROR ("error renaming: %s", GetLastError());
 }
 #endif
 
 void renameOrDie (const std::wstring & from, const std::wstring & to)
 {
     if (!MoveFileW (from.c_str(),to.c_str()))
-	ERROR ("error renaming: %s", GetLastError());
+    ERROR ("error renaming: %s", GetLastError());
 }
 
 // ----------------------------------------------------------------------------
@@ -823,7 +823,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
 
     unsigned __int64 filepos = fgetpos (f); // (for error message only)
     CHAR * p = fgets (buf, size, f);
-    if (p == NULL)			// EOF reached: next time feof() = true
+    if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
             ERROR ("error reading line: %s", strerror (errno));
@@ -843,17 +843,17 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
 
     // remove newline at end
 
-    if (n > 0 && p[n-1] == '\n')	// UNIX and Windows style
+    if (n > 0 && p[n-1] == '\n')    // UNIX and Windows style
     {
         n--;
         p[n] = 0;
-        if (n > 0 && p[n-1] == '\r')	// Windows style
+        if (n > 0 && p[n-1] == '\r')    // Windows style
         {
             n--;
             p[n] = 0;
         }
     }
-    else if (n > 0 && p[n-1] == '\r')	// Mac style
+    else if (n > 0 && p[n-1] == '\r')    // Mac style
     {
         n--;
         p[n] = 0;
@@ -866,7 +866,7 @@ CHAR * fgetline (FILE * f, CHAR * buf, int size)
 const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
 {
     wchar_t * p = fgetws (buf, size, f);
-    if (p == NULL)			// EOF reached: next time feof() = true
+    if (p == NULL)            // EOF reached: next time feof() = true
     {
         if (ferror (f))
             ERROR ("error reading line: %s", strerror (errno));
@@ -886,17 +886,17 @@ const wchar_t * fgetline (FILE * f, wchar_t * buf, int size)
 
     // remove newline at end
 
-    if (n > 0 && p[n-1] == L'\n')	// UNIX and Windows style
+    if (n > 0 && p[n-1] == L'\n')    // UNIX and Windows style
     {
         n--;
         p[n] = 0;
-        if (n > 0 && p[n-1] == L'\r')	// Windows style
+        if (n > 0 && p[n-1] == L'\r')    // Windows style
         {
             n--;
             p[n] = 0;
         }
     }
-    else if (n > 0 && p[n-1] == L'\r')	// Mac style
+    else if (n > 0 && p[n-1] == L'\r')    // Mac style
     {
         n--;
         p[n] = 0;
@@ -958,15 +958,15 @@ const char * fgetstring (FILE * f, __out_z_cap(size) char * buf, int size)
     int i;
     for (i = 0; ; i++)
     {
-	int c = fgetc (f);
-	if (c == EOF)
+    int c = fgetc (f);
+    if (c == EOF)
             ERROR ("error reading string or missing 0: %s", strerror (errno));
-	if (c == 0) break;
-	if (i >= size -1)
-	{
-	    ERROR ("input line too long (max. %d characters allowed)", size -1);
-	}
-	buf[i] = (char) c;
+    if (c == 0) break;
+    if (i >= size -1)
+    {
+        ERROR ("input line too long (max. %d characters allowed)", size -1);
+    }
+    buf[i] = (char) c;
     }
     ASSERT (i < size);
     buf[i] = 0;
@@ -978,14 +978,14 @@ const char * fgetstring (const HANDLE f, __out_z_cap(size) char * buf, int size)
     int i;
     for (i = 0; ; i++)
     {
-	    char c; 
-	    freadOrDie((void*) &c, sizeof(char), 1, f);
-		if (c == (char) 0) break;
-		if (i >= size -1)
-		{
-		    ERROR ("input line too long (max. %d characters allowed)", size -1);
-		}
-		buf[i] = (char) c;
+        char c; 
+        freadOrDie((void*) &c, sizeof(char), 1, f);
+        if (c == (char) 0) break;
+        if (i >= size -1)
+        {
+            ERROR ("input line too long (max. %d characters allowed)", size -1);
+        }
+        buf[i] = (char) c;
     }
     ASSERT (i < size);
     buf[i] = 0;
@@ -998,10 +998,10 @@ wstring fgetwstring (FILE * f)
     wstring res;
     for (;;)
     {
-	int c = fgetwc (f);
-	if (c == EOF)
+    int c = fgetwc (f);
+    if (c == EOF)
             ERROR ("error reading string or missing 0: %s", strerror (errno));
-	if (c == 0) break;
+    if (c == 0) break;
         res.push_back ((wchar_t) c);
     }
     return res;
@@ -1011,14 +1011,14 @@ void fskipspace (FILE * f)
 {
     for (;;)
     {
-	int c = fgetc (f);
-	if (c == EOF)       // hit the end
+    int c = fgetc (f);
+    if (c == EOF)       // hit the end
         {
             if (ferror (f))
                 ERROR ("error reading from file: %s", strerror (errno));
             break;
         }
-	if (!isspace (c))    // end of space: undo getting that character
+    if (!isspace (c))    // end of space: undo getting that character
         {
             int rc = ungetc (c, f);
             if (rc != c)
@@ -1037,17 +1037,17 @@ void fskipNewline (FILE * f)
     
     do
     {
-	freadOrDie (&c, sizeof (c), 1, f);
+    freadOrDie (&c, sizeof (c), 1, f);
     } while (c == ' ' || c == '\t');
 
-    if (c == '\r')			// Windows-style CR-LF
+    if (c == '\r')            // Windows-style CR-LF
     {
-	freadOrDie (&c, sizeof (c), 1, f);
+    freadOrDie (&c, sizeof (c), 1, f);
     }
 
     if (c != '\n')
     {
-	ERROR ("unexpected garbage at end of line");
+    ERROR ("unexpected garbage at end of line");
     }
 }
 
@@ -1060,19 +1060,19 @@ const char * fgettoken (FILE * f, __out_z_cap(size) char * buf, int size)
     int i;
     for (i = 0; ; i++)
     {
-	c = fgetc (f);
-	if (c == EOF) break;
-	if (isspace (c)) break;
-	if (i >= size -1)
-	    ERROR ("input token too long (max. %d characters allowed)", size -1);
-	buf[i] = (char) c;
+    c = fgetc (f);
+    if (c == EOF) break;
+    if (isspace (c)) break;
+    if (i >= size -1)
+        ERROR ("input token too long (max. %d characters allowed)", size -1);
+    buf[i] = (char) c;
     }
     // ... TODO: while (isspace (c)) c = fgetc (f);      // skip trailing space
     if (c != EOF)
     {
-	int rc = ungetc (c, f);
-	if (rc != c)
-	    ERROR ("error in ungetc(): %s", strerror (errno));
+    int rc = ungetc (c, f);
+    if (rc != c)
+        ERROR ("error in ungetc(): %s", strerror (errno));
     }
     ASSERT (i < size);
     buf[i] = 0;
@@ -1152,7 +1152,7 @@ void fcheckTag (const HANDLE f, const char * expectedTag)
 
 void fcheckTag_ascii (FILE * f, const STRING & expectedTag)
 {
-    char buf[20];	// long enough for a tag
+    char buf[20];    // long enough for a tag
     fskipspace (f);
     fgettoken (f, buf, sizeof(buf)/sizeof(*buf));
     if (expectedTag != buf)
@@ -1201,7 +1201,7 @@ void fskipstring (FILE * f)
     char c;
     do
     {
-	freadOrDie (&c, sizeof (c), 1, f);
+    freadOrDie (&c, sizeof (c), 1, f);
     }
     while (c);
 }
@@ -1216,7 +1216,7 @@ void fpad (FILE * f, int n)
     int pos = ftell (f);
     if (pos == -1)
     {
-	ERROR ("error in ftell(): %s", strerror (errno));
+    ERROR ("error in ftell(): %s", strerror (errno));
     }
     // determine how many bytes are needed (at least 1 for the 0-terminator)
     // and create a dummy string of that length incl. terminator
@@ -1302,13 +1302,13 @@ int fgetint_ascii (FILE * f)
     freadOrDie (&c, sizeof (c), 1, f);
     while (isdigit ((unsigned char)c))
     {
-	res = (10 * res) + (c - '0');
-	freadOrDie (&c, sizeof (c), 1, f);
+    res = (10 * res) + (c - '0');
+    freadOrDie (&c, sizeof (c), 1, f);
     }
     int rc = ungetc (c, f);
     if (rc != c)
     {
-	ERROR ("error in ungetc(): %s", strerror (errno));
+    ERROR ("error in ungetc(): %s", strerror (errno));
     }
     return res;
 }
@@ -1336,9 +1336,9 @@ float fgetfloat_ascii (FILE * f)
     fskipspace (f);
     int rc = fscanf (f, "%f", &val); // security hint: safe overloads
     if (rc == 0)
-	ERROR ("error reading float value from file (invalid format): %s");
+    ERROR ("error reading float value from file (invalid format): %s");
     else if (rc == EOF)
-	ERROR ("error reading from file: %s", strerror (errno));
+    ERROR ("error reading from file: %s", strerror (errno));
     ASSERT (rc == 1);
     return val;
 }
@@ -1441,7 +1441,7 @@ void WAVEHEADER::write (FILE * f)
     long curPos = ftell (f);
     if (curPos == -1L)
     {
-	ERROR ("error determining file position: %s", strerror (errno));
+    ERROR ("error determining file position: %s", strerror (errno));
     }
     unsigned int len = (unsigned int) filesize (f);
     unsigned int RiffLength = len - 8;

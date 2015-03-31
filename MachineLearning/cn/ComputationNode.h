@@ -16,8 +16,9 @@
 #include <assert.h>
 #include "basetypes.h"
 #include <atomic>
+#include <sstream>
 #include <Matrix.h>
-
+#include <iostream>
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
 
@@ -292,7 +293,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int64_t UpdateEvalTimeStamp()
         {
-            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, 1);
+            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
             return m_evalTimeStamp;
         }
 
@@ -695,8 +696,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               RpcStringFreeW((RPC_WSTR*)&szUuid);
             }
 #else
-            int64_t id = atomic_fetch_add(&s_timeStampCounter, 1);
-            msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
+            int64_t id = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+            std::wstring base = L"AutoName";
+            std::wstringstream sstm;
+            sstm << base.c_str() << id;
+            std::wstring name = sstm.str();
+            //msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
 #endif
 
             return name;
@@ -4177,7 +4182,7 @@ protected:  \
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
             m_dropoutRate = 0;
-            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, 1);
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
             InitRecurrentNode();
         }
 
@@ -4186,7 +4191,7 @@ protected:  \
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
-            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, 1);
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
@@ -4786,16 +4791,23 @@ protected:  \
             if (inputIndex > 0)
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
-            //if (m_samplesInRecurrentStep == 1)
-            //{
-            ComputeInputPartialSR(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
-            /*}else
+            if (m_samplesInRecurrentStep == 1)
+            {
+                ComputeInputPartialSR(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
+            }else
             {
                 for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
                 {
-                    ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), i, m_samplesInRecurrentStep);
+                    bool reset = false;
+
+                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
+                    {
+                        reset = true;
+                    }
+
+                    ComputeInputPartialSRP(timeIdxInSeq, m_delay, reset, Inputs(0)->GradientValues(), GradientValues(), i, m_samplesInRecurrentStep);
                 }
-            }*/
+            }
         }
 
         static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int delay,  
@@ -4810,11 +4822,11 @@ protected:  \
             }
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  bool reset,
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t indexInBatch, const size_t mNbr)
         {
             assert(timeIdxInSeq >= 0);
-            if ((timeIdxInSeq - delay) >= 0 && (timeIdxInSeq - delay) * mNbr <= inputGradientValues.GetNumCols())
+            if ((timeIdxInSeq - delay) >= 0 && (timeIdxInSeq - delay) * mNbr <= inputGradientValues.GetNumCols() && !reset)
             {
                 Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr + indexInBatch, 1);
                 Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + indexInBatch, 1);
@@ -4854,13 +4866,25 @@ protected:  \
             
             if (m_samplesInRecurrentStep == 1)
             {
-                bool reset = (m_sentenceEnd[0] == timeIdxInSeq);
+                //bool reset = (m_sentenceEnd[0] == timeIdxInSeq);
+                bool reset = false;
+
+                if ((((int)m_sentenceEnd[0] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[0] <= timeIdxInSeq))
+                {
+                    reset = true;
+                }
                 EvaluateThisNodeSR(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
             } else
             {
                 for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
                 {
-                    bool reset = (m_sentenceEnd[i] == timeIdxInSeq);
+                    // bool reset = (m_sentenceEnd[i] == timeIdxInSeq);
+                    bool reset = false;
+
+                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
+                    {
+                        reset = true;
+                    }
                     EvaluateThisNodeSRP(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), i, m_samplesInRecurrentStep);
                 }
             }
@@ -4915,7 +4939,7 @@ protected:  \
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr+indexInBatch, 1);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (iPastIndex < 0 && reset)
+            if (reset)
                 out.SetValue(default_activity);
             else
             {
@@ -5308,7 +5332,7 @@ protected:  \
 
         // copy constructor
         CosDistanceWithNegativeSamplesNode(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
@@ -5334,7 +5358,6 @@ protected:  \
 
 	template class CosDistanceWithNegativeSamplesNode<float>;
 	template class CosDistanceWithNegativeSamplesNode<double>;
-
 
 #pragma endregion derived operations
 

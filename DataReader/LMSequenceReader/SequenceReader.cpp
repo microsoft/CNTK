@@ -15,6 +15,7 @@
 #include <vld.h> // leak detection
 #endif
 #include "fileutil.h"   // for fexists()
+#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -55,7 +56,7 @@ size_t SequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail)
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
 template<class ElemType>
-/*IDataReader<ElemType>::LabelIdType*/ unsigned SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
+typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
     string unk = "<unk>";
@@ -177,7 +178,9 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
                     m_sequence.push_back(epochSample);
                     if ((m_sequence.size() == 1 ? epochSample : epochSample - m_sequence[m_sequence.size()-2]) > m_mbSize)
                     {
-                        fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+                        //fprintf(stderr, "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
+
+                        std::wcerr << "read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least " << epochSample << endl;
                         RuntimeError("read sentence length is longer than the minibatch size. should be smaller. increase the minibatch size to at least %d", epochSample);
                     }
 
@@ -335,7 +338,8 @@ void SequenceReader<ElemType>::WriteLabelFile()
             }
             else if (!m_cachingWriter)
             {
-                fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                //fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                std::wcerr << "WARNING: file " << labelInfo.fileToWrite.c_str() << " NOT written to disk, label files only written when starting at epoch zero!" << endl;
             }
         }
     }
@@ -558,7 +562,9 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
+    {
         fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+    }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
@@ -602,17 +608,14 @@ void SequenceReader<ElemType>::ReadWord(char *word, FILE *fin)
 template<class ElemType>
 void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*flatten*/) 
 {
-    char strFileName[MAX_STRING];
     char stmp[MAX_STRING];
     string strtmp; 
-    size_t sz;
     int cnt, clsidx, b;
     class_size  = 0;
 
-    wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
-
+    //wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
     FILE * vin;
-    vin = fopen(strFileName, "rt") ;
+    vin = fopen(msra::strfun::utf8(vocfile.c_str()).c_str() , "rt") ;
 
     if (vin == nullptr)
     {
@@ -805,7 +808,7 @@ void SequenceReader<ElemType>::LMSetupEpoch()
 }
 
 // utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size) 
+inline size_t RoundUp(size_t value, size_t size) 
 {
     return ((value + size -1)/size)*size;
 }
@@ -847,8 +850,8 @@ void SequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, s
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new typename IDataReader<ElemType>::LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(typename IDataReader<ElemType>::LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -1104,7 +1107,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     if (labelInfo.type == labelCategory)
     {
         memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*actualmbsize);
-        memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*actualmbsize);
+        memset(m_labelsIdBuffer,0,sizeof(typename IDataReader<ElemType>::LabelIdType)*actualmbsize);
     }
     else if (labelInfo.type != labelNone)
     {
@@ -1208,7 +1211,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         }
     }catch(...)
     {
-        RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut]);
+        RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut].c_str());
     }
 
     // we read some records, so process them
@@ -1255,7 +1258,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void SequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {
@@ -1446,7 +1449,10 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+    {
+        //fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
+        std::wcerr << "reading sequence file " << m_file.c_str() << endl;
+    }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
@@ -1504,8 +1510,8 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new typename IDataReader<ElemType>::LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(typename IDataReader<ElemType>::LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {

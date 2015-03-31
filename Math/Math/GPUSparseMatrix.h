@@ -1,4 +1,4 @@
-﻿//
+//
 // <copyright file="GPUSparseMatrix.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
@@ -23,8 +23,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API GPUSparseMatrix : public BaseMatrix<ElemType>
     {
-        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray; using B::m_elemSizeAllocated; using B::m_nz; using B::m_format;   // without this, base members would require to use thi-> in GCC
-
+	public:
+        typedef BaseMatrix<ElemType> B; 
+		using B::m_numRows; 
+		using B::m_numCols; 
+		using B::m_pArray; 
+		using B::m_elemSizeAllocated; 
+		using B::m_nz; 
+		using B::m_format;   
+		using B::m_computeDevice;
+		using B::m_externalBuffer;
+		using B::m_matrixName;
+		using B::OwnBuffer;
+		using B::GetFormat;
+		using B::SetFormat;
+		using B::GetNumRows;
+		using B::GetNumCols;
+		using B::IsEmpty;
+		using B::SetComputeDeviceId;
+		using B::SetMatrixName;
+		using B::SetNzCount;
+		// without this, base members would require to use thi-> in GCC
     public:
         GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR, const DEVICEID_TYPE computeDevice = AUTOPLACEMATRIX);
 
@@ -35,9 +54,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUSparseMatrix(const GPUMatrix<ElemType>&, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
-#ifndef    LINUX
+//#ifndef __unix__
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
-#endif    /* LINUX */
+//#endif    /* LINUX */
 
         ~GPUSparseMatrix();
 
@@ -175,9 +194,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ChangeDeviceTo(DEVICEID_TYPE toId);
 
         GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);
-#ifndef    LINUX
+//#ifndef __unix__
         GPUSparseMatrix<ElemType>& operator=(GPUSparseMatrix<ElemType>&& moveFrom);
-#endif    /* LINUX */
+//#endif    /* LINUX */
         GPUSparseMatrix<ElemType> operator+ (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType> operator- (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType>& operator^= (const ElemType alpha); //element-wise power        

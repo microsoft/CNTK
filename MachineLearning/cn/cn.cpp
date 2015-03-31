@@ -27,9 +27,9 @@
 #include <algorithm>
 #if defined(_WIN32)
 #include "io.h"
+#include "buildinfo.h"
 #endif
 #include "hostname.h"
-#include "buildinfo.h"
 #ifdef LEAKDETECT
 #include "vld.h" // for memory leak detection
 #endif
@@ -506,7 +506,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
             if (iter->second <= cutoff)
                 wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
-        throw exception("no word remained after cutoff");
+        RuntimeError("no word remained after cutoff\n");
     
     if (vocabSize > wordCountLessCutoff)
     {
@@ -820,6 +820,7 @@ int MPIAPI MPI_Init(_In_opt_ int *argc, _Inout_count_(*argc) wchar_t*** argv)
 }
 #endif
 
+#ifdef _WIN32
 void PrintBuiltInfo()
 {
     fprintf(stderr, "-------------------------------------------------------------------\n");
@@ -835,7 +836,7 @@ void PrintBuiltInfo()
     fprintf(stderr, "-------------------------------------------------------------------\n");
 
 }
-
+#endif
 
 int wmain(int argc, wchar_t* argv[])
 {
@@ -887,8 +888,9 @@ int wmain(int argc, wchar_t* argv[])
             RedirectStdErr(logpath);
         }
 
+#ifdef _WIN32
         PrintBuiltInfo();
-
+#endif
         std::string timestamp = TimeDateStamp();
 
         if (myRank == 0) // main process
@@ -966,3 +968,21 @@ int wmain(int argc, wchar_t* argv[])
 #endif
     return EXIT_SUCCESS;
 }
+
+#ifdef __UNIX__
+int main(int argc, char* argv[])
+{
+    wchar_t **wargs = new wchar_t*[argc];
+    for (int i = 0; i < argc; ++i)
+    {
+        wargs[i] = new wchar_t[strlen(argv[i]) + 1];
+        size_t ans = ::mbstowcs(wargs[i], argv[i], strlen(argv[i]) + 1);
+        assert(ans == strlen(argv[i]));
+    }
+    int ret = wmain(argc, wargs);
+    for (int i = 0; i < argc; ++i)
+        delete[] wargs[i];
+    delete[] wargs;
+    return ret;
+}
+#endif

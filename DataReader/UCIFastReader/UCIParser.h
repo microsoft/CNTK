@@ -6,10 +6,17 @@
 // </copyright>
 //
 
+#include "stdafx.h"
 #include <string>
 #include <vector>
 #include <assert.h>
 #include <stdint.h>
+#include <algorithm>
+
+#ifdef min
+#undef min
+#endif
+#define min std::min
 
 // UCI label location types
 enum LabelMode
