@@ -4383,7 +4383,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 *alpha.m_CPUMatrix,
                 *beta.m_CPUMatrix,
                 *lbls.m_CPUMatrix,
-                *pair_scores.m_CPUMatrix, shift),
+                *pair_scores.m_CPUMatrix),
             GPUMatrix<ElemType>::RCRFBackwardCompute(
                 *alpha.m_GPUMatrix,
                 *beta.m_GPUMatrix,
@@ -4414,8 +4414,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 *alpha.m_CPUMatrix,
                 *beta.m_CPUMatrix,
                 *pair_scores.m_CPUMatrix,
-                *grd.m_CPUMatrix,
-                shift),
+                *grd.m_CPUMatrix),
             GPUMatrix<ElemType>::RCRFTransGrdCompute(
                 *lbls.m_GPUMatrix,
                 *alpha.m_GPUMatrix,

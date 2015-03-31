@@ -2555,7 +2555,7 @@ rollingWindow
  option reads in all feature files and stores them on disk in one large
  temporary binary file.
  The data is randomized by running a large rollowing window over the data
- is this file and randomizing the data within the window.
+ in this file and randomizing the data within the window.
  This method produces more thorough randomization of the data but requires
  a large temprorary file written to disk.
  The other option is 
@@ -2623,7 +2623,11 @@ randomize
 
 :
 \emph default
- Auto or None, whether the reader should randomize the data
+ Auto or None if readMethod is rollingWindow, Auto, None, or a specified
+ block size if readMethod is blockRandomize.
+ It determines how the reader should randomize the data.
+ When a block size is specified, only that much of data will be in memory
+ at one time.
 \end_layout
 
 \begin_layout Itemize
