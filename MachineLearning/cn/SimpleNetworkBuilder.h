@@ -338,6 +338,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
+        ComputationNodePtr BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+
+
         ComputationNode<ElemType>* BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
         ComputationNetwork<ElemType>& BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
@@ -348,7 +351,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 		ComputationNetwork<ElemType>& BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
 
-		ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
+        ComputationNetwork<ElemType>& BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
+        
+        ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
         
         ComputationNetwork<ElemType>& BuildLSTMInputOutputTensorNetworkFromDescription(size_t mbSize = 1);        
         
