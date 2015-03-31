@@ -1382,6 +1382,348 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *m_net;
     }
 
+
+    template<class ElemType>
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse)
+    {
+
+        size_t numHiddenLayers = m_layerSizes.size() - 2;
+
+        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+        ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
+        ComputationNodePtr Wxf = nullptr, Whf = nullptr, Wcf = nullptr, bf = nullptr, Wxc = nullptr, Whc = nullptr, bc = nullptr;
+        ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, ct = nullptr, ht = nullptr;
+        ComputationNodePtr delayHI = nullptr, delayCI = nullptr, delayHO = nullptr, delayHF = nullptr, delayHC = nullptr, delayCF = nullptr, delayCC = nullptr;
+        ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
+        ComputationNodePtr bit = nullptr, bft = nullptr, bct = nullptr;
+        ComputationNodePtr streamsxi = nullptr, streamsxo = nullptr, streamsxf = nullptr, streamsxc = nullptr;
+
+        for (size_t sidx = 0; sidx < inputObs.size(); sidx++)
+        {
+            input = inputObs[sidx];
+            if (inputWeightSparse)
+            {
+                Wxo = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+                Wxi = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+                Wxf = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXF%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+                Wxc = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+            }
+            else
+            {
+                Wxo = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WXO%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+                Wxi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WXI%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+                Wxf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WXF%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+                Wxc = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WXC%dI%d", iLayer, sidx), outputDim, inputDim[sidx]);
+            }
+            m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(Wxf, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(Wxc, m_uniformInit, randomSeed++, m_initValueScale);
+
+            streamsxi = (streamsxi == nullptr) ? m_net->Times(Wxi, input) : m_net->Plus(streamsxi, m_net->Times(Wxi, input));
+            streamsxf = (streamsxf == nullptr) ? m_net->Times(Wxf, input) : m_net->Plus(streamsxf, m_net->Times(Wxf, input));
+            streamsxc = (streamsxc == nullptr) ? m_net->Times(Wxc, input) : m_net->Plus(streamsxc, m_net->Times(Wxc, input));
+            streamsxo = (streamsxo == nullptr) ? m_net->Times(Wxo, input) : m_net->Plus(streamsxo, m_net->Times(Wxo, input));
+        }
+
+
+        bo = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"bo%d", iLayer), outputDim, 1);
+        bc = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"bc%d", iLayer), outputDim, 1);
+        bi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"bi%d", iLayer), outputDim, 1);
+        bf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"bf%d", iLayer), outputDim, 1);
+        //if (m_forgetGateInitVal > 0)
+        bf->FunctionValues().SetValue(m_forgetGateInitVal);
+        //if (m_inputGateInitVal > 0)
+        bi->FunctionValues().SetValue(m_inputGateInitVal);
+        //if (m_outputGateInitVal > 0)
+        bo->FunctionValues().SetValue(m_outputGateInitVal);
+
+        Whi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
+        m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
+        Wci = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WCI%d", iLayer), outputDim, 1);
+        m_net->InitLearnableParameters(Wci, m_uniformInit, randomSeed++, m_initValueScale);
+
+        Whf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WHF%d", iLayer), outputDim, outputDim);
+        m_net->InitLearnableParameters(Whf, m_uniformInit, randomSeed++, m_initValueScale);
+        Wcf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WCF%d", iLayer), outputDim, 1);
+        m_net->InitLearnableParameters(Wcf, m_uniformInit, randomSeed++, m_initValueScale);
+
+        Who = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WHO%d", iLayer), outputDim, outputDim);
+        m_net->InitLearnableParameters(Who, m_uniformInit, randomSeed++, m_initValueScale);
+        Wco = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WCO%d", iLayer), outputDim, 1);
+        m_net->InitLearnableParameters(Wco, m_uniformInit, randomSeed++, m_initValueScale);
+
+        Whc = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WHC%d", iLayer), outputDim, outputDim);
+        m_net->InitLearnableParameters(Whc, m_uniformInit, randomSeed++, m_initValueScale);
+
+        size_t layer1 = outputDim;
+
+        delayHI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        delayHF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        delayHO = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        delayHC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        delayCI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        delayCF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        delayCC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+
+        if (m_constInputGateValue)
+        {
+            //it = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim, mbSize);
+            //it->NeedGradient() = false;
+            //it->FunctionValues().SetValue(m_constInputGateValue);
+            it = nullptr;
+        }
+        else
+            it = ApplyNonlinearFunction(
+            m_net->Plus(
+            m_net->Plus(
+            m_net->Plus(
+            streamsxi,
+            bi),
+            m_net->Times(Whi, delayHI)),
+            m_net->DiagTimes(Wci, delayCI)), 0);
+
+        if (it == nullptr)
+        {
+            bit = m_net->Tanh(
+                m_net->Plus(
+                streamsxc,
+                m_net->Plus(
+                m_net->Times(Whc, delayHC),
+                bc
+                )
+                )
+                );
+        }
+        else
+        {
+            bit = m_net->ElementTimes(it,
+                m_net->Tanh(
+                m_net->Plus(
+                streamsxc,
+                m_net->Plus(
+                m_net->Times(Whc, delayHC),
+                bc
+                )
+                )
+                )
+                );
+        }
+
+        if (m_constForgetGateValue)
+        {
+            ft = nullptr;
+        }
+        else
+            ft = ApplyNonlinearFunction(
+            m_net->Plus(
+            m_net->Plus(
+            m_net->Plus(
+            streamsxf,
+            bf),
+            m_net->Times(Whf, delayHF)),
+            m_net->DiagTimes(Wcf, delayCF)), 0);
+
+
+        if (ft == nullptr)
+        {
+            bft = delayCC;
+        }
+        else
+        {
+            bft = m_net->ElementTimes(ft, delayCC);
+        }
+
+        ct = m_net->Plus(bft, bit);
+
+
+        if (m_constOutputGateValue)
+        {
+            ot = nullptr;
+        }
+        else
+            ot = ApplyNonlinearFunction(
+            m_net->Plus(
+            m_net->Plus(
+            m_net->Plus(
+            streamsxo,
+            bo),
+            m_net->Times(Who, delayHO)),
+            m_net->DiagTimes(Wco, ct)), 0);
+
+        if (ot == nullptr)
+        {
+            output = m_net->Tanh(ct);
+        }
+        else
+        {
+            output = m_net->ElementTimes(ot, m_net->Tanh(ct));
+        }
+
+        delayHO->AttachInputs(output);
+        delayHI->AttachInputs(output);
+        delayHF->AttachInputs(output);
+        delayHC->AttachInputs(output);
+        delayCI->AttachInputs(ct);
+        delayCF->AttachInputs(ct);
+        delayCC->AttachInputs(ct);
+
+        if (m_addDropoutNodes)
+            input = m_net->Dropout(output);
+        else
+            input = output;
+        output = input;
+
+        return (ComputationNode<ElemType>*) output;
+    }
+
+    /**
+    Build a bi-directional LSTM network to compute the following 
+    p(y_t | y_1^{t-1}, x_1^T)
+    The target side for y_t is a LSTM language model with past prediction y_{t-1} as its input. This language model also uses 
+    the outputs from the forwawrd direction LSTM and the output from the backward direction LSTM that are operated on the source side. 
+
+    Developed by Kaisheng Yao. 
+    This is used in the following works:
+    K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion, submitted to Interspeech 2015
+    */
+    template<class ElemType>
+    ComputationNetwork<ElemType>& SimpleNetworkBuilder<ElemType>::BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize)
+    {
+        if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        {
+            ULONG randomSeed = 1;
+
+            size_t numHiddenLayers = m_layerSizes.size() - 2;
+
+            size_t numRecurrentLayers = m_recurrentLayers.size();
+
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr, Wxo;
+            ComputationNodePtr forwardInput = nullptr, forwardOutput = nullptr, backwardInput = nullptr, backwardOutput = nullptr;
+            vector<ComputationNodePtr> streams;
+            vector<size_t> streamdims;
+            ComputationNodePtr inputprediction = nullptr, inputletter = nullptr, ngram = nullptr;
+            ComputationNodePtr ltrSource = nullptr;
+            size_t ltrDim = 0;
+
+            map<wstring, size_t> featDim;
+
+            size_t ltrSrcIdx = 1;
+            /// create projections to use delay predictions
+            inputprediction = m_net->CreateInputNode(L"featureDelayedTarget", m_streamSizes[0], mbSize);
+            m_net->FeatureNodes().push_back(inputprediction);
+
+            inputletter = m_net->CreateInputNode(L"ltrForward", m_streamSizes[1], mbSize);
+            m_net->FeatureNodes().push_back(inputletter);
+            featDim[L"ltrForward"] = m_streamSizes[1];
+
+            size_t layerIdx = 0;
+            size_t idx = 0;
+            int recur_idx = 0;
+            for (vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
+                p != m_net->FeatureNodes().end(); p++, idx++)
+            {
+                layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
+                input = *p;
+                if (m_applyMeanVarNorm)
+                {
+                    input = *p;
+                    w = m_net->Mean(input);
+                    b = m_net->InvStdDev(input);
+                    output = m_net->PerDimMeanVarNormalization(input, w, b);
+
+                    input = output;
+                }
+
+                size_t idim = input->FunctionValues().GetNumRows();
+                assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
+
+                e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
+                m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+                output = m_net->LookupTable(e, input, msra::strfun::wstrprintf(L"LOOKUP%d", idx));
+
+                streamdims.push_back(m_layerSizes[1] * m_lookupTabelOrderSizes[idx]);
+                input = output;
+                streams.push_back(input);
+
+                if (idx == ltrSrcIdx)
+                {
+                    ltrSource = input;
+                    ltrDim = m_layerSizes[1] * m_lookupTabelOrderSizes[idx];
+                }
+            }
+
+            layerIdx++;
+
+            if (numHiddenLayers > 0)
+            {
+                /// forward direction
+                forwardOutput = (ComputationNodePtr)BuildLSTMComponentWithMultiInputs(randomSeed, mbSize, layerIdx, streamdims, m_layerSizes[layerIdx + 1], streams);
+                forwardInput = forwardOutput;
+
+                backwardInput = (ComputationNodePtr)m_net->TimeReverse(ltrSource);
+                backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
+                backwardInput = backwardOutput;
+
+                layerIdx++;
+
+                while (layerIdx < numHiddenLayers - 1)
+                {
+                    forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 100, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], forwardInput);
+                    forwardInput = forwardOutput;
+
+                    backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 200, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], backwardInput);
+                    backwardInput = backwardOutput;
+
+                    layerIdx++;
+                }
+                backwardOutput = (ComputationNodePtr)m_net->TimeReverse(backwardInput);
+            }
+
+            streams.clear();
+            streamdims.clear();
+            streams.push_back(forwardOutput);
+            streamdims.push_back(m_layerSizes[layerIdx]);
+            streams.push_back(backwardOutput);
+            streamdims.push_back(m_layerSizes[layerIdx]);
+
+            output = (ComputationNodePtr)BuildLSTMComponentWithMultiInputs(randomSeed, mbSize, layerIdx, streamdims, m_layerSizes[layerIdx + 1], streams);
+            input = output;
+            layerIdx++;
+
+            /// directly connect transcription model output/feature to the output layer
+            Wxo = m_net->CreateLearnableParameter(L"ConnectToLowerLayers", m_layerSizes[numHiddenLayers + 1], m_layerSizes[layerIdx]);
+            m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
+
+            output = m_net->Times(Wxo, input);
+            input = output;
+
+            /// here uses "labels", so only one label from multiple stream inputs are used.
+            label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
+
+            AddTrainAndEvalCriterionNodes(input, label);
+
+            //add softmax layer (if prob is needed or KL reg adaptation is needed)
+            output = m_net->Softmax(input, L"outputs");
+
+            if (m_needPrior)
+            {
+                prior = m_net->Mean(label);
+                input = m_net->Log(prior, L"LogOfPrior");
+                ComputationNodePtr
+                    scaledLogLikelihood = m_net->Minus(output, input, L"ScaledLogLikelihood");
+                m_net->OutputNodes().push_back(scaledLogLikelihood);
+            }
+            else
+                m_net->OutputNodes().push_back(output);
+
+        }
+
+        m_net->ResetEvalTimeStamp();
+
+        return *m_net;
+    }
+
     template class SimpleNetworkBuilder<float>;
     template class SimpleNetworkBuilder<double>;
 

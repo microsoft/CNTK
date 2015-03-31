@@ -340,6 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
+        ComputationNodePtr BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse = false);
 
         ComputationNode<ElemType>* BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
@@ -353,6 +354,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
         
+        ComputationNetwork<ElemType>& BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+
         ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
         
         ComputationNetwork<ElemType>& BuildLSTMInputOutputTensorNetworkFromDescription(size_t mbSize = 1);        
@@ -722,7 +725,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType m_forgetGateInitVal;
         ElemType m_inputGateInitVal;
         ElemType m_outputGateInitVal;
-  
+
+        intargvector m_streamSizes;  /// for multiple stream data
+        intargvector m_lookupTabelOrderSizes; /// each stream has its own projection, so need to provide with the lookup table order size for each stream
+
         int m_lookupTableOrder;
         int m_labelEmbeddingSize;
 
