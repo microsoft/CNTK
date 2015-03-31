@@ -1071,7 +1071,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr CrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
+
+        ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new SequenceDecoderNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(label, prediction, pairscore);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, prediction);
@@ -1312,14 +1321,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNodePtr newNode(new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(unnormedPrior, mean, logStddev, feature);
-            AddNodeToNet(newNode);
-            return newNode;
-        }
-
-        ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"")
-        {
-            ComputationNodePtr newNode(new SequenceDecoderNode<ElemType>(m_deviceId, nodeName));
-            newNode->AttachInputs(label, prediction, pairscore);
             AddNodeToNet(newNode);
             return newNode;
         }
