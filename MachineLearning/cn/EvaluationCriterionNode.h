@@ -266,7 +266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// compute forward backward algorithm
-        static void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp, const int iStep = 1)
+        static void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
@@ -274,8 +274,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             /// change to other values so can support multiple sentences in each minibatch
             assert(iStep == 1);
-            ForwardCompute(alpha, backtrace, pos_scores, pair_scores, stt, iStep);
-            BackwardCompute(functionValues, backtrace, stp, iStep);
+            ForwardCompute(alpha, backtrace, pos_scores, pair_scores, stt);
+            BackwardCompute(functionValues, backtrace, stp);
 
         };
 
@@ -283,10 +283,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ForwardCompute(Matrix<ElemType>& alpha,
             Matrix<ElemType>& backtrace,
             const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores,
-            const size_t stt, const int shift = 1)
+            const size_t stt)
         {
             /// to-do, shift more than 1 to support muliple sentences per minibatch
-            assert(shift == 1);
             int iNumPos = pos_scores.GetNumCols();
             int iNumLab = pos_scores.GetNumRows();
             size_t iTmp = 0;
@@ -335,9 +334,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// compute backward algorithm
         static void BackwardCompute(
             Matrix<ElemType>& decodedpath,
-            const Matrix<ElemType>& backtrace, const size_t stp, const int shift = 1)
+            const Matrix<ElemType>& backtrace, const size_t stp)
         {
-            assert(shift == 1);
             int iNumPos = backtrace.GetNumCols();
             int iNumLab = backtrace.GetNumRows();
 
