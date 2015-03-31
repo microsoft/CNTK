@@ -273,7 +273,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// this implementation only supports one sentence per minibatch
 
             /// change to other values so can support multiple sentences in each minibatch
-            assert(iStep == 1);
             ForwardCompute(alpha, backtrace, pos_scores, pair_scores, stt);
             BackwardCompute(functionValues, backtrace, stp);
 
