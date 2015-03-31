@@ -1278,6 +1278,110 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return *m_net;
     }
 
+    template<class ElemType>
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
+    {
+
+        size_t numHiddenLayers = m_layerSizes.size() - 2;
+
+        ComputationNodePtr input = nullptr, output = nullptr;
+        ComputationNodePtr wInputGate = nullptr, wForgetGate = nullptr, wOutputGate = nullptr, wMemoryCellMatrix = nullptr;
+
+        input = inputObs;
+        size_t nDim = inputDim + outputDim + 2;
+        wInputGate = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WINPUTGATE%d", iLayer), outputDim, nDim);
+        m_net->InitLearnableParameters(wInputGate, m_uniformInit, randomSeed++, m_initValueScale);
+        wInputGate->FunctionValues().ColumnSlice(0, 1).SetValue(m_inputGateInitVal);  /// init to input gate bias
+        wForgetGate = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WFORGETGATE%d", iLayer), outputDim, nDim);
+        m_net->InitLearnableParameters(wForgetGate, m_uniformInit, randomSeed++, m_initValueScale);
+        wForgetGate->FunctionValues().ColumnSlice(0, 1).SetValue(m_forgetGateInitVal); /// init to forget gate bias
+        wOutputGate = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WOUTPUTGATE%d", iLayer), outputDim, nDim);
+        m_net->InitLearnableParameters(wOutputGate, m_uniformInit, randomSeed++, m_initValueScale);
+        wOutputGate->FunctionValues().ColumnSlice(0, 1).SetValue(m_outputGateInitVal);/// init to output gate bias
+        wMemoryCellMatrix = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WMEMORYCELLWEIGHT%d", iLayer), outputDim, inputDim + outputDim + 1);
+        m_net->InitLearnableParameters(wMemoryCellMatrix, m_uniformInit, randomSeed++, m_initValueScale);
+        wMemoryCellMatrix->FunctionValues().ColumnSlice(0, 1).SetValue(0);/// init to memory cell bias
+
+        output = m_net->LSTM(inputObs, wInputGate, wForgetGate, wOutputGate, wMemoryCellMatrix, msra::strfun::wstrprintf(L"LSTM%d", iLayer));
+
+        if (m_addDropoutNodes)
+            input = m_net->Dropout(output);
+        else
+            input = output;
+        output = input;
+
+        return (ComputationNode<ElemType>*) output;
+    }
+
+    template<class ElemType>
+    ComputationNetwork<ElemType>& SimpleNetworkBuilder<ElemType>::BuildLSTMEncoderNetworkFromDescription(size_t mbSize)
+    {
+
+        if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        {
+            ULONG randomSeed = 1;
+
+            size_t i = 0;
+            size_t numHiddenLayers = m_layerSizes.size() - 1;
+
+            size_t numRecurrentLayers = m_recurrentLayers.size();
+
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+
+            input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
+            m_net->FeatureNodes().push_back(input);
+
+            if (m_applyMeanVarNorm)
+            {
+                w = m_net->Mean(input);
+                b = m_net->InvStdDev(input);
+                output = m_net->PerDimMeanVarNormalization(input, w, b);
+
+                input = output;
+            }
+
+            if (m_lookupTableOrder > 0)
+            {
+                e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"EncoderE%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
+                m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+                output = m_net->LookupTable(e, input, L"EncoderLookupTable");
+
+                if (m_addDropoutNodes)
+                    input = m_net->Dropout(output);
+                else
+                    input = output;
+                i++;
+            }
+
+            /// direct connect from input node to output node
+
+            int recur_idx = 0;
+            int offset = m_lookupTableOrder > 0 ? 1 : 0;
+            if (numHiddenLayers > 0)
+            {
+                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                input = output;
+                i++;
+
+                for (; i<numHiddenLayers; i++)
+                {
+                    output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+
+                    if (m_addDropoutNodes)
+                        input = m_net->Dropout(output);
+                    else
+                        input = output;
+                }
+            }
+
+            m_net->OutputNodes().push_back(output);
+
+        }
+
+        m_net->ResetEvalTimeStamp();
+        return *m_net;
+    }
+
     template class SimpleNetworkBuilder<float>;
     template class SimpleNetworkBuilder<double>;
 
