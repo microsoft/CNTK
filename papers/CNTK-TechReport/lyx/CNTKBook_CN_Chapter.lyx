@@ -9423,7 +9423,7 @@ CNN
 ) 
 \begin_inset CommandInset citation
 LatexCommand cite
-key "CNN-lecun:1995,CNN-FastComputing-chellapilla+2006,CNN-FeatureHierarchy-kavukcuoglu+2010,DCNN-ImageNet-krizhevsky+2012,CNN-ASR-abdel+2012,TransferLearning-DNN-Ciresan+2012,CNN-LVCSR-sainath+2013,DCNN-LVCSR-sainath+2013,CNN-ASR-Abdel+2013,CNN-ASR-deng+2013"
+key "CNN-lecun:1995,CNN-FastComputing-chellapilla+2006,CNN-FeatureHierarchy-kavukcuoglu+2010,DCNN-ImageNet-krizhevsky+2012,CNN-ASR-abdel+2012,TransferLearning-DNN-Ciresan+2012,CNN-LVCSR-sainath+2013,DCNN-LVCSR-sainath+2013,CNN-ASR-Abdel+2013,CNN-ASR-deng+2013,CNN-atlas1988"
 
 \end_inset
 
