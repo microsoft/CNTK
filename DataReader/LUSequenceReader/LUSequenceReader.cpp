@@ -172,28 +172,29 @@ void LUSequenceReader<ElemType>::WriteLabelFile()
 template<class ElemType>
 void LUSequenceReader<ElemType>::LoadLabelFile(const std::wstring &filePath, std::vector<LabelType>& retLabels)
 {
-    File file(filePath, fileOptionsRead);
-
     // initialize with file name
     std::string path = msra::strfun::utf8(filePath);
-    auto location = path.find_last_of("/\\");
-    if (location != npos)
-        path = path.substr(location+1);
     
-    // read the entire file into a string
-    string str;
+    char stmp[MAX_STRING];
+    string str; 
     retLabels.resize(0);
-    while (!file.IsEOF())
+    FILE * vin = fopen(path.c_str(), "rt");
+    if (vin == nullptr)
+        RuntimeError("cannot open label file %s\n", path.c_str());
+
+    while (fgets(stmp, MAX_STRING, vin) != NULL)
     {
-        file.GetLine(str);
+        str = stmp; 
 
         // check for a comment line
         string::size_type pos = str.find_first_not_of(" \t");
         if (pos != -1)
         {
-            retLabels.push_back((LabelType)trim(str));
+            str = trim(str);
+            retLabels.push_back((LabelType)str);
         }
     }
+    fclose(vin);
 }
 
 
@@ -266,19 +267,18 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     else
         RuntimeError("two label definitions (in and out) required for Sequence Reader");
 
-    ConfigParameters featureConfig = readerConfig(m_featuresName,"");
-    ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
+    ConfigParameters featureConfig = readerConfig(m_featuresName, "");
+    ConfigParameters labelConfig[2] = { readerConfig(m_labelsName[0], ""), readerConfig(m_labelsName[1], "") };
 
     class_size = 0;
-    m_featureDim = featureConfig("dim");
     for (int index = labelInfoMin; index < labelInfoMax; ++index)
     {
-        m_labelInfo[index].idMax = 0; 
+        m_labelInfo[index].idMax = 0;
         m_labelInfo[index].beginSequence = labelConfig[index]("beginSequence", "");
         m_labelInfo[index].endSequence = labelConfig[index]("endSequence", "");
 
         // determine label type desired
-        std::string labelType(labelConfig[index]("labelType","Category"));
+        std::string labelType(labelConfig[index]("labelType", "Category"));
         if (labelType == "Category")
         {
             m_labelInfo[index].type = labelCategory;
@@ -300,7 +300,7 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         {
             std::wstring wClassFile = labelConfig[index]("token", "");
             if (wClassFile != L""){
-                ReadLabelInfo(wClassFile  , m_labelInfo[index].word4idx, m_labelInfo[index].idx4word);
+                ReadLabelInfo(wClassFile, m_labelInfo[index].word4idx, m_labelInfo[index].idx4word);
             }
 
             std::vector<string> arrayLabels;
@@ -308,7 +308,7 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             if (fexists(labelPath))
             {
                 LoadLabelFile(labelPath, arrayLabels);
-                for (int i=0; i < arrayLabels.size(); ++i)
+                for (int i = 0; i < arrayLabels.size(); ++i)
                 {
                     LabelType label = arrayLabels[i];
                     m_labelInfo[index].mapIdToLabel[i] = label;
@@ -320,16 +320,16 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             else
             {
                 if (wClassFile != L""){
-                    int iMax = -1, i; 
+                    int iMax = -1, i;
                     for (auto ptr = m_labelInfo[index].word4idx.begin(); ptr != m_labelInfo[index].word4idx.end(); ptr++)
                     {
-                        LabelType label = ptr->first; 
-                        i = ptr->second; 
+                        LabelType label = ptr->first;
+                        i = ptr->second;
                         iMax = max(i, iMax);
                         m_labelInfo[index].mapIdToLabel[i] = label;
                         m_labelInfo[index].mapLabelToId[label] = i;
                     }
-                    m_labelInfo[index].idMax = (LabelIdType)(iMax+1);
+                    m_labelInfo[index].idMax = (LabelIdType)(iMax + 1);
 
                 }
                 m_labelInfo[index].mapName = labelPath;
@@ -352,36 +352,25 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_endReached = false;
     m_readNextSampleLine = 0;
     m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
+    m_traceLevel = readerConfig("traceLevel", "0");
     m_parser.SetTraceLevel(m_traceLevel);
 
-    mRandomize = false; 
+    /// to-do: use randomization by default
+    mRandomize = false;
     if (readerConfig.Exists("randomize"))
     {
         string randomizeString = readerConfig("randomize");
         if (randomizeString == "None")
         {
-            mRandomize = false;
+            ;
         }
         else if (randomizeString == "Auto")
         {
             mRandomize = true;
         }
-        else
-        {
-            ;//readerConfig("randomize");
-        }
-    }
-    else
-    {
-        ; //randomizeAuto;
     }
 
-    m_seed = 0;
-
-    // The input data is a combination of the label Data and extra feature dims together
-//    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
-    m_featureCount = 1; 
+    m_featureCount = 1;
 
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
@@ -389,7 +378,9 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-    m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
+    m_parser.ParseInit(m_file.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
+
+    m_seed = 0;
 }
 
 template<class ElemType>
@@ -476,10 +467,12 @@ void LUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         RuntimeError("cannot open word class file");
     }
     b = 0;
-    while (!feof(vin)){
-        fscanf_s(vin, "%s\n", stmp, _countof(stmp));
-        word4idx[stmp] = b;
-        idx4word[b++]= stmp;
+    while (fgets(stmp, MAX_STRING, vin) != NULL)
+    {
+        strtmp = stmp;
+        strtmp = trim(strtmp);
+        word4idx[strtmp] = b;
+        idx4word[b++] = strtmp;
     }
     fclose(vin);
 
@@ -646,8 +639,8 @@ void LUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch,
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
+            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -690,7 +683,9 @@ void LUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch,
     m_clsinfoRead = false; 
     m_idx2clsRead = false; 
 
+    mTotalSentenceSofar = 0;
     m_parser.ParseReset(); 
+
 }
 
 
@@ -793,17 +788,26 @@ template<class ElemType>
 void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& readerConfig)
 {
     mWordMappingFn = readerConfig("wordmap", "");
+    char ctmp[2048];
     string si, so;
+    string ss;
+    vector<string> vs;
     if (mWordMappingFn != "")
     {
-        ifstream fp;
-        fp.open(mWordMappingFn.c_str());
-        while (!fp.eof())
+        FILE * fp;
+        fp = fopen(mWordMappingFn.c_str(), "rt");
+        if (fp == nullptr){
+            fprintf(stderr, "BatchLUSequenceReader: cannot load %s", mWordMappingFn.c_str());
+            throw std::runtime_error("cannot load file");
+        }
+        while (fgets(ctmp, 2048, fp) != nullptr)
         {
-            fp >> si >> so;
+            ss = ctmp;
+            vs = sep_string(ss, " ");
+            si = vs[0]; so = vs[1];
             mWordMapping[si] = so;
         }
-        fp.close();
+        fclose(fp);
     }
     mUnkStr = readerConfig("unk", "<unk>");
 }
@@ -817,10 +821,6 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     LoadWordMapping(readerConfig);
 
-    //// if we have a cache, no need to parse the test files...
-    //if (m_cachingReader)
-    //    return;
-
     std::vector<std::wstring> features;
     std::vector<std::wstring> labels;
     GetFileConfigNames(readerConfig, features, labels);
@@ -829,93 +829,126 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         m_featuresName = features[0];
     }
 
-    if (labels.size() == 2)
     {
-        for (int index = labelInfoMin; index < labelInfoMax; ++index)
+        wstring tInputLabel = readerConfig("inputLabel", L"");
+        wstring tOutputLabel = readerConfig("outputLabel", L"");
+
+        if (labels.size() == 2)
         {
-            m_labelsName[index] = labels[index];
-        }
-    }
-    else
-        RuntimeError("two label definitions (in and out) required for Sequence Reader");
-
-    ConfigParameters featureConfig = readerConfig(m_featuresName,"");
-    ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
-
-    class_size = 0;
-    m_featureDim = featureConfig("dim");
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
-    {
-        m_labelInfo[index].idMax = 0; 
-        m_labelInfo[index].beginSequence = labelConfig[index]("beginSequence", "");
-        m_labelInfo[index].endSequence = labelConfig[index]("endSequence", "");
-        m_labelInfo[index].busewordmap = labelConfig[index]("usewordmap", "false");
-
-        // determine label type desired
-        std::string labelType(labelConfig[index]("labelType","Category"));
-        if (labelType == "Category")
-        {
-            m_labelInfo[index].type = labelCategory;
-        }
-        else if (labelType == "NextWord")
-        {
-            // in this case, it's all identical to the Input labels, except the data type
-            m_labelInfo[index].type = labelNextWord;
-            m_labelInfo[index].dim = m_labelInfo[labelInfoIn].dim;
-        }
-        else if (labelType == "None")
-        {
-            m_labelInfo[index].type = labelNone;
-            m_labelInfo[index].dim = 0;   // override for no labels
-        }
-
-        // if we have labels, we need a label Mapping file, it will be a file with one label per line
-        if (m_labelInfo[index].type != labelNone)
-        {
-            std::wstring wClassFile = labelConfig[index]("token", "");
-            if (wClassFile != L""){
-                ReadLabelInfo(wClassFile  , m_labelInfo[index].word4idx, m_labelInfo[index].idx4word);
-            }
-            if (m_labelInfo[index].busewordmap)
-                ChangeMaping(mWordMapping, mUnkStr, m_labelInfo[index].word4idx);
-
-
-            std::vector<string> arrayLabels;
-            std::wstring labelPath = labelConfig[index]("labelMappingFile");
-            if (fexists(labelPath))
+            if (tInputLabel == L"" && tOutputLabel == L"")
             {
-                LoadLabelFile(labelPath, arrayLabels);
-                for (int i=0; i < arrayLabels.size(); ++i)
+                for (int index = labelInfoMin; index < labelInfoMax; ++index)
                 {
-                    LabelType label = arrayLabels[i];
-                    m_labelInfo[index].mapIdToLabel[i] = label;
-                    m_labelInfo[index].mapLabelToId[label] = i;
+                    m_labelsName[index] = labels[index];
                 }
-                m_labelInfo[index].idMax = (LabelIdType)arrayLabels.size();
-                m_labelInfo[index].mapName = labelPath;
             }
             else
             {
+                int index = 0;
+                for (int i = labelInfoMin; i < labelInfoMax; ++i)
+                {
+                    if (labels[i] == tInputLabel)
+                        m_labelsName[index] = labels[i];
+                }
+                if (m_labelsName[index] == L"")
+                    RuntimeError("cannot find input label");
+
+                index = 1;
+                for (int i = labelInfoMin; i < labelInfoMax; ++i)
+                {
+                    if (labels[i] == tOutputLabel)
+                        m_labelsName[index] = labels[i];
+                }
+                if (m_labelsName[index] == L"")
+                    RuntimeError("cannot find output label");
+            }
+        }
+        else
+            RuntimeError("two label definitions (in and out) required for Sequence Reader");
+
+        ConfigParameters featureConfig = readerConfig(m_featuresName, "");
+        ConfigParameters labelConfig[2] = { readerConfig(m_labelsName[0], ""), readerConfig(m_labelsName[1], "") };
+
+        mbEncodingForDecoding = false; 
+        class_size = 0;
+        for (int index = labelInfoMin; index < labelInfoMax; ++index)
+        {
+            m_labelInfo[index].idMax = 0;
+            m_labelInfo[index].beginSequence = labelConfig[index]("beginSequence", "");
+            m_labelInfo[index].endSequence = labelConfig[index]("endSequence", "");
+            m_labelInfo[index].busewordmap = labelConfig[index]("usewordmap", "false");
+
+            m_labelInfo[index].isproposal = labelConfig[index]("isproposal", "false");
+            if (m_labelInfo[index].isproposal){
+                mbEncodingForDecoding = readerConfig("TestEncodingForDecoding");
+            }
+
+            // determine label type desired
+            std::string labelType(labelConfig[index]("labelType", "Category"));
+            if (labelType == "Category")
+            {
+                m_labelInfo[index].type = labelCategory;
+            }
+            else if (labelType == "NextWord")
+            {
+                // in this case, it's all identical to the Input labels, except the data type
+                m_labelInfo[index].type = labelNextWord;
+                m_labelInfo[index].dim = m_labelInfo[labelInfoIn].dim;
+            }
+            else if (labelType == "None")
+            {
+                m_labelInfo[index].type = labelNone;
+                m_labelInfo[index].dim = 0;   // override for no labels
+            }
+
+            // if we have labels, we need a label Mapping file, it will be a file with one label per line
+            if (m_labelInfo[index].type != labelNone)
+            {
+                std::wstring wClassFile = labelConfig[index]("token", "");
                 if (wClassFile != L""){
-                    int iMax = -1, i; 
-                    for (auto ptr = m_labelInfo[index].word4idx.begin(); ptr != m_labelInfo[index].word4idx.end(); ptr++)
+                    ReadLabelInfo(wClassFile, m_labelInfo[index].word4idx, m_labelInfo[index].idx4word);
+                }
+                if (m_labelInfo[index].busewordmap)
+                    ChangeMaping(mWordMapping, mUnkStr, m_labelInfo[index].word4idx);
+
+
+                std::vector<string> arrayLabels;
+                std::wstring labelPath = labelConfig[index]("labelMappingFile");
+                if (fexists(labelPath))
+                {
+                    LoadLabelFile(labelPath, arrayLabels);
+                    for (int i = 0; i < arrayLabels.size(); ++i)
                     {
-                        LabelType label = ptr->first; 
-                        i = ptr->second; 
-                        iMax = max(i, iMax);
+                        LabelType label = arrayLabels[i];
                         m_labelInfo[index].mapIdToLabel[i] = label;
                         m_labelInfo[index].mapLabelToId[label] = i;
                     }
-                    m_labelInfo[index].idMax = (LabelIdType)(iMax+1);
-
+                    m_labelInfo[index].idMax = (LabelIdType)arrayLabels.size();
+                    m_labelInfo[index].mapName = labelPath;
                 }
-                m_labelInfo[index].mapName = labelPath;
+                else
+                {
+                    if (wClassFile != L""){
+                        int iMax = -1, i;
+                        for (auto ptr = m_labelInfo[index].word4idx.begin(); ptr != m_labelInfo[index].word4idx.end(); ptr++)
+                        {
+                            LabelType label = ptr->first;
+                            i = ptr->second;
+                            iMax = max(i, iMax);
+                            m_labelInfo[index].mapIdToLabel[i] = label;
+                            m_labelInfo[index].mapLabelToId[label] = i;
+                        }
+                        m_labelInfo[index].idMax = (LabelIdType)(iMax + 1);
 
-                m_labelInfo[index].fileToWrite = labelPath;
+                    }
+                    m_labelInfo[index].mapName = labelPath;
+
+                    m_labelInfo[index].fileToWrite = labelPath;
+                }
             }
-        }
 
-        m_labelInfo[index].dim = m_labelInfo[index].idMax;
+            m_labelInfo[index].dim = m_labelInfo[index].idMax;
+        }
     }
 
     // initialize all the variables
@@ -928,26 +961,6 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     ConfigArray wContext = readerConfig("wordContext", "0");
     intargvector wordContext = wContext;
     m_wordContext = wordContext;
-    if (readerConfig.Exists("randomize"))
-    {
-        string randomizeString = readerConfig("randomize");
-        if (randomizeString == "None")
-        {
-            ;
-        }
-        else if (randomizeString == "Auto")
-        {
-            ;
-        }
-        else
-        {
-            ;//readerConfig("randomize");
-        }
-    }
-    else
-    {
-        ; //randomizeAuto;
-    }
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
@@ -959,9 +972,26 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-    m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
+    m_parser.ParseInit(m_file.c_str(), labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+
+    mRandomize = false;
+    if (readerConfig.Exists("randomize"))
+    {
+        string randomizeString = readerConfig("randomize");
+        if (randomizeString == "None")
+        {
+            ;
+        }
+        else if (randomizeString == "Auto" || randomizeString == "True")
+        {
+            mRandomize = true;
+        }
+    }
+
+    mEqualLengthOutput = readerConfig("equalLength", "true");
+    mAllowMultPassData = readerConfig("dataMultiPass", "false");
 }
 
 template<class ElemType>
@@ -979,6 +1009,7 @@ void BatchLUSequenceReader<ElemType>::Reset()
     if (m_featureTemp.size() > 0)
         m_featureTemp.clear();
     m_parser.mSentenceIndex2SentenceInfo.clear();
+    mTotalSentenceSofar = 0;
 }
 
 template<class ElemType>
@@ -1013,8 +1044,8 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
+            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -1025,29 +1056,18 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
     }
 
     m_mbSize = mbSize;
-    if (requestedEpochSamples == requestDataSize)
-    {
-        if (!m_endReached)
-        {
-            m_epochSize = requestDataSize;
-        }
-    }
-    else
-    {
-        m_epochSize = requestedEpochSamples;
-    }
-    
+    m_epochSize = requestedEpochSamples;
+
     // we use epochSize, which might not be set yet, so use a default value for allocations if not yet set
-    size_t epochSize = m_epochSize == requestDataSize?1000:m_epochSize;
     m_epoch = epoch;
     m_mbStartSample = epoch*m_epochSize;
 
     // allocate room for the data
-    m_featureData.reserve(m_featureCount*epochSize);
+    m_featureData.reserve(m_featureCount*m_mbSize);
     if (m_labelInfo[labelInfoOut].type == labelCategory)
-        m_labelIdData.reserve(epochSize);
+        m_labelIdData.reserve(m_mbSize);
     else if (m_labelInfo[labelInfoOut].type != labelNone)
-        m_labelData.reserve(epochSize);
+        m_labelData.reserve(m_mbSize);
     m_sequence.reserve(m_seqIndex); // clear out the sequence array
     /// this is too complicated for LM 
     // SetupEpoch(); 
@@ -1065,57 +1085,103 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
 template<class ElemType>
 size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 {
-    size_t sln = 0;
+    vector<size_t> sln ;
 
-    if (numRead == 0) return 0;
-
-    if (mProcessed.size() == 0)
+    if (mToProcess.size() > 0 && mProcessed.size() > 0)
     {
-        mProcessed.resize(numRead, false);
-    }
-
-    if (mToProcess.size() > 0)
-    {
-        bool allDone = false; 
+        bool allDone = true; 
         for (int s = 0; s < mToProcess.size(); s++)
         {
             size_t mp = mToProcess[s];
-            if (mProcessed[mp])
+            if (mProcessed[mp] == false)
             {
-                mLastProcssedSentenceId = mp;
-                mLastPosInSentence = 0;
-                allDone = true;
+                allDone = false;
                 break;
             }
         }
         if (allDone)
         {
+            mLastPosInSentence = 0;
             mToProcess.clear();
+            /// reset sentence Begin and setnenceEnd
+            mSentenceEnd = false;
+            mSentenceBegin = false;
         }
     }
 
-    if (mToProcess.size() > 0)
+    if (mToProcess.size() > 0 && mProcessed.size() > 0)
     {
-        sln = m_parser.mSentenceIndex2SentenceInfo[mToProcess[0]].sLen;
-        return sln;
-    }
+        size_t nbrToProcess = mToProcess.size();
+        mSentenceBeginAt.resize(nbrToProcess, -1);
+        mSentenceEndAt.resize(nbrToProcess, -1);
+        mSentenceLength.clear();
+        mMaxSentenceLength = 0;
 
-    for (size_t seq = mLastProcssedSentenceId ; seq < numRead; seq++)
-    {
-        if (mProcessed[seq]) continue;
-        
-        if (sln == 0)
+        for (size_t i = 0; i < nbrToProcess; i++)
         {
-            sln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+            size_t seq = mToProcess[i];
+            size_t ln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+            mSentenceLength.push_back(ln);
+            mMaxSentenceLength = max(mMaxSentenceLength, ln); 
         }
-        if (sln == m_parser.mSentenceIndex2SentenceInfo[seq].sLen &&
-            mProcessed[seq] == false && mToProcess.size() < mBlgSize)
-            mToProcess.push_back(seq);
-
-        if (mToProcess.size() == mBlgSize) break;
+        return mToProcess.size();
     }
 
-    return sln;
+    mMaxSentenceLength = 0;
+
+    if (m_parser.mSentenceIndex2SentenceInfo.size() == 0)
+        return mMaxSentenceLength;
+
+    size_t iNumber = min(numRead, mProcessed.size());
+    int previousLn = -1;
+    for (size_t seq = mLastProcssedSentenceId, inbrReader = 0; inbrReader < iNumber; seq++)
+    {
+        if (seq >= mProcessed.size())
+            break;
+
+        if (mProcessed[seq]) continue;
+
+        if (mEqualLengthOutput)
+        {
+            if (mProcessed[seq] == false && mToProcess.size() < mBlgSize)
+            {
+                int ln = (int)m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+                if (ln == previousLn || previousLn == -1)
+                {
+                    sln.push_back(ln);
+                    mToProcess.push_back(seq);
+                    mMaxSentenceLength = max(mMaxSentenceLength, ln);
+                    if (previousLn == -1)
+                        mLastProcssedSentenceId = seq + 1;  /// update index for the next retrieval
+                    previousLn = ln;
+                }
+            }
+
+            if (mToProcess.size() == mBlgSize) break;
+            inbrReader++;
+        }
+        else
+        {
+            if (mProcessed[seq] == false && mToProcess.size() < mBlgSize)
+            {
+                size_t ln = m_parser.mSentenceIndex2SentenceInfo[seq].sLen;
+                sln.push_back(ln);
+                mToProcess.push_back(seq);
+                mMaxSentenceLength = max(mMaxSentenceLength, ln);
+            }
+
+            if (mToProcess.size() == mBlgSize) break;
+            inbrReader++;
+        }
+    }
+
+    size_t nbrToProcess = mToProcess.size();
+    mSentenceBeginAt.resize(nbrToProcess, -1);
+    mSentenceEndAt.resize(nbrToProcess, -1);
+
+    mSentenceLength = sln;
+
+    return mToProcess.size();
 }
 
 template<class ElemType>
@@ -1134,84 +1200,134 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
     // see how many we already read
     std::vector<SequencePosition> seqPos;
 
+    if (mTotalSentenceSofar > m_epochSize)
+        return false;
+    else
     {
-        size_t sLn = FindNextSentences(mNumRead);
-        if (sLn == 0)
+        size_t nbrSentenceRead = FindNextSentences(mBlgSize);
+        if (mAllowMultPassData && nbrSentenceRead == 0 && mTotalSentenceSofar > 0 && mTotalSentenceSofar < m_epochSize && mTotalSentenceSofar % mProcessed.size() == 0)
+        {
+            /// restart for the next pass of the data
+            mProcessed.assign(mProcessed.size(), false);
+            mLastProcssedSentenceId = 0;
+            nbrSentenceRead = FindNextSentences(mBlgSize);
+        }
+
+        if (nbrSentenceRead == 0)
         {
             Reset();
 
             mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
-            if (mNumRead == 0) return false;
+            if (mNumRead == 0)
+            {
+                fprintf(stderr, "EnsureDataAvailable: no more data\n");
+                return false;
+            }
+            mProcessed.assign(mNumRead, false);
 
+#ifndef DEBUG_READER
             if (mRandomize)
             {
-                unsigned seed = m_seed;
+                unsigned seed = m_seed; 
                 std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), std::default_random_engine(seed));
                 m_seed++;
             }
+#endif
 
             m_readNextSampleLine += mNumRead;
-            sLn = FindNextSentences(mNumRead);
+            nbrSentenceRead = FindNextSentences(mBlgSize);
+            if (nbrSentenceRead == 0)
+                return false; /// no more data to process
         }
 
+        mTotalSentenceSofar += (ULONG) nbrSentenceRead;
+//        fprintf(stderr, "LUSequenceReader: number of sentence read so far is %d\n", mTotalSentenceSofar);
         /// add one minibatch 
-        size_t i = mLastPosInSentence; 
-        size_t j = 0;
+        int i = (int)mLastPosInSentence; 
+        int j = 0;
 
-        for (i = mLastPosInSentence; j < m_mbSize &&  i < sLn; i++ , j++)
+        if (mLastPosInSentence != 0)
+            throw std::runtime_error("LUSequenceReader : only support begining sentence at zero");
+        if (mSentenceBeginAt.size() != mToProcess.size())
+            throw std::runtime_error("LUSequenceReader : need to preallocate mSentenceBegin");
+        if (mSentenceEndAt.size() != mToProcess.size())
+            throw std::runtime_error("LUSequenceReader : need to preallocate mSentenceEnd");
+        if (mMaxSentenceLength > m_mbSize)
+            throw std::runtime_error("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
+
+        for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
         {
             for (int k = 0; k < mToProcess.size(); k++)
             {
                 size_t seq = mToProcess[k];
-                size_t label = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
-                std::vector<std::vector<LabelIdType>> tmpCxt;
 
-                for (int i_cxt = 0; i_cxt < m_wordContext.size() ; i_cxt++)
+                if (i == mLastPosInSentence)
                 {
-                    // to-do, should ignore <s>, check the sentence ending is </s> 
-                    // need to remove <s> from the training set
-                    // allocate and initialize the next chunck of featureData
-                    if (featIn.type == labelCategory)
+                    mSentenceBeginAt[k] = i;
+                }
+                if (i == m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1)
+                {
+                    mSentenceEndAt[k] = i;
+                }
+                if (i < m_parser.mSentenceIndex2SentenceInfo[seq].sLen)
+                {
+                    size_t label = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
+                    std::vector<std::vector<LabelIdType>> tmpCxt;
+
+                    for (int i_cxt = 0; i_cxt < m_wordContext.size(); i_cxt++)
                     {
-                        vector<LabelIdType> index ;
-                        int ilabel = (int) (label + m_wordContext[i_cxt]);
-                        if (ilabel < m_parser.mSentenceIndex2SentenceInfo[seq].sBegin )
+                        if (featIn.type == labelCategory)
                         {
-                            GetIdFromLabel(m_featureTemp[m_parser.mSentenceIndex2SentenceInfo[seq].sBegin], featIn, index);
-                        }
-                        else if (ilabel >= m_parser.mSentenceIndex2SentenceInfo[seq].sEnd)
-                        {
-                            GetIdFromLabel(m_featureTemp[m_parser.mSentenceIndex2SentenceInfo[seq].sEnd-1], featIn, index);
+                            vector<LabelIdType> index;
+                            int ilabel = (int) label + m_wordContext[i_cxt];
+                            if (ilabel < m_parser.mSentenceIndex2SentenceInfo[seq].sBegin)
+                            {
+                                GetIdFromLabel(m_featureTemp[m_parser.mSentenceIndex2SentenceInfo[seq].sBegin], featIn, index);
+                            }
+                            else if (ilabel >= m_parser.mSentenceIndex2SentenceInfo[seq].sEnd)
+                            {
+                                GetIdFromLabel(m_featureTemp[m_parser.mSentenceIndex2SentenceInfo[seq].sEnd - 1], featIn, index);
+                            }
+                            else
+                            {
+                                GetIdFromLabel(m_featureTemp[ilabel], featIn, index);
+                            }
+                            if (i_cxt == 0)
+                            {
+                                m_featureData.push_back(index);
+                            }
+                            tmpCxt.push_back(index);
                         }
                         else
                         {
-                            GetIdFromLabel(m_featureTemp[ilabel], featIn, index);
+                            RuntimeError("Input label expected to be a category label");
                         }
-                        if (i_cxt == 0)
-                        {
-                            m_featureData.push_back(index);
-                        }
-                        tmpCxt.push_back(index);
                     }
-                    else
-                    {
-                        RuntimeError("Input label expected to be a category label");
-                    }
+
+                    m_featureWordContext.push_back(tmpCxt);
+
+                    // now get the output label
+                    LabelIdType id = GetIdFromLabel(m_labelTemp[label], labelIn);
+                    m_labelIdData.push_back(id);
+                }
+                else
+                {
+                    /// push null 
+                    std::vector<std::vector<LabelIdType>> tmpCxt;
+                    std::vector<LabelIdType> index;
+                    for (int i_cxt = 0; i_cxt < m_wordContext.size(); i_cxt++)
+                        index.push_back((LabelIdType)NULLLABEL);
+                    tmpCxt.push_back(index);
+                    m_featureWordContext.push_back(tmpCxt);
+
+                    m_labelIdData.push_back((LabelIdType)NULLLABEL);
                 }
 
-                m_featureWordContext.push_back(tmpCxt);
-
-                // now get the output label
-                LabelIdType id = GetIdFromLabel(m_labelTemp[label], labelIn);
-                m_labelIdData.push_back(id);
-
-
                 m_totalSamples ++;
-                label++;
             }
         }
 
-        mLastPosInSentence = i;
+        mLastPosInSentence = (i == mMaxSentenceLength)?0:i;
     }
 
     return bDataIsThere;
@@ -1220,8 +1336,16 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 template<class ElemType>
 size_t BatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
-    size_t sz = mToProcess.size();
-    return sz; 
+    size_t sz = (mSentenceBeginAt.size() == 0)?mBlgSize : mSentenceBeginAt.size();
+    if (mSentenceBeginAt.size() == 0)
+    {
+        mSentenceBeginAt.assign(sz, -1);
+    }
+    if (mSentenceEndAt.size() == 0)
+    {
+        mSentenceEndAt.assign(sz, -1);
+    }
+    return sz;
 }
 
 template<class ElemType>
@@ -1236,17 +1360,21 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
+    {
+        fprintf(stderr, "GetMiniBatch : m_mbSize = 0\n");
         return false;
+    }
 
     bool moreData = EnsureDataAvailable(m_mbStartSample);
     if (moreData == false)
-        return false; 
+        return false;
 
     // actual size is the size of the next seqence
     size_t actualmbsize = 0;
+    size_t lablsize = 0;
 
     // figure out the size of the next sequence
-    actualmbsize = m_labelIdData.size() ; 
+    actualmbsize = m_labelIdData.size();
     if (actualmbsize > m_mbSize * mToProcess.size()){
         RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
     }
@@ -1261,21 +1389,24 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
         Matrix<ElemType>& features = *matrices[m_featuresName];
         if (matrices.find(m_featuresName) != matrices.end())
         {
-//            assert(features.GetMatrixType() == MatrixType::SPARSE);
-            //features.Resize(featInfo.dim, actualmbsize, true);
             features.Resize(featInfo.dim * m_wordContext.size(), actualmbsize, true);
             features.SetValue(0);
         }
 
+        size_t utt_id = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
         {
-            size_t wrd = 0;
+            utt_id = (size_t) fmod(j, mSentenceEndAt.size());  /// get the utterance id
+
+            size_t utt_t = (size_t) floor(j/mSentenceEndAt.size()); /// the utt-specific timing
+            if (utt_t > mSentenceEndAt[utt_id]) continue;
+
             // vector of feature data goes into matrix column
-            for (size_t jj = 0; jj < m_featureWordContext[j].size(); jj++)
+            for (size_t jj = 0; jj < m_featureWordContext[j].size(); jj++) ///  number of sentence per time
             {
                 /// this support context dependent inputs since words or vector of words are placed
                 /// in different slots
-                for (size_t ii = 0; ii < m_featureWordContext[j][jj].size(); ii++)
+                for (size_t ii = 0; ii < m_featureWordContext[j][jj].size(); ii++)  /// context
                 {
                     /// this can support bag of words, since words are placed in the same slot
                     size_t idx = m_featureWordContext[j][jj][ii];
@@ -1283,48 +1414,53 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
                     if (matrices.find(m_featuresName) != matrices.end())
                     {
                         assert(idx < featInfo.dim);
-                        features.SetValue(idx + jj * featInfo.dim, j, (ElemType)1); 
+                        features.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
                     }
                 }
             }
-
-            assert(m_featureData[j].size() == 1);
-            wrd = m_featureData[j][0];
-            SetSentenceEnd(wrd, j, actualmbsize);
-            SetSentenceBegin(wrd, j, actualmbsize);
         }
 
-        GetLabelOutput(matrices, m_mbStartSample, actualmbsize);
+        lablsize = GetLabelOutput(matrices, actualmbsize);
 
         // go to the next sequence
         m_seqIndex++;
-    } 
+    }
     else
-        return false; 
+    {
+        fprintf(stderr, "actual minibatch size is zero\n");
+        return 0;
+    }
 
     // we read some records, so process them
-    return true;
+    if (lablsize == 0)
+        return false;
+    else
+        return true;
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, 
-    Matrix<ElemType>*>& matrices, 
-    size_t /*m_mbStartSample*/, size_t actualmbsize)
+size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, 
+    Matrix<ElemType>*>& matrices, size_t actualmbsize)
 {
     const LabelInfo& labelInfo = m_labelInfo[labelInfoOut];
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-    if (labels == nullptr) return;
+    if (labels == nullptr) return 0;
     
     labels->Resize(labelInfo.dim, actualmbsize);
     labels->SetValue(0);
+    size_t nbrLabl = 0;
     for (size_t j = 0; j < actualmbsize; ++j)
     {
         int    wrd = m_labelIdData[j];
-        
+
+        size_t utt_id = (size_t) fmod(j, mSentenceBeginAt.size());
+        size_t utt_t = (size_t) floor(j / mSentenceBeginAt.size());
+
+        if (utt_t > mSentenceEndAt[utt_id]) continue;
         labels->SetValue(wrd, j, 1); 
-
+        nbrLabl++;
     }
-
+    return nbrLabl;
 }
 
 template<class ElemType>
@@ -1400,7 +1536,142 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 
 }
 
-template class BatchLUSequenceReader<double>; 
+template<class ElemType>
+bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName)
+{
+    if (this->m_featuresName == nodeName) return true;
+    if (m_labelsName[labelInfoIn] == nodeName) return true;
+    if (m_labelsName[labelInfoOut] == nodeName) return true;
+
+    return false;
+}
+
+template class BatchLUSequenceReader<double>;
 template class BatchLUSequenceReader<float>;
+
+template<class ElemType>
+bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+{
+    /// on first iteration, need to check if all requested data matrices are available
+    std::map<std::wstring, size_t>::iterator iter;
+    if (mCheckDictionaryKeys)
+    {
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        {
+            bool bFound = false;
+            for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+            {
+                if ((p->second)->CanReadFor(iter->first))
+                {
+                    nameToReader[iter->first] = p->second;
+                    bFound = true;
+
+                    break;
+                }
+            }
+            if (bFound == false)
+                RuntimeError("GetMinibatch: cannot find a node that can feed in features for L%s", iter->first);
+        }
+        mCheckDictionaryKeys = false;
+    }
+
+    /// set the same random seed
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        p->second->SetRandomSeed(m_seed);
+    }
+    m_seed++;
+
+    /// run for each reader
+    size_t nlabels = 0;
+    size_t nsamples = 0;
+    vector<size_t> to_process;
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        if (to_process.size() > 0)
+            (p->second)->SetToProcessId(to_process);
+        nlabels = (p->second)->GetMinibatch(matrices);
+        if (to_process.size() == 0)
+            to_process = (p->second)->ReturnToProcessId();
+        nsamples = max(nlabels, nsamples);
+    }
+
+    if (nsamples == 0)
+        return false;
+    return true;
+}
+
+/// set the same random seed
+template<class ElemType>
+void MultiIOBatchLUSequenceReader<ElemType>::SetRandomSeed(int us)
+{
+    m_seed = us;
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        p->second->SetRandomSeed(m_seed);
+    }
+}
+
+template<class ElemType>
+void MultiIOBatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
+{
+    ConfigArray ioNames = readerConfig("ioNodeNames", "");
+    if (ioNames.size() > 0)
+    {
+        /// newer code that explicitly place multiple streams for inputs
+        foreach_index(i, ioNames) // inputNames should map to node names
+        {
+            ConfigParameters thisIO = readerConfig(ioNames[i]);
+
+            BatchLUSequenceReader<ElemType> *thisReader = new BatchLUSequenceReader<ElemType>();
+            thisReader->Init(thisIO);
+
+            pair<wstring, BatchLUSequenceReader<ElemType>*> pp(ioNames[i], thisReader);
+
+            mReader.insert(pp);
+        }
+    }
+    else{
+        /// older code that assumes only one stream of feature
+        BatchLUSequenceReader<ElemType> *thisReader = new BatchLUSequenceReader<ElemType>();
+
+        thisReader->Init(readerConfig);
+
+        pair<wstring, BatchLUSequenceReader<ElemType>*> pp(msra::strfun::wstrprintf(L"stream%d", mReader.size()), thisReader);
+
+        mReader.insert(pp);
+    }
+}
+
+template<class ElemType>
+void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+{
+    /// run for each reader
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        (p->second)->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
+    }
+}
+
+template<class ElemType>
+void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+{
+    /// run for each reader
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        (p->second)->SetSentenceEndInBatch(sentenceEnd);
+    }
+}
+
+template<class ElemType>
+size_t MultiIOBatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
+{
+    return mReader.begin()->second->NumberSlicesInEachRecurrentIter();
+}
+
+
+template class MultiIOBatchLUSequenceReader<double>;
+template class MultiIOBatchLUSequenceReader<float>;
+
 
 }}}

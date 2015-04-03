@@ -25,6 +25,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
 #define MAX_STRING  2048
 
+#define NULLLABEL 65532
+
 enum LabelKind
 {
     labelNone = 0,  // no labels to worry about
@@ -58,6 +60,10 @@ public:
     map<string, string> mWordMapping;
     string mWordMappingFn;
     string mUnkStr;
+
+public:
+    /// accumulated number of sentneces read so far
+    unsigned long mTotalSentenceSofar;
 
 protected:
 
@@ -122,6 +128,9 @@ protected:
         bool busewordmap; /// whether using wordmap to map unseen words to unk
         std::wstring mapName;
         std::wstring fileToWrite;  // set to the path if we need to write out the label file
+
+        bool isproposal; /// whether this is for proposal generation
+
     } m_labelInfo[labelInfoMax];
 
     // caching support
@@ -227,6 +236,7 @@ public:
 	using LUSequenceReader<ElemType>::ReadLabelInfo;
 	using LUSequenceReader<ElemType>::mRandomize;
 	using LUSequenceReader<ElemType>::m_seed;
+    using LUSequenceReader<ElemType>::mTotalSentenceSofar;
 private:
     size_t mLastProcssedSentenceId ; 
     size_t mBlgSize; 
@@ -273,11 +283,11 @@ public:
     void   SetSentenceBegin(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceBegin((int)wrd, (int)pos, (int)actualMbSize); }
     void   SetSentenceEnd(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd((int)wrd, (int)pos, (int)actualMbSize); }
 
-    void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
-                       size_t m_mbStartSample, size_t actualmbsize);
+    size_t GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t actualmbsize);
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
     bool EnsureDataAvailable(size_t mbStartSample);
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
@@ -286,8 +296,64 @@ public:
 
 public:
     void LoadWordMapping(const ConfigParameters& readerConfig);
+    bool CanReadFor(wstring nodeName);  /// return true if this reader can output for a node with name nodeName
 
+    vector<size_t> ReturnToProcessId() { return mToProcess; }
+    void SetToProcessId(const vector<size_t>& tp) { mToProcess = tp; }
 
+    void SetRandomSeed(int seed) 
+    {
+        m_seed = seed;
+    }
+
+public:
+    bool mbEncodingForDecoding;
+
+    bool mEqualLengthOutput;
+    bool mAllowMultPassData;
+
+    /// return length of sentences size
+    vector<size_t> mSentenceLength;
+    size_t mMaxSentenceLength;
+    vector<int> mSentenceBeginAt;
+    vector<int> mSentenceEndAt;
 };
+
+template<class ElemType>
+class MultiIOBatchLUSequenceReader : public BatchLUSequenceReader<ElemType>
+{
+private:
+    map<wstring, BatchLUSequenceReader<ElemType>*> mReader;
+
+    bool   mCheckDictionaryKeys;
+    std::map<std::wstring, BatchLUSequenceReader<ElemType>*> nameToReader;
+public:
+    MultiIOBatchLUSequenceReader() {
+        mCheckDictionaryKeys = true;
+        nameToReader.clear();
+    }
+
+    ~MultiIOBatchLUSequenceReader() {
+        for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+        {
+            delete[] p->second;
+        }
+    };
+
+
+    bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
+    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
+
+    void SetSentenceEndInBatch(vector<size_t> &sentenceEnd);
+    
+    size_t NumberSlicesInEachRecurrentIter();
+
+    void Init(const ConfigParameters& readerConfig);
+
+public:
+    void SetRandomSeed(int);
+};
+
 
 }}}
