@@ -339,9 +339,9 @@ template class LUSequenceParser<double, double>;
 template class LUSequenceParser<double, std::string>;
 
 template <typename NumType, typename LabelType>
-void LUBatchLUSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn, std::string endSequenceIn, std::string beginSequenceOut, std::string endSequenceOut)
+void LUBatchLUSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O")
 {
-    LULUSequenceParser<NumType, LabelType>::ParseInit(fileName, dimFeatures, dimLabelsIn, dimLabelsOut, beginSequenceIn, endSequenceIn, beginSequenceOut, endSequenceOut);
+    LULUSequenceParser<NumType, LabelType>::ParseInit(fileName, dimLabelsIn, dimLabelsOut, beginSequenceIn, endSequenceIn, beginSequenceOut, endSequenceOut);
 }
 
 template <typename NumType, typename LabelType>
@@ -350,18 +350,18 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
     long linecnt; 
     linecnt = LULUSequenceParser<NumType, LabelType>::Parse(recordsRequested, labels, inputs, seqPos);
 
-    size_t prvat = 0;    
+    int prvat = 0;    
     size_t i = 0;
     for (auto ptr = seqPos->begin(); ptr != seqPos->end(); ptr++, i++)
     {
         size_t iln = ptr->labelPos - prvat;
         stSentenceInfo stinfo;
         stinfo.sLen = iln;
-        stinfo.sBegin = (int)prvat;
+        stinfo.sBegin = prvat;
         stinfo.sEnd = (int)ptr->labelPos;
         mSentenceIndex2SentenceInfo.push_back(stinfo); 
 
-        prvat = ptr->labelPos;
+        prvat = (int)ptr->labelPos;
     }
 
     assert(mSentenceIndex2SentenceInfo.size() == linecnt);

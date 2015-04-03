@@ -266,11 +266,10 @@ public:
         if (mFile) fclose(mFile); 
     }
 
-    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn="<s>", std::string endSequenceIn="</s>", std::string beginSequenceOut="O", std::string endSequenceOut="O")
+    void ParseInit(LPCWSTR fileName, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O")
     {
         assert(fileName != NULL);
         mFileName = fileName;
-        m_dimFeatures = dimFeatures;
         m_dimLabelsIn = dimLabelsIn;
         m_beginSequenceIn = beginSequenceIn;
         m_endSequenceIn = endSequenceIn;
@@ -292,7 +291,7 @@ public:
         if (mFile) fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
-            RuntimeError("cannot open file %s", fileName);
+            RuntimeError("cannot open file %ls", fileName);
     }
 
     void ParseReset()
@@ -403,7 +402,7 @@ public:
     LUBatchLUSequenceParser() { };
     ~LUBatchLUSequenceParser() { }
 
-    void ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn="<s>", std::string endSequenceIn="</s>", std::string beginSequenceOut="O", std::string endSequenceOut="O");
+    void ParseInit(LPCWSTR fileName, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn = "<s>", std::string endSequenceIn = "</s>", std::string beginSequenceOut = "O", std::string endSequenceOut = "O");
 
     // Parse - Parse the data
     // recordsRequested - number of records requested
