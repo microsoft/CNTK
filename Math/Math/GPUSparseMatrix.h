@@ -267,7 +267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType MatrixNorm1() const;
         ElemType MatrixNorm0() const { return (ElemType)GetNumNZElements(); };
     public:        
-        //Performs C = alpha ∗ op ( S ) ∗ D + beta ∗ C; Where S is sparse and D and C are dense
+        //Performs C = alpha ? op ( S ) ? D + beta ? C; Where S is sparse and D and C are dense
         static void MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUSparseMatrix<ElemType>& b, 
             const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c);
         static void MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& S, const bool transposeS, const GPUMatrix<ElemType>& D, 
