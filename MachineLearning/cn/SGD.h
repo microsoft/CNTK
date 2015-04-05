@@ -1346,7 +1346,6 @@ protected:
         ElemType MomentumPerMB() const {return m_momentumPerMB;}
 
     public:
-        #define EPSILON 1e-5
 
         bool GradientCheck(
             ComputationNetwork<ElemType>& net,

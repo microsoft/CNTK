@@ -245,7 +245,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType SumOfElements () const; //sum of all elements
         Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
-        Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+        ElemType LogAddSumOfElements() const;
+
+        Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         Matrix<ElemType>&  AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         Matrix<ElemType>&  AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
@@ -439,6 +441,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
 			Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
 
+    public:
+        static void RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+            Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift);
+
+        static void RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>&   alpha,
+            const Matrix<ElemType>& beta,
+            const Matrix<ElemType>& pair_scores,
+            Matrix<ElemType>& grd,
+            const int startLbl, /// the time 0 start symbol in the output layer
+            const int shift);
 
     };
 

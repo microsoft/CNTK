@@ -47,7 +47,7 @@ public:
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
-    map<int, int> idx4cnt;
+    map<int, size_t> idx4cnt;
     int nwords, dims, nsamps, nglen, nmefeats;
     Matrix<ElemType>* m_id2classLocal; // CPU version
     Matrix<ElemType>* m_classInfoLocal; // CPU version

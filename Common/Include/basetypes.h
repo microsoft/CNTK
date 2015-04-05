@@ -1128,4 +1128,7 @@ public:
 };
 #endif
 
+#define EPSILON 1e-5
+#define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
+
 #endif    // _BASETYPES_

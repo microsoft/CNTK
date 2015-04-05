@@ -5359,7 +5359,6 @@ protected:  \
 	template class CosDistanceWithNegativeSamplesNode<float>;
 	template class CosDistanceWithNegativeSamplesNode<double>;
 
-
 #pragma endregion derived operations
 
 }}}
