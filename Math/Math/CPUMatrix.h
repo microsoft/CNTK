@@ -368,6 +368,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return stream;
         }
 
+    public:
+        ElemType LogAddSumOfElements() const;
+
+    public:
+        /// for RCRF
+        static void RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& lbls,
+            const CPUMatrix<ElemType>& pair_scores);
+        static void _rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
+            CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& pair_scores);
+
+        static void RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
+            const CPUMatrix<ElemType>&   alpha,
+            const CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& pair_scores,
+            CPUMatrix<ElemType>& grd);
+
+        static void _rcrfTransGrdCompute(size_t i,
+            const CPUMatrix<ElemType>& lbls,
+            const CPUMatrix<ElemType>&   alpha,
+            const CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& pair_scores,
+            CPUMatrix<ElemType>& grd,
+            const size_t tPos /// position
+            );
 
     protected:
         size_t LocateElement (const size_t i, const size_t j) const;

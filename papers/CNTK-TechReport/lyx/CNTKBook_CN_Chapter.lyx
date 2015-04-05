@@ -6773,6 +6773,61 @@ and
 
 \end_layout
 
+\begin_layout Itemize
+
+\emph on
+TimeReverse 
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+TimeReverse
+\end_layout
+
+\end_inset
+
+: does time reverse operation on the input matrix 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\mathbf{\boldsymbol{\mathit{\upsilon}}}\left(\mathbf{X}(:,1:T\right) & \leftarrow & \mathbf{\boldsymbol{\mathit{\upsilon}}}\left(\mathbf{X}(:,T:-1:1\right)\\
+\nabla_{\mathbf{X}}^{J}(:,T:-1:1) & \leftarrow & \mathbf{\nabla_{n}^{\mathit{J}}}\mathbf{X(:,}1:T\mathbf{)}.
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+The time reverse node is usually used for bi-directional model.
+ To build a bi-directional, firstly use a TimeReverse node to do time reverse
+ operation on the input.
+ Then, do process on the processed input.
+ Finally, use another TimeReverse node on the output of the processed data.
+ 
+\end_layout
+
 \begin_layout Subsection
 Computation Node Types with 
 \begin_inset Index idx
@@ -8778,7 +8833,347 @@ v\left(\mathbf{X},\mathbf{\mathbf{Y}}\right) & += & \mathbf{C_{t}}\mathbf{\circ 
 
 \end_inset
 
-Soft
+
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+CRF
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Node ! CRF
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CRF
+\end_layout
+
+\end_inset
+
+:
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ CRF stands for conditional random fields.
+ This node does sequence-level training, using CRF criterion.
+ This node has three nputs.
+ The first is the label 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+L
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+.
+ The second is the position dependent score 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+H
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+.
+ The third input is transition score 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+T
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+.
+ A typical usage of CRF node is using 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+L
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ same as from labels used in cross-entropy node, computing 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+H
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ from child nodes using RNNs, and computing transition score 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+A
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ from a matrix.
+ The matrix for 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+A
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ can be initialized with values of 1/|
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+L
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+|, where |
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+L
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+| is the cardinality of the label 
+\family default
+\series bold
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+L
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+.
+ A forward pass computes the following accumulated score for each time t
+ for label i.
+ A backward pass computes gradients of the final accumulated score with
+ respect to the position dependent input 
+\begin_inset Formula $\frac{\partial R}{\partial h_{t}(i)}$
+\end_inset
+
+ at time 
+\begin_inset Formula $t$
+\end_inset
+
+ for label 
+\begin_inset Formula $i$
+\end_inset
+
+ as follows, and similarly for the gradient to the transition weight 
+\begin_inset Formula $\frac{\partial R}{\partial a_{i,j}}$
+\end_inset
+
+ for transition from label 
+\begin_inset Formula $i$
+\end_inset
+
+ to label 
+\begin_inset Formula $j$
+\end_inset
+
+: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\alpha_{t}\left(i\right) & \leftarrow & h_{it}+logadd_{k}\left(\delta_{t-1}(k)+\eta a_{ki}\right)\\
+\mathbf{\frac{\partial R}{\partial\delta_{t-1}(i)}} & \leftarrow & \sum_{j}\frac{\partial C_{logadd}}{\partial\delta_{t}(j)}\frac{\exp(\delta_{t-1}(i)+a_{i,j})}{\sum_{k}\exp(\delta_{t-1}(k)+a_{k,j})}\\
+\mathbf{\frac{\partial R}{\partial\delta_{T}(i)}} & \leftarrow & \frac{\exp(\delta_{T}(i))}{\sum_{k}\exp(\delta_{T}(k))}\\
+\frac{\partial R}{\partial h_{t}(i)} & \leftarrow & l_{t}(i)-\frac{\partial R}{\partial\delta_{t}(i)}\\
+\frac{\partial R}{\partial a_{i,j}} & \leftarrow & \sum_{t}[1(l_{t-1}(i)=1\&\&l_{t}(j)=1)-\frac{\partial R}{\partial\delta_{t}(j)}\frac{\exp(\alpha_{t-1}(i)+\eta a_{i,j})}{\sum_{k}\exp(\alpha_{t-1}(k)+\eta a_{k,j})}]
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Notice that the gradient to the transition weights need to be summed over
+ the whole observation sequence, which is the current minibatch.
+ 
+\end_layout
+
+\begin_layout Standard
+
 \end_layout
 
 \begin_layout Subsection
@@ -9028,7 +9423,7 @@ CNN
 ) 
 \begin_inset CommandInset citation
 LatexCommand cite
-key "CNN-lecun:1995,CNN-FastComputing-chellapilla+2006,CNN-FeatureHierarchy-kavukcuoglu+2010,DCNN-ImageNet-krizhevsky+2012,CNN-ASR-abdel+2012,TransferLearning-DNN-Ciresan+2012,CNN-LVCSR-sainath+2013,DCNN-LVCSR-sainath+2013,CNN-ASR-Abdel+2013,CNN-ASR-deng+2013"
+key "CNN-lecun:1995,CNN-FastComputing-chellapilla+2006,CNN-FeatureHierarchy-kavukcuoglu+2010,DCNN-ImageNet-krizhevsky+2012,CNN-ASR-abdel+2012,TransferLearning-DNN-Ciresan+2012,CNN-LVCSR-sainath+2013,DCNN-LVCSR-sainath+2013,CNN-ASR-Abdel+2013,CNN-ASR-deng+2013,CNN-atlas1988"
 
 \end_inset
 

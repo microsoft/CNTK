@@ -4676,5 +4676,194 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return x + log(1.0 + z);
         }
     }
+
+    template<class ElemType>
+    ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
+    {
+        ElemType fAlpha = LZERO;
+        for (int k = 0; k < GetNumElements(); k++)
+            fAlpha = (ElemType) logadd(fAlpha, m_pArray[k]);
+        return fAlpha;
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& lbls,
+        const CPUMatrix<ElemType>& pair_scores)
+    {
+        int iNumPos = (int)lbls.GetNumCols();
+        int iNumLab = (int)lbls.GetNumRows();
+
+        int lastLbl = -1;
+        for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+        if (lbls(ik, iNumPos - 1) != 0){
+            lastLbl = ik; break;
+        }
+
+        beta.Resize(iNumLab, iNumPos);
+
+        for (int t = iNumPos - 1; t >= 0; t--)
+        {
+#pragma omp parallel for
+            for (int k = 0; k < iNumLab; k++)
+            {
+                _rcrfBackwardCompute(t, k, alpha, beta, pair_scores);
+            }
+        }
+
+    };
+
+    /// the kernel function for RCRF  backward computation
+    template<class ElemType>
+    void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
+        CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& pair_scores)
+    {
+        size_t iNumLab = alpha.GetNumRows();
+        size_t iNumPos = alpha.GetNumCols();
+
+        ElemType fSum;
+        ElemType fTmp = LZERO;
+        if (t == iNumPos - 1)
+        {
+            fSum = LZERO;
+            for (int j = 0; j < iNumLab; j++)
+            {
+                fSum = (ElemType)logadd((double)fSum, alpha(j, t));
+            }
+
+            fTmp = alpha(k, t) - fSum;
+            beta(k, t) = fTmp;
+        }
+        else
+        {
+            for (int j = 0; j < iNumLab; j++)
+            {
+                fSum = LZERO;
+                for (int m = 0; m < iNumLab; m++)
+                {
+                    fSum = (ElemType)logadd((double)fSum, alpha(m, t) + pair_scores(j, m));
+                }
+
+                fTmp = (ElemType)logadd(fTmp, beta(j, t + 1) + alpha(k, t) + pair_scores(j, k) - fSum);
+            }
+            beta(k, t) = fTmp;
+        }
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
+        const CPUMatrix<ElemType>&   alpha,
+        const CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& pair_scores,
+        CPUMatrix<ElemType>& grd)
+    {
+        int iNumPos = (int)alpha.GetNumCols();
+        int iNumLab = (int)alpha.GetNumRows();
+
+        int firstLbl = -1;
+        for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+        if (lbls(ik, 0) != 0){
+            firstLbl = ik; break;
+        }
+
+        for (size_t tPos = 0; tPos < iNumPos; tPos++)
+        {
+            CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1);
+            CPUMatrix<ElemType> a;
+            if (tPos > 0)
+                a = alpha.ColumnSlice(tPos - 1, 1);
+
+#pragma omp parallel for
+            for (int i = 0; i < iNumLab; i++){
+                _rcrfTransGrdCompute(i, lbls, alpha, beta, pair_scores, grd, tPos);
+            }
+
+            /// transition score
+            int i = -1;
+            if (tPos == 0) i = firstLbl;
+            else {
+                for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+                if (lbls(ik, tPos - 1) != 0){
+                    i = ik; break;
+                }
+            }
+
+            int j = -1;
+            for (int ik = 0; ik < lbls.GetNumRows(); ik++){
+                if (lbls(ik, tPos) != 0){
+                    j = ik; break;
+                }
+            }
+
+            grd(j, i) -= 1.0;
+        }
+    };
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::_rcrfTransGrdCompute(size_t i,
+        const CPUMatrix<ElemType>& lbls,
+        const CPUMatrix<ElemType>&   alpha,
+        const CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& pair_scores,
+        CPUMatrix<ElemType>& grd,
+        const size_t tPos /// position
+        )
+    {
+        int iNumLab = (int)alpha.GetNumRows();
+
+        int firstLbl = -1;
+        for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+        if (lbls(ik, 0) != 0){
+            firstLbl = ik; break;
+        }
+
+        CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1);
+        CPUMatrix<ElemType> a;
+        if (tPos > 0)
+            a = alpha.ColumnSlice(tPos - 1, 1);
+
+        {
+            ElemType fTmp = LZERO;
+            for (int j = 0; j < iNumLab; j++){
+                if (tPos == 0){
+                    if (i == firstLbl){
+                        fTmp = 0;
+                    }
+                    else{
+                        fTmp = LZERO;
+                    }
+                }
+                else{
+                    fTmp = a(i, 0);
+                }
+                fTmp += pair_scores(j, i);
+
+
+                ElemType fSum = LZERO;
+                for (int k = 0; k < iNumLab; k++){
+                    ElemType fTmp2;
+                    if (tPos == 0){
+                        if (k == firstLbl){
+                            fTmp2 = 0;
+                        }
+                        else{
+                            fTmp2 = LZERO;
+                        }
+                    }
+                    else{
+                        fTmp2 = a(k, 0);
+                    }
+                    fSum = (ElemType)logadd(fSum, fTmp2 + pair_scores(j, k));
+                }
+
+                fTmp -= fSum;
+                fTmp += b(j, 0);
+
+                grd(j, i) += exp(fTmp);
+            }
+        }
+    };
+
 }}}
 

@@ -119,7 +119,8 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 	ConfigValue bLockGPUstr = config("LockGPU", "true");
 	bool bLockGPU = bLockGPUstr;
 
-    if (!_stricmp(val.c_str(), "CPU"))
+    //recommend to use CPU. Adding -1 for backward compatability
+    if (!_stricmp(val.c_str(), "CPU") || !_stricmp(val.c_str(), "-1"))
     {
         return CPUDEVICE;
     }

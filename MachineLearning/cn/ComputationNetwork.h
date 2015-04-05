@@ -779,6 +779,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new CrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == CRFNode<ElemType>::TypeName())
+                newNode = new CRFNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
                 newNode = new CrossEntropyNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
@@ -807,6 +809,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == TimeReverseNode<ElemType>::TypeName())
+                newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -942,6 +946,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new CrossEntropyNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == CRFNode<ElemType>::TypeName())
+                newNode = new CRFNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
                 newNode = new MatrixL1RegNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
@@ -964,7 +970,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
-			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
+            else if (nodeType == TimeReverseNode<ElemType>::TypeName())
+                newNode = new TimeReverseNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
             else
             {
@@ -1067,7 +1075,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr ClassCrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, 
+        ComputationNodePtr ClassCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction,
             const ComputationNodePtr input_weight, const ComputationNodePtr cls_log_post_prob, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
@@ -1076,7 +1084,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr CrossEntropy (const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
+        ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore,
+            const ComputationNodePtr transition_score, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new CRFNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(label, postDepScore, transition_score);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new CrossEntropyNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, prediction);
@@ -1294,8 +1311,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AddNodeToNet(newNode);
             return newNode;
         }
-        
-        ComputationNodePtr LookupTable (const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
+
+        ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new TimeReverseNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(input);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(dictionary, input);
