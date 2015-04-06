@@ -2717,8 +2717,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            return m_CPUMatrix->LogAddSumOfElements(),
-            return m_GPUMatrix->LogAddSumOfElements(),
+            return this->m_CPUMatrix->LogAddSumOfElements(),
+            return this->m_GPUMatrix->LogAddSumOfElements(),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );

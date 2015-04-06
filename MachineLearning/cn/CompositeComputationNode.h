@@ -2076,7 +2076,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> mMemory;
 
     public:
-        BatchModeNode(DEVICEID_TYPE deviceId) : ComputationNode(deviceId), mMemory(deviceId) {}
+        BatchModeNode(DEVICEID_TYPE deviceId) : ComputationNode<ElemType>(deviceId), mMemory(deviceId) {}
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
 
@@ -2116,11 +2116,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
-            wsprintf(str, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << wstring(str);
-            wsprintf(str, L"HasComputed=%ws", HasComputed() ? L"true" : L"false");
-            fstream << wstring(str);
+            char str[4096];
+            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << string(str);
+            sprintf(str, "HasComputed=%ls", HasComputed()? L"true" : L"false");
+            fstream << string(str);
 
             PrintNodeValuesToFile(printValues, fstream);
         }
@@ -2141,9 +2141,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class TimeReverseNode : public BatchModeNode<ElemType>
     {
         UsingComputationNodeMembers;
+        using BatchModeNode<ElemType>::mMemory;
+        using BatchModeNode<ElemType>::m_hasComputed;
 
     public:
-        TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode(deviceId)
+        TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -2151,7 +2153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode(deviceId)
+        TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -2159,7 +2161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         TimeReverseNode(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : BatchModeNode(node->m_deviceId)
+            : BatchModeNode<ElemType>(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
