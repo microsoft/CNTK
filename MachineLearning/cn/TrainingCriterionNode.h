@@ -1235,7 +1235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         CRFNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode(deviceId), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
+            : ComputationNode<ElemType>(deviceId), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -1244,7 +1244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         CRFNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode(deviceId), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
+            : ComputationNode<ElemType>(deviceId), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -1531,7 +1531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         CRFNode(const CRFNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode(node->m_deviceId), mAlpha(node->m_deviceId), mBeta(node->m_deviceId), mPostProb(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId), mAlpha(node->m_deviceId), mBeta(node->m_deviceId), mPostProb(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
