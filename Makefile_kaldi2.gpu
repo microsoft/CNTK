@@ -66,7 +66,7 @@ CUDA_INCLUDE = $(CUDA_PATH)/include
 CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
 # Add KALDI (you need to add your Kaldi path into this file)
-include kaldi_vars_local.mk
+include kaldi_vars.mk
 
 INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(CUDA_INCLUDE) -I $(MATHLIB_INCLUDE) $(KALDI_INCLUDES)
 

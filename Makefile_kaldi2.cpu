@@ -59,7 +59,7 @@ else
 	MATHLIB_DEFINE = -DUSE_ACML
 endif
 # Add KALDI (you need to add your Kaldi path into this file)
-include kaldi_vars_local.mk
+include kaldi_vars.mk
 
 INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(MATHLIB_INCLUDE)  $(KALDI_INCLUDES)
 
