@@ -2423,7 +2423,7 @@ __global__ void _determineBlockIds(
     size_t blockIndex = numCols;
     if (blockId2Col[index] > 0)
     {
-        blockIndex = atomicAdd((double*)blockSize, (double)1);
+        blockIndex = atomicAdd(blockSize, 1);
         col2BlockId[index] = blockIndex;
     }
 
