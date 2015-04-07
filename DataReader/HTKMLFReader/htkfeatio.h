@@ -516,6 +516,17 @@ public:
         featdim = this->featdim;
         featperiod = this->featperiod;
     }
+    
+    void getinfo (const parsedpath & ppath, string & featkind, size_t & featdim, unsigned int & featperiod, size_t& nframe)
+    {
+        open (ppath);
+        featkind = this->featkind;
+        featdim = this->featdim;
+        featperiod = this->featperiod;
+        nframe = this->numframes;
+    }
+
+
 
     // called to add energy as we read
     void AddEnergy(size_t energyElements)

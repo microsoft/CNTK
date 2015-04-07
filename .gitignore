@@ -173,4 +173,7 @@ core
 # =========================
 MachineLearning/cn/buildinfo.h
 
-
+# =========================
+# AutoTest resource 
+# =========================
+AutoTest/
