@@ -435,7 +435,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     output = m_net->PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
                     input = output;
                 }
-                
+                if (i == numLayers - 1)
+                {
+                    m_outputLayerSize = wts.GetNumRows();
+                }
                 wstring nameOfW = msra::strfun::wstrprintf (L"W%d", i);
                 wstring nameOfB = msra::strfun::wstrprintf (L"B%d", i);
                 wstring nameOfPrevH = msra::strfun::wstrprintf (L"H%d", i);
