@@ -2116,11 +2116,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            char str[4096];
-            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << string(str);
-            sprintf(str, "HasComputed=%ls", HasComputed()? L"true" : L"false");
-            fstream << string(str);
+            const size_t BUFLEN = 4096;
+            WCHAR str[BUFLEN];
+            swprintf(str, BUFLEN, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << wstring(str);
+            swprintf(str, BUFLEN, L"HasComputed=%ws", HasComputed() ? L"true" : L"false");
+            fstream << wstring(str);
 
             PrintNodeValuesToFile(printValues, fstream);
         }
@@ -2128,6 +2129,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         bool m_hasComputed;
     };
+
+    // add this at the start of each derived class, to get access to the members of ComputationNode
+    // TODO: comment here why this is needed and how to maintain it
+#define UsingBatchModeNodeMembers \
+    UsingComputationNodeMembers; \
+    typedef BatchModeNode<ElemType> C; \
+protected:  \
+    typedef BatchModeNode<ElemType>* BatchModeNodePtr;  \
+public: \
+    using C::HasComputed; using C::MarkComputed; \
+    using C::RequireBatchMode; using C::EvaluateThisNode; using C::SaveToFile; \
+    using C::LoadFromFile; using C::DumpNodeInfo; \
+protected:  \
+    using C::mMemory; using C::m_hasComputed; \
 
     template class BatchModeNode<float>;
     template class BatchModeNode<double>;
@@ -2140,9 +2155,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class TimeReverseNode : public BatchModeNode<ElemType>
     {
-        UsingComputationNodeMembers;
-        using BatchModeNode<ElemType>::mMemory;
-        using BatchModeNode<ElemType>::m_hasComputed;
+        UsingBatchModeNodeMembers;
 
     public:
         TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId)
