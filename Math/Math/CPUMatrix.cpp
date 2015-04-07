@@ -4650,6 +4650,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         return *this;
     }
+
+
+#pragma endregion Static BLAS Functions
+
+    double logadd(double x, double y)
+    {
+        double temp, diff, z; 
+    
+        if (x < y) {
+            temp = x; x = y; y = temp;
+        }
+        diff = y - x; 
+        if (diff < MINLOGEXP)
+        {
+            return (x < LSMALL)?LZERO:x;
+        }
+        else
+        {
+            z = exp(diff);
+            return x + log(1.0 + z);
+        }
+    }
+
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
     {
@@ -4838,32 +4861,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-
-#pragma endregion Static BLAS Functions
-
     //The explicit instantiation part
     template class CPUMatrix<float>;
     template class CPUMatrix<double>;
-
-    double logadd(double x, double y)
-    {
-        double temp, diff, z; 
-    
-        if (x < y) {
-            temp = x; x = y; y = temp;
-        }
-        diff = y - x; 
-        if (diff < MINLOGEXP)
-        {
-            return (x < LSMALL)?LZERO:x;
-        }
-        else
-        {
-            z = exp(diff);
-            return x + log(1.0 + z);
-        }
-    }
-
 
 }}}
 
