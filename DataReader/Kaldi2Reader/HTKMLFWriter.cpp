@@ -198,6 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (nnet_out_host(j,i) > 50)
                         {
                             nnet_out_host(j,i)  = -(float)log(1.0/outputData.GetNumCols());
+                            fprintf (stderr, "overflowed!! : %d %d frames of %s\n", i,j, wfea.c_str());
                         }
 
 

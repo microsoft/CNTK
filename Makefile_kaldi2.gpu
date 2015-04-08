@@ -110,7 +110,7 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 
 SEPARATOR = "=-----------------------------------------------------------="
 
-all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/KaldiReader.so $(BINDIR)/KaldiWriter.so $(BINDIR)/Kaldi2Reader.so
+all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/Kaldi2Reader.so
 
 
 	ln -sf $(CURDIR)/$(BINDIR)/* bin

@@ -565,8 +565,8 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        //fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
-        std::wcerr << "reading sequence file" << m_file.c_str() << endl;
+        fprintf(stderr, "haha reading sequence file %S\n", m_file.c_str());
+        //std::wcerr << "reading sequence file" << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -1459,8 +1459,8 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        //fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
-        std::wcerr << "reading sequence file " << m_file.c_str() << endl;
+        fprintf(stderr, "reading sequence file %S\n", m_file.c_str());
+        //std::wcerr << "reading sequence file " << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
