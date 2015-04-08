@@ -119,7 +119,7 @@
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
