@@ -888,7 +888,7 @@ public:
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     void read (const wstring & path, const set<wstring> & restricttokeys, const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap, const double htkTimeToFrame)
     {
-        if (!restricttokeys.empty() && size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
+        if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
             return;
 
         fprintf (stderr, "htkmlfreader: reading MLF file %S ...", path.c_str());
@@ -896,19 +896,19 @@ public:
 
         vector<char> buffer;    // buffer owns the characters--don't release until done
         vector<char*> lines = readlines (path, buffer);
-        vector<WORDSEQUENCE::word> wordsequencebuffer;
-        vector<WORDSEQUENCE::aligninfo> alignsequencebuffer;
+        vector<typename WORDSEQUENCE::word> wordsequencebuffer;
+        vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
 
         if (lines.empty() || strcmp (lines[0], "#!MLF!#")) malformed ("header missing");
 
         // parse entries
-        fprintf (stderr, "parse the line %d\n", lines.size());
+        fprintf (stderr, "parse the line %zu\n", lines.size());
         size_t line = 1;
-        while (line < lines.size() && (restricttokeys.empty() || size() < restricttokeys.size()))
+        while (line < lines.size() && (restricttokeys.empty() || this->size() < restricttokeys.size()))
             parseentry (lines, line, restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
 
         curpath.clear();
-        fprintf (stderr, " total %lu entries\n", size());
+        fprintf (stderr, " total %lu entries\n", this->size());
     }
 
     // read state list, index is from 0

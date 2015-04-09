@@ -487,7 +487,7 @@ public:
         }
 
         curpath.clear();
-        fprintf (stderr, " total %lu entries\n", size());
+        fprintf (stderr, " total %lu entries\n", this->size());
     }
 
     // read state list, index is from 0

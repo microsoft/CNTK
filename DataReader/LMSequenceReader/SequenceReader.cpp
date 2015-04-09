@@ -777,7 +777,7 @@ void SequenceReader<ElemType>::SetupEpoch()
         if (m_totalSamples == 0)
         {
             if (m_traceLevel > 0)
-                fprintf(stderr, "starting at epoch %d parsing all data to determine record count\n", m_epoch);
+                fprintf(stderr, "starting at epoch %zu parsing all data to determine record count\n", m_epoch);
             // choose a large number to read
             m_parser.SetFilePosition(0);
             m_mbStartSample = 0;
@@ -787,7 +787,7 @@ void SequenceReader<ElemType>::SetupEpoch()
                 m_seqIndex = m_sequence.size();
             }
             if (m_traceLevel > 0)
-                fprintf(stderr, "\n %lld records found\n", m_totalSamples);
+                fprintf(stderr, "\n %zu records found\n", m_totalSamples);
         }
         m_seqIndex = 0;
 

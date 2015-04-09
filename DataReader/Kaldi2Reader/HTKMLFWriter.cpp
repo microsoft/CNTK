@@ -107,7 +107,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 n++;
             }
 
-            fprintf (stderr, " %d entries\n", n);
+            fprintf (stderr, " %zu entries\n", n);
 
             if (i==0)
                 numFiles=n;
@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
                 
-                fprintf (stderr, "evaluate: writing %d frames of %s\n", outputData.GetNumCols(), wfea.c_str());
+                fprintf (stderr, "evaluate: writing %zu frames of %s\n", outputData.GetNumCols(), wfea.c_str());
                 feature_writer[i].Write(file_key, nnet_out_host);
                 i++;
  
@@ -243,7 +243,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             msra::asr::htkfeatwriter::write (outputFile, "USER", sampPeriod, output);
         });
                         
-        fprintf (stderr, "evaluate: writing %d frames of %S\n", output.cols(), outputFile.c_str());
+        fprintf (stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());
 
 
     }
@@ -274,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             msra::asr::htkfeatwriter::writeKaldi (outputFile, "USER", sampPeriod, output, sizeof(ElemType));
         });
                         
-        fprintf (stderr, "evaluate: writing %d frames of %S\n", output.cols(), outputFile.c_str());
+        fprintf (stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());
     }
 
 

@@ -419,10 +419,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef __unix__
                 char* tempFile;
                 //GetTempFileName(pageFilePath.c_str(), L"CNTK", 0, tempFile);
-                tempFile = pageFilePath.c_str();
+                tempFile = (char*) pageFilePath.c_str();
                 int fid = mkstemp(tempFile);
                 unlink (tempFile);
-                close (tempFile);
+                close (fid);
                 pagePaths.push_back(GetWC(tempFile));
 #endif
             }
@@ -525,7 +525,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 n++;
             }
 
-            fprintf (stderr, " %d entries\n", n);
+            fprintf (stderr, " %zu entries\n", n);
 
             if (i==0)
                 numFiles=n;
@@ -760,7 +760,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter=matrices.begin();iter!=matrices.end();iter++)
             {
                 if (m_nameToTypeMap.find(iter->first)==m_nameToTypeMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n",iter->first.c_str()));
 
             }
             m_checkDictionaryKeys=false;
@@ -1183,7 +1183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (matrices.find(iter->first)==matrices.end())
                 {
-                    fprintf(stderr,"GetMinibatchToWrite: feature node %ws specified in reader not found in the network\n",iter->first.c_str());
+                    fprintf(stderr,"GetMinibatchToWrite: feature node %S specified in reader not found in the network\n",iter->first.c_str());
                     throw std::runtime_error("GetMinibatchToWrite: feature node specified in reader not found in the network.");
                 }
             }
@@ -1215,7 +1215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     reader.read (path, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
                 });
-                fprintf (stderr, "evaluate: reading %d frames of %S\n", feat.cols(), ((wstring)path).c_str());
+                fprintf (stderr, "evaluate: reading %zu frames of %S\n", feat.cols(), ((wstring)path).c_str());
                 m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
             }
             m_inputFileIndex++;
