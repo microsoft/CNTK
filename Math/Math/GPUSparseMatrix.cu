@@ -610,7 +610,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDACALL(cudaFree(m_rowToId));
 
         if (m_tempHostBuffer != nullptr)
-            delete[] m_tempHostBuffer;
+            delete[] (byte*)m_tempHostBuffer;
 
         ZeroInit(m_format, m_computeDevice);
     }
@@ -2276,7 +2276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (m_tempHostBufferSize < sizeInByte)
         {
-            delete[] m_tempHostBuffer;
+            delete[] (byte*)m_tempHostBuffer;
             m_tempHostBuffer = new byte[sizeInByte];
             m_tempHostBufferSize = sizeInByte;
         }
