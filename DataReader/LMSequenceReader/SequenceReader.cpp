@@ -1462,6 +1462,12 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 }
 
 template<class ElemType>
+void BatchSequenceReader<ElemType>::SetRandomSeed(int)
+{
+    NOT_IMPLEMENTED;
+}
+
+template<class ElemType>
 void BatchSequenceReader<ElemType>::Reset()
 {
     mProcessed.clear();
@@ -1862,7 +1868,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*act
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
 {
     sentenceEnd.resize(mToProcess.size());
     if (mSentenceBegin)
@@ -1873,6 +1879,12 @@ void BatchSequenceReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &senten
     {
         sentenceEnd.assign(mToProcess.size(), m_mbSize+2);
     }
+}
+
+template<class ElemType>
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &)
+{
+    NOT_IMPLEMENTED;
 }
 
 template<class ElemType>

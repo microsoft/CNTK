@@ -178,12 +178,14 @@ public:
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
-    void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
+    void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
+    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/) {};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
     
     virtual bool DataEnd(EndDataType endDataType);
+    void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
 };
 
 template<class ElemType>
@@ -301,8 +303,10 @@ public:
     bool EnsureDataAvailable(size_t mbStartSample);
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
+    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/);
+    void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
 
+    void SetRandomSeed(int);
 };
 
 }}}

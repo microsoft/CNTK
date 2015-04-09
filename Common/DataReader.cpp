@@ -110,11 +110,19 @@ void DataReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz)
 {
     m_dataReader->SetNbrSlicesEachRecurrentIter(sz);
 }
+
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd)
+void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd)
 {
-    m_dataReader->SetSentenceEndInBatch(sentenceEnd);
+    m_dataReader->SetSentenceSegBatch(sentenceEnd);
 }
+
+template<class ElemType>
+void DataReader<ElemType>::SetRandomSeed(int seed)
+{
+    m_dataReader->SetRandomSeed(seed);
+}
+
 // GetLabelMapping - Gets the label mapping from integer index to label type 
 // returns - a map from numeric datatype to native label type 
 template<class ElemType>

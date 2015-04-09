@@ -1131,4 +1131,11 @@ public:
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
+/**
+These macros are used for sentence segmentation information. 
+*/
+#define SENTENCE_BEGIN 0 
+#define SENTENCE_MIDDLE 1
+#define NO_OBSERVATION -1
+
 #endif    // _BASETYPES_
