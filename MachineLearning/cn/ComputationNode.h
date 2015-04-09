@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        vector<size_t> m_sentenceEnd;
+        Matrix<ElemType> m_sentenceSeg;
     public:
         ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
         {
@@ -114,9 +114,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual void Validate() = 0;
         
-        virtual void Reset() {}
-        virtual void NotReset() {}
-
         virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
             throw std::logic_error("This operation does not support single input.");
@@ -179,6 +176,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool RequirePreCompute() const { return false;}
 
+        // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
+        virtual bool RequireBatchMode() const { return false; }
+
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
             fstream << L"\n" + NodeName() + L"=" + OperationName();
@@ -205,10 +205,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gradientValues.Resize(numRows, numSamples); 
             }
         }
-        void ResetBound(size_t indexInBatch, size_t frameNum)
+        void ResetBound(const Matrix<ElemType> & seg)
         {
-            m_sentenceEnd[indexInBatch] = frameNum;
+            m_sentenceSeg.TransferFromDeviceToDevice(m_sentenceSeg.GetDeviceId(), seg.GetDeviceId(), true, false, false);
+            m_sentenceSeg = seg;
         }
+
         void SetLoopId(const int id)
         {
             m_loopId = id;
@@ -288,7 +290,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
         {
             m_samplesInRecurrentStep = bsz;
-            m_sentenceEnd.resize(bsz);
         }
 
         int64_t UpdateEvalTimeStamp()
@@ -842,6 +843,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
 
+        /// these are used to export hidden state activity
+        virtual bool GetHistory(Matrix<ElemType>& , bool )
+        {
+            return false;
+        }
+
+        virtual void SetHistory(const Matrix<ElemType>& )
+        {
+        }
+
+        /// these two are used to pass gradients from future minibatch
+        virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
+        virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
+
     protected:
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
@@ -878,14 +893,14 @@ public: \
         using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
         using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
         using B::IsChildAnImage; using B::IsEqualTo; using B::IsFuncValueOlderThanInputs; using B::IsLeaf; using B::IsSmaller; \
-        using B::LoadFromFile; using B::MoveMatricesToDevice; using B::NeedGradient; using B::NodeName; using B::NotReset; \
+        using B::LoadFromFile; using B::MoveMatricesToDevice; using B::NeedGradient; using B::NodeName; \
         using B::OperationName; using B::PrintNodeValuesToFile; using B::PrintSelf; using B::PrintSelfBeforeValidation; \
-        using B::RequirePreCompute; using B::Reset; using B::ReshuffleNodes; using B::ReshuffleNodesForEvalWithRecurrentLoops; \
+        using B::RequirePreCompute; using B::ReshuffleNodes; using B::ReshuffleNodesForEvalWithRecurrentLoops; \
         using B::SaveToFile; using B::SetFunctionAndGradientSize; using B::SetInput; using B::Validate; \
 protected:  \
         using B::m_loopId; using B::m_samplesInRecurrentStep; \
         using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop; using B::m_sentenceEnd; \
+        using B::m_indexInLoop; using B::m_sentenceSeg; \
         using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
         using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
         using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter
@@ -4712,7 +4727,6 @@ protected:  \
             m_delay = 1;
             m_functionValues.Resize(1,1);
             m_pastActivity.Resize(1,1);
-            Reset();
             InitRecurrentNode();
         }
                 
@@ -4725,7 +4739,6 @@ protected:  \
             m_delay = 1;
             m_functionValues.Resize(1,1);
             m_pastActivity.Resize(1,1);
-            Reset();
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
@@ -4768,11 +4781,18 @@ protected:  \
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
 
-            Reset();
             InitRecurrentNode();
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
+
+        void ResetBound(const Matrix<ElemType> & seg)
+        {
+            m_sentenceSeg = seg;
+            m_sentenceSeg.Shift(seg, m_delay);
+            m_sentenceSeg.InplaceTruncateBottom(SENTENCE_BEGIN);
+            m_sentenceSeg.InplaceTruncateTop(SENTENCE_MIDDLE);
+        }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -4791,23 +4811,9 @@ protected:  \
             if (inputIndex > 0)
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
-            if (m_samplesInRecurrentStep == 1)
-            {
-                ComputeInputPartialSR(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
-            }else
-            {
-                for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
-                {
-                    bool reset = false;
+            Matrix<ElemType> colBegin = m_sentenceSeg.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
 
-                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
-                    {
-                        reset = true;
-                    }
-
-                    ComputeInputPartialSRP(timeIdxInSeq, m_delay, reset, Inputs(0)->GradientValues(), GradientValues(), i, m_samplesInRecurrentStep);
-                }
-            }
+            ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin);
         }
 
         static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int delay,  
@@ -4822,16 +4828,13 @@ protected:  \
             }
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  bool reset,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t indexInBatch, const size_t mNbr)
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin)
         {
             assert(timeIdxInSeq >= 0);
-            if ((timeIdxInSeq - delay) >= 0 && (timeIdxInSeq - delay) * mNbr <= inputGradientValues.GetNumCols() && !reset)
-            {
-                Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr + indexInBatch, 1);
-                Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + indexInBatch, 1);
-                to += frm; 
-            }
+            Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
+            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
+            Matrix<ElemType>::Scale(colBegin, frm);
+            to += frm; 
         }
 
 
@@ -4841,20 +4844,9 @@ protected:  \
             size_t blogSize = Inputs(0)->FunctionValues().GetNumCols();
 
             for (size_t i = 0; i < blogSize / m_samplesInRecurrentStep; i++)
-                EvaluateThisNodeSR(i, m_delay, m_Reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
+                EvaluateThisNodeSR(i, m_delay, true, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
             /// reset past activity
             m_pastActivity = Inputs(0)->FunctionValues();
-        }
-
-        void Reset()
-        {
-            m_Reset = true;
-        }
-
-
-        void NotReset()
-        {
-            m_Reset = false;
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
@@ -4862,32 +4854,11 @@ protected:  \
             /// reset past activity as it reached to the begining of a minibatch
             /// the node pointed hasn't yet updated, so it is the past activity 
             if (timeIdxInSeq == 0)
+            {
                 m_pastActivity = Inputs(0)->FunctionValues();
-            
-            if (m_samplesInRecurrentStep == 1)
-            {
-                //bool reset = (m_sentenceEnd[0] == timeIdxInSeq);
-                bool reset = false;
-
-                if ((((int)m_sentenceEnd[0] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[0] <= timeIdxInSeq))
-                {
-                    reset = true;
-                }
-                EvaluateThisNodeSR(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
-            } else
-            {
-                for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
-                {
-                    // bool reset = (m_sentenceEnd[i] == timeIdxInSeq);
-                    bool reset = false;
-
-                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
-                    {
-                        reset = true;
-                    }
-                    EvaluateThisNodeSRP(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), i, m_samplesInRecurrentStep);
-                }
             }
+            
+            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_sentenceSeg);
 
         }
 
@@ -4921,7 +4892,7 @@ protected:  \
             }
         }
 
-        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t indexInBatch, const size_t mNbr)
+        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const Matrix<ElemType> & colBegin)
         {
             ASSERT(delay > 0);
 
@@ -4936,19 +4907,17 @@ protected:  \
                 d = (int)functionValues.Mod((float)iPastIndex, (float)pastActivity.GetNumCols());  
             /// this can point to the past activity of the previous mninibatch
 
-            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr+indexInBatch, 1);
+            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (reset)
-                out.SetValue(default_activity);
+            if (iPastIndex < 0)
+                inp = pastActivity.ColumnSlice(d, mNbr);
             else
-            {
-                if (iPastIndex < 0)
-                    inp = pastActivity.ColumnSlice(d+indexInBatch, 1);
-                else
-                    inp = inputFunctionValues.ColumnSlice(d+indexInBatch, 1);
-                out.SetValue(inp);
-            }
+                inp = inputFunctionValues.ColumnSlice(d, mNbr);
+
+            out.SetValue(inp);
+
+            Matrix<ElemType>::Scale(colBegin, out);
         }
 
 
@@ -5015,7 +4984,6 @@ protected:  \
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 node->m_delay = m_delay;
-                node->m_Reset = m_Reset;
                 node->m_default_activity = m_default_activity;
                 node->m_pastActivity = m_pastActivity;
             }
@@ -5039,7 +5007,6 @@ protected:  \
     private:
         Matrix<ElemType> m_pastActivity;  /// saves the past activity this delay node points to
         int      m_delay;    /// steps for delay 
-        bool     m_Reset; 
 
     };
 
