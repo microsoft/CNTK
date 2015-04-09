@@ -992,6 +992,8 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     mEqualLengthOutput = readerConfig("equalLength", "true");
     mAllowMultPassData = readerConfig("dataMultiPass", "false");
+
+    mIgnoreSentenceBeginTag = readerConfig("ignoresentencebegintag", "false");
 }
 
 template<class ElemType>
@@ -1269,7 +1271,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                 if (i == mLastPosInSentence)
                 {
                     mSentenceBeginAt[k] = i;
-                    mtSentenceBegin.SetValue(k, j, (ElemType) SENTENCE_BEGIN);
+                    if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
+                        mtSentenceBegin.SetValue(k, j, (ElemType) SENTENCE_BEGIN);
                 }
 
                 if (i == m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1)
