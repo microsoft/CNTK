@@ -18,6 +18,7 @@
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "SGD.h"
+#include "MultiNetworksSGD.h"
 #include <string>
 #include <basetypes.h>
 #include "commandArgUtil.h"
@@ -334,7 +335,7 @@ namespace Microsoft {
             	else if (s == L"crf")
             		return TrainingCriterion::CRF;
                 LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax | CRF)");
-	    }
+	        }
 
             EvalCriterion ParseEvalCriterionString(wstring s)
             {
@@ -691,6 +692,63 @@ void DoAdapt(const ConfigParameters& config)
     delete cvDataReader;
 }
 
+/**
+This implements sequence to sequence translation paper in
+http://arxiv.org/pdf/1409.3215.pdf
+
+*/
+template <typename ElemType>
+void DoEncoderDecoder(const ConfigParameters& config)
+{
+
+    ConfigParameters configSGD = config("SGD");
+    bool makeMode = config("makeMode", "true");
+    IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* decoderNetBuilder = NULL;
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
+
+    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
+
+    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
+
+    if (config.Exists("EncoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need encoder network");
+
+    if (config.Exists("DecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        decoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    MultiNetworksSGD<ElemType> sgd(configSGD);
+
+    sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
+
+    sgd.EncoderDecoder(encoderNetBuilder, decoderNetBuilder, encoderDataReader, decoderDataReader,
+        cvEncoderDataReader, cvDecoderDataReader, makeMode);
+
+    delete encoderDataReader;
+    delete decoderDataReader;
+    delete cvEncoderDataReader;
+    delete cvDecoderDataReader;
+}
+
 template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
@@ -754,6 +812,8 @@ void DoCommand(const ConfigParameters& config)
                 DoCreateLabelMap<ElemType>(commandParams);
             else if (action[j] == "writeWordAndClass")
                 DoWriteWordAndClassInfo<ElemType>(commandParams);
+            else if (action[j] == "trainEncoderDecoder")
+                DoEncoderDecoder<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 

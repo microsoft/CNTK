@@ -135,6 +135,9 @@
     <ClInclude Include="..\..\Common\Include\TimerUtility.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="MultiNetworksSGD.h">
+      <Filter>Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
