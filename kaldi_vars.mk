@@ -1,7 +1,7 @@
 ########## Set your Kaldi location and the Kaldi includes / libs you want to use ##########
 
 ############### make sure your kaldi is compiled by --share mode so we can find the lib ##############################
-KALDI_PATH = ####### your kaldi path ################
+KALDI_PATH = /data/sls/scratch/leoliu/software/kaldi-hostd/
 
 KALDI_INCLUDES = -I $(KALDI_PATH)/src
 KALDI_LIBS = -L$(KALDI_PATH)/src/lib -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet

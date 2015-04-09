@@ -215,7 +215,7 @@ public:
                 symmap.insert (std::make_pair (hmmname, hmmindex)); // insert into hash table
             }
         }
-        fprintf (stderr, "simplesenonehmm: %d units with %d unique HMMs, %d tied states, and %d trans matrices read\n",
+        fprintf (stderr, "simplesenonehmm: %zu units with %zu unique HMMs, %zu tied states, and %zu trans matrices read\n",
                  symmap.size(), hmms.size(), statemap.size(), transPs.size());
     }
 

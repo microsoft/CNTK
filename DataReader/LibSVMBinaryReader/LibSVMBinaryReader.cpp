@@ -94,12 +94,12 @@ void LibSVMBinaryReader<ElemType>::WriteLabelFile()
             {
                 labelFile << m_mapIdToLabel[i] << '\n';
             }
-            fprintf(stderr, "label file %ws written to disk\n", m_labelFileToWrite.c_str());
+            fprintf(stderr, "label file %S written to disk\n", m_labelFileToWrite.c_str());
             m_labelFileToWrite.clear();
         }
         else if (!m_cachingWriter)
         {
-            fprintf(stderr, "WARNING: file %ws NOT written to disk yet, will be written the first time the end of the entire dataset is found.\n", m_labelFileToWrite.c_str());
+            fprintf(stderr, "WARNING: file %S NOT written to disk yet, will be written the first time the end of the entire dataset is found.\n", m_labelFileToWrite.c_str());
         }
     }
 }

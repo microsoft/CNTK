@@ -24,7 +24,7 @@
 #include <unordered_map>
 #include <algorithm>        // for find()
 #include "simplesenonehmm.h"
-
+#include <inttypes.h>
 namespace msra { namespace math { class ssematrixbase;  template<class ssematrixbase> class ssematrix; template<class ssematrixbase> class ssematrixstriperef; };};
 
 namespace msra { namespace lm { class CMGramLM; class CSymbolSet; };};        // for numer-lattice building
@@ -188,7 +188,7 @@ public: // TODO: make private again once
                 if (ai.size() < 2)  // less than 2--must be /sil/
                     continue;
                 spunit = ai[ai.size() - 1].unit;
-                fprintf (stderr, "builduniquealignments: /sp/ unit inferred through heuristics as %d\n", spunit);
+                fprintf (stderr, "builduniquealignments: /sp/ unit inferred through heuristics as %zu\n", spunit);
                 break;
             }
         }
@@ -234,7 +234,7 @@ public: // TODO: make private again once
                 && nodes[edges[prevj].S].t == nodes[edges[j].S].t
                 && nodes[edges[prevj].E].t == nodes[edges[j].E].t
                 && edges[prevj].l != edges[j].l)   // some diagnostics
-                    fprintf (stderr, "build: merging edges %d and %d despite slightly different LM scores %.8f vs. %.8f, ts/te=%.2f/%.2f\n",
+                    fprintf (stderr, "build: merging edges %zu and %zu despite slightly different LM scores %.8f vs. %.8f, ts/te=%.2f/%.2f\n",
                              prevj, j, edges[prevj].l, edges[j].l, nodes[edges[prevj].S].t * 0.01f, nodes[edges[prevj].E].t * 0.01f);
 #endif
             if (prevj == SIZE_MAX || fabs (edges[prevj].l - edges[j].l) > lmargin || (info.hasacscores && edges[prevj].a != edges[j].a) || comparealign (prevj, j, false) != 0)
@@ -286,7 +286,7 @@ public: // TODO: make private again once
         }
         const size_t uniquealigntokens = uniquededgedatatokens.size() - (numuniquealignments * (info.hasacscores ? 2 : 1));
         const size_t nonuniquenonsptokens = align.size() - numimpliedsp;
-        fprintf (stderr, "builduniquealignments: %d edges: %d unique alignments (%.2f%%); %d align tokens - %d implied /sp/ units = %d, uniqued to %d (%.2f%%)\n",
+        fprintf (stderr, "builduniquealignments: %zu edges: %zu unique alignments (%.2f%%); %zu align tokens - %zu implied /sp/ units = %zu, uniqued to %zu (%.2f%%)\n",
                  edges.size(), numuniquealignments, 100.0f * numuniquealignments / edges.size(),
                  align.size(), numimpliedsp, nonuniquenonsptokens, uniquealigntokens, 100.0f * uniquealigntokens / nonuniquenonsptokens);
 
@@ -593,7 +593,7 @@ private:
 #if 1           // multiple /sil/ -> log this (as we are not sure whether this is actually proper--probably it is)
                 if (numsilunits > 1)
                 {
-                    fprintf (stderr, "backpointers: lattice '%S', edge %d has %d /sil/ phonemes\n", L.getkey(), j, numsilunits);
+                    fprintf (stderr, "backpointers: lattice '%S', edge %d has %zu /sil/ phonemes\n", L.getkey(), j, numsilunits);
                     fprintf (stderr, "alignments: :");
                     foreach_index (a, aligntokens)
                     {
@@ -643,7 +643,7 @@ private:
     double bestpathlattice (const std::vector<float> & edgeacscores, std::vector<double> & logpps,
                             const float lmf, const float wp, const float amf) const;
 
-    static float lattice::alignedge (const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm & hset, 
+    static float alignedge (const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm & hset, 
                                      const msra::math::ssematrixbase & logLLs, msra::math::ssematrixbase & gammas, 
                                      size_t edgeindex, const bool returnsenoneids, array_ref<unsigned short> thisedgealignments);
 
@@ -674,7 +674,7 @@ private:
                                     const std::vector<float> & transcriptunigrams, const msra::math::ssematrixbase & logLLs, 
                                     const msra::asr::simplesenonehmm & hset, const float lmf, const float wp, const float amf);
 
-    static float lattice::forwardbackwardedge (const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm & hset, 
+    static float forwardbackwardedge (const_array_ref<aligninfo> units, const msra::asr::simplesenonehmm & hset, 
                                                const msra::math::ssematrixbase & logLLs, msra::math::ssematrixbase & gammas, 
                                                size_t edgeindex);
 
@@ -746,7 +746,7 @@ public:
         size_t totaledgeframes = 0;
         for (size_t j = 0; j < info.numedges; j++)
             totaledgeframes += nodes[edges[j].E].t - (size_t) nodes[edges[j].S].t;
-        fprintf (stderr, "lattice: read %d nodes, %d edges, %d units, %d frames, %.1f edges/node, %.1f units/edge, %.1f frames/edge, density %.1f\n",
+        fprintf (stderr, "lattice: read %zu nodes, %zu edges, %zu units, %zu frames, %.1f edges/node, %.1f units/edge, %.1f frames/edge, density %.1f\n",
                  info.numnodes, info.numedges, align.size(), info.numframes,
                  info.numedges / (double) info.numnodes, align.size() / (double) info.numedges, totaledgeframes / (double) info.numedges, totaledgeframes / (double) info.numframes);
     }
@@ -895,7 +895,7 @@ public:
 #if 1       // post-bugfix for incorrect inference of spunit
             if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size())   // we have buggy lattices like that--what do they mean??
             {
-                fprintf (stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", info.impliedspunitid, idmap.size());
+                fprintf (stderr, "fread: detected buggy spunit id %zu which is out of range (%zu entries in map)\n", info.impliedspunitid, idmap.size());
                 throw std::runtime_error ("fread: out of bounds spunitid");
             }
 #endif
@@ -949,7 +949,7 @@ public:
                     k += skipscoretokens;
                     uniquealignments++;
                 }
-                fprintf (stderr, "fread: mapped %d unique alignments\n", uniquealignments);
+                fprintf (stderr, "fread: mapped %zu unique alignments\n", uniquealignments);
             }
             if (info.impliedspunitid != spunit)
             {
@@ -1091,13 +1091,13 @@ public:
     {
         if (tocpaths.empty())   // nothing to read--keep silent
             return;
-        fprintf (stderr, "archive: opening %d lattice-archive TOC files ('%S' etc.)..", tocpaths.size(), tocpaths[0].c_str());
+        fprintf (stderr, "archive: opening %zu lattice-archive TOC files ('%S' etc.)..", tocpaths.size(), tocpaths[0].c_str());
         foreach_index (i, tocpaths)
         {
             fprintf (stderr, ".");
             open (tocpaths[i]);
         }
-        fprintf (stderr, " %d total lattices referenced in %d archive files\n", toc.size(), archivepaths.size());
+        fprintf (stderr, " %zu total lattices referenced in %zu archive files\n", toc.size(), archivepaths.size());
     }
 
     // open an archive
@@ -1133,7 +1133,7 @@ public:
                 throw std::runtime_error ("open: invalid TOC line (empty archive pathname): " + std::string (line));
             char c;
             uint64_t offset;
-            if (sscanf_s (q, "[%I64u]%c", &offset, &c, sizeof (c)) != 1)
+            if (sscanf (q, "[%" PRIu64 "]%c", &offset, &c) != 1)
                 throw std::runtime_error ("open: invalid TOC line (bad [] expression): " + std::string (line));
             if (!toc.insert (make_pair (key, latticeref (offset, archiveindex))).second)
                 throw std::runtime_error ("open: TOC entry leads to duplicate key: " + std::string (line));
