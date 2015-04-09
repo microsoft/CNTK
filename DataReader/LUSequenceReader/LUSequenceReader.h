@@ -260,6 +260,7 @@ public:
         mNumRead = 0;
         mSentenceEnd = false; 
         mSentenceBegin = true; 
+        mIgnoreSentenceBeginTag = false;
     }
 
     ~BatchLUSequenceReader() {
@@ -330,6 +331,12 @@ public:
     /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
     /// frame. 
     Matrix<ElemType> mtSentenceBegin;
+
+    /// by default it is false
+    /// if true, reader will set to SENTENCE_MIDDLE for time positions that are orignally correspond to SENTENCE_BEGIN
+    /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
+    /// default will have truncated BPTT, which only does BPTT inside a minibatch
+    bool mIgnoreSentenceBeginTag;
 };
 
 template<class ElemType>
