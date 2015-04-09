@@ -172,7 +172,6 @@ public:
 
     void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SentenceEnd(std::vector<size_t> &/*sentenceEnd*/) {};
-    void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
@@ -292,7 +291,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
 
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
+    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin);
 
 public:
     void LoadWordMapping(const ConfigParameters& readerConfig);
@@ -317,6 +316,20 @@ public:
     size_t mMaxSentenceLength;
     vector<int> mSentenceBeginAt;
     vector<int> mSentenceEndAt;
+    
+    /// a matrix of n_stream x n_length
+    /// n_stream is the number of streams
+    /// n_length is the maximum lenght of each stream
+    /// for example, two sentences used in parallel in one minibatch would be
+    /// [2 x 5] if the max length of one of the sentences is 5
+    /// the elements of the matrix is 0, 1, or -1, defined as SENTENCE_BEGIN, SENTENCE_MIDDLE, NO_OBSERVATION in cbasetype.h 
+    /// 0 1 1 0 1
+    /// 1 0 1 0 0 
+    /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
+    /// the second data stream has two sentences, with 0 indicating begining of sentences
+    /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
+    /// frame. 
+    Matrix<ElemType> mtSentenceBegin;
 };
 
 template<class ElemType>
@@ -345,8 +358,8 @@ public:
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
-    void SetSentenceEndInBatch(vector<size_t> &sentenceEnd);
-    
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin);
+
     size_t NumberSlicesInEachRecurrentIter();
 
     void Init(const ConfigParameters& readerConfig);

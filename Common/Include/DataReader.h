@@ -61,7 +61,8 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;
     virtual bool DataEnd(EndDataType endDataType) = 0;
-    virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd) = 0;
+    virtual void SetSentenceSegBatch(Matrix<ElemType>&sentenceEnd) = 0;
+    virtual void SetRandomSeed(int) = 0;
 };
 
 // GetReader - get a reader type from the DLL
@@ -156,7 +157,9 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
+    void SetSentenceSegBatch(Matrix<ElemType>&sentenceEnd);
+
+    virtual void SetRandomSeed(int);
 };
 
 }}}

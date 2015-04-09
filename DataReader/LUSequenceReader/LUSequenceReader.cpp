@@ -1255,6 +1255,11 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         if (mMaxSentenceLength > m_mbSize)
             throw std::runtime_error("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
 
+        mtSentenceBegin.Resize(mToProcess.size(), mMaxSentenceLength);
+        mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+        DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
+        mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
+
         for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
         {
             for (int k = 0; k < mToProcess.size(); k++)
@@ -1264,7 +1269,9 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                 if (i == mLastPosInSentence)
                 {
                     mSentenceBeginAt[k] = i;
+                    mtSentenceBegin.SetValue(k, j, (ElemType) SENTENCE_BEGIN);
                 }
+
                 if (i == m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1)
                 {
                     mSentenceEndAt[k] = i;
@@ -1321,6 +1328,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     m_featureWordContext.push_back(tmpCxt);
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
+                    mtSentenceBegin.SetValue(k, j, (ElemType) NO_OBSERVATION);
                 }
 
                 m_totalSamples ++;
@@ -1328,6 +1336,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         }
 
         mLastPosInSentence = (i == mMaxSentenceLength)?0:i;
+
+        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
     }
 
     return bDataIsThere;
@@ -1387,11 +1397,15 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
+
         if (matrices.find(m_featuresName) != matrices.end())
         {
             features.Resize(featInfo.dim * m_wordContext.size(), actualmbsize, true);
             features.SetValue(0);
         }
+
+        DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
+        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, true, false, false);
 
         size_t utt_id = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
@@ -1420,6 +1434,8 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
             }
         }
 
+        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, true, false, false);
+
         lablsize = GetLabelOutput(matrices, actualmbsize);
 
         // go to the next sequence
@@ -1432,7 +1448,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
     }
 
     // we read some records, so process them
-    if (lablsize == 0)
+    if (actualmbsize == 0)
         return false;
     else
         return true;
@@ -1464,17 +1480,10 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin)
 {
-    sentenceEnd.resize(mToProcess.size());
-    if (mSentenceBegin)
-    {
-        sentenceEnd.assign(mToProcess.size(), 0);
-    }
-    else
-    {
-        sentenceEnd.assign(mToProcess.size(), m_mbSize+2);
-    }
+    mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), sentenceBegin.GetDeviceId(), true, false, false);
+    sentenceBegin.SetValue(mtSentenceBegin); 
 }
 
 template<class ElemType>
@@ -1583,21 +1592,12 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring,
     m_seed++;
 
     /// run for each reader
-    size_t nlabels = 0;
-    size_t nsamples = 0;
-    vector<size_t> to_process;
     for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
-        if (to_process.size() > 0)
-            (p->second)->SetToProcessId(to_process);
-        nlabels = (p->second)->GetMinibatch(matrices);
-        if (to_process.size() == 0)
-            to_process = (p->second)->ReturnToProcessId();
-        nsamples = max(nlabels, nsamples);
+        if ((p->second)->GetMinibatch(matrices) == false)
+            return false;
     }
 
-    if (nsamples == 0)
-        return false;
     return true;
 }
 
@@ -1654,12 +1654,33 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin)
 {
     /// run for each reader
+    vector<size_t> col;
+    size_t rows = 0, cols = 0;
     for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
-        (p->second)->SetSentenceEndInBatch(sentenceEnd);
+        (p->second)->SetSentenceSegBatch(sentenceBegin);
+        if (rows == 0)
+            rows = sentenceBegin.GetNumRows();
+        else
+            if (rows != sentenceBegin.GetNumRows())
+                LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence begining");
+        size_t this_col = sentenceBegin.GetNumCols();
+        col.push_back(this_col);
+        cols += this_col;
+    }
+
+    sentenceBegin.Resize(rows, cols);
+    size_t i = 0, t = 0; 
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        Matrix<ElemType> mtmp(sentenceBegin.GetDeviceId());
+        (p->second)->SetSentenceSegBatch(mtmp);
+        sentenceBegin.ColumnSlice(i, col[t]).SetValue(mtmp);
+        i += col[t];
+        t++;
     }
 }
 

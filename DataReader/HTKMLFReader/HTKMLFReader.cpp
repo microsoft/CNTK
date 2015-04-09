@@ -1526,13 +1526,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+    void HTKMLFReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
     {
         sentenceEnd.resize(m_switchFrame.size());
-        for (size_t i = 0; i < m_switchFrame.size() ; i++)
+        for (size_t i = 0; i < m_switchFrame.size(); i++)
         {
             sentenceEnd[i] = m_switchFrame[i];
         }
+    }
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::SetRandomSeed(int )
+    {
+        NOT_IMPLEMENTED;
     }
 
     // GetFileConfigNames - determine the names of the features and labels sections in the config file
