@@ -205,6 +205,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool doGradientCheck = configSGD("gradientcheck", "false");
             ElemType gradientCheckSigDigit = configSGD("sigFigs", "6");
 
+            m_doUnitTest = configSGD("unittest", "false");
+
             bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
 
 			bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
@@ -1480,6 +1482,8 @@ protected:
 
         bool m_doGradientCheck;
         ElemType m_gradientCheckSigDigit;
+
+        bool m_doUnitTest;
 
         bool m_validateAfterModelReloading;
 
