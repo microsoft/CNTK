@@ -26,7 +26,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef enum tpRNNType { SIMPLENET=0, /// no recurrent connections
             SIMPLERNN = 1, LSTM=2, DEEPRNN=4, CLASSLM = 8, 
             LBLM=16,
-            NPLM=32, CLASSLSTM=64, TENSORIOLSTM=128, RCRF=256} RNNTYPE; 
+            LSTMENCODER = 18,
+            NPLM = 32, CLASSLSTM = 64, TENSORIOLSTM = 128, RCRF = 256
+    } RNNTYPE;
 
     enum class TrainingCriterion : int
     {
@@ -137,7 +139,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_rnnType= TENSORIOLSTM;
 			if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
 				m_rnnType = RCRF;
-		}
+            if (std::find(strType.begin(), strType.end(), L"LSTMENCODER") != strType.end())
+                m_rnnType = LSTMENCODER;
+        }
 
         // Init - Builder Initialize for multiple data sets
         // config - [in] configuration parameters for the network builder
@@ -185,7 +189,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete m_net;
         }
 
-        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true) 
+        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
+            bool bAllowNoCriterion = false) 
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {
@@ -202,7 +207,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    m_net->LoadFromFile(modelFileName);
+                    m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterion);
                 }
             }
 
@@ -230,6 +235,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return BuildLSTMInputOutputTensorNetworkFromDescription(mbSize);
 			if (m_rnnType == RCRF)
 				return BuildSeqTrnLSTMNetworkFromDescription(mbSize);
+            if (m_rnnType == LSTMENCODER)
+                return BuildLSTMEncoderNetworkFromDescription(mbSize);
 
 
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet

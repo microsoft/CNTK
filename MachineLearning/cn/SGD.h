@@ -7,6 +7,7 @@
 
 #include "basetypes.h"
 #include "ComputationNetwork.h"
+#include "IComputationNetBuilder.h"
 #include "ComputationNetworkHelper.h"
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
@@ -793,7 +794,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t actualMBSize = net.GetActualMBSize();
                 net.SetActualMiniBatchSize(actualMBSize);
                 net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd);
+                trainSetDataReader->SetSentenceSegBatch(net.m_sentenceSeg);
 
                 for (auto nodeIter=nodes.begin(); nodeIter != nodes.end(); nodeIter++)
                 {
@@ -1002,7 +1003,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 net.SetActualMiniBatchSize(actualMBSize);
                 net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd); 
+                trainSetDataReader->SetSentenceSegBatch(net.m_sentenceSeg); 
 
 #ifndef EVALDLL
                 if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
@@ -1487,8 +1488,8 @@ protected:
         bool m_needAveMultiplier;
         ElemType m_L2RegWeight;
         ElemType m_L1RegWeight;
+
     };
-    template class SGD<float>; 
-    template class SGD<double>;
+
 
 }}}

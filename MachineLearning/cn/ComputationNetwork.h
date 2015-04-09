@@ -50,7 +50,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } RecurrentInfo;
 
     public:
-        ComputationNetwork(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX) : m_deviceId(deviceId)
+        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), m_sentenceSeg(deviceId)
         {
             m_randomSeedOffset = 0;
             m_actMiniBSize = 0;
@@ -287,7 +287,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return actualMBSize;
         }
 
-        virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary)
+        virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary, 
+            const bool bAllowNoCriterionNode = false)
         {
             ClearNet();
 
@@ -431,7 +432,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
             
 
-            ValidateNetwork();  //some internal values in the nodes are computed during validation
+            ValidateNetwork(false, bAllowNoCriterionNode);  //some internal values in the nodes are computed during validation
+
         }
 
 #pragma region Network Modification
@@ -1502,19 +1504,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
             {
                 (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                if ((*nodeIter)->OperationName() == L"Delay")
+                if ((*nodeIter)->OperationName() == L"Delay" ||
+					(*nodeIter)->OperationName() == L"LSTM")
                 {
-                    for (size_t i = 0; i < m_nbrSlicesInEachRecurrentIteration; i++)
-                    {
-                        (*nodeIter)->ResetBound(i, m_sentenceEnd[i]);
-                    }
-                    if (m_sentenceEnd[0] <= m_actMiniBSize)
-                    {
-                        (*nodeIter)->Reset();
-                    } else
-                    {
-                        (*nodeIter)->NotReset();
-                    }
+                    (*nodeIter)->ResetBound(m_sentenceSeg);
                 }
             }
 
@@ -1568,7 +1561,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetActualNbrSlicesInEachRecIter(const size_t aSize)
         {
             m_nbrSlicesInEachRecurrentIteration = aSize;
-            m_sentenceEnd.assign(aSize, m_actMiniBSize/aSize);
         }
 
         void ComputeGradientLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
@@ -1595,9 +1587,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeGradient(const ComputationNodePtr rootNode)
+        virtual void ComputeGradient(const ComputationNodePtr rootNode, 
+            bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
+            const Matrix<ElemType>* rootGradientInitValue = nullptr
+            )
         {
-            if (rootNode->FunctionValues().GetNumElements() != 1)
+            if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
                 throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
             //run forward pass first
@@ -1607,8 +1602,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //run backward pass
             std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
-            rootNode->GradientValues().Resize(1,1);
-            rootNode->GradientValues().SetValue(1);
+            if (bResetToOne)
+            {
+                rootNode->GradientValues().Resize(1, 1);
+                rootNode->GradientValues().SetValue(1);
+            }
+
+            if (rootGradientInitValue != nullptr)
+                rootNode->GradientValues().SetValue(*rootGradientInitValue);
 
             for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
             {
@@ -1833,8 +1834,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return nodesRequirePreComputation;
         }
 
+        //return list of nodes that require precomputation and not precomputed yet.
+        std::list<ComputationNodePtr> GetNodesRequireBatchMode(const ComputationNodePtr rootNode = nullptr, bool checkComputed = true)
+        {
+            std::list<ComputationNodePtr> nodesRequirePreComputation;
+
+            if (rootNode == nullptr) //find nodes from all available nodes
+            {
+                for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+                {
+                    ComputationNodePtr node = nodeIter->second;
+                    if (node->RequireBatchMode())
+                    {
+                        BatchModeNode<ElemType> * preComputedNode = static_cast<BatchModeNode<ElemType> *> (node);
+                        if (!checkComputed || !preComputedNode->HasComputed())
+                            nodesRequirePreComputation.push_back(node);
+                    }
+                }
+            }
+            else //for calculating a specific node
+            {
+                std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
+                for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+                {
+                    ComputationNodePtr node = (*nodeIter);
+                    if (node->RequireBatchMode())
+                    {
+                        BatchModeNode<ElemType> * preComputedNode = static_cast<BatchModeNode<ElemType> *> (node);
+                        if (!checkComputed || !preComputedNode->HasComputed())
+                            nodesRequirePreComputation.push_back(node);
+                    }
+                }
+            }
+
+            return nodesRequirePreComputation;
+        }
+
         // Validate - Validate the network 
-        void ValidateNetwork(bool allowFragment=false)
+        void ValidateNetwork(bool allowFragment=false, const bool bAllowNoCriterion = false)
         {
             // currently only validates nodes, we should validate everything we can
             if (FeatureNodes().size() == 0 && !allowFragment)
@@ -1852,6 +1889,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     this->SetActualMiniBatchSize(actualMBSize);
                     ValidateNetwork(node);
                 }
+            }
+            else if (bAllowNoCriterion == true)
+            {
+                // do nothing
             }
             else if (!allowFragment)
             {
@@ -1907,6 +1948,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+    public:
+        virtual void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
+        {
+            //put all node info first
+            Matrix<ElemType> hist;
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            {
+                ComputationNodePtr nodePtr = nodeIter->second;
+                if (nodePtr->GetHistory(hist, bLastTime))
+                {
+                    history[nodeIter->first] = hist;
+                }
+            }
+        };
+
+        void SetHistory(map<wstring, Matrix<ElemType>>& history)
+        {
+            //put all node info first
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            {
+                ComputationNodePtr nodePtr = nodeIter->second;
+                if (history.find(nodeIter->first) != history.end())
+                {
+                    nodePtr->SetHistory(history[nodeIter->first]);
+                }
+            }
+        };
     protected:
         // Copy constructor, should never be called.
 #pragma warning (push)
@@ -2396,7 +2464,7 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
 
             return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
         }
-        vector<size_t> m_sentenceEnd;
+        Matrix<ElemType> m_sentenceSeg;
 protected:
         std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode, std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap, const bool forwardCompute) 
         {
