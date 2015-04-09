@@ -355,7 +355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void MinusOneAt(Matrix<ElemType>& c, const size_t position);
 
         static void Scale(ElemType alpha, Matrix<ElemType>& a);
-        static void Scale(Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
+        static void Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
         static void Scale(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void InnerProduct (const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise);
         static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
@@ -434,6 +434,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
 		public:
+            Matrix<ElemType>& Shift(const Matrix<ElemType>& a, int shift);
+
 			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
 			Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
 			static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);

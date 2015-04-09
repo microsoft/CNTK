@@ -3997,7 +3997,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="alpha">1x1 matrix</param>
     /// <param name="a">Input matrix</param>
     template<class ElemType>
-    void Matrix<ElemType>::Scale(Matrix<ElemType>& alpha, Matrix<ElemType>& a)
+    void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
             throw std::logic_error("Scale:  Input matrix a is empty.");
@@ -4230,7 +4230,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-	template<class ElemType>
+    //		Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, size_t shift)
+    //[this]= (a right shift by n), padded with zeros
+    // shift left, shift needs to be negative value
+    // shift right, shift needs to be positive value
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("Shift: Matrix is empty.");
+
+        auto& us = *this;
+        if (this != &a)
+        {
+            Resize(a.GetNumRows(), a.GetNumCols());
+        }
+
+        long n = (long)GetNumCols();
+
+        if (shift >= 0 && shift < n)
+            us.ColumnSlice(shift, n - shift).SetValue(a.ColumnSlice(0, n - shift));
+        if (shift < 0 && shift > -n)
+            us.ColumnSlice(0, n + shift).SetValue(a.ColumnSlice(-shift, n + shift));
+        return *this;
+    }
+
+    template<class ElemType>
 	Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
 	{
 		if (a.IsEmpty() || b.IsEmpty())
