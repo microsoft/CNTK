@@ -2375,9 +2375,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class LSTMNode : public ComputationNode<ElemType>
     {
         UsingComputationNodeMembers;
-    protected:
-        vector<size_t> m_SentenceEnd;
-        vector<int> m_SentenceBegin;
 
     public:
         LSTMNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -2411,9 +2408,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_inputDim = 0;
             m_outputDim = 0;
-            LoadFromFile(fstream, modelVersion, deviceId);
             m_use_errors_from_future_minibatch = false;
-            mDefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
+            mDefaultState = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
+            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
@@ -2444,15 +2441,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
 
-            fstream << m_inputDim << m_outputDim;
             fstream << mDefaultState;
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
-            fstream >> m_inputDim >> m_outputDim;
             fstream >> mDefaultState;
         }
 
@@ -2495,11 +2490,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t inputDim = Inputs(0)->FunctionValues().GetNumRows();
             size_t outputDim = Inputs(1)->FunctionValues().GetNumRows();
 
-            if (m_SentenceEnd[0] == 0 && nT > 0)
-            {
-                throw std::runtime_error("LSTMNode:ComputeInputPartial: check sentence end. it is smaller than the input length, which is not correct");
-            }
-
             if (mGradientComputed == false)
             {
                 if (FunctionValues().GetNumCols() != GradientValues().GetNumCols() ||
@@ -2524,18 +2514,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 stateError.Resize(slicePrevState.GetNumRows(), slicePrevState.GetNumCols());
 
-                for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
-                {
-                    size_t nSteps = nT / m_samplesInRecurrentStep - m_SentenceEnd[i];
-                    if (nSteps > 1)
-                    {
-                        for (size_t t = 1; t < nSteps; t++)
-                        {
-                            GradientValues().ColumnSlice((m_SentenceEnd[i] + t)* m_samplesInRecurrentStep + i, 1).SetValue(0);
-                        }
-                    }
-                }
-
                 for (int timeIdxInSeq = nT - m_samplesInRecurrentStep; timeIdxInSeq >= 0; timeIdxInSeq -= m_samplesInRecurrentStep)
                 {
                     Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
@@ -2553,38 +2531,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     Matrix<ElemType> grdToObsSlice(this->m_deviceId);
 
+
 #ifdef DEBUG_DECODER
                     fprintf(stderr, "original output error [%d] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
 #endif
 
-                    if (m_use_errors_from_future_minibatch && m_state_error_from_future_minibatch.GetNumCols() != m_samplesInRecurrentStep)
-                    {
-                        fprintf(stderr, "LSTMNode::ComputeInputPartial: the column number of the error propagated from future is different from the number of samples per minibatch. Check reader configurations such as if setting equalLength=true by default. It might be set to false.");
-                        throw std::runtime_error("LSTMNode::ComputeInputPartial: errors from future dimension mismatched with the number of sentences per minibatch.");
-                    }
-
-                    for (size_t utt_id = 0; utt_id < m_samplesInRecurrentStep; utt_id++)
-                    {
-                        size_t utt_t = (size_t)floor(timeIdxInSeq / m_samplesInRecurrentStep);
-                        if (utt_t < m_SentenceEnd[utt_id])
-                        {
-
-                            error.ColumnSlice(utt_id, 1) += grdToPrevOutput.ColumnSlice(utt_id, 1);
-                            stateError.ColumnSlice(utt_id, 1).SetValue(grdToPrevState.ColumnSlice(utt_id, 1));
-                        }
-                        else
-                        {
-                            if (m_use_errors_from_future_minibatch && utt_t == m_SentenceEnd[utt_id])
-                            {
-                                error.ColumnSlice(utt_id, 1).SetValue(m_obs_error_from_future_minibatch.ColumnSlice(utt_id, 1));
-                                stateError.ColumnSlice(utt_id, 1).SetValue(m_state_error_from_future_minibatch.ColumnSlice(utt_id, 1));
-                            }
-                            else
-                            {
-                                stateError.ColumnSlice(utt_id, 1).SetValue(0);
-                            }
-                        }
-                    }
+                    PrepareThisErrors(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState, 
+                        m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, m_sentenceSeg);
 
 #ifdef DEBUG_DECODER
                     fprintf(stderr, "output error [%d] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
@@ -2596,7 +2549,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     grdToPrevOutput.SetValue(0);
                     grdToPrevState.SetValue(0);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, mDefaultState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, m_SentenceBegin);
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, m_sentenceSeg);
 
                     ComputeInputGradientWrtGates(
                         error,
@@ -2626,6 +2579,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     grdToObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
+                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, m_samplesInRecurrentStep, m_sentenceSeg);
+                    PrepareErrors(timeIdxInSeq, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "after error prop b_c norm = %.8e\n", Inputs(4)->FunctionValues().ColumnSlice(0, 1).FrobeniusNorm());
@@ -2633,11 +2588,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_obs_error_from_future_minibatch = grdToPrevOutput;
                 m_state_error_from_future_minibatch = grdToPrevState;
 
-                /// save the hidden activities and output for the next minibatch
+                /// save the last time hidden activities and output for the next minibatch
                 for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
                 {
-                    mPastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(m_SentenceEnd[i] * m_samplesInRecurrentStep + i, 1));
-                    mPastState.ColumnSlice(i, 1).SetValue(mState.ColumnSlice(m_SentenceEnd[i] * m_samplesInRecurrentStep + i, 1));
+                    for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
+                    {
+                        if (m_sentenceSeg.ColumnSlice(t, 1).Get00Element() == SENTENCE_MIDDLE)
+                        {
+                            mPastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
+                            mPastState.ColumnSlice(i, 1).SetValue(mState.ColumnSlice(t, 1));
+                            break;
+                        }
+                    }
                 }
 
 
@@ -2905,8 +2867,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 mPastOutput.Resize(outputDim, m_samplesInRecurrentStep);
             }
 
-            PrepareHistory(0, mSlicePrevOutput, mSlicePrevState, mDefaultState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, m_SentenceBegin);
-
 #ifdef DEBUG_DECODER
             if (mPastOutput.IsEmpty() == false)
                 fprintf(stderr, "LSTM past output norm = %.8e\n", mPastOutput.FrobeniusNorm());
@@ -2929,7 +2889,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceTanhInput =
                     tanhObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
 
-                PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, mDefaultState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, m_SentenceBegin);
+                PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, m_sentenceSeg);
 
                 EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                     sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
@@ -2938,10 +2898,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// save the hidden activities and output for the next minibatch
             mLastOutput.Resize(outputDim, m_samplesInRecurrentStep);
             mLastState.Resize(outputDim, m_samplesInRecurrentStep);
+
             for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
             {
-                mLastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(m_SentenceEnd[i] * m_samplesInRecurrentStep + i, 1));
-                mLastState.ColumnSlice(i, 1).SetValue(mState.ColumnSlice(m_SentenceEnd[i] * m_samplesInRecurrentStep + i, 1));
+                for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
+                {
+                    int utt_t = (int)t / m_samplesInRecurrentStep;
+                    if (m_sentenceSeg.ColumnSlice(i, utt_t).Get00Element() == SENTENCE_MIDDLE)
+                    {
+                        mLastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
+                        mLastState.ColumnSlice(i, 1).SetValue(mState.ColumnSlice(t, 1));
+                        break;
+                    }
+                }
             }
 
 #ifdef DEBUG_DECODER
@@ -2951,24 +2920,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "LSTM last state norm = %.8e\n", mLastState.FrobeniusNorm());
 #endif
 
-            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+            /// set output to 0 if there are no observations
+            for (size_t i = 0; i < nT; i++)
             {
-                size_t nSteps = nT / m_samplesInRecurrentStep - m_SentenceEnd[i];
-                if (nSteps > 1)
+                if (m_sentenceSeg.ColumnSlice(i, 1).Get00Element() == NO_OBSERVATION)
                 {
-                    for (size_t t = 1; t < nSteps; t++)
-                    {
-                        size_t atTime = (m_SentenceEnd[i] + t)* m_samplesInRecurrentStep + i;
-                        FunctionValues().ColumnSlice(atTime, 1).SetValue(0);
-                        mState.ColumnSlice(atTime, 1).SetValue(0);
+                    FunctionValues().ColumnSlice(i, 1).SetValue(0);
+                    mState.ColumnSlice(i, 1).SetValue(0);
 
-                        mGi.ColumnSlice(atTime, 1).SetValue(0);
-                        mGf.ColumnSlice(atTime, 1).SetValue(0);
-                        mGo.ColumnSlice(atTime, 1).SetValue(0);
+                    mGi.ColumnSlice(i, 1).SetValue(0);
+                    mGf.ColumnSlice(i, 1).SetValue(0);
+                    mGo.ColumnSlice(i, 1).SetValue(0);
 
-                        tanhState.ColumnSlice(atTime, 1).SetValue(0);
-                        tanhObs.ColumnSlice(atTime, 1).SetValue(0);
-                    }
+                    tanhState.ColumnSlice(i, 1).SetValue(0);
+                    tanhObs.ColumnSlice(i, 1).SetValue(0);
                 }
             }
 
@@ -2990,62 +2955,107 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t timeIdxInSeq,
             Matrix<ElemType> & slicePrevOutput,
             Matrix<ElemType> & slicePrevState,
-            const ElemType defaultStateValue,
             const Matrix<ElemType> & output,
             const Matrix<ElemType> & state,
             const Matrix<ElemType> & pastOutput,
             const Matrix<ElemType> & pastState,
-            size_t nsamples, const vector<int>& sentenceBegin)
+            size_t nsamples, const Matrix<ElemType>& sentenceBegin)
         {
             size_t nRow = pastOutput.GetNumRows();
+            size_t nStream = sentenceBegin.GetNumRows();
+
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             if (slicePrevOutput.IsEmpty() || slicePrevOutput.GetNumRows() != nRow || slicePrevOutput.GetNumCols() != nsamples)
                 slicePrevOutput.Resize(nRow, nsamples);
             if (slicePrevState.IsEmpty() || slicePrevState.GetNumRows() != nRow || slicePrevState.GetNumCols() != nsamples)
                 slicePrevState.Resize(nRow, nsamples);
 
-            for (size_t i = 0; i < nsamples; i++)
+            if (sentenceBegin.GetNumRows() != nsamples)
+                LogicError("Number of rows should be the same as the number of data streams");
+
+            Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
+            colBegin.SetValue(sentenceBegin.ColumnSlice(utt_t, 1));
+            Matrix<ElemType> colSeg(colBegin.GetDeviceId()); 
+            colSeg.Resize(nStream, nStream);
+            /// will reset to 0 if sentence begining at a posiiton is 0
+            /// will keep the output if it is not the sentence begining
+            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE);
+            colSeg.SetDiagonalValue(colBegin);
+
+            Matrix<ElemType> newPrevOutput(colBegin.GetDeviceId());
+            Matrix<ElemType> newPrevState(colBegin.GetDeviceId());
+            if (utt_t == 0)
             {
-                bool reset = (sentenceBegin.size() == 0 ? (utt_t == 0 ? true : false) : (sentenceBegin.size() == 1) ? (sentenceBegin[0] == utt_t) : (sentenceBegin[i] == utt_t));
-                if (reset){
-                    pastOutput.ColumnSlice(i, 1).SetValue(0);
-                    pastState.ColumnSlice(i, 1).SetValue(defaultStateValue);
-                    slicePrevOutput.ColumnSlice(i, 1).SetValue(pastOutput.ColumnSlice(i, 1));
-                    slicePrevState.ColumnSlice(i, 1).SetValue(pastState.ColumnSlice(i, 1));
-                }
-                else
+                /// this is the begining of this minibatch
+                Matrix<ElemType>::Multiply(pastOutput.ColumnSlice(0, nsamples), false, colSeg, false, newPrevOutput);
+                Matrix<ElemType>::Multiply(pastState.ColumnSlice(0, nsamples), false, colSeg, false, newPrevState);
+            }
+            else
+            {
+                /// this is in the minibatch
+                Matrix<ElemType>::Multiply(output.ColumnSlice(timeIdxInSeq - nsamples, nsamples), false, colSeg, false, newPrevOutput);
+                Matrix<ElemType>::Multiply(state.ColumnSlice(timeIdxInSeq - nsamples, nsamples), false, colSeg, false, newPrevState);
+            }
+            slicePrevOutput.ColumnSlice(0, nsamples).SetValue(newPrevOutput);
+            slicePrevState.ColumnSlice(0, nsamples).SetValue(newPrevState);
+        }
+
+        /// prepare prevstate and prevoutput
+        static void WINAPI PrepareThisErrors(
+            size_t timeIdxInSeq,
+            size_t nT, /// number of columns
+            Matrix<ElemType> & error,
+            Matrix<ElemType> & stateError,
+            const Matrix<ElemType>& grdToPrevOutput,
+            const Matrix<ElemType>& grdToPrevState,
+            const Matrix<ElemType>& obs_error_from_future_minibatch,
+            const Matrix<ElemType>& state_error_from_future_minibatch,
+            size_t nsamples, const Matrix<ElemType>& sentenceBegin)
+        {
+            int utt_t = (int)floor(timeIdxInSeq / nsamples);
+            int total_utt_t = (int)floor(nT / nsamples);
+
+            Matrix<ElemType> colBegin = sentenceBegin.ColumnSlice(timeIdxInSeq, nsamples);
+
+            if (utt_t < total_utt_t)
+            {
+                Matrix<ElemType> colBeginNextFrame = sentenceBegin.ColumnSlice(timeIdxInSeq + nsamples, nsamples);
+
+                for (size_t utt_id = 0; utt_id < nsamples; utt_id++)
                 {
-                    if (sentenceBegin.size() > 0)
+                    if (colBeginNextFrame.ColumnSlice(utt_id, 1).Get00Element() <= SENTENCE_BEGIN &&
+                        colBegin.ColumnSlice(utt_id, 1).Get00Element() == SENTENCE_MIDDLE)
                     {
-                        if (utt_t == 0 && sentenceBegin[i] < 0)
-                        {
-                            slicePrevOutput.ColumnSlice(i, 1).SetValue(pastOutput.ColumnSlice(i, 1));
-                            slicePrevState.ColumnSlice(i, 1).SetValue(pastState.ColumnSlice(i, 1));
-                        }
-                        else
-                        if (utt_t > sentenceBegin[i])
-                        {
-                            slicePrevOutput.ColumnSlice(i, 1).SetValue(output.ColumnSlice(timeIdxInSeq - nsamples + i, 1));
-                            slicePrevState.ColumnSlice(i, 1).SetValue(state.ColumnSlice(timeIdxInSeq - nsamples + i, 1));
-                        }
-                        else
-                            throw std::runtime_error("impossible condition in preparehistory in LSTMNode");
-                    }
-                    else // sentenceBegin.size() == 0 
-                    {
-                        if (utt_t > 0)
-                        {
-                            slicePrevOutput.ColumnSlice(i, 1).SetValue(output.ColumnSlice(timeIdxInSeq - nsamples + i, 1));
-                            slicePrevState.ColumnSlice(i, 1).SetValue(state.ColumnSlice(timeIdxInSeq - nsamples + i, 1));
-                        }
-                        else
-                        {
-                            slicePrevOutput.ColumnSlice(i, 1).SetValue(pastOutput.ColumnSlice(i, 1));
-                            slicePrevState.ColumnSlice(i, 1).SetValue(pastState.ColumnSlice(i, 1));
-                        }
+                        error.ColumnSlice(utt_id, 1) += obs_error_from_future_minibatch.ColumnSlice(utt_id, 1);
+                        stateError.ColumnSlice(utt_id, 1) += state_error_from_future_minibatch.ColumnSlice(utt_id, 1);
                     }
                 }
             }
+            else
+            {
+                error += obs_error_from_future_minibatch;
+                stateError += state_error_from_future_minibatch;
+            }
+
+            error += grdToPrevOutput;
+            stateError += grdToPrevState;
+        }
+
+        /// prepare prevstate and prevoutput
+        static void WINAPI PrepareErrors(
+            size_t timeIdxInSeq,
+            Matrix<ElemType> & errors,
+            size_t nsamples, const Matrix<ElemType>& sentenceBegin)
+        {
+            Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
+            colBegin.SetValue(sentenceBegin.ColumnSlice(timeIdxInSeq, nsamples));
+
+            /// will reset to 0 if sentence begining at a posiiton is 0
+            /// will keep the output if it is not the sentence begining
+            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE);
+            Matrix<ElemType>::Scale(colBegin, errors);
         }
 
         static void WINAPI EvaluateThisNodeS(
@@ -3208,8 +3218,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(4)->FunctionValues().SetValue((ElemType)0.1);
             FunctionValues().Resize(nOutput, nT);
 
-            m_SentenceEnd.clear();
-            m_SentenceEnd.push_back(nT - 1);
             EvaluateThisNode();
 
             /// check with expected values
