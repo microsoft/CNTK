@@ -640,6 +640,10 @@ void BestGpu::QueryNvmlData()
 
 bool BestGpu::LockDevice(int deviceID, bool trial)
 {
+    if (deviceID < 0) // don't lock CPU, always return true 
+    {
+        return true;
+    }    
 #ifdef WIN32 
 	// copied from dbn.exe, not perfect but it works in practice 
 	wchar_t buffer[80];
