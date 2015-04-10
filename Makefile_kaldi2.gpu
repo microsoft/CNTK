@@ -25,7 +25,7 @@
 # export LD_LIBRARY_PATH=/usr/local/acml5.3.0/gfortran64/lib:/usr/local/cuda/lib64:/usr/local/lib
 # export PATH=$PATH:/usr/local/bin:/usr/local/cuda/bin
 
-CC = g++-4.8
+CC = g++-4.9
 NVCC = nvcc
 ARCH = x86_64
 DEVICE = gpu
