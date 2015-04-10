@@ -1484,9 +1484,13 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     const LabelInfo& labelInfo = m_labelInfo[labelInfoOut];
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr) return 0;
-    
+
+    DEVICEID_TYPE device = labels->GetDeviceId();
+
     labels->Resize(labelInfo.dim, actualmbsize);
     labels->SetValue(0);
+    labels->TransferFromDeviceToDevice(device, CPUDEVICE, true);
+
     size_t nbrLabl = 0;
     for (size_t j = 0; j < actualmbsize; ++j)
     {
@@ -1499,6 +1503,8 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         labels->SetValue(wrd, j, 1); 
         nbrLabl++;
     }
+
+    labels->TransferFromDeviceToDevice(CPUDEVICE, device, true);
     return nbrLabl;
 }
 
