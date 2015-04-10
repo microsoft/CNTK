@@ -780,6 +780,23 @@ bool LUSequenceReader<ElemType>::GetData(const std::wstring& sectionName, size_t
     return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
 }
 
+template<class ElemType>
+int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
+{
+
+    // now get the labels
+    LabelInfo& featIn = m_labelInfo[labelInfoOut];
+
+    auto found = featIn.mapLabelToId.find(featIn.endSequence);
+
+    // not yet found, add to the map
+    if (found != featIn.mapLabelToId.end())
+    {
+        return (int)found->second;
+    }
+    else return -1;
+}
+
 // instantiate all the combinations we expect to be used
 template class LUSequenceReader<double>; 
 template class LUSequenceReader<float>;
@@ -1257,6 +1274,9 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         if (mMaxSentenceLength > m_mbSize)
             throw std::runtime_error("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
 
+        /// reset sentenceending index to no_observation, which is negative
+        mSentenceEndAt.assign(mSentenceEndAt.size(), NO_OBSERVATION);
+
         mtSentenceBegin.Resize(mToProcess.size(), mMaxSentenceLength);
         mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
         DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
@@ -1485,8 +1505,10 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 template<class ElemType>
 void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin)
 {
-    mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), sentenceBegin.GetDeviceId(), true, false, false);
+    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
+    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
     sentenceBegin.SetValue(mtSentenceBegin); 
+    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
 }
 
 template<class ElemType>
@@ -1536,12 +1558,18 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = !EnsureDataAvailable(m_mbStartSample);
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
-        if (mSentenceEnd)
+        if (mSentenceEndAt.size() != mToProcess.size())
+            LogicError("DataEnd: sentence ending vector size %d and the toprocess vector size %d should be the same", mSentenceEndAt.size(), mToProcess.size());
+        ret = true;
+        for (size_t i = 0; i < mToProcess.size(); i++)
         {
-            for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
-                mProcessed[*ptr] = true; 
+            if (mSentenceEndAt[i] == NO_OBSERVATION)
+            {
+                LogicError("BatchLUSequenceReader: minibatch should be large enough to accomodate the longest sentence");
+            }
+            size_t k = mToProcess[i];
+            mProcessed[k] = true;
         }
-        ret = mSentenceEnd;
         break;
     }
     return ret;
@@ -1556,6 +1584,98 @@ bool BatchLUSequenceReader<ElemType>::CanReadFor(wstring nodeName)
     if (m_labelsName[labelInfoOut] == nodeName) return true;
 
     return false;
+}
+
+/// get a column slice corresponding to a frame of observations
+template<class ElemType>
+bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+{
+
+    // get out if they didn't call StartMinibatchLoop() first
+    if (m_mbSize == 0)
+        return false;
+
+    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
+
+    if (m_labelInfo[labelInfoIn].isproposal)
+    {
+        const LabelInfo& featInfo = m_labelInfo[labelInfoIn];
+
+        //loop through all the samples
+        Matrix<ElemType>& features = *matrices[m_featuresName];
+        if (matrices.find(m_featuresName) != matrices.end())
+        {
+            features.Resize(featInfo.dim * m_wordContext.size(), 1, true);
+            features.SetValue(0);
+        }
+
+        assert(mBlgSize == 1); /// currently only support one utterance a time
+
+        size_t hlength = history.size();
+        int nextProposal = -1;
+        if (hlength == 0)
+        {
+            LabelIdType index;
+
+            if (mbEncodingForDecoding == false)
+                index = GetIdFromLabel(m_labelInfo[labelInfoIn].beginSequence.c_str(), labelIn);
+            else
+                /// need to generate symbols from the end of the encoding sequence
+                index = GetIdFromLabel(m_labelInfo[labelInfoIn].endSequence.c_str(), labelIn);
+            nextProposal = index;
+            history.push_back(nextProposal);
+        }
+
+        for (size_t j = 0; j < mBlgSize; ++j)
+        {
+            for (size_t jj = 0; jj < m_wordContext.size(); jj++)
+            {
+                int cxt = m_wordContext[jj];
+
+                /// assert that wordContext is organized as descending order
+                assert((jj == m_wordContext.size() - 1) ? true : cxt > m_wordContext[jj + 1]);
+
+                size_t hidx;
+                size_t hlength = history.size();
+                if (hlength + cxt > 0)
+                    hidx = history[hlength + cxt - 1];
+                else
+                    hidx = history[0];
+
+                if (matrices.find(m_featuresName) != matrices.end())
+                {
+                    features.SetValue(hidx + jj * featInfo.dim, j, (ElemType)1);
+                }
+            }
+        }
+    }
+    else {
+        for (map<wstring, Matrix<ElemType>>::iterator p = mMatrices.begin(); p != mMatrices.end(); p++)
+        {
+            assert(mMatrices[p->first].GetNumCols() > tidx);
+            if (matrices.find(p->first) != matrices.end())
+                matrices[p->first]->SetValue(mMatrices[p->first].ColumnSlice(tidx, mBlgSize));
+        }
+    }
+    // we read some records, so process them
+    return true;
+}
+
+/// propose labels, return a vector with size larger than 0 if this reader allows proposal
+/// otherwise, return a vector with length zero
+template<class ElemType>
+void BatchLUSequenceReader<ElemType>::InitProposals(map<wstring, Matrix<ElemType>*>& pMat)
+{
+    if (m_labelInfo[labelInfoIn].isproposal)
+    {
+        /// no need to save info for labelInfoIn since it is in mProposals
+        if (pMat.find(m_labelsName[labelInfoOut]) != pMat.end())
+            mMatrices[m_labelsName[labelInfoOut]].SetValue(*(pMat[m_labelsName[labelInfoOut]]));
+    }
+    else {
+        if (pMat.find(m_featuresName) != pMat.end())
+            mMatrices[m_featuresName].SetValue(*(pMat[m_featuresName]));
+    }
 }
 
 template class BatchLUSequenceReader<double>;
@@ -1693,6 +1813,57 @@ size_t MultiIOBatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
     return mReader.begin()->second->NumberSlicesInEachRecurrentIter();
 }
 
+template<class ElemType>
+int MultiIOBatchLUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
+{
+    if (mReader.size() != 1)
+        LogicError("GetSentenceEndIdFromOutputLabel: support only for one reader in MultiIOBatchLUSequenceReader");
+    int iret = -1;
+
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        iret = (p->second)->GetSentenceEndIdFromOutputLabel();
+    }
+    return iret;
+}
+
+template<class ElemType>
+bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
+{
+    bool ret = true;
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        ret |= (p->second)->DataEnd(endDataType);
+    }
+    return ret;
+}
+
+/// history is shared
+template<class ElemType>
+bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+{
+    /// run for each reader
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        if ((p->second)->GetFrame(matrices, tidx, history) == false)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+/// need to provide initial matrice values if there are
+/// these values are from getMinibatch
+template<class ElemType>
+void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+{
+    /// run for each reader
+    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    {
+        (p->second)->InitProposals(matrices);
+    }
+}
 
 template class MultiIOBatchLUSequenceReader<double>;
 template class MultiIOBatchLUSequenceReader<float>;
