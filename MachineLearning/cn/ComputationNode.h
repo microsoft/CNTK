@@ -294,6 +294,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_samplesInRecurrentStep = bsz;
         }
 
+        size_t GetNbrSlicesInEachRecurrentIteration()
+        {
+            return m_samplesInRecurrentStep;
+        }
+
         int64_t UpdateEvalTimeStamp()
         {
             m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);

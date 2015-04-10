@@ -235,7 +235,7 @@ namespace Microsoft {
                     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                     {
                         ComputationNodePtr node = (*nodeIter);
-                        smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), encoderNet.GetDeviceID()));
+                        smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
                     }
 
                     vector<ElemType> epochCriterion;
@@ -904,7 +904,6 @@ namespace Microsoft {
                     encoderNet.SetActualMiniBatchSize(actualMBSize);
                     encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
                     encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.m_sentenceSeg);
-                    //                encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.m_sentenceBegin);
 
                     encoderNet.Evaluate(encoderEvaluationNodes[0]);
 
@@ -914,10 +913,7 @@ namespace Microsoft {
                     decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
                     /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                    //                decoderTrainSetDataReader->SetSentenceBegin(false);
                     decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceSeg);
-                    //                decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceBegin);
-                    //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
 
                     /// get the pair of encode and decoder nodes
                     for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
