@@ -177,6 +177,8 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
     
+public:
+    int GetSentenceEndIdFromOutputLabel();
 };
 
 template<class ElemType>
@@ -236,6 +238,7 @@ public:
 	using LUSequenceReader<ElemType>::mRandomize;
 	using LUSequenceReader<ElemType>::m_seed;
     using LUSequenceReader<ElemType>::mTotalSentenceSofar;
+    using LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel;
 private:
     size_t mLastProcssedSentenceId ; 
     size_t mBlgSize; 
@@ -307,6 +310,18 @@ public:
     }
 
 public:
+    /**
+    for sequential reading data, useful for beam search decoding
+    */
+    /// this is for frame-by-frame reading of data.
+    /// data is first read into these matrices and then if needed is column-by-column retrieved
+    map<wstring, Matrix<ElemType>> mMatrices;
+    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
+
+    /// create proposals
+    void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);
+
+public:
     bool mbEncodingForDecoding;
 
     bool mEqualLengthOutput;
@@ -373,6 +388,15 @@ public:
 
 public:
     void SetRandomSeed(int);
+
+public:
+    int GetSentenceEndIdFromOutputLabel();
+    bool DataEnd(EndDataType endDataType);
+
+    /// create proposals
+    void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);
+    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history);
+
 };
 
 

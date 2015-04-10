@@ -56,6 +56,7 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
     virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
+    virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
     virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) = 0; 
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
@@ -63,6 +64,8 @@ public:
     virtual bool DataEnd(EndDataType endDataType) = 0;
     virtual void SetSentenceSegBatch(Matrix<ElemType>&sentenceEnd) = 0;
     virtual void SetRandomSeed(int) = 0;
+    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false;  }
+    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
 };
 
 // GetReader - get a reader type from the DLL
@@ -134,6 +137,7 @@ public:
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     size_t NumberSlicesInEachRecurrentIter() ;
+    int GetSentenceEndIdFromOutputLabel();
 
     void SetNbrSlicesEachRecurrentIter(const size_t );
 
@@ -160,6 +164,10 @@ public:
     void SetSentenceSegBatch(Matrix<ElemType>&sentenceEnd);
 
     virtual void SetRandomSeed(int);
+
+    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&);
+    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
 };
 
 }}}
