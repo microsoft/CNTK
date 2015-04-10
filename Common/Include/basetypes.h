@@ -1138,4 +1138,10 @@ These macros are used for sentence segmentation information.
 #define SENTENCE_MIDDLE 1
 #define NO_OBSERVATION -1
 
+template<class F>
+static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
+{
+    return l.second > r.second;
+}
+
 #endif    // _BASETYPES_
