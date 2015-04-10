@@ -39,7 +39,7 @@ int GPUWatcher::GetGPUIdWithTheMostFreeMemory()
 size_t GPUWatcher::GetFreeMemoryOnCUDADevice(int devId)
 {
     cudaError_t result = cudaSetDevice(devId);
-    if (result!=CUDA_SUCCESS)
+    if (result != cudaSuccess)
     {
         return 0;
     }
@@ -47,7 +47,7 @@ size_t GPUWatcher::GetFreeMemoryOnCUDADevice(int devId)
     size_t free=0;  
     size_t total=0;  
     result = cudaMemGetInfo(&free, &total);  
-    if (result!=CUDA_SUCCESS)
+    if (result != cudaSuccess)
     {
         return 0;
     }
