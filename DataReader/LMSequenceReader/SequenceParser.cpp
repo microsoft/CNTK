@@ -558,7 +558,7 @@ template class SequenceParser<double, double>;
 template class SequenceParser<double, std::string>;
 
 template <typename NumType, typename LabelType>
-void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn="<s>", std::string endSequenceIn="</s>", std::string beginSequenceOut="O", std::string endSequenceOut="O")
+void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn/*="<s>"*/, std::string endSequenceIn/*="</s>"*/, std::string beginSequenceOut/*="O"*/, std::string endSequenceOut/*="O"*/)
 {
     ::LMSequenceParser<NumType, LabelType>::ParseInit(fileName, dimFeatures, dimLabelsIn, dimLabelsOut, beginSequenceIn, endSequenceIn, beginSequenceOut, endSequenceOut);
 }
