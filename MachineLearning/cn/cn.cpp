@@ -749,6 +749,72 @@ void DoEncoderDecoder(const ConfigParameters& config)
     delete cvDecoderDataReader;
 }
 
+/**
+this is for testing models trained using the sequence to sequence translation method below
+http://arxiv.org/pdf/1409.3215.pdf
+*/
+template <typename ElemType>
+void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> encoderReader(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    decoderReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> decoderReader(decoderReaderConfig);
+
+    ConfigArray minibatchSize = config("minibatchSize", "40960");
+    size_t epochSize = config("epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+    wstring encoderModelPath = config("encoderModelPath");
+    wstring decoderModelPath = config("decoderModelPath");
+    intargvector mbSize = minibatchSize;
+
+    UINT16 traceLevel = config("traceLevel", "0");
+    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+
+    ComputationNetwork<ElemType> encoderNet(deviceId);
+    encoderNet.LoadFromFile(encoderModelPath, FileOptions::fileOptionsBinary, true);
+    encoderNet.ResetEvalTimeStamp();
+
+    ComputationNetwork<ElemType> decoderNet(deviceId);
+    decoderNet.LoadFromFile(decoderModelPath);
+    decoderNet.ResetEvalTimeStamp();
+
+    ConfigArray evalNodeNames = config("evalNodeNames");
+    vector<wstring> evalNodeNamesVector;
+    for (int i = 0; i < evalNodeNames.size(); ++i)
+    {
+        evalNodeNamesVector.push_back(evalNodeNames[i]);
+    }
+
+    ConfigArray outputNodeNames = config("outputNodeNames");
+    vector<wstring> outputNodeNamesVector;
+    for (int i = 0; i < outputNodeNames.size(); ++i)
+    {
+        outputNodeNamesVector.push_back(outputNodeNames[i]);
+    }
+
+    ElemType beamWidth = config("beamWidth", "1");
+
+    ConfigParameters writerConfig = config("writer");
+    DataWriter<ElemType> testDataWriter(writerConfig);
+
+    SimpleEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
+    eval.InitTrainEncoderDecoderWithHiddenStates(config);
+
+    eval.EncodingEvaluateDecodingBeamSearch(encoderNet, decoderNet, encoderReader, decoderReader,
+        testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
+}
+
 template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
@@ -814,6 +880,8 @@ void DoCommand(const ConfigParameters& config)
                 DoWriteWordAndClassInfo<ElemType>(commandParams);
             else if (action[j] == "trainEncoderDecoder")
                 DoEncoderDecoder<ElemType>(commandParams);
+            else if (action[j] == "testEncoderDecoder")
+                DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 

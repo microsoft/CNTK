@@ -8,6 +8,7 @@
 #include "ComputationNetwork.h"
 #include "ComputationNetworkHelper.h"
 #include "DataReader.h"
+#include "DataWriter.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -21,6 +22,24 @@ using namespace std;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
+    struct NN_state {
+        map<wstring, Matrix<ElemType>> hidden_activity;
+    };
+
+    template<class ElemType>
+    struct Token{
+        Token(const ElemType score, const std::vector<size_t> &sequence, const NN_state<ElemType> & state)
+            : score(score), sequence(sequence), state(state) {
+        }
+        bool operator<(const Token &t) const {
+            return score < t.score;
+        }
+        ElemType score;
+        vector<size_t> sequence;
+        NN_state<ElemType> state;
+    };
+
+    template<class ElemType>
     class SimpleEvaluator : ComputationNetworkHelper<ElemType>
     {
         typedef ComputationNetworkHelper<ElemType> B;
@@ -28,6 +47,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         typedef ComputationNode<ElemType>* ComputationNodePtr;
         typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
+
+    protected:
+        /// used for backward directional nodes
+        std::list<ComputationNodePtr> batchComputeNodes;
 
     public:
 
@@ -450,16 +473,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// first evaluate encoder network
                 if (encoderDataReader.GetMinibatch(encoderInputMatrices) == false)
                     break;
-                actualMBSize = decoderDataReader.GetMinibatch(decoderInputMatrices);
-                if (actualMBSize == 0)
+                if (decoderDataReader.GetMinibatch(decoderInputMatrices) == false)
                     break;
                 UpdateEvalTimeStamps(encoderFeatureNodes);
                 UpdateEvalTimeStamps(decoderFeatureNodes);
 
+                actualMBSize = decoderNet.GetActualMBSize();
+                if (actualMBSize == 0)
+                    LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
+
                 encoderNet.SetActualMiniBatchSize(actualMBSize);
                 encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
                 encoderDataReader.SetSentenceSegBatch(encoderNet.m_sentenceSeg);
-//                encoderDataReader.SetSentenceSegBatch(encoderNet.m_sentenceBegin);
 
                 assert(encoderEvalNodes.size() == 1);
                 for (int i = 0; i < encoderEvalNodes.size(); i++)
@@ -469,11 +494,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-//                decoderDataReader.SetSentenceBegin(false);
                 decoderNet.SetActualNbrSlicesInEachRecIter(decoderDataReader.NumberSlicesInEachRecurrentIter());
                 decoderDataReader.SetSentenceSegBatch(decoderNet.m_sentenceSeg);
-//                decoderDataReader.SetSentenceSegBatch(decoderNet.m_sentenceBegin);
-//                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
 
                 /// get the pair of encode and decoder nodes
                 for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
@@ -514,8 +536,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// call DataEnd to check if end of sentence is reached
                 /// datareader will do its necessary/specific process for sentence ending 
-//                encoderDataReader.SetSentenceEnd(true);
-//                decoderDataReader.SetSentenceEnd(true);
                 encoderDataReader.DataEnd(endDataSentence);
                 decoderDataReader.DataEnd(endDataSentence);
             }
@@ -542,6 +562,449 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return evalResults;
         }
+
+        void InitTrainEncoderDecoderWithHiddenStates(const ConfigParameters& readerConfig)
+        {
+            ConfigArray arrEncoderNodeNames = readerConfig("encoderNodes", "");
+            vector<wstring> encoderNodeNames;
+
+            m_lst_pair_encoder_decode_node_names.clear();;
+
+            if (arrEncoderNodeNames.size() > 0)
+            {
+                /// newer code that explicitly place multiple streams for inputs
+                foreach_index(i, arrEncoderNodeNames) // inputNames should map to node names
+                {
+                    wstring nodeName = arrEncoderNodeNames[i];
+                    encoderNodeNames.push_back(nodeName);
+                }
+            }
+
+            ConfigArray arrDecoderNodeNames = readerConfig("decoderNodes", "");
+            vector<wstring> decoderNodeNames;
+            if (arrDecoderNodeNames.size() > 0)
+            {
+                /// newer code that explicitly place multiple streams for inputs
+                foreach_index(i, arrDecoderNodeNames) // inputNames should map to node names
+                {
+                    wstring nodeName = arrDecoderNodeNames[i];
+                    decoderNodeNames.push_back(nodeName);
+                }
+            }
+
+            assert(encoderNodeNames.size() == decoderNodeNames.size());
+
+            for (size_t i = 0; i < encoderNodeNames.size(); i++)
+            {
+                m_lst_pair_encoder_decode_node_names.push_back(make_pair(encoderNodeNames[i], decoderNodeNames[i]));
+            }
+        }
+
+        void EncodingEvaluateDecodingBeamSearch(
+            ComputationNetwork<ElemType>& encoderNet,
+            ComputationNetwork<ElemType>& decoderNet,
+            IDataReader<ElemType>& encoderDataReader,
+            IDataReader<ElemType>& decoderDataReader,
+            IDataWriter<ElemType>& dataWriter,
+            const vector<wstring>& outputNodeNames, const vector<wstring>& writeNodeNames,
+            const size_t mbSize, const ElemType beam, const size_t testSize)
+        {
+            std::vector<ComputationNodePtr> encoderEvalNodes;
+            for (int i = 0; i< encoderNet.OutputNodes().size(); i++)
+                encoderEvalNodes.push_back(encoderNet.OutputNodes()[i]);
+            assert(encoderEvalNodes.size() == 1);
+
+            //specify output nodes and files
+            std::vector<ComputationNodePtr> outputNodes;
+            for (int i = 0; i<outputNodeNames.size(); i++)
+                outputNodes.push_back(decoderNet.GetNodeFromName(outputNodeNames[i]));
+
+            //specify nodes to write to file
+            std::vector<ComputationNodePtr> writeNodes;
+            for (int i = 0; i<writeNodeNames.size(); i++)
+                writeNodes.push_back(m_net.GetNodeFromName(writeNodeNames[i]));
+
+            //prepare features and labels
+            std::vector<ComputationNodePtr> & encoderFeatureNodes = encoderNet.FeatureNodes();
+            std::vector<ComputationNodePtr> & decoderFeatureNodes = decoderNet.FeatureNodes();
+            std::vector<ComputationNodePtr> & decoderLabelNodes = decoderNet.LabelNodes();
+
+            std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices;
+            for (size_t i = 0; i<encoderFeatureNodes.size(); i++)
+            {
+                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &encoderFeatureNodes[i]->FunctionValues();
+            }
+
+            std::map<std::wstring, Matrix<ElemType>*> decoderInputMatrices;
+            for (size_t i = 0; i<decoderFeatureNodes.size(); i++)
+            {
+                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &decoderFeatureNodes[i]->FunctionValues();
+            }
+            for (size_t i = 0; i<decoderLabelNodes.size(); i++)
+            {
+                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &decoderLabelNodes[i]->FunctionValues();
+            }
+
+            /// get the pair of encode and decoder nodes
+            if (m_lst_pair_encoder_decoder_nodes.size() == 0 && m_lst_pair_encoder_decode_node_names.size() > 0)
+            {
+                for (list<pair<wstring, wstring>>::iterator iter = m_lst_pair_encoder_decode_node_names.begin(); iter != m_lst_pair_encoder_decode_node_names.end(); iter++)
+                {
+                    /// past hidden layer activity from encoder network to decoder network
+                    ComputationNodePtr encoderNode = encoderNet.GetNodeFromName(iter->first);
+                    ComputationNodePtr decoderNode = decoderNet.GetNodeFromName(iter->second);
+
+                    if (encoderNode != nullptr && decoderNode != nullptr)
+                        m_lst_pair_encoder_decoder_nodes.push_back(make_pair(encoderNode, decoderNode));
+                }
+            }
+
+            if (m_lst_pair_encoder_decoder_nodes.size() == 0)
+                throw runtime_error("TrainOneEpochEncoderDecoderWithHiddenStates: no encoder and decoder node pairs");
+
+            //evaluate through minibatches
+            size_t totalEpochSamples = 0;
+            size_t actualMBSize = 0;
+
+            encoderDataReader.StartMinibatchLoop(mbSize, 0, testSize);
+            encoderDataReader.SetNbrSlicesEachRecurrentIter(1);
+            decoderDataReader.StartMinibatchLoop(mbSize, 0, testSize);
+            decoderDataReader.SetNbrSlicesEachRecurrentIter(1);
+
+            Matrix<ElemType> mEncoderOutput(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
+            Matrix<ElemType> historyMat(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
+
+            bool bDecoding = true; 
+            while (bDecoding){
+                if (encoderDataReader.GetMinibatch(encoderInputMatrices) == false)
+                    break;
+
+                UpdateEvalTimeStamps(encoderFeatureNodes);
+
+                actualMBSize = encoderNet.GetActualMBSize();
+
+                encoderNet.SetActualMiniBatchSize(actualMBSize);
+                encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
+                encoderDataReader.SetSentenceSegBatch(encoderNet.m_sentenceSeg);
+
+                assert(encoderEvalNodes.size() == 1);
+                for (int i = 0; i<encoderEvalNodes.size(); i++)
+                {
+                    encoderNet.Evaluate(encoderEvalNodes[i]);
+                }
+
+                size_t mNutt = encoderDataReader.NumberSlicesInEachRecurrentIter();
+
+                /// get the pair of encode and decoder nodes
+                for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
+                {
+                    /// past hidden layer activity from encoder network to decoder network
+                    ComputationNodePtr encoderNode = iter->first;
+                    ComputationNodePtr decoderNode = iter->second;
+
+                    encoderNode->GetHistory(historyMat, true);
+#ifdef DEBUG_DECODER
+                    fprintf(stderr, "LSTM past output norm = %.8e\n", historyMat.ColumnSlice(0, 1).FrobeniusNorm());
+                    fprintf(stderr, "LSTM past state norm = %.8e\n", historyMat.ColumnSlice(1, 1).FrobeniusNorm());
+#endif
+                    decoderNode->SetHistory(historyMat);
+                }
+
+                vector<size_t> best_path;
+
+                decoderNet.SetActualMiniBatchSize(actualMBSize);
+                decoderDataReader.SetNbrSlicesEachRecurrentIter(mNutt);
+                decoderNet.SetActualNbrSlicesInEachRecIter(decoderDataReader.NumberSlicesInEachRecurrentIter());
+
+                decoderNet.m_sentenceSeg.Resize(decoderDataReader.NumberSlicesInEachRecurrentIter(), 1);
+                decoderNet.m_sentenceSeg.SetValue(SENTENCE_MIDDLE);
+
+                FindBestPathWithVariableLength(decoderNet, actualMBSize, decoderDataReader, dataWriter, outputNodes, writeNodes, decoderFeatureNodes, beam, decoderInputMatrices, best_path);
+
+                totalEpochSamples += actualMBSize;
+
+                /// call DataEnd to check if end of sentence is reached
+                /// datareader will do its necessary/specific process for sentence ending 
+                encoderDataReader.DataEnd(endDataSentence);
+            }
+        }
+
+        bool GetCandidatesAtOneTimeInstance(const Matrix<ElemType>& score,
+            const ElemType & preScore, const ElemType & threshold,
+            const ElemType& best_score_so_far,
+            vector<pair<int, ElemType>>& rCandidate)
+        {
+            Matrix<ElemType> ptrScore(CPUDEVICE);
+            ptrScore = score;
+
+            ElemType *pPointer = ptrScore.BufferPointer();
+            vector<pair<int, ElemType>> tPairs;
+            for (int i = 0; i < ptrScore.GetNumElements(); i++)
+            {
+                tPairs.push_back(make_pair(i, pPointer[i]));
+                //                    assert(pPointer[i] <= 1.0); /// work on the posterior probabilty, so every score should be smaller than 1.0
+            }
+
+            std::sort(tPairs.begin(), tPairs.end(), comparator<ElemType>);
+
+            bool bAboveThreshold = false;
+            for (vector<pair<int, ElemType>>::iterator itr = tPairs.begin(); itr != tPairs.end(); itr++)
+            {
+                if (itr->second < 0.0)
+                    LogicError("This means to use probability so the value should be non-negative");
+
+                ElemType dScore = (itr->second > (ElemType)EPS_IN_LOG) ? log(itr->second) : (ElemType)LOG_OF_EPS_IN_LOG;
+
+                dScore += preScore;
+                if (dScore >= threshold && dScore >= best_score_so_far)
+                {
+                    rCandidate.push_back(make_pair(itr->first, dScore));
+                    bAboveThreshold = true;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return bAboveThreshold;
+        }
+
+        // retrieve activity at time atTime. 
+        // notice that the function values returned is single column 
+        void PreComputeActivityAtTime(size_t atTime)
+        {
+            for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
+            {
+                ComputationNodePtr node = *nodeIter;
+                node->EvaluateThisNode(atTime);
+                if (node->FunctionValues().GetNumCols() != node->GetNbrSlicesInEachRecurrentIteration())
+                {
+                    RuntimeError("preComputeActivityAtTime: the function values has to be a single column matrix ");
+                }
+            }
+        }
+
+        //return true if precomputation is executed.
+        void ResetPreCompute()
+        {
+            //mark false
+            for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
+            {
+                BatchModeNode<ElemType>* node = static_cast<BatchModeNode<ElemType>*> (*nodeIter);
+                node->MarkComputed(false);
+            }
+        }
+
+        //return true if precomputation is executed.
+        bool PreCompute(ComputationNetwork<ElemType>& net,
+            std::vector<ComputationNodePtr>& FeatureNodes)
+        {
+            batchComputeNodes = net.GetNodesRequireBatchMode();
+
+            if (batchComputeNodes.size() == 0)
+            {
+                return false;
+            }
+
+            UpdateEvalTimeStamps(FeatureNodes);
+
+            size_t actualMBSize = net.GetActualMBSize();
+            net.SetActualMiniBatchSize(actualMBSize);
+            for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
+            {
+                net.Evaluate(*nodeIter);
+            }
+
+            //mark done
+            for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
+            {
+                BatchModeNode<ElemType>* node = static_cast<BatchModeNode<ElemType>*> (*nodeIter);
+                node->MarkComputed(true);
+            }
+
+            return true;
+        }
+
+        void WriteNbest(const size_t nidx, const vector<size_t> &best_path,
+            std::vector<ComputationNodePtr>& outputNodes, IDataWriter<ElemType>& dataWriter)
+        {
+            assert(outputNodes.size() == 1);
+            std::map<std::wstring, void *, nocase_compare> outputMatrices;
+            size_t bSize = best_path.size();
+            for (int i = 0; i < outputNodes.size(); i++)
+            {
+                size_t dim = outputNodes[i]->FunctionValues().GetNumRows();
+                outputNodes[i]->FunctionValues().Resize(dim, bSize);
+                outputNodes[i]->FunctionValues().SetValue(0);
+                for (int k = 0; k < bSize; k++)
+                    outputNodes[i]->FunctionValues().SetValue(best_path[k], k, 1.0);
+                outputMatrices[outputNodes[i]->NodeName()] = (void *)(&outputNodes[i]->FunctionValues());
+            }
+
+            dataWriter.SaveData(nidx, outputMatrices, bSize, bSize, 0);
+        }
+
+        /**
+            beam search decoder
+        */
+        ElemType FindBestPathWithVariableLength(ComputationNetwork<ElemType>& evalnet,
+            size_t inputLength,
+            IDataReader<ElemType>& dataReader, IDataWriter<ElemType>& dataWriter,
+            std::vector<ComputationNodePtr>& evalNodes,
+            std::vector<ComputationNodePtr>& outputNodes,
+            std::vector<ComputationNodePtr> & FeatureNodes,
+            const ElemType beam, 
+            std::map<std::wstring, Matrix<ElemType>*> & inputMatrices,
+            vector<size_t> &best_path)
+        {
+            assert(evalNodes.size() == 1);
+
+            NN_state<ElemType> state;
+            NN_state<ElemType> null_state;
+
+            priority_queue<Token<ElemType>> n_bests;  /// save n-bests
+
+            /**
+            loop over all the candidates for the featureDelayTarget,
+            evaluate their scores, save their histories
+            */
+            priority_queue<Token<ElemType>> from_queue, to_queue;
+            priority_queue<Token<ElemType>> result_queue;
+            vector<ElemType> evalResults;
+
+            size_t mbSize = inputLength;
+            size_t maxMbSize = 3 * mbSize;
+
+            /// use reader to initialize evalnet's sentence start information to let it know that this
+            /// is the begining of sentence
+            evalnet.SetActualMiniBatchSize(mbSize);
+            evalnet.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
+
+            clock_t start, now;
+            start = clock();
+
+            from_queue.push(Token<ElemType>(0., vector<size_t>(), state)); /// the first element in the priority queue saves the initial NN state
+
+            /// the end of sentence symbol in reader
+            int outputEOS = dataReader.GetSentenceEndIdFromOutputLabel();
+
+            dataReader.InitProposals(inputMatrices);
+
+            size_t itdx = 0;
+
+            ResetPreCompute();
+            PreCompute(evalnet, FeatureNodes);
+
+            /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
+            /// is the begining of sentence
+            evalnet.SetActualMiniBatchSize(dataReader.NumberSlicesInEachRecurrentIter());
+
+            ElemType best_score = -numeric_limits<ElemType>::infinity();
+            ElemType best_score_so_far = -numeric_limits<ElemType>::infinity();
+            for (itdx = 0; itdx < maxMbSize; itdx++)
+            {
+                best_score = -numeric_limits<ElemType>::infinity();
+                vector<size_t> best_output_label;
+
+                PreComputeActivityAtTime(itdx);
+
+                while (!from_queue.empty()) {
+                    const Token<ElemType> from_token = from_queue.top();
+                    vector<size_t> history = from_token.sequence;
+
+                    /// update feature nodes once, as the observation is the same for all propsoals in labels
+                    UpdateEvalTimeStamps(FeatureNodes);
+
+                    /// history is updated in the getproposalobs function
+                    dataReader.GetProposalObs(inputMatrices, itdx, history);
+
+                    /// get the nn state history and set nn state to the history
+                    map<wstring, Matrix<ElemType>> hidden_history = from_token.state.hidden_activity;
+                    evalnet.SetHistory(hidden_history);
+
+                    for (int i = 0; i<evalNodes.size(); i++)
+                    {
+                        evalnet.Evaluate(evalNodes[i]);
+                        vector<pair<int, ElemType>> retPair;
+                        if (GetCandidatesAtOneTimeInstance(evalNodes[i]->FunctionValues(), from_token.score, best_score - beam, -numeric_limits<ElemType>::infinity(), retPair)
+                            == false)
+                            continue;
+
+                        evalnet.GetHistory(state.hidden_activity, true);
+                        for (vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
+                        {
+                            vector<size_t> history = from_token.sequence;
+                            history.push_back(itr->first);
+
+                            if (itr->first != outputEOS)
+                            {
+                                Token<ElemType> to_token(itr->second, history, state);  /// save updated nn state and history
+
+                                to_queue.push(to_token);
+
+                                if (itr->second > best_score)  /// update best score
+                                {
+                                    best_score = itr->second;
+                                    best_output_label = history;
+                                }
+                            }
+                            else {
+                                /// sentence ending reached
+                                Token<ElemType> to_token(itr->second, history, state);  
+                                result_queue.push(to_token);
+                            }
+                        }
+
+                        history = from_token.sequence;  /// back to the from token's history
+                    }
+
+                    from_queue.pop();
+                }
+
+                if (to_queue.size() == 0)
+                    break;
+
+                // beam pruning
+                const ElemType threshold = best_score - beam;
+                while (!to_queue.empty())
+                {
+                    if (to_queue.top().score >= threshold)
+                        from_queue.push(to_queue.top());
+                    to_queue.pop();
+                }
+
+                best_score_so_far = best_score;
+            }
+
+            // write back best path
+            size_t ibest = 0;
+            while (result_queue.size() > 0)
+            {
+                best_path.clear();
+
+                assert(best_path.empty());
+                best_path.swap(result_queue.top().sequence);
+                {
+                    ElemType score = result_queue.top().score;
+                    best_score = score;
+                    fprintf(stderr, "best[%d] score = %.4e\t", ibest, score);
+                    if (best_path.size() > 0)
+                        WriteNbest(ibest, best_path, outputNodes, dataWriter);
+                }
+
+                ibest++;
+
+                result_queue.pop();
+                break; /// only output the top one
+            }
+
+            now = clock();
+            fprintf(stderr, "%.1f words per second\n", mbSize / ((double)(now - start) / 1000.0));
+
+            return (ElemType) best_score;
+        }
+
     };
 
 }}}
