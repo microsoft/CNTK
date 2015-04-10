@@ -2461,9 +2461,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_inputDim = m_inputDim;
                 node->m_outputDim = m_outputDim;
 
-                node->mPastState = mPastState;
-                node->mPastOutput = mPastOutput;
-
                 node->mState = mState;  /// hidden state activity
                 node->mPastState = mPastState; /// state activity in the previous minibatch
                 node->mPastOutput = mPastOutput; /// output in the previou minibatch 
@@ -2514,6 +2511,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 stateError.Resize(slicePrevState.GetNumRows(), slicePrevState.GetNumCols());
 
+                grdToPrevOutput.Resize(slicePrevOutput.GetNumRows(), slicePrevOutput.GetNumCols());
+                grdToPrevState.Resize(slicePrevState.GetNumRows(), slicePrevState.GetNumCols());
+                grdToPrevOutput.SetValue(0);
+                grdToPrevState.SetValue(0);
+
                 for (int timeIdxInSeq = nT - m_samplesInRecurrentStep; timeIdxInSeq >= 0; timeIdxInSeq -= m_samplesInRecurrentStep)
                 {
                     Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
@@ -2536,7 +2538,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr, "original output error [%d] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
 #endif
 
-                    PrepareThisErrors(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState, 
+                    PrepareThisErrorsBeforeBackProp(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState,
                         m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, m_sentenceSeg);
 
 #ifdef DEBUG_DECODER
@@ -2579,28 +2581,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     grdToObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
-                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, m_samplesInRecurrentStep, m_sentenceSeg);
-                    PrepareErrors(timeIdxInSeq, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
+                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "after error prop b_c norm = %.8e\n", Inputs(4)->FunctionValues().ColumnSlice(0, 1).FrobeniusNorm());
 #endif
                 m_obs_error_from_future_minibatch = grdToPrevOutput;
                 m_state_error_from_future_minibatch = grdToPrevState;
-
-                /// save the last time hidden activities and output for the next minibatch
-                for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
-                {
-                    for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
-                    {
-                        if (m_sentenceSeg.ColumnSlice(t, 1).Get00Element() == SENTENCE_MIDDLE)
-                        {
-                            mPastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
-                            mPastState.ColumnSlice(i, 1).SetValue(mState.ColumnSlice(t, 1));
-                            break;
-                        }
-                    }
-                }
 
 
 #ifdef DEBUG_DECODER
@@ -2837,6 +2824,78 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
+        /**
+        get the segmentation information, SENTENECE_BEGIN, SENTENCE_MIDDLE, NO_OBSERVATION 
+        for time at t and stream of streamid
+        */
+        int GetSegInfo(size_t t, size_t streamid)
+        {
+            if (streamid >= m_samplesInRecurrentStep)
+                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", streamid, m_samplesInRecurrentStep);
+
+            size_t nT = Inputs(0)->FunctionValues().GetNumCols();
+            if (t >= nT)
+                LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
+
+            int utt_t = (int)t / m_samplesInRecurrentStep;
+            Matrix<ElemType> thisCol = m_sentenceSeg.ColumnSlice(utt_t, 1);
+            thisCol.Reshape(1, m_samplesInRecurrentStep);
+            return (int) thisCol.ColumnSlice(streamid, 1).Get00Element();
+        }
+
+        /**
+        save the last hidden layer activity and output
+        */
+        void SaveLastStateActity()
+        {
+            size_t nT = Inputs(0)->FunctionValues().GetNumCols();
+            size_t outputDim = Inputs(1)->FunctionValues().GetNumRows();
+            
+            /// save the hidden activities and output for the next minibatch
+            mLastOutput.Resize(outputDim, m_samplesInRecurrentStep);
+            mLastState.Resize(outputDim, m_samplesInRecurrentStep);
+
+            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+            {
+                for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
+                {
+                    if (GetSegInfo(t, i) == SENTENCE_MIDDLE)
+                    {
+                        mLastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
+                        mLastState.ColumnSlice(i, 1).SetValue(mState.ColumnSlice(t, 1));
+                        break;
+                    }
+                }
+            }
+        }
+
+        /**
+        Reset state and output for no-observation case
+        */
+        void ResetForNoObservation()
+        {
+            size_t nT = Inputs(0)->FunctionValues().GetNumCols();
+            /// set output to 0 if there are no observations
+            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+            {
+                for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
+                {
+                    if (GetSegInfo(t, i) == NO_OBSERVATION)
+                    {
+                        FunctionValues().ColumnSlice(t, 1).SetValue(0);
+                        mState.ColumnSlice(t, 1).SetValue(0);
+
+                        mGi.ColumnSlice(t, 1).SetValue(0);
+                        mGf.ColumnSlice(t, 1).SetValue(0);
+                        mGo.ColumnSlice(t, 1).SetValue(0);
+
+                        tanhState.ColumnSlice(t, 1).SetValue(0);
+                        tanhObs.ColumnSlice(t, 1).SetValue(0);
+                    }
+                }
+            }
+        }
+
         virtual void EvaluateThisNode()
         {
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
@@ -2896,22 +2955,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             /// save the hidden activities and output for the next minibatch
-            mLastOutput.Resize(outputDim, m_samplesInRecurrentStep);
-            mLastState.Resize(outputDim, m_samplesInRecurrentStep);
-
-            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
-            {
-                for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
-                {
-                    int utt_t = (int)t / m_samplesInRecurrentStep;
-                    if (m_sentenceSeg.ColumnSlice(i, utt_t).Get00Element() == SENTENCE_MIDDLE)
-                    {
-                        mLastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
-                        mLastState.ColumnSlice(i, 1).SetValue(mState.ColumnSlice(t, 1));
-                        break;
-                    }
-                }
-            }
+            SaveLastStateActity();
 
 #ifdef DEBUG_DECODER
             if (mLastOutput.IsEmpty() == false)
@@ -2921,21 +2965,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             /// set output to 0 if there are no observations
-            for (size_t i = 0; i < nT; i++)
-            {
-                if (m_sentenceSeg.ColumnSlice(i, 1).Get00Element() == NO_OBSERVATION)
-                {
-                    FunctionValues().ColumnSlice(i, 1).SetValue(0);
-                    mState.ColumnSlice(i, 1).SetValue(0);
-
-                    mGi.ColumnSlice(i, 1).SetValue(0);
-                    mGf.ColumnSlice(i, 1).SetValue(0);
-                    mGo.ColumnSlice(i, 1).SetValue(0);
-
-                    tanhState.ColumnSlice(i, 1).SetValue(0);
-                    tanhObs.ColumnSlice(i, 1).SetValue(0);
-                }
-            }
+            ResetForNoObservation();
 
 #ifdef DEBUG_DECODER
             ElemType tmpnorm = FunctionValues().FrobeniusNorm();
@@ -3002,7 +3032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// prepare prevstate and prevoutput
-        static void WINAPI PrepareThisErrors(
+        void PrepareThisErrorsBeforeBackProp(
             size_t timeIdxInSeq,
             size_t nT, /// number of columns
             Matrix<ElemType> & error,
@@ -3016,46 +3046,77 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             int total_utt_t = (int)floor(nT / nsamples);
 
-            Matrix<ElemType> colBegin = sentenceBegin.ColumnSlice(timeIdxInSeq, nsamples);
+            error += grdToPrevOutput;
+            stateError = grdToPrevState;
 
-            if (utt_t < total_utt_t)
+            if (m_use_errors_from_future_minibatch)
             {
-                Matrix<ElemType> colBeginNextFrame = sentenceBegin.ColumnSlice(timeIdxInSeq + nsamples, nsamples);
-
                 for (size_t utt_id = 0; utt_id < nsamples; utt_id++)
                 {
-                    if (colBeginNextFrame.ColumnSlice(utt_id, 1).Get00Element() <= SENTENCE_BEGIN &&
-                        colBegin.ColumnSlice(utt_id, 1).Get00Element() == SENTENCE_MIDDLE)
+                    /// if uses errors from future minibatch
+                    if ((GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && utt_t == total_utt_t - 1) /// last time 
+                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_OBSERVATION) /// future observation is no observation
+                        )
                     {
                         error.ColumnSlice(utt_id, 1) += obs_error_from_future_minibatch.ColumnSlice(utt_id, 1);
                         stateError.ColumnSlice(utt_id, 1) += state_error_from_future_minibatch.ColumnSlice(utt_id, 1);
                     }
                 }
             }
-            else
-            {
-                error += obs_error_from_future_minibatch;
-                stateError += state_error_from_future_minibatch;
-            }
 
-            error += grdToPrevOutput;
-            stateError += grdToPrevState;
+
+            Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
+            colBegin.SetValue(sentenceBegin.ColumnSlice(utt_t, 1));
+            colBegin.InplaceTruncateBottom(NO_OBSERVATION);
+            colBegin.InplaceTruncateTop(SENTENCE_BEGIN);
+            Matrix<ElemType> colSeg(colBegin.GetDeviceId());
+            colSeg.Resize(nsamples, nsamples);
+            colSeg.SetDiagonalValue(colBegin);
+
+            /// will reset to 0 if sentence begining at a posiiton is 0
+            /// will keep the output if it is not the sentence begining
+            Matrix<ElemType> eyeM = Matrix<ElemType>::Eye(nsamples, sentenceBegin.GetDeviceId());
+            Matrix<ElemType>::ScaleAndAdd((ElemType)1.0, eyeM, colSeg); /// raise +1, so that -1 (NO_OBSERVATION) -> 0 (SENTENCE_BEGIN)
+
+            /// times the errors with the mask
+            Matrix<ElemType> newOutputError(colBegin.GetDeviceId());
+            Matrix<ElemType> newStateError(colBegin.GetDeviceId());
+
+            Matrix<ElemType>::Multiply(error, false, colSeg, false, newOutputError);
+            Matrix<ElemType>::Multiply(stateError, false, colSeg, false, newStateError);
+            
+            error.ColumnSlice(0, nsamples).SetValue(newOutputError);
+            stateError.ColumnSlice(0, nsamples).SetValue(newStateError);
         }
 
         /// prepare prevstate and prevoutput
         static void WINAPI PrepareErrors(
             size_t timeIdxInSeq,
             Matrix<ElemType> & errors,
+            Matrix<ElemType> & stateError,
             size_t nsamples, const Matrix<ElemType>& sentenceBegin)
         {
+            int utt_t = (int)floor(timeIdxInSeq / nsamples);
             Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
-            colBegin.SetValue(sentenceBegin.ColumnSlice(timeIdxInSeq, nsamples));
-
+            colBegin.SetValue(sentenceBegin.ColumnSlice(utt_t, 1));
             /// will reset to 0 if sentence begining at a posiiton is 0
             /// will keep the output if it is not the sentence begining
             colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
             colBegin.InplaceTruncateTop(SENTENCE_MIDDLE);
-            Matrix<ElemType>::Scale(colBegin, errors);
+
+            Matrix<ElemType> colSeg(colBegin.GetDeviceId());
+            colSeg.Resize(nsamples, nsamples);
+            colSeg.SetDiagonalValue(colBegin);
+
+            /// times the errors with the mask
+            Matrix<ElemType> newOutputError(colBegin.GetDeviceId());
+            Matrix<ElemType> newStateError(colBegin.GetDeviceId());
+
+            Matrix<ElemType>::Multiply(errors, false, colSeg, false, newOutputError);
+            Matrix<ElemType>::Multiply(stateError, false, colSeg, false, newStateError);
+
+            errors.ColumnSlice(0, nsamples).SetValue(newOutputError);
+            stateError.ColumnSlice(0, nsamples).SetValue(newStateError);
         }
 
         static void WINAPI EvaluateThisNodeS(
@@ -3184,91 +3245,107 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool UnitTest()
         {
-            size_t nT = 3;
-            size_t nInput = 2;
-            size_t nHidden = 3;
-            size_t nOutput = 3;
+            try{
+                size_t nT = 3;
+                size_t nInput = 2;
+                size_t nHidden = 3;
+                size_t nOutput = 3;
 
-            /// backup 
-            Matrix<ElemType> f0(m_deviceId), f1(m_deviceId), f2(m_deviceId), f3(m_deviceId), f4(m_deviceId), func(m_deviceId), f5(m_deviceId);
-            Matrix<ElemType> target(m_deviceId);
-            Matrix<ElemType> giWeight, ghWeight, goWeight;
+                /// backup 
+                Matrix<ElemType> f0(m_deviceId), f1(m_deviceId), f2(m_deviceId), f3(m_deviceId), f4(m_deviceId), func(m_deviceId), f5(m_deviceId);
+                Matrix<ElemType> target(m_deviceId);
+                Matrix<ElemType> giWeight, ghWeight, goWeight;
 
-            f0 = Inputs(0)->FunctionValues();
-            f1 = Inputs(1)->FunctionValues();
-            f2 = Inputs(2)->FunctionValues();
-            f3 = Inputs(3)->FunctionValues();
-            f4 = Inputs(4)->FunctionValues();
-            func = FunctionValues();
+                Matrix<ElemType> boundary(m_deviceId);
+                boundary.Resize(1, nT);
+                boundary.SetValue(SENTENCE_MIDDLE);
+                boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+                ResetBound(boundary);
 
-            target.Resize(nOutput, nT);
-            for (size_t i = 0; i < nT; i++)
-                target(0, i) = 1;
+                f0 = Inputs(0)->FunctionValues();
+                f1 = Inputs(1)->FunctionValues();
+                f2 = Inputs(2)->FunctionValues();
+                f3 = Inputs(3)->FunctionValues();
+                f4 = Inputs(4)->FunctionValues();
+                func = FunctionValues();
 
-            Inputs(0)->FunctionValues().Resize(nInput, nT);
-            Inputs(0)->FunctionValues().SetValue(ConstOnes(nInput, nT, m_deviceId));
-            Inputs(0)->FunctionValues().SetValue((ElemType)0.1);
-            Inputs(1)->FunctionValues().Resize(nHidden, nInput + nOutput + 2);
-            Inputs(1)->FunctionValues().SetValue((ElemType)0.1);
-            Inputs(2)->FunctionValues().Resize(nHidden, nInput + nHidden + 2);
-            Inputs(2)->FunctionValues().SetValue((ElemType)0.1);
-            Inputs(3)->FunctionValues().Resize(nOutput, nInput + nHidden + 2);
-            Inputs(3)->FunctionValues().SetValue((ElemType)0.1);
-            Inputs(4)->FunctionValues().Resize(nOutput, nHidden + nInput + 1);
-            Inputs(4)->FunctionValues().SetValue((ElemType)0.1);
-            FunctionValues().Resize(nOutput, nT);
+                target.Resize(nOutput, nT);
+                for (size_t i = 0; i < nT; i++)
+                    target(0, i) = 1;
 
-            EvaluateThisNode();
+                Inputs(0)->FunctionValues().Resize(nInput, nT);
+                Inputs(0)->FunctionValues().SetValue(ConstOnes(nInput, nT, m_deviceId));
+                Inputs(0)->FunctionValues().SetValue((ElemType)0.1);
+                Inputs(1)->FunctionValues().Resize(nHidden, nInput + nOutput + 2);
+                Inputs(1)->FunctionValues().SetValue((ElemType)0.1);
+                Inputs(2)->FunctionValues().Resize(nHidden, nInput + nHidden + 2);
+                Inputs(2)->FunctionValues().SetValue((ElemType)0.1);
+                Inputs(3)->FunctionValues().Resize(nOutput, nInput + nHidden + 2);
+                Inputs(3)->FunctionValues().SetValue((ElemType)0.1);
+                Inputs(4)->FunctionValues().Resize(nOutput, nHidden + nInput + 1);
+                Inputs(4)->FunctionValues().SetValue((ElemType)0.1);
+                FunctionValues().Resize(nOutput, nT);
 
-            /// check with expected values
-            if (!ISCLOSE(FunctionValues()(0, 0), 0.0335975, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 1), 0.05485132, EPSILON) ||
-                !ISCLOSE(FunctionValues()(0, 2), 0.06838435, EPSILON) ||
-                !(FunctionValues()(0, 0) == FunctionValues()(1, 0)))
-                return false;
-            if (FunctionValues().GetDeviceId() != m_deviceId)
-                FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+                EvaluateThisNode();
 
-            GradientValues().Resize(nOutput, nT);
-            GradientValues().SetValue(1.0);
-            for (size_t i = 0; i < 5; i++)
-            {
-                Inputs(i)->GradientValues().Resize(Inputs(i)->FunctionValues().GetNumRows(), Inputs(i)->FunctionValues().GetNumCols());
-                Inputs(i)->GradientValues().SetValue(0);
+                /// check with expected values
+                if (!ISCLOSE(FunctionValues()(0, 0), 0.0335975, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(0, 1), 0.05485132, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(0, 2), 0.06838435, EPSILON) ||
+                    !(FunctionValues()(0, 0) == FunctionValues()(1, 0)))
+                    throw("LSTMNode forward computation error");
+
+                if (FunctionValues().GetDeviceId() != m_deviceId)
+                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                GradientValues().Resize(nOutput, nT);
+                GradientValues().SetValue(1.0);
+                for (size_t i = 0; i < 5; i++)
+                {
+                    Inputs(i)->GradientValues().Resize(Inputs(i)->FunctionValues().GetNumRows(), Inputs(i)->FunctionValues().GetNumCols());
+                    Inputs(i)->GradientValues().SetValue(0);
+                }
+                for (size_t i = 0; i < 5; i++)
+                    ComputeInputPartial(i);
+
+                /// check with expected values
+                if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) /// bi
+                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 0.00784382, EPSILON)  // Wxi
+                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 3), 0.00192997, EPSILON)  // Whi
+                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 6), 0.00362767, EPSILON)  // Wci
+                    )
+                    throw("LSTMNode gradient error on input gates");
+                if (!ISCLOSE(Inputs(2)->GradientValues()(0, 0), 0.02738655, EPSILON)  // bf
+                    || !ISCLOSE(Inputs(2)->GradientValues()(0, 1), 0.00273866, EPSILON)  // Wxf
+                    || !ISCLOSE(Inputs(2)->GradientValues()(0, 3), 0.00120922, EPSILON)  // Whf
+                    || !ISCLOSE(Inputs(2)->GradientValues()(0, 6), 0.00227184, EPSILON)  // Wcf
+                    )
+                    throw("LSTMNode gradient error on forget gates");
+                if (!ISCLOSE(Inputs(3)->GradientValues()(0, 0), 0.07801557, EPSILON)  // bo
+                    || !ISCLOSE(Inputs(3)->GradientValues()(0, 1), 0.00780156, EPSILON)  // Wxo
+                    || !ISCLOSE(Inputs(3)->GradientValues()(0, 3), 0.00268089, EPSILON)  // Who
+                    || !ISCLOSE(Inputs(3)->GradientValues()(0, 6), 0.00809852, EPSILON)  // Wco
+                    )
+                    throw("LSTMNode gradient error on output gates");
+                if (!ISCLOSE(Inputs(4)->GradientValues()(0, 0), 1.3075038, EPSILON)  // bc
+                    || !ISCLOSE(Inputs(4)->GradientValues()(0, 1), 0.13075038, EPSILON)  // Wxc
+                    || !ISCLOSE(Inputs(4)->GradientValues()(0, 3), 0.03080355, EPSILON)  // Whc
+                    )
+                    throw("LSTMNode gradient error on memory cells");
+
+                for (size_t i = 0; i < 5; i++)
+                {
+                    if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
+                        Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
+                }
             }
-            for (size_t i = 0; i < 5; i++)
-                ComputeInputPartial(i);
-
-            /// check with expected values
-            if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) /// bi
-                || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 0.00784382, EPSILON)  // Wxi
-                || !ISCLOSE(Inputs(1)->GradientValues()(0, 3), 0.00192997, EPSILON)  // Whi
-                || !ISCLOSE(Inputs(1)->GradientValues()(0, 6), 0.00362767, EPSILON)  // Wci
-                )
-                return false;
-            if (!ISCLOSE(Inputs(2)->GradientValues()(0, 0), 0.02738655, EPSILON)  // bf
-                || !ISCLOSE(Inputs(2)->GradientValues()(0, 1), 0.00273866, EPSILON)  // Wxf
-                || !ISCLOSE(Inputs(2)->GradientValues()(0, 3), 0.00120922, EPSILON)  // Whf
-                || !ISCLOSE(Inputs(2)->GradientValues()(0, 6), 0.00227184, EPSILON)  // Wcf
-                )
-                return false;
-            if (!ISCLOSE(Inputs(3)->GradientValues()(0, 0), 0.07801557, EPSILON)  // bo
-                || !ISCLOSE(Inputs(3)->GradientValues()(0, 1), 0.00780156, EPSILON)  // Wxo
-                || !ISCLOSE(Inputs(3)->GradientValues()(0, 3), 0.00268089, EPSILON)  // Who
-                || !ISCLOSE(Inputs(3)->GradientValues()(0, 6), 0.00809852, EPSILON)  // Wco
-                )
-                return false;
-            if (!ISCLOSE(Inputs(4)->GradientValues()(0, 0), 1.3075038, EPSILON)  // bc
-                || !ISCLOSE(Inputs(4)->GradientValues()(0, 1), 0.13075038, EPSILON)  // Wxc
-                || !ISCLOSE(Inputs(4)->GradientValues()(0, 3), 0.03080355, EPSILON)  // Whc
-                )
-                return false;
-
-            for (size_t i = 0; i < 5; i++)
+            catch (...)
             {
-                if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
-                    Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
+                fprintf(stderr, "LSTMNode unit test is not passed!");
+                return false;
             }
+
+            fprintf(stderr, "LSTMNode unit test passed!\n");
             return true;
         }
 
@@ -3379,8 +3456,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t tCol = mPastOutput.GetNumCols();
             size_t rCol = mPastState.GetNumCols();
 
-            if (hist.GetDeviceId() != m_deviceId)
-                hist.TransferFromDeviceToDevice(hist.GetDeviceId(), m_deviceId, true);
+            DEVICEID_TYPE device = hist.GetDeviceId();
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
             hist.Resize(tRow, tCol + rCol);
 
             if (bLastTime)
@@ -3392,6 +3469,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 hist.ColumnSlice(0, tCol).SetValue(mPastOutput);
                 hist.ColumnSlice(tCol, rCol).SetValue(mPastState);
             }
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
             return true;
         }
 
@@ -3401,10 +3480,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t tCol = hist.GetNumCols();
             size_t eCols = tCol / 2;
 
+            DEVICEID_TYPE device = hist.GetDeviceId();
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
+
             mPastOutput.Resize(tRow, eCols);
             mPastState.Resize(tRow, eCols);
             mPastOutput.SetValue(hist.ColumnSlice(0, eCols));
             mPastState.SetValue(hist.ColumnSlice(eCols, eCols));
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
         }
 
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>& hist)
@@ -3413,12 +3497,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t tCol = m_obs_error_from_future_minibatch.GetNumCols();
             size_t rCol = m_state_error_from_future_minibatch.GetNumCols();
 
-            if (hist.GetDeviceId() != m_deviceId)
-                hist.TransferFromDeviceToDevice(hist.GetDeviceId(), m_deviceId, true);
+            DEVICEID_TYPE device = hist.GetDeviceId();
+
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
             hist.Resize(tRow, tCol + rCol);
 
             hist.ColumnSlice(0, tCol).SetValue(m_obs_error_from_future_minibatch);
             hist.ColumnSlice(tCol, rCol).SetValue(m_state_error_from_future_minibatch);
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
         }
 
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>& hist)
@@ -3426,10 +3513,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t tCol = hist.GetNumCols();
             size_t rCol = tCol / 2;
 
+            DEVICEID_TYPE device = hist.GetDeviceId();
+
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
+
             m_obs_error_from_future_minibatch.SetValue(hist.ColumnSlice(0, rCol));
             m_state_error_from_future_minibatch.SetValue(hist.ColumnSlice(rCol, rCol));
 
             m_use_errors_from_future_minibatch = true;
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
         }
 
 

@@ -112,8 +112,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             NOT_IMPLEMENTED;
         }
+
         virtual void Validate() = 0;
-        
+        virtual bool UnitTest() { return true; }
+
         virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
             throw std::logic_error("This operation does not support single input.");

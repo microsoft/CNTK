@@ -682,12 +682,14 @@ namespace Microsoft {
                             fprintf(stderr, "\n###### d%ws######\n", node->NodeName().c_str());
                             deviceId = node->FunctionValues().GetDeviceId();  // original device id
 
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             ElemType eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
 
                             /// perturb parameter
                             ElemType ePos = eOrg + (ElemType)EPSILON;
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false); 
                             node->FunctionValues().SetValue(irow, icol, ePos);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -705,6 +707,7 @@ namespace Microsoft {
 
                             /// perturb parameter
                             ElemType eNeg = eOrg - (ElemType)EPSILON;
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             node->FunctionValues().SetValue(irow, icol, eNeg);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -722,6 +725,7 @@ namespace Microsoft {
 
                             ElemType grdNum = (score1 - score2) / (ePos - eNeg);
 
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             node->FunctionValues().SetValue(irow, icol, eOrg);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -773,6 +777,7 @@ namespace Microsoft {
                             fprintf(stderr, "\n###### d%ws######\n", node->NodeName().c_str());
                             deviceId = node->FunctionValues().GetDeviceId();  // original device id
 
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             ElemType eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -806,6 +811,7 @@ namespace Microsoft {
 
                             /// perturb parameter
                             ElemType ePos = eOrg + (ElemType)EPSILON;
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             node->FunctionValues().SetValue(irow, icol, ePos);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -822,6 +828,7 @@ namespace Microsoft {
                             ElemType score1 = localEpochCriterion.Get00Element();
 
                             ElemType eNeg = eOrg - (ElemType)EPSILON;
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             node->FunctionValues().SetValue(irow, icol, eNeg);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -838,6 +845,7 @@ namespace Microsoft {
 
                             ElemType grdNum = (score1r - score1) / (eNeg - ePos);
 
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             node->FunctionValues().SetValue(irow, icol, eOrg);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
