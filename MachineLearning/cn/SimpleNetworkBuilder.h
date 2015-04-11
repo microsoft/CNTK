@@ -27,7 +27,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SIMPLERNN = 1, LSTM=2, DEEPRNN=4, CLASSLM = 8, 
             LBLM=16,
             LSTMENCODER = 18,
-            NPLM = 32, CLASSLSTM = 64, TENSORIOLSTM = 128, RCRF = 256
+            NPLM = 32, CLASSLSTM = 64, TENSORIOLSTM = 128, RCRF = 256, 
+            UNIDIRECTIONALLSTM=19
     } RNNTYPE;
 
     enum class TrainingCriterion : int
@@ -111,6 +112,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_maOrder = config("maOrder", "0");
             m_lookupTableOrder = config("lookupTableOrder","0");
+
+            ConfigArray sSizes = config("streamSizes", "");
+            m_streamSizes = sSizes;
+            sSizes = config("lookupTableOrderSizes", "");  /// this allows having a multiple streams of inputs with
+            /// different lookuptable order sizes. the older one lookupTableOrder is still kept to have backward
+            /// support.
+            m_lookupTabelOrderSizes = sSizes;
+
             m_labelEmbeddingSize = config("labelEmbeddingSize","10");
             m_constForgetGateValue = config("constForgetGateValue","false");
             m_constInputGateValue = config("constInputGateValue","false");
@@ -141,6 +150,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				m_rnnType = RCRF;
             if (std::find(strType.begin(), strType.end(), L"LSTMENCODER") != strType.end())
                 m_rnnType = LSTMENCODER;
+            if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
+                std::find(strType.begin(), strType.end(), L"UNIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
+                m_rnnType = UNIDIRECTIONALLSTM;
         }
 
         // Init - Builder Initialize for multiple data sets
@@ -237,6 +249,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				return BuildSeqTrnLSTMNetworkFromDescription(mbSize);
             if (m_rnnType == LSTMENCODER)
                 return BuildLSTMEncoderNetworkFromDescription(mbSize);
+            if (m_rnnType == UNIDIRECTIONALLSTM)
+                return BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
 
 
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -361,6 +375,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
         
+        ComputationNetwork<ElemType>& BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+
         ComputationNetwork<ElemType>& BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
 
         ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
