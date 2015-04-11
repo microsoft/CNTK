@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_indexInLoop;
         Matrix<ElemType> m_sentenceSeg;
     public:
-        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
+        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), m_sentenceSeg(deviceId)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -207,10 +207,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gradientValues.Resize(numRows, numSamples); 
             }
         }
-        void ResetBound(const Matrix<ElemType> & seg)
+
+        virtual void ResetBound(const Matrix<ElemType> & seg)
         {
-            m_sentenceSeg.TransferFromDeviceToDevice(m_sentenceSeg.GetDeviceId(), seg.GetDeviceId(), true, false, false);
+            DEVICEID_TYPE device = m_sentenceSeg.GetDeviceId();
+            m_sentenceSeg.TransferFromDeviceToDevice(device, seg.GetDeviceId(), true);
             m_sentenceSeg = seg;
+            m_sentenceSeg.TransferFromDeviceToDevice(seg.GetDeviceId(), device, true);
         }
 
         void SetLoopId(const int id)
@@ -4795,8 +4798,14 @@ protected:  \
 
         void ResetBound(const Matrix<ElemType> & seg)
         {
-            m_sentenceSeg = seg;
-            m_sentenceSeg.Shift(seg, m_delay);
+            ComputationNode<ElemType>::ResetBound(seg);
+            if (m_delay > 1)
+            {
+                m_sentenceSeg.Shift(seg, m_delay - 1);
+                m_sentenceSeg.ElementMultiplyWith(seg);
+            }
+            if (m_delay <= 0)
+                LogicError("Delay should be 1 or larger");
             m_sentenceSeg.InplaceTruncateBottom(SENTENCE_BEGIN);
             m_sentenceSeg.InplaceTruncateTop(SENTENCE_MIDDLE);
         }
@@ -4818,7 +4827,14 @@ protected:  \
             if (inputIndex > 0)
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
-            Matrix<ElemType> colBegin = m_sentenceSeg.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+
+            size_t utt_t = (size_t)timeIdxInSeq / m_samplesInRecurrentStep;
+            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
+            colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
+            colSeg.Resize(m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            colSeg.SetValue(0);
+            colSeg.SetDiagonalValue(colBegin);
 
             ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin);
         }
@@ -4840,8 +4856,7 @@ protected:  \
             assert(timeIdxInSeq >= 0);
             Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
-            Matrix<ElemType>::Scale(colBegin, frm);
-            to += frm; 
+            Matrix<ElemType>::MultiplyAndAdd(frm, false, colBegin, false, to);
         }
 
 
@@ -4865,7 +4880,15 @@ protected:  \
                 m_pastActivity = Inputs(0)->FunctionValues();
             }
             
-            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_sentenceSeg);
+            size_t utt_t = (size_t) timeIdxInSeq / m_samplesInRecurrentStep;
+            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
+            colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
+            colSeg.Resize(m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            colSeg.SetValue(0);
+            colSeg.SetDiagonalValue(colBegin);
+
+            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, colSeg);
 
         }
 
@@ -4922,9 +4945,8 @@ protected:  \
             else
                 inp = inputFunctionValues.ColumnSlice(d, mNbr);
 
-            out.SetValue(inp);
+            Matrix<ElemType>::Multiply(inp, false, colBegin, false, out);
 
-            Matrix<ElemType>::Scale(colBegin, out);
         }
 
 
