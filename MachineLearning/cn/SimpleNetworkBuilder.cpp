@@ -1391,6 +1391,136 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 
+    /**
+    Build unidirectional LSTM p(y_t | y_t-1, x_1^t)
+
+    Because the past prediction is used, decoding requires beam search decoder
+
+    Developed by Kaisheng Yao
+    This is used in the following work
+    K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" submitted to Interspeech 2015
+    */
+    template<class ElemType>
+    ComputationNetwork<ElemType>& SimpleNetworkBuilder<ElemType>::BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize)
+    {
+        if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        {
+            ULONG randomSeed = 1;
+
+            size_t numHiddenLayers = m_layerSizes.size() - 2;
+
+            size_t numRecurrentLayers = m_recurrentLayers.size();
+
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, Wxo = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            vector<ComputationNodePtr> streams;
+            vector<size_t> streamdims;
+            ComputationNodePtr inputforward = nullptr, inputbackward = nullptr, inputletter = nullptr;
+            ComputationNodePtr transcription_prediction = nullptr;
+
+            map<wstring, size_t> featDim;
+
+            assert(m_streamSizes.size() > 0);
+            inputbackward = m_net->CreateInputNode(L"featureDelayedTarget", m_streamSizes[0], mbSize);
+            m_net->FeatureNodes().push_back(inputbackward);
+            featDim[L"featureDelayedTarget"] = m_streamSizes[0];
+
+            inputletter = m_net->CreateInputNode(L"ltrForward", m_streamSizes[1], mbSize);
+            m_net->FeatureNodes().push_back(inputletter);
+            featDim[L"ltrForward"] = m_streamSizes[1];
+
+            size_t layerIdx = 0;
+            size_t idx = 0;
+            int recur_idx = 0;
+            for (vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
+                p != m_net->FeatureNodes().end(); p++, idx++)
+            {
+                layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
+                input = *p;
+                if (m_applyMeanVarNorm)
+                {
+                    input = *p;
+                    w = m_net->Mean(input);
+                    b = m_net->InvStdDev(input);
+                    output = m_net->PerDimMeanVarNormalization(input, w, b);
+
+                    input = output;
+                }
+
+                size_t idim = input->FunctionValues().GetNumRows();
+                assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
+
+                e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
+                m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+                output = m_net->LookupTable(e, input, msra::strfun::wstrprintf(L"LOOKUP%d", idx));
+
+                streamdims.push_back(m_layerSizes[1] * m_lookupTabelOrderSizes[idx]);
+                input = output;
+                streams.push_back(input);
+            }
+
+            /// now merge the streams
+            if (numHiddenLayers > 0)
+            {
+                switch (m_rnnType){
+                case UNIDIRECTIONALLSTM:
+                    output = (ComputationNodePtr)BuildLSTMComponentWithMultiInputs(randomSeed, mbSize, layerIdx, streamdims, m_layerSizes[layerIdx + 1], streams);
+                    break;
+                default:
+                    LogicError("This is for unidorectional LSTM model. Check rnntype to see whether it is UNIDIRECTIONALLSTMWITHPASTPREDICTION or TRANSDUCER");
+                }
+
+                input = output;
+                layerIdx++;
+
+                while (layerIdx < numHiddenLayers)
+                {
+                    switch (m_rnnType){
+                    case UNIDIRECTIONALLSTM:
+                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], input);
+                        break;
+                    default:
+                        LogicError("This is for unidorectional LSTM model. Check rnntype to see whether it is UNIDIRECTIONALLSTMWITHPASTPREDICTION or TRANSDUCER");
+                    }
+
+                    layerIdx++;
+
+                    input = output;
+                }
+            }
+
+            /// directly connect transcription model output/feature to the output layer
+            Wxo = m_net->CreateLearnableParameter(L"ConnectToLowerLayers", m_layerSizes[numHiddenLayers + 1], m_layerSizes[layerIdx]);
+            m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
+
+            output = m_net->Times(Wxo, input);
+            input = output;
+
+            /// here uses "labels", so only one label from multiple stream inputs are used.
+            label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
+
+            AddTrainAndEvalCriterionNodes(input, label, w);
+
+            //add softmax layer (if prob is needed or KL reg adaptation is needed)
+            output = m_net->Softmax(input, L"outputs");
+
+            if (m_needPrior)
+            {
+                prior = m_net->Mean(label);
+                input = m_net->Log(prior, L"LogOfPrior");
+                ComputationNodePtr
+                    scaledLogLikelihood = m_net->Minus(output, input, L"ScaledLogLikelihood");
+                m_net->OutputNodes().push_back(scaledLogLikelihood);
+            }
+            else
+                m_net->OutputNodes().push_back(output);
+
+        }
+
+        m_net->ResetEvalTimeStamp();
+
+        return *m_net;
+    }
+
     template<class ElemType>
     ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse)
     {
