@@ -845,6 +845,226 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             dataWriter.SaveData(nidx, outputMatrices, bSize, bSize, 0);
         }
 
+        void BeamSearch(IDataReader<ElemType>& dataReader, IDataWriter<ElemType>& dataWriter, const vector<wstring>& outputNodeNames, const vector<wstring>& writeNodeNames, const size_t mbSize, const ElemType beam, const size_t testSize)
+        {
+            clock_t startReadMBTime = 0, endComputeMBTime = 0;
+
+            //specify output nodes and files
+            std::vector<ComputationNodePtr> outputNodes;
+            for (int i = 0; i<outputNodeNames.size(); i++)
+                outputNodes.push_back(m_net.GetNodeFromName(outputNodeNames[i]));
+
+            //specify nodes to write to file
+            std::vector<ComputationNodePtr> writeNodes;
+            for (int i = 0; i<writeNodeNames.size(); i++)
+                writeNodes.push_back(m_net.GetNodeFromName(writeNodeNames[i]));
+
+            //prepare features and labels
+            std::vector<ComputationNodePtr> & FeatureNodes = m_net.FeatureNodes();
+            std::vector<ComputationNodePtr> & labelNodes = m_net.LabelNodes();
+
+            std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
+            for (size_t i = 0; i<FeatureNodes.size(); i++)
+            {
+                inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+            }
+            for (size_t i = 0; i<labelNodes.size(); i++)
+            {
+                inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();
+            }
+
+            //evaluate through minibatches
+            size_t totalEpochSamples = 0;
+            size_t actualMBSize = 0;
+
+            dataReader.StartMinibatchLoop(mbSize, 0, testSize);
+            dataReader.SetNbrSlicesEachRecurrentIter(1);
+
+            startReadMBTime = clock();
+            size_t numMBsRun = 0;
+            ElemType ComputeTimeInMBs = 0;
+            while (dataReader.GetMinibatch(inputMatrices))
+            {
+                UpdateEvalTimeStamps(FeatureNodes);
+
+                actualMBSize = m_net.GetActualMBSize();
+                m_net.SetActualMiniBatchSize(actualMBSize);
+
+                vector<size_t> best_path;
+
+                FindBestPath(m_net, dataReader, dataWriter, outputNodes, writeNodes, FeatureNodes, beam, inputMatrices, best_path);
+
+                totalEpochSamples += actualMBSize;
+
+                /// call DataEnd to check if end of sentence is reached
+                /// datareader will do its necessary/specific process for sentence ending 
+                dataReader.DataEnd(endDataSentence);
+
+                endComputeMBTime = clock();
+                numMBsRun++;
+
+                if (m_traceLevel > 0)
+                {
+                    ElemType MBComputeTime = (ElemType)(endComputeMBTime - startReadMBTime) / CLOCKS_PER_SEC;
+
+                    ComputeTimeInMBs += MBComputeTime;
+
+                    fprintf(stderr, "Sentenes Seen = %d; Samples seen = %d; Total Compute Time = %.8g ; Time Per Sample=%.8g\n", numMBsRun, totalEpochSamples, ComputeTimeInMBs, ComputeTimeInMBs / totalEpochSamples);
+                }
+
+                startReadMBTime = clock();
+            }
+
+            fprintf(stderr, "done decoding\n");
+        }
+
+        void FindBestPath(ComputationNetwork<ElemType>& evalnet,
+            IDataReader<ElemType>& dataReader, IDataWriter<ElemType>& dataWriter,
+            std::vector<ComputationNodePtr>& evalNodes,
+            std::vector<ComputationNodePtr>& outputNodes,
+            std::vector<ComputationNodePtr> & FeatureNodes,
+            const ElemType beam, 
+            std::map<std::wstring, Matrix<ElemType>*> & inputMatrices,
+            vector<size_t> &best_path)
+        {
+            assert(evalNodes.size() == 1);
+
+            NN_state<ElemType> state;
+            NN_state<ElemType> null_state;
+
+            priority_queue<Token<ElemType>> n_bests;  /// save n-bests
+
+            /**
+            loop over all the candidates for the featureDelayTarget,
+            evaluate their scores, save their histories
+            */
+            priority_queue<Token<ElemType>> from_queue, to_queue;
+            vector<ElemType> evalResults;
+
+            size_t mbSize;
+            mbSize = evalnet.GetActualMBSize();
+            size_t maxMbSize = 2 * mbSize;
+
+            /// use reader to initialize evalnet's sentence start information to let it know that this
+            /// is the begining of sentence
+            evalnet.SetActualMiniBatchSize(mbSize);
+            evalnet.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
+            dataReader.SetSentenceSegBatch(evalnet.m_sentenceSeg);
+
+            clock_t start, now;
+            start = clock();
+
+            /// for the case of not using encoding, no previous state is avaliable, except for the default hidden layer activities 
+            /// no need to get that history and later to set the history as there are default hidden layer activities
+
+            from_queue.push(Token<ElemType>(0., vector<size_t>(), state)); /// the first element in the priority queue saves the initial NN state
+
+            dataReader.InitProposals(inputMatrices);
+            size_t itdx = 0;
+            size_t maxSize = min(maxMbSize, mbSize);
+
+            ResetPreCompute();
+            PreCompute(evalnet, FeatureNodes);
+
+            /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
+            /// is the begining of sentence
+            evalnet.SetActualMiniBatchSize(1);
+            dataReader.SetSentenceSegBatch(evalnet.m_sentenceSeg);
+            for (itdx = 0; itdx < maxSize; itdx++)
+            {
+                ElemType best_score = -numeric_limits<ElemType>::infinity();
+                vector<size_t> best_output_label;
+
+                if (itdx > 0)
+                {
+                    /// state need to be carried over from past time instance
+                    evalnet.m_sentenceSeg.SetValue(1); 
+                }
+
+                PreComputeActivityAtTime(itdx);
+
+                while (!from_queue.empty()) {
+                    const Token<ElemType> from_token = from_queue.top();
+                    vector<size_t> history = from_token.sequence;
+
+                    /// update feature nodes once, as the observation is the same for all propsoals in labels
+                    UpdateEvalTimeStamps(FeatureNodes);
+
+                    /// history is updated in the getproposalobs function
+                    dataReader.GetProposalObs(inputMatrices, itdx, history);
+
+                    /// get the nn state history and set nn state to the history
+                    map<wstring, Matrix<ElemType>> hidden_history = from_token.state.hidden_activity;
+                    evalnet.SetHistory(hidden_history);
+
+                    for (int i = 0; i<evalNodes.size(); i++)
+                    {
+                        evalnet.Evaluate(evalNodes[i]);
+                        vector<pair<int, ElemType>> retPair;
+                        if (GetCandidatesAtOneTimeInstance(evalNodes[i]->FunctionValues(), from_token.score, best_score - beam, -numeric_limits<ElemType>::infinity(), retPair)
+                            == false)
+                            continue;
+
+                        evalnet.GetHistory(state.hidden_activity, true);
+                        for (vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
+                        {
+                            vector<size_t> history = from_token.sequence;
+                            history.push_back(itr->first);
+                            Token<ElemType> to_token(itr->second, history, state);  /// save updated nn state and history
+
+                            to_queue.push(to_token);
+
+                            if (itr->second > best_score)  /// update best score
+                            {
+                                best_score = itr->second;
+                                best_output_label = history;
+                            }
+                        }
+
+                        history = from_token.sequence;  /// back to the from token's history
+                    }
+
+                    from_queue.pop();
+                }
+
+                if (to_queue.size() == 0)
+                    break;
+
+                // beam pruning
+                const ElemType threshold = best_score - beam;
+                while (!to_queue.empty())
+                {
+                    if (to_queue.top().score >= threshold)
+                        from_queue.push(to_queue.top());
+                    to_queue.pop();
+                }
+            }
+
+            // write back best path
+            size_t ibest = 0;
+            while (from_queue.size() > 0)
+            {
+                best_path.clear();
+
+                assert(best_path.empty());
+                best_path.swap(from_queue.top().sequence);
+                if (ibest == 0)
+                    WriteNbest(ibest, best_path, outputNodes, dataWriter);
+
+#ifdef DBG_BEAM_SEARCH
+                WriteNbest(ibest, best_path, outputNodes, dataWriter);
+                cout << " score = " << from_queue.top().score << endl;
+#endif
+
+                from_queue.pop();
+
+                ibest++;
+            }
+
+            now = clock();
+            fprintf(stderr, "%.1f words per second\n", mbSize / ((double)(now - start) / 1000.0));
+        }
+
         /**
             beam search decoder
         */
