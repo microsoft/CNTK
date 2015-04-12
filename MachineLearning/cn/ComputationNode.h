@@ -4854,9 +4854,12 @@ protected:  \
         static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin)
         {
             assert(timeIdxInSeq >= 0);
-            Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
-            Matrix<ElemType>::MultiplyAndAdd(frm, false, colBegin, false, to);
+            if ((timeIdxInSeq - delay) >= 0)
+            {
+                Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
+                Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
+                Matrix<ElemType>::MultiplyAndAdd(frm, false, colBegin, false, to);
+            }
         }
 
 
@@ -4977,7 +4980,111 @@ protected:  \
             CopyImageSizeFromInputs(); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputNode) 
+        bool UnitTest()
+        {
+            try{
+                size_t nT = 3;
+                size_t nInput = 2;
+
+                /// backup 
+                Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
+                Matrix<ElemType> target(m_deviceId);
+
+                Matrix<ElemType> boundary(m_deviceId);
+                boundary.Resize(1, nT);
+                boundary.SetValue(SENTENCE_MIDDLE);
+                boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+                ResetBound(boundary);
+
+                f0 = Inputs(0)->FunctionValues();
+                func = FunctionValues();
+
+                target.Resize(nInput, nT);
+                for (size_t i = 0; i < nT; i++)
+                    target(0, i) = 1;
+
+                Inputs(0)->FunctionValues().Resize(nInput, nT);
+                Inputs(0)->FunctionValues().SetValue(ConstOnes(nInput, nT, m_deviceId));
+                Inputs(0)->FunctionValues().SetValue((ElemType)0.1);
+                FunctionValues().Resize(nInput, nT);
+                FunctionValues().SetValue(0.0);
+
+                for (size_t t = 0; t < nT; t++)
+                {
+                    EvaluateThisNode(t);
+
+                    if (t == 0)
+                    {
+                        /// check with expected values
+                        if (!ISCLOSE(FunctionValues()(0, 0), 0.0, EPSILON) ||
+                            !ISCLOSE(FunctionValues()(0, 1), 0, EPSILON) ||
+                            !ISCLOSE(FunctionValues()(0, 2), 0, EPSILON) )
+                            throw("Delaynode forward computation error");
+                    }
+
+                    if (t == 1)
+                    {
+                        /// check with expected values
+                        if (!ISCLOSE(FunctionValues()(0, 0), 0.0, EPSILON) ||
+                            !ISCLOSE(FunctionValues()(0, 1), 0.1, EPSILON) ||
+                            !ISCLOSE(FunctionValues()(0, 2), 0, EPSILON) )
+                            throw("Delaynode forward computation error");
+                    }
+
+                    if (t == 2)
+                    {
+                        /// check with expected values
+                        if (!ISCLOSE(FunctionValues()(0, 0), 0.0, EPSILON) ||
+                            !ISCLOSE(FunctionValues()(0, 1), 0.1, EPSILON) ||
+                            !ISCLOSE(FunctionValues()(0, 2), 0.1, EPSILON) )
+                            throw("Delaynode forward computation error");
+                    }
+
+                    if (FunctionValues().GetDeviceId() != m_deviceId)
+                        FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+                }
+
+                GradientValues().Resize(nInput, nT);
+                GradientValues().SetValue(1.0);
+                Inputs(0)->GradientValues().Resize(nInput, nT);
+                Inputs(0)->GradientValues().SetValue(0);
+
+                for (int t = nT - 1; t >= 0; t--)
+                {
+                    ComputeInputPartial(0, t);
+
+                    if (t==nT-1)
+                        /// check with expected values
+                        if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 0, EPSILON) 
+                            || !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 1, EPSILON)  
+                            || !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 0, EPSILON)) 
+                            throw("DelayNode gradient error on input gates");
+                    if (t==nT-2)
+                        if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 1, EPSILON) 
+                            || !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 1, EPSILON)  
+                            || !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 0, EPSILON)) 
+                            throw("DelayNode gradient error on input gates");
+                    if (t == 0)
+                        if (!ISCLOSE(Inputs(0)->GradientValues()(0, 1), 1, EPSILON) 
+                            || !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 1, EPSILON)  
+                            || !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 0, EPSILON)) 
+                            throw("DelayNode gradient error on input gates");
+                }
+
+                if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                    Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+            }
+            catch (...)
+            {
+                fprintf(stderr, "Delaynode unit test is not passed!");
+                return false;
+            }
+
+            fprintf(stderr, "Delaynode unit test passed!\n");
+            return true;
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr inputNode)
         {
             m_children.resize(1);
             m_children[0] = inputNode;
