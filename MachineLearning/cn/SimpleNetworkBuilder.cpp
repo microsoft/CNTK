@@ -1410,6 +1410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numHiddenLayers = m_layerSizes.size() - 2;
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
+            size_t dims = 0;
 
             ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, Wxo = nullptr, output = nullptr, label = nullptr, prior = nullptr;
             vector<ComputationNodePtr> streams;
@@ -1458,32 +1459,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 streams.push_back(input);
             }
 
+            layerIdx++;
+
+            output = (ComputationNodePtr)m_net->Parallel(streams[0], streams[1], L"Parallel0");
+            input = output;
+            dims = streamdims[0] + streamdims[1];
+
             /// now merge the streams
             if (numHiddenLayers > 0)
             {
-                switch (m_rnnType){
-                case UNIDIRECTIONALLSTM:
-                    output = (ComputationNodePtr)BuildLSTMComponentWithMultiInputs(randomSeed, mbSize, layerIdx, streamdims, m_layerSizes[layerIdx + 1], streams);
-                    break;
-                default:
-                    LogicError("This is for unidorectional LSTM model. Check rnntype to see whether it is UNIDIRECTIONALLSTMWITHPASTPREDICTION or TRANSDUCER");
-                }
-
-                input = output;
-                layerIdx++;
-
                 while (layerIdx < numHiddenLayers)
                 {
                     switch (m_rnnType){
                     case UNIDIRECTIONALLSTM:
-                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], input);
+                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, dims, m_layerSizes[layerIdx + 1], input);
                         break;
                     default:
                         LogicError("This is for unidorectional LSTM model. Check rnntype to see whether it is UNIDIRECTIONALLSTMWITHPASTPREDICTION or TRANSDUCER");
                     }
 
                     layerIdx++;
-
+                    dims = m_layerSizes[layerIdx];
                     input = output;
                 }
             }
