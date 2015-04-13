@@ -28,7 +28,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LBLM=16,
             LSTMENCODER = 18,
             NPLM = 32, CLASSLSTM = 64, TENSORIOLSTM = 128, RCRF = 256, 
-            UNIDIRECTIONALLSTM=19
+            UNIDIRECTIONALLSTM=19,
+            BIDIRECTIONALLSTM= 20
     } RNNTYPE;
 
     enum class TrainingCriterion : int
@@ -153,6 +154,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
                 std::find(strType.begin(), strType.end(), L"UNIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
                 m_rnnType = UNIDIRECTIONALLSTM;
+            if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
+                std::find(strType.begin(), strType.end(), L"BIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
+                m_rnnType = BIDIRECTIONALLSTM;
         }
 
         // Init - Builder Initialize for multiple data sets
@@ -251,7 +255,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return BuildLSTMEncoderNetworkFromDescription(mbSize);
             if (m_rnnType == UNIDIRECTIONALLSTM)
                 return BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
-
+            if (m_rnnType == BIDIRECTIONALLSTM)
+                return BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
 
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
