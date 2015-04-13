@@ -817,6 +817,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TimeReverseNode<ElemType>::TypeName())
                 newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == ParallelNode<ElemType>::TypeName())
+                newNode = new ParallelNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -984,6 +986,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new TimeReverseNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == ParallelNode<ElemType>::TypeName())
+                newNode = new ParallelNode<ElemType>(m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1317,6 +1321,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNodePtr newNode(new DelayNode<ElemType>(m_deviceId, initHiddenActivity, row_size, col_size, nodeName));
             newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+
+            return newNode;
+        }
+
+        ComputationNodePtr Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new ParallelNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a, b);
             AddNodeToNet(newNode);
 
             return newNode;
