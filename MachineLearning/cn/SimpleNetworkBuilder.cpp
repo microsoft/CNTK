@@ -1793,14 +1793,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             layerIdx++;
 
+            /// glue the two streams
+            forwardInput = (ComputationNodePtr)m_net->Parallel(streams[0], streams[1], L"Parallel0");
+
             if (numHiddenLayers > 0)
             {
                 /// forward direction
-                forwardOutput = (ComputationNodePtr)BuildLSTMComponentWithMultiInputs(randomSeed, mbSize, layerIdx, streamdims, m_layerSizes[layerIdx + 1], streams);
+                forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx+100, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
                 forwardInput = forwardOutput;
 
                 backwardInput = (ComputationNodePtr)m_net->TimeReverse(ltrSource);
-                backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
+                backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx+200, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
                 backwardInput = backwardOutput;
 
                 layerIdx++;
@@ -1815,6 +1818,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     layerIdx++;
                 }
+
                 backwardOutput = (ComputationNodePtr)m_net->TimeReverse(backwardInput);
             }
 
@@ -1825,7 +1829,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             streams.push_back(backwardOutput);
             streamdims.push_back(m_layerSizes[layerIdx]);
 
-            output = (ComputationNodePtr)BuildLSTMComponentWithMultiInputs(randomSeed, mbSize, layerIdx, streamdims, m_layerSizes[layerIdx + 1], streams);
+            /// glue the two streams
+            forwardInput = (ComputationNodePtr)m_net->Parallel(streams[0], streams[1], L"Parallel1");
+
+            output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
+
             input = output;
             layerIdx++;
 
