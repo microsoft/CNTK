@@ -8,3 +8,5 @@ best performing systemis
 s36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2
 
 unidirectional LSTM : scripts/s23.unidirectional.log
+
+bidirectional LSTM: scripts/s30.bidirectional.log
