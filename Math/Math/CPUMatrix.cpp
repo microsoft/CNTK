@@ -266,6 +266,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //for each column of a, we add all rows of a to this starting from startIndex
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddToRowSliceValuesOf: input matrix a is empty.");
+
+        if (a.GetNumRows() != numRows)
+            throw std::logic_error("AddToRowSliceValuesOf: a.GetNumRows() != numRows.");
+
+        if (startIndex + numRows > GetNumRows())
+            throw std::logic_error("AddToRowSliceValuesOf: startIndex + numRows exceeds GetNumRows().");
+
+        if (a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddToRowSliceValuesOf: columns does not match.");
+
+        long n = (long)a.GetNumCols(), m = (long)numRows;
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (size_t i = 0, startRow = startIndex; i<(m & ~3); i += 4, startRow += 4)
+            {
+                us(startRow, j) = a(i, j);
+                us(startRow + 1, j) = a(i + 1, j);
+                us(startRow + 2, j) = a(i + 2, j);
+                us(startRow + 3, j) = a(i + 3, j);
+            }
+            //handle remaining stuffs
+            for (size_t i = m & ~3, startRow = startIndex + (m & ~3); i<m; i++, startRow++)
+            {
+                us(startRow, j) = a(i, j);
+            }
+        }
+
+        return *this;
+    }
 
     //for each column of a, we assign numRows starting from startIndex to this
     template<class ElemType>

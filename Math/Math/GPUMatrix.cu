@@ -564,6 +564,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }     
 
+    //for each column of a, we assign all rows of a to this starting from startIndex
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddToRowSliceValuesOf: input matrix a is empty.");
+
+        if (a.GetNumRows() != numRows)
+            throw std::logic_error("AddToRowSliceValuesOf: a.GetNumRows() != numRows.");
+
+        if (startIndex + numRows > GetNumRows())
+            throw std::logic_error("AddToRowSliceValuesOf: startIndex + numRows exceeds GetNumRows().");
+
+        if (a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddToRowSliceValuesOf: columns does not match.");
+
+        LONG64 N = (LONG64)a.GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignToRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (long)startIndex, (long)GetNumRows(), (long)a.GetNumRows());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
 
     //for each column of a, we assign numRows starting from startIndex to this
     template<class ElemType>

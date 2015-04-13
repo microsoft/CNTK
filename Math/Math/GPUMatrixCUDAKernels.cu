@@ -324,6 +324,19 @@ __global__ void _setValue(
 };
 
 template<class ElemType>
+__global__ void _assignToRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / srcRows;
+    long row = id - (col * srcRows);
+
+    dest[col*destRows + row + startIndex] = src[id];
+}
+
+template<class ElemType>
 __global__ void _assignRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
