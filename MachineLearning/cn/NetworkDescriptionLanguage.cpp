@@ -230,9 +230,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, CRFNode<ElemType>::TypeName(), L"CRF"))
         ret = true;
-    else if (EqualInsensitive(nodeType, ParallelNode<ElemType>::TypeName(), "Parallel"))
+    else if (EqualInsensitive(nodeType, ParallelNode<ElemType>::TypeName(), L"Parallel"))
         ret = true;
-    else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), "LSTM"))
+    else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), L"LSTM"))
         ret = true;
 
     // return the actual node name in the parameter if we found something
