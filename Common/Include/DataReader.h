@@ -65,7 +65,7 @@ public:
     virtual void SetSentenceSegBatch(Matrix<ElemType>&sentenceEnd) = 0;
     virtual void SetRandomSeed(int) = 0;
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false;  }
-    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
+    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
 };
 
 // GetReader - get a reader type from the DLL
