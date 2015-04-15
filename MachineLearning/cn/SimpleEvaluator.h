@@ -307,7 +307,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (size_t i=0; i<evalResults.size(); i++)
             {
-                fprintf(stderr, "%ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), (evalResults[i]-evalResultsLastMBs[i])/numSamplesLastMBs);
+                ElemType eresult = (evalResults[i] - evalResultsLastMBs[i]) / numSamplesLastMBs;
+                fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
+
+                //always display Perplexity as well for crossEntropy values
+                if (evalNodes[i]->OperationName() == CrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
+                    evalNodes[i]->OperationName() == CrossEntropyNode<ElemType>::TypeName() ||
+                    evalNodes[i]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
+                fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
             }
 
             fprintf(stderr, "\n");

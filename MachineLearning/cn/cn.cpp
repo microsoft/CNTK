@@ -765,6 +765,13 @@ template <typename ElemType>
 void DoCommand(const ConfigParameters& config)
 {
     ConfigArray command = config("command", "train");
+
+    int numCPUThreads = config("numCPUThreads", "0");
+    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
+
+    if (numCPUThreads>0)
+        std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
+
     for (int i = 0; i < command.size(); i++)
     {
         //get the configuration parameters that match the command
@@ -796,10 +803,10 @@ void DoCommand(const ConfigParameters& config)
                 DoConvertFromDbn<ElemType>(commandParams);
             else if (action[j] == "createLabelMap")
                 DoCreateLabelMap<ElemType>(commandParams);
-			else if (action[j] == "writeWordAndClass")
-				DoWriteWordAndClassInfo<ElemType>(commandParams);
-			else if (action[j] == "plot")
-				DoTopologyPlot<ElemType>(commandParams);
+            else if (action[j] == "writeWordAndClass")
+	            DoWriteWordAndClassInfo<ElemType>(commandParams);
+            else if (action[j] == "plot")
+	            DoTopologyPlot<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 
