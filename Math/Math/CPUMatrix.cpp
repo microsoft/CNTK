@@ -18,6 +18,7 @@
 #include <random>
 #include <chrono>
 #include <exception>
+#include <thread>
 
 #ifdef     _WIN32
 #include <Windows.h>
@@ -4860,6 +4861,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     };
+
+    template<class ElemType>
+    int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
+    {
+        if (numThreads == 0)  //use default
+            return numThreads; 
+
+        int mthreads = (int)std::thread::hardware_concurrency();
+
+        if (numThreads <= 0)
+            numThreads = max(1, mthreads + numThreads);
+        if (numThreads > mthreads)
+            numThreads = mthreads;
+
+#ifdef _OPENMP
+        omp_set_num_threads(numThreads);
+        numThreads = omp_get_max_threads();
+
+#ifndef USE_MKL
+        acmlsetnumthreads(numThreads);
+#else
+        mkl_set_num_threads(numThreads);
+#endif
+#endif
+        return numThreads;
+    }
 
     //The explicit instantiation part
     template class CPUMatrix<float>;
