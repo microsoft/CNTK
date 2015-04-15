@@ -113,7 +113,7 @@ public:
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
     static BestGpu* g_bestGpu = NULL;
-    DEVICEID_TYPE deviceId = CPUDEVICE;
+    static DEVICEID_TYPE deviceId = CPUDEVICE;
 
     ConfigValue val = config("deviceId", "auto");
 	ConfigValue bLockGPUstr = config("LockGPU", "true");
@@ -130,6 +130,11 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     {
         g_bestGpu = new BestGpu();
     }
+    else if (bLockGPU && deviceId >= 0)
+    {
+        return deviceId;   
+    }  
+
     if (!_stricmp(val.c_str(), "Auto"))
     {
 #ifdef MPI_SUPPORT

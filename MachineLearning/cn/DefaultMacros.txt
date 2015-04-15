@@ -52,9 +52,9 @@
         DO=Dropout(SFF)
     }
     #Sigmoid Feed Forward with Dropout
-    SBFFD(input,rowCount,colCount)
+    SBFFD(inputval,rowCount,colCount)
     {
-        SBFF=SBFF(input,rowCount,colCount)
+        SBFF=SBFF(inputval,rowCount,colCount)
         DO=Dropout(SBFF)
     }
     #SoftMax Feed Forward

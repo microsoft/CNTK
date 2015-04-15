@@ -712,11 +712,66 @@ void DoConvertFromDbn(const ConfigParameters& config)
     net.SaveToFile(modelPath);
     delete (netBuilder);
 }
+
+// do topological plot of computation network 
+template <typename ElemType>
+void DoTopologyPlot(const ConfigParameters& config)
+{
+	wstring modelPath = config("modelPath");
+	wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
+	wstring outRending = config("outputFile");      // filename for the rendered topology plot
+	// this can be empty, in that case no rendering will be done
+	// or if this is set, renderCmd must be set, so CNTK will call re       
+	wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+	// e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
+	//              where <IN> and <OUT> are two special placeholders
+
+	//========================================
+	// Sec. 1 option check
+	//========================================
+	if (outdot.empty())
+	{
+		outdot = modelPath +L".dot";
+	}
+
+	wstring rescmd;
+	if (!outRending.empty())        // we need to render the plot
+	{
+		std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
+		std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
+
+		rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1"+outdot+L"$3");
+		rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1"+outRending+L"$3");
+	}
+
+
+	ComputationNetwork<ElemType> net(-1);
+	net.LoadFromFile(modelPath);
+	net.PlotNetworkTopology(outdot);
+    fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
+
+	if (!outRending.empty())
+	{
+        fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
+		_wsystem(rescmd.c_str());
+        fprintf(stderr, "Done\n");
+	}
+}
+
+
+
 // process the command
 template <typename ElemType>
 void DoCommand(const ConfigParameters& config)
 {
     ConfigArray command = config("command", "train");
+
+    int numCPUThreads = config("numCPUThreads", "0");
+    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
+
+    if (numCPUThreads>0)
+        std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
+
     for (int i = 0; i < command.size(); i++)
     {
         //get the configuration parameters that match the command
@@ -749,7 +804,9 @@ void DoCommand(const ConfigParameters& config)
             else if (action[j] == "createLabelMap")
                 DoCreateLabelMap<ElemType>(commandParams);
             else if (action[j] == "writeWordAndClass")
-                DoWriteWordAndClassInfo<ElemType>(commandParams);
+	            DoWriteWordAndClassInfo<ElemType>(commandParams);
+            else if (action[j] == "plot")
+	            DoTopologyPlot<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 
