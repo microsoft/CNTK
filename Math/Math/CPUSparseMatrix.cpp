@@ -24,7 +24,8 @@
 
 #include "basetypes.h"
 #include "fileutil.h"
-
+#include <iostream>
+#pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
 #ifndef USE_MKL
 // use ACML as default. 
@@ -36,6 +37,7 @@
 #include <acml.h>  // requires ACML 5.3.0 and above
 #else
 // requires MKL 10.0 and above
+#include <mkl.h>
 #endif
 
 // This is an example of an exported variable
@@ -131,19 +133,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format)
     {
+
         CheckInit(format);
     }
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size)
     {
+
         CheckInit(format);
         Resize(numRows, numCols, size, true, false);
     }
 
     template<class ElemType>
     CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
-    {       
+    {               
+
         if (m_matrixName!=NULL) 
         {
             delete[] m_matrixName;
@@ -203,9 +208,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_unCompIndex[m_nz] = (CPUSPARSE_INDEX_TYPE)r;
 
         //consistency check
-        if(c == m_colIdx && r <= m_unCompIndex[m_nz-1]) 
+        if (m_nz > 0)
         {
-            throw std::logic_error("CPUSparseMatrix:  SetValue is not called properly");
+            if(c == m_colIdx && r <= m_unCompIndex[m_nz-1]) 
+            {
+                throw std::logic_error("CPUSparseMatrix:  SetValue is not called properly");
+            }
         }
 
         if (c != m_colIdx) 
@@ -225,7 +233,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	template<class ElemType>
 	void CPUSparseMatrix<ElemType>::Print(const char* matrixName, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const {
 
-		if (GetFormat() != matrixFormatSparseCSC && GetFormat() != matrixFormatSparseCSR)
+		if (this->GetFormat() != matrixFormatSparseCSC && this->GetFormat() != matrixFormatSparseCSR)
 		{
 			return;
 			//NOT_IMPLEMENTED;
@@ -255,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         m_format = matrixFormatSparseCSC;
         Resize(numRows, numCols, nz, true, false);
-        SetNzCount(nz);
+        this->SetNzCount(nz);
 
         memcpy(RowLocation(), h_Row, RowSize());
         memcpy(ColLocation(), h_CSCCol, ColSize());
@@ -444,10 +452,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (lhs.IsEmpty() || rhs.IsEmpty())
             throw std::logic_error("LeftMultiplyAndAdd:  one of the input matrix is empty.");
 
-        int m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
-        int k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
-        int l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
-        int n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
+        size_t m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
+        size_t k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
+        size_t l = transposeB? (int)rhs.GetNumCols(): (int)rhs.GetNumRows();
+        size_t n = transposeB? (int)rhs.GetNumRows(): (int)rhs.GetNumCols();
 
         assert (m>0 && k>0 && l>0 && n>0); m; n;  //converting from size_t to int may cause overflow
         assert (k == l);
@@ -485,7 +493,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     bool first = true;
                     if(w2Id.find(i) == w2Id.end()) 
                     {
-                        w2Id[i] = w2Id.size();
+                        size_t id = w2Id.size();
+                        w2Id[i] = id;
                         c.m_blockIds[c.m_blockSize]=i;
                         c.m_blockSize++;
                     } 
@@ -508,6 +517,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }   
             c.m_nz = c.m_blockSize * m;
+
             if(c.m_nz > c.GetSizeAllocated()) 
             {
                 throw std::logic_error("sparse matrix out of range.");
@@ -639,7 +649,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> 
     ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier)
     {
-        if (c.IsEmpty())
+        if (c.IsEmpty() || c.GetNumCols() != GetNumCols() || c.GetNumRows() != GetNumRows())
         {
             c.Resize(GetNumRows(), GetNumCols());
             c.SetValue(0.0);
@@ -664,7 +674,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t col = (m_format == MatrixFormat::matrixFormatSparseCSC) ? j : i;
                     ElemType adenorm = c(row, col); 
                     adenorm += val * val; 
-                    ElemType a = (floor + sqrt(adenorm));
+                    ElemType a = sqrt(floor + adenorm);
                     m_pArray[p] = val / a;
                     c(row, col) = adenorm; 
 
@@ -672,24 +682,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         aveMultiplier += 1 / a;
                 }
             }
-        } else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
+        } 
+        else if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
-            for(size_t j = 0; j < m_blockSize; j++)
+            size_t len = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
+            size_t p = 0;
+            for (long j = 0; j < m_blockSize; j++)
             {
-                size_t i = m_blockIds[j];
-                size_t len = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
-                size_t start = j* len;
-                for(size_t p = start; p < start+len; p++) 
+                size_t colOrRow = m_blockIds[j];
+                for (long i = 0; i < len; i++, p++) 
                 {
                     ElemType val = m_pArray[p];
 
-                    size_t row = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
-                    size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
-                    ElemType adenorm = c(row, col); 
-                    adenorm += val * val; 
-                    ElemType a = (floor + sqrt(adenorm));
-                    m_pArray[p] = val / a;
-                    c(row, col) = adenorm; 
+                    size_t row = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? i : colOrRow;
+                    size_t col = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? colOrRow : i;
+                    c(row, col) += val * val;
+                    ElemType a = sqrt(floor + c(row, col));
+                    m_pArray[p] /= a;
 
                     if (needAveMultiplier)
                         aveMultiplier += 1 / a;
@@ -704,36 +713,242 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
+    {
+        long m = (long)this->NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] = threshold;
+
+            if (nzValues[i+1] > threshold)
+                nzValues[i+1] = threshold;
+
+            if (nzValues[i+2] > threshold)
+                nzValues[i+2] = threshold;
+
+            if (nzValues[i+3] > threshold)
+                nzValues[i+3] = threshold;
+
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] = threshold;
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
+    {
+        long m = (long)this->NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (nzValues[i] < threshold)
+                nzValues[i] = threshold;
+
+            if (nzValues[i + 1] < threshold)
+                nzValues[i + 1] = threshold;
+
+            if (nzValues[i + 2] < threshold)
+                nzValues[i + 2] = threshold;
+
+            if (nzValues[i + 3] < threshold)
+                nzValues[i + 3] = threshold;
+
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] < threshold)
+                nzValues[i] = threshold;
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
     CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
-        if(m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
-        {
-            ElemType locThresholdPos = abs(threshold);
-            ElemType locTHresholdNeg = -locThresholdPos; 
+        ElemType locThresholdPos = abs(threshold);
+        ElemType locTHresholdNeg = -locThresholdPos; 
 
-            for(size_t j = 0; j < m_blockSize; j++) 
-            {
-                size_t len = (m_format == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
-                size_t start = j* len;
-                for (size_t p = start; p < start+len; p++)
-                {
-                    if (m_pArray[p] > locThresholdPos)
-                    {
-                        m_pArray[p] = locThresholdPos;
-                    }
-                    else if (m_pArray[p] < locTHresholdNeg)
-                    {
-                        m_pArray[p] = locTHresholdNeg;
-                    }
-                }
-            }
-        } 
-        else 
+        long m = (long)this->NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
         {
-            throw std::runtime_error("CPUSparseMatrix:: InplaceTruncate() only support block based sparse matrix");
+            if (nzValues[i] > locThresholdPos)
+                nzValues[i] = locThresholdPos;
+            else if (nzValues[i] < locTHresholdNeg)
+                nzValues[i] = locTHresholdNeg;
+
+            if (nzValues[i+1] > locThresholdPos)
+                nzValues[i+1] = locThresholdPos;
+            else if (nzValues[i+1] < locTHresholdNeg)
+                nzValues[i+1] = locTHresholdNeg;
+
+            if (nzValues[i+2] > locThresholdPos)
+                nzValues[i+2] = locThresholdPos;
+            else if (nzValues[i+2] < locTHresholdNeg)
+                nzValues[i+2] = locTHresholdNeg;
+
+            if (nzValues[i+3] > locThresholdPos)
+                nzValues[i+3] = locThresholdPos;
+            else if (nzValues[i+3] < locTHresholdNeg)
+                nzValues[i+3] = locTHresholdNeg;
         }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] > locThresholdPos)
+                nzValues[i] = locThresholdPos;
+            else if (nzValues[i] < locTHresholdNeg)
+                nzValues[i] = locTHresholdNeg;
+        }
+
         return *this;
     }    
+
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        long m = (long)this->NzCount();
+        ElemType *nzValues = NzValues();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] -= threshold;
+            else if (nzValues[i] < -threshold)
+                nzValues[i] += threshold;
+            else
+                nzValues[i] = 0;
+
+            if (nzValues[i + 1] > threshold)
+                nzValues[i + 1] -= threshold;
+            else if (nzValues[i + 1] < -threshold)
+                nzValues[i + 1] += threshold;
+            else
+                nzValues[i + 1] = 0;
+
+            if (nzValues[i + 2] > threshold)
+                nzValues[i + 2] -= threshold;
+            else if (nzValues[i + 2] < -threshold)
+                nzValues[i + 2] += threshold;
+            else
+                nzValues[i + 2] = 0;
+
+            if (nzValues[i + 3] > threshold)
+                nzValues[i + 3] -= threshold;
+            else if (nzValues[i + 3] < -threshold)
+                nzValues[i + 3] += threshold;
+            else
+                nzValues[i + 3] = 0;
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (nzValues[i] > threshold)
+                nzValues[i] -= threshold;
+            else if (nzValues[i] < -threshold)
+                nzValues[i] += threshold;
+            else
+                nzValues[i] = 0;
+        }
+        return *this;
+    }
+
+    template<class ElemType>
+    ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
+    {
+        if (this->IsEmpty())
+            throw std::logic_error("FrobeniusNorm: Matrix is empty.");
+
+        ElemType v = 0;
+
+        long m = (long)this->NzCount();
+        const ElemType *nzValues = NzValues();
+
+        //four-way unrolling
+#pragma omp parallel for reduction(+:v)
+        for (long i = 0; i<(m & ~3); i += 4)
+        {
+            v += nzValues[i] * nzValues[i] + nzValues[i + 1] * nzValues[i + 1] + nzValues[i + 2] * nzValues[i + 2] + nzValues[i + 3] * nzValues[i + 3];
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            v += nzValues[i] * nzValues[i];
+        }
+
+        return sqrt(v);
+    }
+
+    //sum of all abs(elements)
+    template<class ElemType>
+    ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
+    {
+        if (this->IsEmpty())
+            throw std::logic_error("SumOfAbsElements: Matrix is empty.");
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+#ifndef USE_MKL
+            return (ElemType)dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+#else  
+            return (ElemType)cblas_dasum((int)this->NzCount(), reinterpret_cast <double*>(m_pArray), 1);
+#endif
+        }
+        else
+        {
+#pragma warning (suppress: 4244)
+#ifndef USE_MKL
+            return sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+#else
+            return cblas_sasum((int)this->NzCount(), reinterpret_cast <float*>(m_pArray), 1);
+#endif
+        }
+    }
+
+
+    //sum of all elements
+    template<class ElemType>
+    ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
+    {
+        if (this->IsEmpty())
+            throw std::logic_error("SumOfElements: Matrix is empty.");
+
+        ElemType sum = 0;
+
+        long m = (long)this->NzCount();
+        const ElemType *nzValues = NzValues();
+
+        //four-way unrolling
+#pragma omp parallel for reduction(+:sum)
+        for (long i = 0; i<(m & ~3); i += 4)
+        {
+            sum += nzValues[i] + nzValues[i + 1] + nzValues[i + 2] + nzValues[i + 3];
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            sum += nzValues[i];
+        }
+
+        return sum;
+    }
 
     template <class ElemType>
     MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)

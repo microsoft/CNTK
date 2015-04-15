@@ -47,6 +47,8 @@ build/
 *.log
 *.scc
 *.dep
+*.o
+*.d
 
 # Visual C++ cache files
 ipch/
@@ -159,10 +161,16 @@ $RECYCLE.BIN/
 
 *.lyx~
 *.bak
+
+bin/
+LOG
+*.log
+core	
 *.lyx#
 
 # =========================
 # prebuild file 
 # =========================
 MachineLearning/cn/buildinfo.h
+
 

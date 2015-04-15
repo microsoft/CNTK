@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (numHiddenLayers > 0)
                 {
                     //TODO: to figure out sparse matrix size
-                    u = m_net->CreateSparseLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0], 0);
+                    u = m_net->CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
                     m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
@@ -76,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int i=1; i<numHiddenLayers; i++)
                     {
                         //TODO: to figure out sparse matrix size
-                        u = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i], 0);
+                        u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
                         m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
                         if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
@@ -227,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 clsweight = m_net->CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
                 m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
-                clslogpostprob = m_net->LogSoftmax(m_net->Times(clsweight, input), L"ClassPostProb");
+                clslogpostprob = m_net->Times(clsweight, input, L"ClassPostProb");
 
                 output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy", 
                     clslogpostprob);
@@ -536,7 +536,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delayXI->AttachInputs(input);
                     ((DelayNode<ElemType>*) delayXI)->SetDelay(ik);
                     //TODO: to figure out sparse matrix size
-                    Wxi = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"DD%d", ik), m_layerSizes[0], m_layerSizes[0], 0);
+                    Wxi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
                     m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
                     it = m_net->Plus(output, m_net->Times(Wxi, delayXI));
@@ -645,19 +645,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
                     {
                         //TODO: to figure out sparse matrix size
-                        Wxi2 = m_net->CreateSparseLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi2 = m_net->CreateLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi3 = m_net->CreateSparseLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi3 = m_net->CreateLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi4 = m_net->CreateSparseLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi4 = m_net->CreateLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi1 = m_net->CreateSparseLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi1 = m_net->CreateLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
                         //TODO: to figure out sparse matrix size
-                        Wxi = m_net->CreateSparseLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0], 0);
+                        Wxi = m_net->CreateLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0]);
                         m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
                         /// unless there is a good algorithm to detect loops, use this explicit setup
@@ -723,7 +723,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 //TODO: to figure out sparse matrix size
-                w = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers], 0);
+                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 //                b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
                 label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
@@ -770,7 +770,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs, bool inputWeightSparse)
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
     {
 
         size_t numHiddenLayers = m_layerSizes.size()-2;
@@ -784,20 +784,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr bit=nullptr, bft=nullptr, bct=nullptr;
 
         input = inputObs;
-        if(inputWeightSparse)
-        {
-            Wxo = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"WXO%d", iLayer), outputDim, inputDim);
-            Wxi = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"WXI%d", iLayer), outputDim, inputDim);
-            Wxf = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"WXF%d", iLayer), outputDim, inputDim);
-            Wxc = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"WXC%d", iLayer), outputDim, inputDim);
-        }
-        else
-        {
-            Wxo = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXO%d", iLayer), outputDim, inputDim);        
-            Wxi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXI%d", iLayer), outputDim, inputDim);
-            Wxf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXF%d", iLayer), outputDim, inputDim);
-            Wxc = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXC%d", iLayer), outputDim, inputDim);
-        }
+        Wxo = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXO%d", iLayer), outputDim, inputDim);        
+        Wxi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXI%d", iLayer), outputDim, inputDim);
+        Wxf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXF%d", iLayer), outputDim, inputDim);
+        Wxc = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXC%d", iLayer), outputDim, inputDim);
+
         m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
         m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
         m_net->InitLearnableParameters(Wxf, m_uniformInit, randomSeed++, m_initValueScale);
@@ -1082,10 +1073,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
                 ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
-                ComputationNodePtr Wxf=nullptr, Whf=nullptr, Wcf=nullptr, bf=nullptr, Wxc=nullptr, Whc=nullptr, bc=nullptr;
-                ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, ct=nullptr, ht=nullptr;
-                ComputationNodePtr delayHI = nullptr, delayCI = nullptr, delayHO = nullptr, delayHF = nullptr, delayHC=nullptr, delayCF=nullptr, delayCC=nullptr;
-                ComputationNodePtr directWIO = nullptr, directInput=nullptr, directOutput=nullptr;
+                ComputationNodePtr clslogpostprob = nullptr;
+                ComputationNodePtr clsweight = nullptr;
                 ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = {nullptr}; 
 
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
@@ -1120,7 +1109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int offset = m_lookupTableOrder > 0? 1 : 0;
                 if (numHiddenLayers > 0)
                 {
-                    output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset]*(offset?m_lookupTableOrder:1), m_layerSizes[offset+1], input, true);
+                    output = (ComputationNodePtr) BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset]*(offset?m_lookupTableOrder:1), m_layerSizes[offset+1], input);
                     input = output;
                     outputFromEachLayer[offset+1]  = input;
 
@@ -1157,19 +1146,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         input = output;
                 }
 
-                // TODO: verify the change is okay
-                // w = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers]*(MAX_WORDS_PER_CLASS+MAX_CLASSES)*mbSize*NUM_UTTS_IN_RECURRENT_ITER);
-                w = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
+                /// need to have [input_dim x output_dim] matrix
+                /// e.g., [200 x 10000], where 10000 is the vocabulary size
+                /// this is for speed-up issue as per word matrix can be simply obtained using column slice
+                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                // TODO: verify the change is okay
-                //label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize, 2*mbSize*NUM_UTTS_IN_RECURRENT_ITER);
-                label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
-                
-                AddTrainAndEvalCriterionNodes(input, label, w);
-                
-                output = m_net->Times(w, input, L"outputs");   
-                
+
+                /// the label is a dense matrix. each element is the word index
+                label = m_net->CreateInputNode(L"labels", 4, mbSize);
+
+                clsweight = m_net->CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
+                m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
+                clslogpostprob = m_net->Times(clsweight, input, L"ClassPostProb");
+
+                output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
+                    clslogpostprob);
+
                 m_net->OutputNodes().push_back(output);
+
 
                 if (m_needPrior)
                 {

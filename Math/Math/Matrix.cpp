@@ -1188,7 +1188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             aveMultiplier = m_CPUMatrix->Adagrad(*gradients.m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
             aveMultiplier = m_GPUMatrix->Adagrad(*gradients.m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU),
             aveMultiplier = gradients.m_CPUSparseMatrix->Adagrad(*this->m_CPUMatrix, needAveMultiplier); SetDataLocation(CPU),
-            NOT_IMPLEMENTED
+            aveMultiplier = gradients.m_GPUSparseMatrix->Adagrad(*this->m_GPUMatrix, needAveMultiplier); SetDataLocation(GPU)
             );
 
         return aveMultiplier;
@@ -2440,7 +2440,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::InplaceTruncate(const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -2456,7 +2456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->InplaceTruncate(threshold), 
-            this->m_GPUMatrix->InplaceTruncateTop(fabs(threshold)); this->m_GPUMatrix->InplaceTruncateBottom(-fabs(threshold)), 
+            this->m_GPUMatrix->InplaceTruncate(threshold),
             this->m_CPUSparseMatrix->InplaceTruncate(threshold),
             this->m_GPUSparseMatrix->InplaceTruncate(threshold)
             );
@@ -2464,6 +2464,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        assert(threshold >= 0);
+
+        if (IsEmpty())
+            throw std::logic_error("InplaceSoftThreshold: Matrix is empty.");
+        
+        if (threshold == 0)
+            return *this;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->InplaceSoftThreshold(threshold),
+            this->m_GPUMatrix->InplaceSoftThreshold(threshold),
+            this->m_CPUSparseMatrix->InplaceSoftThreshold(threshold),
+            this->m_GPUSparseMatrix->InplaceSoftThreshold(threshold)
+            );
+
+        return *this;
+    }
     //Threshold truncating: this[i] = max( this[i], threshold )
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
@@ -2486,7 +2507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             this->m_CPUMatrix->InplaceTruncateBottom(threshold), 
             this->m_GPUMatrix->InplaceTruncateBottom(threshold), 
-            NOT_IMPLEMENTED, 
+            this->m_CPUSparseMatrix->InplaceTruncateBottom(threshold),
             this->m_GPUSparseMatrix->InplaceTruncateBottom(threshold)
             );
                 
@@ -2542,18 +2563,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!isfinite((float)threshold))
                 return *this;
-            }
+        }
         else
         {
             if (!isfinite(threshold))
                 return *this;
-            }
+        }
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->InplaceTruncateTop(threshold), 
             this->m_GPUMatrix->InplaceTruncateTop(threshold), 
-            NOT_IMPLEMENTED, 
+            this->m_CPUSparseMatrix->InplaceTruncateTop(threshold),
             this->m_GPUSparseMatrix->InplaceTruncateTop(threshold)
             );
                 
@@ -2626,7 +2647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nullptr,
             return this->m_CPUMatrix->SumOfElements(), 
             return this->m_GPUMatrix->SumOfElements(), 
-            NOT_IMPLEMENTED, 
+            return this->m_CPUSparseMatrix->SumOfElements(),
             return this->m_GPUSparseMatrix->SumOfElements()
             );
                 
@@ -2686,6 +2707,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return this->m_GPUSparseMatrix->SumOfAbsElements()
             );                
             }
+
+    //sum of all elements
+    template<class ElemType>
+    ElemType Matrix<ElemType>::LogAddSumOfElements() const
+    {
+        if (IsEmpty())
+            throw std::logic_error("LogAddSumOfElements: Matrix is empty.");
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            nullptr,
+            return m_CPUMatrix->LogAddSumOfElements(),
+            return m_GPUMatrix->LogAddSumOfElements(),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
     template<class ElemType>
     bool Matrix<ElemType>::IsEqualTo(const Matrix<ElemType>& a, const ElemType threshold /*= 1e-8*/) const
@@ -2869,7 +2906,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nullptr,
             return this->m_CPUMatrix->FrobeniusNorm(), 
             return this->m_GPUMatrix->FrobeniusNorm(), 
-            NOT_IMPLEMENTED, 
+            return this->m_CPUSparseMatrix->FrobeniusNorm(),
             return this->m_GPUSparseMatrix->FrobeniusNorm()
             );                
         }
@@ -3522,26 +3559,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Static BLAS Functions
 
     template<class ElemType>
-    void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT)
+    void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W)
     {
         if (A.IsEmpty() )
             throw std::logic_error("SVD:  the input matrix is empty.");        
 
         DecideAndMoveToRightDevice(A, SIGMA, U);    
         VT._transferToDevice(A.GetDeviceId());
+        W._transferToDevice(A.GetDeviceId());
 
         SIGMA.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
         U.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
         VT.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
-
+        W.SwitchToMatrixType(A.GetMatrixType(), A.GetFormat(), false);
 
         DISPATCH_MATRIX_ON_FLAG(&A,
             nullptr,
-        Matrix<ElemType> tA = A;
-                CPUMatrix<ElemType>::SVD(*tA.m_CPUMatrix, *SIGMA.m_CPUMatrix, *U.m_CPUMatrix, *VT.m_CPUMatrix);
+            Matrix<ElemType> tA = A;
+            CPUMatrix<ElemType>::SVD(*tA.m_CPUMatrix, *SIGMA.m_CPUMatrix, *U.m_CPUMatrix, *VT.m_CPUMatrix, *W.m_CPUMatrix);
                 SIGMA.SetDataLocation(CPU);
                 U.SetDataLocation(CPU);
-                VT.SetDataLocation(CPU), 
+                VT.SetDataLocation(CPU); 
+                W.SetDataLocation(CPU),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
@@ -4328,6 +4367,66 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		return *this;
 	}
 
+
+    template<class ElemType>
+    void Matrix<ElemType>::RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+        Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+        const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift)
+    {
+        DecideAndMoveToRightDevice(alpha, beta);
+        functionValues._transferToDevice(alpha.GetDeviceId());
+        beta._transferToDevice(alpha.GetDeviceId());
+
+        DISPATCH_MATRIX_ON_FLAG(&alpha,
+            &beta,
+            CPUMatrix<ElemType>::RCRFBackwardCompute(
+                *alpha.m_CPUMatrix,
+                *beta.m_CPUMatrix,
+                *lbls.m_CPUMatrix,
+                *pair_scores.m_CPUMatrix),
+            GPUMatrix<ElemType>::RCRFBackwardCompute(
+                *alpha.m_GPUMatrix,
+                *beta.m_GPUMatrix,
+                *lbls.m_GPUMatrix,
+                *pos_scores.m_GPUMatrix,
+                *pair_scores.m_GPUMatrix, shift),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
+        const Matrix<ElemType>&   alpha,
+        const Matrix<ElemType>& beta,
+        const Matrix<ElemType>& pair_scores,
+        Matrix<ElemType>& grd,
+        const int startLbl,
+        const int shift)
+    {
+        DecideAndMoveToRightDevice(alpha, grd);
+        grd._transferToDevice(alpha.GetDeviceId());
+
+        DISPATCH_MATRIX_ON_FLAG(&alpha,
+            &grd,
+            CPUMatrix<ElemType>::RCRFTransGrdCompute(
+                *lbls.m_CPUMatrix,
+                *alpha.m_CPUMatrix,
+                *beta.m_CPUMatrix,
+                *pair_scores.m_CPUMatrix,
+                *grd.m_CPUMatrix),
+            GPUMatrix<ElemType>::RCRFTransGrdCompute(
+                *lbls.m_GPUMatrix,
+                *alpha.m_GPUMatrix,
+                *beta.m_GPUMatrix,
+                *pair_scores.m_GPUMatrix,
+                *grd.m_GPUMatrix,
+                startLbl,
+                shift),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
 
 #pragma endregion Static BLAS Functions

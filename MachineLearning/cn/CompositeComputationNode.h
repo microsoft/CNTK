@@ -13,6 +13,7 @@
 #include <list>
 #include "ComputationNode.h"
 #include "TrainingCriterionNode.h"
+#include <iostream> 
 
 #define TWO_PI 6.283185307f
 
@@ -62,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintNodeValuesToFile(printValues, fstream);
         }
 
-    protected:
+    public:
         bool m_hasComputed;
     };
 #define UsingPreComputedNodeMembers UsingComputationNodeMembers; using PreComputedNode<ElemType>::m_hasComputed
@@ -75,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingPreComputedNodeMembers;
     public:
-        MeanNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)  
+        MeanNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId)  
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -85,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        MeanNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId), ones(deviceId)
+        MeanNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -103,12 +104,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_hasComputed = hasComputed;
 
-            if (m_hasComputed && m_numSamples > 0)  //m_numSamples>0 means it's not called from model loading
+            if (m_hasComputed) 
             {
                 m_numSamples = 0;
             }
-            //Matrix<ElemType> &avg =FunctionValues();
-            //avg.Print("mean",0,avg.GetNumRows()-1,0,avg.GetNumCols()-1);
         }
 
         virtual bool RequirePreCompute() const { return true;}
@@ -134,24 +133,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
                 samples.HasNan("Mean-Samples");
 #endif
-                
-                ones.SetPreferredDeviceId(samples.GetPreferredDeviceId());
 
-                if (samples.GetNumCols() != ones.GetNumRows())
-                {
-                    ones.Resize(samples.GetNumCols(), 1);
-                    ones.SetValue(1);
+                size_t numNewSamples = samples.GetNumCols();
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + samples.GetNumCols()), samples, false, 
+                    ConstOnes(numNewSamples, 1, samples.GetDeviceId()), false, (ElemType)m_numSamples / (m_numSamples + numNewSamples), avg);
 
-                }
-
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f/(m_numSamples + samples.GetNumCols()),samples, false, ones, false, (ElemType)m_numSamples/(m_numSamples + samples.GetNumCols()), avg);
 #if NANCHECK
                 avg.HasNan("Mean-avg");
                 ones.HasNan("Mean-ones");
 #endif
                 
-                m_numSamples += samples.GetNumCols();
-
+                m_numSamples += numNewSamples;
             }
         }
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -179,17 +171,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (ones.GetDeviceId() != deviceId)
-                    ones.TransferFromDeviceToDevice(ones.GetDeviceId(), deviceId);
-            }
-        }
-
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
@@ -199,13 +180,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 node->m_hasComputed = m_hasComputed;
                 node->m_numSamples = m_numSamples;
-                node->ones = ones;
             }
         }
 
         // copy constructor
         MeanNode(const MeanNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : PreComputedNode<ElemType>(node->m_deviceId), ones(node->m_deviceId)
+            : PreComputedNode<ElemType>(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
@@ -220,7 +200,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         size_t m_numSamples;
-        Matrix<ElemType> ones;
     };
 
     template class MeanNode<float>; 
@@ -232,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingPreComputedNodeMembers;
     public:
         InvStdDevNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : PreComputedNode<ElemType>(deviceId), avg(deviceId), avgsqr(deviceId), ones(deviceId), sampsqr(deviceId)
+            : PreComputedNode<ElemType>(deviceId), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -243,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         InvStdDevNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : PreComputedNode<ElemType>(deviceId), avg(deviceId), avgsqr(deviceId), ones(deviceId), sampsqr(deviceId)
+            : PreComputedNode<ElemType>(deviceId), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -266,36 +245,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ElemType sqrtFloor = 1e-10f;
 
+                m_var.InplaceTruncateBottom(sqrtFloor); //prevent too small variance (and negative square roots)
 #if NANCHECK
-                avg.HasNan("MarkComputed-avg");
+                m_var.HasNan("MarkComputed-InplaceTruncateBottom");
 #endif
-                avg ^= 2;
+                m_var.InplaceSqrt();
+
 #if NANCHECK
-                avg.HasNan("MarkComputed-avg^2");
+                m_var.HasNan("MarkComputed-InplaceSqrt");
 #endif
-                avgsqr -= avg;
+                m_var.ElementInverse();
+
 #if NANCHECK
-                avgsqr.HasNan("MarkComputed-(avgsqr-avg)");
+                m_var.HasNan("MarkComputed-ElementInverse()");
 #endif
-                // do a floor here, because we can get small negative numbers that will turn into QNAN if they make it to the SQRT call below
-                avgsqr.InplaceTruncateBottom(sqrtFloor); //prevent too small variance (and negative square roots)
-#if NANCHECK
-                avgsqr.HasNan("MarkComputed-InplaceTruncateBottom");
-#endif
-                avgsqr.InplaceSqrt();
-#if NANCHECK
-                avgsqr.HasNan("MarkComputed-InplaceSqrt");
-#endif
-                avgsqr.ElementInverse();
-#if NANCHECK
-                avgsqr.HasNan("MarkComputed-ElementInverse()");
-#endif
-                FunctionValues().SetValue(avgsqr);
+                FunctionValues().SetValue(m_var);
 
                 m_numSamples = 0;
-
-                //Matrix<ElemType> &invstddev =FunctionValues();
-                //invstddev.Print("invstddev",0,invstddev.GetNumRows()-1,0,invstddev.GetNumCols()-1);
             }
         }
         virtual bool RequirePreCompute() const { return true;}
@@ -320,32 +286,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
                 samples.HasNan("InvStdDev-Samples");
 #endif
+                m_temp.SetValue(m_mean);
+                size_t numNewSample = samples.GetNumCols();
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), samples, false, 
+                    ConstOnes(numNewSample, 1, samples.GetDeviceId()), false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_mean);
 
-                ones.SetPreferredDeviceId(samples.GetPreferredDeviceId());
-                sampsqr.SetPreferredDeviceId(samples.GetPreferredDeviceId());
+                m_temp -= m_mean;
+                m_temp.AssignElementPowerOf(m_temp, 2);
+                m_var += m_temp;
 
-                if (samples.GetNumCols() != ones.GetNumRows())
-                {
-                    //ones._decideDevices(ones); // if it's going to move do it before we resize
-                    ones.Resize(samples.GetNumCols(), 1);
-                    ones.SetValue(1);
-                }
+                m_temp.AssignDifferenceOf(samples, m_mean);
+                m_temp.AssignElementPowerOf(m_temp, 2);
 
-                if (samples.GetNumCols() != sampsqr.GetNumCols() || samples.GetNumRows() != sampsqr.GetNumRows())
-                {
-                    //sampsqr._decideDevices(sampsqr); // if it's going to move do it before we resize
-                    sampsqr.Resize(samples.GetNumRows(), samples.GetNumCols());
-                    sampsqr.SetValue(1); // value not needed, but need to get it to correct device (handled by SetValue())
-                }
-
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f/(m_numSamples + samples.GetNumCols()),samples, false, ones, false, (ElemType)m_numSamples/(m_numSamples + samples.GetNumCols()), avg);
-
-                sampsqr = samples^2;
-
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f/(m_numSamples + sampsqr.GetNumCols()), sampsqr, false, ones, false, (ElemType)m_numSamples/(m_numSamples + samples.GetNumCols()), avgsqr);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), m_temp, false,
+                    ConstOnes(numNewSample, 1, samples.GetDeviceId()), false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_var);
 
 #if NANCHECK
-                avgsqr.HasNan("InvStdDev-avgsqr");
+                m_var.HasNan("InvStdDev-m_var");
 #endif
 
                 m_numSamples += samples.GetNumCols();
@@ -368,8 +325,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("InvStdDev operation: the input node has 0 element.");
 
             size_t inputDim = Inputs(0)->FunctionValues().GetNumRows();
-            avg.Resize(inputDim, 1);        
-            avgsqr.Resize(inputDim, 1); 
+            m_mean.Resize(inputDim, 1);        
+            m_var.Resize(inputDim, 1); 
 
             FunctionValues().Resize(inputDim, 1);
             CopyImageSizeFromInputs(); 
@@ -387,15 +344,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (avg.GetDeviceId() != deviceId)
-                    avg.TransferFromDeviceToDevice(avg.GetDeviceId(), deviceId);
-                if (avgsqr.GetDeviceId() != deviceId)
-                    avgsqr.TransferFromDeviceToDevice(avgsqr.GetDeviceId(), deviceId);
-                if (ones.GetDeviceId() != deviceId)
-                    ones.TransferFromDeviceToDevice(ones.GetDeviceId(), deviceId);
-                if (sampsqr.GetDeviceId() != deviceId)
-                    sampsqr.TransferFromDeviceToDevice(sampsqr.GetDeviceId(), deviceId);
-
+                if (m_mean.GetDeviceId() != deviceId)
+                    m_mean.TransferFromDeviceToDevice(m_mean.GetDeviceId(), deviceId);
+                if (m_var.GetDeviceId() != deviceId)
+                    m_var.TransferFromDeviceToDevice(m_var.GetDeviceId(), deviceId);
+                if (m_temp.GetDeviceId() != deviceId)
+                    m_temp.TransferFromDeviceToDevice( m_temp.GetDeviceId(), deviceId);
             }
         }
 
@@ -409,19 +363,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_hasComputed = m_hasComputed;
                 node->m_numSamples = m_numSamples;
 
-                node->avg = avg;
-                node->avgsqr = avgsqr;
-                node->ones = ones;
-                node->sampsqr = sampsqr;
+                node->m_mean = m_mean;
+                node->m_var = m_var;
+                node-> m_temp =  m_temp;
             }
         }
 
         // copy constructor
         InvStdDevNode(const InvStdDevNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : PreComputedNode<ElemType>(node->m_deviceId), avg(node->m_deviceId), avgsqr(node->m_deviceId), ones(node->m_deviceId), sampsqr(node->m_deviceId)
-        {                                                                                                                                               
-            node->CopyTo(this, newName, flags);                                                                                                         
-        }                                                                                                                                               
+            : PreComputedNode<ElemType>(node->m_deviceId), m_mean(node->m_deviceId), m_var(node->m_deviceId),  m_temp(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }                                      
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -433,10 +386,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         size_t m_numSamples;
-        Matrix<ElemType> avg;
-        Matrix<ElemType> avgsqr;
-        Matrix<ElemType> ones;
-        Matrix<ElemType> sampsqr;
+        Matrix<ElemType> m_mean;
+        Matrix<ElemType> m_var;
+        Matrix<ElemType>  m_temp;
     };
 
     template class InvStdDevNode<float>;
@@ -2104,4 +2056,326 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
+
+    /**
+    BatchModeNode is a derivative of ComputationNode.
+    It additionally check if needs to process data in batch before processing its parent
+    This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
+    It differs from PreComputeNode in that precompute done is done before the entire corpus.
+    This is done before forward computation of all nodes. 
+    This node is similar to the PreComputeNode, but is an abstract of it.
+    */
+    template<class ElemType>
+    class BatchModeNode : public ComputationNode<ElemType>
+        // all nodes require precomputation should derive from it
+    {
+        UsingComputationNodeMembers;
+
+    protected:
+        /// the memory of input or output
+        Matrix<ElemType> mMemory;
+
+    public:
+        BatchModeNode(DEVICEID_TYPE deviceId) : ComputationNode<ElemType>(deviceId), mMemory(deviceId) {}
+        virtual bool HasComputed() const = 0;
+        virtual void MarkComputed(const bool hasComputed) = 0;
+
+        virtual bool RequireBatchMode() const { return true; }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            assert(mMemory.GetNumCols() > 0);
+
+            FunctionValues().Resize(mMemory.GetNumRows(), m_samplesInRecurrentStep);
+            if (timeIdxInSeq == 0)
+            {
+                assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == mMemory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
+            }
+            FunctionValues().SetValue(mMemory.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+            assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
+        }
+
+        virtual void SaveToFile(File& fstream)  const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_hasComputed;
+            fstream << m_functionValues;
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+
+            fstream >> m_hasComputed;
+            fstream >> m_functionValues;
+        }
+
+
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        {
+            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+
+            const size_t BUFLEN = 4096;
+            WCHAR str[BUFLEN];
+            swprintf(str, BUFLEN, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << wstring(str);
+            swprintf(str, BUFLEN, L"HasComputed=%ws", HasComputed() ? L"true" : L"false");
+            fstream << wstring(str);
+
+            PrintNodeValuesToFile(printValues, fstream);
+        }
+
+    protected:
+        bool m_hasComputed;
+    };
+
+    // add this at the start of each derived class, to get access to the members of ComputationNode
+    // TODO: comment here why this is needed and how to maintain it
+#define UsingBatchModeNodeMembers \
+    UsingComputationNodeMembers; \
+    typedef BatchModeNode<ElemType> C; \
+protected:  \
+    typedef BatchModeNode<ElemType>* BatchModeNodePtr;  \
+public: \
+    using C::HasComputed; using C::MarkComputed; \
+    using C::RequireBatchMode; using C::EvaluateThisNode; using C::SaveToFile; \
+    using C::LoadFromFile; using C::DumpNodeInfo; \
+protected:  \
+    using C::mMemory; using C::m_hasComputed; \
+
+    template class BatchModeNode<float>;
+    template class BatchModeNode<double>;
+
+    /**
+    Developed by Kaisheng Yao. 
+    This node is used in the following work
+    K. Yao and G. Zweig, "Sequence-to-Sequence Neural Net Models for Grapheme-to-Phoneme Conversion", submitted to INTERSPEECH 2015
+    */
+    template<class ElemType>
+    class TimeReverseNode : public BatchModeNode<ElemType>
+    {
+        UsingBatchModeNodeMembers;
+
+    public:
+        TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        TimeReverseNode(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
+            : BatchModeNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            TimeReverseNode<ElemType>* node = (TimeReverseNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->mMemory = mMemory;
+            }
+        }
+
+        virtual void SaveToFile(File& fstream)  const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual bool HasComputed() const {
+            return m_hasComputed;
+        }
+
+        virtual void MarkComputed(const bool hasComputed)
+        {
+            m_hasComputed = hasComputed;
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new TimeReverseNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"TimeReverse"; }
+
+        virtual void MoveMatricesToDevice(const short deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (mMemory.GetDeviceId() != deviceId)
+            {
+                bool fEmpty = mMemory.GetNumElements() == 0;
+                mMemory.TransferFromDeviceToDevice(mMemory.GetDeviceId(), deviceId, true, fEmpty);
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("TimeReverse operation only takes one input.");
+            ComputationNodePtr child = Inputs(inputIndex);
+            ComputeInputPartialS(GradientValues(), child->GradientValues(), m_samplesInRecurrentStep);
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
+        {
+#if DUMPOUTPUT
+
+            functionValues.Print("TimeReverseNode");
+#endif
+            size_t nc = inputGradientValues.GetNumCols();
+            size_t nr = inputGradientValues.GetNumRows();
+            if (nc != gradientValues.GetNumCols() ||
+                nr != gradientValues.GetNumRows())
+            {
+                inputGradientValues.Resize(nr, nc);
+                inputGradientValues.SetValue(0);
+            }
+
+            for (size_t i = 0; i < nc; i += nSamples)
+            {
+                Matrix<ElemType> ig = gradientValues.ColumnSlice(i, nSamples);
+                Matrix<ElemType> ii = inputGradientValues.ColumnSlice(nc - i - nSamples, nSamples);
+                ii += ig;
+            }
+
+#if DUMPOUTPUT
+            inputGradientValues.Print("child Gradient-out");
+#endif
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            if (m_hasComputed == false)
+            {
+                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
+                mMemory.SetValue(FunctionValues());
+            }
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues, int nSamples)
+        {
+            /// this assumes this reverse node is called once, so it can set, instead add to, the function values
+            size_t rows0 = inputFunctionValues.GetNumRows(), cols0 = inputFunctionValues.GetNumCols();
+            functionValues.Resize(rows0, cols0);
+
+            for (size_t i = 0; i < cols0; i += nSamples)
+            {
+                Matrix<ElemType> ig = inputFunctionValues.ColumnSlice(i, nSamples);
+                functionValues.ColumnSlice(cols0 - i - nSamples, nSamples).SetValue(ig);
+            }
+
+#if NANCHECK
+            m_functionValues.HasNan("TimeReverse");
+#endif
+#if DUMPOUTPUT
+            functionValues.Print("TimeReverseNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("TimeReverse operation requires one input.");
+
+            size_t rows, cols;
+            rows = Inputs(0)->FunctionValues().GetNumRows();
+            cols = Inputs(0)->FunctionValues().GetNumCols();
+
+            FunctionValues().Resize(rows, cols);
+            CopyImageSizeFromInput(0);
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr cNode)
+        {
+            m_children.resize(1);
+            m_children[0] = cNode;
+        }
+
+    public:
+        bool UnitTest() {
+            size_t nT = 3;
+            size_t nInput = 3;
+            size_t nOutput = nInput;
+            /// backup 
+            Matrix<ElemType> f0(m_deviceId), func(m_deviceId);
+
+            f0 = Inputs(0)->FunctionValues();
+            func = FunctionValues();
+
+            Inputs(0)->FunctionValues().Resize(nInput, nT);
+            Inputs(0)->FunctionValues().SetValue(0);
+            Inputs(0)->FunctionValues()(0, 0) = 1;
+            Inputs(0)->FunctionValues()(0, 1) = 2;
+            Inputs(0)->FunctionValues()(0, 2) = 3;
+            FunctionValues().Resize(nOutput, nT);
+            if (Inputs(0)->FunctionValues().GetDeviceId() != m_deviceId)
+                Inputs(0)->FunctionValues().TransferFromDeviceToDevice(Inputs(0)->FunctionValues().GetDeviceId(), m_deviceId, true);
+
+            EvaluateThisNode();
+
+            /// check with expected values
+            if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||
+                !ISCLOSE(FunctionValues()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(FunctionValues()(0, 2), 1, EPSILON))
+                return false;
+            if (FunctionValues().GetDeviceId() != m_deviceId)
+                FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+            Inputs(0)->GradientValues().Resize(nOutput, nT);
+            Inputs(0)->GradientValues().SetValue(1.0);
+            GradientValues().Resize(nOutput, nT);
+            GradientValues().SetValue(0);
+            GradientValues()(0, 0) = 1;
+            GradientValues()(0, 1) = 2;
+            GradientValues()(0, 2) = 3;
+            if (GradientValues().GetDeviceId() != m_deviceId)
+                GradientValues().TransferFromDeviceToDevice(GradientValues().GetDeviceId(), m_deviceId, true);
+
+            ComputeInputPartial(0);
+
+            /// check with expected values
+            if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 4, EPSILON)
+                || !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 3, EPSILON)
+                || !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 2, EPSILON))
+                return false;
+
+            if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+
+            if (GradientValues().GetDeviceId() != m_deviceId)
+                GradientValues().TransferFromDeviceToDevice(GradientValues().GetDeviceId(), m_deviceId, true);
+
+            return true;
+        }
+    };
+
+    template class TimeReverseNode<float>;
+    template class TimeReverseNode<double>;
+
+
 }}}

@@ -15,6 +15,7 @@
 #include <vld.h> // leak detection
 #endif
 #include <fstream>
+#include <random>       // std::default_random_engine
 #include "fileutil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -56,7 +57,8 @@ size_t LUSequenceReader<ElemType>::RecordsToRead(size_t mbStartSample, bool tail
 // endOfDataCheck - check if we are at the end of the dataset (no wraparound)
 // returns - true if we have more to read, false if we hit the end of the dataset
 template<class ElemType>
-/*IDataReader<ElemType>::LabelIdType*/ unsigned LUSequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
+/* return value used to be unsigned */
+typename IDataReader<ElemType>::LabelIdType LUSequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
 
@@ -353,16 +355,17 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_traceLevel = readerConfig("traceLevel","0");
     m_parser.SetTraceLevel(m_traceLevel);
 
+    mRandomize = false; 
     if (readerConfig.Exists("randomize"))
     {
         string randomizeString = readerConfig("randomize");
         if (randomizeString == "None")
         {
-            ;
+            mRandomize = false;
         }
         else if (randomizeString == "Auto")
         {
-            ;
+            mRandomize = true;
         }
         else
         {
@@ -373,6 +376,8 @@ void LUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     {
         ; //randomizeAuto;
     }
+
+    m_seed = 0;
 
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
@@ -599,7 +604,7 @@ void LUSequenceReader<ElemType>::LMSetupEpoch()
 }
 
 // utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size) 
+inline size_t RoundUp(size_t value, size_t size) 
 {
     return ((value + size -1)/size)*size;
 }
@@ -641,8 +646,8 @@ void LUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch,
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -748,7 +753,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, LabelType>& labelMapping)
 {
     if (m_cachingReader)
     {
@@ -1008,8 +1013,8 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
         {
             m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
             memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(IDataReader<ElemType>::LabelIdType)*mbSize);
+            m_labelsIdBuffer = new LabelIdType[mbSize];
+            memset(m_labelsIdBuffer,0,sizeof(LabelIdType)*mbSize);
         }
         else if (labelInfo.type != labelNone)
         {
@@ -1138,7 +1143,12 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
             mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
             if (mNumRead == 0) return false;
 
-            //            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+            if (mRandomize)
+            {
+                unsigned seed = m_seed;
+                std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), std::default_random_engine(seed));
+                m_seed++;
+            }
 
             m_readNextSampleLine += mNumRead;
             sLn = FindNextSentences(mNumRead);

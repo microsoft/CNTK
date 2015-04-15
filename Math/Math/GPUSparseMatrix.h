@@ -1,4 +1,4 @@
-﻿//
+//
 // <copyright file="GPUSparseMatrix.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
@@ -23,8 +23,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MATH_API GPUSparseMatrix : public BaseMatrix<ElemType>
     {
-        typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray; using B::m_elemSizeAllocated; using B::m_nz; using B::m_format;   // without this, base members would require to use thi-> in GCC
-
+	public:
+        typedef BaseMatrix<ElemType> B; 
+		using B::m_numRows; 
+		using B::m_numCols; 
+		using B::m_pArray; 
+		using B::m_elemSizeAllocated; 
+		using B::m_nz; 
+		using B::m_format;   
+		using B::m_computeDevice;
+		using B::m_externalBuffer;
+		using B::m_matrixName;
+		using B::OwnBuffer;
+		using B::GetFormat;
+		using B::SetFormat;
+		using B::GetNumRows;
+		using B::GetNumCols;
+		using B::IsEmpty;
+		using B::SetComputeDeviceId;
+		using B::SetMatrixName;
+		using B::SetNzCount;
+		// without this, base members would require to use thi-> in GCC
     public:
         GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR, const DEVICEID_TYPE computeDevice = AUTOPLACEMATRIX);
 
@@ -35,9 +54,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUSparseMatrix(const GPUMatrix<ElemType>&, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
 
-#ifndef    LINUX
+//#ifndef __unix__
         GPUSparseMatrix(GPUSparseMatrix<ElemType>&&);
-#endif    /* LINUX */
+//#endif    /* LINUX */
 
         ~GPUSparseMatrix();
 
@@ -175,9 +194,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ChangeDeviceTo(DEVICEID_TYPE toId);
 
         GPUSparseMatrix<ElemType>& operator=(const GPUSparseMatrix<ElemType>& deepCopy);
-#ifndef    LINUX
+//#ifndef __unix__
         GPUSparseMatrix<ElemType>& operator=(GPUSparseMatrix<ElemType>&& moveFrom);
-#endif    /* LINUX */
+//#endif    /* LINUX */
         GPUSparseMatrix<ElemType> operator+ (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType> operator- (const GPUSparseMatrix<ElemType>& a) const;
         GPUSparseMatrix<ElemType>& operator^= (const ElemType alpha); //element-wise power        
@@ -232,6 +251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUSparseMatrix<ElemType>& AssignAbsOf (const GPUSparseMatrix<ElemType>& a);
 
         GPUSparseMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        GPUSparseMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         GPUSparseMatrix<ElemType>& InplaceTruncateBottom (const ElemType threshold);
         GPUSparseMatrix<ElemType>& AssignTruncateBottomOf (const GPUSparseMatrix<ElemType>& a, const ElemType threshold);
@@ -257,7 +277,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& c);
 
         void NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum);
-        
+        ElemType Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier);
+
         static void Multiply(const GPUSparseMatrix<ElemType>& S, const GPUMatrix<ElemType>& D, GPUMatrix<ElemType>& C);
         static void Multiply(const GPUMatrix<ElemType>& D, const GPUSparseMatrix<ElemType>& S, GPUMatrix<ElemType>& C);
         static void Multiply(const GPUSparseMatrix<ElemType>& S1, bool transposeS1, const GPUSparseMatrix<ElemType>& S2, bool transposeS2, GPUSparseMatrix<ElemType> &C);
@@ -297,6 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void DeepCopy(const GPUSparseMatrix<ElemType>& deepCopyFrom);
         void Clear();
         void PrepareBuffer(const size_t numRows, const size_t numCols, const bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func);
+
         size_t ElemCountFromBufferSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const size_t totalBufferSize) const;
         size_t ElemCountFromBufferSize() const;
         DEVICEID_TYPE PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;

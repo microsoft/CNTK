@@ -25,6 +25,8 @@
 #ifdef    _WIN32
 // thread local storage to access the current stream, initalize to default stream
 extern __declspec (thread)
+#else
+static
 #endif
 cudaStream_t t_stream;
 
@@ -47,6 +49,15 @@ void CUSPARSECALL(cusparseStatus_t x)
         std::cerr << "!!!!!!!!CUSPARSE EXCEPTION: " << std::endl;
         throw std::runtime_error("CUSPARSE EXCEPTION");
     }    
+}
+
+void CUBLASCALL(cublasStatus_t x)
+{
+    if (x != CUBLAS_STATUS_SUCCESS)
+    {
+        std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
+        throw std::runtime_error("CUBLAS fail");
+    }
 }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -108,10 +119,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetValue(deepCopy, matrixFormat);
     }
 
-
     template<class ElemType>
     GPUSparseMatrix<ElemType>::GPUSparseMatrix(const GPUSparseMatrix<ElemType>& deepCopy)
     {
+
         ZeroInit(deepCopy.GetFormat(), deepCopy.GetComputeDeviceId());
         DeepCopy(deepCopy);
     }
@@ -599,7 +610,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDACALL(cudaFree(m_rowToId));
 
         if (m_tempHostBuffer != nullptr)
-            delete[] m_tempHostBuffer;
+            delete[] (byte*)m_tempHostBuffer;
 
         ZeroInit(m_format, m_computeDevice);
     }
@@ -1059,7 +1070,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t row = h_Row[i];
             if (indexer.find(row) == indexer.end())
             {
-                indexer[row] = indexer.size();
+                size_t id = indexer.size();  //We need to assign size to a temp variable due to difference in Linux and Windows
+                indexer[row] = id;
             }
             rowToId[i] = indexer[row];
         }
@@ -1108,25 +1120,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
-        if(m_format == matrixFormatSparseBlockCol || m_format == matrixFormatSparseBlockRow ||
-            m_format == matrixFormatSparseCSR || m_format == matrixFormatSparseCSC)
-        {
-            long N=(long)GetNumNZElements();
-            int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
-            cudaEvent_t done = nullptr;
-            if (do_sync)    CUDACALL(cudaEventCreate(&done));
-            ElemType * values = NzValues();
-            _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(values,threshold,N);
-            if (do_sync)    CUDACALL(cudaEventRecord(done));
-            if (do_sync)    CUDACALL(cudaEventSynchronize(done));
-            if (do_sync)    CUDACALL(cudaEventDestroy(done));
-        } 
-        else 
-        {
-            NOT_IMPLEMENTED;
-        }
+        long N=(long)GetNumNZElements();
+
+        long blocksPerGrid = (long)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        ElemType * values = NzValues();
+        _inplaceTruncate<ElemType><<<blocksPerGrid,threadsPerBlock>>>(values,threshold,N);
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+
         return *this;
     } 
+
+    template<class ElemType>
+    GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        long N = (long)GetNumNZElements();
+
+        long blocksPerGrid = (long)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        ElemType * values = NzValues();
+        _inplaceSoftThreshold<ElemType> << <blocksPerGrid, threadsPerBlock >> >(values, threshold, N);
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+
+        return *this;
+    }
 
     // normal update for smoothed gradients c and current gradients (this)
     template<class ElemType> 
@@ -1163,6 +1186,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else 
         {
             NOT_IMPLEMENTED;
+        }
+    }
+
+    template<class ElemType>
+    ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier)
+    {
+        size_t numColsNeeded = GetNumCols();
+        if (needAveMultiplier)
+            numColsNeeded += GetNumCols();
+
+        if (c.IsEmpty() || c.GetNumCols() < numColsNeeded)
+        {
+            c.Resize(GetNumRows(), numColsNeeded);
+            c.SetValue(0.0);
+        }
+
+        assert(c.GetNumRows() == GetNumRows() && c.GetNumCols() == numColsNeeded);
+
+        size_t n = this->GetNumElements();
+
+        ElemType *multipliers = nullptr;
+        if (needAveMultiplier)
+            multipliers = c.GetArray() + n; // temp memory used to store multipliers,
+
+        if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
+        {
+            NOT_IMPLEMENTED;
+        }
+        else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow)
+        {
+            int blocksPerGrid = (m_nz + threadsPerBlock - 1) / threadsPerBlock;
+            bool colMajor = (m_format == MatrixFormat::matrixFormatSparseBlockCol ? true : false);
+            size_t len = colMajor ? GetNumRows() : GetNumCols();
+            _adagrad4BlockSparse<ElemType> << <blocksPerGrid, threadsPerBlock >> >(c.GetArray(), c.GetNumRows(), NzValues(), BlockId2ColOrRow(), multipliers, colMajor, len, m_nz);
+        }
+        else
+            NOT_IMPLEMENTED;
+
+        if (!needAveMultiplier)
+            return 1;
+
+        cublasHandle_t cuHandle = GPUMatrix<ElemType>::GetCublasHandle(GetComputeDeviceId());
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            float aveMultiplier = 0;
+            CUBLASCALL(cublasSasum(cuHandle, (LONG64)m_nz, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
+            return (ElemType)aveMultiplier / m_nz;
+        }
+        else
+        {
+            double aveMultiplier = 0;
+            CUBLASCALL(cublasDasum(cuHandle, (LONG64)m_nz, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
+            return (ElemType)aveMultiplier / m_nz;
         }
     }
 
@@ -2200,7 +2276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (m_tempHostBufferSize < sizeInByte)
         {
-            delete[] m_tempHostBuffer;
+            delete[] (byte*)m_tempHostBuffer;
             m_tempHostBuffer = new byte[sizeInByte];
             m_tempHostBufferSize = sizeInByte;
         }

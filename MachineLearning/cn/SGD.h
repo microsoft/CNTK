@@ -186,6 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             bool needAveMultiplier = (bool)configSGD("normWithAveMultiplier", "true");
             ElemType L2RegWeight = (ElemType)configSGD("L2RegWeight", "0");
+            ElemType L1RegWeight = (ElemType)configSGD("L1RegWeight", "0");
 
             /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of 
             /// useAdagrad=true
@@ -213,7 +214,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
-                rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode, needAveMultiplier, L2RegWeight);
+                rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode, needAveMultiplier, L2RegWeight, L1RegWeight);
         }
     
         void setMomentum(float momentum)
@@ -235,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
-            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed = true, const bool needAveMultiplier = true, const ElemType L2RegWeight = 0)
+            RMSPropInfo rpi = RMSPropInfo(), size_t learnRateAdjustInterval = 1, const bool UsingAllDataForPreComputed = true, const bool needAveMultiplier = true, const ElemType L2RegWeight = 0, const ElemType L1RegWeight = 0)
         {
             m_numPrevLearnRates = numPrevLearnRates;
             m_mbSize=mbSize;
@@ -255,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_learnRateIncreaseFactor=learnRateIncreaseFactor;
             m_reduceLearnRateIfImproveLessThan=reduceLearnRateIfImproveLessThan;
              m_continueReduce=continueReduce;
-             m_learnRateAdjustInterval = max(1, learnRateAdjustInterval); //minimum interval is 1 epoch
+             m_learnRateAdjustInterval = max((size_t) 1, learnRateAdjustInterval); //minimum interval is 1 epoch
             m_learnRateDecreaseFactor=learnRateDecreaseFactor;
             m_clippingThresholdPerSample=abs(clippingThresholdPerSample);
             m_numMiniBatch4LRSearch=numMiniBatch4LRSearch;
@@ -276,6 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_needAveMultiplier = needAveMultiplier;
             m_L2RegWeight = L2RegWeight;
+            m_L1RegWeight = L1RegWeight;
 
             for (size_t i=0; i<m_mbSize.size(); i++)
                 if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -529,7 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (learnRateInitialized)
                     prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample; 
 
-                setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size()-1]);
+                setMomentum(m_momentumInputPerMB[startEpoch]);
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
@@ -551,11 +553,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
+				setMomentum(m_momentumInputPerMB[i]);
                 //learning rate adjustment
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
                 {
                     learnRatePerSample = m_learningRatesPerSample[i];
-                    setMomentum(m_momentumInputPerMB[i]);
+                    
                 }
                 else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
                 {
@@ -585,7 +588,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef MPI_SUPPORT
 				INT32 mySamples = (INT32)
 #endif
-					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", (int)startEpoch,  learnRatePerSample, m_momentumPerMB);
+					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", i,  learnRatePerSample, m_momentumPerMB);
                 TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample, FeatureNodes, labelNodes,
                     criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
                     epochCriterion, epochEvalErrors, totalSamplesSeen);
@@ -796,6 +799,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     net.Evaluate( *nodeIter);
                 }
+
             }
 
             //mark done
@@ -1037,7 +1041,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ComputationNodePtr node = (*nodeIter);
                         Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                        UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber], m_L2RegWeight, m_needAveMultiplier);
+                        UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber], m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
                     }                    
                 }
 
@@ -1103,7 +1107,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 public:
         // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const bool needAveMultiplier)
+    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const ElemType L1RegWeight, const bool needAveMultiplier)
         {
 #if DUMPOUTPUT
             fprintf(stderr, "learnRatePerSample=%0.8f, actualMBSize=%ld, expectedMBSize=%ld\n",learnRatePerSample, actualMBSize, expectedMBSize);
@@ -1140,12 +1144,13 @@ public:
                 }
                 smoothedGradient.NormalGrad(gradientValues, functionValues, learnRatePerSample, momentum);
             }
-            if (adpType == GradientsUpdateType::AdaGrad)
+            else if (adpType == GradientsUpdateType::AdaGrad 
+                || (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType()== MatrixType::SPARSE)) //rmsprop for sparse is not implemented yet, delegate it with adagrad
             {
                 ElemType aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
             }
-            if (adpType == GradientsUpdateType::RmsProp)
+            else if (adpType == GradientsUpdateType::RmsProp)
             {
                 ElemType aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma, (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max, (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
                 Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
@@ -1155,18 +1160,23 @@ public:
             {
                 Matrix<ElemType>::ScaleAndAdd(1.0, sgdUpdateNoise, functionValues);
             }
+
+            // L1 regularizer with proximal gradient descent method
+            if (L1RegWeight > 0) //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
+                functionValues.InplaceSoftThreshold(learnRatePerSample*L1RegWeight*actualMBSize);
+
 #if DUMPOUTPUT
             functionValues.Print("Parameter Update");
 #endif
         }
 protected:
         // UpdateWeights - update the weights in 
-    void UpdateWeights(const ComputationNodePtr node, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, const size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const bool needAveMultiplier) const
+    void UpdateWeights(const ComputationNodePtr node, Matrix<ElemType>& smoothedGradient, const ElemType learnRatePerSample, const size_t actualMBSize, const size_t expectedMBSize, const ElemType L2RegWeight, const ElemType L1RegWeight, const bool needAveMultiplier) const
         {
 #if DUMPOUTPUT
             fprintf(stderr, "Update_%ls\n",node->NodeName().c_str());
 #endif
-            UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(), smoothedGradient, learnRatePerSample, actualMBSize, expectedMBSize, L2RegWeight, needAveMultiplier);
+            UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(), smoothedGradient, learnRatePerSample, actualMBSize, expectedMBSize, L2RegWeight, L1RegWeight, needAveMultiplier);
             node->UpdateEvalTimeStamp();
         }
 
@@ -1256,8 +1266,11 @@ protected:
             int epoch1Base = epoch + 1;
             if (epoch1Base == m_maxEpochs || bLastModel) 
                 return m_modelPath;          
-            else 
-                return msra::strfun::wstrprintf (L"%s.%d", m_modelPath.c_str(), (int) epoch1Base);
+            else {
+				wstring w = msra::strfun::wstrprintf (L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
+				return w;
+			}
+ 
         } 
 
         //return -1 if nothing exists
@@ -1301,7 +1314,7 @@ protected:
         GradientsUpdateType ParseGradUpdateType(wstring s)
         {
             msra::strfun::tolower_ascii(s);
-            if (s == L"" || s == L"none")
+            if (s == L"" || s == L"none" || s == L"normal" || s== L"simple")
                 return GradientsUpdateType::None;
             else if (s == L"adagrad")
                 return GradientsUpdateType::AdaGrad;
@@ -1333,7 +1346,6 @@ protected:
         ElemType MomentumPerMB() const {return m_momentumPerMB;}
 
     public:
-        #define EPSILON 1e-5
 
         bool GradientCheck(
             ComputationNetwork<ElemType>& net,
@@ -1349,16 +1361,13 @@ protected:
                 ComputationNodePtr node = (*nodeIter);
                 char wstrtmp[2048];
 
-                for (size_t itry = 0; itry < min(50, node->FunctionValues().GetNumElements()); itry++)
+                for (size_t itry = 0; itry < min((size_t)50, node->FunctionValues().GetNumElements()); itry++)
                 {
                     /// no support to sparse matrix yet
                     int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
                     int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
                     irow = max(0, irow);
                     icol = max(0, icol);
-
-                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
-                        continue;
 
                     fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
                     // node->FunctionValues().Print();
@@ -1368,6 +1377,10 @@ protected:
 
                     node->UpdateEvalTimeStamp();
                     net.ComputeGradient(criterionNodes[npos]);  //use only the first criterion. Is 
+//                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE && node->GradientValues().GetDeviceId() != CPUDEVICE)
+                    if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
+                        break;
+
                     //ElemType mbEvalCri =
                     criterionNodes[npos]->FunctionValues().Get00Element(); //criterionNode should be a scalar
                     ElemType eGradErr = node->GradientValues()(irow, icol);
@@ -1473,6 +1486,7 @@ protected:
 
         bool m_needAveMultiplier;
         ElemType m_L2RegWeight;
+        ElemType m_L1RegWeight;
     };
     template class SGD<float>; 
     template class SGD<double>;

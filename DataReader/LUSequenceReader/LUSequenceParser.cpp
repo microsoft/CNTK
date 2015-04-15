@@ -339,7 +339,7 @@ template class LUSequenceParser<double, double>;
 template class LUSequenceParser<double, std::string>;
 
 template <typename NumType, typename LabelType>
-void LUBatchLUSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn="<s>", std::string endSequenceIn="</s>", std::string beginSequenceOut="O", std::string endSequenceOut="O")
+void LUBatchLUSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn, std::string endSequenceIn, std::string beginSequenceOut, std::string endSequenceOut)
 {
     LULUSequenceParser<NumType, LabelType>::ParseInit(fileName, dimFeatures, dimLabelsIn, dimLabelsOut, beginSequenceIn, endSequenceIn, beginSequenceOut, endSequenceOut);
 }

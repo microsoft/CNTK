@@ -28,6 +28,6 @@ int _tmain(int argc, _TCHAR* argv[])
     {
         fprintf(stderr,"%4d: features dim: %d x %d - [%.8g, %.8g, ...] label dim: %d x %d - [%d, %d, ...]\n", i++, features.GetNumRows(), features.GetNumCols(), features(0,0), features(0,1), labels.GetNumRows(), labels.GetNumCols(), (int)labels(0,0), (int)labels(1,0));
     }
-	return 0;
+    return 0;
 }
 

@@ -5,7 +5,7 @@
 //
 
 #pragma once
-
+#include "Platform.h"
 #include <string>
 #include <vector>
 #include <ctime>
@@ -69,6 +69,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // without this, base members would require to use thi-> in GCC
     public:
         static const int MaxGpus = 8;  // support up to 8 GPUs
+		using BaseMatrix<ElemType>::m_computeDevice;
+		using BaseMatrix<ElemType>::m_elemSizeAllocated;
+		using BaseMatrix<ElemType>::m_matrixName;
+		using BaseMatrix<ElemType>::m_format;
+		using BaseMatrix<ElemType>::m_externalBuffer;
+		using BaseMatrix<ElemType>::OwnBuffer;
+		using BaseMatrix<ElemType>::GetNumElements;
+		using BaseMatrix<ElemType>::IsEmpty;
+		using BaseMatrix<ElemType>::GetNumRows;
+		using BaseMatrix<ElemType>::GetNumCols;
+		using BaseMatrix<ElemType>::SetMatrixName;
     private:
         static cublasHandle_t s_cuHandle[MaxGpus];
         static void *s_curandGenerator;
@@ -218,6 +229,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignTruncateBottomOf (const GPUMatrix<ElemType>& a, const ElemType threshold);
         GPUMatrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         GPUMatrix<ElemType>& AssignTruncateTopOf (const GPUMatrix<ElemType>& a, const ElemType threshold);
+        GPUMatrix<ElemType>& InplaceTruncate(const ElemType threshold);
+        GPUMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         GPUMatrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
@@ -341,6 +354,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType> &Gradients, const GPUMatrix<ElemType> &SmoothedGradients);
 
+        ElemType LogAddSumOfElements() const;
+
     public:
         GPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt);
         static void InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt);
@@ -348,6 +363,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed);
 
         GPUMatrix<ElemType>& AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift);
+
+    public:
+        static void RCRFBackwardCompute(
+            const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+            const GPUMatrix<ElemType>& lbls,
+            const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift = 1);
+        static void RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
+            const GPUMatrix<ElemType>&   alpha,
+            const GPUMatrix<ElemType>& beta,
+            const GPUMatrix<ElemType>& pair_scores,
+            GPUMatrix<ElemType>& grd,
+            const int startLbl, /// the time 0 start symbol in the output layer
+            const int shift);
 
     public:
         friend File& operator>>(File& stream, GPUMatrix<ElemType>& us)

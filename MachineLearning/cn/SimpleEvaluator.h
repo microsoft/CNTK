@@ -157,22 +157,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             fprintf(stderr,"Final Results: ");
-            DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastMBs);
+            DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, evalNodes, evalResults, evalResultsLastMBs, true);
             
             for (int i=0; i<evalResults.size(); i++)
             {
                 evalResults[i] /= totalEpochSamples;
-            }
-
-            if (inputMatrices[L"classinfo"])
-            {
-                delete inputMatrices[L"classinfo"];
-                inputMatrices.erase(L"classinfo");
-            }
-            if (inputMatrices[L"idx2cls"])
-            {
-                delete inputMatrices[L"idx2cls"];
-                inputMatrices.erase(L"idx2cls");
             }
 
             return evalResults;
@@ -312,13 +301,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
         void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodePtr>& evalNodes, 
-            const vector<ElemType> & evalResults, const vector<ElemType> & evalResultsLastMBs)
+            const vector<ElemType> & evalResults, const vector<ElemType> & evalResultsLastMBs, bool displayConvertedValue = false)
         {
             fprintf(stderr,"Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
             for (size_t i=0; i<evalResults.size(); i++)
             {
-                fprintf(stderr, "%ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), (evalResults[i]-evalResultsLastMBs[i])/numSamplesLastMBs);
+                ElemType eresult = (evalResults[i] - evalResultsLastMBs[i]) / numSamplesLastMBs;
+                fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
+
+                if (displayConvertedValue)
+                {
+                    //display Perplexity as well for crossEntropy values
+                    if (evalNodes[i]->OperationName() == CrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
+                        evalNodes[i]->OperationName() == CrossEntropyNode<ElemType>::TypeName() ||
+                        evalNodes[i]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
+                        fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
+                }
             }
 
             fprintf(stderr, "\n");

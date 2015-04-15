@@ -18,6 +18,7 @@
 #include <random>
 #include <chrono>
 #include <exception>
+#include <thread>
 
 #ifdef     _WIN32
 #include <Windows.h>
@@ -51,7 +52,7 @@
 #ifndef USE_MKL  //MKL has one additional parameter for different matrix order
 #define BLAS_COLMAJOR 
 #else
-#define BLAS_COLMAJOR (int)MatrixOrder::ColMajor, 
+#define BLAS_COLMAJOR (int)MatrixOrder::ColMajor,
 #endif
 
 #define SWAP(a,b) {(a) ^= (b); (b) ^= (a); (a) ^= (b);}
@@ -918,7 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ElemType aveMultiplier = 0;
 
-        if (IsEmpty())
+        if (IsEmpty() || gradients.GetNumCols() != GetNumCols() || gradients.GetNumRows() != GetNumRows())
         {
             Resize(gradients.GetNumRows(), gradients.GetNumCols());
             SetValue(0.0);
@@ -928,24 +929,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType *a=m_pArray, *d_v=gradients.m_pArray;
         size_t n = GetNumElements();
-        long nLoop = (long)n - n%4;
 
         const ElemType floor = 1e-16f;
         ElemType a0, a1, a2, a3;
 
-#pragma omp parallel for
-        // unwrap this loop for efficiency
-        for (long i=0; i<nLoop; i+=4)
+        //disable omp here because aveMultiper needs to be added atomically. however, it seems the result is incorrect even if rmp atomic and amp critical are used.
+//#pragma omp parallel for     
+        for (long i = 0; i<(n & ~3); i += 4)  //four-way unrolling
         {
             a[i] += d_v[i] * d_v[i];
             a[i+1] += d_v[i+1] * d_v[i+1];
             a[i+2] += d_v[i+2] * d_v[i+2];
             a[i+3] += d_v[i+3] * d_v[i+3];
 
-            a0 = (sqrt(a[i]) + floor);
-            a1 = (sqrt(a[i + 1]) + floor);
-            a2 = (sqrt(a[i + 2]) + floor);
-            a3 = (sqrt(a[i + 3]) + floor);
+            a0 = sqrt(a[i] + floor);
+            a1 = sqrt(a[i + 1] + floor);
+            a2 = sqrt(a[i + 2] + floor);
+            a3 = sqrt(a[i + 3] + floor);
 
             d_v[i] /= a0;
             d_v[i+1] /= a1;
@@ -959,11 +959,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get the last few elements if any
-        for (long i=nLoop; i<n; i++)
+        for (long i = n & ~3; i<n; i++)
         {
             a[i] += d_v[i] * d_v[i];
 
-            a0 = (sqrt(a[i]) + floor);
+            a0 = sqrt(a[i] + floor);
             d_v[i] /= a0;
 
             if (needAveMultiplier)
@@ -972,7 +972,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        if (needAveMultiplier)
+        if (needAveMultiplier && n > 0)
             return aveMultiplier / n;
         else
             return 1;
@@ -2296,7 +2296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
 
         auto& us=*this;
         ElemType locThresholdPos = abs(threshold);
@@ -2339,6 +2339,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
             
+        return *this;
+    }
+
+    //x= x-threshold if x>threshold, x+threshold if x<-threshold, 0 otherwise
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
+
+        long m = (long)GetNumElements();
+
+#pragma omp parallel for     
+        for (long i = 0; i<(m & ~3); i += 4)  //four-way unrolling
+        {
+            if (m_pArray[i] > threshold)
+                m_pArray[i] -= threshold;
+            else if (m_pArray[i] < -threshold)
+                m_pArray[i] += threshold;
+            else
+                m_pArray[i] = 0;
+
+            if (m_pArray[i+1] > threshold)
+                m_pArray[i+1] -= threshold;
+            else if (m_pArray[i+1] < -threshold)
+                m_pArray[i+1] += threshold;
+            else
+                m_pArray[i+1] = 0;
+
+            if (m_pArray[i+2] > threshold)
+                m_pArray[i+2] -= threshold;
+            else if (m_pArray[i+2] < -threshold)
+                m_pArray[i+2] += threshold;
+            else
+                m_pArray[i+2] = 0;
+
+            if (m_pArray[i+3] > threshold)
+                m_pArray[i+3] -= threshold;
+            else if (m_pArray[i+3] < -threshold)
+                m_pArray[i+3] += threshold;
+            else
+                m_pArray[i+3] = 0;
+        }
+        //handle remaining stuffs
+        for (long i = m & ~3; i<m; i++)
+        {
+            if (m_pArray[i] > threshold)
+                m_pArray[i] -= threshold;
+            else if (m_pArray[i] < -threshold)
+                m_pArray[i] += threshold;
+            else
+                m_pArray[i] = 0;
+        }
+
         return *this;
     }
 
@@ -3171,10 +3225,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fprintf (stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowStart, rowEnd, colStart, colEnd);
 
         const auto& us = *this;
-        foreach_row(i,us)
+        for (size_t i = rowStart; i <= rowEnd; i++)
         {
-            foreach_column(j,us)
-                fprintf (stderr, "%.10f\t",  us(i,j));
+            for (size_t j = colStart; j <= colEnd; j++)
+                fprintf(stderr, "%.10f\t", us(i, j));
             fprintf (stderr, "\n");
         }
     }
@@ -3626,7 +3680,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             dgemm(transA, transB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
 #else
-            cblas_dgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
+            cblas_dgemm ((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <double*>(a.m_pArray), lda, reinterpret_cast <double*>(b.m_pArray), ldb, beta, reinterpret_cast <double*>(c.m_pArray), ldc);
 #endif
         }
         else
@@ -3635,37 +3689,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
             sgemm(BLAS_COLMAJOR transA, transB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #else
-            cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
+            cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #endif
         }
     }
 
     /* compute singular value decomposition as 
     A = U*SIGMA*VT
+    W is used as temp working memory
     */
     template<class ElemType>
-    void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT)
+    void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W)
     {
         if (A.IsEmpty())
             throw std::logic_error("SVD:  input matrix is empty.");
 
         int info;
-        size_t m, n, lda, ldu, ldvt;
-        m = A.GetNumRows();
-        n = A.GetNumCols();
-        lda = m; 
+        int m, n, lda, ldu, ldvt;
+        m = (int)A.GetNumRows();
+        n = (int)A.GetNumCols();
+        W.GetNumRows();  //W is used as temp working memory
+        lda = m;
         ldu = m;
-        ldvt= n;
-        U.Resize(m,m);
-        SIGMA.Resize(min(m,n),1);
-        VT.Resize(n,n);
+        ldvt = n;
+        U.Resize(m, m);
+        SIGMA.Resize(min(m, n), 1);
+        VT.Resize(n, n);
 
         if (sizeof(ElemType) == sizeof(double))
+        {
+#ifndef USE_MKL
             dgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <double*>(A.m_pArray), (int)lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), (int)ldu, reinterpret_cast <double*>(VT.m_pArray), (int)ldvt, &info);
+#else
+            double  wkopt;
+            int lwork = -1;
+            dgesvd("All", "All", &m, &n, reinterpret_cast <double*>(A.m_pArray), &lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), &ldu, reinterpret_cast <double*>(VT.m_pArray), &ldvt, &wkopt, &lwork, &info);
+            lwork = (int)wkopt;
+            W.Resize(lwork, 1);
+            dgesvd("All", "All", &m, &n, reinterpret_cast <double*>(A.m_pArray), &lda, reinterpret_cast <double*>(SIGMA.m_pArray), reinterpret_cast <double*>(U.m_pArray), &ldu, reinterpret_cast <double*>(VT.m_pArray), &ldvt, reinterpret_cast <double*>(W.m_pArray), &lwork, &info);
+#endif
+        }
         else
         {
+#ifndef USE_MKL
 #pragma warning (suppress: 4244)
             sgesvd('A', 'A', (int)m, (int)n, reinterpret_cast <float*>(A.m_pArray), (int)lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), (int)ldu, reinterpret_cast <float*>(VT.m_pArray), (int)ldvt, &info);
+#else
+            float  wkopt;
+            int lwork = -1;
+            sgesvd("All", "All", &m, &n, reinterpret_cast <float*>(A.m_pArray), &lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), &ldu, reinterpret_cast <float*>(VT.m_pArray), &ldvt, &wkopt, &lwork, &info);
+            lwork = (int)wkopt;
+            W.Resize(lwork, 1);
+            sgesvd("All", "All", &m, &n, reinterpret_cast <float*>(A.m_pArray), &lda, reinterpret_cast <float*>(SIGMA.m_pArray), reinterpret_cast <float*>(U.m_pArray), &ldu, reinterpret_cast <float*>(VT.m_pArray), &ldvt, reinterpret_cast <float*>(W.m_pArray), &lwork, &info);
+#endif
+        }
+
+        if (info > 0) 
+        {
+            RuntimeError("The algorithm computing SVD failed to converge.\n");
         }
     }
 
@@ -4355,40 +4436,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (long j = 0; j < n; j++)
                 {
+#ifndef USE_MKL
                     c(0, j) = (ElemType)ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn(j)), 1);
+#else
+                    c(0, j) = (ElemType)cblas_ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn(j)), 1);
+#endif
                 }
                 for (long j = 0; j < n; j++)
                 {
                     for (long i = 1; i < negnumber + 1; i++)
                     {
+#ifndef USE_MKL
                         c(i, j) = (ElemType)ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+#else
+                        c(i, j) = (ElemType)cblas_ddot(m, reinterpret_cast <double*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <double*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+#endif
                     }
                 }
 
             }
             else
             {
-                /*
-                #pragma omp parallel for
-                foreach_column(j, c)
-                {
-                #pragma warning (suppress: 4244)
-                #ifndef USE_MKL
-                c(0, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
-                #else
-                c(0, j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
-                #endif
-                }*/
                 for (long j = 0; j < n; j++)
                 {
+#ifndef USE_MKL
                     c(0, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
+#else
+                    c(0, j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn(j)), 1);
+#endif
                 }
                 for (long j = 0; j < n; j++)
                 {
                     for (long i = 1; i < negnumber + 1; i++)
                     {
+#ifndef USE_MKL
                         c(i, j) = (ElemType)sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
-
+#else
+                        c(i, j) = (ElemType)cblas_sdot(m, reinterpret_cast <float*>(a.m_pArray + a.LocateColumn(j)), 1, reinterpret_cast <float*>(b.m_pArray + b.LocateColumn((j + shift + i - 1) % n)), 1);
+#endif
                     }
                 }
             }
@@ -4407,7 +4492,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifndef USE_MKL
                     c(i, 0) = (ElemType)ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
 #else
-                    c(i, 0) = cblas_ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
+                    c(i, 0) = (ElemType)cblas_ddot(n, reinterpret_cast <double*>(a.m_pArray + i), m, reinterpret_cast <double*>(b.m_pArray + i), m);
 #endif
                 }
             }
@@ -4570,10 +4655,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma endregion Static BLAS Functions
 
-    //The explicit instantiation part
-    template class CPUMatrix<float>;
-    template class CPUMatrix<double>;
-
     double logadd(double x, double y)
     {
         double temp, diff, z; 
@@ -4592,5 +4673,224 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return x + log(1.0 + z);
         }
     }
+
+    template<class ElemType>
+    ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
+    {
+        ElemType fAlpha = LZERO;
+        for (int k = 0; k < GetNumElements(); k++)
+            fAlpha = (ElemType) logadd(fAlpha, m_pArray[k]);
+        return fAlpha;
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& lbls,
+        const CPUMatrix<ElemType>& pair_scores)
+    {
+        int iNumPos = (int)lbls.GetNumCols();
+        int iNumLab = (int)lbls.GetNumRows();
+
+        int lastLbl = -1;
+        for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+        if (lbls(ik, iNumPos - 1) != 0){
+            lastLbl = ik; break;
+        }
+
+        beta.Resize(iNumLab, iNumPos);
+
+        for (int t = iNumPos - 1; t >= 0; t--)
+        {
+#pragma omp parallel for
+            for (int k = 0; k < iNumLab; k++)
+            {
+                _rcrfBackwardCompute(t, k, alpha, beta, pair_scores);
+            }
+        }
+
+    };
+
+    /// the kernel function for RCRF  backward computation
+    template<class ElemType>
+    void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
+        CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& pair_scores)
+    {
+        size_t iNumLab = alpha.GetNumRows();
+        size_t iNumPos = alpha.GetNumCols();
+
+        ElemType fSum;
+        ElemType fTmp = LZERO;
+        if (t == iNumPos - 1)
+        {
+            fSum = LZERO;
+            for (int j = 0; j < iNumLab; j++)
+            {
+                fSum = (ElemType)logadd((double)fSum, alpha(j, t));
+            }
+
+            fTmp = alpha(k, t) - fSum;
+            beta(k, t) = fTmp;
+        }
+        else
+        {
+            for (int j = 0; j < iNumLab; j++)
+            {
+                fSum = LZERO;
+                for (int m = 0; m < iNumLab; m++)
+                {
+                    fSum = (ElemType)logadd((double)fSum, alpha(m, t) + pair_scores(j, m));
+                }
+
+                fTmp = (ElemType)logadd(fTmp, beta(j, t + 1) + alpha(k, t) + pair_scores(j, k) - fSum);
+            }
+            beta(k, t) = fTmp;
+        }
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
+        const CPUMatrix<ElemType>&   alpha,
+        const CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& pair_scores,
+        CPUMatrix<ElemType>& grd)
+    {
+        int iNumPos = (int)alpha.GetNumCols();
+        int iNumLab = (int)alpha.GetNumRows();
+
+        int firstLbl = -1;
+        for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+        if (lbls(ik, 0) != 0){
+            firstLbl = ik; break;
+        }
+
+        for (size_t tPos = 0; tPos < iNumPos; tPos++)
+        {
+            CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1);
+            CPUMatrix<ElemType> a;
+            if (tPos > 0)
+                a = alpha.ColumnSlice(tPos - 1, 1);
+
+#pragma omp parallel for
+            for (int i = 0; i < iNumLab; i++){
+                _rcrfTransGrdCompute(i, lbls, alpha, beta, pair_scores, grd, tPos);
+            }
+
+            /// transition score
+            int i = -1;
+            if (tPos == 0) i = firstLbl;
+            else {
+                for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+                if (lbls(ik, tPos - 1) != 0){
+                    i = ik; break;
+                }
+            }
+
+            int j = -1;
+            for (int ik = 0; ik < lbls.GetNumRows(); ik++){
+                if (lbls(ik, tPos) != 0){
+                    j = ik; break;
+                }
+            }
+
+            grd(j, i) -= 1.0;
+        }
+    };
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::_rcrfTransGrdCompute(size_t i,
+        const CPUMatrix<ElemType>& lbls,
+        const CPUMatrix<ElemType>&   alpha,
+        const CPUMatrix<ElemType>& beta,
+        const CPUMatrix<ElemType>& pair_scores,
+        CPUMatrix<ElemType>& grd,
+        const size_t tPos /// position
+        )
+    {
+        int iNumLab = (int)alpha.GetNumRows();
+
+        int firstLbl = -1;
+        for (int ik = 0; ik < lbls.GetNumRows(); ik++)
+        if (lbls(ik, 0) != 0){
+            firstLbl = ik; break;
+        }
+
+        CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1);
+        CPUMatrix<ElemType> a;
+        if (tPos > 0)
+            a = alpha.ColumnSlice(tPos - 1, 1);
+
+        {
+            ElemType fTmp = LZERO;
+            for (int j = 0; j < iNumLab; j++){
+                if (tPos == 0){
+                    if (i == firstLbl){
+                        fTmp = 0;
+                    }
+                    else{
+                        fTmp = LZERO;
+                    }
+                }
+                else{
+                    fTmp = a(i, 0);
+                }
+                fTmp += pair_scores(j, i);
+
+
+                ElemType fSum = LZERO;
+                for (int k = 0; k < iNumLab; k++){
+                    ElemType fTmp2;
+                    if (tPos == 0){
+                        if (k == firstLbl){
+                            fTmp2 = 0;
+                        }
+                        else{
+                            fTmp2 = LZERO;
+                        }
+                    }
+                    else{
+                        fTmp2 = a(k, 0);
+                    }
+                    fSum = (ElemType)logadd(fSum, fTmp2 + pair_scores(j, k));
+                }
+
+                fTmp -= fSum;
+                fTmp += b(j, 0);
+
+                grd(j, i) += exp(fTmp);
+            }
+        }
+    };
+
+    template<class ElemType>
+    int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
+    {
+        if (numThreads == 0)  //use default
+            return numThreads; 
+
+        int mthreads = (int)std::thread::hardware_concurrency();
+
+        if (numThreads <= 0)
+            numThreads = max(1, mthreads + numThreads);
+        if (numThreads > mthreads)
+            numThreads = mthreads;
+
+#ifdef _OPENMP
+        omp_set_num_threads(numThreads);
+        numThreads = omp_get_max_threads();
+
+#ifndef USE_MKL
+        acmlsetnumthreads(numThreads);
+#else
+        mkl_set_num_threads(numThreads);
+#endif
+#endif
+        return numThreads;
+    }
+
+    //The explicit instantiation part
+    template class CPUMatrix<float>;
+    template class CPUMatrix<double>;
+
 }}}
 

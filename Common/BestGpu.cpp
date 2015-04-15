@@ -5,7 +5,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
-
+#include "Platform.h"
 #include "BestGpu.h"
 #include "commandArgUtil.h" // for ConfigParameters
 #ifndef CPUONLY
@@ -21,9 +21,14 @@
 
 // CUDA-C includes
 #include <cuda.h>
+#ifdef __WINDOWS__
 #include <windows.h>
 #include <delayimp.h>
 #include <Shlobj.h>
+#define PATH_DELIMITER '\\'
+#elif defined(__UNIX__)
+#define PATH_DELIMITER '/'
+#endif//__WINDOWS__
 #include <stdio.h>
 
 #ifdef MPI_SUPPORT
@@ -99,7 +104,7 @@ public:
     
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
 //Symbol - Meaning
-// Auto - automatically pick a single GPU based on “BestGpu” score
+// Auto - automatically pick a single GPU based on ?BestGpu? score
 // CPU  - use the CPU
 // 0    - or some other single number, use a single GPU with CUDA ID same as the number
 // 0:2:3- an array of ids to use, (PTask will only use the specified IDs)
@@ -108,13 +113,14 @@ public:
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
     static BestGpu* g_bestGpu = NULL;
-    DEVICEID_TYPE deviceId = CPUDEVICE;
+    static DEVICEID_TYPE deviceId = CPUDEVICE;
 
     ConfigValue val = config("deviceId", "auto");
 	ConfigValue bLockGPUstr = config("LockGPU", "true");
 	bool bLockGPU = bLockGPUstr;
 
-    if (!_stricmp(val.c_str(), "CPU"))
+    //recommend to use CPU. Adding -1 for backward compatability
+    if (!_stricmp(val.c_str(), "CPU") || !_stricmp(val.c_str(), "-1"))
     {
         return CPUDEVICE;
     }
@@ -124,6 +130,11 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     {
         g_bestGpu = new BestGpu();
     }
+    else if (bLockGPU && deviceId >= 0)
+    {
+        return deviceId;   
+    }  
+
     if (!_stricmp(val.c_str(), "Auto"))
     {
 #ifdef MPI_SUPPORT
@@ -411,7 +422,8 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     // if no GPUs were found, we should use the CPU
     if (m_procData.size() == 0)
     {
-        best.resize(1);
+        best.clear();
+        best.push_back(-1); // default to CPU
         return best;
     }
 
@@ -614,7 +626,7 @@ void BestGpu::QueryNvmlData()
                 unsigned len = (unsigned)name.length();
                 nvmlSystemGetProcessName(info.pid, (char*)name.data(), len);
                 name.resize(strlen(name.c_str()));
-                size_t pos = name.find_last_of('\\');
+                size_t pos = name.find_last_of(PATH_DELIMITER);
                 if (pos != std::string::npos)
                     name = name.substr(pos + 1);
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)
@@ -633,6 +645,10 @@ void BestGpu::QueryNvmlData()
 
 bool BestGpu::LockDevice(int deviceID, bool trial)
 {
+    if (deviceID < 0) // don't lock CPU, always return true 
+    {
+        return true;
+    }    
 #ifdef WIN32 
 	// copied from dbn.exe, not perfect but it works in practice 
 	wchar_t buffer[80];

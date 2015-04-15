@@ -236,6 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         Matrix<ElemType>& AssignTruncateTopOf (const Matrix<ElemType>& a, const ElemType threshold);
         Matrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        Matrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
@@ -244,7 +245,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType SumOfElements () const; //sum of all elements
         Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
-        Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+        ElemType LogAddSumOfElements() const;
+
+        Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         Matrix<ElemType>&  AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         Matrix<ElemType>&  AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
@@ -331,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //static BLAS functions
 
         // singular value decomposition of A as A = U*SIGMA*VT
-        static void SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT);
+        static void SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W);
 
         static void MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, 
             ElemType beta, Matrix<ElemType>& c);
@@ -438,6 +441,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
 			Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
 
+    public:
+        static void RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+            Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const int shift);
+
+        static void RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
+            const Matrix<ElemType>&   alpha,
+            const Matrix<ElemType>& beta,
+            const Matrix<ElemType>& pair_scores,
+            Matrix<ElemType>& grd,
+            const int startLbl, /// the time 0 start symbol in the output layer
+            const int shift);
 
     };
 

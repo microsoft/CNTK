@@ -1031,6 +1031,35 @@ __global__ void _adagrad(
 }
 
 template<class ElemType>
+__global__ void _adagrad4BlockSparse(
+    ElemType* a,  //dense
+    const size_t numRows, //number of rows in a and in d_v
+    ElemType* d_v, //block sparse
+    const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow,
+    ElemType* multipliers,
+    const bool colMajor,
+    const size_t len, //major dim, numRows in colMajor and numcols in rowMajor
+    const LONG64 N) //total number of non-zero values
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    const ElemType floor = 1e-16f;
+    LONG64 blockid = id / len;  
+    LONG64 row = colMajor ? id - blockid*len : blockId2ColOrRow[blockid];
+    LONG64 col = colMajor ? blockId2ColOrRow[blockid] : id - blockid*len;
+
+    size_t indexInA = row + col*numRows;
+    a[indexInA] += d_v[id] * d_v[id];
+    ElemType temp = sqrt(a[indexInA] + floor);
+    d_v[id] /= temp;
+
+    if (multipliers != nullptr)
+        multipliers[id] = 1 / temp;
+}
+
+template<class ElemType>
 __global__ void _rmsprop_init(
     ElemType* avars, ElemType* signs, ElemType* steps,
     ElemType* curr_grad,
@@ -2785,6 +2814,29 @@ __global__ void _inplaceTruncate(
 }
 
 template<class ElemType>
+__global__ void _inplaceSoftThreshold(
+    ElemType* a,
+    const ElemType threshold,
+    const LONG64 N)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    if (a[id] > threshold)
+    {
+        a[id] -= threshold;
+    }
+    else if (a[id] < -threshold)
+    {
+        a[id] += threshold;
+    }
+    else
+        a[id] = 0;
+}
+
+
+template<class ElemType>
 __global__ void _normalGradForSparseBlock(
     const ElemType momentum,
     const bool blockCol, //true if blockRow
@@ -3572,6 +3624,333 @@ __global__ void _minusOneAt(
         c[id] = c[id] - 1.0; 
 }
 
+
+/// the kernel function for RCRF  backward computation
+/// assume a column slice of input and output
+template<class ElemType>
+__global__ void _rcrfBackwardCompute(
+    const size_t iNumPos,
+    const ElemType* galpha,   /// column slice at current time t
+    ElemType* gbeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* gpair_scores,
+    const size_t iNumLab, const int shift)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+
+    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
+    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+
+    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
+    ElemType * pair_scores = alpha + iNumPos * iNumLab;
+    ElemType * beta = alpha + iNumPos * iNumLab + iNumLab * iNumLab;
+
+    if (id < 0 || id >= iNumLab)
+        return;
+
+    /// copy global memory to shared memory to save time
+    for (int t = iNumPos - 1; t >= 0; t--)
+    {
+        alpha[IDX2C(id, t, iNumLab)] = galpha[IDX2C(id, t, iNumLab)];
+    }
+
+    for (int j = 0; j < iNumLab; j++)
+        pair_scores[IDX2C(id, j, iNumLab)] = gpair_scores[IDX2C(id, j, iNumLab)];
+
+    __syncthreads();
+
+    for (int t = iNumPos - 1; t >= 0; t--)
+    {
+        ElemType fSum;
+        ElemType fTmp = LZERO;
+        if (t == iNumPos - 1)
+        {
+            fSum = LZERO;
+            for (int j = 0; j < iNumLab; j++)
+            {
+                fSum = logadd(fSum, alpha[IDX2C(j, t, iNumLab)]);
+            }
+
+            fTmp = alpha[IDX2C(id, t, iNumLab)] - fSum;
+        }
+        else
+        {
+            for (int j = 0; j < iNumLab; j++)
+            {
+                fSum = LZERO;
+                for (int m = 0; m < iNumLab; m++)
+                {
+                    fSum = logadd(fSum, alpha[IDX2C(m, t, iNumLab)] + pair_scores[IDX2C(j, m, iNumLab)]);
+                }
+
+                fTmp = logadd(fTmp, beta[IDX2C(j, t + 1, iNumLab)] + alpha[IDX2C(id, t, iNumLab)] + pair_scores[IDX2C(j, id, iNumLab)] - fSum);
+            }
+        }
+
+        beta[IDX2C(id, t, iNumLab)] = fTmp;
+        __syncthreads();
+    }
+
+    /// copy from shared memory to global memory to pass values
+    for (int t = iNumPos - 1; t >= 0; t--)
+    {
+        gbeta[IDX2C(id, t, iNumLab)] = beta[IDX2C(id, t, iNumLab)];
+    }
+    //    __syncthreads();
+}
+
+/// the kernel function for RCRF  backward computation
+/// assume a column slice of input and output
+template<class ElemType>
+__global__ void _rcrfBackwardCompute(
+    const size_t t, /// time position 
+    const size_t iNumPos,
+    const ElemType* galpha,   /// column slice at current time t
+    ElemType* gbeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* gzeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* gpair_scores,   /// column slice at current time t
+    const size_t iNumLab, const int shift)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+
+    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
+    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+
+    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
+    ElemType * beta_t1 = (ElemType*)(alpha + iNumLab);
+    ElemType * zeta = (ElemType*)(beta_t1 + iNumLab);
+    ElemType pair_scores[1024];
+
+    if (id < 0 || id >= iNumLab)
+        return;
+
+    /// copy global memory to shared memory to save time
+    alpha[id] = galpha[IDX2C(id, t, iNumLab)];
+    if (t < iNumPos - 1)
+        beta_t1[id] = gbeta[IDX2C(id, t + 1, iNumLab)];
+    zeta[id] = gzeta[id];
+
+    __syncthreads();
+
+    for (int j = 0; j < iNumLab; j++)
+        pair_scores[j] = gpair_scores[IDX2C(j, id, iNumLab)];
+
+    ElemType fTmp = LZERO;
+    if (t == iNumPos - 1)
+    {
+        fTmp = alpha[id] - zeta[id];
+    }
+    else
+    {
+        for (int j = 0; j < iNumLab; j++)
+        {
+            fTmp = logadd(fTmp, beta_t1[j] + alpha[id] + pair_scores[j] - zeta[j]);
+        }
+    }
+
+    gbeta[IDX2C(id, t, iNumLab)] = fTmp;
+
+}
+
+/// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
+template<class ElemType>
+__global__ void _rcrfBackwardComputeZeta(
+    const size_t t, /// time position 
+    const size_t iNumPos,
+    const ElemType* galpha,   /// column slice at current time t
+    ElemType* gzeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* gpair_scores,
+    const size_t iNumLab, const int shift)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+
+    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
+    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+
+    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
+    ElemType pair_scores[1024];
+
+    if (id < 0 || id >= iNumLab)
+        return;
+
+    /// copy global memory to shared memory to save time
+    alpha[id] = galpha[IDX2C(id, t, iNumLab)];
+
+    __syncthreads();
+
+    for (int j = 0; j < iNumLab; j++)
+        pair_scores[j] = gpair_scores[IDX2C(id, j, iNumLab)];
+
+    ElemType fSum = LZERO;
+    for (int m = 0; m < iNumLab; m++)
+    {
+        if (t == iNumPos - 1)
+            fSum = logadd(fSum, alpha[IDX2C(m, 0, iNumLab)]);
+        else
+            fSum = logadd(fSum, alpha[IDX2C(m, 0, iNumLab)] + pair_scores[m]);
+    }
+
+    gzeta[id] = fSum;
+
+}
+
+/// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
+template<class ElemType>
+__global__ void _rcrfTransGrdComputeZeta(
+    const int t, /// time position 
+    const size_t iNumPos,
+    const ElemType* galpha,   /// column slice at current time t
+    ElemType* gzeta,          /// column slices with [row, 2] at current time t for [
+    const ElemType* gpair_scores,
+    const size_t iNumLab,
+    const size_t start_lbl,
+    const int shift)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+
+    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
+    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+
+    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
+    ElemType pair_scores[1024];
+
+    if (id < 0 || id >= iNumLab)
+        return;
+
+    /// copy global memory to shared memory to save time
+    if (t >= 0)
+        alpha[id] = galpha[IDX2C(id, t, iNumLab)];
+
+    __syncthreads();
+
+    for (int j = 0; j < iNumLab; j++)
+        pair_scores[j] = gpair_scores[IDX2C(id, j, iNumLab)];
+
+    ElemType fSum = LZERO;
+    ElemType fTmp;
+    for (int m = 0; m < iNumLab; m++)
+    {
+        if (t < 0)
+        {
+            if (m == start_lbl)
+                fTmp = 0;
+            else fTmp = LZERO;
+        }
+        else
+            fTmp = alpha[m];
+
+        fSum = logadd(fSum, pair_scores[m] + fTmp);
+    }
+
+    gzeta[id] = fSum;
+
+}
+
+template<class ElemType>
+__global__ void _rcrfTransGrdCompute(
+    int t,
+    const size_t start_lbl,
+    const ElemType*   galpha,
+    const ElemType* gbeta,
+    const ElemType* gzeta,
+    const ElemType* gpair_scores,
+    const ElemType * lbls,
+    ElemType* grd,
+    const size_t iNumPos,
+    const size_t iNumLab,
+    const int shift)
+{
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+
+    extern __shared__ double sh_alpha_and_beta[]; /// intersting, has to use [], instead of *
+    /// need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+
+    ElemType * alpha = (ElemType*)(sh_alpha_and_beta);
+    ElemType * beta = (ElemType*)(alpha + iNumLab);
+    ElemType * zeta = (ElemType*)(beta + iNumLab);
+    ElemType pair_scores[1024];
+
+    if (id < 0 || id >= iNumLab)
+        return;
+
+    /// copy global memory to shared memory to save time
+    if (t > 0)
+        alpha[id] = galpha[IDX2C(id, t - 1, iNumLab)];
+    beta[id] = gbeta[IDX2C(id, t, iNumLab)];
+    zeta[id] = gzeta[id];
+
+    __syncthreads();
+
+    for (int j = 0; j < iNumLab; j++)
+        pair_scores[j] = gpair_scores[IDX2C(j, id, iNumLab)];
+
+    ElemType fTmp;
+    ElemType fTmp2;
+    for (int j = 0; j < iNumLab; j++){
+        if (t == 0)
+        {
+            if (id == start_lbl)
+                fTmp = 0;
+            else
+                fTmp = LZERO;
+        }
+        else
+            fTmp = alpha[id];
+
+        fTmp2 = fTmp + pair_scores[j] - zeta[j];
+        assert(fTmp2 <= 0.0);
+        fTmp2 += beta[j];
+
+        fTmp = exp(fTmp2);
+        grd[IDX2C(j, id, iNumLab)] += fTmp;
+    }
+
+    if ((t == 0 && id == start_lbl) || (t > 0 && t < iNumPos && lbls[IDX2C(id, t - 1, iNumLab)] != 0))
+    {
+        for (int ik = 0; ik < iNumLab; ik++)
+        {
+            if (lbls[IDX2C(ik, t, iNumLab)] != 0)
+                grd[IDX2C(ik, id, iNumLab)] -= 1.0;
+        }
+    }
+
+};
+
+template<class ElemType>
+__global__ void _reductionLogAddSum(
+    const ElemType* data,
+    ElemType *sum,
+    const size_t sum_size,
+    LONG64 N)
+{
+
+    __shared__ ElemType partialLogAddSum[threadsPerBlock];
+
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    int tid = threadIdx.x;
+
+    if (id < N)
+        partialLogAddSum[tid] = data[id];
+    else
+        partialLogAddSum[tid] = LZERO;
+
+    __syncthreads();
+
+    /// do reduction on the shared memory
+    size_t start_width = ceil((N + 0.0) / 2.0);
+    for (size_t s = start_width; s > 0; s >>= 1)
+    {
+        ElemType lSum = LZERO;
+        if (tid < s){
+            lSum = logadd(partialLogAddSum[tid], partialLogAddSum[tid + s]);
+            partialLogAddSum[tid] = lSum;
+        }
+    }
+    __syncthreads();
+
+
+    if (tid == 0)
+        sum[0] = partialLogAddSum[0];
+}
 
 
 #endif // !CPUONLY

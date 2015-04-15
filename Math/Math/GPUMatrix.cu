@@ -40,7 +40,9 @@ bool do_sync = true;
 
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
-__declspec (thread) 
+__declspec (thread)
+#else
+static
 #endif
 cudaStream_t t_stream = cudaStreamDefault;
 
@@ -65,6 +67,7 @@ void CURAND_CALL(curandStatus x)
 {
     if(x!=CURAND_STATUS_SUCCESS) 
     { 
+        std::cerr << "!!!!!!!!CURAND EXCEPTION: " << std::endl;
         throw std::runtime_error("CURAND fail");
     }        
 }
@@ -73,6 +76,7 @@ void CUBLAS_CALL(cublasStatus_t x)
 {
     if(x!=CUBLAS_STATUS_SUCCESS) 
     { 
+        std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
         throw std::runtime_error("CUBLAS fail");
     }
 }
@@ -164,8 +168,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static int chosenDeviceId = AUTOPLACEMATRIX;
         if (chosenDeviceId != AUTOPLACEMATRIX)
             return chosenDeviceId;
-
+#ifdef __WINDOWS__
         __try
+#endif
         {
             // stash previous device state
             // if there was one on entry:
@@ -206,10 +211,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             chosenDeviceId = curDev;
             return curDev;
         }
+#ifdef __WINDOWS__
         __except (1)
         {
             return -1; // CPU
         }
+#endif
     }
 
     // PrepareDevice - Setup the correct cuda context for an operation
@@ -1096,7 +1103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             multipliers = m_pArray + n; // temp memory used to store multipliers,
 
         int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
-        _adagrad<ElemType> << <blocksPerGrid, threadsPerBlock >> >(m_pArray, gradients.m_pArray, GetNumElements(), multipliers);
+        _adagrad<ElemType> << <blocksPerGrid, threadsPerBlock >> >(m_pArray, gradients.m_pArray, n, multipliers);
 
         if (!needAveMultiplier)
             return 1;
@@ -1106,13 +1113,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             float aveMultiplier = 0;
             CUBLAS_CALL(cublasSasum(cuHandle, (LONG64)n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
-            return aveMultiplier / n;
+            return (ElemType)aveMultiplier / n;
         }
         else
         {
             double aveMultiplier = 0;
             CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-            return aveMultiplier / n;
+            return (ElemType)aveMultiplier / n;
         }
     }
 
@@ -1195,7 +1202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             double aveMultiplier = 0;
             CUBLAS_CALL(cublasDasum(cuHandle, (LONG64)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-            return aveMultiplier / n;
+            return (ElemType) aveMultiplier / n;
         }
     }
 
@@ -2002,6 +2009,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
 
         return *this;        
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncate(const ElemType threshold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("InplaceTruncate: Matrix is empty.");
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(N*1.0 / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _inplaceTruncate<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, threshold, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("InplaceSoftThreshold: Matrix is empty.");
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(N*1.0 / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _inplaceSoftThreshold<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, threshold, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
     }
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfAbsLessThan (const ElemType threshold)
@@ -3397,8 +3440,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (a.IsEmpty())
                 throw std::logic_error("ElementWisePower:  The input matrix a is empty.");
-            if (a.GetNumRows()!=c.GetNumRows() || a.GetNumCols()!=c.GetNumCols())
-                throw std::logic_error("ElementWisePower: matrices must be of the same size");
+
+            c.Resize(a.GetNumRows(), a.GetNumCols());
 
             cudaEvent_t done = nullptr;
             a.PrepareDevice();
@@ -3689,7 +3732,106 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma endregion Static BLAS Functions
 
 
-    template class GPUMatrix<float>; 
+    /// f = logadd(f, vec) to get the logadd sum of vector elments
+    template<class ElemType>
+    ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const
+    {
+        if (this->IsEmpty())
+            throw std::logic_error("SumOfElements: Matrix is empty");
+
+        PrepareDevice();
+        ElemType* d_sum = NULL;
+        ElemType h_sum;
+        LONG64 N = (LONG64)GetNumElements();
+        CUDA_CALL(cudaMalloc((void**)&d_sum, sizeof(ElemType)));
+        int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+
+        _reductionLogAddSum<ElemType> << < blocksPerGrid, threadsPerBlock >> > (this->m_pArray,
+            d_sum, 1, N);
+        CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaFree(d_sum));
+
+        return h_sum;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::RCRFBackwardCompute(
+        const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+        const GPUMatrix<ElemType>& lbls,
+        const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift)
+    {
+        if (alpha.IsEmpty() || pos_scores.IsEmpty() || pair_scores.IsEmpty())
+            throw std::logic_error("RCRFBackwardCompute: one of the input matrices is empty.");
+
+        if (alpha.GetNumRows() != pos_scores.GetNumRows() || alpha.GetNumCols() != pos_scores.GetNumCols())
+            throw std::logic_error("RCRFBackwardCompute: matrix dimensions mismatched.");
+
+        size_t iNumLab = alpha.GetNumRows();
+        size_t iNumPos = alpha.GetNumCols();
+
+        alpha.PrepareDevice();
+        beta.Resize(iNumLab, iNumPos);
+
+        ElemType* d_zeta = NULL;
+        CUDA_CALL(cudaMalloc((void**)&d_zeta, sizeof(ElemType)* iNumLab)); //we allocate memory on the device
+
+        long N = iNumLab;
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        size_t szMemSize;
+        for (int t = iNumPos - 1; t >= 0; t--)
+        {
+            szMemSize = sizeof(ElemType)* iNumLab;
+            _rcrfBackwardComputeZeta<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t, iNumPos, alpha.m_pArray, d_zeta, pair_scores.m_pArray, iNumLab, shift);
+            szMemSize = iNumLab * 3;
+            szMemSize *= sizeof(ElemType);
+            _rcrfBackwardCompute<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t, iNumPos, alpha.m_pArray, beta.m_pArray,
+                d_zeta, pair_scores.m_pArray, iNumLab, shift);
+        }
+        /*
+        error = cudaGetErrorString(cudaPeekAtLastError());
+        printf("%s\n", error);
+        error = cudaGetErrorString(cudaThreadSynchronize());
+        printf("%s\n", error);
+        */
+
+        CUDA_CALL(cudaFree(d_zeta));
+    }
+
+    /**
+    Compute the gradient for the first order Markov transition probabilities
+    It uses equations derived in R. Collobert's paper "Natural lanugage processing (almost) from scratch"
+    */
+    template<class ElemType>
+    void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
+        const GPUMatrix<ElemType>&   alpha,
+        const GPUMatrix<ElemType>& beta,
+        const GPUMatrix<ElemType>& pair_scores,
+        GPUMatrix<ElemType>& grd,
+        const int startLbl,
+        const int shift)
+    {
+        assert(shift == 1);
+        int iNumPos = alpha.GetNumCols();
+        int iNumLab = alpha.GetNumRows();
+
+        ElemType* d_zeta = NULL;
+        CUDA_CALL(cudaMalloc((void**)&d_zeta, sizeof(ElemType)* iNumLab)); //we allocate memory on the device
+        long N = iNumLab;
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        size_t szMemSize;
+        for (int t = 0; t < iNumPos; t++)
+        {
+            szMemSize = sizeof(ElemType)* iNumLab;
+            _rcrfTransGrdComputeZeta<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t - 1, iNumPos, alpha.m_pArray, d_zeta, pair_scores.m_pArray, iNumLab, startLbl, shift);
+            szMemSize = iNumLab * 3;
+            szMemSize *= sizeof(ElemType);
+            _rcrfTransGrdCompute<ElemType> << <blocksPerGrid, threadsPerBlock, szMemSize >> >(t, startLbl, alpha.m_pArray, beta.m_pArray,
+                d_zeta, pair_scores.m_pArray, lbls.m_pArray, grd.m_pArray, iNumPos, iNumLab, shift);
+        }
+        CUDA_CALL(cudaFree(d_zeta));
+    };
+
+    template class GPUMatrix<float>;
     template class GPUMatrix<double>;
     template class DeviceBoundNumber<float>;
     template class DeviceBoundNumber<double>;
@@ -3769,5 +3911,6 @@ int _ConvertSMVer2Cores(int major, int minor)
 //    else
 //        return (long)free;
 //}
+
 
 #endif // CPUONLY

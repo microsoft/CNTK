@@ -24,6 +24,7 @@
 #include "File.h"
 #include "Matrix.h"
 #include "commandArgUtil.h"
+#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
@@ -31,6 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     protected:
         typedef ComputationNode<ElemType>* ComputationNodePtr;
+		typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
         typedef struct stRecurrentInfo{
             std::vector<ComputationNodePtr> m_recurrentNodes;
             std::vector<ComputationNodePtr> m_recurrentNodesForForward;
@@ -138,6 +140,210 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+
+private:	// [erw] added for Toplological Plot only
+		class DotGraphConfigure
+		{
+		public: 
+			wstring m_LearnableParameterStyle ; 
+			wstring m_featuresStyle; 
+			wstring m_CriteriaStyle;
+			wstring m_labelsStyle; 
+			wstring m_normalNodeStyle; 
+			wstring m_PrecomputingNodeStyle;
+			wstring m_DelayNodeStyle;
+
+			DotGraphConfigure()
+			{
+				m_LearnableParameterStyle	= L"node [ shape = box     , color = gray , style = \"filled, rounded\"  ]; "; 
+				m_featuresStyle				= L"node [ shape = ellipse , color = red  , fillcolor = white ]; "; 
+				m_CriteriaStyle				= L"node [ shape = doublecircle , color =  red , fillcolor = white  ]; ";
+				m_normalNodeStyle			= L"node [ shape = ellipse, color = blue, fillcolor = white, style = solid ]; ";
+				m_PrecomputingNodeStyle		= L"node [ shape = box    , color = black, style = \"dashed, filled\",  fillcolor= limegreen ] ;";
+				m_labelsStyle				= L"node [ shape = diamond, color = brown, style = bold ] ;  ";
+				m_DelayNodeStyle			= L"node [ shape = box3d  , color = lightgray, style = \"filled\" , fillcolor = white ] ";
+			}
+		};
+		wstring FormSpecialNodes(wstring style, std::vector<ComputationNodePtr>& specialNodes)
+		{
+            if (specialNodes.empty())
+            {
+                return L"";
+            }
+			wstring str = style; 
+			for (auto x : specialNodes){
+				str = str + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+			}
+			return str + L"; \n";
+		}
+public:
+
+
+		void DescribeNetworkUsingDot(std::list<ComputationArc>& arcs, std::wstring outFile, DotGraphConfigure dotcfg = DotGraphConfigure())
+		{
+			File fstream(outFile, FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
+			wstring line;
+
+			// get precompute node 
+			std::vector<ComputationNodePtr>	PreComputedNodes;
+			std::vector<ComputationNodePtr>	allnodes = GetAllNodes();
+			for (auto n : allnodes)
+			{
+				if (n->RequirePreCompute())
+				{
+					PreComputedNodes.push_back(n);
+				}
+			}
+			// get delay node 
+			std::vector<ComputationNodePtr> DelayNodes; 
+			for (auto n : allnodes)
+			{
+				if (n->OperationName() == L"Delay")
+				{
+					DelayNodes.push_back(n);
+				}
+			}
+			// get learnableParameters 
+			std::vector<ComputationNodePtr> learnableParameters; 
+			for (auto n : allnodes)
+			{
+				if (n->OperationName() == L"LearnableParameter")
+				{
+					learnableParameters.push_back(n);
+				}
+			}
+
+			fstream << "strict digraph {\n";
+			fstream << "rankdir = BT ;  \n";
+			//////////////////////////////////////////////////////////////////////////
+			//	special nodes  
+			//////////////////////////////////////////////////////////////////////////
+			fstream << L"// special nodes \n";
+			// learnable parameters: 
+			fstream << FormSpecialNodes(dotcfg.m_LearnableParameterStyle, learnableParameters);
+			// features  
+			fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_features);
+			// labels 
+			fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
+			// critera 
+			fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
+			// pre-compute nodes
+			fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
+			// delay nodes 
+			fstream << FormSpecialNodes(dotcfg.m_DelayNodeStyle, DelayNodes);
+			// normal nodes 
+			fstream << dotcfg.m_normalNodeStyle << L"\n";
+
+			//////////////////////////////////////////////////////////////////////////
+			//	add labels for each node 
+			//////////////////////////////////////////////////////////////////////////
+			fstream << L"\n// add labels and operation name\n";
+			for (auto x : allnodes)
+			{
+				line.clear(); 
+                size_t nrows = x->FunctionValues().GetNumRows();
+                size_t ncols = x->FunctionValues().GetNumCols();
+				line = msra::strfun::wstrprintf(L" \"%s\" [ label = \"%s [%d,%d]\\n%s\" ] ;\n", 
+                    x->GetName().c_str(), x->GetName().c_str(), nrows, ncols,  x->OperationName().c_str());
+				fstream << line;
+			}
+
+			//////////////////////////////////////////////////////////////////////////
+			//	sub-graph 
+			//////////////////////////////////////////////////////////////////////////
+			// subgraph source 
+			fstream << L"subgraph {\n"; 
+			fstream << L"\t\t rank=source ; ";
+			line.clear(); 
+			for (auto x : m_features)
+			{
+				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+			}
+			fstream << line << L"\n}\n"; 
+			// subgraph eval/output/criteria
+			fstream << L"subgraph {\n"; 
+			fstream << L"\t\t rank=sink ; ";
+			line.clear(); 
+			for (auto x : m_finalCriteria)
+			{
+				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+			}
+			for (auto x : m_outputNodes)
+			{
+				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+			}
+			for (auto x : m_evalNodes)
+			{
+				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+			}
+			fstream << line << L"\n}\n"; 
+
+			//////////////////////////////////////////////////////////////////////////
+			//	specify arc connections
+			//////////////////////////////////////////////////////////////////////////
+			for (auto x = arcs.begin(); x != arcs.end(); x++)
+			{
+				ComputationNodePtr src = (*x).first; 
+				ComputationNodePtr des = (*x).second; 
+
+				std::wstring srcname = src->GetName();  
+				std::wstring desname = des->GetName();
+				
+
+				if (des->OperationName() == L"Delay")
+				{
+					// special treament for arc with Delay node as the children 
+					// create a dummy node 
+					ComputationNodePtr delayedNode = des;
+					wstring dummyName = des->GetName() + L".dummy";
+					wstring out = msra::strfun::wstrprintf(L"node [ shape = box3d  , color = lightgray, style = \"filled\" , label = \"%s\" ] ; \"%s\"\n",
+						(delayedNode->GetName() + L"\\n(delayed)").c_str(), dummyName.c_str());
+					line = out; 
+					line += msra::strfun::wstrprintf(L"\"%s\" -> \"%s\" ; \n", dummyName.c_str(), srcname.c_str());
+				}
+				else
+				{
+					line = msra::strfun::wstrprintf(L"\"%s\" -> \"%s\" ; \n", desname.c_str(), srcname.c_str());
+				}
+
+
+				fstream << line; 
+			}
+			fstream << "\n}\n";
+
+
+			
+		}
+		void PlotNetworkTopology(const std::wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language 
+		{
+			BuildAndValidateNetwork(m_evalNodes[0]); 
+
+			//////////////////////////////////////////////////////////////////////////
+			//	step 1.		get all the arcs in the network 
+			//////////////////////////////////////////////////////////////////////////
+			std::unordered_set<ComputationNodePtr>	visited; 
+			std::list<ComputationArc>		arcs;
+
+			for (size_t i = 0; i < m_finalCriteria.size(); i++)
+			{
+				m_finalCriteria[i]->EnumerateArcs(visited, arcs);
+			}
+			for (size_t i = 0; i < m_outputNodes.size(); i++)
+			{
+				m_outputNodes[i]->EnumerateArcs(visited, arcs); 
+			}
+			for (size_t i = 0; i < m_evalNodes.size(); i++)
+			{
+				m_evalNodes[i]->EnumerateArcs(visited, arcs);
+			}
+
+			//////////////////////////////////////////////////////////////////////////
+			//	step 2.		output dot description
+			//////////////////////////////////////////////////////////////////////////
+			DescribeNetworkUsingDot(arcs, outputFile);
+
+		}
+
         void SetDeviceID(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;  
@@ -149,7 +355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         unsigned long GetRandomSeedOffset() {return m_randomSeedOffset;}
         void SetRandomSeedOffset(unsigned long value) {m_randomSeedOffset = value;}
 
-        void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary)
+        void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
         {
             File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
@@ -178,7 +384,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fstream << nodePtr->NodeName() << nodePtr->ChildrenSize();
                 for (size_t i=0; i<nodePtr->ChildrenSize(); i++)
                 {
-                    fstream << nodePtr->Inputs(i)->NodeName();
+					if (nodePtr->Inputs(i) == nullptr)
+					{
+						fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
+					}
+					else
+					{
+						fstream << nodePtr->Inputs(i)->NodeName();
+					}
                 }
             }
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
@@ -566,6 +779,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             nodeToDelete->DetachInputs(); //nodeToDelete is a parent
+			auto search = std::find(m_labels.begin(), m_labels.end(), nodeToDelete);
+			if (search != m_labels.end())
+			{
+				m_labels.erase(search);
+			}
+			search = std::find(m_features.begin(), m_features.end(), nodeToDelete);
+			if (search != m_features.end())
+			{
+				m_features.erase(search);
+			}
+			search = std::find(m_finalCriteria.begin(), m_finalCriteria.end(), nodeToDelete);
+			if (search != m_finalCriteria.end())
+			{
+				m_finalCriteria.erase(search);
+			}
+			search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
+			if (search != m_evalNodes.end())
+			{
+				m_evalNodes.erase(search);
+			}
+
+			search = std::find(m_outputNodes.begin(), m_outputNodes.end(), nodeToDelete);
+			if (search != m_outputNodes.end())
+			{
+				m_outputNodes.erase(search);
+			}
+
+			// ? how to deal with m_recurrentInfo, when we delete a node.
 
             //delete the node itself
             m_nameToNodeMap.erase(nodeName);
@@ -743,6 +984,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new CrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == CRFNode<ElemType>::TypeName())
+                newNode = new CRFNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
                 newNode = new CrossEntropyNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
@@ -771,6 +1014,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == TimeReverseNode<ElemType>::TypeName())
+                newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -906,6 +1151,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new CrossEntropyNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == CRFNode<ElemType>::TypeName())
+                newNode = new CRFNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
                 newNode = new MatrixL1RegNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
@@ -928,7 +1175,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
-			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
+            else if (nodeType == TimeReverseNode<ElemType>::TypeName())
+                newNode = new TimeReverseNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
             else
             {
@@ -1031,7 +1280,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr ClassCrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, 
+        ComputationNodePtr ClassCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction,
             const ComputationNodePtr input_weight, const ComputationNodePtr cls_log_post_prob, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
@@ -1040,7 +1289,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return newNode;
         }
 
-        ComputationNodePtr CrossEntropy (const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
+        ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore,
+            const ComputationNodePtr transition_score, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new CRFNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(label, postDepScore, transition_score);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new CrossEntropyNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, prediction);
@@ -1258,8 +1516,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AddNodeToNet(newNode);
             return newNode;
         }
-        
-        ComputationNodePtr LookupTable (const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
+
+        ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new TimeReverseNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(input);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(dictionary, input);
@@ -1840,7 +2106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ClearCalcOrderCaches()
         {
-			for (std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>::iterator it = m_cacheEvalOrders.begin(); it != m_cacheEvalOrders.end(); ++it)
+			for (typename std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>::iterator it = m_cacheEvalOrders.begin(); it != m_cacheEvalOrders.end(); ++it)
 			{
 				for (auto iter2 = m_cacheEvalOrders[it->first].begin(); iter2 != m_cacheEvalOrders[it->first].end(); iter2++)
 				{

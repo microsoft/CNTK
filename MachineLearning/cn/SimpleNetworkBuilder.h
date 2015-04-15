@@ -66,7 +66,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // full parameter Init routine
-        void Init(const intargvector& layerSizes, const TrainingCriterion trainCriterion, const EvalCriterion evalCriterion, const stringargvector nonLinearFunctions=L"Sigmoid", 
+        void Init(const intargvector& layerSizes, const TrainingCriterion trainCriterion, const EvalCriterion evalCriterion,
+            int outputLayerSize = -1,
+            const stringargvector nonLinearFunctions=L"Sigmoid", 
             const bool addDropoutNodes=false,
             const bool uniformInit = true, const ElemType initValueScale = 1.0f,
             const bool applyMeanVarNorm = false, bool needPrior = false, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
@@ -74,6 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId=deviceId;
             m_net = new ComputationNetwork<ElemType>(m_deviceId);
 
+            m_outputLayerSize = outputLayerSize;
             m_layerSizes=layerSizes;
             m_applyMeanVarNorm=applyMeanVarNorm;
             m_trainCriterion=trainCriterion;
@@ -152,11 +155,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             bool addDropoutNodes = config("addDropoutNodes", "false");
 
+            int outputLayerSize;
             ConfigArray layerSizes;
             intargvector layers;
             TrainingCriterion trainingCriterion;
             EvalCriterion evalCriterion;
 
+            outputLayerSize = config("outputLayerSize", "-1");
             layerSizes = config("layerSizes","100");
             layers = layerSizes;
             trainingCriterion = ParseTrainingCriterionString(config("trainingCriterion"));
@@ -170,7 +175,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_vocabSize = (int)config("vocabSize", "-1");
             m_nbrCls = (int)config("nbrClass", "-1");
  
-            Init(layers, trainingCriterion, evalCriterion, nonlinearFunctions, addDropoutNodes,
+            Init(layers, trainingCriterion, evalCriterion, outputLayerSize,
+                nonlinearFunctions, addDropoutNodes,
                 uniformInit, initValueScale, applyMeanVarNorm, needPrior, deviceId);   
 
             InitRecurrentConfig(config);
@@ -330,7 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildClassEntropyNetwork(size_t mbSize = 1);
 
-        ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, bool inputWeightSparse = false);
+        ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
         ComputationNode<ElemType>* BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
@@ -381,7 +387,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
             if (!CheckDbnTag(fstream,"BNET"))
                 throw std::runtime_error("Error reading DBN file - did not find expected tag BNET\n");
-        
+
             for (i=0;i<numLayers;i++) //0th index is for input layer, 
             {    
                 fstream >> layerType;
@@ -389,14 +395,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> wts = ReadMatrixFromDbnFile(fstream,std::string("W"));
                 Matrix<ElemType> bias = ReadMatrixFromDbnFile(fstream,std::string("a")); // remnant from pretraining, not needed
                 Matrix<ElemType> A = ReadMatrixFromDbnFile(fstream,std::string("b"));
-                if (wts.GetNumRows()!=m_layerSizes[i+1] || wts.GetNumCols()!=m_layerSizes[i])
-                {
-                    std::stringstream msg;
-                    msg << "error reading DBN file: mismatch in layer size between dbn file and config specification!" << endl;
-                    msg << wts.GetNumRows() << "," << wts.GetNumCols() << "!=" << m_layerSizes[i + 1] << "," << m_layerSizes[i] << endl;
-                    
-                    throw std::runtime_error(msg.str().c_str());
-                }
                 if (i==0)
                 {
                     input = m_net->Input(wts.GetNumCols(), mbSize, L"features");
@@ -437,7 +435,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     output = m_net->PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
                     input = output;
                 }
-                
+                if (i == numLayers - 1)
+                {
+                    m_outputLayerSize = wts.GetNumRows();
+                }
                 wstring nameOfW = msra::strfun::wstrprintf (L"W%d", i);
                 wstring nameOfB = msra::strfun::wstrprintf (L"B%d", i);
                 wstring nameOfPrevH = msra::strfun::wstrprintf (L"H%d", i);
@@ -451,15 +452,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 b = m_net->Parameter(bias.GetNumRows(), 1, nameOfB);
                 b->FunctionValues().SetValue(bias);
                 
-                if (layerType!="perceptron")
+                if (layerType == "perceptron")
                 {
+                    fprintf(stderr, "DBN: Reading (%d x %d) perceptron\n", wts.GetNumRows(), wts.GetNumCols());
+                    output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
+                }
+                else if (layerType == "rbmisalinearbernoulli" )
+                {
+                    fprintf(stderr, "DBN: Reading (%d x %d) linear layer\n", wts.GetNumRows(), wts.GetNumCols());
+                    output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
+                }
+                else // assume rbmbernoullibernoulli
+                {
+                    fprintf(stderr, "DBN: Reading (%d x %d) non-linear layer\n", wts.GetNumRows(), wts.GetNumCols());
                     output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus), i, nameOfH);
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output, L"Drop" + nameOfH);
-                }
-                else
-                {
-                    output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
                 }
     
                 input = output;
@@ -467,15 +475,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!CheckDbnTag(fstream,"ENET"))
                 throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
-            size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
-            label = m_net->Input(outputLayerSize, mbSize, L"labels");
+
+            label = m_net->Input(m_outputLayerSize, mbSize, L"labels");
 
             if (layerType == "perceptron") // complete network
             {
                 m_net->RenameNode(output, L"HLast");
+#if 0
                 assert(numLayers+1==m_layerSizes.size());
+#endif
                 Matrix<ElemType> priorVals = ReadMatrixFromDbnFile(fstream,std::string("Pu"));
-                assert(priorVals.GetNumCols()==1 && priorVals.GetNumRows()==outputLayerSize);
+                assert(priorVals.GetNumCols()==1 && priorVals.GetNumRows()==m_outputLayerSize);
 
                 w = m_net->Mean(label, L"Prior");
                 w->FunctionValues().SetValue(priorVals);
@@ -485,23 +495,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else // pretrained network - need to add output layer, initalize
             {
-                wstring nameOfW = msra::strfun::wstrprintf (L"W%d", i);
+                size_t outputLayerSize = 0;
+                if (this->m_outputLayerSize >= 0)
+                    outputLayerSize = this->m_outputLayerSize;
+                else if (m_layerSizes.size() > 0)
+                    m_layerSizes[m_layerSizes.size() - 1];
+                else
+                    std::runtime_error("Output layer size must be specified when converting pretrained network, use outputLayerSize=");
+                    
+                size_t penultimateSize = input->FunctionValues().GetNumRows();
+
+                wstring nameOfW = msra::strfun::wstrprintf(L"W%d", i);
                 wstring nameOfB = msra::strfun::wstrprintf (L"B%d", i);
                 wstring nameOfPrevH = msra::strfun::wstrprintf (L"H%d", i);
                 wstring nameOfTimes = nameOfW + L"*" + nameOfPrevH;
                 wstring nameOfPlus = nameOfTimes + L"+" + nameOfB;
                 wstring nameOfH = msra::strfun::wstrprintf (L"H%d", i+1);
 
-                assert(numLayers+2==m_layerSizes.size());
-                w = m_net->Parameter(m_layerSizes[numLayers+1], m_layerSizes[numLayers], nameOfW);
+                w = m_net->Parameter(outputLayerSize, penultimateSize, nameOfW);
                 m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                b = m_net->Parameter(m_layerSizes[numLayers+1], 1, nameOfB);
+                b = m_net->Parameter(outputLayerSize, 1, nameOfB);
                 output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
                 m_net->RenameNode(output, L"HLast");
 
                 if (m_needPrior)
                 {
-                    Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(m_layerSizes[numLayers+1], 1, m_deviceId);
+                    Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
                     prior = m_net->Mean(label, L"Prior");
                     prior->FunctionValues().SetValue(zeros);
                     pcNodePtr = static_cast<PreComputedNode<ElemType>*>(prior);
@@ -669,6 +688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         ComputationNetwork<ElemType>* m_net;
 
+        int m_outputLayerSize;
         intargvector m_layerSizes; 
         bool m_applyMeanVarNorm;
         bool m_needPrior;

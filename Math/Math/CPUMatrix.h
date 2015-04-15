@@ -197,6 +197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& InplaceTruncateTop (const ElemType threshold);
         CPUMatrix<ElemType>& AssignTruncateTopOf (const CPUMatrix<ElemType>& a, const ElemType threshold);
         CPUMatrix<ElemType>& InplaceTruncate (const ElemType threshold);
+        CPUMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
         CPUMatrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
@@ -281,9 +282,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
 
     public:
+        static int SetNumThreads(int numThreads);
 
         //static BLAS functions
-        static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT);
+        static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);
 
         static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, 
                                            ElemType beta, CPUMatrix<ElemType>& c);
@@ -367,6 +369,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return stream;
         }
 
+    public:
+        ElemType LogAddSumOfElements() const;
+
+    public:
+        /// for RCRF
+        static void RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& lbls,
+            const CPUMatrix<ElemType>& pair_scores);
+        static void _rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
+            CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& pair_scores);
+
+        static void RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
+            const CPUMatrix<ElemType>&   alpha,
+            const CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& pair_scores,
+            CPUMatrix<ElemType>& grd);
+
+        static void _rcrfTransGrdCompute(size_t i,
+            const CPUMatrix<ElemType>& lbls,
+            const CPUMatrix<ElemType>&   alpha,
+            const CPUMatrix<ElemType>& beta,
+            const CPUMatrix<ElemType>& pair_scores,
+            CPUMatrix<ElemType>& grd,
+            const size_t tPos /// position
+            );
 
     protected:
         size_t LocateElement (const size_t i, const size_t j) const;

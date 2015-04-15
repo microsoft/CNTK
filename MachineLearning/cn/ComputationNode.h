@@ -15,19 +15,19 @@
 #include <algorithm>
 #include <assert.h>
 #include "basetypes.h"
-
+#include <atomic>
+#include <sstream>
 #include <Matrix.h>
-
-#ifndef _WIN32
-static inline int64_t InterlockedIncrement64(int64_t * v) { return (*v)++; }          // BUGBUG: find the Linux equivalent
-#define WINAPI      // TODO: what is this needed for? If not needed, let's get rid of it
-#endif
-
+#include <iostream>
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
 
 #ifndef NOT_IMPLEMENTED
-#define NOT_IMPLEMENTED LogicError("Not implemented")
+#define NOT_IMPLEMENTED \
+{   \
+    fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+    throw std::logic_error("Not Implemented"); \
+}
 #endif
 
 #pragma warning (disable: 4267)
@@ -55,6 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef ComputationNode<ElemType>* ComputationNodePtr;
+		typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
         int     m_loopId;
         size_t  m_samplesInRecurrentStep; 
 
@@ -271,6 +272,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             return m_indexInLoop;
         }
+
+		std::wstring GetName() const
+		{
+			return m_nodeName;
+		}
+
+		std::vector<ComputationNodePtr>	GetChildren() const
+		{
+			return m_children;
+		}
+
         bool isVisisted()
         {
             return m_visited;
@@ -293,7 +305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int64_t UpdateEvalTimeStamp()
         {
-            m_evalTimeStamp = InterlockedIncrement64(&s_timeStampCounter);
+            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
             return m_evalTimeStamp;
         }
 
@@ -571,11 +583,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+		//  [1/13/2015 erw] add to enumerate all the edges 
+		void EnumerateArcs(std::unordered_set<ComputationNodePtr>& vistied, std::list<ComputationArc>& arcs )
+			//  enumerate arcs that can be reached starting from the current node's children
+			//  [in/out] visited record already visited nodes 
+		{
+			std::list<ComputationNodePtr>	tovisit; 
+
+			if (vistied.find(this) == vistied.end()) // only do when this node has not been visited before
+			{
+				tovisit.push_back(this);
+
+				while (!tovisit.empty())
+				{
+					ComputationNodePtr curNode = tovisit.front();
+					tovisit.pop_front();
+
+					if (vistied.find(curNode) == vistied.end())
+					{
+						for (size_t i = 0; i < curNode->m_children.size(); i++)
+						{
+							arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));	
+
+							if (vistied.find(curNode->m_children[i]) == vistied.end()) // this children has not been visited before 
+							{
+								tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
+							}
+						}
+						vistied.insert(curNode);
+					}
+				}
+			}
+		}
+		
 
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
         // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
         // should only need one memory block per device
-        static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const int deviceId)
+        static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId)
         {
             if (s_constOnes.find(rows) == s_constOnes.end() ||
                 s_constOnes[rows].find(cols) == s_constOnes[rows].end()) //not found
@@ -696,8 +741,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
               RpcStringFreeW((RPC_WSTR*)&szUuid);
             }
 #else
-            int64_t id = InterlockedIncrement64(&s_timeStampCounter);
-            msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
+            int64_t id = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+            std::wstring base = L"AutoName";
+            std::wstringstream sstm;
+            sstm << base.c_str() << id;
+            std::wstring name = sstm.str();
+            //msra::strfun::wstrprintf name(L"%s%d", L"AutoName", id);
 #endif
 
             return name;
@@ -851,7 +900,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_nodeName;
         Matrix<ElemType> m_functionValues, m_gradientValues;
 
-        static int64_t s_timeStampCounter;
+        static atomic_ullong s_timeStampCounter;
         int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
         static std::map<size_t, std::map<size_t, Matrix<ElemType>*>> s_constOnes;
@@ -4178,7 +4227,7 @@ protected:  \
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
             m_dropoutRate = 0;
-            m_randomSeed = (unsigned long) InterlockedIncrement64(&s_timeStampCounter);;
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
             InitRecurrentNode();
         }
 
@@ -4187,7 +4236,7 @@ protected:  \
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
-            m_randomSeed = (unsigned long) InterlockedIncrement64(&s_timeStampCounter);
+            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
@@ -4787,16 +4836,23 @@ protected:  \
             if (inputIndex > 0)
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
-            //if (m_samplesInRecurrentStep == 1)
-            //{
-            ComputeInputPartialSR(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
-            /*}else
+            if (m_samplesInRecurrentStep == 1)
+            {
+                ComputeInputPartialSR(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
+            }else
             {
                 for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
                 {
-                    ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), i, m_samplesInRecurrentStep);
+                    bool reset = false;
+
+                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
+                    {
+                        reset = true;
+                    }
+
+                    ComputeInputPartialSRP(timeIdxInSeq, m_delay, reset, Inputs(0)->GradientValues(), GradientValues(), i, m_samplesInRecurrentStep);
                 }
-            }*/
+            }
         }
 
         static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int delay,  
@@ -4811,11 +4867,11 @@ protected:  \
             }
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  bool reset,
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t indexInBatch, const size_t mNbr)
         {
             assert(timeIdxInSeq >= 0);
-            if ((timeIdxInSeq - delay) >= 0 && (timeIdxInSeq - delay) * mNbr <= inputGradientValues.GetNumCols())
+            if ((timeIdxInSeq - delay) >= 0 && (timeIdxInSeq - delay) * mNbr <= inputGradientValues.GetNumCols() && !reset)
             {
                 Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr + indexInBatch, 1);
                 Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + indexInBatch, 1);
@@ -4855,13 +4911,25 @@ protected:  \
             
             if (m_samplesInRecurrentStep == 1)
             {
-                bool reset = (m_sentenceEnd[0] <= timeIdxInSeq);
+                //bool reset = (m_sentenceEnd[0] == timeIdxInSeq);
+                bool reset = false;
+
+                if ((((int)m_sentenceEnd[0] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[0] <= timeIdxInSeq))
+                {
+                    reset = true;
+                }
                 EvaluateThisNodeSR(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
             } else
             {
                 for (size_t i = 0 ; i < m_samplesInRecurrentStep; i++)
                 {
-                    bool reset = (m_sentenceEnd[i] <= timeIdxInSeq);
+                    // bool reset = (m_sentenceEnd[i] == timeIdxInSeq);
+                    bool reset = false;
+
+                    if ((((int)m_sentenceEnd[i] +(int)m_delay - 1) >= (int)timeIdxInSeq) && (m_sentenceEnd[i] <= timeIdxInSeq))
+                    {
+                        reset = true;
+                    }
                     EvaluateThisNodeSRP(timeIdxInSeq, m_delay, reset, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), i, m_samplesInRecurrentStep);
                 }
             }
@@ -4886,7 +4954,7 @@ protected:  \
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (iPastIndex < 0 && reset)
+            if (reset)
                 out.SetValue(default_activity);
             else
             {
@@ -4916,7 +4984,7 @@ protected:  \
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr+indexInBatch, 1);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (iPastIndex < 0 && reset)
+            if (reset)
                 out.SetValue(default_activity);
             else
             {
@@ -5309,7 +5377,7 @@ protected:  \
 
         // copy constructor
         CosDistanceWithNegativeSamplesNode(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
@@ -5335,7 +5403,6 @@ protected:  \
 
 	template class CosDistanceWithNegativeSamplesNode<float>;
 	template class CosDistanceWithNegativeSamplesNode<double>;
-
 
 #pragma endregion derived operations
 

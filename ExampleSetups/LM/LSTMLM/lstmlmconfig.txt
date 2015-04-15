@@ -26,12 +26,11 @@ command=penntreebanklstmrndmb10lr01:penntreebanktestlstmrndmb10lr01
 # notice that Alex's paper doesn't use class for speed-up.
 # 
 
-type=double
 
 penntreebanklstmrndmb10lr01=[
     # this is the maximum size for the minibatch, since sequence minibatches are really just a single sequence
 	# can be considered as the maximum length of a sentence
-	action=trainRNN
+	action=train
 
 # correspond to the number of words/characteres to train in a minibatch
     minibatchSize=6
@@ -49,11 +48,13 @@ penntreebanklstmrndmb10lr01=[
 	    evalCriterion=classcrossentropywithsoftmax
 	    nodeType=Sigmoid
         initValueScale=6.0
-		layerSizes=10000:200:10050
+		    layerSizes=10000:200:10000
         addPrior=false
         addDropoutNodes=false
         applyMeanVarNorm=false
         uniformInit=true;
+        vocabSize=10000
+        nbrClass=50
     ]
 
     # configuration file, base parameters
@@ -91,7 +92,7 @@ penntreebanklstmrndmb10lr01=[
 
     reader=[
       # reader to use
-      readerType=SequenceReader
+      readerType=LMSequenceReader
       randomize=None
 
       # word class info
@@ -116,7 +117,8 @@ penntreebanklstmrndmb10lr01=[
       #windowSize - number of records we should include in BinaryWriter window
       windowSize=10000
 
-      file=c:\exp\penntreebank\data\ptb.train.cntk.100.txt
+#      file=c:\exp\penntreebank\data\ptb.train.cntk.100.txt
+      file=c:\exp\penntreebank\data\ptb.train.cntk.txt
 
       #additional features sections
       #for now store as expanded category data (including label in)
@@ -193,7 +195,7 @@ penntreebanklstmrndmb10lr01=[
 
     cvReader=[
       # reader to use
-      readerType=SequenceReader
+      readerType=LMSequenceReader
       randomize=None
 
       # word class info
@@ -215,7 +217,8 @@ penntreebanklstmrndmb10lr01=[
       #windowSize - number of records we should include in BinaryWriter window
       windowSize=10000
 
-      file=c:\exp\penntreebank\data\ptb.valid.cntk.100.txt
+#      file=c:\exp\penntreebank\data\ptb.valid.cntk.100.txt
+      file=c:\exp\penntreebank\data\ptb.valid.cntk.txt
 
       #additional features sections
       #for now store as expanded category data (including label in)
@@ -311,7 +314,7 @@ penntreebanktestlstmrndmb10lr01=[
 
     reader=[
       # reader to use
-      readerType=SequenceReader
+      readerType=LMSequenceReader
       randomize=None
 
       # word class info
@@ -333,7 +336,8 @@ penntreebanktestlstmrndmb10lr01=[
       #windowSize - number of records we should include in BinaryWriter window
       windowSize=10000
 
-      file=c:\exp\penntreebank\data\ptb.test.cntk.100.txt
+#      file=c:\exp\penntreebank\data\ptb.test.cntk.100.txt
+      file=c:\exp\penntreebank\data\ptb.test.cntk.txt
 
       #additional features sections
       #for now store as expanded category data (including label in)
