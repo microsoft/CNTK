@@ -34,7 +34,7 @@
 
 //version number to control how to read and write 
 #define CNTK_MODEL_VERSION_1 1
-#define CURRENT_CNTK_MODEL_VERSION 1
+#define CURRENT_CNTK_MODEL_VERSION 2
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -4758,9 +4758,11 @@ protected:  \
             fstream << OperationName() << NodeName();
             fstream << m_delay; 
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
+
+            fstream << m_default_activity;
         }
 
-        void LoadFromFile(File& fstream, const size_t /*modelVersion*/, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        void LoadFromFile(File& fstream, const size_t modelVersion/*modelVersion*/, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
@@ -4772,6 +4774,9 @@ protected:  \
             fstream >> iRow >> timeIdxInSeq;
             FunctionValues().Resize(iRow,timeIdxInSeq);
             m_pastActivity.Resize(iRow, timeIdxInSeq);
+
+            if (modelVersion == 2)
+                fstream >> m_default_activity;
         }
 
         DelayNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
@@ -4796,6 +4801,30 @@ protected:  \
 
         virtual const std::wstring OperationName() const {return TypeName();}
 
+        /**
+        Set sentence boundary information according to a specified time delay. 
+
+        This function resets segmentation information according to the specified delay, which is a stream of 0, -1, and 1. 
+        For the delay node, the default delay time is 1. In the case of other delay times, the output from delay is multipled by a sentence-length constrained shifted mask padded with zero.
+        For example, mask for delay time = 1 is
+        0 1 1 0 1 1 1
+        Its corresponding mask for delay time = 2 is
+        0 0 1 0 0 1 1
+        This can be computed as 
+        Elementwiseproduct(A, A right shift 1)
+
+        Using the mask for segmentation, it is easy to orgnize data streams. Examples are in the following
+        Case 1: Data parallelism with two sentences processed in parallel. Suppose the second sentence is 5 words only. The first format is an interleaved format of two parallel processes
+        Use the following 2-row matrix to represent the two processes
+        0 1 1 1 0 1 1 0 1
+        0 1 1 1 1 1 0 0 0
+        Case 2: Data parallelism with two sentences. One is not using sentence truncation (the first stream) and the second stream with two sentences uses sentence truncation
+        0 1 1 1 1 1 1 1 1
+        0 1 1 1 1 1 0 1 1 
+
+        When delay node reads above, it simply use matrix multiplication on its hidden state and the natural outcome is a reset of hidden state, since 0 times anything is 0.
+        With the above way of representing sentence-beginning, the node is flexible to have either BPTT with sentence truncation or BPTT w/o sentence truncation. Also, it can deal with the situation that there are long sentences and short sentences in one minibatch.
+        */
         void ResetBound(const Matrix<ElemType> & seg)
         {
             ComputationNode<ElemType>::ResetBound(seg);
@@ -4806,8 +4835,6 @@ protected:  \
             }
             if (m_delay <= 0)
                 LogicError("Delay should be 1 or larger");
-            m_sentenceSeg.InplaceTruncateBottom(SENTENCE_BEGIN);
-            m_sentenceSeg.InplaceTruncateTop(SENTENCE_MIDDLE);
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -4858,7 +4885,12 @@ protected:  \
             {
                 Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
                 Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
-                Matrix<ElemType>::MultiplyAndAdd(frm, false, colBegin, false, to);
+
+                Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)inputGradientValues.GetDeviceId());
+                colSegPastActivity.SetValue(colBegin);
+                colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+                colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
+                Matrix<ElemType>::MultiplyAndAdd(frm, false, colSegPastActivity, false, to);
             }
         }
 
@@ -4884,14 +4916,10 @@ protected:  \
             }
             
             size_t utt_t = (size_t) timeIdxInSeq / m_samplesInRecurrentStep;
-            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
             Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
             colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
-            colSeg.Resize(m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            colSeg.SetValue(0);
-            colSeg.SetDiagonalValue(colBegin);
 
-            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, colSeg);
+            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin);
 
         }
 
@@ -4925,9 +4953,18 @@ protected:  \
             }
         }
 
-        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const Matrix<ElemType> & colBegin)
+        /**
+        This function returns output from the previous time instance.For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from colBegin.In case of sentence begining, the state activity is set to an initial value.The colBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_OBSERVATION, which are 0, 1, and - 1, respectively.
+            To compute the initial value, we use
+            prevState = colBegin * pastActivity + ~colBegin * initialStateValue
+            and ~sentenceBegin is computed as - 1 * (colBegin - 1), assuming that colBegin is either 0 or 1. For example, when colBegin == 1, ~sentenceBegin == 0.
+        colBegin is truncated to the range of 0 to 1 to satisify the assumption. For NO_OBSERVATION case, it is converted to its absolute value, which is 1, and treated in ~colBegin as SENTENCE_MIDDLE, which results in 0 so that zero is output for NO_OBSERVATION case. 
+        */
+        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin)
         {
             ASSERT(delay > 0);
+
+            size_t nStateRow = pastActivity.GetNumRows();
 
             if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
                 functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
@@ -4948,8 +4985,28 @@ protected:  \
             else
                 inp = inputFunctionValues.ColumnSlice(d, mNbr);
 
-            Matrix<ElemType>::Multiply(inp, false, colBegin, false, out);
+            Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
+            Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
+            colSeg.Resize(mNbr, mNbr);
+            colSeg.SetValue(0);
+            colSegPastActivity.SetValue(colBegin);
+            colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
+            colSeg.SetDiagonalValue(colSegPastActivity);
+            Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
 
+            /// obtain not A
+            colSegPastActivity.SetValue(colBegin);
+            colSegPastActivity.InplaceAbs();
+            colSegPastActivity -= (ElemType)1.0;
+            Matrix<ElemType>::Scale((ElemType)-1.0, colSegPastActivity);
+            colSeg.SetDiagonalValue(colSegPastActivity);
+            Matrix<ElemType> ones(colSegPastActivity.GetDeviceId());
+            ones.Resize(nStateRow, mNbr);
+            ones.SetValue((ElemType)1);
+
+            /// add default state value if it is for reset
+            Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, out);
         }
 
 

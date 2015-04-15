@@ -970,6 +970,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// is the begining of sentence
             evalnet.SetActualMiniBatchSize(1);
             dataReader.SetSentenceSegBatch(evalnet.m_sentenceSeg);
+            /// need to set the sentence begining segmentation info
+            evalnet.m_sentenceSeg.SetValue(SENTENCE_BEGIN);
+
             for (itdx = 0; itdx < maxSize; itdx++)
             {
                 ElemType best_score = -numeric_limits<ElemType>::infinity();
@@ -978,7 +981,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet.m_sentenceSeg.SetValue(1); 
+                    evalnet.m_sentenceSeg.SetValue(SENTENCE_MIDDLE); 
                 }
 
                 PreComputeActivityAtTime(itdx);

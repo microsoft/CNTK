@@ -2063,11 +2063,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
     It differs from PreComputeNode in that precompute done is done before the entire corpus.
     This is done before forward computation of all nodes. 
-    This node is similar to the PreComputeNode, but is an abstract of it.
     */
     template<class ElemType>
     class BatchModeNode : public ComputationNode<ElemType>
-        // all nodes require precomputation should derive from it
     {
         UsingComputationNodeMembers;
 
@@ -2441,6 +2439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
 
+            fstream << m_inputDim << m_outputDim;
             fstream << mDefaultState;
         }
 
@@ -2448,6 +2447,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
+            if (modelVersion == 2)
+                fstream >> m_inputDim >> m_outputDim;
             fstream >> mDefaultState;
         }
 
@@ -2551,7 +2552,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     grdToPrevOutput.SetValue(0);
                     grdToPrevState.SetValue(0);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, m_sentenceSeg);
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, mDefaultState, m_sentenceSeg);
 
                     ComputeInputGradientWrtGates(
                         error,
@@ -2948,7 +2949,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceTanhInput =
                     tanhObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
 
-                PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, m_sentenceSeg);
+                PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, mDefaultState, m_sentenceSeg);
 
                 EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                     sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
@@ -2980,6 +2981,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mGradientComputed = false;
         }
 
+        /**
+        Prepare history for LSTMnode
+
+        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_OBSERVATION, which are 0, 1, and -1, respectively. 
+        To compute the initial value, we use
+        prevState = sentenceBegin * pastActivity + ~sentenceBegin * initialStateValue
+        and ~sentenceBegin is computed as -1*(sentenceBegin - 1), assuming that sentenceBegin is either 0 or 1. For example, when sentenceBegin == 1, ~sentenceBegin == 0. 
+        The previous-time output doesn't have initial value, so it is computed as 
+        prevOutput = sentenceBegin * pastOutput
+
+        */
         /// prepare prevstate and prevoutput
         static void WINAPI PrepareHistory(
             size_t timeIdxInSeq,
@@ -2989,9 +3001,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType> & state,
             const Matrix<ElemType> & pastOutput,
             const Matrix<ElemType> & pastState,
-            size_t nsamples, const Matrix<ElemType>& sentenceBegin)
+            size_t nsamples, const ElemType & initStateValue, const Matrix<ElemType>& sentenceBegin)
         {
             size_t nRow = pastOutput.GetNumRows();
+            size_t nStateRow = pastState.GetNumRows();
             size_t nStream = sentenceBegin.GetNumRows();
 
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
@@ -3020,6 +3033,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// this is the begining of this minibatch
                 Matrix<ElemType>::Multiply(pastOutput.ColumnSlice(0, nsamples), false, colSeg, false, newPrevOutput);
                 Matrix<ElemType>::Multiply(pastState.ColumnSlice(0, nsamples), false, colSeg, false, newPrevState);
+
+                /// obtain not A
+                colBegin -= (ElemType)1.0;
+                Matrix<ElemType>::Scale((ElemType)-1.0, colBegin);
+                colSeg.SetDiagonalValue(colBegin);
+                Matrix<ElemType> ones(colBegin.GetDeviceId());
+                ones.Resize(nStateRow, nsamples);
+                ones.SetValue((ElemType)1);
+
+                /// add default state value if it is for reset
+                Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newPrevState);
             }
             else
             {
