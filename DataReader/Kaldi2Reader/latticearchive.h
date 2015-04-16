@@ -12,6 +12,8 @@
 #undef HACK_IN_SILENCE          // [v-hansu] hack to simulate DEL in the lattice
 #define SILENCE_PENALTY          // give penalty to added silence
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "basetypes.h"
 #include "latticestorage.h"
