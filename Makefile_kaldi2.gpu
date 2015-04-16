@@ -35,7 +35,7 @@ BUILDTYPE = release
 #MATHLIB = acml
 MATHLIB = mkl
 # modify relevant path below for your system
-MKL_PATH = /usr/users/chiaying/intel/composer_xe_2013.2.146
+MKL_PATH = /usr/users/yzhang87/tools/composer_xe_2015.2.164
 ACML_PATH = /usr/users/yzhang87/code/acml/gfortran64
 #######
 
