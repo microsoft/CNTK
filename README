@@ -1,14 +1,16 @@
 == Author of the README ==
-	Wengong Jin,
-	Shanghai Jiao Tong University
-	email: acmgokun@gmail.com
+    Wengong Jin,
+    Shanghai Jiao Tong University
+    email: acmgokun@gmail.com
 
-	Hakan Erdogan
-	MERL, Sabanci University
-	email: haerdogan@sabanciuniv.edu
+    Hakan Erdogan
+    MERL, Sabanci University
+    email: haerdogan@sabanciuniv.edu
 
     Yu Zhang, Leo Liu
     CSAIL, Massachusetts Institute of Technology
+    email: yzhang87@csail.mit.edu
+    email: leoliu_cu@sbcglobal.net
 
 == Preeliminaries ==
 To build the cpu version, you have to install intel MKL blas library or ACML library first. Note that ACML is free, where MKL may not be.
@@ -46,8 +48,34 @@ All executables are in bin/ directory:
 To run the executable, make sure bin/ is in your ${LD_LIBRARY_PATH}, if not, running cn.exe will fail when cn.exe tries to link the corresponding reader. Once it's done, run in command line:
 	./cn.exe configFile=${your config file}
 
-
 == Kaldi Reader ==
+This is a HTKMLF reader and kaldi writer (for decode)
+
+To build the cpu/gpu version, run
+    make -f Makefile_kaldi.cpu/gpu
+
+The feature section is like:
+
+writer=[
+    writerType=KaldiReader
+    readMethod=blockRandomize
+    frameMode=false
+    miniBatchMode=Partial
+    randomize=Auto
+    verbosity=1
+    ScaledLogLikelihood=[
+        dim=$labelDim$
+        Kaldicmd="ark:-" # will pipe to the Kaldi decoder latgen-faster-mapped
+        scpFile=$outputSCP$ # the file key of the features
+    ]
+]
+
+== Kaldi2 Reader ==
+This is a kaldi reader and kaldi writer (for decode)
+
+To build the cpu/gpu version, run
+    make -f Makefile_kaldi2.cpu/gpu
+
 
 The features section is different:
 
