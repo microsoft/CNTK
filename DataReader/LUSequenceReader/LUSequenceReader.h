@@ -18,12 +18,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#ifdef DBG_SMT
+#define CACHE_BLOG_SIZE 100
+#else
 #define CACHE_BLOG_SIZE 50000
+#endif
 
 #define STRIDX2CLS L"idx2cls"
 #define CLASSINFO  L"classinfo"
     
-#define MAX_STRING  2048
+#define MAX_STRING  100000
 
 #define NULLLABEL 65532
 
@@ -44,22 +48,18 @@ protected:
 
     std::wstring m_file; 
 public:
-	using LabelType = typename IDataReader<ElemType>::LabelType;
-	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-    int nwords, dims, nsamps, nglen, nmefeats;
+    using LabelType = wstring;
+    using LabelIdType = long;
+    long nwords, dims, nsamps, nglen, nmefeats;
 
     int m_seed; 
     bool mRandomize;
 
-    int class_size;
-    map<int, vector<int>> class_words;
-    vector<int>class_cn;
-
 public:
     /// deal with OOV
-    map<string, string> mWordMapping;
+    map<LabelType, LabelType> mWordMapping;
     string mWordMappingFn;
-    string mUnkStr;
+    LabelType mUnkStr;
 
 public:
     /// accumulated number of sentneces read so far
@@ -67,8 +67,7 @@ public:
 
 protected:
 
-    LULUSequenceParser<ElemType, LabelType> m_parser;
-//    LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
+    LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
     size_t m_mbSize;    // size of minibatch requested
     size_t m_mbStartSample; // starting sample # of the next minibatch
     size_t m_epochSize; // size of an epoch
@@ -119,12 +118,12 @@ protected:
         LabelKind type;  // labels are categories, create mapping table
         std::map<LabelIdType, LabelType> mapIdToLabel;
         std::map<LabelType, LabelIdType> mapLabelToId;
-        map<string, int> word4idx;
-        map<int, string> idx4word;
+        map<LabelType, LabelIdType> word4idx;
+        map<LabelIdType, LabelType> idx4word;
         LabelIdType idMax; // maximum label ID we have encountered so far
-        LabelIdType dim; // maximum label ID we will ever see (used for array dimensions)
-        std::string beginSequence; // starting sequence string (i.e. <s>)
-        std::string endSequence; // ending sequence string (i.e. </s>)
+        long dim; // maximum label ID we will ever see (used for array dimensions)
+        LabelType beginSequence; // starting sequence string (i.e. <s>)
+        LabelType endSequence; // ending sequence string (i.e. </s>)
         bool busewordmap; /// whether using wordmap to map unseen words to unk
         std::wstring mapName;
         std::wstring fileToWrite;  // set to the path if we need to write out the label file
@@ -146,37 +145,34 @@ protected:
     void WriteLabelFile();
     void LoadLabelFile(const std::wstring &filePath, std::vector<LabelType>& retLabels);
 
-    LabelIdType GetIdFromLabel(const std::string& label, LabelInfo& labelInfo);
-    bool GetIdFromLabel(const vector<string>& label, LabelInfo& labelInfo, vector<LabelIdType>& val);
-    bool CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned & labelId);
+    LabelIdType GetIdFromLabel(const LabelType& label, LabelInfo& labelInfo);
+    bool GetIdFromLabel(const vector<LabelIdType>& label, vector<LabelIdType>& val);
+    bool CheckIdFromLabel(const LabelType& labelValue, const LabelInfo& labelInfo, unsigned & labelId);
 
-    virtual bool ReadRecord(size_t readSample);
     bool SentenceEnd();
 
 public:
-    virtual void Init(const ConfigParameters& config);
-    void ReadLabelInfo(const wstring & vocfile,  map<string, int> & word4idx,
-                                                map<int, string>& idx4word) ;
-    void ChangeMaping(const map<string, string>& maplist, 
-            const string & unkstr , 
-            map<string, int> & word4idx);
+    void Init(const ConfigParameters& ){};
+    void ReadLabelInfo(const wstring & vocfile,  map<LabelType, LabelIdType> & word4idx,
+        map<LabelIdType, LabelType>& idx4word);
+    void ChangeMaping(const map<LabelType, LabelType>& maplist,
+        const LabelType& unkstr,
+        map<LabelType, LabelIdType> & word4idx);
 
-    void ReadWord(char *wrod, FILE *fin);
+    void Destroy() {};
 
-    virtual void Destroy();
     LUSequenceReader() {
         m_featuresBuffer=NULL; m_labelsBuffer=NULL; m_clsinfoRead = false; m_idx2clsRead = false; 
     }
-    virtual ~LUSequenceReader();
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    ~LUSequenceReader(){};
+    void StartMinibatchLoop(size_t , size_t , size_t = requestDataSize) {};
 
     void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SentenceEnd(std::vector<size_t> &/*sentenceEnd*/) {};
 
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
-    
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
+
 public:
     int GetSentenceEndIdFromOutputLabel();
 };
@@ -185,9 +181,9 @@ template<class ElemType>
 class BatchLUSequenceReader : public LUSequenceReader<ElemType>
 {
 public:
-	using LabelType = typename IDataReader<ElemType>::LabelType;
-	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-	using LUSequenceReader<ElemType>::mWordMappingFn;
+    using LabelType = wstring;
+    using LabelIdType = long;
+    using LUSequenceReader<ElemType>::mWordMappingFn;
 	using LUSequenceReader<ElemType>::m_cachingReader;
 	using LUSequenceReader<ElemType>::mWordMapping;
 	using LUSequenceReader<ElemType>::mUnkStr;
@@ -197,7 +193,6 @@ public:
 	using LUSequenceReader<ElemType>::labelInfoMin;
 	using LUSequenceReader<ElemType>::labelInfoMax;
 	using LUSequenceReader<ElemType>::m_featureDim;
-	using LUSequenceReader<ElemType>::class_size;
 	using LUSequenceReader<ElemType>::m_labelInfo;
 //	using LUSequenceReader<ElemType>::m_labelInfoIn;
 	using LUSequenceReader<ElemType>::m_mbStartSample;
@@ -247,8 +242,8 @@ private:
     size_t mLastPosInSentence; 
     size_t mNumRead ;
 
-    std::vector<vector<LabelType>>  m_featureTemp;
-    std::vector<LabelType> m_labelTemp;
+    std::vector<vector<LabelIdType>>  m_featureTemp;
+    std::vector<LabelIdType> m_labelTemp;
 
     bool   mSentenceEnd; 
     bool   mSentenceBegin;
