@@ -2536,15 +2536,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
 #ifdef DEBUG_DECODER
-                    fprintf(stderr, "original output error [%d] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
+                    fprintf(stderr, "original output error [%ld] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
 #endif
 
                     PrepareThisErrorsBeforeBackProp(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState,
                         m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, m_sentenceSeg);
 
 #ifdef DEBUG_DECODER
-                    fprintf(stderr, "output error [%d] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
-                    fprintf(stderr, "state error [%d] norm = %.8e\n", timeIdxInSeq, stateError.FrobeniusNorm());
+                    fprintf(stderr, "output error [%ld] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
+                    fprintf(stderr, "state error [%ld] norm = %.8e\n", timeIdxInSeq, stateError.FrobeniusNorm());
 #endif
 
                     grdToPrevOutput.Resize(slicePrevOutput.GetNumRows(), slicePrevOutput.GetNumCols());
@@ -2870,33 +2870,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        /**
-        Reset state and output for no-observation case
-        */
-        void ResetForNoObservation()
-        {
-            size_t nT = Inputs(0)->FunctionValues().GetNumCols();
-            /// set output to 0 if there are no observations
-            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
-            {
-                for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
-                {
-                    if (GetSegInfo(t, i) == NO_OBSERVATION)
-                    {
-                        FunctionValues().ColumnSlice(t, 1).SetValue(0);
-                        mState.ColumnSlice(t, 1).SetValue(0);
-
-                        mGi.ColumnSlice(t, 1).SetValue(0);
-                        mGf.ColumnSlice(t, 1).SetValue(0);
-                        mGo.ColumnSlice(t, 1).SetValue(0);
-
-                        tanhState.ColumnSlice(t, 1).SetValue(0);
-                        tanhObs.ColumnSlice(t, 1).SetValue(0);
-                    }
-                }
-            }
-        }
-
         virtual void EvaluateThisNode()
         {
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
@@ -2929,9 +2902,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef DEBUG_DECODER
             if (mPastOutput.IsEmpty() == false)
-                fprintf(stderr, "LSTM past output norm = %.8e\n", mPastOutput.FrobeniusNorm());
+                fprintf(stderr, "LSTM node %ls past output norm = %.8e\n", this->NodeName().c_str(), mPastOutput.FrobeniusNorm());
             if (mPastState.IsEmpty() == false)
-                fprintf(stderr, "LSTM past state norm = %.8e\n", mPastState.FrobeniusNorm());
+                fprintf(stderr, "LSTM node %ls past state norm = %.8e\n", this->NodeName().c_str(), mPastState.FrobeniusNorm());
 #endif
 
             for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += m_samplesInRecurrentStep)
@@ -2960,13 +2933,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef DEBUG_DECODER
             if (mLastOutput.IsEmpty() == false)
-                fprintf(stderr, "LSTM last output norm = %.8e\n", mLastOutput.FrobeniusNorm());
+                fprintf(stderr, "LSTM node %ls last output norm = %.8e\n", this->NodeName().c_str(), mLastOutput.FrobeniusNorm());
             if (mLastState.IsEmpty() == false)
-                fprintf(stderr, "LSTM last state norm = %.8e\n", mLastState.FrobeniusNorm());
+                fprintf(stderr, "LSTM node %ls last state norm = %.8e\n", this->NodeName().c_str(), mLastState.FrobeniusNorm());
 #endif
 
             /// set output to 0 if there are no observations
-            ResetForNoObservation();
+            ResetForNoObservation(FunctionValues());
+            ResetForNoObservation(mState);
 
 #ifdef DEBUG_DECODER
             ElemType tmpnorm = FunctionValues().FrobeniusNorm();
@@ -3004,8 +2978,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t nsamples, const ElemType & initStateValue, const Matrix<ElemType>& sentenceBegin)
         {
             size_t nRow = pastOutput.GetNumRows();
-            size_t nStateRow = pastState.GetNumRows();
             size_t nStream = sentenceBegin.GetNumRows();
+
+            assert(nStream == nsamples);
 
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             if (slicePrevOutput.IsEmpty() || slicePrevOutput.GetNumRows() != nRow || slicePrevOutput.GetNumCols() != nsamples)
@@ -3034,16 +3009,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::Multiply(pastOutput.ColumnSlice(0, nsamples), false, colSeg, false, newPrevOutput);
                 Matrix<ElemType>::Multiply(pastState.ColumnSlice(0, nsamples), false, colSeg, false, newPrevState);
 
-                /// obtain not A
-                colBegin -= (ElemType)1.0;
-                Matrix<ElemType>::Scale((ElemType)-1.0, colBegin);
-                colSeg.SetDiagonalValue(colBegin);
-                Matrix<ElemType> ones(colBegin.GetDeviceId());
-                ones.Resize(nStateRow, nsamples);
-                ones.SetValue((ElemType)1);
-
-                /// add default state value if it is for reset
-                Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newPrevState);
             }
             else
             {
@@ -3051,6 +3016,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::Multiply(output.ColumnSlice(timeIdxInSeq - nsamples, nsamples), false, colSeg, false, newPrevOutput);
                 Matrix<ElemType>::Multiply(state.ColumnSlice(timeIdxInSeq - nsamples, nsamples), false, colSeg, false, newPrevState);
             }
+
+            SetToInitStateValueForResetSeg(sentenceBegin.ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);
+
             slicePrevOutput.ColumnSlice(0, nsamples).SetValue(newPrevOutput);
             slicePrevState.ColumnSlice(0, nsamples).SetValue(newPrevState);
         }
@@ -3093,14 +3061,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             colBegin.SetValue(sentenceBegin.ColumnSlice(utt_t, 1));
             colBegin.InplaceTruncateBottom(NO_OBSERVATION);
             colBegin.InplaceTruncateTop(SENTENCE_BEGIN);
+            colBegin += fabs((ElemType)NO_OBSERVATION); /// raise this so that -1 -> 0 and therefore 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
             colSeg.SetDiagonalValue(colBegin);
-
-            /// will reset to 0 if sentence begining at a posiiton is 0
-            /// will keep the output if it is not the sentence begining
-            Matrix<ElemType> eyeM = Matrix<ElemType>::Eye(nsamples, sentenceBegin.GetDeviceId());
-            Matrix<ElemType>::ScaleAndAdd((ElemType)1.0, eyeM, colSeg); /// raise +1, so that -1 (NO_OBSERVATION) -> 0 (SENTENCE_BEGIN)
 
             /// times the errors with the mask
             Matrix<ElemType> newOutputError(colBegin.GetDeviceId());
@@ -3185,9 +3149,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::MultiplyAndAdd(mCellWgt.ColumnSlice(1 + inputDim, outputDim), false, prevOutput, false, state);
             state += mCellWgt.ColumnSlice(0, 1);
 #ifdef DEBUG_DECODER
-            fprintf(stderr, "W_xc norm = %.8e\n", mCellWgt.ColumnSlice(1, inputDim).FrobeniusNorm());
-            fprintf(stderr, "W_hc norm = %.8e\n", mCellWgt.ColumnSlice(1 + inputDim, outputDim).FrobeniusNorm());
-            fprintf(stderr, "b_c norm = %.8e\n", mCellWgt.ColumnSlice(0, 1).FrobeniusNorm());
+//            fprintf(stderr, "W_xc norm = %.8e\n", mCellWgt.ColumnSlice(1, inputDim).FrobeniusNorm());
+//            fprintf(stderr, "W_hc norm = %.8e\n", mCellWgt.ColumnSlice(1 + inputDim, outputDim).FrobeniusNorm());
+//            fprintf(stderr, "b_c norm = %.8e\n", mCellWgt.ColumnSlice(0, 1).FrobeniusNorm());
 #endif
             tanhObs.AssignTanhOf(state);
             state.AssignElementProductOf(gi, tanhObs);
@@ -3279,7 +3243,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> f0(m_deviceId), f1(m_deviceId), f2(m_deviceId), f3(m_deviceId), f4(m_deviceId), func(m_deviceId), f5(m_deviceId);
                 Matrix<ElemType> target(m_deviceId);
                 Matrix<ElemType> giWeight, ghWeight, goWeight;
-
+                ElemType initStateValue = mDefaultState;
                 Matrix<ElemType> boundary(m_deviceId);
                 boundary.Resize(1, nT);
                 boundary.SetValue(SENTENCE_MIDDLE);
@@ -3310,6 +3274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(4)->FunctionValues().SetValue((ElemType)0.1);
                 FunctionValues().Resize(nOutput, nT);
 
+                mDefaultState = 0.0;
                 EvaluateThisNode();
 
                 /// check with expected values
@@ -3362,6 +3327,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
                         Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
                 }
+                mDefaultState = initStateValue;
             }
             catch (...)
             {
