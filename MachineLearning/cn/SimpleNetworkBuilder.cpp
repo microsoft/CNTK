@@ -1188,6 +1188,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         output = m_net->LSTM(inputObs, wInputGate, wForgetGate, wOutputGate, wMemoryCellMatrix, msra::strfun::wstrprintf(L"LSTM%d", iLayer));
 
+#ifdef DEBUG_DECODER
+        wInputGate->FunctionValues().SetValue((ElemType)0.01);
+        wForgetGate->FunctionValues().SetValue((ElemType)0.01);
+        wOutputGate->FunctionValues().SetValue((ElemType)0.01);
+        wMemoryCellMatrix->FunctionValues().SetValue((ElemType)0.01);
+#endif
+
         if (m_addDropoutNodes)
             input = m_net->Dropout(output);
         else
@@ -1233,6 +1240,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
                 m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
                 output = m_net->LookupTable(e, input, L"LookupTable");
+#ifdef DEBUG_DECODER
+                e->FunctionValues().SetValue((ElemType)0.01);
+#endif
 
                 if (m_addDropoutNodes)
                     input = m_net->Dropout(output);
@@ -1285,6 +1295,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+#ifdef DEBUG_DECODER
+            w->FunctionValues().SetValue((ElemType)0.01);
+#endif
             label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
             AddTrainAndEvalCriterionNodes(input, label, w);
 
@@ -1353,6 +1366,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"EncoderE%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
                 m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
                 output = m_net->LookupTable(e, input, L"EncoderLookupTable");
+#ifdef DEBUG_DECODER
+                e->FunctionValues().SetValue((ElemType)0.01);
+#endif
 
                 if (m_addDropoutNodes)
                     input = m_net->Dropout(output);
