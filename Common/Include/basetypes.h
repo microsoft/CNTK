@@ -1144,4 +1144,8 @@ static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
     return l.second > r.second;
 }
 
+/// debug code for machine translation setup
+//#define DBG_SMT
+//#define DEBUG_DECODER
+
 #endif    // _BASETYPES_
