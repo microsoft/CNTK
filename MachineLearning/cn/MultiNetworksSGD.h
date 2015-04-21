@@ -90,7 +90,7 @@ namespace Microsoft {
                     for (size_t i = 0; i < encoderNodeNames.size(); i++)
                     {
                         m_lst_pair_encoder_decode_node_names.push_back(make_pair(encoderNodeNames[i], decoderNodeNames[i]));
-                        fwprintf(stderr, L"pair %s <-> %s\n", encoderNodeNames[i].c_str(), decoderNodeNames[i].c_str());
+                        fprintf(stderr, "paired %ls <-> %ls\n", encoderNodeNames[i].c_str(), decoderNodeNames[i].c_str());
                     }
                 }
 
@@ -113,14 +113,14 @@ namespace Microsoft {
                     }
 
                     wstring modelFileName = GetEncoderModelNameForEpoch(int(startEpoch) - 1);
-                    fwprintf(stderr, L"encoderFileName=%s\n", modelFileName.c_str());
+                    fprintf(stderr, "encoderFileName=%ls\n", modelFileName.c_str());
                     if (startEpoch >= 0)
                         fprintf(stderr, "Starting from checkpoint. Load Encoder Network From File %ws.\n", modelFileName);
                     ComputationNetwork<ElemType>& encoderNet =
                         startEpoch<0 ? encoderNetBuilder->BuildNetworkFromDescription() : encoderNetBuilder->LoadNetworkFromFile(modelFileName, true, true);
 
                     modelFileName = GetDecoderModelNameForEpoch(int(startEpoch) - 1);
-                    fwprintf(stderr, L"decoderFileName=%s\n", modelFileName.c_str());
+                    fprintf(stderr, "decoderFileName=%ls\n", modelFileName.c_str());
                     if (startEpoch >= 0)
                         fprintf(stderr, "Starting from checkpoint. Load Decoder Network From File %ws.\n", modelFileName);
 
@@ -782,33 +782,6 @@ namespace Microsoft {
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
 
-                            node->UpdateEvalTimeStamp();
-                            localEpochCriterion.SetValue(0);
-                            localEpochEvalErrors.SetValue(0);
-
-                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                                decoderNet, encoderTrainSetDataReader,
-                                decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
-
-                            ElemType score0 = localEpochCriterion.Get00Element();
-
-                            node->UpdateEvalTimeStamp();
-                            localEpochCriterion.SetValue(0);
-                            localEpochEvalErrors.SetValue(0);
-
-                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                                decoderNet, encoderTrainSetDataReader,
-                                decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
-
-                            ElemType score0r = localEpochCriterion.Get00Element();
-                            if (score0 != score0r)
-                            {
-                                throw std::runtime_error("two runs of the same inputs should produce same outputs");
-                            }
-
-
                             /// perturb parameter
                             ElemType ePos = eOrg + (ElemType)EPSILON;
                             node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
@@ -925,8 +898,8 @@ namespace Microsoft {
                         encoderNode->GetHistory(historyMat, true); /// get the last state activity
                         decoderNode->SetHistory(historyMat);
 #ifdef DEBUG_DECODER
-                        fprintf(stderr, "LSTM past output norm = %.8e\n", historyMat.ColumnSlice(0, 1).FrobeniusNorm());
-                        fprintf(stderr, "LSTM past state norm = %.8e\n", historyMat.ColumnSlice(1, 1).FrobeniusNorm());
+                        fprintf(stderr, "LSTM past output norm = %.8e\n", historyMat.ColumnSlice(0, nstreams).FrobeniusNorm());
+                        fprintf(stderr, "LSTM past state norm = %.8e\n", historyMat.ColumnSlice(nstreams, nstreams).FrobeniusNorm());
 #endif
                     }
 

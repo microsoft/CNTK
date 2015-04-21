@@ -204,6 +204,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// gradient check setup
             bool doGradientCheck = configSGD("gradientcheck", "false");
             ElemType gradientCheckSigDigit = configSGD("sigFigs", "6");
+            if (doGradientCheck && sizeof(ElemType) != sizeof(double))
+                LogicError("Gradient check needs to use type = double");
 
             m_doUnitTest = configSGD("unittest", "false");
 
@@ -281,10 +283,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needAveMultiplier = needAveMultiplier;
             m_L2RegWeight = L2RegWeight;
             m_L1RegWeight = L1RegWeight;
-
-            for (size_t i=0; i<m_mbSize.size(); i++)
-                if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
-                    throw std::invalid_argument ("epoch size must be larger than mbsize.");
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None && (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
             {
