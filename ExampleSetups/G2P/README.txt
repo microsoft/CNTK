@@ -21,8 +21,11 @@ in Python. use the following commands
 import const as cn
 import score
 
-#outputfn='//speechstore5/transient/kaishengy/exp/lts/result/reps30bilstm/test_bw1_iter8/output.rec.txt'
-outputfn='//speechstore5/transient/kaishengy/exp/lts/result/reps23mb100fw6/test_bw1_iter35/output.rec.txt'
+outputfn='//speechstore5/transient/kaishengy/exp/lts/result/reps30bilstm/test_bw1_iter35/output.rec.txt'
+outputfn='//speechstore5/transient/kaishengy/exp/lts/result/reps23mb100fw6/test_bw1_iter34/output.rec.txt'
+outputfn='//speechstore5/transient/kaishengy/exp/lts/result/reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2/test_bw1_iter43/output.rec.txt'
+outputfn='//speechstore5/transient/kaishengy/exp/lts/result/s30rndjointconditionalbilstmn300n300n300/test_bw1_iter35/output.rec.txt'
+outputfn='//speechstore5/transient/kaishengy/exp/lts/result/s36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2/test_bw1_iter43/output.rec.txt'
 lexicon = {}
 score.ReadPronunciations(cn._TEST_PRON, lexicon)
 score.BleuScore(lexicon,
