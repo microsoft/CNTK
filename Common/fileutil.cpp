@@ -1656,3 +1656,27 @@ vector<string> sep_string(const string & istr, const string & sep)
 
     return vstr;
 }
+
+/// separate string by separator
+vector<wstring> wsep_string(const wstring & istr, const wstring & sep)
+{
+    wstring str = istr;
+    str = wtrim(str);
+    vector<wstring> vstr;
+    wstring csub;
+    size_t ifound = 0;
+    size_t ifoundlast = ifound;
+    ifound = str.find(sep, ifound);
+    while (ifound != std::wstring::npos)
+    {
+        csub = str.substr(ifoundlast, ifound - ifoundlast);
+        vstr.push_back(wtrim(csub));
+
+        ifoundlast = ifound + 1;
+        ifound = str.find(sep, ifoundlast);
+    }
+    csub = str.substr(ifoundlast, str.length() - ifoundlast);
+    vstr.push_back(wtrim(csub));
+
+    return vstr;
+}
