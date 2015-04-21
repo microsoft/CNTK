@@ -1518,7 +1518,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
                 if ((*nodeIter)->OperationName() == L"Delay" ||
-					(*nodeIter)->OperationName() == L"LSTM")
+					(*nodeIter)->OperationName() == L"LSTM" ||
+                    (*nodeIter)->OperationName() == L"CrossEntropyWithSoftmax" )
                 {
                     (*nodeIter)->ResetBound(m_sentenceSeg);
                 }
