@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        Matrix<ElemType> m_sentenceSeg;
+        Matrix<ElemType> m_sentenceSeg;  
     public:
         ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), m_sentenceSeg(deviceId)
         {
@@ -214,6 +214,74 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceSeg.TransferFromDeviceToDevice(device, seg.GetDeviceId(), true);
             m_sentenceSeg = seg;
             m_sentenceSeg.TransferFromDeviceToDevice(seg.GetDeviceId(), device, true);
+        }
+
+        static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin, 
+            size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
+        {
+            Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
+            Matrix<ElemType> colSeg(colBegin.GetDeviceId());
+            colSeg.Resize(nStream, nStream);
+            size_t nStateRow = newprevstate.GetNumRows();
+
+            assert(nStream == sentenceBegin.GetNumRows());
+
+            /// only set state to init state value for segmentation = 0
+            /// to extract the segmentation == 0, perform the following operations
+            /// e.g., -1 0 1 -> 0 1 2 -> 0 1 1
+            /// -1 0 1 -> 1 0 -1 -> 2 1 0 -> 1 1 0 
+            /// 0 1 1 .* 1 1 0 -> 0 1 0 
+            /// obtain not A
+            Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
+            colPos.SetValue(sentenceBegin); /// -1 0 1
+            colBegin.SetValue(sentenceBegin); /// -1 0 1
+            assert(colBegin.GetNumCols() == 1);
+
+            colPos += (ElemType)SENTENCE_MIDDLE; /// 0 1 2
+            colBegin -= (ElemType)SENTENCE_MIDDLE; /// -2 -1 0
+            Matrix<ElemType>::Scale((ElemType)-1.0, colBegin); /// 2 1 0
+            colPos.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colPos.InplaceTruncateTop(SENTENCE_MIDDLE); /// 0 1 1
+            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE); /// 1 1 0
+            colBegin.ElementMultiplyWith(colPos);  /// 0 1 0 
+            colSeg.SetDiagonalValue(colBegin);  /// 0 1 0 
+            Matrix<ElemType> ones(colBegin.GetDeviceId());
+            ones.Resize(nStateRow, nStream);
+            ones.SetValue((ElemType)1);
+            /// add default state value if it is for reset
+            Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate);  /// += [0 initStateValue 0 ]
+        }
+
+        /**
+        reset to 0 for any elements that correspond to noobservation
+        */
+        void ResetForNoObservation(Matrix<ElemType>& toChange)
+        {
+            size_t nT = toChange.GetNumCols();
+            size_t nd = toChange.GetNumRows();
+            size_t nS = m_sentenceSeg.GetNumRows();
+            Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
+
+            colBegin.Resize(nS, nS);
+            colSeg.Resize(nS, 1);
+            newfunc.Resize(nd, nS);
+            for (int utt_t = 0; utt_t < nT; utt_t += nS)
+            {
+                size_t j = utt_t / nS;
+                colSeg.SetValue(m_sentenceSeg.ColumnSlice(j, 1));
+                colSeg += SENTENCE_MIDDLE;
+                colSeg.InplaceTruncateBottom(SENTENCE_BEGIN);
+                colSeg.InplaceTruncateTop(SENTENCE_MIDDLE);
+                colBegin.SetDiagonalValue(colSeg);
+
+                /// this is the begining of this minibatch
+                Matrix<ElemType>::Multiply(toChange.ColumnSlice(utt_t, nS), false, colBegin, false, newfunc);
+
+                toChange.ColumnSlice(utt_t, nS).SetValue(newfunc);
+            }
         }
 
         void SetLoopId(const int id)
@@ -2986,6 +3054,10 @@ protected:  \
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+#ifdef DEBUG_DECODER
+            fprintf(stderr, "Times node %ls output norm = %.8e, input(0) norm = %.8e, input(1) norm = %.8e\n", this->NodeName().c_str(), FunctionValues().FrobeniusNorm(), 
+                Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm());
+#endif
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
@@ -4658,6 +4730,9 @@ protected:  \
         virtual void EvaluateThisNode()
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+#ifdef DEBUG_DECODER
+            fprintf(stderr, "LookupTableNode node %ls: Input[0]=%.8e Input[1]=%.8e output = %.8e\n", this->NodeName().c_str(), Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm(), FunctionValues().FrobeniusNorm());
+#endif
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
@@ -4964,8 +5039,6 @@ protected:  \
         {
             ASSERT(delay > 0);
 
-            size_t nStateRow = pastActivity.GetNumRows();
-
             if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
                 functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
                 functionValues.Resize(inputFunctionValues.GetNumRows(),
@@ -4995,18 +5068,7 @@ protected:  \
             colSeg.SetDiagonalValue(colSegPastActivity);
             Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
 
-            /// obtain not A
-            colSegPastActivity.SetValue(colBegin);
-            colSegPastActivity.InplaceAbs();
-            colSegPastActivity -= (ElemType)1.0;
-            Matrix<ElemType>::Scale((ElemType)-1.0, colSegPastActivity);
-            colSeg.SetDiagonalValue(colSegPastActivity);
-            Matrix<ElemType> ones(colSegPastActivity.GetDeviceId());
-            ones.Resize(nStateRow, mNbr);
-            ones.SetValue((ElemType)1);
-
-            /// add default state value if it is for reset
-            Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, out);
+            SetToInitStateValueForResetSeg(colBegin, mNbr, initStateValue, out);
         }
 
 
