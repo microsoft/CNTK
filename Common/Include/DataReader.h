@@ -49,7 +49,8 @@ class DATAREADER_API IDataReader
 {
 public:
     typedef std::string LabelType;
-    typedef unsigned int LabelIdType;
+    typedef unsigned LabelIdType;
+    unsigned m_seed;
 
     virtual void Init(const ConfigParameters& config) = 0;
     virtual void Destroy() = 0;
@@ -58,12 +59,12 @@ public:
     virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
     virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) = 0; 
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;
-    virtual bool DataEnd(EndDataType endDataType) = 0;
-    virtual void SetSentenceSegBatch(Matrix<ElemType>&sentenceEnd) = 0;
-    virtual void SetRandomSeed(int) = 0;
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
+    virtual void SetLabelMapping(const std::wstring& , const std::map<LabelIdType, LabelType>& ) { NOT_IMPLEMENTED;  };
+    virtual bool GetData(const std::wstring& , size_t , void* , size_t& , size_t ) { NOT_IMPLEMENTED;  };
+    virtual bool DataEnd(EndDataType ) { NOT_IMPLEMENTED;  };
+    virtual void SetSentenceSegBatch(Matrix<ElemType>& ) { NOT_IMPLEMENTED; };
+    virtual void SetRandomSeed(int) { NOT_IMPLEMENTED; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false;  }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
 };
