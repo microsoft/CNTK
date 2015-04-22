@@ -68,9 +68,11 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
 
         if (mFile.eof())
         { 
-            ParseReset(); /// restart from the corpus begining
             if (canMultiplePassData)
+            {
+                ParseReset(); /// restart from the corpus begining
                 continue;
+            }
             else
                 break; 
         }
