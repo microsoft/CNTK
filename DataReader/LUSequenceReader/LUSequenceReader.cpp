@@ -436,6 +436,9 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
     mTotalSentenceSofar = 0;
 
     Reset();
+
+    m_parser.ParseReset(); /// restart from the corpus begining
+
 }
 
 template<class ElemType>
