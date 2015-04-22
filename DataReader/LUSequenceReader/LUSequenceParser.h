@@ -185,7 +185,10 @@ public:
 
     void ParseReset()
     {
-        mFile.seekg(0, mFile.beg); 
+        mFile.close();
+        mFile.open(mFileName.c_str(), wifstream::in);
+        if (!mFile.good())
+            RuntimeError("cannot open file %ls", mFileName.c_str());
     }
 
     void AddOneItem(std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, long& lineCount,
@@ -211,7 +214,7 @@ public:
     // numbers - pointer to vector to return the numbers 
     // seqPos - pointers to the other two arrays showing positions of each sequence
     // returns - number of records actually read, if the end of file is reached the return value will be < requested records
-    long Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id);
+    long Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id, bool mAllowMultPassData = false);
 
 };
 

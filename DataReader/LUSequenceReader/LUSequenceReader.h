@@ -19,7 +19,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef DBG_SMT
-#define CACHE_BLOG_SIZE 100
+#define CACHE_BLOG_SIZE 2
 #else
 #define CACHE_BLOG_SIZE 50000
 #endif
