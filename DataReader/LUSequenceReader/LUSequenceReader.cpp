@@ -47,6 +47,8 @@ void LUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
 
     wifstream vin; 
     vin.open(strFileName, wifstream::in);
+    if (!vin.good())
+        LogicError("LUSequenceReader cannot open %ls \n", strFileName);
 
     b = 0;
     while (vin.good())
@@ -383,7 +385,6 @@ void BatchLUSequenceReader<ElemType>::Reset()
     if (m_featureTemp.size() > 0)
         m_featureTemp.clear();
     m_parser.mSentenceIndex2SentenceInfo.clear();
-    mTotalSentenceSofar = 0;
 }
 
 template<class ElemType>
@@ -431,6 +432,8 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
 
     m_clsinfoRead = false; 
     m_idx2clsRead = false; 
+
+    mTotalSentenceSofar = 0;
 
     Reset();
 }
@@ -570,7 +573,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         {
             Reset();
 
-            mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos, featIn.word4idx, labelIn.word4idx);
+            mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos, featIn.word4idx, labelIn.word4idx, mAllowMultPassData);
             if (mNumRead == 0)
             {
                 fprintf(stderr, "EnsureDataAvailable: no more data\n");

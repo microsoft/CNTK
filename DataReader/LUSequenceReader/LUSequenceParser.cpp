@@ -47,7 +47,7 @@ template class LUSequenceParser<double, std::string>;
 template class LUSequenceParser<double, std::wstring>;
 
 template<class NumType, class LabelType>
-long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id)
+long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long>& inputlabel2id, const map<wstring, long>& outputlabel2id, bool canMultiplePassData)
 {
     // transfer to member variables
     m_inputs = input;
@@ -67,7 +67,13 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
         ch = wtrim(ch);
 
         if (mFile.eof())
+        { 
             ParseReset(); /// restart from the corpus begining
+            if (canMultiplePassData)
+                continue;
+            else
+                break; 
+        }
 
         std::vector<wstring> vstr;
         bool bBlankLine = (ch.length() == 0);
@@ -87,12 +93,12 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
         for (size_t i = 0; i < vstr.size() - 1; i++)
         {
             if (inputlabel2id.find(vstr[i]) == inputlabel2id.end())
-                LogicError("cannot find item %s in input label", vstr[i]);
+                LogicError("cannot find item %ls in input label", vstr[i].c_str());
 
             vtmp.push_back(inputlabel2id.find(vstr[i])->second);
         }
         if (outputlabel2id.find(vstr[vstr.size() - 1]) == outputlabel2id.end())
-            LogicError("cannot find item %s in output label", vstr[vstr.size() - 1]);
+            LogicError("cannot find item %ls in output label", vstr[vstr.size() - 1].c_str());
         labels->push_back(outputlabel2id.find(vstr[vstr.size() - 1])->second);
         input->push_back(vtmp);
         if ((vstr[vstr.size() - 1] == m_endSequenceOut ||
