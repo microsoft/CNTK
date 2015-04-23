@@ -17,6 +17,7 @@ to score:
 suppose the G2P results are in xxx.output
 in Python. use the following commands
 
+cd d:/dev/kaisheny/dev/exp/lts/lts/scripts/
 
 import const as cn
 import score
