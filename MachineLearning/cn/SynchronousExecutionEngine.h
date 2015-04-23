@@ -236,11 +236,12 @@ public:
         }
         else if (cnNodeType == RowSliceNode<ElemType>::TypeName())
         {
+            if (parameter.size() != 3)
+                RuntimeError("RowSlice should have three parameters. Usage: RowSlice(startRowIndex, numRows, origNodeName.");
 
-            // setup the parameter position of children so we can hook them up later
             nodeParamCount = 1;
-            // parameters are (rows, [cols], inputNode)
-            nodeParamStart = parameter.size() > 2?2:1;
+            nodeParamStart = 2;
+
             if (pass == ndlPassInitial)
             {
                 // evaluate only scalar parameters
@@ -251,12 +252,13 @@ public:
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 nodePtr = m_net.RowSlice(NULL, start_index, num_rows, name);
                 nodePtr->NeedGradient() = needGradient;
-
             }
         }
         else if (cnNodeType == DelayNode<ElemType>::TypeName())
         {
-            // setup the parameter position of children so we can hook them up later
+            if (parameter.size() <2 || parameter.size() >3)
+                RuntimeError("Delay should have two to three fixed parameters. Usage: Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1]).");
+
             nodeParamCount = 1;
             // parameters are (rows, [cols], delayNode)
             nodeParamStart = parameter.size() > 2?2:1;

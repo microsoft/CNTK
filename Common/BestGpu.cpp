@@ -113,13 +113,14 @@ public:
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
     static BestGpu* g_bestGpu = NULL;
-    DEVICEID_TYPE deviceId = CPUDEVICE;
+    static DEVICEID_TYPE deviceId = CPUDEVICE;
 
     ConfigValue val = config("deviceId", "auto");
 	ConfigValue bLockGPUstr = config("LockGPU", "true");
 	bool bLockGPU = bLockGPUstr;
 
-    if (!_stricmp(val.c_str(), "CPU"))
+    //recommend to use CPU. Adding -1 for backward compatability
+    if (!_stricmp(val.c_str(), "CPU") || !_stricmp(val.c_str(), "-1"))
     {
         return CPUDEVICE;
     }
@@ -129,6 +130,11 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
     {
         g_bestGpu = new BestGpu();
     }
+    else if (bLockGPU && deviceId >= 0)
+    {
+        return deviceId;   
+    }  
+
     if (!_stricmp(val.c_str(), "Auto"))
     {
 #ifdef MPI_SUPPORT
@@ -639,6 +645,10 @@ void BestGpu::QueryNvmlData()
 
 bool BestGpu::LockDevice(int deviceID, bool trial)
 {
+    if (deviceID < 0) // don't lock CPU, always return true 
+    {
+        return true;
+    }    
 #ifdef WIN32 
 	// copied from dbn.exe, not perfect but it works in practice 
 	wchar_t buffer[80];

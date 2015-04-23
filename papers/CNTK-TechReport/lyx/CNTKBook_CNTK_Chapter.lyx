@@ -4686,6 +4686,224 @@ minibatchSize
 \end_layout
 
 \begin_layout Section
+Plot Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Plot Command
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This command loads a given computation network and describes the network
+ topology (usually a DAG) using the DOT (http://www.graphviz.org/doc/info/lang.html
+) language.
+ It can also optionally call a third-part tool (http://www.graphviz.org/Documentat
+ion/dotguide.pdf) to render the network topology.
+ Note that many DOT rendering tools are optimized for DAG, and the rendered
+ graph becomes quite messy if the network structure is non-DAG.
+ The non-DAG structure is usually caused by the use of delay node.
+ In this case, this command will treat all the delay nodes as leaf nodes.
+ 
+\end_layout
+
+\begin_layout Standard
+The related parameters of this command are: 
+\end_layout
+
+\begin_layout Itemize
+modelPath
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+ – the path to the computation network.
+ 
+\end_layout
+
+\begin_layout Itemize
+outputDOTFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputdotFile
+\end_layout
+
+\end_inset
+
+ – the path to the output DOT file.
+ If user does not specify it, ${modelPath}.dot will be assumed.
+\end_layout
+
+\begin_layout Standard
+Optionally, if uses want to convert the dot description to a figure, he
+ or she needs to specify the following parameters: 
+\end_layout
+
+\begin_layout Itemize
+outputFile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputfile
+\end_layout
+
+\end_inset
+
+ – the path to the output figure.
+ 
+\end_layout
+
+\begin_layout Itemize
+renderCmd
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+renderCmd
+\end_layout
+
+\end_inset
+
+ – A string indicates how the third party tool is used to convert from a
+ DOT file to a figure.
+ For example, if graphviz is used, the RenderCmd can be written as 
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+RenderCmd="d:
+\backslash
+Tools
+\backslash
+graphviz
+\backslash
+bin
+\backslash
+dot.exe -Tjpg <IN> -o<OUT>"
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where the plot command will substitute “<IN> “ with the outputDOTFile command
+ parameters and “<OUT>” with the outputFile command parameters; -Tjpg indicates
+ a jpg file format is selected.
+ 
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+Here is a complete example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+command=topoplot     
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+topoplot=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=plot
+\end_layout
+
+\begin_layout Plain Layout
+
+  modelPath= train
+\backslash
+lstm.model.0 
+\end_layout
+
+\begin_layout Plain Layout
+
+  outputdotFile=train
+\backslash
+lstm.model.dot # this specifies the dot file to output         
+\end_layout
+
+\begin_layout Plain Layout
+
+  # if user does not specify this, it will be ${modelPath}.dot         
+\end_layout
+
+\begin_layout Plain Layout
+
+  outputfile=train
+\backslash
+lstm.model.jpg  # this specifies the rendered image
+\end_layout
+
+\begin_layout Plain Layout
+
+  RenderCmd="d:
+\backslash
+Tools
+\backslash
+graphviz
+\backslash
+bin
+\backslash
+dot.exe  -Tjpg   <IN> -o<OUT>"         
+\end_layout
+
+\begin_layout Plain Layout
+
+  # if RenderCmd is specified, CNTK will call the plot command after replacing
+         
+\end_layout
+
+\begin_layout Plain Layout
+
+  # <IN> with ${outputdotFile} and <OUT> with ${outputfile}     
+\end_layout
+
+\begin_layout Plain Layout
+
+] 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
 ConvertDBN Command
 \begin_inset Index idx
 status open
@@ -4882,6 +5100,51 @@ The valid values are float (default) and double.
  esp.
  when running under GPUs.
  To run gradient check you should set precision to double.
+\end_layout
+
+\begin_layout Subsection
+NumCPUThreads
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NumCPUThreads
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The NumCPUThreads parameter determines the maximum CPU threads used for
+ CPU math operations.
+ In CNTK it is specified at the top-level as
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+NumCPUThreads=4
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+By default the value is 0, which means using what ever number of threads
+ determined by MKL, ACML, or OpenMP.
+ If a positive number is specified, the number of threads will not be larger
+ than the value specified and the number of hardware concurrency.
+ If a negative number is specified, the actual number of thread will be
+ the sum of the number of hardware concurrency and this value floored at
+ 1.
 \end_layout
 
 \begin_layout Subsection
