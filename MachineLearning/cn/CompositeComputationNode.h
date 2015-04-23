@@ -2074,7 +2074,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> mMemory;
 
     public:
-        BatchModeNode(DEVICEID_TYPE deviceId) : ComputationNode(deviceId), mMemory(deviceId) {}
+        BatchModeNode(DEVICEID_TYPE deviceId) : ComputationNode<ElemType>(deviceId), mMemory(deviceId) {}
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
 
@@ -2114,10 +2114,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
-            wsprintf(str, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            const size_t BUFLEN = 4096;
+            WCHAR str[BUFLEN];
+            swprintf(str, BUFLEN, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << wstring(str);
-            wsprintf(str, L"HasComputed=%ws", HasComputed() ? L"true" : L"false");
+            swprintf(str, BUFLEN, L"HasComputed=%ws", HasComputed() ? L"true" : L"false");
             fstream << wstring(str);
 
             PrintNodeValuesToFile(printValues, fstream);
@@ -2126,6 +2127,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         bool m_hasComputed;
     };
+
+    // add this at the start of each derived class, to get access to the members of ComputationNode
+    // TODO: comment here why this is needed and how to maintain it
+#define UsingBatchModeNodeMembers \
+    UsingComputationNodeMembers; \
+    typedef BatchModeNode<ElemType> C; \
+protected:  \
+    typedef BatchModeNode<ElemType>* BatchModeNodePtr;  \
+public: \
+    using C::HasComputed; using C::MarkComputed; \
+    using C::RequireBatchMode; using C::EvaluateThisNode; using C::SaveToFile; \
+    using C::LoadFromFile; using C::DumpNodeInfo; \
+protected:  \
+    using C::mMemory; using C::m_hasComputed; \
 
     template class BatchModeNode<float>;
     template class BatchModeNode<double>;
@@ -2138,10 +2153,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class TimeReverseNode : public BatchModeNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingBatchModeNodeMembers;
 
     public:
-        TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode(deviceId)
+        TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -2149,7 +2164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode(deviceId)
+        TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
@@ -2157,7 +2172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         TimeReverseNode(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : BatchModeNode(node->m_deviceId)
+            : BatchModeNode<ElemType>(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }

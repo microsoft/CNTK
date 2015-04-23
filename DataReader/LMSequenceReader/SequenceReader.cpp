@@ -16,6 +16,8 @@
 #endif
 #include "fileutil.h"   // for fexists()
 #include <iostream>
+#include <vector>
+#include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -72,7 +74,7 @@ typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromL
 
 
 template<class ElemType>
-/*IDataReader<ElemType>::LabelIdType*/ bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned & labelId)
+bool SequenceReader<ElemType>::CheckIdFromLabel(const std::string& labelValue, const LabelInfo& labelInfo, unsigned & labelId)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
 
@@ -563,7 +565,8 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+        //fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+        std::wcerr << "reading sequence file" << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -606,37 +609,43 @@ void SequenceReader<ElemType>::ReadWord(char *word, FILE *fin)
 }
 
 template<class ElemType>
-void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*flatten*/) 
+void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*flatten*/)
 {
-    char stmp[MAX_STRING];
-    string strtmp; 
-    int cnt, clsidx, b;
-    class_size  = 0;
+    string tmp_vocfile(vocfile.begin(), vocfile.end()); // convert from wstring to string
+    string strtmp;
+    size_t cnt;
+    int clsidx, b;
+    class_size = 0;
 
-    //wcstombs_s(&sz, strFileName, 2048, vocfile.c_str(), vocfile.length());
-    FILE * vin;
-    vin = fopen(msra::strfun::utf8(vocfile.c_str()).c_str() , "rt") ;
-
-    if (vin == nullptr)
+    string line;
+    vector<string> tokens;
+    ifstream fin;
+    fin.open(tmp_vocfile.c_str());
+    if (!fin)
     {
         RuntimeError("cannot open word class file");
     }
-    for (int a = 0; a < nwords; a++)
+
+    while (getline(fin, line))
     {
-        fscanf_s(vin, "%6d\t%10d\t", &b, &cnt);
-        ReadWord(stmp, vin);
-        fscanf_s(vin, "%d\t\n", &clsidx);
-        strtmp = stmp;
+        line = trim(line);
+        tokens = msra::strfun::split(line, "\t ");
+        assert(tokens.size() == 4);
+
+        b = stoi(tokens[0]);
+        cnt = (size_t)stof(tokens[1]);
+        strtmp = tokens[2];
+        clsidx = stoi(tokens[3]);
+
         idx4cnt[b] = cnt;
         word4idx[strtmp] = b;
-        idx4word[b]= strtmp;
-        
+        idx4word[b] = strtmp;
+
         idx4class[b] = clsidx;
         class_size = max(class_size, clsidx);
     }
-    fclose(vin);
-
-    class_size ++;
+    fin.close();
+    class_size++;
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer

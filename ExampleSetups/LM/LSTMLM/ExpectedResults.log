@@ -1,0 +1,56 @@
+$ grep -a --text Finish gpulstmlm_train_test.log | grep Train
+Finished Epoch[1]: [Training Set] Train Loss Per Sample = 6.0689292    EvalErr Per Sample = 6.0689292   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=501.42099
+Finished Epoch[1]: [Validation Set] Train Loss Per Sample = 5.7789721  EvalErr Per Sample = 5.7789721
+Finished Epoch[2]: [Training Set] Train Loss Per Sample = 5.6369767    EvalErr Per Sample = 5.6369767   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=501.62399
+Finished Epoch[2]: [Validation Set] Train Loss Per Sample = 5.5511756  EvalErr Per Sample = 5.5511756
+Finished Epoch[3]: [Training Set] Train Loss Per Sample = 5.4327216    EvalErr Per Sample = 5.4327216   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=501.52399
+Finished Epoch[3]: [Validation Set] Train Loss Per Sample = 5.4396544  EvalErr Per Sample = 5.4396544
+Finished Epoch[4]: [Training Set] Train Loss Per Sample = 5.2914305    EvalErr Per Sample = 5.2914305   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=503.44199
+Finished Epoch[4]: [Validation Set] Train Loss Per Sample = 5.345387  EvalErr Per Sample = 5.345387
+Finished Epoch[5]: [Training Set] Train Loss Per Sample = 5.1821184    EvalErr Per Sample = 5.1821184   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=508.905
+Finished Epoch[5]: [Validation Set] Train Loss Per Sample = 5.2927375  EvalErr Per Sample = 5.2927375
+Finished Epoch[6]: [Training Set] Train Loss Per Sample = 5.0916734    EvalErr Per Sample = 5.0916734   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=522.10303
+Finished Epoch[6]: [Validation Set] Train Loss Per Sample = 5.2429872  EvalErr Per Sample = 5.2429872
+Finished Epoch[7]: [Training Set] Train Loss Per Sample = 5.0149188    EvalErr Per Sample = 5.0149188   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=526.94702
+Finished Epoch[7]: [Validation Set] Train Loss Per Sample = 5.1904435  EvalErr Per Sample = 5.1904435
+Finished Epoch[8]: [Training Set] Train Loss Per Sample = 4.9472914    EvalErr Per Sample = 4.9472914   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=544.46198
+Finished Epoch[8]: [Validation Set] Train Loss Per Sample = 5.1749911  EvalErr Per Sample = 5.1749911
+Finished Epoch[9]: [Training Set] Train Loss Per Sample = 4.8864255    EvalErr Per Sample = 4.8864255   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=531.33002
+Finished Epoch[9]: [Validation Set] Train Loss Per Sample = 5.1553888  EvalErr Per Sample = 5.1553888
+Finished Epoch[10]: [Training Set] Train Loss Per Sample = 4.831315    EvalErr Per Sample = 4.831315   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=523.29999
+Finished Epoch[10]: [Validation Set] Train Loss Per Sample = 5.1265602  EvalErr Per Sample = 5.1265602
+Finished Epoch[11]: [Training Set] Train Loss Per Sample = 4.7812014    EvalErr Per Sample = 4.7812014   Ave Learn Rate Per Sample = 0.009999999776  Epoch Time=521.64697
+Finished Epoch[11]: [Validation Set] Train Loss Per Sample = 5.1217532  EvalErr Per Sample = 5.1217532
+Finished Epoch[12]: [Training Set] Train Loss Per Sample = 4.6650786    EvalErr Per Sample = 4.6650786   Ave Learn Rate Per Sample = 0.004999999888  Epoch Time=523.90198
+Finished Epoch[12]: [Validation Set] Train Loss Per Sample = 5.0993018  EvalErr Per Sample = 5.0993018
+Finished Epoch[13]: [Training Set] Train Loss Per Sample = 4.5911136    EvalErr Per Sample = 4.5911136   Ave Learn Rate Per Sample = 0.002499999944  Epoch Time=520.66101
+Finished Epoch[13]: [Validation Set] Train Loss Per Sample = 5.0787692  EvalErr Per Sample = 5.0787692
+Finished Epoch[14]: [Training Set] Train Loss Per Sample = 4.5472517    EvalErr Per Sample = 4.5472517   Ave Learn Rate Per Sample = 0.001249999972  Epoch Time=517.742
+Finished Epoch[14]: [Validation Set] Train Loss Per Sample = 5.0703268  EvalErr Per Sample = 5.0703268
+Finished Epoch[15]: [Training Set] Train Loss Per Sample = 4.5230498    EvalErr Per Sample = 4.5230498   Ave Learn Rate Per Sample = 0.000624999986  Epoch Time=516.28998
+Finished Epoch[15]: [Validation Set] Train Loss Per Sample = 5.0566416  EvalErr Per Sample = 5.0566416
+Finished Epoch[16]: [Training Set] Train Loss Per Sample = 4.510385    EvalErr Per Sample = 4.510385   Ave Learn Rate Per Sample = 0.000312499993  Epoch Time=513.30499
+Finished Epoch[16]: [Validation Set] Train Loss Per Sample = 5.0524426  EvalErr Per Sample = 5.0524426
+
+$ grep -a --text Finish gpulstmlm_train_test.log | grep Validation
+Finished Epoch[1]: [Validation Set] Train Loss Per Sample = 5.7789721  EvalErr Per Sample = 5.7789721
+Finished Epoch[2]: [Validation Set] Train Loss Per Sample = 5.5511756  EvalErr Per Sample = 5.5511756
+Finished Epoch[3]: [Validation Set] Train Loss Per Sample = 5.4396544  EvalErr Per Sample = 5.4396544
+Finished Epoch[4]: [Validation Set] Train Loss Per Sample = 5.345387  EvalErr Per Sample = 5.345387
+Finished Epoch[5]: [Validation Set] Train Loss Per Sample = 5.2927375  EvalErr Per Sample = 5.2927375
+Finished Epoch[6]: [Validation Set] Train Loss Per Sample = 5.2429872  EvalErr Per Sample = 5.2429872
+Finished Epoch[7]: [Validation Set] Train Loss Per Sample = 5.1904435  EvalErr Per Sample = 5.1904435
+Finished Epoch[8]: [Validation Set] Train Loss Per Sample = 5.1749911  EvalErr Per Sample = 5.1749911
+Finished Epoch[9]: [Validation Set] Train Loss Per Sample = 5.1553888  EvalErr Per Sample = 5.1553888
+Finished Epoch[10]: [Validation Set] Train Loss Per Sample = 5.1265602  EvalErr Per Sample = 5.1265602
+Finished Epoch[11]: [Validation Set] Train Loss Per Sample = 5.1217532  EvalErr Per Sample = 5.1217532
+Finished Epoch[12]: [Validation Set] Train Loss Per Sample = 5.0993018  EvalErr Per Sample = 5.0993018
+Finished Epoch[13]: [Validation Set] Train Loss Per Sample = 5.0787692  EvalErr Per Sample = 5.0787692
+Finished Epoch[14]: [Validation Set] Train Loss Per Sample = 5.0703268  EvalErr Per Sample = 5.0703268
+Finished Epoch[15]: [Validation Set] Train Loss Per Sample = 5.0566416  EvalErr Per Sample = 5.0566416
+Finished Epoch[16]: [Validation Set] Train Loss Per Sample = 5.0524426  EvalErr Per Sample = 5.0524426
+
+
+# test 
+Final Results: Minibatch[1-82430]: Samples Seen = 82430    TrainNodeClassBasedCrossEntropy/Sample = 4.9702353    TrainNodeClassBasedCrossEntropy/Sample = 4.9702353
+corresponding PPL = 144
