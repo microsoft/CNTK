@@ -261,7 +261,7 @@ public:
 
             nodeParamCount = 1;
             // parameters are (rows, [cols], delayNode)
-            nodeParamStart = parameter.size() > 2?2:1;
+            nodeParamStart = parameter.size() > 2 ? 2 : 1;
 
             if (pass == ndlPassInitial)
             {
@@ -274,12 +274,12 @@ public:
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
                 nodePtr = m_net.Delay(NULL, defaultHiddenActivity, rows, cols, name);
-                size_t delayTime = node->GetOptionalParameter("delayTime","1");
+                size_t delayTime = node->GetOptionalParameter("delayTime", "1");
                 ((DelayNode<ElemType>*)nodePtr)->SetDelay(delayTime);
 
                 nodePtr->NeedGradient() = needGradient;
             }
-        }    
+        }
         else if (cnNodeType == ConvolutionNode<ElemType>::TypeName())
         {
             if (parameter.size() != 7)
@@ -404,6 +404,9 @@ public:
                 break;
             case 4:
                 nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]));
+                break;
+            case 5:
+                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]), ComputationNodePtr(inputs[4]));
                 break;
             default:
                 if (nodeParamCount > 0)
