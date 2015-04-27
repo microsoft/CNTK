@@ -4794,13 +4794,16 @@ protected:  \
             size_t rows1 =input1.GetNumRows(), cols1 = input1.GetNumCols();
             int wordsInEachSample = rows1 / input0.GetNumCols();
 
-            input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+            if (wordsInEachSample > 1)
+                input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
             functionValues.AssignProductOf(input0, false, input1, false);
 
-            input1.Reshape(rows1, cols1);
+            if (wordsInEachSample > 1)
+                input1.Reshape(rows1, cols1);
             size_t rows = functionValues.GetNumRows();
-            functionValues.Reshape(rows * wordsInEachSample, cols1);
+            if (wordsInEachSample > 1)
+                functionValues.Reshape(rows * wordsInEachSample, cols1);
         }
             
         virtual void Validate()
