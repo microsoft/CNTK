@@ -162,6 +162,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 delete[] m_unCompIndex;
             if(m_compIndex != NULL)
                 delete[] m_compIndex;
+            m_pArray = NULL; 
+            m_unCompIndex = NULL; 
+            m_compIndex = NULL;
         }  
         else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
         {
@@ -169,6 +172,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 delete[] m_pArray;
             if(m_blockIds != NULL) 
                 delete[] m_blockIds;
+            m_pArray = NULL;
+            m_blockIds = NULL;
         }
     }
 
@@ -282,6 +287,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_numRows != numRows || m_numCols != numCols)
             keepExistingValues = false;  
 
+        numNZElemToReserve = max(numNZElemToReserve, 1);
         size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
         bool reallocate = (m_elemSizeAllocated < numNZElemToReserve || (m_elemSizeAllocated > numNZElemToReserve && !growOnly) || m_compIndexSize < newCompIndexSize);
 
@@ -292,10 +298,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {                
             if (m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR)
             {
-                ElemType *pArray = new ElemType[numNZElemToReserve];
-                CPUSPARSE_INDEX_TYPE *unCompIndex = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve];
-                CPUSPARSE_INDEX_TYPE *compIndex = new CPUSPARSE_INDEX_TYPE[newCompIndexSize];
-                
+                ElemType *pArray = NULL;
+                pArray = new ElemType[numNZElemToReserve];
+                CPUSPARSE_INDEX_TYPE *unCompIndex = NULL;
+                unCompIndex  = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve];
+                CPUSPARSE_INDEX_TYPE *compIndex = NULL;
+                compIndex  = new CPUSPARSE_INDEX_TYPE[newCompIndexSize];
+                if (numNZElemToReserve > 0)
+                    memset(pArray, 0, sizeof(ElemType)*numNZElemToReserve);
+
                 if (keepExistingValues && (m_nz > numNZElemToReserve || m_compIndexSize > newCompIndexSize))
                     LogicError("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
 
@@ -308,11 +319,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (m_pArray != NULL)
-                    delete[] m_pArray;
+                    delete [] m_pArray;
                 if (m_unCompIndex != NULL)
-                    delete[] m_unCompIndex;
+                    delete [] m_unCompIndex;
                 if (m_compIndex != NULL)
-                    delete[] m_compIndex;
+                    delete [] m_compIndex;
+                m_pArray = NULL;
+                m_unCompIndex = NULL;
+                m_compIndex = NULL;
 
                 m_pArray = pArray;
                 m_unCompIndex = unCompIndex;
@@ -337,6 +351,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delete[] m_pArray;
                 if(m_blockIds != NULL) 
                     delete[] m_blockIds;
+                m_pArray = NULL;
+                m_blockIds = NULL;
 
                 m_pArray = blockVal;
                 m_blockIds = blockIds;
