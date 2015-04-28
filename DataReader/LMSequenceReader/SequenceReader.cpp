@@ -970,9 +970,11 @@ bool SequenceReader<ElemType>::SentenceEnd()
     return false; 
 }
 
-/// the output label is a [2 x T] matrix.
+/// the output label is a [4 x T] matrix, where T is the number of words observed
 /// the first row is the word index
 /// the second row is the class id of this word
+/// the third row is begining index of the class for this word
+/// the fourth row is the ending index + 1 of the class for this word
 template<class ElemType>
 void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                                               size_t m_mbStartSample, size_t actualmbsize)
@@ -1910,6 +1912,12 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 
 }
 
+/// labels are in [4 x T] matrix
+/// 1st row is the word id
+/// 2nd row is the class id of this word
+/// 3rd and 4th rows are the begining and ending indices of this class
+/// notice that indices are defined as follows [begining ending_indx) of the class 
+/// i.e., the ending_index is 1 plus of the true ending index
 template<class ElemType>
 void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, 
     Matrix<ElemType>*>& matrices, 
