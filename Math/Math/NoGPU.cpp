@@ -725,6 +725,22 @@ namespace Microsoft {
             }
 
             template<class ElemType>
+            ElemType GPUMatrix<ElemType>::LogAddSumOfElements() const { return -1; };
+
+            template<class ElemType> void GPUMatrix<ElemType>::RCRFBackwardCompute(
+                const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+                const GPUMatrix<ElemType>& lbls,
+                const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift = 1) {};
+
+            template<class ElemType> void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
+                const GPUMatrix<ElemType>&   alpha,
+                const GPUMatrix<ElemType>& beta,
+                const GPUMatrix<ElemType>& pair_scores,
+                GPUMatrix<ElemType>& grd,
+                const int startLbl, /// the time 0 start symbol in the output layer
+                const int shift) {};
+
+            template<class ElemType>
             GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt)
             {
                 return (*this);
