@@ -1223,7 +1223,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
 
+#ifdef SPARSE_INPUT
+            input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
+#else
             input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
+#endif
             m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
@@ -1349,7 +1353,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
 
+#ifdef SPARSE_INPUT
+            input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
+#else
             input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
+#endif
             m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
