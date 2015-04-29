@@ -763,12 +763,12 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
         if (matrices.find(m_featuresName) != matrices.end())
         {
+            features.Reset();
             features.Resize(featInfo.dim * m_wordContext.size(), actualmbsize, true);
-            features.SetValue(0);
         }
 
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
-        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, true, false, false);
+        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE);
 
         size_t utt_id = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
@@ -776,7 +776,6 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
             utt_id = (size_t) fmod(j, mSentenceEndAt.size());  /// get the utterance id
 
             size_t utt_t = (size_t) floor(j/mSentenceEndAt.size()); /// the utt-specific timing
-            if (utt_t > mSentenceEndAt[utt_id]) continue;
 
             // vector of feature data goes into matrix column
             for (size_t jj = 0; jj < m_featureWordContext[j].size(); jj++) ///  number of sentence per time
@@ -791,13 +790,16 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
                     if (matrices.find(m_featuresName) != matrices.end())
                     {
                         assert(idx < featInfo.dim);
-                        features.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
+                        if (utt_t > mSentenceEndAt[utt_id]) 
+                            features.SetValue(idx + jj * featInfo.dim, j, (ElemType)0);
+                        else
+                            features.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
                     }
                 }
             }
         }
 
-        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, true, false, false);
+        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId);
 
         lablsize = GetLabelOutput(matrices, actualmbsize);
 
