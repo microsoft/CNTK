@@ -163,6 +163,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUSPARSE_INDEX_TYPE *m_unCompIndex; //row/col ids in CSC/CSR format
         CPUSPARSE_INDEX_TYPE *m_compIndex; //begin ids of col/row in CSC/CSR format
 
+        /**
+        e.g. in scipy
+        >>> indptr = np.array([0, 2, 3, 6])
+        >>> indices = np.array([0, 2, 2, 0, 1, 2])
+        >>> data = np.array([1, 2, 3, 4, 5, 6])
+        >>> csc_matrix((data, indices, indptr), shape=(3, 3)).toarray()
+        array([[1, 0, 4],
+        [0, 0, 5],
+        [2, 3, 6]])
+
+        the above corresponds to 
+        m_pArray = data is an array of the (top-to-bottom, then left-to-right) non-zero values of the matrix
+        m_unCompIndex = indices is the row indices corresponding to the values
+        m_compIndex = indptr is the list of val indexes where each column starts
+        */
+
         size_t m_blockSize; //block size
         size_t *m_blockIds; //block ids
     };

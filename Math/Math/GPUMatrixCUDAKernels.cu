@@ -2384,22 +2384,56 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     )
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m*n)  
+    if (id >= m*n)
         return;
 
     int colInC = id / m;
     int rowInC = id - colInC * m;
 
-    int start = colCSCIndex[colInC]; 
+    int start = colCSCIndex[colInC];
     int end = colCSCIndex[colInC + 1];
 
     ElemType s = 0;
-   for (int j = start; j<end; j++)  //j points to the value
+    for (int j = start; j<end; j++)  //j points to the value
     {
         int i = rowIndex[j];
         s += a[IDX2C(rowInC, i, m)] * bnzValues[j];
     }
     c[IDX2C(rowInC, colInC, m)] = alpha * s + beta * c[IDX2C(rowInC, colInC, m)];
+}
+
+/// c += alpha * a * b^T
+template<class ElemType>
+__global__ void _denseMultSparseCSCTransposeAndAddToDense(
+    int m, //rowDense
+    int n,   //number of columns in sparse matrix
+    int colInC, /// column index of the sparse matrix
+    ElemType alpha,
+    const ElemType* a,  //dense
+    const ElemType* bnzValues,  //sparse nz values
+    const GPUSPARSE_INDEX_TYPE* rowIndex,
+    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    ElemType* c  //dense target
+    )
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m)
+        return;
+
+    int rowInC = id;
+    int start = colCSCIndex[colInC];
+    int end = colCSCIndex[colInC + 1];
+
+    ElemType s = 0;
+    ElemType val = 0;
+    for (int j = start; j<end; j++)  //j points to the value that are in the same row
+    {
+        int i = rowIndex[j];  /// actually the column index because of transpose
+        val = bnzValues[j];   /// the b[][j] value
+        s = a[IDX2C(rowInC, colInC, m)] * val;
+
+        atomicAdd(&c[IDX2C(rowInC, i, m)], alpha * s);
+    }
 }
 
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and

@@ -1222,13 +1222,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
     {
-        DISPATCH_MATRIX_ON_FLAG(this,
-            this,
-            m_CPUMatrix->Reshape(numRows,numCols), 
-            m_GPUMatrix->Reshape(numRows,numCols), 
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED
-            );
+        if (numRows != GetNumRows() || numCols != GetNumCols())
+        {
+            DISPATCH_MATRIX_ON_FLAG(this,
+                this,
+                m_CPUMatrix->Reshape(numRows, numCols),
+                m_GPUMatrix->Reshape(numRows, numCols),
+                NOT_IMPLEMENTED,
+                NOT_IMPLEMENTED
+                );
+        }
     }
 
     template<class ElemType>
