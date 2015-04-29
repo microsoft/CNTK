@@ -172,7 +172,7 @@ private:	// [erw] added for Toplological Plot only
             }
 			wstring str = style; 
 			for (auto x : specialNodes){
-				str = str + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+				str = str + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
 			return str + L"; \n";
 		}
@@ -243,7 +243,7 @@ public:
 				line.clear(); 
                 size_t nrows = x->FunctionValues().GetNumRows();
                 size_t ncols = x->FunctionValues().GetNumCols();
-				line = msra::strfun::wstrprintf(L" \"%s\" [ label = \"%s [%d,%d]\\n%s\" ] ;\n", 
+				line = msra::strfun::wstrprintf(L" \"%ls\" [ label = \"%ls [%d,%d]\\n%ls\" ] ;\n", 
                     x->GetName().c_str(), x->GetName().c_str(), nrows, ncols,  x->OperationName().c_str());
 				fstream << line;
 			}
@@ -257,7 +257,7 @@ public:
 			line.clear(); 
 			for (auto x : m_features)
 			{
-				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
 			fstream << line << L"\n}\n"; 
 			// subgraph eval/output/criteria
@@ -266,15 +266,15 @@ public:
 			line.clear(); 
 			for (auto x : m_finalCriteria)
 			{
-				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
 			for (auto x : m_outputNodes)
 			{
-				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
 			for (auto x : m_evalNodes)
 			{
-				line = line + msra::strfun::wstrprintf(L"\"%s\" ", x->GetName().c_str());
+				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
 			fstream << line << L"\n}\n"; 
 
@@ -296,20 +296,20 @@ public:
 					// create a dummy node 
 					ComputationNodePtr delayedNode = des;
 					wstring dummyName = des->GetName() + L".dummy";
-					wstring out = msra::strfun::wstrprintf(L"node [ shape = box3d  , color = lightgray, style = \"filled\" , label = \"%s\" ] ; \"%s\"\n",
+                    wstring out = msra::strfun::wstrprintf(L"node [ shape = box3d  , color = lightgray, style = \"filled\" , label = \"%ls\" ] ; \"%ls\"\n",
 						(delayedNode->GetName() + L"\\n(delayed)").c_str(), dummyName.c_str());
 					line = out; 
-					line += msra::strfun::wstrprintf(L"\"%s\" -> \"%s\" ; \n", dummyName.c_str(), srcname.c_str());
+					line += msra::strfun::wstrprintf(L"\"%ls\" -> \"%ls\" ; \n", dummyName.c_str(), srcname.c_str());
 				}
 				else
 				{
-					line = msra::strfun::wstrprintf(L"\"%s\" -> \"%s\" ; \n", desname.c_str(), srcname.c_str());
+					line = msra::strfun::wstrprintf(L"\"%ls\" -> \"%ls\" ; \n", desname.c_str(), srcname.c_str());
 				}
 
 
 				fstream << line; 
 			}
-			fstream << "\n}\n";
+			fstream << L"\n}\n";
 
 
 			
