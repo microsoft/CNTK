@@ -760,15 +760,15 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
+        Matrix<ElemType>  locObs(CPUDEVICE);
+        locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
 
-        if (matrices.find(m_featuresName) != matrices.end())
+        if (matrices.find(m_featuresName) == matrices.end())
         {
-            features.Reset();
-            features.Resize(featInfo.dim * m_wordContext.size(), actualmbsize, true);
+            RuntimeError("LUsequence reader cannot find l%s", m_featuresName);
         }
 
-        DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
-        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE);
+        locObs.Resize(featInfo.dim * m_wordContext.size(), actualmbsize);
 
         size_t utt_id = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
@@ -787,20 +787,17 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
                     /// this can support bag of words, since words are placed in the same slot
                     size_t idx = m_featureWordContext[j][jj][ii];
 
-                    if (matrices.find(m_featuresName) != matrices.end())
-                    {
-                        assert(idx < featInfo.dim);
-                        if (utt_t > mSentenceEndAt[utt_id]) 
-                            features.SetValue(idx + jj * featInfo.dim, j, (ElemType)0);
-                        else
-                            features.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
-                    }
+                    assert(idx < featInfo.dim);
+                    if (utt_t > mSentenceEndAt[utt_id]) 
+                        locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType)0);
+                    else
+                        locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType)1);
                 }
             }
         }
 
-        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId);
-
+        features.SetValue(locObs);
+        
         lablsize = GetLabelOutput(matrices, actualmbsize);
 
         // go to the next sequence
