@@ -182,7 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); //matrix format will affect the size to allocate
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
 
         GPUSparseMatrix<ElemType> Transpose() const;
         void InplaceTranspose();

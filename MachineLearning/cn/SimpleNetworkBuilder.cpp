@@ -1163,7 +1163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs, bool bSparse)
+    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
     {
 
         size_t numHiddenLayers = m_layerSizes.size() - 2;
@@ -1173,13 +1173,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         input = inputObs;
         size_t nDim = inputDim + outputDim + 2;
-#ifdef SPARSE_INPUT
-        wInputGate = m_net->CreateSparseLearnableParameter(msra::strfun::wstrprintf(L"WINPUTGATE%d", iLayer), outputDim, nDim);
-        m_net->InitLearnableParameters(wInputGate, m_uniformInit, randomSeed++, m_initValueScale);
-#else
         wInputGate = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WINPUTGATE%d", iLayer), outputDim, nDim);
         m_net->InitLearnableParameters(wInputGate, m_uniformInit, randomSeed++, m_initValueScale);
-#endif
         wInputGate->FunctionValues().ColumnSlice(0, 1).SetValue(m_inputGateInitVal);  /// init to input gate bias
         wForgetGate = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"WFORGETGATE%d", iLayer), outputDim, nDim);
         m_net->InitLearnableParameters(wForgetGate, m_uniformInit, randomSeed++, m_initValueScale);
@@ -1196,7 +1191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef DEBUG_DECODER
         wInputGate->FunctionValues().SetValue((ElemType)0.01);
         wForgetGate->FunctionValues().SetValue((ElemType)0.01);
-        wOutputGate->FunctionValues().SetValue((ElemType)0.01);d
+        wOutputGate->FunctionValues().SetValue((ElemType)0.01);
         wMemoryCellMatrix->FunctionValues().SetValue((ElemType)0.01);
 #endif
 
@@ -1228,7 +1223,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
 
-            input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
+            if (m_sparse_input)
+                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
+            else
+                input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
+
             m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
@@ -1354,13 +1353,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
 
-#ifdef SPARSE_INPUT
-            input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
+            if (m_sparse_input)
+                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
+            else
+                input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
+
             m_net->FeatureNodes().push_back(input);
-#else
-            input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
-            m_net->FeatureNodes().push_back(input);
-#endif
+
             if (m_applyMeanVarNorm)
             {
                 w = m_net->Mean(input);
@@ -1516,7 +1515,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             output = m_net->Times(Wxo, input);
             input = output;
 
-            /// here uses "labels", so only one label from multiple stream inputs are used.l
+            /// here uses "labels", so only one label from multiple stream inputs are used.
             label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
 
             AddTrainAndEvalCriterionNodes(input, label, w);

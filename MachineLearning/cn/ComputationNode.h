@@ -4711,14 +4711,19 @@ protected:  \
             if (inputIndex > 1)
                 throw std::invalid_argument("LookupTable operation only takes two inputs.");
 
+            DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
+            DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
+            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
+
             if (inputIndex == 0)  //left derivative
             {
                 ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
             }
             else  //right derivative
-        {
+            {
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
             }
+            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -4794,16 +4799,19 @@ protected:  \
             size_t rows1 =input1.GetNumRows(), cols1 = input1.GetNumCols();
             int wordsInEachSample = rows1 / input0.GetNumCols();
 
-            if (wordsInEachSample > 1)
-                input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+            input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
+
+            DEVICEID_TYPE input1DeviceId = input1.GetDeviceId();
+            DEVICEID_TYPE input0DeviceId = input0.GetDeviceId();
+            input1.TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
 
             functionValues.AssignProductOf(input0, false, input1, false);
 
-            if (wordsInEachSample > 1)
-                input1.Reshape(rows1, cols1);
+            input1.TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
+
+            input1.Reshape(rows1, cols1);
             size_t rows = functionValues.GetNumRows();
-            if (wordsInEachSample > 1)
-                functionValues.Reshape(rows * wordsInEachSample, cols1);
+            functionValues.Reshape(rows * wordsInEachSample, cols1);
         }
             
         virtual void Validate()
@@ -4837,6 +4845,72 @@ protected:  \
         LookupTableNode(const LookupTableNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
+        }
+        
+        bool UnitTest()
+        {
+            try{
+                size_t nInput = 2;
+                size_t nHidden = 3;
+                size_t nOutput = 3;
+
+                Inputs(0)->FunctionValues().Resize(nInput, nHidden);
+                Inputs(0)->FunctionValues().SetValue(1.0);
+                Inputs(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
+                Inputs(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
+                Inputs(1)->FunctionValues().Resize(nHidden, nOutput);
+                Inputs(1)->FunctionValues().SetValue(0.0);
+                Inputs(1)->FunctionValues().SetValue(0, 0, 1.0);
+                Inputs(1)->FunctionValues().SetValue(1, 1, 2.0);
+                Inputs(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
+                Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
+                FunctionValues().Resize(nInput, nOutput);
+
+                EvaluateThisNode();
+
+                /// check with expected values
+                FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
+                if (!ISCLOSE(FunctionValues()(0, 0), 1.0, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(0, 1), 2.0, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(1, 1), 2.0, EPSILON) )
+                    throw("LSTMNode forward computation error");
+
+                if (FunctionValues().GetDeviceId() != m_deviceId)
+                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                GradientValues().Resize(nInput, nOutput);
+                GradientValues().SetValue(1.0);
+                for (size_t i = 0; i < 2; i++)
+                {
+                    Inputs(i)->GradientValues().Resize(Inputs(i)->FunctionValues().GetNumRows(), Inputs(i)->FunctionValues().GetNumCols());
+                    Inputs(i)->GradientValues().SetValue(0);
+                }
+                for (size_t i = 0; i < 2; i++)
+                    ComputeInputPartial(i);
+
+                /// check with expected values
+                if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 2, EPSILON) /// bi
+                    || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 2, EPSILON)  // Wxi
+                    || !ISCLOSE(Inputs(1)->GradientValues()(1, 0), 2, EPSILON)  // Whi
+                    || !ISCLOSE(Inputs(1)->GradientValues()(2, 1), 2, EPSILON)  // Wci
+                    )
+                    throw("LSTMNode gradient error on input gates");
+
+                for (size_t i = 0; i < 2; i++)
+                {
+                    if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
+                        Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
+                }
+
+            }
+            catch (...)
+            {
+                fprintf(stderr, "LookupTableNode unit test is not passed!");
+                return false;
+            }
+
+            fprintf(stderr, "LookupTableNode unit test passed!\n");
+            return true;
         }
     };
 
