@@ -19,6 +19,10 @@
 
 using namespace std;
 
+/// this is for sparse input, useful when input dimension is very large and sparse such as language modeling
+/// to-do: need to use it guided by argument
+#define SPARSE_INPUT
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define MAX_DEPTH 20
@@ -370,7 +374,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
-        ComputationNodePtr BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+        ComputationNodePtr BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, bool bSparse = false);
 
         ComputationNodePtr BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse = false);
 
