@@ -133,6 +133,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inputGateInitVal = config("inputGateInitVal", "-1");
             m_outputGateInitVal = config("outputGateInitVal", "-1");
 
+            m_sparse_input = config("sparseinput", "false");
+
             stringargvector strType = str_rnnType; 
             if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end())
                 m_rnnType = SIMPLERNN;
@@ -787,6 +789,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_nbrCls;  /// number of classes
         int m_vocabSize; /// vocabulary size
 
+        bool m_sparse_input; 
     };
 
 }}}
