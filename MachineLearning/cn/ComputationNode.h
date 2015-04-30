@@ -4711,14 +4711,19 @@ protected:  \
             if (inputIndex > 1)
                 throw std::invalid_argument("LookupTable operation only takes two inputs.");
 
+            DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
+            DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
+            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
+
             if (inputIndex == 0)  //left derivative
             {
                 ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
             }
             else  //right derivative
-        {
+            {
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
             }
+            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -4796,7 +4801,13 @@ protected:  \
 
             input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
+            DEVICEID_TYPE input1DeviceId = input1.GetDeviceId();
+            DEVICEID_TYPE input0DeviceId = input0.GetDeviceId();
+            input1.TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
+
             functionValues.AssignProductOf(input0, false, input1, false);
+
+            input1.TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
 
             input1.Reshape(rows1, cols1);
             size_t rows = functionValues.GetNumRows();
