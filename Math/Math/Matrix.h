@@ -118,7 +118,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
         void Reshape(const size_t numRows, const size_t numCols);
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 0, bool growOnly = true);  //by default we only reallocate if need to grow        
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
         size_t GetAllocatedSize() const;
         void Reset(); //reset for sparse matrix
 

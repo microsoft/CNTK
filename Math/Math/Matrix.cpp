@@ -743,7 +743,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (GetMatrixType() == MatrixType::DENSE && m_CPUMatrix != nullptr)
                     {
-                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols(), 1, true, false);
+                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols());
                         if (keepValues)
                             CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
                     }
@@ -788,7 +788,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (keepValues)
                                 m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
                             else
-                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), 0, true, false);
+                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
                         }
 
                         delete m_GPUMatrix;
@@ -978,6 +978,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this == &deepCopyFrom)
             return;
+
+        if (this->GetDeviceId() != CPUDEVICE && (this->GetMatrixType() == MatrixType::SPARSE) &&
+            deepCopyFrom.GetMatrixType() == MatrixType::SPARSE)
+        {
+            if (deepCopyFrom.GetDeviceId() == CPUDEVICE)
+                this->m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix);
+            else
+                this->m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix);
+            return;
+        }
 
         this->m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
         DecideAndMoveToRightDevice(deepCopyFrom, *this);
