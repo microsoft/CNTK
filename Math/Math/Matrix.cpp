@@ -3398,13 +3398,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (IsEmpty())
             throw std::logic_error("Print: Matrix is empty.");
+        DEVICEID_TYPE orgdevice = this->GetDeviceId();
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
             this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd), 
-            _transferToDevice(CPUDEVICE, false, false); this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd), 
+            _transferToDevice(CPUDEVICE, false, false); this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd); _transferToDevice(orgdevice, false, false), 
             this->m_CPUSparseMatrix->Print(matrixName), 
-            _transferToDevice(CPUDEVICE, false, false); this->m_CPUSparseMatrix->Print(matrixName)
+            _transferToDevice(CPUDEVICE, false, false); this->m_CPUSparseMatrix->Print(matrixName); _transferToDevice(orgdevice, false, false)
             );
                 
     }
