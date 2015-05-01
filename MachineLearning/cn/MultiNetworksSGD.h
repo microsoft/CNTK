@@ -601,6 +601,10 @@ namespace Microsoft {
                             if (numMBsRun % m_numMBsToShowResult == 0)
                             {
 
+                                epochCriterion[0] = localEpochCriterion.Get00Element();
+                                for (size_t i = 0; i< numEvalNodes; i++)
+                                    epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
+
                                 ElemType llk = (epochCriterion[0] - epochCriterionLastMBs[0]) / numSamplesLastMBs;
                                 ElemType ppl = exp(llk);
                                 fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d   Decoder Train Loss Per Sample = %.8g PPL = %.4e ", epochNumber + 1, numMBsRun - m_numMBsToShowResult + 1, numMBsRun, numSamplesLastMBs,
