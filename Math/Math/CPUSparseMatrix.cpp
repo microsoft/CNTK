@@ -230,7 +230,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_nz++;
     }
 
-	template<class ElemType>
+    //make sure call order in colume wise for CSC and row wise for CSR
+    template<class ElemType>
+    void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix& v)
+    {
+        this->Reset();
+        this->Resize(v.GetNumRows(), v.GetNumCols(), v.NzSize());
+
+        memcpy(this->NzValues(), v.NzValues(), v.NzSize());
+        memcpy(this->RowLocation(), v.RowLocation(), v.RowSize());
+        memcpy(this->ColLocation(), v.ColLocation(), v.ColSize());
+
+        m_nz = v.NzCount(); 
+    }
+
+    template<class ElemType>
 	void CPUSparseMatrix<ElemType>::Print(const char* matrixName) const {
 		Print(matrixName, 0, 0, 0, 0);
 	}

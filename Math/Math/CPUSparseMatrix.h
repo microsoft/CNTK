@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using B::GetNumCols; using B::GetNumRows;
 
         void SetValue(const size_t row, const size_t col, ElemType val); 
-        void SetValue(const CPUSparseMatrix& /*val*/) { NOT_IMPLEMENTED; }
+        void SetValue(const CPUSparseMatrix& /*val*/);
 
         void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
 
