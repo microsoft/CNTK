@@ -73,7 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
+        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
         void Reset();
 
         const ElemType operator() (const size_t row, const size_t col) const
