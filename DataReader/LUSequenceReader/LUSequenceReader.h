@@ -317,7 +317,6 @@ public:
     void InitProposals(map<wstring, Matrix<ElemType>*>& pMat);
 
 public:
-    bool mbEncodingForDecoding;
 
     bool mEqualLengthOutput;
     bool mAllowMultPassData;

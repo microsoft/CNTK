@@ -28,7 +28,7 @@ template<class ElemType>
 /* return value used to be unsigned */
 long LUSequenceReader<ElemType>::GetIdFromLabel(const LabelType& labelValue, LabelInfo& labelInfo)
 {
-    auto found = labelInfo.mapLabelToId.find(labelValue);
+    auto found = labelInfo.word4idx.find(labelValue);
 
     return found->second;
 }
@@ -289,7 +289,6 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         ConfigParameters featureConfig = readerConfig(m_featuresName, "");
         ConfigParameters labelConfig[2] = { readerConfig(m_labelsName[0], ""), readerConfig(m_labelsName[1], "") };
 
-        mbEncodingForDecoding = false; 
         for (int index = labelInfoMin; index < labelInfoMax; ++index)
         {
             m_labelInfo[index].idMax = 0;
@@ -298,9 +297,6 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             m_labelInfo[index].busewordmap = labelConfig[index]("usewordmap", "false");
 
             m_labelInfo[index].isproposal = labelConfig[index]("isproposal", "false");
-            if (m_labelInfo[index].isproposal){
-                mbEncodingForDecoding = readerConfig("TestEncodingForDecoding");
-            }
 
             // determine label type desired
             std::string labelType(labelConfig[index]("labelType", "Category"));
@@ -948,11 +944,14 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
-        if (matrices.find(m_featuresName) != matrices.end())
+        Matrix<ElemType>  locObs(CPUDEVICE);
+        locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+
+        if (matrices.find(m_featuresName) == matrices.end())
         {
-            features.Resize(featInfo.dim * m_wordContext.size(), 1, true);
-            features.SetValue(0);
+            RuntimeError("LUSequenceReader cannot find l%s", m_featuresName);
         }
+        locObs.Resize(featInfo.dim * m_wordContext.size(), mBlgSize);
 
         assert(mBlgSize == 1); /// currently only support one utterance a time
 
@@ -962,11 +961,8 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
         {
             LabelIdType index;
 
-            if (mbEncodingForDecoding == false)
-                index = GetIdFromLabel(m_labelInfo[labelInfoIn].beginSequence.c_str(), labelIn);
-            else
-                /// need to generate symbols from the end of the encoding sequence
-                index = GetIdFromLabel(m_labelInfo[labelInfoIn].endSequence.c_str(), labelIn);
+            index = GetIdFromLabel(m_labelInfo[labelInfoIn].beginSequence.c_str(), labelIn);
+
             nextProposal = index;
             history.push_back(nextProposal);
         }
@@ -989,10 +985,12 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 
                 if (matrices.find(m_featuresName) != matrices.end())
                 {
-                    features.SetValue(hidx + jj * featInfo.dim, j, (ElemType)1);
+                    locObs.SetValue(hidx + jj * featInfo.dim, j, (ElemType)1);
                 }
             }
         }
+
+        features.SetValue(locObs);
     }
     else {
         for (map<wstring, Matrix<ElemType>>::iterator p = mMatrices.begin(); p != mMatrices.end(); p++)
@@ -1002,6 +1000,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
                 matrices[p->first]->SetValue(mMatrices[p->first].ColumnSlice(tidx, mBlgSize));
         }
     }
+
     // we read some records, so process them
     return true;
 }
