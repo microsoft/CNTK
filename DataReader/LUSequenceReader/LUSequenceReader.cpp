@@ -79,26 +79,6 @@ bool LUSequenceReader<ElemType>::GetIdFromLabel(const vector<LabelIdType>& label
     return true;
 }
 
-// SetLabelMapping - Sets the label mapping from integer index to label 
-// labelMapping - mapping table from label values to IDs (must be 0-n)
-// note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
-template<class ElemType>
-void LUSequenceReader<ElemType>::SetLabelMapping(const std::wstring&, const std::map<long, wstring>& labelMapping)
-{
-    if (m_cachingReader)
-    {
-        LogicError("Cannot set mapping table when the caching reader is being used");
-    }
-    LabelInfo& labelInfo = m_labelInfo[(m_labelInfo[labelInfoOut].type == labelNextWord) ? labelInfoIn : labelInfoOut];
-
-    labelInfo.mapIdToLabel = labelMapping;
-    labelInfo.mapLabelToId.clear();
-    for each (std::pair<unsigned, LabelType> var in labelMapping)
-    {
-        labelInfo.mapLabelToId[var.second] = var.first;
-    }
-}
-
 template<class ElemType>
 int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
@@ -106,10 +86,10 @@ int LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
     // now get the labels
     LabelInfo& featIn = m_labelInfo[labelInfoOut];
 
-    auto found = featIn.mapLabelToId.find(featIn.endSequence);
+    auto found = featIn.word4idx.find(featIn.endSequence);
 
     // not yet found, add to the map
-    if (found != featIn.mapLabelToId.end())
+    if (found != featIn.word4idx.end())
     {
         return (int)found->second;
     }

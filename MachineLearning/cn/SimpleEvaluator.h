@@ -1121,6 +1121,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             /// the end of sentence symbol in reader
             int outputEOS = dataReader.GetSentenceEndIdFromOutputLabel();
+            if (outputEOS < 0)
+                LogicError("Cannot find end of sentence symbol. Check ");
 
             dataReader.InitProposals(inputMatrices);
 
