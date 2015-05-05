@@ -116,8 +116,6 @@ protected:
     struct LabelInfo
     {
         LabelKind type;  // labels are categories, create mapping table
-        std::map<LabelIdType, LabelType> mapIdToLabel;
-        std::map<LabelType, LabelIdType> mapLabelToId;
         map<LabelType, LabelIdType> word4idx;
         map<LabelIdType, LabelType> idx4word;
         LabelIdType idMax; // maximum label ID we have encountered so far
@@ -170,7 +168,6 @@ public:
     void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SentenceEnd(std::vector<size_t> &/*sentenceEnd*/) {};
 
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
 public:
