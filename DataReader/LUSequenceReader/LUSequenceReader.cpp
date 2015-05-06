@@ -410,6 +410,7 @@ void BatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t e
     m_idx2clsRead = false; 
 
     mTotalSentenceSofar = 0;
+    m_totalSamples = 0;
 
     Reset();
 
@@ -540,7 +541,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
     else
     {
         size_t nbrSentenceRead = FindNextSentences(mBlgSize);
-        if (mAllowMultPassData && nbrSentenceRead == 0 && mTotalSentenceSofar > 0 && mTotalSentenceSofar < m_epochSize && mTotalSentenceSofar % mProcessed.size() == 0)
+        if (mAllowMultPassData && nbrSentenceRead == 0 && mTotalSentenceSofar > 0 && m_totalSamples < m_epochSize)
         {
             /// restart for the next pass of the data
             mProcessed.assign(mProcessed.size(), false);
@@ -655,6 +656,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     // now get the output label
                     LabelIdType id = m_labelTemp[label];
                     m_labelIdData.push_back(id);
+
+                    m_totalSamples++;
                 }
                 else
                 {
@@ -670,7 +673,6 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     mtSentenceBegin.SetValue(k, j, (ElemType) NO_OBSERVATION);
                 }
 
-                m_totalSamples ++;
             }
         }
 
