@@ -113,6 +113,9 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
 
     } // while
 
+    if (sequencePositionLast.inputPos< input->size())
+        AddOneItem(labels, input, seqPos, lineCount, recordCount, orgRecordCount, sequencePositionLast);
+
     int prvat = 0;
     size_t i = 0;
     for (auto ptr = seqPos->begin(); ptr != seqPos->end(); ptr++, i++)
