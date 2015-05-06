@@ -1500,47 +1500,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Evaluate(const ComputationNodePtr rootNode)
         {
-            BuildAndValidateNetwork(rootNode);
+            try{
+                BuildAndValidateNetwork(rootNode);
 
-            std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
+                std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
 
 #ifdef DISPLAY_DEBUG
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-#endif
-
-            for (int i=0; i < m_recurrentInfo.size(); i++)
-            {
-                m_recurrentInfo[i].m_completedEvaluate = false;
-            }
-
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
-                (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                if ((*nodeIter)->OperationName() == L"Delay" ||
-					(*nodeIter)->OperationName() == L"LSTM" ||
-                    (*nodeIter)->OperationName() == L"CrossEntropyWithSoftmax" )
-                {
-                    (*nodeIter)->ResetBound(m_sentenceSeg);
-                }
-            }
-
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
-
-                EvaluateLoop(allNodes, (*nodeIter));
-
-                if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
-                {
-#ifdef DISPLAY_DEBUG
+                for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
                     fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
-#if DUMPOUTPUT
-                    fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
-#endif
-                    (*nodeIter)->EvaluateThisNode(); // we manage time stamp here so that derived classes don't need to worry about it
-                    (*nodeIter)->UpdateEvalTimeStamp();
+
+                for (int i = 0; i < m_recurrentInfo.size(); i++)
+                {
+                    m_recurrentInfo[i].m_completedEvaluate = false;
                 }
+
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
+                    (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                    if ((*nodeIter)->OperationName() == L"Delay" ||
+                        (*nodeIter)->OperationName() == L"LSTM" ||
+                        (*nodeIter)->OperationName() == L"CrossEntropyWithSoftmax")
+                    {
+                        (*nodeIter)->ResetBound(m_sentenceSeg);
+                    }
+                }
+
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
+
+                    EvaluateLoop(allNodes, (*nodeIter));
+
+                    if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
+                    {
+#ifdef DISPLAY_DEBUG
+                        fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+#endif
+#if DUMPOUTPUT
+                        fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
+#endif
+                        (*nodeIter)->EvaluateThisNode(); // we manage time stamp here so that derived classes don't need to worry about it
+                        (*nodeIter)->UpdateEvalTimeStamp();
+                    }
+                }
+            }
+            catch (...)
+            {
+                RuntimeError("Error in evaluation");
             }
         }
 
@@ -1606,35 +1612,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType>* rootGradientInitValue = nullptr
             )
         {
-            if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
-                throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
+            try{
+                if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
+                    throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
-            //run forward pass first
-            Evaluate(rootNode);
+                //run forward pass first
+                Evaluate(rootNode);
 
-            ClearGradientForAllNodes(rootNode);
+                ClearGradientForAllNodes(rootNode);
 
-            //run backward pass
-            std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
-            if (bResetToOne)
-            {
-                rootNode->GradientValues().Resize(1, 1);
-                rootNode->GradientValues().SetValue(1);
-            }
+                //run backward pass
+                std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+                if (bResetToOne)
+                {
+                    rootNode->GradientValues().Resize(1, 1);
+                    rootNode->GradientValues().SetValue(1);
+                }
 
-            if (rootGradientInitValue != nullptr)
-                rootNode->GradientValues().SetValue(*rootGradientInitValue);
+                if (rootGradientInitValue != nullptr)
+                    rootNode->GradientValues().SetValue(*rootGradientInitValue);
 
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
 #ifdef DISPLAY_DEBUG
-                fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
-                    (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
-                    (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+                    fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
+                        (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
+                        (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
-                ComputeGradientLoop(allNodes, *nodeIter);
+                    ComputeGradientLoop(allNodes, *nodeIter);
 
-                (*nodeIter)->ComputeGradientForChildren();
+                    (*nodeIter)->ComputeGradientForChildren();
+                }
+            }
+            catch (...)
+            {
+                RuntimeError("Error in ComputeGradient");
             }
         }
 
@@ -2504,19 +2516,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 public: // public so PTask can use eval/gradient order, and pre-compute matrix sizes
         void ClearGradientForAllNodes(const ComputationNodePtr rootNode) 
         {
-            std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+            try{
+                std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
-                (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
+                    (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
+                }
+                for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+                {
+                    (*nodeIter).m_completedGradient = false;
+                }
+                for (int i = 0; i < m_recurrentInfo.size(); i++)
+                {
+                    m_recurrentInfo[i].m_completedGradient = false;
+                }
             }
-            for (auto nodeIter=m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+            catch (...)
             {
-                (*nodeIter).m_completedGradient = false;
-            }
-            for (int i=0; i < m_recurrentInfo.size(); i++)
-            {
-                m_recurrentInfo[i].m_completedGradient = false;
+                RuntimeError("Error in ClearGradientForAllNodes");
             }
         }
 
