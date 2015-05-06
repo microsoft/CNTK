@@ -1,4 +1,20 @@
+== Dev branch           ==
+This branch contains some features that are not yet checked into main branch. To enlist this branch, run 
+
+git checkout origin/Dev 
+
+== To-do                ==
+Add descriptions to LSTMnode
+Add descriptions to 0/1 mask segmentation in feature reader, delay node, and crossentropywithsoftmax node
+Change criterion node to use the 0/1 mask, following example in crossentropywithsoftmax node
+Add description of encoder-decoder simple network builder
+Add description of time-reverse node, simple network builder and NDL builder for bi-directional models
+
 == Author of the README ==
+   	Kaisheng Yao
+        Microsoft Research
+        email: kaisheny@microsoft.com
+
 	Wengong Jin,
 	Shanghai Jiao Tong University
 	email: acmgokun@gmail.com
