@@ -2569,32 +2569,37 @@ protected:  \
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, mDefaultState, m_sentenceSeg);
 
-                    ComputeInputGradientWrtGates(
-                        error,
-                        sliceObs,
-                        grdToObsSlice,
-                        Inputs(1)->FunctionValues(),
-                        grdToInputGate,
-                        Inputs(2)->FunctionValues(),
-                        grdToForgetGate,
-                        Inputs(3)->FunctionValues(),
-                        grdToOutputGate,
-                        Inputs(4)->FunctionValues(),
-                        grdToCellWgt,
-                        mSlicePrevOutput,
-                        mSlicePrevState,
-                        stateError,
-                        sliceState,
-                        sliceTanhState,
-                        sliceTanhObs,
-                        sliceGi,
-                        sliceGf,
-                        sliceGo,
-                        grdToPrevOutput,
-                        grdToPrevState,
-                        m_tempMatrix
-                        );
-
+                    try{
+                        ComputeInputGradientWrtGates(
+                            error,
+                            sliceObs,
+                            grdToObsSlice,
+                            Inputs(1)->FunctionValues(),
+                            grdToInputGate,
+                            Inputs(2)->FunctionValues(),
+                            grdToForgetGate,
+                            Inputs(3)->FunctionValues(),
+                            grdToOutputGate,
+                            Inputs(4)->FunctionValues(),
+                            grdToCellWgt,
+                            mSlicePrevOutput,
+                            mSlicePrevState,
+                            stateError,
+                            sliceState,
+                            sliceTanhState,
+                            sliceTanhObs,
+                            sliceGi,
+                            sliceGf,
+                            sliceGo,
+                            grdToPrevOutput,
+                            grdToPrevState,
+                            m_tempMatrix
+                            );
+                    }
+                    catch (...)
+                    {
+                        RuntimeError("Error in computing gradient in function ComputeInputPartial for LSTMnode at position %ld, length %ld", timeIdxInSeq, nT);
+                    }
                     grdToObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
                     PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
@@ -2890,84 +2895,96 @@ protected:  \
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
             size_t outputDim = Inputs(1)->FunctionValues().GetNumRows();
 
-            FunctionValues().Resize(outputDim, nT);
-            FunctionValues().SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
-            mState.Resize(outputDim, nT);
-            mState.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
-            mGi.Resize(outputDim, nT);
-            mGi.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
-            mGf.Resize(outputDim, nT);
-            mGf.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
-            mGo.Resize(outputDim, nT);
-            mGo.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
-            tanhState.Resize(outputDim, nT);
-            tanhState.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
-            tanhObs.Resize(outputDim, nT);
-            tanhObs.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+            try{
+                FunctionValues().Resize(outputDim, nT);
+                FunctionValues().SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                mState.Resize(outputDim, nT);
+                mState.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                mGi.Resize(outputDim, nT);
+                mGi.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                mGf.Resize(outputDim, nT);
+                mGf.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                mGo.Resize(outputDim, nT);
+                mGo.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                tanhState.Resize(outputDim, nT);
+                tanhState.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                tanhObs.Resize(outputDim, nT);
+                tanhObs.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
 
-            if (mPastState.IsEmpty() || mPastState.GetNumCols() != m_samplesInRecurrentStep)
-            {
-                mPastState.Resize(outputDim, m_samplesInRecurrentStep);
-                mPastState.SetValue(mDefaultState);
-            }
-            if (mPastOutput.IsEmpty() || mPastOutput.GetNumCols() != m_samplesInRecurrentStep)
-            {
-                mPastOutput.Resize(outputDim, m_samplesInRecurrentStep);
-            }
-
-#ifdef DEBUG_DECODER
-            if (mPastOutput.IsEmpty() == false)
-                fprintf(stderr, "LSTM node %ls past output norm = %.8e\n", this->NodeName().c_str(), mPastOutput.FrobeniusNorm());
-            if (mPastState.IsEmpty() == false)
-                fprintf(stderr, "LSTM node %ls past state norm = %.8e\n", this->NodeName().c_str(), mPastState.FrobeniusNorm());
-#endif
-
-            for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += m_samplesInRecurrentStep)
-            {
-
-                Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutput = FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceState = mState.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-
-                Matrix<ElemType> sliceGi = mGi.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceGf = mGf.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceGo = mGo.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-
-                Matrix<ElemType> sliceTanhState = tanhState.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceTanhInput =
-                    tanhObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-
-                PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, mDefaultState, m_sentenceSeg);
-
-                EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
-                    sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
-            }
-
-            /// save the hidden activities and output for the next minibatch
-            SaveLastStateActity();
+                if (mPastState.IsEmpty() || mPastState.GetNumCols() != m_samplesInRecurrentStep)
+                {
+                    mPastState.Resize(outputDim, m_samplesInRecurrentStep);
+                    mPastState.SetValue(mDefaultState);
+                }
+                if (mPastOutput.IsEmpty() || mPastOutput.GetNumCols() != m_samplesInRecurrentStep)
+                {
+                    mPastOutput.Resize(outputDim, m_samplesInRecurrentStep);
+                }
 
 #ifdef DEBUG_DECODER
-            if (mLastOutput.IsEmpty() == false)
-                fprintf(stderr, "LSTM node %ls last output norm = %.8e\n", this->NodeName().c_str(), mLastOutput.FrobeniusNorm());
-            if (mLastState.IsEmpty() == false)
-                fprintf(stderr, "LSTM node %ls last state norm = %.8e\n", this->NodeName().c_str(), mLastState.FrobeniusNorm());
+                if (mPastOutput.IsEmpty() == false)
+                    fprintf(stderr, "LSTM node %ls past output norm = %.8e\n", this->NodeName().c_str(), mPastOutput.FrobeniusNorm());
+                if (mPastState.IsEmpty() == false)
+                    fprintf(stderr, "LSTM node %ls past state norm = %.8e\n", this->NodeName().c_str(), mPastState.FrobeniusNorm());
 #endif
 
-            /// set output to 0 if there are no observations
-            ResetForNoObservation(FunctionValues());
-            ResetForNoObservation(mState);
+                for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += m_samplesInRecurrentStep)
+                {
+
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceOutput = FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceState = mState.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+
+                    Matrix<ElemType> sliceGi = mGi.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGf = mGf.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGo = mGo.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+
+                    Matrix<ElemType> sliceTanhState = tanhState.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhInput =
+                        tanhObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), mState, mPastOutput, mPastState, m_samplesInRecurrentStep, mDefaultState, m_sentenceSeg);
+
+                    try{
+                        EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
+                            sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
+                    }
+                    catch (...)
+                    {
+                        RuntimeError("Error in evaluating LSTMnode at position %ld out of %ld", timeIdxInSeq, nT);
+                    }
+                }
+
+                /// save the hidden activities and output for the next minibatch
+                SaveLastStateActity();
 
 #ifdef DEBUG_DECODER
-            ElemType tmpnorm = FunctionValues().FrobeniusNorm();
-            if (ISCLOSE(tmpnorm, 0.834251, 0.002))
-                fprintf(stderr, "check!");
-            fprintf(stderr, "LSTM function norm = %.8e\n", tmpnorm);
-            for (size_t i = 0; i < 5; i++)
-                fprintf(stderr, "LSTM input[%d] norm = %.8e ", i, Inputs(i)->FunctionValues().FrobeniusNorm());
-            fprintf(stderr, "\n");
+                if (mLastOutput.IsEmpty() == false)
+                    fprintf(stderr, "LSTM node %ls last output norm = %.8e\n", this->NodeName().c_str(), mLastOutput.FrobeniusNorm());
+                if (mLastState.IsEmpty() == false)
+                    fprintf(stderr, "LSTM node %ls last state norm = %.8e\n", this->NodeName().c_str(), mLastState.FrobeniusNorm());
 #endif
 
-            mGradientComputed = false;
+                /// set output to 0 if there are no observations
+                ResetForNoObservation(FunctionValues());
+                ResetForNoObservation(mState);
+
+#ifdef DEBUG_DECODER
+                ElemType tmpnorm = FunctionValues().FrobeniusNorm();
+                if (ISCLOSE(tmpnorm, 0.834251, 0.002))
+                    fprintf(stderr, "check!");
+                fprintf(stderr, "LSTM function norm = %.8e\n", tmpnorm);
+                for (size_t i = 0; i < 5; i++)
+                    fprintf(stderr, "LSTM input[%d] norm = %.8e ", i, Inputs(i)->FunctionValues().FrobeniusNorm());
+                fprintf(stderr, "\n");
+#endif
+
+                mGradientComputed = false;
+            }
+            catch (...)
+            {
+                RuntimeError("Error in evaluation of LSTMNode with %ld observations", nT);
+            }
         }
 
         /**

@@ -566,27 +566,15 @@ namespace Microsoft {
                             localEpochEvalErrors.SetValue(0);
                         }
 
-                        try{
-                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
+                        EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
                                 decoderNet, encoderTrainSetDataReader,
                                 decoderTrainSetDataReader, encoderEvaluationNodes,
                                 decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
-                        }
-                        catch (...)
-                        {
-                            RuntimeError("Errors in forward pass");
-                        }
 
-                        try{
-                            EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
+                        EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
                                 decoderNet, encoderEvaluationNodes,
                                 decoderCriterionNodes,
                                 historyMat, m_lst_pair_encoder_decoder_nodes);
-                        }
-                        catch (...)
-                        {
-                            RuntimeError("Errors in backpropagation");
-                        }
 
                         //update model parameters
                         if (learnRatePerSample > m_minLearnRate * 0.01)
@@ -890,53 +878,58 @@ namespace Microsoft {
                     Matrix<ElemType>& localEpochEvalErrors
                     )
                 {
+                    try{
+                        size_t actualMBSize = encoderNet.GetActualMBSize();
 
-                    size_t actualMBSize = encoderNet.GetActualMBSize();
+                        encoderNet.SetActualMiniBatchSize(actualMBSize);
+                        encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.m_sentenceSeg);
 
-                    encoderNet.SetActualMiniBatchSize(actualMBSize);
-                    encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-                    encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.m_sentenceSeg);
+                        encoderNet.Evaluate(encoderEvaluationNodes[0]);
 
-                    encoderNet.Evaluate(encoderEvaluationNodes[0]);
+                        actualMBSize = decoderNet.GetActualMBSize();
 
-                    actualMBSize = decoderNet.GetActualMBSize();
+                        decoderNet.SetActualMiniBatchSize(actualMBSize);
+                        decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
-                    decoderNet.SetActualMiniBatchSize(actualMBSize);
-                    decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                        decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceSeg);
 
-                    /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceSeg);
+                        /// get the pair of encode and decoder nodes
+                        for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
+                        {
+                            /// past hidden layer activity from encoder network to decoder network
+                            ComputationNodePtr encoderNode = iter->first;
+                            ComputationNodePtr decoderNode = iter->second;
 
-                    /// get the pair of encode and decoder nodes
-                    for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
-                    {
-                        /// past hidden layer activity from encoder network to decoder network
-                        ComputationNodePtr encoderNode = iter->first;
-                        ComputationNodePtr decoderNode = iter->second;
-
-                        encoderNode->GetHistory(historyMat, true); /// get the last state activity
-                        decoderNode->SetHistory(historyMat);
+                            encoderNode->GetHistory(historyMat, true); /// get the last state activity
+                            decoderNode->SetHistory(historyMat);
 #ifdef DEBUG_DECODER
-                        fprintf(stderr, "LSTM past output norm = %.8e\n", historyMat.ColumnSlice(0, nstreams).FrobeniusNorm());
-                        fprintf(stderr, "LSTM past state norm = %.8e\n", historyMat.ColumnSlice(nstreams, nstreams).FrobeniusNorm());
+                            fprintf(stderr, "LSTM past output norm = %.8e\n", historyMat.ColumnSlice(0, nstreams).FrobeniusNorm());
+                            fprintf(stderr, "LSTM past state norm = %.8e\n", historyMat.ColumnSlice(nstreams, nstreams).FrobeniusNorm());
+#endif
+                        }
+
+                        UpdateEvalTimeStamps(decoderFeatureNodes);
+                        decoderNet.Evaluate(decoderCriterionNodes[0]);
+
+                        Matrix<ElemType>::AddElementToElement(decoderCriterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+
+                        size_t numEvalNodes = decoderEvaluationNodes.size();
+                        std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
+                        for (size_t i = 0; i < numEvalNodes; i++)
+                        {
+                            decoderNet.Evaluate(decoderEvaluationNodes[i]);
+                            Matrix<ElemType>::AddElementToElement(decoderEvaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                        }
+#ifdef DEBUG_DECODER
+                        fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
 #endif
                     }
-
-                    UpdateEvalTimeStamps(decoderFeatureNodes);
-                    decoderNet.Evaluate(decoderCriterionNodes[0]);
-
-                    Matrix<ElemType>::AddElementToElement(decoderCriterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
-
-                    size_t numEvalNodes = decoderEvaluationNodes.size();
-                    std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
-                    for (size_t i = 0; i<numEvalNodes; i++)
+                    catch (...)
                     {
-                        decoderNet.Evaluate(decoderEvaluationNodes[i]);
-                        Matrix<ElemType>::AddElementToElement(decoderEvaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                        RuntimeError("Errors in forward pass");
                     }
-#ifdef DEBUG_DECODER
-                    fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
-#endif
                 }
 
                 void EncoderDecoderWithHiddenStatesErrorProp(
@@ -948,29 +941,47 @@ namespace Microsoft {
                     list<pair<ComputationNodePtr, ComputationNodePtr>> lst_pair_encoder_decoder_nodes
                     )
                 {
-                    /// don't reevalute, need to call forward pass before call this function
-                    //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
-                    decoderNet.ComputeGradient(decoderCriterionNodes[0]);
+                    try{
+                        /// don't reevalute, need to call forward pass before call this function
+                        //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
+                        try{
+                            decoderNet.ComputeGradient(decoderCriterionNodes[0]);
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Error in evaluating gradients for decoder network");
+                        }
+                        
+                        /// get the pair of encode and decoder nodes
+                        for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
+                        {
+                            /// past gradients to hidden layer activity from decoder network to encoder network
+                            ComputationNodePtr encoderNode = iter->first;
+                            ComputationNodePtr decoderNode = iter->second;
 
-                    /// get the pair of encode and decoder nodes
-                    for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
-                    {
-                        /// past gradients to hidden layer activity from decoder network to encoder network
-                        ComputationNodePtr encoderNode = iter->first;
-                        ComputationNodePtr decoderNode = iter->second;
+                            decoderNode->GetErrorsToPreviousMinibatch(historyMat);
+                            encoderNode->SetErrorsFromFutureMinibatch(historyMat);
+                        }
 
-                        decoderNode->GetErrorsToPreviousMinibatch(historyMat);
-                        encoderNode->SetErrorsFromFutureMinibatch(historyMat);
+                        // compute gradients on encoder networks
+                        Matrix<ElemType> initGradient(encoderNet.GetDeviceID());
+                        initGradient.Resize(encoderEvaluationNodes[0]->FunctionValues().GetNumRows(),
+                            encoderEvaluationNodes[0]->FunctionValues().GetNumCols());
+                        
+                        initGradient.SetValue(0);
+
+                        try{
+                            encoderNet.ComputeGradient(encoderEvaluationNodes[0], false, &initGradient);
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Error in evaluating gradients for encoder network");
+                        }
                     }
-
-                    // compute gradients on encoder networks
-                    Matrix<ElemType> initGradient(encoderNet.GetDeviceID());
-                    initGradient.Resize(encoderEvaluationNodes[0]->FunctionValues().GetNumRows(),
-                        encoderEvaluationNodes[0]->FunctionValues().GetNumCols());
-                    initGradient.SetValue(0);
-
-                    encoderNet.ComputeGradient(encoderEvaluationNodes[0], false, &initGradient);
-
+                    catch (...)
+                    {
+                        RuntimeError("Errors in backpropagation");
+                    }
                 }
 
             };
