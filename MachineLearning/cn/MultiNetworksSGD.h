@@ -523,13 +523,19 @@ namespace Microsoft {
                     bool bContinueDecoding = true;
                     while (bContinueDecoding)
                     {
-                        encoderTrainSetDataReader->SetRandomSeed(uSeedForDataReader);
-                        encoderTrainSetDataReader->GetMinibatch(encoderInputMatrices);
+                        try{
+                            encoderTrainSetDataReader->SetRandomSeed(uSeedForDataReader);
+                            encoderTrainSetDataReader->GetMinibatch(encoderInputMatrices);
 
-                        /// now gradients on decoder network
-                        decoderTrainSetDataReader->SetRandomSeed(uSeedForDataReader);
-                        if (decoderTrainSetDataReader->GetMinibatch(decoderInputMatrices) == false)
-                            break;
+                            /// now gradients on decoder network
+                            decoderTrainSetDataReader->SetRandomSeed(uSeedForDataReader);
+                            if (decoderTrainSetDataReader->GetMinibatch(decoderInputMatrices) == false)
+                                break;
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Errors in reading features ");
+                        }
 
                         size_t actualMBSize = decoderNet.GetActualMBSize();
                         if (actualMBSize == 0)
@@ -560,18 +566,27 @@ namespace Microsoft {
                             localEpochEvalErrors.SetValue(0);
                         }
 
-                        //                    decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
+                        try{
+                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
+                                decoderNet, encoderTrainSetDataReader,
+                                decoderTrainSetDataReader, encoderEvaluationNodes,
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Errors in forward pass");
+                        }
 
-                        EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                            decoderNet, encoderTrainSetDataReader,
-                            decoderTrainSetDataReader, encoderEvaluationNodes,
-                            decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
-
-                        EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
-                            decoderNet, encoderEvaluationNodes,
-                            decoderCriterionNodes,
-                            historyMat, m_lst_pair_encoder_decoder_nodes);
-
+                        try{
+                            EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
+                                decoderNet, encoderEvaluationNodes,
+                                decoderCriterionNodes,
+                                historyMat, m_lst_pair_encoder_decoder_nodes);
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Errors in backpropagation");
+                        }
 
                         //update model parameters
                         if (learnRatePerSample > m_minLearnRate * 0.01)
