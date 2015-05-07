@@ -10,7 +10,7 @@ FOR /F "usebackq" %%i IN (`hostname`) DO SET HOST=%%i
 
 :: not sure whether git in path ? 
 git --version 2 > nul 
-if not %ERRORLEVEL% == 9909 (
+if not %ERRORLEVEL% == 9009 (
     echo #define _GIT_EXIST >> buildinfo.h
     FOR /F "usebackq" %%i IN (`git rev-parse --abbrev-ref HEAD`) DO SET BRANCH=%%i
     FOR /F "usebackq" %%i IN (`git rev-parse HEAD`) DO SET COMMIT=%%i
@@ -26,5 +26,7 @@ set a=%~dp0
 set buildpath="%a:\=\\%"
 echo #define _BUILDPATH_    %buildpath%     >> buildinfo.h
 
+set cuda_path="%CUDA_PATH:\=\\%"
+echo #define _CUDA_PATH_    %cuda_path%     >> buildinfo.h
 
 echo #endif >> buildinfo.h
