@@ -979,6 +979,7 @@ void PrintBuiltInfo()
     fprintf(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
     fprintf(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
     fprintf(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+    fprintf(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
 #ifdef _GIT_EXIST
     fprintf(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
     fprintf(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
