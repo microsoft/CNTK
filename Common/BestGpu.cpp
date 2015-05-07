@@ -279,8 +279,17 @@ void BestGpu::Init()
         return;
 
     //get the count of objects
-    //cudaError_t err =
+    cudaError_t err =
     cudaGetDeviceCount(&m_deviceCount);
+    // TODO: use CUDA_CALL here
+    if (err != cudaSuccess)
+    {
+        const char* errmsg = cudaGetErrorString(err);
+        fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
+        throw std::runtime_error(errmsg);
+    }
+
+
 
     ProcessorData pdEmpty = { 0 };
     for (int i = 0; i < m_deviceCount; i++)
