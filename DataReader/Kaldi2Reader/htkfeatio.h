@@ -461,7 +461,7 @@ public:
                     std::wcout << "num_cols != 1: " << num_cols << std::endl;
                     exit(1);
                 }
-                int delay_row = row;
+                int delay_row = 0;
                 if (row - targets_delay >= 0)
                 {
                     delay_row = row - targets_delay;
