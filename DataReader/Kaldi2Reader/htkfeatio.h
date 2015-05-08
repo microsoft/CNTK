@@ -422,7 +422,7 @@ public:
     }
 
     // constructor reads multiple MLF files
-    htkmlfreader (const vector<wstring> & paths, const set<wstring> & restricttokeys, const wstring & stateListPath = L"", const double htkTimeToFrame = 100000.0)
+    htkmlfreader (const vector<wstring> & paths, const set<wstring> & restricttokeys, const wstring & stateListPath = L"", const double htkTimeToFrame = 100000.0, int targets_delay = 0)
     {
         // read state list
         if (stateListPath != L"")
@@ -430,11 +430,11 @@ public:
 
         // read MLF(s) --note: there can be multiple, so this is a loop
         foreach_index (i, paths)
-            read (paths[i], restricttokeys, htkTimeToFrame);
+            read (paths[i], restricttokeys, htkTimeToFrame, targets_delay);
     }
 
     // note: this function is not designed to be pretty but to be fast
-    void read (const wstring & path, const set<wstring> & restricttokeys, const double htkTimeToFrame)
+    void read (const wstring & path, const set<wstring> & restricttokeys, const double htkTimeToFrame, int targets_delay)
     {
         fprintf (stderr, "htkmlfreader: reading MLF file %S ...", path.c_str());
         curpath = path;         // for error messages only
@@ -461,8 +461,13 @@ public:
                     std::wcout << "num_cols != 1: " << num_cols << std::endl;
                     exit(1);
                 }
+                int delay_row = row;
+                if (row - targets_delay >= 0)
+                {
+                    delay_row = row - targets_delay;
+                }
 
-                std::pair<int32, float> pair = p.at(row).at(0);
+                std::pair<int32, float> pair = p.at(delay_row).at(0);
                 if (pair.second != 1) {
                     std::wcout << "pair.second != 1: " << pair.second << std::endl;
                     exit(1);
