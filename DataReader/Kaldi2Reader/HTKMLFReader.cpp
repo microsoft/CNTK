@@ -334,13 +334,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
         std::vector<std::map<std::wstring,std::vector<msra::asr::htkmlfentry>>> labelsmulti;
         //std::vector<std::wstring> pagepath;
+        int targets_delay = 0;
+        if (readerConfig.Exists("targets_delay"))
+        {
+            targets_delay = readerConfig("targets_delay");
+        }
         foreach_index(i, mlfpathsmulti)
         {
             msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>  
-                labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], htktimetoframe);      // label MLF
+                labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], htktimetoframe, targets_delay);      // label MLF
             // get the temp file name for the page file
             labelsmulti.push_back(labels);
-     }
+        }
 
         if (!_stricmp(readMethod.c_str(),"blockRandomize"))
         {
