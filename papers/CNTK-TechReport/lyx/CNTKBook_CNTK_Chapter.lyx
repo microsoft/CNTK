@@ -4419,6 +4419,162 @@ ndlMacros
 \end_layout
 
 \begin_layout Subsection
+SVD Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SVD Command
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This command conducts SVD decomposition for learnable parameters.
+ For example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+svd=[
+\end_layout
+
+\begin_layout Plain Layout
+
+  action=SVD 
+\end_layout
+
+\begin_layout Plain Layout
+
+  modelPath=train
+\backslash
+lstm.model.67
+\end_layout
+
+\begin_layout Plain Layout
+
+  outputmodelPath=train
+\backslash
+lstm.model.svd
+\end_layout
+
+\begin_layout Plain Layout
+
+  SVDConfig=NodeConfigs 
+\end_layout
+
+\begin_layout Plain Layout
+
+] 
+\end_layout
+
+\end_inset
+
+Here we list the associated parameter blocks.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+modelPath
+\end_layout
+
+\end_inset
+
+modelPath – specifies where to load the initial model 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outputmodelPath
+\end_layout
+
+\end_inset
+
+outputmodelPath – specifies where to save the revised model 
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SVDConfig
+\end_layout
+
+\end_inset
+
+SVDConfig – a config file which specifies how the SVD is performed for different
+ groups of nodes.
+ This config is in a two-column format:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+<NodeNameRegex> <float>
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first column is a regular expression which will match the node name
+ in one group.
+ The second column is a float indicating what percentage of SVD-energy will
+ be kept after SVD, where SVD-energy is defined as the sum of singular values.
+ For example, the config
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+LSTMoutput[1-3].Wx[ifco] 0.4 
+\end_layout
+
+\begin_layout Plain Layout
+
+LSTMoutput[1-3].Wh[ifco] 0.6
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+will cause a more aggressive SVD (0.4) decomposition for the non-recurrent
+ connections (from x to i,f,c,o gates) in LSTM and less aggressive SVD decomposi
+tion for recurrent connections (from h to i,f,c,o gates), where the parameter
+ names are defined in the NDL.
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
 Dumpnode Command
 \begin_inset Index idx
 status open
