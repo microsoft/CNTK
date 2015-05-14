@@ -2151,7 +2151,7 @@ public:
             {
                 float keepratio = group.second; 
                 fprintf(stderr, "--------------------------------------------------------------------------------------------\n");
-                fprintf(stderr, "ParameterSVD: start to process group %d with KeepRatio=%.2f\n", groupID++, keepratio);
+                fprintf(stderr, "ParameterSVD: start to process group %d with KeepRatio=%.2f\n", (int) groupID++, keepratio);
                 fprintf(stderr, "--------------------------------------------------------------------------------------------\n");
                 for (auto name : group.first)
                 {
@@ -2204,7 +2204,7 @@ public:
 
                     std::chrono::duration<double>  elapsedtime = enTime - stTime;
                     fprintf(stderr, "Performing SVD for a %5d-by-%-5d matrix (node name: %-20ls) ---  computation time %5.2f secs ;  keep %4.1f%% energy ===> keep %5d svd values (reduce to %4.1f%% parameters) \n",
-                        m, n, name.c_str(), elapsedtime.count(), keepratio*100, r, ((m+n)*r+0.0f)/m/n*100);
+                        (int)m, (int)n, name.c_str(), elapsedtime.count(), keepratio * 100, (int)r, ((m + n)*r + 0.0f) / m / n * 100);
 
 
                     Matrix<ElemType> redU = U.ColumnSlice(0, r);        // redU in R^ {mXr}
