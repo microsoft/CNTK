@@ -72,15 +72,15 @@
       <SDLCheck>true</SDLCheck>
       <OpenMPSupport>true</OpenMPSupport>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalOptions>/bigobj /D MPI_SUPPORT %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include";$(ProjectDir)\mpi</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>CNTKMath.lib; nvml.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(ProjectDir)/mpi/$(Platform); "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib" </AdditionalLibraryDirectories>
+      <DelayLoadDLLs>CNTKMath.dll;nvml.dll;nvcuda.dll; cudart64_70.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
@@ -110,9 +110,9 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/d2Zi+ /D MPI_SUPPORT %(AdditionalOptions)</AdditionalOptions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"; $(ProjectDir)\mpi</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -122,7 +122,7 @@
       <AdditionalDependencies>CNTKMath.lib; nvml.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
       <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
-      <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"; $(ProjectDir)/mpi/$(Platform)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
