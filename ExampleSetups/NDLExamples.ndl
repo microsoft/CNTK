@@ -58,7 +58,8 @@ ndlTestGMM=[
     LogStddev=Parameter(GMMComponent, 1)
     
     LL=GMMLL(UnnormedPrior, Means, LogStddev, L3)
-
+    LLAll=SumElements(LL)
+    NLL=Negate(LLALL, tag=Criteria)
 
     # rootNodes defined here
     OutputNodes=(NLL)
@@ -85,7 +86,12 @@ ndlTestMDN=[
     
     UnnormedPrior =  BFF(L3, GMMComponent, HDim)
     Means=BFF(L3, SizeOfAllMeans, HDim)
-    LogStddev=BFF(L3, GMMComponent, HDim)
+    
+    #it's important to control the range of logstddev
+    LogStddev0=BFF(L3, GMMComponent, MDim)
+    LogStddev1=Tanh(LogStddev0)
+    scaleF=Const(2)    
+    LogStddev=Scale(scaleF, LogStddev1)    
     
     LL=GMMLL(UnnormedPrior, Means, LogStddev, labels)
     LLAll=SumElements(LL)
