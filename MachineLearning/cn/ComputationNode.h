@@ -2676,6 +2676,36 @@ protected:  \
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"RowSlice";} 
 
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i<ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        throw runtime_error("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+
+                }
+                fprintf(stderr, ", StartIndex=%lu, NumOfRows=%lu)", m_startIndex, m_numRows);
+            }
+        }
+
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)

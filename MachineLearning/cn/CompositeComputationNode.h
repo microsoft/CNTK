@@ -1892,7 +1892,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
         //If we want to speed up we need to replace following code with a several specialized GPU functions
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean, const Matrix<ElemType>& logstddev,
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean,  Matrix<ElemType>& logstddev,
             const Matrix<ElemType>& feature, Matrix<ElemType>& prior, Matrix<ElemType>& stddev, Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& normedDeviation, Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
@@ -1901,11 +1901,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t featureDim = feature.GetNumRows();
 
             //compute prior which is softmax of unnormedPrior
-            prior.AssignLogSoftmaxOf(unnormedPrior, true);
+            prior.AssignLogSoftmaxOf(unnormedPrior, true);  //log prior
+
             prior.InplaceExp();
 
             //compute stddev
             stddev.AssignExpOf(logstddev);
+
+#if DUMPOUTPUT
+            unnormedPrior.Print("unnormedPrior", 0, min(5, unnormedPrior.GetNumRows() - 1), 0, min(10, unnormedPrior.GetNumCols() - 1));
+            mean.Print("mean", 0, min(5, mean.GetNumRows() - 1), 0, min(10, mean.GetNumCols() - 1));
+            logstddev.Print("logstddev", 0, min(5, logstddev.GetNumRows() - 1), 0, min(10, logstddev.GetNumCols() - 1));
+
+            prior.Print("prior", 0, min(5, prior.GetNumRows() - 1), 0, min(10, prior.GetNumCols() - 1));
+            stddev.Print("stddev", 0, min(5, stddev.GetNumRows() - 1), 0, min(10, stddev.GetNumCols() - 1));
+#endif
 
             //compute normedDeviation <-- ||x-u_c||^2/(stddev^2)
             normedDeviationVectors.AssignRepeatOf(feature, numComponent, 1);
@@ -1913,22 +1923,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             normedDeviationVectors.Reshape(featureDim, numSamples* numComponent);  //now each column is feature-mean_i
 
             normedDeviation.AssignVectorNorm2Of(normedDeviationVectors, true);
+            normedDeviation ^= 2;
             temp.AssignRepeatOf(stddev, 1, numSamples / stddev.GetNumCols());  //stddev.GetNumCols() is either 1 or =numSamples
             temp.Reshape(1, temp.GetNumElements());  //one stddev value for each component for each sample
+            temp ^= 2;
             normedDeviation.ElementDivideBy(temp);  //normedDeviation and temp have same dim (1, numSamples* numComponent)
-            normedDeviation ^= 2;
 
             //compute  normedDeviationVectors <-- (x-u_c)/(stddev^2)
-            normedDeviationVectors.RowElementDivideBy(temp); //temp is stddev. divide once  
             normedDeviationVectors.RowElementDivideBy(temp);  //divide twice
             normedDeviationVectors.Reshape(featureDim*numComponent, numSamples);  //reshape back
 
             //compute per-component likelihood
             posterior.AssignProductOf(-0.5f, normedDeviation); //posterior  <-- -||x-u_c||^2/(stddev^2)/2 and in (1, numSamples* numComponent) dim
+            temp.InplaceLog();
+            temp *= ((ElemType)numComponent / 2.0f); //temp <-- stddev^c and in (1, numSamples* numComponent) dim
+            posterior -= temp;  // posterior  <-- exp[-||x-u_c||^2/(stddev^2)/2]/(stddev^c)
+            posterior -= (ElemType)(numComponent / 2.0f*log(TWO_PI)); //likelihood for each component and sample is now computed and stored in posterior
             posterior.InplaceExp(); //posterior  <-- exp(-||x-u_c||^2/(stddev^2)/2)
-            temp ^= (ElemType)numComponent; //temp <-- stddev^c and in (1, numSamples* numComponent) dim
-            posterior.RowElementDivideBy(temp);  // posterior  <-- exp[-||x-u_c||^2/(stddev^2)/2]/(stddev^c)
-            posterior /= (ElemType)pow(TWO_PI, numComponent / 2.0f); //likelihood for each component and sample is now computed and stored in posterior
 
             normedDeviation.Reshape(numComponent, numSamples);  //reshape back
             posterior.Reshape(numComponent, numSamples);  //reshape back
@@ -1937,18 +1948,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (unnormedPrior.GetNumCols() == numSamples)  //each sample has different prior
                 posterior.ElementMultiplyWith(prior);
             else  //all samples share the same prior
-                posterior.ColumnElementMultiplyWith(prior);  
+                posterior.ColumnElementMultiplyWith(prior);
 
             //compute GMM log-likelihood
             Matrix<ElemType>::Multiply(ConstOnes(1, numComponent, posterior.GetDeviceId()), false, posterior, false, functionValues);  //functionValues <-- total likelihood
             posterior.RowElementDivideBy(functionValues); //posterior <-- per-comp likelihood / total likelihood
             functionValues.InplaceLog(); //log likelihood
 
+#if DUMPOUTPUT
+            temp.Print("temp", 0, min(5, temp.GetNumRows() - 1), 0, min(10, temp.GetNumCols() - 1));
+            normedDeviation.Print("normedDeviation", 0, min(5, normedDeviation.GetNumRows() - 1), 0, min(10, normedDeviation.GetNumCols() - 1));
+
+            posterior.Print("posterior", 0, min(5, posterior.GetNumRows() - 1), 0, min(10, posterior.GetNumCols() - 1));
+            functionValues.Print("functionValues", 0, min(5, functionValues.GetNumRows() - 1), 0, min(10, functionValues.GetNumCols() - 1));
+
+            functionValues.Print("GMMLogLikelihoodNode");
+#endif
+
 #if NANCHECK
             functionValues.HasNan("GMMLogLikelihood");
-#endif
-#if DUMPOUTPUT
-            functionValues.Print("GMMLogLikelihoodNode");
 #endif
         }
 
