@@ -80,7 +80,7 @@
       <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <DelayLoadDLLs>cublas64_65.dll;cusparse64_65.dll;curand64_65.dll;cudart64_65.dll;libacml_dll.dll;libacml_mp_dll.dll;nvcuda.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;cudart64_70.dll;libacml_dll.dll;libacml_mp_dll.dll;nvcuda.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
@@ -132,7 +132,7 @@
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>libacml_mp_dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>libacml_mp_dll.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;cudart64_70.dll;libacml_dll.dll;libacml_mp_dll.dll;nvcuda.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" $(OutputPath)</Command>
