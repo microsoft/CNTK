@@ -14,7 +14,7 @@
 #include <map>
 #include <vector>
 #include "minibatchsourcehelpers.h"
-
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -31,6 +31,52 @@ enum LabelKind
     labelCategory = 1, // category labels, creates mapping tables
     labelNextWord = 2,  // sentence mapping (predicts next word)
     labelOther = 3, // some other type of label
+};
+
+template <typename Count>
+class noiseSampler {
+    std::vector<double> m_prob, m_log_prob;
+    std::uniform_int_distribution<Count> unif_int;
+    bool uniform_sampling;
+    double uniform_prob;
+    double uniform_log_prob;
+    std::piecewise_constant_distribution<double> d;
+    std::mt19937 rng;
+public:
+    noiseSampler(){ }
+    noiseSampler(const std::vector<double> &counts, bool xuniform_sampling = false)
+        :uniform_sampling(xuniform_sampling), rng(time(0))
+    {
+        int k = counts.size();
+        uniform_prob = 1.0 / k;
+        uniform_log_prob = std::log(uniform_prob);
+        std::vector<double> vn(counts.size() + 1);
+        for (int i = 0; i < vn.size(); i++)
+            vn[i] = i;
+        d = std::piecewise_constant_distribution<double>(vn.begin(), vn.end(), counts.begin());
+        unif_int = std::uniform_int_distribution<Count>(0, counts.size() - 1);
+        m_prob = d.densities();
+        m_log_prob.resize(m_prob.size());
+        for (int i = 0; i < k; i++)
+            m_log_prob[i] = std::log(m_prob[i]);
+    }
+    int size() const{ return m_prob.size(); }
+    double prob(int i) const { if (uniform_sampling) return uniform_prob; else return m_prob[i]; }
+    double logprob(int i) const { if (uniform_sampling) return uniform_log_prob; else return m_log_prob[i]; }
+
+    template <typename Engine>
+    int sample(Engine &eng) const
+    {
+        int m = unif_int(eng);
+        if (uniform_sampling)
+            return m;
+        return d(eng);
+    }
+    
+    int sample()
+    {
+        return sample(this->rng);
+    }
 };
 
 template<class ElemType>
