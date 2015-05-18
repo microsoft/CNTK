@@ -54,7 +54,7 @@ class noiseSampler {
 public:
     noiseSampler(){ }
     noiseSampler(const std::vector<double> &counts, bool xuniform_sampling = false)
-        :uniform_sampling(xuniform_sampling), rng((int)time(0))
+        :uniform_sampling(xuniform_sampling), rng(1234)
     {
         size_t k = counts.size();
         uniform_prob = 1.0 / k;

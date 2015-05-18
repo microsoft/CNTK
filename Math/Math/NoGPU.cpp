@@ -1037,7 +1037,24 @@ namespace Microsoft {
             {
                 return ElemType(0);
             }
+            template<class ElemType>
+            void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
+                const GPUMatrix<ElemType>& b, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
+            {
+            }
 
+            template<class ElemType>
+            void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GPUMatrix<ElemType>& a,
+                const GPUMatrix<ElemType>& b, size_t inputIndex, GPUMatrix<ElemType>& c)
+            {
+
+            }
+
+
+            template<class ElemType>
+            void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
+            {              
+            }
 #pragma endregion Static BLAS Functions
 
             template class GPUMatrix<float>;
