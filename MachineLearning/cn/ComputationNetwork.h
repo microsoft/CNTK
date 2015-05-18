@@ -985,7 +985,9 @@ public:
             else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())
                 newNode = new CrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-                newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+                newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName); 
+            else if (nodeType == NoiseContrastiveEstimationNode<ElemType>::TypeName())
+                newNode = new NoiseContrastiveEstimationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CRFNode<ElemType>::TypeName())
                 newNode = new CRFNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
@@ -1278,6 +1280,15 @@ public:
         {
             ComputationNodePtr newNode(new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, prediction);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr NoiseContrastiveEstimation(const ComputationNodePtr label, const ComputationNodePtr prediction,
+            const ComputationNodePtr input_weight, const ComputationNodePtr input_bias, const std::wstring nodeName = L"", NCEEvalMode mode = NCEEvalMode::None)
+        {
+            ComputationNodePtr newNode(new NoiseContrastiveEstimationNode<ElemType>(m_deviceId, nodeName, mode));
+            newNode->AttachInputs(label, prediction, input_weight, input_bias);
             AddNodeToNet(newNode);
             return newNode;
         }

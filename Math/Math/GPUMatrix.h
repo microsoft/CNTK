@@ -284,6 +284,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>& AssignInnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 
 
+
+        void AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c);
+        void AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t inputIndex, GPUMatrix<ElemType>& c);    
+        void AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
+
+
         void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
         void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
 

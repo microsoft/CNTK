@@ -19,7 +19,7 @@
 #include <chrono>
 #include <exception>
 #include <thread>
-
+#include<iostream>
 #ifdef     _WIN32
 #include <Windows.h>
 #else
@@ -3763,6 +3763,135 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return CPUMatrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 1.0, c);
     }
 
+    template<class ElemType>
+    void CPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
+        const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
+        //this: samples+probs
+        // a:   hidden
+        // b:   embedding
+        // tmp:  softmax
+        //  c: loglikelihood
+    {
+        ElemType log_likelihood = 0.0;
+        size_t sample_size = this->GetNumRows() / 2;
+        size_t batch_size = this->GetNumCols();
+        size_t num_noise_samples = sample_size - 1;
+        ElemType log_num_noise_samples = (ElemType)std::log(num_noise_samples);
+#pragma omp parallel for reduction(+:log_likelihood)
+        for (int instance_id = 0; instance_id < batch_size; instance_id++)
+        for (int sample_id = 0; sample_id < sample_size; sample_id++)
+        {
+            int sample =(int) (*this)(2 * sample_id, instance_id);
+            ElemType prob = -(*this)(2 * sample_id + 1, instance_id);
+            if (sample_id == 0)
+                prob = -prob;
+            double score = 0;// a[sample];
+            for (int dim = 0; dim < b.GetNumCols(); dim++)
+                score += a(sample, dim)* b(dim, instance_id);
+            double score_noise = log_num_noise_samples + prob;
+            double z = logadd(score, score_noise);
+            double logprob = score - z;
+            double logprob_noise = score_noise - z;
+            log_likelihood += sample_id == 0 ? (ElemType)logprob : (ElemType)logprob_noise;
+        }
+        c(0, 0) = log_likelihood;
+    }
+
+    //samples+prob                         gradient           hidden               embedding          embedding/hidden
+    //a.m_CPUMatrix->AssignNCEDerivative(*tmp.m_CPUMatrix, *a.m_CPUMatrix, *b.m_CPUMatrix, inputIndex, *c.m_CPUMatrix);
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<ElemType>& tmp, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t inputIndex, CPUMatrix<ElemType>& c)
+    {
+        size_t sample_size = this->GetNumRows() / 2;
+        size_t batch_size = this->GetNumCols();
+        if (inputIndex == 1)
+        {
+#pragma omp parallel for
+            for (int instance_id = 0; instance_id < batch_size; instance_id++)
+            for (int sample_id = 0; sample_id < sample_size; sample_id++)
+            {
+                int sample =(int) (*this)(2 * sample_id, instance_id);
+                for (int dim = 0; dim < b.GetNumRows(); dim++)
+                    c(dim, instance_id) -= b(dim, sample)* tmp(sample_id, instance_id);
+            }
+        }
+        else if (inputIndex == 2)
+        {
+            int i_blocks = omp_get_num_threads() * 16;
+            // Assume only one block in k direction.
+            // We don't need to explicitly block in the j direction.
+#pragma omp parallel for
+            for (int ib = 0; ib < i_blocks; ib++)
+            for (int instance_id = 0; instance_id < batch_size; instance_id++)
+            for (int sample_id = 0; sample_id < sample_size; sample_id++)
+            {
+                int sample =(int) (*this)(2 * sample_id, instance_id);
+                if (sample % i_blocks == ib)
+                for (int dim = 0; dim < b.GetNumRows(); dim++)
+                    c(dim, sample) -= a(dim, instance_id)* tmp(sample_id, instance_id);
+            }
+        }
+        else
+        {
+            assert(inputIndex == 3);
+            // Assume only one block in k direction.
+            // We don't need to explicitly block in the j direction.
+            for (int instance_id = 0; instance_id < batch_size; instance_id++)
+            for (int sample_id = 0; sample_id < sample_size; sample_id++)
+            {
+                int sample =(int) (*this)(2 * sample_id, instance_id);
+                c(sample, 0) -= tmp(sample_id, instance_id);
+            }
+        }
+        return *this;
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a,
+        const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, size_t sampleCount, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c)
+        //this: samples+probs
+        // a:   hidden
+        // b:   embedding
+        // tmp:  softmax
+        //  c: loglikelihood
+    {
+        /*z
+        for (int i = 0; i < (*this).GetNumRows(); i++)
+        {
+            for (int j = 0; j < (*this).GetNumCols(); j++)
+                std::cerr << (*this)(i, j) << " ";
+            std::cerr << endl;
+        }
+        */
+        sampleCount *= 1;
+        double log_likelihood = 0.0;
+        size_t sample_size = this->GetNumRows() / 2;
+        size_t batch_size = this->GetNumCols();
+        size_t num_noise_samples = sample_size - 1;
+        double log_num_noise_samples = std::log(num_noise_samples);
+#pragma omp parallel for reduction(+:log_likelihood)
+        for (int instance_id = 0; instance_id < batch_size; instance_id++)
+        for (int sample_id = 0; sample_id < sample_size; sample_id++)
+        {
+            int sample =(int) (*this)(2 * sample_id, instance_id);
+            double score = bias(sample, 0);
+            for (int dim = 0; dim < b.GetNumRows(); dim++)
+                score += a(dim, instance_id)* b(dim, sample);
+            double sample_prob = -(*this)(2 * sample_id + 1, instance_id);
+            if (sample_id == 0)
+                sample_prob = -sample_prob;
+            double score_noise = log_num_noise_samples + sample_prob;
+            double z = logadd(score, score_noise);
+            double logprob = score - z;
+            double logprob_noise = score_noise - z;
+            tmp(sample_id, instance_id) = (ElemType)-std::exp(logprob);
+            if (sample_id == 0)
+                tmp(sample_id, instance_id) += 1;
+            log_likelihood += sample_id == 0 ? logprob : logprob_noise; 
+        }
+
+        c(0, 0) = (ElemType)-log_likelihood;
+    }
 
     /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c =  op(a) * op(b)</summary>
     /// <param name="a">Input matrix</param>
