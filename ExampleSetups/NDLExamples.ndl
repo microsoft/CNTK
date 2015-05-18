@@ -84,14 +84,18 @@ ndlTestMDN=[
     GMMComponent=4
     SizeOfAllMeans=40
     
-    UnnormedPrior =  BFF(L3, GMMComponent, HDim)
+    UnnormedPrior0 =  BFF(L3, GMMComponent, HDim)
+    UnnormedPrior1=Tanh(UnnormedPrior0)
+    scaleFPrior=Const(2)   
+    UnnormedPrior=Scale(scaleFPrior, UnnormedPrior1)
+    
     Means=BFF(L3, SizeOfAllMeans, HDim)
     
     #it's important to control the range of logstddev
     LogStddev0=BFF(L3, GMMComponent, MDim)
     LogStddev1=Tanh(LogStddev0)
-    scaleF=Const(2)    
-    LogStddev=Scale(scaleF, LogStddev1)    
+    scaleFStddev=Const(2)    
+    LogStddev=Scale(scaleFStddev, LogStddev1)    
     
     LL=GMMLL(UnnormedPrior, Means, LogStddev, labels)
     LLAll=SumElements(LL)
