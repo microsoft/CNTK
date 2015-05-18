@@ -3757,7 +3757,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUMatrix<ElemType>::RCRFBackwardCompute(
         const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-        const GPUMatrix<ElemType>& lbls,
+        const GPUMatrix<ElemType>& /*lbls*/,
         const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift)
     {
         if (alpha.IsEmpty() || pos_scores.IsEmpty() || pair_scores.IsEmpty())
