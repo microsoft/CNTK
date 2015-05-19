@@ -868,6 +868,219 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class MatrixL2RegNode<float>; 
     template class MatrixL2RegNode<double>;
+    enum NCEEvalMode
+    {
+        Softmax = 0,
+        Unnormalized = 1,
+        None = 2
+    };
+    template<class ElemType>
+    class NoiseContrastiveEstimationNode : public ComputationNode < ElemType >
+    {
+        UsingComputationNodeMembers;
+    public:
+        NoiseContrastiveEstimationNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", NCEEvalMode xm_evalMode = NCEEvalMode::None)
+            : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
+            m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+                m_evalMode = xm_evalMode;
+            }
+        NCEEvalMode &EvalMode(){ return m_evalMode; }
+
+        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
+            m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
+
+        /**
+        compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
+        */
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            m_needRecomputeGradientToSoftmaxInput = false;
+            //gradient computation@yinggongzhao
+            //inputIndex should be 2 this time
+            if (m_evalMode != NCEEvalMode::None)
+                throw std::logic_error("ComputeInputPartial should only be called in training mode");
+            if (inputIndex == 0)
+                throw std::invalid_argument("ComputeInput partial should not be called for label");
+            //                                                                              samples+probs                   hidden                  embedding
+            Inputs(inputIndex)->GradientValues().AssignNCEDerivative(m_ncePrediction, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), inputIndex);
+        }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
+        {
+            throw std::logic_error("NCECrossEntropyWithSoftmax node should never be in a loop.");
+        }
+
+        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+            Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, true, inputGradientValues);
+        }
+
+        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& obs, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+            Matrix<ElemType>::MultiplyAndAdd(obs, false, gradientValues, false, inputGradientValues);
+        }
+
+        static void WINAPI ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
+        {
+            Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
+            Matrix<ElemType>::Scale(gradientValues, inputGradientValues);
+        }
+
+        virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+        {
+            if (m_evalMode == NCEEvalMode::Softmax || Inputs(0)->FunctionValues().GetNumRows() == 1)
+            {
+                // evaluation uses softmax
+                m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
+#pragma omp parallel for
+                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
+                for (int j = 0; j < Inputs(3)->FunctionValues().GetNumRows(); j++)
+                    m_logSoftmax(i, j) += Inputs(3)->FunctionValues()(j, 0);
+                m_logSoftmax.InplaceLogSoftmax(false);
+                FunctionValues().Resize(1, 1);
+                FunctionValues().SetValue(0);
+                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
+                    FunctionValues()(0, 0) -= m_logSoftmax(i, (size_t)Inputs(0)->FunctionValues()(0, i));
+                ElemType val = FunctionValues()(0, 0);
+                val *= 1;
+            }
+            else if (m_evalMode == NCEEvalMode::Unnormalized)
+            {
+                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+            }
+            else
+            {
+                // training criterion uses NCE
+                //likelihood                                         samples+probs                        hidden                       embedding            bias
+                FunctionValues().AssignNoiseContrastiveEstimation(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_ncePrediction);
+            }
+            m_needRecomputeGradientToSoftmaxInput = true;
+        }
+
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
+        {
+            throw std::logic_error("NCECrossEntropyWithSoftmax node should never be in a loop.");
+        }
+
+        /**
+        Inputs: [0] label in dense matrix in [4 x T]
+        the first row is the word index, the second row is the class index, the third row is the first word index of the class
+        the last row is the first word index of the next class
+        [1] hidden layer activity to the node in [hdsize x T]. for a simple rnn, this is the hidden layer activty
+        [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
+        [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
+        */
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 4)
+                throw std::logic_error("NoiseContrastiveEstimationNode criterion requires four inputs.");
+
+            if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
+                throw std::logic_error("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
+
+            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
+            {
+                throw std::logic_error("The Matrix<ElemType>  dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
+            }
+            if (!(Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols())) // label and input same obs numbers
+            {
+                throw std::logic_error("The Matrix<ElemType>  dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
+            }
+            //if (!(Inputs(0)->FunctionValues().GetNumRows() == 3)) // label needs to be 4 rows
+            //{
+            //  throw std::logic_error("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
+            // }
+
+            //cerr << Inputs(3)->FunctionValues().GetNumCols() << "\t" << Inputs(0)->FunctionValues().GetNumCols() << endl;
+            //if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
+            //{
+            //   throw std::logic_error("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
+            // }
+            FunctionValues().Resize(1, 1);
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, false);
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
+            const ComputationNodePtr inputweight, const ComputationNodePtr biasWeight)
+        {
+            m_children.resize(4);
+            m_children[0] = label;
+            m_children[1] = input;
+            m_children[2] = inputweight;
+            m_children[3] = biasWeight;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_logSoftmax.GetDeviceId() != deviceId)
+                    m_logSoftmax.TransferFromDeviceToDevice(m_logSoftmax.GetDeviceId(), deviceId, true);
+                if (m_softMax.GetDeviceId() != deviceId)
+                    m_softMax.TransferFromDeviceToDevice(m_softMax.GetDeviceId(), deviceId, true);
+                if (m_grdToSoftMaxInput.GetDeviceId() != deviceId)
+                    m_grdToSoftMaxInput.TransferFromDeviceToDevice(m_grdToSoftMaxInput.GetDeviceId(), deviceId, true);
+            }
+        }
+
+        // copy constructor
+        NoiseContrastiveEstimationNode(const NoiseContrastiveEstimationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new NoiseContrastiveEstimationNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    protected:
+        Matrix<ElemType> m_logSoftmax;
+        Matrix<ElemType> m_softMax;
+        Matrix<ElemType> m_ncePrediction;
+
+        /// gradient of cross entropy with respect to the input of softmax
+        /// a 1 row by \sum_t m_nbrWordsInEachTime[t] vector
+        /// one slice of size m_nbrWordsInEachTime[t] saves the input to softmax for word y_t
+        Matrix<ElemType> m_grdToSoftMaxInput;
+        bool m_needRecomputeGradientToSoftmaxInput;
+
+        size_t m_nbrNoise;
+        //size_t           m_nbrCls;//number class
+        size_t           m_totalNbrWords;
+    private:
+        NCEEvalMode m_evalMode;
+    };
+    template class NoiseContrastiveEstimationNode<float>;
+    template class NoiseContrastiveEstimationNode<double>;
 
     //calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
     // need to provide class probabilty from external node

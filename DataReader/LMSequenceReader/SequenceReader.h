@@ -14,7 +14,7 @@
 #include <map>
 #include <vector>
 #include "minibatchsourcehelpers.h"
-
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -22,7 +22,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define STRIDX2CLS L"idx2cls"
 #define CLASSINFO  L"classinfo"
-    
+
+#define STRIDX2PROB L"idx2prob"
 #define MAX_STRING  2048
 
 enum LabelKind
@@ -32,6 +33,60 @@ enum LabelKind
     labelNextWord = 2,  // sentence mapping (predicts next word)
     labelOther = 3, // some other type of label
 };
+            
+enum ReaderMode
+{
+    Softmax = 0,  // no labels to worry about
+    Class = 1, // category labels, creates mapping tables
+    NCE = 2,  // sentence mapping (predicts next word)
+    None = 3, // some other type of label
+};
+
+template <typename Count>
+class noiseSampler {
+    std::vector<double> m_prob, m_log_prob;
+    std::uniform_int_distribution<Count> unif_int;
+    bool uniform_sampling;
+    double uniform_prob;
+    double uniform_log_prob;
+    std::piecewise_constant_distribution<double> d;
+    std::mt19937 rng;
+public:
+    noiseSampler(){ }
+    noiseSampler(const std::vector<double> &counts, bool xuniform_sampling = false)
+        :uniform_sampling(xuniform_sampling), rng(1234)
+    {
+        size_t k = counts.size();
+        uniform_prob = 1.0 / k;
+        uniform_log_prob = std::log(uniform_prob);
+        std::vector<double> vn(counts.size() + 1);
+        for (int i = 0; i < vn.size(); i++)
+            vn[i] = i;
+        d = std::piecewise_constant_distribution<double>(vn.begin(), vn.end(), counts.begin());
+        unif_int = std::uniform_int_distribution<Count>(0,(long) counts.size() - 1);
+        m_prob = d.densities();
+        m_log_prob.resize(m_prob.size());
+        for (int i = 0; i < k; i++)
+            m_log_prob[i] = std::log(m_prob[i]);
+    }
+    int size() const{ return m_prob.size(); }
+    double prob(int i) const { if (uniform_sampling) return uniform_prob; else return m_prob[i]; }
+    double logprob(int i) const { if (uniform_sampling) return uniform_log_prob; else return m_log_prob[i]; }
+
+    template <typename Engine>
+    int sample(Engine &eng) const
+    {
+        int m = unif_int(eng);
+        if (uniform_sampling)
+            return m;
+        return (int)d(eng);
+    }
+    
+    int sample()
+    {
+        return sample(this->rng);
+    }
+};
 
 template<class ElemType>
 class SequenceReader : public IDataReader<ElemType>
@@ -40,6 +95,7 @@ protected:
     bool   m_idx2clsRead; 
     bool   m_clsinfoRead;
 
+    bool   m_idx2probRead;
     std::wstring m_file; 
 public:
 	using LabelType = typename IDataReader<ElemType>::LabelType;
@@ -52,10 +108,15 @@ public:
     Matrix<ElemType>* m_id2classLocal; // CPU version
     Matrix<ElemType>* m_classInfoLocal; // CPU version
 
+    Matrix<ElemType>* m_id2Prob; // CPU version
     int class_size;
     map<int, vector<int>> class_words;
     vector<int>class_cn;
 
+    int noise_sample_size;
+    noiseSampler<long> m;
+
+    ReaderMode readerMode;
     int eos_idx, unk_idx;
 public:
 //    typedef std::string LabelType;
@@ -158,12 +219,15 @@ public:
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                        size_t m_mbStartSample, size_t actualmbsize);
     void GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
+    void GetInputProb(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     void GetClassInfo();
 
     virtual void Destroy();
     SequenceReader() {
         m_featuresBuffer=NULL; m_labelsBuffer=NULL; m_clsinfoRead = false; m_idx2clsRead = false;             
         m_cachingReader=NULL; m_cachingWriter=NULL; m_labelsIdBuffer = NULL;
+        readerMode = ReaderMode::Class;
 		/*
         delete m_featuresBufferRow;
         delete m_featuresBufferRowIdx;

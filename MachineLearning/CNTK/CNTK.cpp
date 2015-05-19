@@ -330,6 +330,8 @@ namespace Microsoft {
                     return TrainingCriterion::CrossEntropyWithSoftmax;
                 else if (s == L"squareerror")
                     return TrainingCriterion::SquareError;
+                else if (s == L"noisecontrastiveestimationnode")
+                    return TrainingCriterion::NCECrossEntropyWithSoftmax;
                 else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
                     LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax)");
                 return TrainingCriterion::ClassCrossEntropyWithSoftmax;
@@ -344,6 +346,8 @@ namespace Microsoft {
                     return EvalCriterion::CrossEntropyWithSoftmax;
                 else if (s == L"classcrossentropywithsoftmax")
                     return EvalCriterion::ClassCrossEntropyWithSoftmax;
+                else if (s == L"noisecontrastiveestimationnode")
+                    return EvalCriterion::NCECrossEntropyWithSoftmax;
                 else if (s != L"squareerror")
                     LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError)");
                 return EvalCriterion::SquareError;
