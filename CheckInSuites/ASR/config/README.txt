@@ -4,7 +4,7 @@ These scripts are similar to those in the TIMIT folder of the ExampleSetups exce
 The globals_cpu.config and globals_gpu.config differ only in which device they use and where the results are stored. 
 
 To test on CPU:
-cn.exe configFile=globals_cpu.config+<DesiredConfigFile>
+cntk configFile=globals_cpu.config+<DesiredConfigFile>
 
 To test on GPU:
-cn.exe configFile=globals_gpu.config+<DesiredConfigFile>
+cntk configFile=globals_gpu.config+<DesiredConfigFile>
