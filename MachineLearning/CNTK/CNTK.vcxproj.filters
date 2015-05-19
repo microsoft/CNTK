@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\Common\BestGpu.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\ConfigFile.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -41,16 +38,13 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="CNTK.cpp" />
+    <ClCompile Include="..\..\Common\BestGpu.cpp">
+      <Filter>GPU Interfacing</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\BestGpu.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\hostname.h">
-      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
       <Filter>Common\Include</Filter>
@@ -59,9 +53,6 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\File.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\nvml.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataReader.h">
@@ -136,6 +127,15 @@
     <ClInclude Include="..\..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\nvml.h">
+      <Filter>GPU Interfacing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\BestGpu.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -170,5 +170,13 @@
     <Filter Include="Misc">
       <UniqueIdentifier>{3c119a92-ffb2-4850-adae-01778324974d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GPU Interfacing">
+      <UniqueIdentifier>{8d99b2cc-5209-40e4-8b4b-a7616973ae3b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="prebuild.bat">
+      <Filter>Misc</Filter>
+    </None>
   </ItemGroup>
 </Project>
