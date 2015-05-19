@@ -1,0 +1,197 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\Common\ConfigFile.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DataReader.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DataWriter.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\File.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\fileutil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelEditLanguage.cpp">
+      <Filter>Model Editing</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputationNode.cpp">
+      <Filter>Nodes</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleNetworkBuilder.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="tests.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkDescriptionLanguage.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\TimerUtility.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="CNTK.cpp" />
+    <ClCompile Include="..\..\Common\BestGpu.cpp">
+      <Filter>GPU Interfacing</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\basetypes.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\File.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataReader.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DataWriter.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputationNetwork.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputationNetworkHelper.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="IComputationNetBuilder.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="IExecutionEngine.h">
+      <Filter>Execution Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelEditLanguage.h">
+      <Filter>Model Editing</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputationNode.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="NDLNetworkBuilder.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NDLUtil.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkDescriptionLanguage.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleEvaluator.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleNetworkBuilder.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleOutputWriter.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="SGD.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="SynchronousExecutionEngine.h">
+      <Filter>Execution Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\hostname.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\TimerUtility.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\Basics.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\nvml.h">
+      <Filter>GPU Interfacing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\BestGpu.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="CompositeComputationNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluationCriterionNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="TrainingCriterionNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="NonlinearityNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="LinearAlgebraNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvolutionalNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="RecurrentNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="InputAndParamNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="modelEditor.txt">
+      <Filter>Model Editing</Filter>
+    </Text>
+    <Text Include="modelEditorFromScratch.txt">
+      <Filter>Model Editing</Filter>
+    </Text>
+    <Text Include="DefaultMacros.txt">
+      <Filter>Misc</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{b3d05c7b-7bcf-4b12-bcb5-dced86717202}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{85226dda-87ba-4da6-af04-563d0ce23b94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Editing">
+      <UniqueIdentifier>{53c3735f-1374-4044-ab58-8a646c95a5e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Execution Engine">
+      <UniqueIdentifier>{3ddfc109-3a90-45f5-91e8-1930759cfe9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Nodes">
+      <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Misc">
+      <UniqueIdentifier>{3c119a92-ffb2-4850-adae-01778324974d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU Interfacing">
+      <UniqueIdentifier>{8d99b2cc-5209-40e4-8b4b-a7616973ae3b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="prebuild.bat">
+      <Filter>Misc</Filter>
+    </None>
+  </ItemGroup>
+</Project>

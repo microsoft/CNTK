@@ -27,9 +27,6 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UCIFastReader.h" />
     <ClInclude Include="UCIParser.h" />
-    <ClInclude Include="minibatchsourcehelpers.h">
-      <Filter>Duplicates to remove</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -52,9 +49,6 @@
     </Filter>
     <Filter Include="Common\Include">
       <UniqueIdentifier>{0dbad9d8-ce99-4f36-b871-3b98a27f58c2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Duplicates to remove">
-      <UniqueIdentifier>{1032308c-b577-4b1e-9f49-9570b93800ec}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
