@@ -121,7 +121,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>CNTKMath.lib; nvml.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMath.dll;nvml.dll;CUDart64_70.dll</DelayLoadDLLs>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"; $(ProjectDir)/mpi/$(Platform)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
