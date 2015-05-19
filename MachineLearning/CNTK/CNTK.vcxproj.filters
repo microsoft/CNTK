@@ -28,14 +28,11 @@
     <ClCompile Include="SimpleNetworkBuilder.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="cn.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
-      <Filter>Main</Filter>
+      <Filter>Misc</Filter>
     </ClCompile>
     <ClCompile Include="tests.cpp">
-      <Filter>Main</Filter>
+      <Filter>Misc</Filter>
     </ClCompile>
     <ClCompile Include="NetworkDescriptionLanguage.cpp">
       <Filter>Network</Filter>
@@ -43,6 +40,7 @@
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="CNTK.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -124,10 +122,10 @@
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
-      <Filter>Main</Filter>
+      <Filter>Misc</Filter>
     </ClInclude>
     <ClInclude Include="targetver.h">
-      <Filter>Main</Filter>
+      <Filter>Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\hostname.h">
       <Filter>Common\Include</Filter>
@@ -144,7 +142,7 @@
       <Filter>Model Editing</Filter>
     </Text>
     <Text Include="DefaultMacros.txt">
-      <Filter>Main</Filter>
+      <Filter>Misc</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -166,7 +164,7 @@
     <Filter Include="Nodes">
       <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Main">
+    <Filter Include="Misc">
       <UniqueIdentifier>{3c119a92-ffb2-4850-adae-01778324974d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
