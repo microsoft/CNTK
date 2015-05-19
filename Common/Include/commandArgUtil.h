@@ -287,7 +287,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return current;
         }
 
-        //Parse - Parse the string
+        //Parse - Parse the string; segment string by top-level a=b expressions and call (virtual) ParseValue() on them
+        //(for configs, this creates a ConfigDictionary entry for each top-level a=b expression, where b can be a block in braces)
         // stringParse - string to parse
         // pos - postion to start parsing at
         void Parse(const std::string& stringParse, std::string::size_type pos=0)
