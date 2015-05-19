@@ -227,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                ResetForNoObservation(Inputs(inputIndex)->GradientValues());
+                ResetForNoLabels(Inputs(inputIndex)->GradientValues());
             }
 
         }
@@ -272,8 +272,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            ResetForNoObservation(Inputs(0)->FunctionValues());
-            ResetForNoObservation(Inputs(1)->FunctionValues());
+            ResetForNoLabels(Inputs(0)->FunctionValues());
+            ResetForNoLabels(Inputs(1)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight);
 #ifdef DEBUG_DECODER
             fprintf(stderr, "CE node %ls output norm = %.8e, label 1-norm = %.8e, prediction norm = %.8e, softmax norm = %.8e, logSoftMax norm = %.8e\n", this->NodeName().c_str(), FunctionValues().FrobeniusNorm(),
