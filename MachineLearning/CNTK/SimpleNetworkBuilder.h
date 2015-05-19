@@ -26,14 +26,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef enum tpRNNType { SIMPLENET=0, /// no recurrent connections
             SIMPLERNN = 1, LSTM=2, DEEPRNN=4, CLASSLM = 8, 
             LBLM=16,
-            NPLM=32, CLASSLSTM=64, TENSORIOLSTM=128} RNNTYPE; 
+            NPLM = 32, CLASSLSTM = 64, NCELSTM = 128, TENSORIOLSTM = 256} RNNTYPE;
+
 
     enum class TrainingCriterion : int
     {
         CrossEntropyWithSoftmax,
         CrossEntropy,
         SquareError,
-        ClassCrossEntropyWithSoftmax
+        ClassCrossEntropyWithSoftmax,
+        NCECrossEntropyWithSoftmax
     };
 
     enum class EvalCriterion : int
@@ -42,7 +44,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CrossEntropy,
         SquareError,
         ErrorPrediction,
-        ClassCrossEntropyWithSoftmax
+        ClassCrossEntropyWithSoftmax,
+
+        NCECrossEntropyWithSoftmax
     };
 
     extern TrainingCriterion ParseTrainingCriterionString(wstring s);
@@ -134,6 +138,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_rnnType= NPLM;
             if (std::find(strType.begin(), strType.end(), L"CLASSLSTM") != strType.end())
                 m_rnnType= CLASSLSTM;
+            if (std::find(strType.begin(), strType.end(), L"NCELSTM") != strType.end())
+                m_rnnType = NCELSTM;
             if (std::find(strType.begin(), strType.end(), L"TENSORIOLSTM") != strType.end())
                 m_rnnType= TENSORIOLSTM;
         }
@@ -174,6 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_cls2index = config("cls2index", "");
             m_vocabSize = (int)config("vocabSize", "-1");
             m_nbrCls = (int)config("nbrClass", "-1");
+            nce_noises = (int)config("noise_number", "-1");//nce noise
  
             Init(layers, trainingCriterion, evalCriterion, outputLayerSize,
                 nonlinearFunctions, addDropoutNodes,
@@ -222,6 +229,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return BuildLSTMNetworkFromDescription(mbSize);
             if (m_rnnType == CLASSLSTM)
                 return BuildCLASSLSTMNetworkFromDescription(mbSize);
+            if (m_rnnType == NCELSTM)
+                return BuildNCELSTMNetworkFromDescription(mbSize);
             if (m_rnnType == CLASSLM)
                 return BuildClassEntropyNetwork(mbSize);
             if (m_rnnType == LBLM)
@@ -348,6 +357,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
         
+        ComputationNetwork<ElemType>& BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
         ComputationNetwork<ElemType>& BuildLSTMInputOutputTensorNetworkFromDescription(size_t mbSize = 1);        
         
         ComputationNetwork<ElemType>& BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName)
@@ -475,6 +485,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!CheckDbnTag(fstream,"ENET"))
                 throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
+            //size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
 
             label = m_net->Input(m_outputLayerSize, mbSize, L"labels");
 
@@ -597,6 +608,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             case TrainingCriterion::ClassCrossEntropyWithSoftmax:
                 output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
                 break;
+            case TrainingCriterion::NCECrossEntropyWithSoftmax:
+                output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
+                
+                break;
          default:
                 throw std::logic_error("Unsupported training criterion.");
             }
@@ -604,7 +619,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
                 (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
-                (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax)))
+                (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax) ||
+                (m_evalCriterion == EvalCriterion::NCECrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::NCECrossEntropyWithSoftmax)))
             {
                 switch (m_evalCriterion)
                 {
@@ -613,6 +629,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     break;
                 case EvalCriterion::ClassCrossEntropyWithSoftmax:
                     output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);
+                    break;  
+                case EvalCriterion::NCECrossEntropyWithSoftmax:
+                    output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"NoiseContrastiveEstimationNode" : evalNodeName);
                     break;
                 case EvalCriterion::SquareError:
                     output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"SquareError":evalNodeName);
@@ -730,6 +749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         string m_word2class;
         int m_nbrCls;  /// number of classes
         int m_vocabSize; /// vocabulary size
+        int nce_noises;
 
     };
 

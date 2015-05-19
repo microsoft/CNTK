@@ -3524,6 +3524,70 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     }
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c)
+    {
+        if (a.GetMatrixType() != MatrixType::SPARSE)
+            NOT_IMPLEMENTED;
+
+        this->Resize(1, 1);
+        if (this->GetDeviceId() < 0)
+            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *this->m_CPUMatrix);
+        else
+            a.m_GPUMatrix->AssignNCEUnnormalizedEval(*b.m_GPUMatrix, *c.m_GPUMatrix, *this->m_GPUMatrix);
+        return *this;
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp)
+    {
+        if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
+            throw std::logic_error("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
+
+        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
+            NOT_IMPLEMENTED;
+
+        //if (a.GetMatrixType() == MatrixType::DENSE)
+        //    NOT_IMPLEMENTED;
+
+        this->Resize(1, 1);
+
+        if (this->GetDeviceId() < 0)
+        {
+            size_t sampleCount = a.m_CPUMatrix->GetNumElements() / a.m_CPUMatrix->GetNumRows();
+            tmp.Resize(a.GetNumRows() / 2, sampleCount);
+            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, sampleCount, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
+        }
+        else
+        {
+            size_t sampleCount = a.m_GPUSparseMatrix->GetNumNZElements() / a.m_GPUSparseMatrix->GetNumRows();
+            tmp.Resize(a.GetNumRows() / 2, sampleCount);
+            a.m_GPUMatrix->AssignNoiseContrastiveEstimation(*b.m_GPUMatrix, *c.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *this->m_GPUMatrix);
+        }
+        return *this;
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex)
+    {
+        if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
+            throw std::logic_error("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
+
+        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
+            NOT_IMPLEMENTED;
+
+        assert(tmp.GetNumRows() == a.GetNumRows() / 2);
+        if (this->GetDeviceId() < 0)
+        {
+            //samples                           gradient           hidden               embedding            embedding/hidden
+            a.m_CPUMatrix->AssignNCEDerivative(*tmp.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, inputIndex, *m_CPUMatrix);
+        }
+        else
+        {
+            a.m_GPUMatrix->AssignNCEDerivative(*tmp.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, inputIndex, *m_GPUMatrix);
+        }
+        return *this;
+    }
 
     template<class ElemType>
     Matrix<ElemType>&   Matrix<ElemType>::AddAveragePoolingGradient(const Matrix<ElemType>& outputGradientBatch, 
