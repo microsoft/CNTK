@@ -4187,6 +4187,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
     }
 
+    template<class ElemType>
+    bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("HasElement: input matrix is empty.");
+
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            &a,
+            return CPUMatrix<ElemType>::HasElement(*a.m_CPUMatrix, value),
+            NOT_IMPLEMENTED; return false,
+            return GPUMatrix<ElemType>::HasElement(*a.m_GPUMatrix, value),
+            NOT_IMPLEMENTED; return false
+            );
+    }
+
     // diagnostics helper to check if matrix has a NaN
     // This is very slow.
     template<class ElemType>
