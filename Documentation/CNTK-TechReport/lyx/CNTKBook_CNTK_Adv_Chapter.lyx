@@ -1464,17 +1464,7 @@ instead.
 \end_layout
 
 \begin_layout Subsubsection
-Input
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-Input
-\end_layout
-
-\end_inset
-
-, InputValue
+InputValue
 \begin_inset Index idx
 status open
 
@@ -1484,7 +1474,17 @@ InputValue
 
 \end_inset
 
+ or Input
+\begin_inset Index idx
+status open
 
+\begin_layout Plain Layout
+Input
+\end_layout
+
+\end_inset
+
+ 
 \end_layout
 
 \begin_layout Standard
@@ -1502,12 +1502,12 @@ status open
 
 \begin_layout Plain Layout
 
-Input(rows, [cols=1], {tag=feature|label})
+InputValue(rows, [cols=1], {tag=feature|label})
 \end_layout
 
 \begin_layout Plain Layout
 
-InputValue(rows, [cols=1])
+Input(rows, [cols=1], {tag=feature|label})  #deprecated
 \end_layout
 
 \end_inset
@@ -1542,7 +1542,7 @@ ImageInput
 
 \end_inset
 
-, Image
+ or Image
 \begin_inset Index idx
 status open
 
@@ -1586,7 +1586,7 @@ Image(width, height, channels, [numImages=1],
 
 \begin_layout Plain Layout
 
-          {tag=feature|label})
+          {tag=feature|label}) #deprecated
 \end_layout
 
 \end_inset
@@ -1629,22 +1629,22 @@ CNTK uses column-major (similar to matlab) to store the matrices.
 \end_layout
 
 \begin_layout Subsubsection
-Parameter
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-Parameter
-\end_layout
-
-\end_inset
-
-, LearnableParameter
+LearnableParameter
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
 LearnableParameter
+\end_layout
+
+\end_inset
+
+ or Parameter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter
 \end_layout
 
 \end_inset
@@ -1668,21 +1668,6 @@ status open
 
 \begin_layout Plain Layout
 
-Parameter(row, [cols=1], {needGradient=true|false, 
-\end_layout
-
-\begin_layout Plain Layout
-
-          init=fixedValue|Uniform|Gaussian|fromFile, 
-\end_layout
-
-\begin_layout Plain Layout
-
-          value=0, initValueScale=number})
-\end_layout
-
-\begin_layout Plain Layout
-
 LearnableParameter(row, [cols=1], 
 \end_layout
 
@@ -1699,6 +1684,21 @@ LearnableParameter(row, [cols=1],
 \begin_layout Plain Layout
 
          value=0, initValueScale=number})
+\end_layout
+
+\begin_layout Plain Layout
+
+Parameter(row, [cols=1], {needGradient=true|false, 
+\end_layout
+
+\begin_layout Plain Layout
+
+          init=fixedValue|Uniform|Gaussian|fromFile, 
+\end_layout
+
+\begin_layout Plain Layout
+
+          value=0, initValueScale=number}) #deprecated
 \end_layout
 
 \end_inset
@@ -1782,7 +1782,7 @@ Constant
 
 \end_inset
 
-, Const
+ or Const
 \begin_inset Index idx
 status open
 
@@ -1813,7 +1813,7 @@ Constant(value, [rows=1, cols=1])
 
 \begin_layout Plain Layout
 
-Const(value, [rows=1, cols=1])
+Const(value, [rows=1, cols=1])  #deprecated
 \end_layout
 
 \end_inset
@@ -1845,7 +1845,7 @@ RectifiedLinear
 
 \end_inset
 
-, ReLU
+ or ReLU
 \begin_inset Index idx
 status open
 
@@ -1908,7 +1908,7 @@ RectifiedLinear(m)
 
 \begin_layout Plain Layout
 
-ReLU(m)
+ReLU(m) #deprecated
 \end_layout
 
 \begin_layout Plain Layout
@@ -2355,7 +2355,7 @@ KhatriRaoProduct
 
 \end_inset
 
-, ColumnwiseCrossProduct
+ or ColumnwiseCrossProduct
 \begin_inset Index idx
 status open
 
@@ -2388,7 +2388,7 @@ KhatriRaoProduct(m1, m2)
 
 \begin_layout Plain Layout
 
-ColumnwiseCrossProduct(m1, m2)
+ColumnwiseCrossProduct(m1, m2) #deprecated
 \end_layout
 
 \end_inset
@@ -2412,7 +2412,7 @@ GMMLogLikelihood
 
 \end_inset
 
-, GMMLL
+ or GMMLL
 \begin_inset Index idx
 status open
 
@@ -2447,7 +2447,7 @@ GMMLogLikelihood(UnnormedPrior, Means, LogStddev, FeatureValues)
 
 \begin_layout Plain Layout
 
-GMMLL(UnnormedPrior, Means, LogStddev, FeatureValues)
+GMMLL(UnnormedPrior, Means, LogStddev, FeatureValues) #deprecated
 \end_layout
 
 \end_inset
@@ -2497,7 +2497,7 @@ SquareError
 
 \end_inset
 
-, SE
+ or SE
 \begin_inset Index idx
 status open
 
@@ -2530,7 +2530,7 @@ SquareError(m1, m2)
 
 \begin_layout Plain Layout
 
-SE(m1, m2)
+SE(m1, m2) #deprecated
 \end_layout
 
 \end_inset
@@ -2554,7 +2554,7 @@ CrossEntropyWithSoftmax
 
 \end_inset
 
-, CEWithSM
+ or CEWithSM
 \begin_inset Index idx
 status open
 
@@ -2588,7 +2588,7 @@ CrossEntropyWithSoftmax(labels, matrix)
 
 \begin_layout Plain Layout
 
-CEWithSM(labels, matrix)
+CEWithSM(labels, matrix) #deprecated
 \end_layout
 
 \end_inset
@@ -2615,7 +2615,7 @@ ClassBasedCrossEntropyWithSoftmax
 
 \end_inset
 
-, CBCEWithSM
+ or CBCEWithSM
 \begin_inset Index idx
 status open
 
@@ -2649,7 +2649,8 @@ ClassBasedCrossEntropyWithSoftmax(labels, matrix)
 
 \begin_layout Plain Layout
 
-CBCEWithSM(labels, mainInputInfo, mainWeight, classProbBeforeSoftmax)
+CBCEWithSM(labels, mainInputInfo, mainWeight, classProbBeforeSoftmax) #deprecate
+d
 \end_layout
 
 \end_inset
@@ -2698,7 +2699,7 @@ ErrorPrediction
 
 \end_inset
 
-, ClassificationError
+ or ClassificationError
 \begin_inset Index idx
 status open
 
@@ -2761,7 +2762,7 @@ CosDistance
 
 \end_inset
 
-, CosDist
+ or CosDist
 \begin_inset Index idx
 status open
 
@@ -2792,7 +2793,7 @@ CosDistance(m1, m2)
 
 \begin_layout Plain Layout
 
-CosDist(m1, m2)
+CosDist(m1, m2) #deprecated
 \end_layout
 
 \end_inset
@@ -2816,7 +2817,7 @@ CosDistanceWithNegativeSamples
 
 \end_inset
 
-, CosWithNegSamples
+ or CosWithNegSamples
 \begin_inset Index idx
 status open
 
@@ -2862,7 +2863,7 @@ CosDistanceWithNegativeSamples(m1, m2, numShifts, numNegSamples)
 
 \begin_layout Plain Layout
 
-CosWithNegSamples(m1, m2, numShifts, numNegSamples)
+CosWithNegSamples(m1, m2, numShifts, numNegSamples) #deprecated
 \end_layout
 
 \end_inset
@@ -2895,7 +2896,7 @@ MatrixL1Reg
 
 \end_inset
 
-, L1Reg
+ or L1Reg
 \begin_inset Index idx
 status open
 
@@ -2915,7 +2916,7 @@ MatrixL2Reg
 
 \end_inset
 
-, L2Reg
+ or L2Reg
 \begin_inset Index idx
 status open
 
@@ -2948,7 +2949,7 @@ MatrixL1Reg(m)
 
 \begin_layout Plain Layout
 
-L1Reg(m)
+L1Reg(m) #deprecated
 \end_layout
 
 \begin_layout Plain Layout
@@ -2958,7 +2959,7 @@ MatrixL2Reg(m)
 
 \begin_layout Plain Layout
 
-L2Reg(m)
+L2Reg(m) #deprecated
 \end_layout
 
 \end_inset
@@ -3063,7 +3064,7 @@ PerDimMeanVarNormalization
 
 \end_inset
 
-, PerDimMVNorm
+ or PerDimMVNorm
 \begin_inset Index idx
 status open
 
@@ -3095,7 +3096,7 @@ PerDimMeanVarNormalization(m, mean, invStdDev)
 
 \begin_layout Plain Layout
 
-PerDimMVNorm(m, mean, invStdDev)
+PerDimMVNorm(m, mean, invStdDev) #deprecated
 \end_layout
 
 \end_inset
@@ -3128,7 +3129,7 @@ PerDimMeanVarDeNormalization
 
 \end_inset
 
-, PerDimMVDeNorm
+ or PerDimMVDeNorm
 \begin_inset Index idx
 status open
 
@@ -3163,7 +3164,7 @@ PerDimMeanVarDeNormalization(m, mean, invStdDev)
 
 \begin_layout Plain Layout
 
-PerDimMVDeNorm(m, mean, invStdDev)
+PerDimMVDeNorm(m, mean, invStdDev) #deprecated
 \end_layout
 
 \end_inset
@@ -3249,7 +3250,7 @@ Convolution
 
 \end_inset
 
-, Convolve
+ or Convolve
 \begin_inset Index idx
 status open
 
@@ -3311,7 +3312,7 @@ Convolve(w, image, kernelWidth, kernelHeight,
 
 \begin_layout Plain Layout
 
-            maxTempMemSizeInSamples=0])
+            maxTempMemSizeInSamples=0]) #deprecated
 \end_layout
 
 \end_inset
@@ -5266,7 +5267,7 @@ SetInput
 
 \end_inset
 
-, SetNodeInput
+ or SetNodeInput
 \begin_inset Index idx
 status open
 
@@ -5326,7 +5327,7 @@ SetInputs
 
 \end_inset
 
-, SetNodeInputs
+ or SetNodeInputs
 \begin_inset Index idx
 status open
 
@@ -5592,7 +5593,7 @@ Remove
 
 \end_inset
 
-, RemoveNode
+ or RemoveNode
 \begin_inset Index idx
 status open
 
@@ -5612,7 +5613,7 @@ Delete
 
 \end_inset
 
-, DeleteNode
+ or DeleteNode
 \begin_inset Index idx
 status open
 
@@ -5638,12 +5639,12 @@ status open
 
 \begin_layout Plain Layout
 
-Remove(node, [node2, node3])
+Remove(node, [node2, node3]) #deprecated
 \end_layout
 
 \begin_layout Plain Layout
 
-Delete(node, [node2, node3])
+Delete(node, [node2, node3]) #deprecated
 \end_layout
 
 \begin_layout Plain Layout
