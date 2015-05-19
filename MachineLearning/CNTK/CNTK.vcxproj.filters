@@ -136,6 +136,21 @@
     <ClInclude Include="TrainingCriterionNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="NonlinearityNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="LinearAlgebraNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvolutionalNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="RecurrentNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="InputAndParamNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

@@ -5,15 +5,17 @@
 //
 #pragma once
 
-#include "Basics.h"
-#include "ComputationNetwork.h"
-#include "IComputationNetBuilder.h"
-#include <string>
-#include "commandArgUtil.h"
-#include "Matrix.h"
 #include <stdexcept>
 #include <regex>
+#include <string>
+
+#include "Basics.h"
+#include "Matrix.h"
 #include "BestGpu.h"
+
+#include "ComputationNetwork.h"
+#include "IComputationNetBuilder.h"
+#include "commandArgUtil.h"
 
 #pragma warning (disable: 4661)
 

@@ -122,9 +122,9 @@ bool EqualInsensitive(std::wstring& string1, const std::wstring& string2, const 
 
 // ++ operator for this enum, so loops work
 NDLPass &operator++(NDLPass &ndlPass) {
-  assert(ndlPass != ndlPassMax);
-  ndlPass = static_cast<NDLPass>(ndlPass + 1);
-  return ndlPass;
+    assert(ndlPass != ndlPassMax);
+    ndlPass = static_cast<NDLPass>(ndlPass + 1);
+    return ndlPass;
 }
 
 // CheckFunction - check to see if we match a function name

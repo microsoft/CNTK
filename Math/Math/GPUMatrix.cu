@@ -1837,7 +1837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(GetNumRows() == a.GetNumRows());
         assert(GetNumCols() == b.GetNumRows());
         assert(a.GetNumCols() == b.GetNumRows());
-        c;  // TODO: this function seems like a stub
+        a; b; c;  // TODO: this function seems like a stub
         /*
         EnsureAuxMemory();
         int p = 512;

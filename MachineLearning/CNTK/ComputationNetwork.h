@@ -17,16 +17,23 @@
 #include <fstream>
 #include <sstream>
 #include <stdlib.h>
-#include "ComputationNode.h"
-#include "TrainingCriterionNodes.h"
-#include "CompositeComputationNodes.h"
-#include "EvaluationCriterionNodes.h"
-#include "File.h"
-#include "Matrix.h"
-#include "commandArgUtil.h"
 #include <iostream>
 #include <regex>
 #include <chrono>
+
+#include "File.h"
+#include "Matrix.h"
+#include "commandArgUtil.h" // for nocase_compare
+
+#include "ComputationNode.h"
+#include "InputAndParamNodes.h"
+#include "LinearAlgebraNodes.h"
+#include "NonlinearityNodes.h"
+#include "ConvolutionalNodes.h"
+#include "RecurrentNodes.h"
+#include "TrainingCriterionNodes.h"
+#include "CompositeComputationNodes.h"
+#include "EvaluationCriterionNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>

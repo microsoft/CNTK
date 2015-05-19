@@ -9,6 +9,7 @@
 
 #include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
 
+#define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
 // ===========================================================================
 // emulation of some MSVC proprietary CRT

@@ -5,17 +5,16 @@
 //
 #pragma once
 
-#include "ComputationNetwork.h"
-#include "DataReader.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <fstream>
+
 #include "Basics.h"
 #include "fileutil.h"
-#include "commandArgUtil.h"
-//#include <Windows.h>
-//#include <WinBase.h>
-#include <fstream>
+
+#include "ComputationNetwork.h"
+#include "DataReader.h"
 
 using namespace std;
 
