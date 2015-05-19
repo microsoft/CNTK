@@ -1416,8 +1416,8 @@ protected:
                     bool wrong = (std::isnan(diff) || diff > threshold);
                     if (wrong)
                     {
-                        fprintf(stderr, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
-                        sprintf(wstrtmp, "\nd%ws Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        fprintf(stderr, "\nd%ls Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
+                        sprintf(wstrtmp, "\nd%ls Numeric gradient = %e, Error BP gradient = %e\n", node->NodeName().c_str(), eGradNum, eGradErr);
                         errMsgs.push_back(wstrtmp);
                     }
                 }
