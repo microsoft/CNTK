@@ -9,6 +9,7 @@
 #include "stdafx.h"
 #define DATAWRITER_LOCAL
 #include "DataWriter.h"
+#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

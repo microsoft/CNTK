@@ -15,6 +15,7 @@
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
 #include "LUSequenceWriter.h"
+#include "commandArgUtil.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif

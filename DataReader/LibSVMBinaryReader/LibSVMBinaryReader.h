@@ -8,6 +8,7 @@
 #include "DataReader.h"
 #include "DataWriter.h"
 #include <string>
+#include "commandArgUtil.h"
 #include <map>
 #include <vector>
 #include "minibatchsourcehelpers.h"
