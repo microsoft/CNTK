@@ -446,6 +446,34 @@ void DoCreateLabelMap(const ConfigParameters& config)
 //					4)  ParameterName		-- name (regex) of the parameter node we want to perform a SVD decomposition 
 //				
 //////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//  helper function for DoParameterSVD 
+//////////////////////////////////////////////////////////////////////////
+bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
+{
+    msra::files::textreader reader(fn);
+    for (; reader;)
+    {
+        wstring line = reader.wgetline(); 
+        vector<wstring> tokens=msra::strfun::split(line, L"\t ");
+        if (tokens.size() != 2)
+            return false;
+        config[tokens[0]] = (float)msra::strfun::todouble(tokens[1]);
+    }
+    return true;
+}
+// a brief on the SVD config file usage 
+void SVDConfigFileUsage()
+{
+    fprintf(stderr, "usage of SVDConfigFile\n"); 
+    fprintf(stderr, "A SVDConfigFile is referred in main config by \"SVDConfig\"\n"); 
+    fprintf(stderr, "Each line in this file specifies a group of Learnable Parameter nodes using regex and the KeepRatio associated with that group\n");
+    fprintf(stderr, "An example: \n"); 
+    fprintf(stderr, "W0         1.0\n"); 
+    fprintf(stderr, "W[1-5]     0.4\n"); 
+    
+
+}
 template<typename ElemType> 
 void  DoParameterSVD(const ConfigParameters& config)
 {
@@ -485,36 +513,6 @@ void  DoParameterSVD(const ConfigParameters& config)
     net.PerformSVDecomposition(svdconfig);
     if (!outputmodelPath.empty())
         net.SaveToFile(outputmodelPath);
-
-}
-
-//////////////////////////////////////////////////////////////////////////
-//  helper function for DoParameterSVD 
-//////////////////////////////////////////////////////////////////////////
-bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
-{
-    msra::files::textreader reader(fn);
-    for (; reader;)
-    {
-        wstring line = reader.wgetline(); 
-        vector<wstring> tokens=msra::strfun::split(line, L"\t ");
-        if (tokens.size() != 2)
-            return false;
-        config[tokens[0]] = (float)msra::strfun::todouble(tokens[1]);
-    }
-    return true;
-}
-
-// a brief on the SVD config file usage 
-void SVDConfigFileUsage()
-{
-    fprintf(stderr, "usage of SVDConfigFile\n"); 
-    fprintf(stderr, "A SVDConfigFile is referred in main config by \"SVDConfig\"\n"); 
-    fprintf(stderr, "Each line in this file specifies a group of Learnable Parameter nodes using regex and the KeepRatio associated with that group\n");
-    fprintf(stderr, "An example: \n"); 
-    fprintf(stderr, "W0         1.0\n"); 
-    fprintf(stderr, "W[1-5]     0.4\n"); 
-    
 
 }
 
