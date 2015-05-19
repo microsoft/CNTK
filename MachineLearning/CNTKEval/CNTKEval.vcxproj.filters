@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\Common\BestGpu.cpp" />
-    <ClCompile Include="..\cn\ComputationNode.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="CNTKEval.cpp" />
@@ -21,6 +20,7 @@
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\CNTK\ComputationNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvalReader.h" />

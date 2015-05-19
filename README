@@ -25,6 +25,8 @@ You can modify the path CUDA_PATH in makefile.cpu to change your cuda path
 We use cuda-7.0 as default.
 Then add ${CUDA_PATH}/lib, ${CUDA_PATH}/lib64 to your ${LD_LIBRARY_PATH} to make sure the program links to the library correctly.
 
+... TODO: add documentation on nvml lib
+
 == Build ==
 To build the cpu version, run
 	make -f Makefile.cpu 
