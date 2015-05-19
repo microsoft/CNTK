@@ -58,8 +58,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
-        
+        // now, configString is a concatenation of lines, including parameters from the command line, with comments stripped
+
+        // expand any lines of the form include=
         configString = config.ResolveIncludeStatements(configString, resolvedConfigFiles);
+
+        // convert into a ConfigDictionary--top-level expressions of the form var=val; if val is a block in braces, it is kept verbatim (not parsed inside)
         config.FileParse(configString);
         return configString;
     }

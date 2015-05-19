@@ -21,7 +21,7 @@ private:
     msra::dbn::minibatchiterator* m_mbiter;
     msra::dbn::minibatchsource* m_frameSource;
     msra::dbn::minibatchreadaheadsource* m_readAheadSource;
-     msra::dbn::FileEvalSource* m_fileEvalSource; 
+    msra::dbn::FileEvalSource* m_fileEvalSource; 
     msra::dbn::latticesource* m_lattices;
     map<wstring,msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
     
@@ -89,6 +89,10 @@ private:
 
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
+    
+    void ExpandDotDotDot(wstring & featPath, const wstring & scpPath, wstring & scpDirCached);
+
+    
     enum InputOutputTypes
     {
         real,
