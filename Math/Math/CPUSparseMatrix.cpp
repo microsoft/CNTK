@@ -22,7 +22,7 @@
 #include <vld.h>
 #endif
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "fileutil.h"
 #include <iostream>
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this

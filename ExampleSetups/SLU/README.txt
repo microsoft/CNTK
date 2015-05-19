@@ -12,11 +12,11 @@ Modify the following files:
 * all SCP files (lists of files) in "lib/scp" to point to your feature files
 
 Run the command line with both globals.config and the desired config, separated by a +
-* for example: cn.exe configFile=globals.config+rnnlu.config
+* for example: cntk configFile=globals.config+rnnlu.config
 
 * note that full paths to config files need to be provided if you are not inside the config directory
 * for example 
-* C:\dev\cntk5\CNTKSolution\x64\Release\cn.exe configFile=C:\dev\cntk5\ExampleSetups\SLU\globals.config+C:\dev\cntk5\ExampleSetups\SLU\rnnlu.config
+* C:\dev\cntk5\CNTKSolution\x64\Release\cntk configFile=C:\dev\cntk5\ExampleSetups\SLU\globals.config+C:\dev\cntk5\ExampleSetups\SLU\rnnlu.config
 
 Scoring
 * ./score.sh 

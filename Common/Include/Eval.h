@@ -23,7 +23,7 @@
 #define EVAL_API
 #endif
 
-#include "basetypes.h"
+#include "Basics.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -68,8 +68,6 @@ class Eval : public IEvaluateModel<ElemType>, protected Plugin
 private:
     IEvaluateModel<ElemType> *m_eval;  // evaluation class pointer
 
-    virtual void Init(const std::string& config);
-
     void GetEvalClass(const std::string& config);
 
     // Destroy - cleanup and remove this class
@@ -98,7 +96,7 @@ public:
     // inputs - map from node name to input vector
     // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
-
+    virtual void Init(const std::string& config);
     virtual void ResetState();
 };
 

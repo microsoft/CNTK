@@ -745,7 +745,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter=matrices.begin();iter!=matrices.end();iter++)
             {
                 if (m_nameToTypeMap.find(iter->first)==m_nameToTypeMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n",iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ls not found in reader - cannot generate input\n",iter->first.c_str()));
 
             }
             m_checkDictionaryKeys=false;
@@ -1168,7 +1168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (matrices.find(iter->first)==matrices.end())
                 {
-                    fprintf(stderr,"GetMinibatchToWrite: feature node %S specified in reader not found in the network\n",iter->first.c_str());
+                    fprintf(stderr,"GetMinibatchToWrite: feature node %ls specified in reader not found in the network\n",iter->first.c_str());
                     throw std::runtime_error("GetMinibatchToWrite: feature node specified in reader not found in the network.");
                 }
             }
@@ -1176,7 +1176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter=matrices.begin();iter!=matrices.end();iter++)
             {
                 if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ls not found in reader - cannot generate input\n",iter->first.c_str()));
             }
             */
             m_checkDictionaryKeys=false;

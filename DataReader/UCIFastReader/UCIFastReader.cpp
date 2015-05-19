@@ -231,12 +231,12 @@ void UCIFastReader<ElemType>::WriteLabelFile()
             {
                 labelFile << m_mapIdToLabel[i] << '\n';
             }
-            fprintf(stderr, "label file %S written to disk\n", m_labelFileToWrite.c_str());
+            fprintf(stderr, "label file %ls written to disk\n", m_labelFileToWrite.c_str());
             m_labelFileToWrite.clear();
         }
         else if (!m_cachingWriter)
         {
-            fprintf(stderr, "WARNING: file %S NOT written to disk yet, will be written the first time the end of the entire dataset is found.\n", m_labelFileToWrite.c_str());
+            fprintf(stderr, "WARNING: file %ls NOT written to disk yet, will be written the first time the end of the entire dataset is found.\n", m_labelFileToWrite.c_str());
         }
     }
 }
@@ -381,7 +381,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring file = configFeatures("file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading uci file %S\n", file.c_str());
+        fprintf(stderr, "reading uci file %ls\n", file.c_str());
 
     m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels);
 
@@ -409,7 +409,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
             if (allowLabelCreation)
                 m_labelFileToWrite = labelPath;
             else
-                RuntimeError("label mapping file %S not found, can be created with a 'createLabelMap' command/action\n", labelPath.c_str());
+                RuntimeError("label mapping file %ls not found, can be created with a 'createLabelMap' command/action\n", labelPath.c_str());
         }
     }
 
@@ -610,7 +610,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
             m_parser.SetParseMode(ParseNormal);
             if (!m_labelFileToWrite.empty())
             {
-                fprintf(stderr, "WARNING: file %S NOT written to disk, label file will only be written when starting epochs at the beginning of the dataset\n", m_labelFileToWrite.c_str());
+                fprintf(stderr, "WARNING: file %ls NOT written to disk, label file will only be written when starting epochs at the beginning of the dataset\n", m_labelFileToWrite.c_str());
                 m_labelFileToWrite.clear();
                 RuntimeError("LabelMappingFile not provided in config, must be provided if not starting from epoch Zero (0)");
             }
