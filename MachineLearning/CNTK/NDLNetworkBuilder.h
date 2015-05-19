@@ -8,7 +8,7 @@
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
 #include "IExecutionEngine.h"
-#include "basetypes.h"
+#include "Basics.h"
 #include <string>
 #include "commandArgUtil.h"
 #include "DataReader.h"
