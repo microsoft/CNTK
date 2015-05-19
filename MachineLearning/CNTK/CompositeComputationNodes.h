@@ -1,5 +1,5 @@
 ﻿//
-// <copyright file="CompositeComputationNode.h" company="Microsoft">
+// <copyright file="CompositeComputationNodes.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <list>
 #include "ComputationNode.h"
-#include "TrainingCriterionNode.h"
+#include "TrainingCriterionNodes.h"
 #include <iostream> 
 
 #define TWO_PI 6.283185307f

@@ -18,9 +18,9 @@
 #include <sstream>
 #include <stdlib.h>
 #include "ComputationNode.h"
-#include "TrainingCriterionNode.h"
-#include "CompositeComputationNode.h"
-#include "EvaluationCriterionNode.h"
+#include "TrainingCriterionNodes.h"
+#include "CompositeComputationNodes.h"
+#include "EvaluationCriterionNodes.h"
 #include "File.h"
 #include "Matrix.h"
 #include "commandArgUtil.h"

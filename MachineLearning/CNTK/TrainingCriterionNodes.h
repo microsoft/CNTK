@@ -1,5 +1,5 @@
 //
-// <copyright file="TrainingCriterionNode.h" company="Microsoft">
+// <copyright file="TrainingCriterionNodes.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
