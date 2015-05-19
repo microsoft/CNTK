@@ -257,31 +257,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to 0 for any elements that correspond to noobservation
         */
-        void ResetForNoObservation(Matrix<ElemType>& toChange)
+        void ResetForNoLabels(Matrix<ElemType>& toChange)
         {
-            size_t nT = toChange.GetNumCols();
-            size_t nd = toChange.GetNumRows();
-            size_t nS = m_sentenceSeg.GetNumRows();
-            Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
-            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
-            Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
-
-            colBegin.Resize(nS, nS);
-            colSeg.Resize(nS, 1);
-            newfunc.Resize(nd, nS);
-            for (int utt_t = 0; utt_t < nT; utt_t += nS)
+//            if (Matrix<ElemType>::HasElement(m_sentenceSeg, NO_LABELS) == false)
             {
-                size_t j = utt_t / nS;
-                colSeg.SetValue(m_sentenceSeg.ColumnSlice(j, 1));
-                colSeg += SENTENCE_MIDDLE;
-                colSeg.InplaceTruncateBottom(SENTENCE_BEGIN);
-                colSeg.InplaceTruncateTop(SENTENCE_MIDDLE);
-                colBegin.SetDiagonalValue(colSeg);
+                size_t nT = toChange.GetNumCols();
+                size_t nd = toChange.GetNumRows();
+                size_t nS = m_sentenceSeg.GetNumRows();
+                Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
+                Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
+                Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
 
-                /// this is the begining of this minibatch
-                Matrix<ElemType>::Multiply(toChange.ColumnSlice(utt_t, nS), false, colBegin, false, newfunc);
+                colBegin.Resize(nS, nS);
+                colSeg.Resize(nS, 1);
+                newfunc.Resize(nd, nS);
+                for (int utt_t = 0; utt_t < nT; utt_t += nS)
+                {
+                    size_t j = utt_t / nS;
+                    colSeg.SetValue(m_sentenceSeg.ColumnSlice(j, 1));
+                    colSeg += SENTENCE_MIDDLE;
+                    colSeg.InplaceTruncateBottom(SENTENCE_BEGIN);
+                    colSeg.InplaceTruncateTop(SENTENCE_MIDDLE);
+                    colBegin.SetDiagonalValue(colSeg);
 
-                toChange.ColumnSlice(utt_t, nS).SetValue(newfunc);
+                    /// this is the begining of this minibatch
+                    Matrix<ElemType>::Multiply(toChange.ColumnSlice(utt_t, nS), false, colBegin, false, newfunc);
+
+                    toChange.ColumnSlice(utt_t, nS).SetValue(newfunc);
+                }
             }
         }
 
@@ -5151,11 +5154,11 @@ protected:  \
         }
 
         /**
-        This function returns output from the previous time instance.For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from colBegin.In case of sentence begining, the state activity is set to an initial value.The colBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_OBSERVATION, which are 0, 1, and - 1, respectively.
+        This function returns output from the previous time instance.For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from colBegin.In case of sentence begining, the state activity is set to an initial value.The colBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_LABELS, which are 0, 1, and - 1, respectively.
             To compute the initial value, we use
             prevState = colBegin * pastActivity + ~colBegin * initialStateValue
             and ~sentenceBegin is computed as - 1 * (colBegin - 1), assuming that colBegin is either 0 or 1. For example, when colBegin == 1, ~sentenceBegin == 0.
-        colBegin is truncated to the range of 0 to 1 to satisify the assumption. For NO_OBSERVATION case, it is converted to its absolute value, which is 1, and treated in ~colBegin as SENTENCE_MIDDLE, which results in 0 so that zero is output for NO_OBSERVATION case. 
+        colBegin is truncated to the range of 0 to 1 to satisify the assumption. For NO_LABELS case, it is converted to its absolute value, which is 1, and treated in ~colBegin as SENTENCE_MIDDLE, which results in 0 so that zero is output for NO_LABELS case. 
         */
         static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin)
         {

@@ -952,23 +952,35 @@ namespace Microsoft {
                             RuntimeError("Error in evaluating gradients for decoder network");
                         }
                         
-                        /// get the pair of encode and decoder nodes
-                        for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
-                        {
-                            /// past gradients to hidden layer activity from decoder network to encoder network
-                            ComputationNodePtr encoderNode = iter->first;
-                            ComputationNodePtr decoderNode = iter->second;
+                        try{
+                            /// get the pair of encode and decoder nodes
+                            for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
+                            {
+                                /// past gradients to hidden layer activity from decoder network to encoder network
+                                ComputationNodePtr encoderNode = iter->first;
+                                ComputationNodePtr decoderNode = iter->second;
 
-                            decoderNode->GetErrorsToPreviousMinibatch(historyMat);
-                            encoderNode->SetErrorsFromFutureMinibatch(historyMat);
+                                decoderNode->GetErrorsToPreviousMinibatch(historyMat);
+                                encoderNode->SetErrorsFromFutureMinibatch(historyMat);
+                            }
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Error in passing gradients from decoder to encoder");
                         }
 
-                        // compute gradients on encoder networks
                         Matrix<ElemType> initGradient(encoderNet.GetDeviceID());
-                        initGradient.Resize(encoderEvaluationNodes[0]->FunctionValues().GetNumRows(),
-                            encoderEvaluationNodes[0]->FunctionValues().GetNumCols());
-                        
-                        initGradient.SetValue(0);
+                        try{
+                            // compute gradients on encoder networks
+                            initGradient.Resize(encoderEvaluationNodes[0]->FunctionValues().GetNumRows(),
+                                encoderEvaluationNodes[0]->FunctionValues().GetNumCols());
+
+                            initGradient.SetValue(0);
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Error in init gradients for error propagation to encoder network");
+                        }
 
                         try{
                             encoderNet.ComputeGradient(encoderEvaluationNodes[0], false, &initGradient);

@@ -591,8 +591,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         if (mMaxSentenceLength > m_mbSize)
             throw std::runtime_error("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
 
-        /// reset sentenceending index to no_observation, which is negative
-        mSentenceEndAt.assign(mSentenceEndAt.size(), NO_OBSERVATION);
+        /// reset sentenceending index to NO_LABELS, which is negative
+        mSentenceEndAt.assign(mSentenceEndAt.size(), NO_LABELS);
 
         mtSentenceBegin.Resize(mToProcess.size(), mMaxSentenceLength);
         mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
@@ -670,7 +670,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     m_featureWordContext.push_back(tmpCxt);
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
-                    mtSentenceBegin.SetValue(k, j, (ElemType) NO_OBSERVATION);
+                    mtSentenceBegin.SetValue(k, j, (ElemType) NO_LABELS);
                 }
 
             }
@@ -886,7 +886,7 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = true;
         for (size_t i = 0; i < mToProcess.size(); i++)
         {
-            if (mSentenceEndAt[i] == NO_OBSERVATION)
+            if (mSentenceEndAt[i] == NO_LABELS)
             {
                 LogicError("BatchLUSequenceReader: minibatch should be large enough to accomodate the longest sentence");
             }

@@ -2846,7 +2846,7 @@ protected:  \
         }
 
         /**
-        get the segmentation information, SENTENECE_BEGIN, SENTENCE_MIDDLE, NO_OBSERVATION 
+        get the segmentation information, SENTENECE_BEGIN, SENTENCE_MIDDLE, NO_LABELS 
         for time at t and stream of streamid
         */
         int GetSegInfo(size_t t, size_t streamid)
@@ -2965,10 +2965,6 @@ protected:  \
                     fprintf(stderr, "LSTM node %ls last state norm = %.8e\n", this->NodeName().c_str(), mLastState.FrobeniusNorm());
 #endif
 
-                /// set output to 0 if there are no observations
-                ResetForNoObservation(FunctionValues());
-                ResetForNoObservation(mState);
-
 #ifdef DEBUG_DECODER
                 ElemType tmpnorm = FunctionValues().FrobeniusNorm();
                 if (ISCLOSE(tmpnorm, 0.834251, 0.002))
@@ -2990,7 +2986,7 @@ protected:  \
         /**
         Prepare history for LSTMnode
 
-        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_OBSERVATION, which are 0, 1, and -1, respectively. 
+        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_LABELS, which are 0, 1, and -1, respectively. 
         To compute the initial value, we use
         prevState = sentenceBegin * pastActivity + ~sentenceBegin * initialStateValue
         and ~sentenceBegin is computed as -1*(sentenceBegin - 1), assuming that sentenceBegin is either 0 or 1. For example, when sentenceBegin == 1, ~sentenceBegin == 0. 
@@ -3079,7 +3075,7 @@ protected:  \
                 {
                     /// if uses errors from future minibatch
                     if ((GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && utt_t == total_utt_t - 1) /// last time 
-                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_OBSERVATION) /// future observation is no observation
+                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_LABELS) /// future observation is no observation
                         )
                     {
                         error.ColumnSlice(utt_id, 1) += obs_error_from_future_minibatch.ColumnSlice(utt_id, 1);
@@ -3091,9 +3087,9 @@ protected:  \
 
             Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
             colBegin.SetValue(sentenceBegin.ColumnSlice(utt_t, 1));
-            colBegin.InplaceTruncateBottom(NO_OBSERVATION);
+            colBegin.InplaceTruncateBottom(NO_LABELS);
             colBegin.InplaceTruncateTop(SENTENCE_BEGIN);
-            colBegin += fabs((ElemType)NO_OBSERVATION); /// raise this so that -1 -> 0 and therefore 
+            colBegin += fabs((ElemType)NO_LABELS); /// raise this so that -1 -> 0 and therefore 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
             colSeg.SetDiagonalValue(colBegin);
