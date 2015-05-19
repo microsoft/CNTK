@@ -9,20 +9,7 @@
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
-#include "ComputationNetwork.h"
-#include "ComputationNode.h"
-#include "DataReader.h"
-#include "DataWriter.h"
-#include "SimpleNetworkBuilder.h"
-#include "NDLNetworkBuilder.h"
-#include "SynchronousExecutionEngine.h"
-#include "ModelEditLanguage.h"
-#include "SGD.h"
 #include <string>
-#include "Basics.h"
-#include "commandArgUtil.h"
-#include "SimpleEvaluator.h"
-#include "SimpleOutputWriter.h"
 #include <chrono>
 #include <algorithm>
 #if defined(_WIN32)
@@ -37,6 +24,20 @@
 #include <iostream>
 #include <queue>
 #include <set>
+
+#include "Basics.h"
+#include "ComputationNetwork.h"
+#include "ComputationNode.h"
+#include "DataReader.h"
+#include "DataWriter.h"
+#include "SimpleNetworkBuilder.h"
+#include "NDLNetworkBuilder.h"
+#include "SynchronousExecutionEngine.h"
+#include "ModelEditLanguage.h"
+#include "SGD.h"
+#include "commandArgUtil.h"
+#include "SimpleEvaluator.h"
+#include "SimpleOutputWriter.h"
 #include "BestGpu.h"
 
 
@@ -1125,8 +1126,10 @@ int wmain(int argc, wchar_t* argv[])
 }
 
 #ifdef __UNIX__
+/// UNIX main function converts arguments in UTF-8 encoding and passes to Visual-Studio style wmain() which takes wchar_t strings.
 int main(int argc, char* argv[])
 {
+    // TODO: change to STL containers
     wchar_t **wargs = new wchar_t*[argc];
     for (int i = 0; i < argc; ++i)
     {

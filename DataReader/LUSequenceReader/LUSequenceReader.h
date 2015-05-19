@@ -10,6 +10,7 @@
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "LUSequenceParser.h"
+#include "commandArgUtil.h" // for intargvector
 #include <string>
 #include <map>
 #include <vector>

@@ -6,6 +6,7 @@
 // HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
 #include "DataReader.h"
+#include "commandArgUtil.h" // for intargvector
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

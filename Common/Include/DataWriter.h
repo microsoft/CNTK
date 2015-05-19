@@ -27,7 +27,6 @@
 #include "Matrix.h"
 #include <map>
 #include <string>
-#include "commandArgUtil.h"
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {

@@ -11,6 +11,22 @@
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace std;
+
+    // string comparison class, so we do case insensitive compares
+    struct nocase_compare
+    {
+        // std::string version of 'less' function
+        // return false for equivalent, true for different
+        bool operator()(const std::string& left, const std::string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
+        // std::wstring version of 'less' function, used in non-config classes
+        bool operator()(const std::wstring& left, const std::wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
+    };
+
+}}}
+
 // ===========================================================================
 // emulation of some MSVC proprietary CRT
 // ===========================================================================

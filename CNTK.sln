@@ -90,6 +90,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorial", "Tutorial", "{98
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CNTK-TechReport", "CNTK-TechReport", "{EA67F51F-1FE8-462D-9F3E-01161685AD59}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\CNTK-TechReport\lyx\CNTKBook-20150518.pdf = Documentation\CNTK-TechReport\lyx\CNTKBook-20150518.pdf
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{DE1A06BA-EC5C-4E0D-BCA8-3EA555310C58}"
 	ProjectSection(SolutionItems) = preProject
@@ -107,7 +110,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lyx", "lyx", "{F9BEB27E-8AF5-464E-8D45-0000D5AFA2D3}"
 	ProjectSection(SolutionItems) = preProject
 		Documentation\CNTK-TechReport\lyx\#CNTKBook_CNTK_Programmer_Chapter.lyx# = Documentation\CNTK-TechReport\lyx\#CNTKBook_CNTK_Programmer_Chapter.lyx#
-		Documentation\CNTK-TechReport\lyx\CNTKBook-20150513.pdf = Documentation\CNTK-TechReport\lyx\CNTKBook-20150513.pdf
 		Documentation\CNTK-TechReport\lyx\CNTKBook-master.lyx = Documentation\CNTK-TechReport\lyx\CNTKBook-master.lyx
 		Documentation\CNTK-TechReport\lyx\CNTKBook_Abstract.lyx = Documentation\CNTK-TechReport\lyx\CNTKBook_Abstract.lyx
 		Documentation\CNTK-TechReport\lyx\CNTKBook_ASRDecoder_Chapter.lyx = Documentation\CNTK-TechReport\lyx\CNTKBook_ASRDecoder_Chapter.lyx

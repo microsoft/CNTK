@@ -9,6 +9,7 @@
 
 #include "DataReader.h"
 #include "DataWriter.h"
+#include "commandArgUtil.h"
 #include "SequenceParser.h"
 #include <string>
 #include <map>
