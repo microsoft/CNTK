@@ -1741,12 +1741,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         PrepareDevice();
-        //LONG64 N=(LONG64)GetNumElements();
-        //int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
+        LONG64 N=(LONG64)GetNumElements();
+        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
 
-        //_assignSigmoidDerivative<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, m_pArray, N);
+        _assignSigmoidDerivative<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, m_pArray, N);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
