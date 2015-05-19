@@ -340,7 +340,7 @@ void SequenceReader<ElemType>::WriteLabelFile()
             }
             else if (!m_cachingWriter)
             {
-                //fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                //fprintf(stderr, "WARNING: file %ls NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
                 std::wcerr << "WARNING: file " << labelInfo.fileToWrite.c_str() << " NOT written to disk, label files only written when starting at epoch zero!" << endl;
             }
         }
@@ -565,7 +565,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        //fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+        //fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
         std::wcerr << "reading sequence file" << m_file.c_str() << endl;
     }
 

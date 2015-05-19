@@ -753,7 +753,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             WCHAR str[BUFLEN];
             swprintf(str, BUFLEN, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << wstring(str);
-            swprintf(str, BUFLEN, L"HasComputed=%ws", HasComputed() ? L"true" : L"false");
+            swprintf(str, BUFLEN, L"HasComputed=%ls", HasComputed() ? L"true" : L"false");
             fstream << wstring(str);
 
             PrintNodeValuesToFile(printValues, fstream);
