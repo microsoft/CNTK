@@ -74,9 +74,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		using BaseMatrix<ElemType>::m_matrixName;
 		using BaseMatrix<ElemType>::m_format;
 		using BaseMatrix<ElemType>::m_externalBuffer;
+        using BaseMatrix<ElemType>::m_nz;
 		using BaseMatrix<ElemType>::OwnBuffer;
 		using BaseMatrix<ElemType>::GetNumElements;
 		using BaseMatrix<ElemType>::IsEmpty;
+        using BaseMatrix<ElemType>::GetArray;
 		using BaseMatrix<ElemType>::GetNumRows;
 		using BaseMatrix<ElemType>::GetNumCols;
 		using BaseMatrix<ElemType>::SetMatrixName;

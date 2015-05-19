@@ -221,7 +221,7 @@ void UCIReader<ElemType, LabelType>::Init(size_t& vdim, size_t& udim, const std:
     // set the feature count to at least one (we better have one feature...)
     assert (m_featureCount != 0);
 
-    fprintf(stderr, "reading uci file %ws", filepaths[0].c_str());
+    fprintf(stderr, "reading uci file %S", filepaths[0].c_str());
     m_file = new File(filepaths[0], fileOptionsRead | fileOptionsText | fileOptionsSequential);
     File& file = *m_file;
 

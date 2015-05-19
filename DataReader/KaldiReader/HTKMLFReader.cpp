@@ -1185,7 +1185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (matrices.find(iter->first)==matrices.end())
                 {
-                    fprintf(stderr,"GetMinibatchToWrite: feature node %ws specified in reader not found in the network\n",iter->first.c_str());
+                    fprintf(stderr,"GetMinibatchToWrite: feature node %S specified in reader not found in the network\n",iter->first.c_str());
                     throw std::runtime_error("GetMinibatchToWrite: feature node specified in reader not found in the network.");
                 }
             }
