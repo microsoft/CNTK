@@ -33,5 +33,5 @@ echo #define _CUDA_PATH_    %cuda_path%     >> buildinfo.h$$
 echo #endif >> buildinfo.h$$
 
 ::: update file only if it changed (otherwise CNTK.cpp will get rebuilt each time)
-fc buildinfo.h$$ buildinfo.h > NUL
-if not ERRORLEVEL 0 move /Y buildinfo.h$$ buildinfo.h
+fc buildinfo.h$$ buildinfo.h > NUL 2>1
+if ERRORLEVEL 1 move /Y buildinfo.h$$ buildinfo.h
