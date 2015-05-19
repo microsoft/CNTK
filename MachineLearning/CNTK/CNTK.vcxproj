@@ -163,11 +163,11 @@
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\nvml.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
-    <ClInclude Include="CompositeComputationNode.h" />
+    <ClInclude Include="CompositeComputationNodes.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkHelper.h" />
     <ClInclude Include="ComputationNode.h" />
-    <ClInclude Include="EvaluationCriterionNode.h" />
+    <ClInclude Include="EvaluationCriterionNodes.h" />
     <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="ModelEditLanguage.h" />
@@ -181,7 +181,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SynchronousExecutionEngine.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TrainingCriterionNode.h" />
+    <ClInclude Include="TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\BestGpu.cpp" />

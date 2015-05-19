@@ -11,14 +11,14 @@
 #include "IComputationNetBuilder.h"
 #include "SGD.h"
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+    // instantiate the core class templates
 
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    template<> atomic_ullong ComputationNode<float>::s_timeStampCounter=ATOMIC_VAR_INIT(0);
+    template<> atomic_ullong ComputationNode<float>::s_timeStampCounter = ATOMIC_VAR_INIT(0);
     template<> atomic_ullong ComputationNode<double>::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes{};

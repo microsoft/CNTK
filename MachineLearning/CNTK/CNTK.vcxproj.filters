@@ -76,13 +76,7 @@
     <ClInclude Include="ModelEditLanguage.h">
       <Filter>Model Editing</Filter>
     </ClInclude>
-    <ClInclude Include="CompositeComputationNode.h">
-      <Filter>Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="ComputationNode.h">
-      <Filter>Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="EvaluationCriterionNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="NDLNetworkBuilder.h">
@@ -109,9 +103,6 @@
     <ClInclude Include="SynchronousExecutionEngine.h">
       <Filter>Execution Engine</Filter>
     </ClInclude>
-    <ClInclude Include="TrainingCriterionNode.h">
-      <Filter>Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
     </ClInclude>
@@ -135,6 +126,15 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="CompositeComputationNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluationCriterionNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="TrainingCriterionNodes.h">
+      <Filter>Nodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
