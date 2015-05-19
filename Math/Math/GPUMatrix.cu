@@ -1741,8 +1741,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(a.GetNumRows(), a.GetNumCols());
 
         PrepareDevice();
-        LONG64 N=(LONG64)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
+        //LONG64 N=(LONG64)GetNumElements();
+        //int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
 
@@ -1760,7 +1760,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UNCONST(ElemType, a, my_a);
         UNCONST(ElemType, b, my_b);
 
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         if (do_sync) CUDA_CALL(cudaEventCreate(&done));
 
         int p = 512;
@@ -1806,7 +1806,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UNCONST(ElemType, a, my_a);
         UNCONST(ElemType, b, my_b);
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         if (do_sync) CUDA_CALL(cudaEventCreate(&done));
         int p = 512;
         int width = a.GetNumCols();
@@ -1837,6 +1837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(GetNumRows() == a.GetNumRows());
         assert(GetNumCols() == b.GetNumRows());
         assert(a.GetNumCols() == b.GetNumRows());
+        c;  // TODO: this function seems like a stub
         /*
         EnsureAuxMemory();
         int p = 512;

@@ -19,7 +19,7 @@
 #include "ModelEditLanguage.h"
 #include "SGD.h"
 #include <string>
-#include <basetypes.h>
+#include "Basics.h"
 #include "commandArgUtil.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"

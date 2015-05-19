@@ -3245,7 +3245,7 @@ __global__ void _assignNceDerivative(
         int rowIndex = i / sampleCount;
 
         ElemType er = tmp[i]; // precalculated error for this output node
-        ElemType log_pnw = val[2 * i + 1];
+        //ElemType log_pnw = val[2 * i + 1];
 
         // calculate gradients
         int loadPerThread = (width + blockDim.x - 1) / blockDim.x;
