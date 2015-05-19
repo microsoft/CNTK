@@ -362,7 +362,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
         static void ElementWisePower (ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
 
-        static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);       
+        static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
+        static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
     public:
         friend File& operator>>(File& stream, Matrix<ElemType>& M)

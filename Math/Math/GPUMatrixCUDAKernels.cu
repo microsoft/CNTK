@@ -997,6 +997,23 @@ __global__ void _areEqual(
 }
 
 template<class ElemType>
+__global__ void _hasElement(
+    const ElemType* a,
+    const LONG64 N,
+    ElemType *d_res  /// [2x1] vector. The first is the value to be compared and the second is the 0/1 to return
+    )
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    if (a[id] == d_res[0])
+    {
+        d_res[1] = 1;
+    }
+}
+
+template<class ElemType>
 __global__ void _setDiagonalValue(
     ElemType* a,
     const ElemType v,

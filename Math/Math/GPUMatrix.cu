@@ -3492,6 +3492,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.GetNumRows()  != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
             return false;
 
+        bool bResult = false;
+
         a.PrepareDevice();
         long *res = new long[1];
         res[0]=1;
@@ -3502,10 +3504,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
         _areEqual<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray,b.m_pArray,N,threshold,d_res);
         CUDA_CALL(cudaMemcpy(res,d_res,sizeof(long)*1,cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaFree(d_res));
         if (res[0]!=0)
-            return true;
+            return bResult = true;
+        delete [] res;
+        return bResult;
+    }
+
+    template<class ElemType>
+    bool GPUMatrix<ElemType>::HasElement(const GPUMatrix<ElemType>& a, const ElemType v)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("HasElement: the input matrix is empty.");
+
+        bool bResult = false; 
+        a.PrepareDevice();
+        ElemType *res = new ElemType[2];
+        res[0] = 0;
+        res[1] = v;
+        ElemType *d_res = NULL;
+        CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(ElemType) * 2));
+        CUDA_CALL(cudaMemcpy(d_res, res, sizeof(ElemType) * 2, cudaMemcpyHostToDevice));
+        long N = (long)a.GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        _hasElement<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(a.m_pArray, N, d_res);
+        CUDA_CALL(cudaMemcpy(res, d_res, sizeof(ElemType) * 2, cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaFree(d_res));
+        if (res[1] != 0)
+            bResult = true; 
         else
-            return false;
+            bResult = false;
+
+        delete [] res;
+        return bResult;
     }
 
     template<class ElemType>

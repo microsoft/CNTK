@@ -4402,6 +4402,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return c;
     }
 
+    template<class ElemType>
+    bool CPUMatrix<ElemType>::HasElement(const CPUMatrix<ElemType>& mat, const ElemType v)
+    {
+        bool bHas = false;
+
+#pragma omp parallel for     
+        for (long j = 0; j < mat.GetNumElements(); j++)
+        {
+            if (mat.m_pArray[j] == v) 
+                bHas = true;
+        }
+
+        return bHas;
+    }
+
     //		CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);
     //[this]=a .* b
     // here, a and b must be two row vectors of the same size, i.e. [1,m]
