@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\Common\hostname.h" />
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
+    <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\..\Common\Include\commandArgUtil.h" />
     <ClInclude Include="..\..\Common\Include\DataReader.h" />

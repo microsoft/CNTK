@@ -5,7 +5,7 @@
 //
 #pragma once
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
 #include <string>

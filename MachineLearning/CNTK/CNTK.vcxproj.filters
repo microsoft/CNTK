@@ -133,6 +133,9 @@
     <ClInclude Include="..\..\Common\Include\TimerUtility.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\Basics.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
