@@ -7,6 +7,12 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "ComputationNode.h"
+#include "InputAndParamNodes.h"
+#include "LinearAlgebraNodes.h"
+#include "NonlinearityNodes.h"
+#include "ConvolutionalNodes.h"
+#include "RecurrentNodes.h"
+
 #include "SimpleEvaluator.h"
 #include "IComputationNetBuilder.h"
 #include "SGD.h"

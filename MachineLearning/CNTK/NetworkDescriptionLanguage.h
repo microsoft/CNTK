@@ -4,13 +4,8 @@
 // </copyright>
 //
 #pragma once
-#include "commandArgUtil.h"
-#include "ComputationNode.h"
-#include "TrainingCriterionNodes.h"
-#include "CompositeComputationNodes.h"
-#include "EvaluationCriterionNodes.h"
+
 #include "ComputationNetwork.h"
-#include <stdarg.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

@@ -10,7 +10,6 @@
 #define EVAL_EXPORTS  // creating the exports here
 #include "Eval.h"
 #include "CNTKEval.h"
-#include "commandArgUtil.h"
 #include "SimpleOutputWriter.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection

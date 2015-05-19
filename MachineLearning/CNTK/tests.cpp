@@ -6,19 +6,20 @@
 // cn.cpp : Defines the entry point for the console application.
 //
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "stdafx.h"
+#include <string>
+#include <chrono>
+
 #include "Basics.h"
 #include "ComputationNetwork.h"
-#include "ComputationNode.h"
 #include "DataReader.h"
 #include "SimpleNetworkBuilder.h"
 #include "SGD.h"
-#include <string>
-#include "commandArgUtil.h"
 #include "SimpleEvaluator.h"
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
-#include <chrono>
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -558,4 +559,3 @@ void GenerateTemplates()
     TestCn<float>(config);
     TestCn<double>(config);
 }
-
