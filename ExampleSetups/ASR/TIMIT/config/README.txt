@@ -12,7 +12,7 @@ Modify the following files:
 * all SCP files (lists of files) in "lib/scp" to point to your feature files
 
 Run the command line with both globals.config and the desired config, separated by a +
-* for example: cn.exe configFile=globals.config+TIMIT_TrainSimpleNetwork.config
+* for example: cntk configFile=globals.config+TIMIT_TrainSimpleNetwork.config
 * note that full paths to config files need to be provided if you are not inside the config directory
 
 Path Definitions:
