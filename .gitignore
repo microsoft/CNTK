@@ -171,7 +171,8 @@ core
 # =========================
 # prebuild file 
 # =========================
-MachineLearning/cn/buildinfo.h
+MachineLearning/CNTK/buildinfo.h
+MachineLearning/CNTK/buildinfo.h$$
 
 # =========================
 # AutoTest resource 
