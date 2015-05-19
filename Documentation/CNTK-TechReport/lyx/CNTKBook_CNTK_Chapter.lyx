@@ -125,7 +125,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp.config
+cntk configFile=yourExp.config
 \end_layout
 
 \end_inset
@@ -5454,7 +5454,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp.config
+cntk configFile=yourExp.config
 \end_layout
 
 \end_inset
@@ -5574,7 +5574,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp.config stderr=c:
+cntk configFile=yourExp.config stderr=c:
 \backslash
 temp
 \backslash
@@ -5602,7 +5602,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp.config mnistTrain=[minibatchSize=256] 
+cntk configFile=yourExp.config mnistTrain=[minibatchSize=256] 
 \end_layout
 
 \end_inset
@@ -5617,7 +5617,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp.config mnistTrain=[reader=[file=mynewfile.txt]] 
+cntk configFile=yourExp.config mnistTrain=[reader=[file=mynewfile.txt]] 
 \end_layout
 
 \end_inset
@@ -5662,12 +5662,12 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp1.config+yourExp2.config 
+cntk configFile=yourExp1.config+yourExp2.config 
 \end_layout
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp1.config configFile=yourExp2.config 
+cntk configFile=yourExp1.config configFile=yourExp2.config 
 \end_layout
 
 \end_inset
@@ -5687,8 +5687,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp1.config mnistTrain=[reader=[file=mynewfile.txt]]
- 
+cntk configFile=yourExp1.config mnistTrain=[reader=[file=mynewfile.txt]] 
 \end_layout
 
 \end_inset
@@ -5711,8 +5710,8 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp1.config+yourExp2.config var1=value configFile=yourExp3.con
-fig 
+cntk configFile=yourExp1.config+yourExp2.config var1=value configFile=yourExp3.conf
+ig 
 \end_layout
 
 \end_inset
@@ -5753,7 +5752,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp2.config
+cntk configFile=yourExp2.config
 \end_layout
 
 \end_inset
@@ -5768,7 +5767,7 @@ status open
 
 \begin_layout Plain Layout
 
-cn.exe configFile=yourExp1.config+yourExp2.config
+cntk configFile=yourExp1.config+yourExp2.config
 \end_layout
 
 \end_inset
