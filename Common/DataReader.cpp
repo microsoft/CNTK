@@ -130,9 +130,9 @@ void DataReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz)
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd)
+void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
 {
-    m_dataReader->SetSentenceSegBatch(sentenceEnd);
+    m_dataReader->SetSentenceSegBatch(sentenceEnd, sentenceExistsBeginOrNoLabels);
 }
 
 template<class ElemType>

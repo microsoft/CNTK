@@ -108,7 +108,6 @@ public:
 
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceSegBatch(vector<size_t> &/*sentenceEnd*/);
-    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int);
 };

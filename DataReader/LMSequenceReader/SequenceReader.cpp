@@ -1891,12 +1891,6 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentence
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &)
-{
-    NOT_IMPLEMENTED;
-}
-
-template<class ElemType>
 bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 {
     bool ret = false;

@@ -594,13 +594,23 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         /// reset sentenceending index to NO_LABELS, which is negative
         mSentenceEndAt.assign(mSentenceEndAt.size(), NO_LABELS);
 
+        /**
+        mtSentenceBegin : a matrix with [Ns+ 1 x T]
+        the first row is 0/1 bit for wether corresponding frame has sentence beginining/no_label for any of streams
+        0 : no such case
+        1 : case exists
+        */
         mtSentenceBegin.Resize(mToProcess.size(), mMaxSentenceLength);
+        mtExistsSentenceBeginOrNoLabels.Resize(1, mMaxSentenceLength);
         mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
         DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
         mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
+        mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
 
         for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
         {
+            mtSentenceBegin.SetValue(0, j, (ElemType)0);
             for (int k = 0; k < mToProcess.size(); k++)
             {
                 size_t seq = mToProcess[k];
@@ -609,7 +619,10 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                 {
                     mSentenceBeginAt[k] = i;
                     if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
-                        mtSentenceBegin.SetValue(k, j, (ElemType) SENTENCE_BEGIN);
+                    {
+                        mtSentenceBegin.SetValue(k, j, (ElemType)SENTENCE_BEGIN);
+                        mtExistsSentenceBeginOrNoLabels.SetValue(0, j, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                    }
                 }
 
                 if (i == m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1)
@@ -671,6 +684,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
                     mtSentenceBegin.SetValue(k, j, (ElemType) NO_LABELS);
+                    mtExistsSentenceBeginOrNoLabels.SetValue(0, j, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS); // mark need matrix computation to figure out no_label position
                 }
 
             }
@@ -679,6 +693,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         mLastPosInSentence = (i == mMaxSentenceLength)?0:i;
 
         mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
+        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
     }
 
     return bDataIsThere;
@@ -739,7 +754,10 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
         Matrix<ElemType>  locObs(CPUDEVICE);
-        locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+        if (features.GetMatrixType() == DENSE)
+            locObs.SwitchToMatrixType(DENSE, features.GetFormat(), false);
+        else
+            locObs.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
 
         if (matrices.find(m_featuresName) == matrices.end())
         {
@@ -826,12 +844,16 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin)
+void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
     sentenceBegin.SetValue(mtSentenceBegin); 
     mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
+
+    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, mtExistsSentenceBeginOrNoLabels.GetDeviceId(), true);
+    sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
+    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtExistsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
 }
 
 template<class ElemType>
@@ -1131,14 +1153,14 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin)
+void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistBeginOrNolabels)
 {
     /// run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
     for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
-        (p->second)->SetSentenceSegBatch(sentenceBegin);
+        (p->second)->SetSentenceSegBatch(sentenceBegin, sentenceExistBeginOrNolabels);
         if (rows == 0)
             rows = sentenceBegin.GetNumRows();
         else
@@ -1150,12 +1172,16 @@ void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType
     }
 
     sentenceBegin.Resize(rows, cols);
+    sentenceExistBeginOrNolabels.Resize(rows, cols);
     size_t i = 0, t = 0; 
     for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         Matrix<ElemType> mtmp(sentenceBegin.GetDeviceId());
-        (p->second)->SetSentenceSegBatch(mtmp);
+        Matrix<ElemType> mtmp2(sentenceExistBeginOrNolabels.GetDeviceId());
+        
+        (p->second)->SetSentenceSegBatch(mtmp, mtmp2);
         sentenceBegin.ColumnSlice(i, col[t]).SetValue(mtmp);
+        sentenceExistBeginOrNolabels.ColumnSlice(i, col[t]).SetValue(mtmp2);
         i += col[t];
         t++;
     }

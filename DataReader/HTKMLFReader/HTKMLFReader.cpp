@@ -1536,12 +1536,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &)
-    {
-        NOT_IMPLEMENTED;
-    }
-
-    template<class ElemType>
     void HTKMLFReader<ElemType>::SetRandomSeed(int )
     {
         NOT_IMPLEMENTED;

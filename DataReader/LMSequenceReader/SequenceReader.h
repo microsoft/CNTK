@@ -179,7 +179,7 @@ public:
 
     void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
-    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/) {};
+    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/ , Matrix<ElemType>& /* sentenceExistsBeginOrNoLabels*/) { NOT_IMPLEMENTED;  };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
@@ -303,7 +303,6 @@ public:
     bool EnsureDataAvailable(size_t mbStartSample);
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
-    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/);
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
 
     void SetRandomSeed(int);
