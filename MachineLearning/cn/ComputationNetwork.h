@@ -50,7 +50,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } RecurrentInfo;
 
     public:
-        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), m_sentenceSeg(deviceId)
+        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), m_sentenceSeg(deviceId), m_sentenceExistsBeginOrNoLabels(deviceId)
         {
             m_randomSeedOffset = 0;
             m_actMiniBSize = 0;
@@ -1498,6 +1498,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        bool IsCriterionNode(ComputationNodePtr nodePtr)
+        {
+            if (nodePtr->OperationName() == L"SquareError" ||
+                nodePtr->OperationName() == L"CrossEntropyWithSoftmax" ||
+                nodePtr->OperationName() == L"CrossEntropy" ||
+                nodePtr->OperationName() == L"MatrixL1Reg" ||
+                nodePtr->OperationName() == L"MatrixL2Reg" ||
+                nodePtr->OperationName() == L"ClassBasedCrossEntropyWithSoftmax" ||
+                nodePtr->OperationName() == L"CRF")
+                return true;
+            return false;
+        }
+
         void Evaluate(const ComputationNodePtr rootNode)
         {
             try{
@@ -1520,9 +1533,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
                     if ((*nodeIter)->OperationName() == L"Delay" ||
                         (*nodeIter)->OperationName() == L"LSTM" ||
-                        (*nodeIter)->OperationName() == L"CrossEntropyWithSoftmax")
+                        IsCriterionNode(*nodeIter))
                     {
-                        (*nodeIter)->ResetBound(m_sentenceSeg);
+                        (*nodeIter)->ResetBound(m_sentenceSeg, m_sentenceExistsBeginOrNoLabels);
                     }
                 }
 
@@ -2562,6 +2575,7 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
             return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
         }
         Matrix<ElemType> m_sentenceSeg;
+        Matrix<ElemType> m_sentenceExistsBeginOrNoLabels; 
 protected:
         std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode, std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap, const bool forwardCompute) 
         {

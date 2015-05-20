@@ -802,7 +802,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t actualMBSize = net.GetActualMBSize();
                 net.SetActualMiniBatchSize(actualMBSize);
                 net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                trainSetDataReader->SetSentenceSegBatch(net.m_sentenceSeg);
+                trainSetDataReader->SetSentenceSegBatch(net.m_sentenceSeg, net.m_sentenceExistsBeginOrNoLabels);
 
                 for (auto nodeIter=nodes.begin(); nodeIter != nodes.end(); nodeIter++)
                 {
@@ -1011,7 +1011,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 net.SetActualMiniBatchSize(actualMBSize);
                 net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                trainSetDataReader->SetSentenceSegBatch(net.m_sentenceSeg); 
+                trainSetDataReader->SetSentenceSegBatch(net.m_sentenceSeg, net.m_sentenceExistsBeginOrNoLabels); 
 
 #ifndef EVALDLL
                 if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
