@@ -19,34 +19,22 @@ template<class ElemType>
 void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
     size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
 {
-    Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
-    Matrix<ElemType> colSeg(colBegin.GetDeviceId());
+    Matrix<ElemType> colSeg(sentenceBegin.GetDeviceId());
     colSeg.Resize(nStream, nStream);
     size_t nStateRow = newprevstate.GetNumRows();
 
     assert(nStream == sentenceBegin.GetNumRows());
 
-    /// only set state to init state value for segmentation = 0
-    /// to extract the segmentation == 0, perform the following operations
-    /// e.g., -1 0 1 -> 0 1 2 -> 0 1 1
-    /// -1 0 1 -> 1 0 -1 -> 2 1 0 -> 1 1 0 
-    /// 0 1 1 .* 1 1 0 -> 0 1 0 
-    /// obtain not A
+    /// only set state to init state value for segmentation = 0, and -1
+    /// e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0 
+
     Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
     colPos.SetValue(sentenceBegin); /// -1 0 1
-    colBegin.SetValue(sentenceBegin); /// -1 0 1
-    assert(colBegin.GetNumCols() == 1);
-
-    colPos += (ElemType)SENTENCE_MIDDLE; /// 0 1 2
-    colBegin -= (ElemType)SENTENCE_MIDDLE; /// -2 -1 0
-    Matrix<ElemType>::Scale((ElemType)-1.0, colBegin); /// 2 1 0
     colPos.InplaceTruncateBottom(SENTENCE_BEGIN);
-    colPos.InplaceTruncateTop(SENTENCE_MIDDLE); /// 0 1 1
-    colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
-    colBegin.InplaceTruncateTop(SENTENCE_MIDDLE); /// 1 1 0
-    colBegin.ElementMultiplyWith(colPos);  /// 0 1 0 
-    colSeg.SetDiagonalValue(colBegin);  /// 0 1 0 
-    Matrix<ElemType> ones(colBegin.GetDeviceId());
+    Matrix<ElemType>::Scale((ElemType)-1.0, colPos); 
+    colPos += SENTENCE_MIDDLE;
+    colSeg.SetDiagonalValue(colPos);  
+    Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
     ones.Resize(nStateRow, nStream);
     ones.SetValue((ElemType)1);
     /// add default state value if it is for reset
@@ -54,7 +42,7 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
 }
 
 template<class ElemType>
-void rnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& colBegin)
+void rnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& colBegin, const Matrix<ElemType>& needToCompute)
 {
     size_t ncol = functionValues.GetNumCols();
     size_t ntime = ncol / mNbr;
@@ -68,17 +56,19 @@ void rnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matri
         else
             inp = inputFunctionValues.ColumnSlice(d, mNbr);
 
-        Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
-        Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
-        colSeg.Resize(mNbr, mNbr);
-        colSeg.SetValue(0);
-        colSegPastActivity.SetValue(colBegin);
-        colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
-        colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
-        colSeg.SetDiagonalValue(colSegPastActivity);
-        Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
-        ElemType initStateValue = (ElemType) 0.1;
-        SetToInitStateValueForResetSeg<ElemType>(colBegin, mNbr, initStateValue, out);
+        if (needToCompute.ColumnSlice(d, 1).Get00Element() == 1)
+        {
+            Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
+            Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
+            colSeg.Resize(mNbr, mNbr);
+            colSeg.SetValue(0);
+            colSegPastActivity.SetValue(colBegin);
+            colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colSeg.SetDiagonalValue(colSegPastActivity);
+            Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
+            ElemType initStateValue = (ElemType) 0.1;
+            SetToInitStateValueForResetSeg<ElemType>(colBegin, mNbr, initStateValue, out);
+        }
     }
 }
 
@@ -143,13 +133,17 @@ void TestRnnEvaluateThisNodeSRP(size_t nRow = 100, size_t nCol = 1000, size_t mN
     Matrix<ElemType> colBegin(deviceID);
     Matrix<ElemType> pastActivity(deviceID);
     Matrix<ElemType> inputFunctionValues(deviceID);
+    Matrix<ElemType> needToCompute(deviceID);
 
     functionValues.Resize(nRow, nCol);
     colBegin.Resize(mNbr, 1);
     pastActivity.Resize(nRow, nCol);
     inputFunctionValues.Resize(nRow, nCol);
+    needToCompute.Resize(1, nCol / mNbr);
+    needToCompute.SetValue(0);
+    needToCompute.ColumnSlice(0, 1).SetValue(1);
     auto t_start = clock();
-    rnnEvaluateThisNodeSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues, colBegin);
+    rnnEvaluateThisNodeSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues, colBegin, needToCompute);
     auto t_end = clock();
     std::cout << "testRnnEvaluateThisNodeSRP: " << 1.0*(t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
 }
