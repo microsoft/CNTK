@@ -1,5 +1,5 @@
 # configuration file for class based RNN training
-
+# final test PPL=122.54
 ExpFolder=$ExpDir$
 ConfigFolder=$ConfigDir$
 DataFolder=$DataDir$
