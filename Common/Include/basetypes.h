@@ -1137,6 +1137,8 @@ These macros are used for sentence segmentation information.
 #define SENTENCE_BEGIN 0 
 #define SENTENCE_MIDDLE 1
 #define NO_LABELS -1
+#define EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 0
+#define NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 1
 
 template<class F>
 static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)

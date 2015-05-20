@@ -287,7 +287,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
 
-    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin);
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
 public:
     void LoadWordMapping(const ConfigParameters& readerConfig);
@@ -338,6 +338,11 @@ public:
     /// frame. 
     Matrix<ElemType> mtSentenceBegin;
 
+    /// a matrix of 1 x n_length
+    /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
+    /// 0 denotes such case is not in this frame
+    Matrix<ElemType> mtExistsSentenceBeginOrNoLabels;
+
     /// by default it is false
     /// if true, reader will set to SENTENCE_MIDDLE for time positions that are orignally correspond to SENTENCE_BEGIN
     /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
@@ -371,7 +376,7 @@ public:
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
-    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin);
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
     size_t NumberSlicesInEachRecurrentIter();
 

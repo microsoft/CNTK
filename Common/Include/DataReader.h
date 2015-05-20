@@ -63,7 +63,7 @@ public:
     virtual void SetLabelMapping(const std::wstring& , const std::map<LabelIdType, LabelType>& ) { NOT_IMPLEMENTED;  };
     virtual bool GetData(const std::wstring& , size_t , void* , size_t& , size_t ) { NOT_IMPLEMENTED;  };
     virtual bool DataEnd(EndDataType ) { NOT_IMPLEMENTED;  };
-    virtual void SetSentenceSegBatch(Matrix<ElemType>& ) { NOT_IMPLEMENTED; };
+    virtual void SetSentenceSegBatch(Matrix<ElemType>& , Matrix<ElemType>& ) { NOT_IMPLEMENTED; };
     virtual void SetRandomSeed(int) { NOT_IMPLEMENTED; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false;  }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
@@ -162,7 +162,7 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceSegBatch(Matrix<ElemType>&sentenceEnd);
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
     virtual void SetRandomSeed(int);
 
