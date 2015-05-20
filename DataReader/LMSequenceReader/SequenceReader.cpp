@@ -1972,7 +1972,12 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 
 }
 
-/// labels are in [4 x T] matrix
+/// labels are in [L x T] matrix
+/// where L depends on reader mode:
+///     4             under CLASS           [wid, class-id, beg-class, end-class]
+///     2*(noise + 1) under NCE training    [wid, prob, (noise-id, noise-prob)+]
+///     1             o.w.                  [wid]
+/// the following comments are obsolete now
 /// 1st row is the word id
 /// 2nd row is the class id of this word
 /// 3rd and 4th rows are the begining and ending indices of this class
@@ -1998,7 +2003,6 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-
 
     if (labels->GetCurrentMatrixLocation() == CPU)
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
