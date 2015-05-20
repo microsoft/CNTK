@@ -312,6 +312,8 @@ public:
 	using SequenceReader<ElemType>::m_sequence;
 	using SequenceReader<ElemType>::idx4class;
 	using SequenceReader<ElemType>::m_indexer;
+	using SequenceReader<ElemType>::m;
+	using SequenceReader<ElemType>::readerMode;
 	using SequenceReader<ElemType>::GetIdFromLabel;
 	using SequenceReader<ElemType>::GetInputToClass;
 	using SequenceReader<ElemType>::GetClassInfo;

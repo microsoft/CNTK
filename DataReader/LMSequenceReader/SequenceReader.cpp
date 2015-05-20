@@ -1050,6 +1050,7 @@ void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemTy
 
     m_idx2probRead = true;
 }
+
 template<class ElemType>
 void SequenceReader<ElemType>::GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {

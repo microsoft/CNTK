@@ -847,7 +847,11 @@ void DoTopologyPlot(const ConfigParameters& config)
 	if (!outRending.empty())
 	{
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
+#ifdef __unix__
+        system(msra::strfun::utf8(rescmd).c_str());
+#else
 		_wsystem(rescmd.c_str());
+#endif
         fprintf(stderr, "Done\n");
 	}
 }

@@ -61,7 +61,7 @@ namespace msra { namespace dbn {
                 unsigned int sampperiod = sampperiods[k];
                 size_t n = numframes[k];
                 msra::files::make_intermediate_dirs (outfile);
-                fprintf (stderr, "saveandflush: writing %d frames to %S\n", n, outfile.c_str());
+                fprintf (stderr, "saveandflush: writing %zu frames to %S\n", n, outfile.c_str());
                 msra::dbn::matrixstripe thispred (pred, firstframe, n);
                 // some sanity check for the data we've written
                 const size_t nansinf = thispred.countnaninf();
@@ -174,7 +174,7 @@ namespace msra { namespace dbn {
                 unsigned int sampperiod = sampperiods[index][k];
                 size_t n = numframes[k];
                 msra::files::make_intermediate_dirs (outfile);
-                fprintf (stderr, "saveandflush: writing %d frames to %S\n", n, outfile.c_str());
+                fprintf (stderr, "saveandflush: writing %zu frames to %S\n", n, outfile.c_str());
                 msra::dbn::matrixstripe thispred (pred, firstframe, n);
                 // some sanity check for the data we've written
                 const size_t nansinf = thispred.countnaninf();
