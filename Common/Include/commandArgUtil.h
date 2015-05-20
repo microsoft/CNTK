@@ -287,8 +287,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return current;
         }
 
-        //Parse - Parse the string; segment string by top-level a=b expressions and call (virtual) ParseValue() on them
-        //(for configs, this creates a ConfigDictionary entry for each top-level a=b expression, where b can be a block in braces)
+        // Parse - Parse the string; segment string by top-level a=b expressions and call (virtual) ParseValue() on them.
+        // This function is used at lots of places for various purposes.
+        //  - (ConfigParameters from file) config-file parsing passes in expressions of the type a1=b1 \n a2=b2 \n ..., creates a ConfigDictionary entry for each top-level a=b expression, where b can be a block in braces
+        //  - (ConfigParameters) right-hand side that is an array of parameters [ a1=b1; a2=b2 ...], with surrounding braces
+        //  - (ConfigValue) individual values are also parsed
+        //  - (ConfigArray) same as ConfigValue--the array syntax (':') is not parsed here
+        //    The above all allow ';' or newline as a separator
+        //  - (NDLScript)
+        //  - more to be added
         // stringParse - string to parse
         // pos - postion to start parsing at
         void Parse(const std::string& stringParse, std::string::size_type pos=0)
