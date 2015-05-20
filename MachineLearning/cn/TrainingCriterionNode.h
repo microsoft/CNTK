@@ -54,6 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputeInputPartialRight(Inputs(1)->GradientValues(), GradientValues(), m_leftMinusRight);
             }
+            ResetForNoLabels(Inputs(inputIndex)->GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
@@ -227,9 +228,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                ResetForNoLabels(Inputs(inputIndex)->GradientValues());
             }
-
+            ResetForNoLabels(Inputs(inputIndex)->GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
@@ -272,8 +272,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            ResetForNoLabels(Inputs(0)->FunctionValues());
-            ResetForNoLabels(Inputs(1)->FunctionValues());
+//            ResetForNoLabels(Inputs(0)->FunctionValues());
+//            ResetForNoLabels(Inputs(1)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight);
 #ifdef DEBUG_DECODER
             fprintf(stderr, "CE node %ls output norm = %.8e, label 1-norm = %.8e, prediction norm = %.8e, softmax norm = %.8e, logSoftMax norm = %.8e\n", this->NodeName().c_str(), FunctionValues().FrobeniusNorm(),
@@ -454,6 +454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
             }
+            ResetForNoLabels(Inputs(inputIndex)->GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
@@ -641,6 +642,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("MatrixL1RegNode only has one input.");
 
             ComputeInputPartialS(m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
+            ResetForNoLabels(Inputs(inputIndex)->GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
@@ -780,6 +782,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("MatrixL2RegNode only has one input.");
 
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
+            ResetForNoLabels(Inputs(inputIndex)->GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
@@ -957,7 +960,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 sz += nbr_wrd;
             }
-
+            ResetForNoLabels(Inputs(inputIndex)->GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
@@ -1319,8 +1322,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         mStartLbl, 1);
                 }
             }
-            else
-                return;
+            ResetForNoLabels(Inputs(inputIndex)->GradientValues());
         }
 
         static void ErrorSignalToPostitionDependentNode(const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& labls, const Matrix<ElemType>& postProb, Matrix<ElemType>& grd)
