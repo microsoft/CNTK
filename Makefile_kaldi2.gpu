@@ -1,0 +1,184 @@
+# WORK IN PROGRESS, not currently complete nor usable
+
+# makefile for a Linux/GCC build of CNTK
+# This needs ACML_PATH. E.g. in tcsh, say: setenv ACML_PATH C:/AMD/acml5.3.1/ifort64_mp
+
+# This is work in progress and not at all complete or usable.
+#
+# The Linux and Windows versions are not different branches, but rather build off the same
+# source files, using different makefiles. This current makefile has the purpose of enabling
+# work to make all sources compile with GCC, and also to check for GCC-compat regressions due to
+# modifications which are currently done under Windows.
+#
+# The planned steps are:
+#  - runnable non-GPU GCC-built version under Cygwin
+#     - get all CPU-only sources to compile with GCC/x64 under Cygwin    --currently ongoing work
+#     - port the dynamic-loading mechanism
+#  - runnable non-GPU version on actual Linux
+#  - enable CUDA on Linux (=makefile code and figuring out the right compiler options)
+#
+# Any help is welcome, of course!
+#
+# This makefile will be extended/completed as we go.
+#
+# You may need to do the following or something similar for all this to work
+# export LD_LIBRARY_PATH=/usr/local/acml5.3.0/gfortran64/lib:/usr/local/cuda/lib64:/usr/local/lib
+# export PATH=$PATH:/usr/local/bin:/usr/local/cuda/bin
+
+CC = g++-4.9
+NVCC = nvcc
+ARCH = x86_64
+DEVICE = gpu
+#BUILDTYPE = debug
+BUILDTYPE = release
+# comment following and uncomment the next one to enable MKL library
+#MATHLIB = acml
+MATHLIB = mkl
+# modify relevant path below for your system
+MKL_PATH = /usr/users/yzhang87/tools/composer_xe_2015.2.164
+ACML_PATH = /usr/users/yzhang87/code/acml/gfortran64
+#######
+
+BUILDFOR = $(ARCH).$(DEVICE).$(BUILDTYPE).$(MATHLIB)
+
+OBJDIR = .build/$(BUILDFOR)
+BINDIR = bin/$(BUILDFOR)
+
+ifeq ($(BUILDTYPE),debug)
+	BUILDTYPE_OPT = -g
+	GPU_BUILDTYPE_OPT = -G
+else
+	BUILDTYPE_OPT = -O4
+	GPU_BUILDTYPE_OPT =
+endif
+
+ifeq ($(MATHLIB),mkl)
+	MATHLIB_INCLUDE = $(MKL_PATH)/mkl/include
+	MATHLIB_LIB = -L$(MKL_PATH)/compiler/lib/intel64 -L$(MKL_PATH)/mkl/lib/intel64 -L$(MKL_PATH)/compiler/lib/mic -L$(MKL_PATH)/mkl/lib/mic -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
+	MATHLIB_DEFINE = -DUSE_MKL
+else
+	MATHLIB_INCLUDE = $(ACML_PATH)/include
+	MATHLIB_LIB = -L$(ACML_PATH)/lib -lacml -lm -lpthread
+	MATHLIB_DEFINE = -DUSE_ACML
+endif
+CUDA_PATH = /scratch/cuda-7.0
+CUDA_INCLUDE = $(CUDA_PATH)/include
+CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
+
+# Add KALDI (you need to add your Kaldi path into this file)
+include kaldi_vars.mk
+
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(CUDA_INCLUDE) -I $(MATHLIB_INCLUDE) $(KALDI_INCLUDES)
+
+CFLAGS = -msse3 -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(MATHLIB_DEFINE) -fopenmp -fpermissive $(KALDI_DEFINES)
+
+NVCCFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -arch=compute_20 $(KALDI_DEFINES)
+
+COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
+             Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp Common/TimerUtility.cpp
+MATH_SRC = Math/Math/Matrix.cpp Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKernels.cu Math/Math/GPUSparseMatrix.cu Math/Math/GPUWatcher.cu \
+		   Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp #Math/Math/InstantiateTemplates.cu
+CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
+          MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
+          MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
+BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
+HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
+KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp
+KALDI2READER_SRC = DataReader/Kaldi2Reader/HTKMLFWriter.cpp DataReader/Kaldi2Reader/DataWriter.cpp DataReader/Kaldi2Reader/DataReader.cpp DataReader/Kaldi2Reader/HTKMLFReader.cpp
+
+SEQUENCEREADER_SRC = DataReader/LMSequenceReader/SequenceReader.cpp DataReader/LMSequenceReader/SequenceParser.cpp DataReader/LMSequenceReader/Exports.cpp
+LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
+UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
+READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC) $(KALDIREADER_SRC) $(KALDI2READER_SRC)
+CORE_SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
+SRC =  $(READER_SRC) $(CORE_SRC)
+
+VPATH := $(sort  $(dir $(SRC)))
+
+OBJ_TMP := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SRC))
+OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(OBJ_TMP))
+CORE_OBJ_TMP := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CORE_SRC))
+CORE_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(CORE_OBJ_TMP))
+UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
+LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
+SEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SEQUENCEREADER_SRC))
+HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
+KALDIREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDIREADER_SRC))
+KALDI2READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDI2READER_SRC))
+
+DEP := $(patsubst %.o, %.d, $(OBJ))
+
+SEPARATOR = "=-----------------------------------------------------------="
+
+all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/Kaldi2Reader.so
+
+
+	ln -sf $(CURDIR)/$(BINDIR)/* bin
+
+$(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^  
+
+$(BINDIR)/LMSequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+
+$(BINDIR)/LUSequenceReader.so: $(LUSEQUENCEREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+
+$(BINDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+
+$(BINDIR)/KaldiReader.so: $(KALDIREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(KALDI_LIBS)
+
+$(BINDIR)/KaldiWriter.so: $(KALDIREADER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+
+$(BINDIR)/Kaldi2Reader.so: $(KALDI2READER_OBJ) $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(KALDI_LIBS)
+
+#$(BINDIR)/HTKMLFReader.so: ${HTKMLFREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o} $(CORE_OBJ) 
+#	@echo $(SEPARATOR)
+#	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
+
+#BinaryReader: ${BINARYREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
+#	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
+
+$(BINDIR)/cn.exe: $(CORE_OBJ)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building output for $(ARCH) with build type $(BUILDTYPE)
+	$(CC) $(BUILDTYPE_OPT) -o $@ $^ $(CUDA_LIB) $(MATHLIB_LIB) -fopenmp -ldl -fPIC 
+
+-include ${DEP}
+
+$(OBJDIR)/%.o : %.cu Makefile
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@mkdir -p $(dir $@)
+	$(NVCC) -c $< -o $@ $(BUILDTYPE_OPT) $(GPU_BUILDTYPE_OPT) $(NVCCFLAGS) $(INCFLAGS) -Xcompiler -fPIC
+
+$(OBJDIR)/%.o : %.cpp Makefile
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@mkdir -p $(dir $@)
+	$(CC) -c $< -o $@ $(BUILDTYPE_OPT) $(CPPFLAGS) $(CFLAGS) $(INCFLAGS) -fPIC -MD -MP -MF ${@:.o=.d}
+
+$(OBJDIR)/%.o : %.cc Makefile
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@mkdir -p $(dir $@)
+	$(CC) -c $< -o $@ $(BUILDTYPE_OPT) $(CPPFLAGS) $(CFLAGS) $(INCFLAGS) -fPIC -MD -MP -MF ${@:.o=.d}
+
+
+.PHONY: clean
+	
+clean:
+	rm -rf $(OBJDIR)
+	rm -rf $(BINDIR)

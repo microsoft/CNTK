@@ -1,0 +1,175 @@
+load=ndlMacroDefine
+run=ndlCreateNetwork
+
+ndlMacroDefine=[
+    # Macro definitions
+    DelayNode(x)
+    {
+        D=Delay(x, delayInput=Dout, delayTime=1);
+    }
+
+
+    MeanVarNorm(x)=[
+	xMean = Mean(x);
+    	xStdDev = InvStdDev(x)
+    	xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    ]
+ 
+    #inline Rectified Linear Feed Forward
+    RFF_R(x1, w1, b1)=RectifiedLinear(Plus(Times(w1,x1),b1))
+    #Feed Forward
+    FF(X1, W1, B1)
+    [
+        T=Times(W1,X1);
+        P=Plus(T, B1);
+    ]
+    #Base feed Forward network, defines Bias and wieght parameters
+    BFF(in, rows, cols)
+    {
+        B=Parameter(rows, init=fixedvalue, value=0)
+        W=Parameter(rows, cols)
+        FF = FF(in, w, b)
+    }
+    #RectifiedLinear Base Feed Forward
+    RBFF(in,rowCount,colCount)
+    {
+        BFF = BFF(in, rowCount, colCount);
+        RL = RectifiedLinear(BFF);
+    }
+    #Rectified Linear Feed Forward
+    RFF(X2,W2,B2)=[
+        FF = FF(X2, W2, B2);
+        RL = RectifiedLinear(FF);
+    ]
+    #RectifiedLinear Feed Forward with Dropout
+    RFFD(X3,W3,B3)
+    {
+        RFF=RFF(X3, W3, B3)
+        DO=Dropout(RFF)
+    }
+    #Sigmoid Base Feed Forward
+    SBFF(in,rowCount,colCount)
+     {
+        BFF = BFF(in, rowCount, colCount);
+        S = Sigmoid(BFF);
+    }
+    #Sigmoid Feed Forward
+    SFF(X2,W2,B2)=[
+        FF = FF(X2, W2, B2);
+        S = Sigmoid(FF);
+    ]
+    #Sigmoid Feed Forward with Dropout
+    SFFD(X3,W3,B3)
+    {
+        SFF=SFF(X3, W3, B3)
+        DO=Dropout(SFF)
+    }
+    #SoftMax Feed Forward
+    SMFF(x,y,z, labels)
+    {
+        FF = FF(x,y,z);
+        SM = CrossEntropyWithSoftmax(labels, FF)
+    }
+    #SoftMax Base Feed Forward
+    SMBFF(x,r,c, labels)
+    {
+        BFF = BFF(x,r,c);
+        SM = CrossEntropyWithSoftmax(labels, BFF)
+    }
+    
+    RFFD_R(x1, w1, b1)={Dropout(RectifiedLinear(Plus(Times(w1,x1),b1)))}
+
+    LogPrior(labels)
+    {
+	Prior=Mean(labels)
+	LogPrior=Log(Prior)
+    }   
+
+    #Sigmoid Base Feed Forward with multi input
+    SBFF_multi(in1, in2, rowCount, colCount1, colCount2)
+     {
+        BFF1 = BFF(in1, rowCount, colCount1);
+        BFF2 = BFF(in2, rowCount, colCount2);
+        B=Parameter(rowCount, init=fixedvalue, value=0.1)
+        
+        BFF_final = Plus(BFF1, BFF2)
+        S = Sigmoid(BFF_final);
+    }
+    SBFF_multi8(in1, in2, in3, in4, in5, in6, in7, in8, in9, in10, in11, rowCount, Colcount1, colCount2)
+    {
+        BFF1 = BFF(in1, rowCount, colCount1);
+        BFF2 = BFF(in2, rowCount, colCount2);
+        BFF3 = BFF(in3, rowCount, colCount2);
+        BFF4 = BFF(in4, rowCount, colCount2);
+        BFF5 = BFF(in5, rowCount, colCount2);
+        BFF6 = BFF(in6, rowCount, colCount2);
+        BFF7 = BFF(in7, rowCount, colCount2);
+        BFF8 = BFF(in8, rowCount, colCount2);
+        BFF9 = BFF(in9, rowCount, colCount2);
+        BFF10 = BFF(in10, rowCount, colCount2);
+        BFF11 = BFF(in11, rowCount, colCount2);
+        
+        BFF_final = Plus(Plus( Plus(Plus(Plus(Plus(Plus(Plus(Plus(Plus(BFF1, BFF2),BFF3),BFF4),BFF5),BFF6),BFF7),BFF8),BFF9),BFF10),BFF11);
+        S = Sigmoid(BFF_final);
+ 
+    }
+
+]
+
+ndlCreateNetwork=[
+
+	#define basic i/o
+	featDim=$featDim$
+	labelDim=$labelDim$
+	labelDim2=$phnDim$
+	hiddenDim=2048
+    bottleneckDim=80
+    bottleneckDim2=500
+	features=Input(featDim, tag=feature)
+	labels=Input(labelDim, tag=label)
+
+	statelabels=Input(labelDim2, tag=label)
+
+	cr1=Constant(0.8)
+    cr2=Constant(0.2)
+	# define network
+	featNorm = MeanVarNorm(features)
+    DNN_A_delayfeat1=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=1)
+    DNN_A_delayfeat2=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=2)
+
+    DNN_A_delayfeat3=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=3)
+    DNN_A_delayfeat4=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=4)
+    DNN_A_delayfeat5=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=5)
+    DNN_A_delayfeat6=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=6)
+    DNN_A_delayfeat7=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=7)
+    DNN_A_delayfeat8=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=8)
+    DNN_A_delayfeat9=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=9)
+    DNN_A_delayfeat10=Delay(bottleneckDim, DNN_B_L2.BFF.FF.P, delayTime=10)
+    
+    DNN_A_delayfeat=Delay(labelDim, DNN_B_CE_BFF.FF.P, delayTime=10)
+
+    DNN_A_L1 = SBFF_multi8(featNorm,DNN_A_delayfeat1,DNN_A_delayfeat2,DNN_A_delayfeat3,DNN_A_delayfeat4,DNN_A_delayfeat5,DNN_A_delayfeat6,DNN_A_delayfeat7,DNN_A_delayfeat8,DNN_A_delayfeat9,DNN_A_delayfeat10, hiddenDim, featDim, bottleneckDim)
+	DNN_A_L2 = SBFF(DNN_A_L1,hiddenDim,hiddenDim)
+	DNN_A_L2_B = SBFF(DNN_A_L1,bottleneckDim2,hiddenDim)
+	DNN_A_CE_BFF = BFF(DNN_A_L2,labelDim,hiddenDim)
+
+    
+    DNN_B_L1 = SBFF_multi(featNorm, DNN_A_L2_B.BFF.FF.P, hiddenDim, featDim, bottleneckDim2)
+    DNN_B_L2 = SBFF(DNN_B_L1, bottleneckDim, hiddenDim)
+    DNN_B_CE_BFF = BFF(DNN_B_L2, labelDim2, bottleneckDim)
+    
+
+    criterion1 = CrossEntropyWithSoftmax(labels, DNN_A_CE_BFF)
+    criterion2 = CrossEntropyWithSoftmax(statelabels, DNN_B_CE_BFF)
+    criterion = Plus(Scale(cr2,criterion2), Scale(cr1,criterion1), tag=Criteria)
+	
+	Err = ErrorPrediction(labels,DNN_A_CE_BFF,tag=Eval)
+    
+    logPrior = LogPrior(labels)	 
+
+    ScaledLogLikelihood=Minus(DNN_A_CE_BFF,logPrior,tag=Output)
+
+
+	# define output (scaled loglikelihood)
+	#ScaledLogLikelihood=Minus(CE_BFF,logPrior,tag=Output)
+]
