@@ -1264,7 +1264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
 
                 output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-                //output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+//                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 /// previously used function. now uses LSTMNode which is correct and fast
                 input = output;
                 outputFromEachLayer[offset + 1] = input;
@@ -1275,7 +1275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
 
                         output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                        //output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+//                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                         // previously used function, now uses LSTMnode, which is fast and correct
 
                         recur_idx++;

@@ -66,9 +66,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        Matrix<ElemType> m_sentenceSeg;  
+        Matrix<ElemType> m_sentenceSeg;
+        Matrix<ElemType> m_existsSentenceBeginOrNoLabels;
     public:
-        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), m_sentenceSeg(deviceId)
+        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), m_sentenceSeg(deviceId), m_existsSentenceBeginOrNoLabels(deviceId)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -209,45 +210,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ResetBound(const Matrix<ElemType> & seg)
+        virtual void ResetBound(const Matrix<ElemType> & seg, const Matrix<ElemType>& existsSentenceBeginOrNoLabels)
         {
             DEVICEID_TYPE device = m_sentenceSeg.GetDeviceId();
             m_sentenceSeg.TransferFromDeviceToDevice(device, seg.GetDeviceId(), true);
             m_sentenceSeg = seg;
             m_sentenceSeg.TransferFromDeviceToDevice(seg.GetDeviceId(), device, true);
+
+            m_existsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, existsSentenceBeginOrNoLabels.GetDeviceId(), true);
+            m_existsSentenceBeginOrNoLabels = existsSentenceBeginOrNoLabels;
+            m_existsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(existsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
         }
 
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin, 
             size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
         {
-            Matrix<ElemType> colBegin(sentenceBegin.GetDeviceId());
-            Matrix<ElemType> colSeg(colBegin.GetDeviceId());
+            Matrix<ElemType> colSeg(sentenceBegin.GetDeviceId());
             colSeg.Resize(nStream, nStream);
             size_t nStateRow = newprevstate.GetNumRows();
 
             assert(nStream == sentenceBegin.GetNumRows());
 
-            /// only set state to init state value for segmentation = 0
-            /// to extract the segmentation == 0, perform the following operations
-            /// e.g., -1 0 1 -> 0 1 2 -> 0 1 1
-            /// -1 0 1 -> 1 0 -1 -> 2 1 0 -> 1 1 0 
-            /// 0 1 1 .* 1 1 0 -> 0 1 0 
-            /// obtain not A
+            /// only set state to init state value for segmentation = 0, and -1
+            /// e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0 
+
             Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
             colPos.SetValue(sentenceBegin); /// -1 0 1
-            colBegin.SetValue(sentenceBegin); /// -1 0 1
-            assert(colBegin.GetNumCols() == 1);
-
-            colPos += (ElemType)SENTENCE_MIDDLE; /// 0 1 2
-            colBegin -= (ElemType)SENTENCE_MIDDLE; /// -2 -1 0
-            Matrix<ElemType>::Scale((ElemType)-1.0, colBegin); /// 2 1 0
             colPos.InplaceTruncateBottom(SENTENCE_BEGIN);
-            colPos.InplaceTruncateTop(SENTENCE_MIDDLE); /// 0 1 1
-            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
-            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE); /// 1 1 0
-            colBegin.ElementMultiplyWith(colPos);  /// 0 1 0 
-            colSeg.SetDiagonalValue(colBegin);  /// 0 1 0 
-            Matrix<ElemType> ones(colBegin.GetDeviceId());
+            Matrix<ElemType>::Scale((ElemType)-1.0, colPos);
+            colPos += SENTENCE_MIDDLE;
+            colSeg.SetDiagonalValue(colPos);
+            Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
             ones.Resize(nStateRow, nStream);
             ones.SetValue((ElemType)1);
             /// add default state value if it is for reset
@@ -255,29 +248,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /**
-        reset to 0 for any elements that correspond to noobservation
+        reset to error signals to 0 for any elements without labele
         */
         void ResetForNoLabels(Matrix<ElemType>& toChange)
         {
-//            if (Matrix<ElemType>::HasElement(m_sentenceSeg, NO_LABELS) == false)
-            {
-                size_t nT = toChange.GetNumCols();
-                size_t nd = toChange.GetNumRows();
-                size_t nS = m_sentenceSeg.GetNumRows();
-                Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
-                Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
-                Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
+            size_t nT = toChange.GetNumCols();
+            size_t nd = toChange.GetNumRows();
+            size_t nS = m_sentenceSeg.GetNumRows();
+            Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
 
-                colBegin.Resize(nS, nS);
-                colSeg.Resize(nS, 1);
-                newfunc.Resize(nd, nS);
-                for (int utt_t = 0; utt_t < nT; utt_t += nS)
+            colBegin.Resize(nS, nS);
+            colSeg.Resize(nS, 1);
+            newfunc.Resize(nd, nS);
+            for (int utt_t = 0; utt_t < nT; utt_t += nS)
+            {
+                size_t j = utt_t / nS;
+                if (m_existsSentenceBeginOrNoLabels.ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
                 {
-                    size_t j = utt_t / nS;
-                    colSeg.SetValue(m_sentenceSeg.ColumnSlice(j, 1));
-                    colSeg += SENTENCE_MIDDLE;
-                    colSeg.InplaceTruncateBottom(SENTENCE_BEGIN);
-                    colSeg.InplaceTruncateTop(SENTENCE_MIDDLE);
+                    colSeg.SetValue(m_sentenceSeg.ColumnSlice(j, 1)); // -1 0 1 
+                    colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
+                    colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
                     colBegin.SetDiagonalValue(colSeg);
 
                     /// this is the begining of this minibatch
@@ -1026,7 +1018,7 @@ public: \
 protected:  \
         using B::m_loopId; using B::m_samplesInRecurrentStep; \
         using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop; using B::m_sentenceSeg; \
+        using B::m_indexInLoop; using B::m_sentenceSeg; using B::m_existsSentenceBeginOrNoLabels; \
         using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
         using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
         using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter
@@ -5025,13 +5017,16 @@ protected:  \
         When delay node reads above, it simply use matrix multiplication on its hidden state and the natural outcome is a reset of hidden state, since 0 times anything is 0.
         With the above way of representing sentence-beginning, the node is flexible to have either BPTT with sentence truncation or BPTT w/o sentence truncation. Also, it can deal with the situation that there are long sentences and short sentences in one minibatch.
         */
-        void ResetBound(const Matrix<ElemType> & seg)
+        void ResetBound(const Matrix<ElemType> & seg, const Matrix<ElemType>& existBeginOrNoLabels)
         {
-            ComputationNode<ElemType>::ResetBound(seg);
+            ComputationNode<ElemType>::ResetBound(seg, existBeginOrNoLabels);
             if (m_delay > 1)
             {
                 m_sentenceSeg.Shift(seg, m_delay - 1);
                 m_sentenceSeg.ElementMultiplyWith(seg);
+
+                m_existsSentenceBeginOrNoLabels.Shift(seg, m_delay - 1);
+                m_existsSentenceBeginOrNoLabels.ElementMultiplyWith(seg);
             }
             if (m_delay <= 0)
                 LogicError("Delay should be 1 or larger");
@@ -5056,14 +5051,10 @@ protected:  \
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
 
             size_t utt_t = (size_t)timeIdxInSeq / m_samplesInRecurrentStep;
-            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
             Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
             colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
-            colSeg.Resize(m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            colSeg.SetValue(0);
-            colSeg.SetDiagonalValue(colBegin);
 
-            ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin);
+            ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(utt_t,1));
         }
 
         static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int delay,  
@@ -5078,7 +5069,7 @@ protected:  \
             }
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin)
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin, const Matrix<ElemType>& colExistsBeginNoLabels)
         {
             assert(timeIdxInSeq >= 0);
             if ((timeIdxInSeq - delay) >= 0)
@@ -5086,11 +5077,18 @@ protected:  \
                 Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
                 Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
 
-                Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)inputGradientValues.GetDeviceId());
-                colSegPastActivity.SetValue(colBegin);
-                colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
-                colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
-                Matrix<ElemType>::MultiplyAndAdd(frm, false, colSegPastActivity, false, to);
+                if (colExistsBeginNoLabels.GetNumElements() != 1)
+                    LogicError("When computing delay node error propagation, a matrix saving whether a frame exists sentence_begin or no_labels has more than one element. This is usually a problem in data reader that feeds wrong dimension when setting a matrix mtExistsSentenceBeginOrNoLabels. This matrix should have one row. ");
+                if (colExistsBeginNoLabels.Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+                {
+                    Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)inputGradientValues.GetDeviceId());
+                    colSegPastActivity.SetValue(colBegin);
+                    colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+                    colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
+                    Matrix<ElemType>::MultiplyAndAdd(frm, false, colSegPastActivity, false, to);
+                }
+                else
+                    to += frm;
             }
         }
 
@@ -5118,8 +5116,7 @@ protected:  \
             size_t utt_t = (size_t) timeIdxInSeq / m_samplesInRecurrentStep;
             Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
             colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
-
-            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin);
+            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(utt_t,1));
 
         }
 
@@ -5160,7 +5157,7 @@ protected:  \
             and ~sentenceBegin is computed as - 1 * (colBegin - 1), assuming that colBegin is either 0 or 1. For example, when colBegin == 1, ~sentenceBegin == 0.
         colBegin is truncated to the range of 0 to 1 to satisify the assumption. For NO_LABELS case, it is converted to its absolute value, which is 1, and treated in ~colBegin as SENTENCE_MIDDLE, which results in 0 so that zero is output for NO_LABELS case. 
         */
-        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin)
+        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin, const Matrix<ElemType>& existsSentenceBeginorNoLabels)
         {
             ASSERT(delay > 0);
 
@@ -5183,17 +5180,22 @@ protected:  \
             else
                 inp = inputFunctionValues.ColumnSlice(d, mNbr);
 
-            Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
-            Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
-            colSeg.Resize(mNbr, mNbr);
-            colSeg.SetValue(0);
-            colSegPastActivity.SetValue(colBegin);
-            colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
-            colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
-            colSeg.SetDiagonalValue(colSegPastActivity);
-            Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
+            if (existsSentenceBeginorNoLabels.Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+            {
+                Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
+                Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
+                colSeg.Resize(mNbr, mNbr);
+                colSeg.SetValue(0);
+                colSegPastActivity.SetValue(colBegin);
+                colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+                colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
+                colSeg.SetDiagonalValue(colSegPastActivity);
+                Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
 
-            SetToInitStateValueForResetSeg(colBegin, mNbr, initStateValue, out);
+                SetToInitStateValueForResetSeg(colBegin, mNbr, initStateValue, out);
+            }
+            else
+                out.SetValue(inp);
         }
 
 
@@ -5238,7 +5240,11 @@ protected:  \
                 boundary.Resize(1, nT);
                 boundary.SetValue(SENTENCE_MIDDLE);
                 boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
-                ResetBound(boundary);
+                Matrix<ElemType> existsSentenceBegin(m_deviceId);
+                existsSentenceBegin.Resize(1, nT);
+                existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                existsSentenceBegin.ColumnSlice(0,1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                ResetBound(boundary, existsSentenceBegin);
 
                 f0 = Inputs(0)->FunctionValues();
                 func = FunctionValues();

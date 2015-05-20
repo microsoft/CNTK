@@ -3276,7 +3276,11 @@ protected:  \
                 boundary.Resize(1, nT);
                 boundary.SetValue(SENTENCE_MIDDLE);
                 boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
-                ResetBound(boundary);
+                Matrix<ElemType> existsSentenceBegin(m_deviceId);
+                existsSentenceBegin.Resize(1, nT);
+                existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                existsSentenceBegin.ColumnSlice(0,1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                ResetBound(boundary, existsSentenceBegin);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();
