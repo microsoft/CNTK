@@ -175,6 +175,7 @@
     <ClInclude Include="InputAndParamNodes.h" />
     <ClInclude Include="LinearAlgebraNodes.h" />
     <ClInclude Include="ModelEditLanguage.h" />
+    <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="NDLNetworkBuilder.h" />
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />
