@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "DataReader.h"
 #include "DataWriter.h"
+#include "commandArgUtil.h"
 #include "UCIParser.h"
 #include <string>
 #include <map>

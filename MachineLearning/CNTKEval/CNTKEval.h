@@ -5,12 +5,15 @@
 //
 // CNTKEval.h - Include file for the CNTK Evaluation DLL 
 #pragma once
-#include "Eval.h"
+
 #include <string>
 #include <map>
 #include <vector>
+
+#include "Eval.h"
 #include "EvalReader.h"
 #include "EvalWriter.h"
+
 #include "ComputationNetwork.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

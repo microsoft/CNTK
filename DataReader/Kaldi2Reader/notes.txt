@@ -1,0 +1,115 @@
+*** TODO ***
+
+0) why is the getbatch: getting utterances so slow...?
+1) Timit feedforward
+2) Timit LSTM
+3) get writer working
+
+scp
+counts
+feature_transform
+
+readMethod
+  rollingWindow - cache file; randomize frames
+  blockRandomize (default) - directly from feature files; randomize frames (if frameMode == false, randomize utterances)
+randomize
+  Auto
+  None
+minibatchMode
+  Partial (default) - smaller last minibatch
+  Full - ignore last minibatch
+scpFile:
+dim:
+  frame dimension
+mlfFile:
+  HTK file containing labels
+labelDim:
+  number of possible labels
+labelMappingFile:
+  all labels seen in MLF file
+frameMode:
+  true - randomize at frame level
+  false - randomize at utterance level
+nbruttsineachrecurrentiter:
+  number parallel (default 1)
+truncated
+  true
+  false
+
+=== Add ===
+countsFile: to get counts and names...
+feature_transform
+
+scp:/data/sls/scratch/leoliu/data/telugu_debug/train/merged.feats.scp
+scp:/data/sls/scratch/leoliu/data/telugu_debug/train/merged.labels.scp
+
+=== READ ===
+
+PrepareForTrainingOrTesting
+  get labels
+  create map of <uttid, list of htkmlfentry>
+    using msra::asr::htkmlfreader <--- change this (htkfeatio.h)
+
+      const vector<wstring> & paths,          file
+      const set<wstring> & restricttokeys,    set of uttids
+      const wstring & stateListPath,          mapping file
+      const WORDSYMBOLTABLE * wordmap,        X
+      const UNITSYMBOLTABLE * unitmap,        X
+      const double htkTimeToFrame             X
+
+  blockRandomize
+    minibatchutterancesourcemulti - utterancesourcemulti.h <--- change this
+
+      const std::vector<std::vector<wstring>> & infiles                               2D-array (make 1D?)
+      const std::vector<map<wstring,std::vector<msra::asr::htkmlfentry>>> & labels    labels from above
+      std::vector<size_t> vdim                                                        feature dimension
+      std::vector<size_t> udim                                                        label dimension
+      std::vector<size_t> leftcontext                                                 left context
+      std::vector<size_t> rightcontext                                                right context
+      size_t randomizationrange                                                       how much to randomize
+      const latticesource & lattice                                                   empty
+      const map<wstring,msra::lattices::lattice::htkmlfwordsequence> & allwordtranscripts  empty
+      const bool framemode                                                            shuffle by frame or utterance
+
+  rollingWindow
+    minibatchframesourcemulti - rollingwindowsource.h <--- change this
+
+      const std::vector<std::vector<wstring>> & infiles
+      const std::vector<map<std::wstring,std::vector<msra::asr::htkmlfentry>>> & labels
+      std::vector<size_t> vdim
+      std::vector<size_t> udim
+      std::vector<size_t> leftcontext
+      std::vector<size_t> rightcontext
+      size_t randomizationrange
+      const std::vector<wstring> & pagepath                                               cache file names
+      const bool mayhavenoframe=false                                                     false
+      int addEnergy=0                                                                     0
+
+  They both use htkfeatio.h <--- change this!
+  create kaldifeatio.h
+
+StartMinibatchLoopToTrainOrTest
+
+  source = that source from above
+  m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, mbSize, datapasses);
+
+      source.getbatch
+      source.gettimegetbatch
+      source.firstvalidglobalts
+  
+  feat = m_mbiter->frames(id);
+
+=== WRITE ===
+
+PrepareForWriting
+  m_inputFilesMultiIO - either the scp list or a 2D list or HTK files <--- change this (make 1D?)
+  m_fileEvalSource = new msra::dbn::FileEvalSource(realDims, numContextLeft, numContextRight, evalchunksize);
+
+GetMinibatchToWrite
+  msra::asr::htkfeatreader reader; <--- change this
+  const auto path = reader.parse(m_inputFilesMultiIO[i][m_inputFileIndex]);
+  reader.read (path, featkind, sampperiod, feat);
+
+  m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);   //sampPeriods not used, featkind not used
+  m_fileEvalSource->CreateEvalMinibatch();
+  m_fileEvalSource->ChunkOfFrames(id);

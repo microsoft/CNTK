@@ -4,7 +4,7 @@
 // </copyright>
 //
 #pragma once
-#include "basetypes.h"
+#include "Basics.h"
 #include <vector>
 #include <string>
 #include <map>
@@ -30,24 +30,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static const std::string forbiddenCharactersInVarNameEscapeWhitespace = ",/<>?;':\"[]{}\\|!@#%^&*()+=~` \\t\\n"; 
     static const std::size_t openBraceVarSize = openBraceVar.size();
     static const std::size_t closingBraceVarSize = openBraceVar.size();
-
-    // string comparison class, so we do case insensitive compares
-    class nocase_compare
-    {
-    public:
-        // std::string version of 'less' function
-        bool operator()(const std::string& left, const std::string& right)
-        {
-            // return false for equivalent, true for different
-            return _stricmp(left.c_str(), right.c_str()) < 0;
-        }
-        // std::wstring version of 'less' function, used in non-config classes
-        bool operator()(const std::wstring& left, const std::wstring& right)
-        {
-            // return false for equivalent, true for different
-            return _wcsicmp(left.c_str(), right.c_str()) < 0;
-        }
-    };
 
     // Trim - trim white space off the start and end of the string
     // str - string to trim
@@ -305,7 +287,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return current;
         }
 
-        //Parse - Parse the string
+        // Parse - Parse the string; segment string by top-level a=b expressions and call (virtual) ParseValue() on them.
+        // This function is used at lots of places for various purposes.
+        //  - (ConfigParameters from file) config-file parsing passes in expressions of the type a1=b1 \n a2=b2 \n ..., creates a ConfigDictionary entry for each top-level a=b expression, where b can be a block in braces
+        //  - (ConfigParameters) right-hand side that is an array of parameters [ a1=b1; a2=b2 ...], with surrounding braces
+        //  - (ConfigValue) individual values are also parsed
+        //  - (ConfigArray) same as ConfigValue--the array syntax (':') is not parsed here
+        //    The above all allow ';' or newline as a separator
+        //  - (NDLScript)
+        //  - more to be added
         // stringParse - string to parse
         // pos - postion to start parsing at
         void Parse(const std::string& stringParse, std::string::size_type pos=0)
@@ -417,14 +407,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             while (tokenEnd != npos);
         }
 
-        // PreprocessConfigLine - This method removes the section of a config line corresponding to a comment.
+        // StripComments - This method removes the section of a config line corresponding to a comment.
         // configLine - The line within a config file to pre-process.
         // returns:
         //      If the entire line is whitespace, or if the entire line is a comment, simply return an empty string.
         //      If there is no comment, simply return the original 'configString'
         //      If there is a comment, remove the part of 'configString' corresponding to the comment
         //      Note that midline comments need to be preceded by whitespace, otherwise they are not treated as comments.
-        std::string PreprocessConfigLine(const std::string &configLine) const
+        std::string StripComments(const std::string &configLine) const
         {
             std::string::size_type pos = configLine.find_first_not_of(" \t");
 
@@ -708,7 +698,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (configLine.find_first_of("\n") != std::string::npos)
                 throw std::logic_error ("\"ResolveVariablesInSingleLine\" shouldn't be called with a string containing a newline character");
 
-            std::string newConfigLine = PreprocessConfigLine(configLine);
+            std::string newConfigLine = StripComments(configLine);
             std::size_t start = newConfigLine.find_first_of(openBraceVar);
             std::size_t end = 0;
             while (start != std::string::npos)

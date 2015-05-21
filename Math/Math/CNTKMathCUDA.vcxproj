@@ -54,13 +54,13 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>..\..\common\include;$(ACML_PATH)\include;$(CUDA_PATH)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)\lib\$(Platform);$(LibraryPath)</LibraryPath>
-    <IntDir>$(Platform)\$(Configuration)\CUDA\</IntDir>
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>..\..\common\include;$(CUDA_PATH)\include;$(ACML_PATH)\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);</LibraryPath>
-    <IntDir>$(Platform)\$(Configuration)\CUDA\</IntDir>
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -86,10 +86,10 @@
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_70.dll" $(OutputPath)</Command>
+      <Command>xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_*.dll" $(OutputPath)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
-      <Message>Copying cudart64_65.dll</Message>
+      <Message>Copying cudart64 DLL</Message>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -133,8 +133,8 @@
       <DelayLoadDLLs>cublas64_65.dll;cusparse64_65.dll;curand64_65.dll;cudart64_65.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_70.dll" $(OutputPath)</Command>
-      <Message>Copying cudart64_65.dll</Message>
+      <Command>xcopy /D /I /Y "$(CUDA_PATH)\bin\cudart64_*.dll" $(OutputPath)</Command>
+      <Message>Copying cudart64 DLL</Message>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>

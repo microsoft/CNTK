@@ -41,8 +41,8 @@ fileCount = 0
 fileList = 'TimitSubjectList.txt'
 fileListFp = open(fileList)
 
-if !hcopyScript or !cnScriptFp or !cnOutputScriptFp or !fileListFp:
-	print "Can't open the necessary output files.
+if !hcopyScriptFp or !cnScriptFp or !cnOutputScriptFp or !fileListFp:
+	print "Can't open the necessary output files."
 	sys.exit(0)
 
 for origFile in fileListFp:

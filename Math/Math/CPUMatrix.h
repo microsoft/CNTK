@@ -11,7 +11,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
-#include "basetypes.h" // for RuntimeError()
+#include "Basics.h" // for RuntimeError()
 
 #ifdef    _WIN32
 #ifdef MATH_EXPORTS
@@ -214,6 +214,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWise) const;
         CPUMatrix<ElemType>& AssignVectorNorm2Of(CPUMatrix<ElemType>& a, const bool isColWise);
+
+        void AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias,
+            size_t sampleCount, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c);
+
+        void AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
+
+        CPUMatrix<ElemType>& AssignNCEDerivative(const CPUMatrix<ElemType>& tmp, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t inputIndex, CPUMatrix<ElemType>& c);
 
         void VectorNormInf(CPUMatrix<ElemType>& c, const bool isColWise) const;
         CPUMatrix<ElemType>& AssignVectorNormInfOf(CPUMatrix<ElemType>& a, const bool isColWise);

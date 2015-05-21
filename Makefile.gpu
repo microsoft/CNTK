@@ -66,7 +66,9 @@ CUDA_PATH = /usr/local/cuda-7.0
 CUDA_INCLUDE = $(CUDA_PATH)/include
 CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
-INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(CUDA_INCLUDE) -I $(MATHLIB_INCLUDE)
+NVML_INCLUDE = /usr/include/nvidia/gdk
+
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(CUDA_INCLUDE) -I $(MATHLIB_INCLUDE) -I $(NVML_INCLUDE)
 
 CFLAGS = -msse3 -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(MATHLIB_DEFINE) -fopenmp -fpermissive
 
@@ -76,12 +78,12 @@ COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Com
              Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp Common/TimerUtility.cpp
 MATH_SRC = Math/Math/Matrix.cpp Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKernels.cu Math/Math/GPUSparseMatrix.cu Math/Math/GPUWatcher.cu \
 		   Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp #Math/Math/InstantiateTemplates.cu
-CN_SRC =  MachineLearning/cn/NetworkDescriptionLanguage.cpp MachineLearning/cn/cn.cpp MachineLearning/cn/ComputationNode.cpp \
-          MachineLearning/cn/ModelEditLanguage.cpp MachineLearning/cn/PTaskGraphBuilder.cpp \
-          MachineLearning/cn/SimpleNetworkBuilder.cpp MachineLearning/cn/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
+CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CNTK/CNTK.cpp MachineLearning/CNTK/ComputationNode.cpp \
+          MachineLearning/CNTK/ModelEditLanguage.cpp \
+          MachineLearning/CNTK/SimpleNetworkBuilder.cpp MachineLearning/CNTK/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
 BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
-SEQUENCEREADER_SRC = DataReader/SequenceReader/SequenceReader.cpp DataReader/SequenceReader/SequenceParser.cpp DataReader/SequenceReader/Exports.cpp
+SEQUENCEREADER_SRC = DataReader/LMSequenceReader/SequenceReader.cpp DataReader/LMSequenceReader/SequenceParser.cpp DataReader/LMSequenceReader/Exports.cpp
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
 UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
 READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC)
@@ -102,14 +104,14 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 
 SEPARATOR = "=-----------------------------------------------------------="
 
-all: $(BINDIR)/cn.exe $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so
+all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so
 	ln -sf $(CURDIR)/$(BINDIR)/* bin
 
 $(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
 	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^  
 
-$(BINDIR)/SequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
+$(BINDIR)/LMSequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
 	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
@@ -128,7 +130,7 @@ $(BINDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) $(CORE_OBJ)
 #BinaryReader: ${BINARYREADER_SRC:.cpp=.o} ${COMMON_SRC:.cpp=.o}
 #	$(CC) -o $(addsuffix .so, $@) $^ -fPIC -shared 
 
-$(BINDIR)/cn.exe: $(CORE_OBJ)
+$(BINDIR)/cntk: $(CORE_OBJ)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)

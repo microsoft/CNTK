@@ -23,11 +23,10 @@
 #define DATAWRITER_API
 #endif
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "Matrix.h"
 #include <map>
 #include <string>
-#include "commandArgUtil.h"
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {

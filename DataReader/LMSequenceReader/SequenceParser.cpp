@@ -7,7 +7,7 @@
 //
 
 #include "stdafx.h"
-#include "basetypes.h"
+#include "Basics.h"
 #include "SequenceParser.h"
 #include <stdexcept>
 #include <stdint.h>
