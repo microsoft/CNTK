@@ -145,6 +145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("Delay should be 1 or larger");
         }
 
+        /// to-do: need to change to the new way of resetting state
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 0)
@@ -170,7 +171,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(utt_t,1));
         }
 
-        static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int delay,  
+        /// to-do: need to change to the new way of resetting state
+        static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int delay,
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr)
         {
             assert(timeIdxInSeq >= 0);
@@ -233,6 +235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
+        /// to-do: need to change to the new way of resetting state
         static void WINAPI EvaluateThisNodeSR(const size_t timeIdxInSeq, const int delay, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr)
         {
             ASSERT(delay > 0);

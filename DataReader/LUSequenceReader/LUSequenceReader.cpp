@@ -595,7 +595,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         mSentenceEndAt.assign(mSentenceEndAt.size(), NO_LABELS);
 
         /**
-        mtSentenceBegin : a matrix with [Ns+ 1 x T]
+        mtSentenceBegin : a matrix with [Ns x T]
         the first row is 0/1 bit for wether corresponding frame has sentence beginining/no_label for any of streams
         0 : no such case
         1 : case exists
