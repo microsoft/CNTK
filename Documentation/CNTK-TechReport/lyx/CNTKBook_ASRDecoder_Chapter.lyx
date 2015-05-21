@@ -1,0 +1,903 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass extbook
+\begin_preamble
+\usepackage{algorithm}
+\usepackage{algpseudocode}  
+\end_preamble
+\use_default_options false
+\master CNTKBook-master.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize 11
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 2
+\use_package cancel 0
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 0
+\use_package mhchem 1
+\use_package stackrel 0
+\use_package stmaryrd 0
+\use_package undertilde 0
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Chapter
+Speech Recognition Decoder Integration 
+\begin_inset CommandInset label
+LatexCommand label
+name "chap:ASRDecoder"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Argon
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Argon
+\end_layout
+
+\end_inset
+
+ Speech Recognition Decoder
+\end_layout
+
+\begin_layout Standard
+Argon is a dynamic decoder modeled after (Soltau & Saon, 
+\begin_inset Quotes eld
+\end_inset
+
+Dynamic Network Decoding Revisited,
+\begin_inset Quotes erd
+\end_inset
+
+ ASRU, 2009).
+ To use Argon, one must supply a representation of the acoustic search space
+ in the form of a weighted finite state acceptor that represents all possible
+ word sequences and their associated context-dependent HMM state sequences.
+ This is 
+\begin_inset Formula $H\textdegree C\mathcal{\textdegree L}$
+\end_inset
+
+ of Mohri et al, (
+\begin_inset Quotes eld
+\end_inset
+
+Weighted Finite State Transducers in Speech Recognition,
+\begin_inset Quotes erd
+\end_inset
+
+ Computer Speech & Language, 2002) .
+ As a pre-processing step, Argon will convert the AT&T format acceptor into
+ a binary image for its own internal use.
+ Additionally, one supplies an acoustic model as trained by CNTK, a source
+ of acoustic features, and a language model.
+ Optionally, a set of language models and their interpolation weights may
+ be specified.
+\end_layout
+
+\begin_layout Standard
+As output, Argon produces one-best word hypotheses and lattices.
+ Lattices are produced with state-level alignments, and the one-best hypotheses
+ can optionally be produced with state-level alignments as well.
+\end_layout
+
+\begin_layout Standard
+Argon is a token-passing decoder
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+token-passing, decoder
+\end_layout
+
+\end_inset
+
+.
+ It works by maintaining a set of tokens, each of which represents a partial
+ path.
+ Each token maintains a language model history state, a pointer to its location
+ in the decoding graph, and a path score.
+ At each time frame, all the tokens from the previous frame are advanced
+ over emitting arcs in the decoding graph, and then across word arcs.
+ When a token finishes a word (i.e.
+ advances across a word arc), the language model is consulted, and the path
+ score is adjusted with the language model probability.
+\end_layout
+
+\begin_layout Standard
+Argon uses a simple form of language model lookahead.
+ By default, the search space 
+\begin_inset Formula $H\textdegree C\mathcal{\textdegree L}$
+\end_inset
+
+ includes the 
+\shape italic
+most optimistic
+\shape default
+ log-probability that a word can have, given the language model.
+ When a word-end is encountered, the remainder of the language model log-probabi
+lity is added.
+ To prevent over-pruning at these jumps, we employ the notion of 
+\shape italic
+language-model slack
+\shape default
+ in pruning.
+ Each token maintains a slack variable, and when a language model score
+ is encountered, the slack variable is incremented by this amount.
+ It is also multiplied by a number slightly less than one at each frame
+ so that it decreases exponentially.
+ Tokens that fall outside the beam by less than the slack amount are not
+ pruned.
+ This effectively smooths the effect of adding language model scores at
+ word ends.
+\end_layout
+
+\begin_layout Subsection
+Representing the Acoustic Search Space
+\end_layout
+
+\begin_layout Standard
+Argon represents the acoustic search space as a determinized, minimized
+ finite state transducer
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+finite state transducer
+\end_layout
+
+\end_inset
+
+, encapsulating 
+\begin_inset Formula $H\textdegree C\mathcal{\textdegree L}$
+\end_inset
+
+.
+ Input arcs are labeled with context dependent HMM states, and output arcs
+ with words.
+ Every path from the start state to one of the final states represents a
+ sequence of words beginning with 
+\begin_inset Quotes eld
+\end_inset
+
+begin-of-sentence
+\begin_inset Quotes erd
+\end_inset
+
+ or <s> and ending with 
+\begin_inset Quotes eld
+\end_inset
+
+end-of-sentence
+\begin_inset Quotes erd
+\end_inset
+
+ or </s>.
+ The sequence of input labels encountered on such a path represents the
+ sequence of context-dependent HMM states of the words, as determined by
+ the lexicon and acoustic context model.
+ A fragment of a search graph is shown in Figure 
+\backslash
+ref{fig:dcdgraph}.
+ 
+\end_layout
+
+\begin_layout Standard
+Minimization of a transducer repositions the output labels in the process
+ of minimizing the transducer size.
+ This necessitates re-aligning the output to synchronize the word labels
+ with the state sequence.
+ Rather than allowing arbitrary label shifting, for all words that have
+ two or more phonemes, Argon outputs word labels immediately before the
+ last phone.
+ This allows for a high degree of compression, good pruning properties,
+ and predictable label positions.
+ 
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $H\textdegree C\mathcal{\textdegree L}$
+\end_inset
+
+ does not represent the language model, we have found it unnecessary to
+ accommodate <epsilon> arcs in the decoding graph, thus somewhat simplifying
+ the decoder implementation.
+ Thus, it is a requirement that 
+\begin_inset Formula $H\textdegree C\mathcal{\textdegree L}$
+\end_inset
+
+ contain only HMM states and word labels.
+ Our reference scripts achieve this with the OpenFST remove-epsilon operation.
+\end_layout
+
+\begin_layout Subsubsection
+From HTK Outputs to Acoustic Search Space
+\end_layout
+
+\begin_layout Standard
+CNTK and Argon use acoustic models based on HTK decision trees.
+ In the first part of the acoustic model building process, context-independent
+ alignments are made with HTK, and a decision tree is built to cluster the
+ triphone states.
+ After a couple of passes of re-alignment, a model file and state level
+ alignments are written out.
+ CNTK uses the alignments to train a DNN acoustic model.
+ 
+\end_layout
+
+\begin_layout Standard
+The simplest way to build an acoustic model is to provide an HTK decision
+ tree file, a lexicon, a file with pronunciation probabilities, and a model
+ MMF file.
+ The MMF file is only used to extract transition probabilities, and as an
+ option, these can be ignored, in which case the MMF is unnecessary.
+ We provide sample scripts which process the lexicon and decision tree to
+ produce 
+\begin_inset Formula $H\textdegree C\mathcal{\textdegree L}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Our sample script imposes two constraints:
+\end_layout
+
+\begin_layout Standard
+1) 3-state left-to-right models except for silence
+\end_layout
+
+\begin_layout Standard
+2) The standard HTK silence model, which defines a 
+\begin_inset Quotes eld
+\end_inset
+
+short-pause
+\begin_inset Quotes erd
+\end_inset
+
+ state and ties it to the middle state of silence
+\end_layout
+
+\begin_layout Standard
+In the output, short-pause and silence are optional between words.
+ All hypotheses start with <s> and end with </s>, both of which are realized
+ as silence.
+\end_layout
+
+\begin_layout Subsection
+Representing the Language Model
+\end_layout
+
+\begin_layout Standard
+The language model is dynamically applied at word-ends.
+ Language model lookahead scores are embedded in the graph, and compensated
+ for at word ends, when multiple language models may be consulted and interpolat
+ed.
+ In the case that multiple language models are used, they are listed in
+ a file, along with their interpolation weights; this file is given to Argon
+ as a command-line parameter.
+\end_layout
+
+\begin_layout Subsection
+Command-Line Parameters
+\end_layout
+
+\begin_layout Subsubsection
+WFST Compilation Parameters
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+WFST, Compilation Parameters
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These parameters are used in the graph pre-compilation stage, when a fsm
+ produced by a tool such as OpenFST is converted into a binary image that
+ is convenient to read at runtime.
+\end_layout
+
+\begin_layout Standard
+[-infsm
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+infsm
+\end_layout
+
+\end_inset
+
+ (string: )]: gzipp'd ascii fsm to precompile
+\end_layout
+
+\begin_layout Standard
+[-lookahead-file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lookahead-file
+\end_layout
+
+\end_inset
+
+ (string: )]: file with the lookahead scores for each word, if lookahead
+ was used 
+\end_layout
+
+\begin_layout Standard
+[-precompile
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+precompile
+\end_layout
+
+\end_inset
+
+ (bool: false)]: precompile the graph? true indicates that precompilation
+ should be done
+\end_layout
+
+\begin_layout Standard
+[-transition-file
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+transition-file
+\end_layout
+
+\end_inset
+
+ (string: )]: transition probability file for use in precompilation 
+\end_layout
+
+\begin_layout Standard
+[-graph
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+graph
+\end_layout
+
+\end_inset
+
+ (string)]: decoding graph to read/write
+\end_layout
+
+\begin_layout Subsubsection
+Parameters specifying inputs
+\end_layout
+
+\begin_layout Standard
+These parameters are related to the inputs used in decoding.
+ Their use is exemplified in the sample scripts.
+\end_layout
+
+\begin_layout Standard
+[-infiles
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+infiles
+\end_layout
+
+\end_inset
+
+ (string: )]: file with a list of mfcc files to process
+\end_layout
+
+\begin_layout Standard
+[-graph
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+graph
+\end_layout
+
+\end_inset
+
+ (string)]: decoding graph to read/write
+\end_layout
+
+\begin_layout Standard
+[-
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lm
+\end_layout
+
+\end_inset
+
+lm (string: )]: language model to use in decoding; use when there is one
+ LM only 
+\end_layout
+
+\begin_layout Standard
+[-lm-collection
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lm-collection
+\end_layout
+
+\end_inset
+
+ (string: )]: file specifying a set of language models to use for decoding
+\end_layout
+
+\begin_layout Standard
+[-
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+sil-cost
+\end_layout
+
+\end_inset
+
+sil-cost (float: 1.0)]: cost charged to silence 
+\end_layout
+
+\begin_layout Standard
+[-
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+am
+\end_layout
+
+\end_inset
+
+am (string: )]: binary acoustic model to use in decoding 
+\end_layout
+
+\begin_layout Standard
+[-cntkmap
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+cntkmap
+\end_layout
+
+\end_inset
+
+ (string: )]: mapping from output names in decoding graph to dnn output
+ nodes
+\end_layout
+
+\begin_layout Standard
+[-dnn_window_size
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+dnn_window_size
+\end_layout
+
+\end_inset
+
+ (int: 11)]: number of consecutive acoustic vectors to stack into one context-wi
+ndow input, depends on acoustic model
+\end_layout
+
+\begin_layout Subsubsection
+Parameters specifying outputs
+\end_layout
+
+\begin_layout Standard
+These parameters specify the outputs that Argon creates at runtime.
+\end_layout
+
+\begin_layout Standard
+[-outmlf
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+outmlf
+\end_layout
+
+\end_inset
+
+ (string: )]: store recognition results in HTK-style master label format
+ file
+\end_layout
+
+\begin_layout Standard
+[-detailed-alignment
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+detailed-alignment
+\end_layout
+
+\end_inset
+
+ (bool: false)]: enables state-level recognition output
+\end_layout
+
+\begin_layout Standard
+[-lattice-prefix
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+lattice-prefix
+\end_layout
+
+\end_inset
+
+ (string: )]: path and filename prefix for output lattices; will be post-pended
+ with a number
+\end_layout
+
+\begin_layout Subsubsection
+Search Parameters
+\end_layout
+
+\begin_layout Standard
+These parameters control Argon's search
+\end_layout
+
+\begin_layout Standard
+[-acweight
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+acweight
+\end_layout
+
+\end_inset
+
+ (float: 0.0667)]: acoustic model weight.
+ language model weight is always 1
+\end_layout
+
+\begin_layout Standard
+[-beam
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+beam
+\end_layout
+
+\end_inset
+
+ (float: 15)]: absolute beam threshold 
+\end_layout
+
+\begin_layout Standard
+[-alignmlf
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+alignmlf
+\end_layout
+
+\end_inset
+
+ (string: )]: source transcription for forced alignment 
+\end_layout
+
+\begin_layout Standard
+[-max-tokens
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+max-tokens
+\end_layout
+
+\end_inset
+
+ (int: 20000)]: number of tokens to keep at each time frame 
+\end_layout
+
+\begin_layout Standard
+[-word_end_beam_frac
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+word_end_beam_frac
+\end_layout
+
+\end_inset
+
+ (float: 0.33333)]: beam at word ends is this times the normal beam
+\end_layout
+
+\begin_layout Section
+Constructing a Decoding Graph
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Decoding Graph
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+As described above, the decoding graph is a representation of how sequences
+ of acoustic model states form sequences of words, with associated path
+ scores that are a combination of the acoustic model state transition probabilit
+ies and the language model lookahead scores.
+ This section describes two different decoding graphs: a simple, context-indepen
+dent phonetic recognition graph suitable for TIMIT recognition, and a more
+ complex, cross-word triphone large vocabulary graph suitable for Wall Street
+ Journal or Aurora-4 recognition tasks.
+\end_layout
+
+\begin_layout Standard
+The decoding graph includes scores that represent the most optimistic score
+ that can be achieved by a word.
+ Scripts extract that score from an ARPA language model, and put it in a
+ file that lists the most optimistic score for each word.
+ The optimistic scores are a simple context-independent form of language
+ model lookahead.
+ A smoothing mechanism is used internally in the decoder to 
+\begin_inset Quotes eld
+\end_inset
+
+smear
+\begin_inset Quotes erd
+\end_inset
+
+ the residual LM score across multiple frames after a word end.
+\end_layout
+
+\begin_layout Subsection
+Context-Independent Phonetic Recognition
+\end_layout
+
+\begin_layout Standard
+To build the TIMIT graph, only three input files are needed: the model state
+ map, the state transitions, and a language model.
+\end_layout
+
+\begin_layout Standard
+The scripts assume each context-indepenent phone is represented by a three
+ state, left to right, hidden markov model.
+ The names of these states should be in a 
+\begin_inset Quotes eld
+\end_inset
+
+model state map
+\begin_inset Quotes erd
+\end_inset
+
+ file that has one line for every model.
+ The first column is the name of the model, and subsequent columns are the
+ names of the states, in left to right order.
+ The transition probabilites between these states are stored in a separate
+ 
+\begin_inset Quotes eld
+\end_inset
+
+state transitions
+\begin_inset Quotes erd
+\end_inset
+
+ file.
+ Every state of the acoustic model should have one line, whose first column
+ is the name of the state, and subsequent columns are the natural logarithm
+ of the self and forward transition probabilities.
+\end_layout
+
+\begin_layout Standard
+The language model should be an ARPA-style language model over the phone
+ model names.
+ Additionally, it should include the unknown word <UNK>, and the beginning
+ and ending sentence markers <s> and </s>.
+ For TIMIT data, they should represent the h# at the beginning and the h#
+ at the end of every utterance, respectively, and h# should not exist in
+ the language model.
+\end_layout
+
+\begin_layout Standard
+The DecodingGraph.mak file demonstrates the process of turning these inputs
+ into a proper Argon decoding graph.
+ When the makefile is successfully run, the current working directory should
+ contain a decoding graph file i_lp.final.dg that is suitable for phonetic
+ decoding.
+\end_layout
+
+\begin_layout Subsection
+Cross-Word Context-Dependent Large Vocabulary Decoding
+\end_layout
+
+\begin_layout Standard
+Building this style of graph is somewhat more involved, and divided into
+ two stages.
+ In the first stage, information about the graph structure is extracted
+ from a donor HTK format acoustic model, and put into a distilled representation.
+ In the second stage, this representation is used to construct the FST and
+ compile it into Argon decoding graph format.
+ We imagine that specialized first stages can be constructed for different
+ styles of input, other than HTK format donor models.
+\end_layout
+
+\begin_layout Subsubsection
+Stage One: Extract structure from HTK donor model
+\end_layout
+
+\begin_layout Standard
+The prerequisites for this process are as follows:
+\end_layout
+
+\begin_layout Standard
+A pronunciation lexicon, an ARPA-format ngram language model, a senone map
+ file, and an ASCII format HTK donor model, with associated list of all
+ possible logical model names and their associated physical model names.
+\end_layout
+
+\begin_layout Subsubsection
+Stage Two: Build and Compile Graph
+\end_layout
+
+\begin_layout Standard
+The L transducer is built from the normalized lexicon.
+ The H transducer is built from the triphone to senone mapping file.
+ The C FST is made to cover all possible triphone contexts that might occur
+ on the input side of L.
+\end_layout
+
+\begin_layout Standard
+H, C, and L are composed, determinized and minimized.
+ Then, the FST is made into an FSA by moving every non-epsilon output token
+ onto its own arc on the same path.
+ The silence models between words are made optional, the language model
+ lookahead scores are applied, and weight pushing is used to take these
+ scores as early as possible on each path through the FSA.
+\end_layout
+
+\begin_layout Standard
+The end result is a compiled graph, where every path represents a sequence
+ of acoustic model states interspaced with the word sequence they represent.
+ The score of the path is equal to the individual HMM transition scores
+ combined with the language model lookahead scores.
+\end_layout
+
+\begin_layout Subsection
+Running Argon
+\end_layout
+
+\begin_layout Standard
+To decode, the following parameters to Argon should be specified: -graph,
+ -lm, -am, -cntkmap, -infiles, and -outmlf.
+ See above for descriptions of these parameters.
+\end_layout
+
+\begin_layout Standard
+The decoder uses a Viterbi beam search algorithm, in which unlikely hypotheses
+ are pruned at each frame.
+ The -beam parameter prevents unlikely hypotheses from being pursued.
+ Any hypothesis that differes from the best hypothesis by more than this
+ amount will be be discarded.
+ The -max-tokens parameter controls the number of active hypotheses.
+ If the -beam parameter causes more than max-tokens hypotheses to be generated,
+ then only this many of the best hypotheses will be retained.
+ Decreasing either of these parameters will speed up the search, but at
+ the cost of a higher likelihood of search errors.
+ Increasing these parameters has the opposite effect.
+\end_layout
+
+\begin_layout Standard
+The -graph parameter tells Argon which compiled decoding graph should be
+ used.
+ The -lm should indicate an ARPA format ngram languag emodel.
+\end_layout
+
+\begin_layout Standard
+The -am and -cntkmap should point to the final CNTK compiled acoustic model,
+ and to its associated mapping file.
+\end_layout
+
+\begin_layout Standard
+The -acweight parameter controls the relative weight of the acoustic model
+ scores to the language and HMM transition scores.
+ Increasing this value will cause more weight to be placed on the acoustic
+ model scores.
+ The useful range for this parameter is between 0.1 and 2.0.
+\end_layout
+
+\begin_layout Standard
+The -infiles parameter lists the files to be decoded.
+ It is expected that these files are in HTK format and are ready to be fed
+ into the input layer of the CNTK acoustic model.
+\end_layout
+
+\begin_layout Standard
+To get a more detailed state-level alignment, specify -detailed-alignment
+ true.
+\end_layout
+
+\end_body
+\end_document

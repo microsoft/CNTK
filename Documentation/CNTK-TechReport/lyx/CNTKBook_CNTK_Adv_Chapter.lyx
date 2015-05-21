@@ -1,0 +1,5729 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass extbook
+\begin_preamble
+\usepackage{algorithm}
+\usepackage{algpseudocode}  
+\end_preamble
+\use_default_options false
+\master CNTKBook-master.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize 11
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 2
+\use_package cancel 0
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 0
+\use_package mhchem 1
+\use_package stackrel 0
+\use_package stmaryrd 0
+\use_package undertilde 0
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\listings_params "basicstyle={\small},breaklines=true,frame=tb"
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Chapter
+Advanced Setups in Computational Network Toolkit
+\begin_inset CommandInset label
+LatexCommand label
+name "chap:CNTK_Adv"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Network Definition Language
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Network ! Definition Language
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The network description language (NDL) provides a simple yet powerful way
+ to define a network in a code-like fashion.
+ It contains variables, macros, and other well understood concepts and allows
+ users of CNTK to define any computational network architecture they want.
+ 
+\end_layout
+
+\begin_layout Subsection
+Basic Concepts
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:NDL-Basic-Concepts"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The example NDL script below describes a one-hidden-layer DNN.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#Variables
+\end_layout
+
+\begin_layout Plain Layout
+
+SDim=784
+\end_layout
+
+\begin_layout Plain Layout
+
+HDim=256
+\end_layout
+
+\begin_layout Plain Layout
+
+LDim=10
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Inputs
+\end_layout
+
+\begin_layout Plain Layout
+
+features=Input(SDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+labels=Input(LDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Parameters
+\end_layout
+
+\begin_layout Plain Layout
+
+W0=Parameter(HDim, SDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+B0=Parameter(HDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+W1=Parameter(LDim, HDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+B1=Parameter(LDim, 1)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Computation
+\end_layout
+
+\begin_layout Plain Layout
+
+Times1=Times(W0, features)
+\end_layout
+
+\begin_layout Plain Layout
+
+Plus1=Plus(Times1, B0)
+\end_layout
+
+\begin_layout Plain Layout
+
+RL1=RectifiedLinear(Plus1)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+Times2=Times(W1, RL1)
+\end_layout
+
+\begin_layout Plain Layout
+
+Plus2=Plus(Times2, B1)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Training Criterion
+\end_layout
+
+\begin_layout Plain Layout
+
+CE=CrossEntropyWithSoftmax(labels, Plus2)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Test Objective Function
+\end_layout
+
+\begin_layout Plain Layout
+
+ErrPredict=ErrorPrediction(labels, Plus2)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Special Nodes
+\end_layout
+
+\begin_layout Plain Layout
+
+FeatureNodes=(features)
+\end_layout
+
+\begin_layout Plain Layout
+
+LabelNodes=(labels)
+\end_layout
+
+\begin_layout Plain Layout
+
+CriteriaNodes=(CE)
+\end_layout
+
+\begin_layout Plain Layout
+
+EvalNodes=(ErrPredict)
+\end_layout
+
+\begin_layout Plain Layout
+
+OutputNodes=(Plus2)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We will introduce the basic concepts such as variables, parameters, inputs,
+ and training criteria using this example.
+\end_layout
+
+\begin_layout Subsubsection
+Variables
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Variables
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SDim=784
+\end_layout
+
+\begin_layout Plain Layout
+
+HDim=256
+\end_layout
+
+\begin_layout Plain Layout
+
+LDim=10
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first thing you will notice are the variables: SDim, HDim and LDim.
+ Variables are defined in NDL when they appear on the left of an equal sign.
+ From that point on that variable name will be associated with the value
+ it was assigned.
+ A variable can contain a matrix or scalar value.
+ Variables are immutable, and assigning new values to an existing variable
+ is not supported.
+\end_layout
+
+\begin_layout Standard
+Variable names may be any alphanumeric sequence that starts with a letter
+ and are case-insensitive.
+ Any name that is also a function (operator) name is a reserved word and
+ cannot be used for a variable.
+ The special node names 
+\emph on
+FeatureNodes, LabelNodes, CriteriaNodes, EvalNodes, OutputNodes
+\emph default
+ are also reserved and may not be used as variable names.
+\end_layout
+
+\begin_layout Standard
+The variables SDim, HDim and LDim are set to scalar numeric values in this
+ example and are used as parameters in the NDL functions.
+ More specifically, SDim, HDim and LDim are the sizes of input, hidden,
+ and output layers in this example and assigned the values 784, 256, and
+ 10, respectively.
+ The input and output layer sizes are determined by the task while the hidden
+ layer size can be chosen by the users depending on their needs.
+\end_layout
+
+\begin_layout Subsubsection
+Inputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Input
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+features=Input(SDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+labels=Input(LDim)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Inputs are used to represent input data and labels associated with the samples.
+ Input is a special function.
+ They are represented as InputNodes internally and are not saved as part
+ of the CN model.
+ In this example, the 
+\emph on
+features
+\emph default
+ input will have the dimensions of the input data (SDim), and the 
+\emph on
+labels
+\emph default
+ input will have the dimensions of the labels (LDim).
+ The variables chosen here are for convenience and could be any valid variable
+ name.
+\end_layout
+
+\begin_layout Subsubsection
+Parameters
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+B0=Parameter(HDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+W0=Parameter(HDim, SDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+W1=Parameter(LDim, HDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+B1=Parameter(LDim, 1)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Parameters are matrices that constitute the learned model upon completion
+ of training.
+ They are represented as LearnableParameterNodes internally and are saved
+ as part of the CN model.
+ The model parameters transform the input data into the desired output data
+ and are updated as part of the learning process.
+ 
+\end_layout
+
+\begin_layout Standard
+In this example.
+ CNTK will train W0 and W1 the weight matrices, and B0 and B1 the bias matrices.
+ Parameter matrices are always represented as two-dimensional matrices internall
+y.
+ If only one dimension is given the other dimension is assumed to be 1.
+ By default parameters are initialized with uniform random numbers between
+ -0.5 and 0.5, but other options exist (see Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:NDL-Functions"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsubsection
+Functions
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Functions
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Times1=Times(W0, features)
+\end_layout
+
+\begin_layout Plain Layout
+
+Plus1=Plus(Times1, B0)
+\end_layout
+
+\begin_layout Plain Layout
+
+RL1=RectifiedLinear(Plus1)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Functions describe computation steps.
+ Functions are called using a syntax similar to most programming languages.
+ The function name is followed by parenthesis which contains the comma separated
+ parameter list.
+ Each function returns a single value, which is identified by a variable.
+ The complete list of functions can be found in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:NDL-Functions"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The hidden layer in this example involves three computation steps: It first
+ gets the product of the weight matrix W0 and the features matrix; then
+ gets the excitation by adding the product to the bias; and finally applies
+ the activation function, in this case RectifiedLinear(), to the excitation.
+ Internally the operators Times(), Plus() and RectifiedLinear() are represented
+ as computation nodes TimesNode, PlusNode, and RectifiedLinearNode, respectively.
+ These Computation nodes are saved as part of the CN model but their values
+ are not.
+\end_layout
+
+\begin_layout Subsubsection
+Training
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Training Criteria
+\end_layout
+
+\end_inset
+
+ and Testing Criteria
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Testing Criteria
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#Training Criterion
+\end_layout
+
+\begin_layout Plain Layout
+
+CE=CrossEntropyWithSoftmax(labels, Plus2)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Test Objective Function
+\end_layout
+
+\begin_layout Plain Layout
+
+ErrPredict=ErrorPrediction(labels, Plus2)
+\end_layout
+
+\end_inset
+
+Each CN can have multiple root nodes used for different purposes.
+ In this example, the training and testing criteria are different.
+ We use the operator CrossEntropyWithSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+() to compute the training criterion and the operator ErrorPrediction
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ErrorPrediction
+\end_layout
+
+\end_inset
+
+() to compute the testing criterion.
+ These operators are internally represented as computation nodes CrossEntropyWit
+hSoftmaxNode and ErrorPredictionNode with names CE and ErrPredict, respectively.
+\end_layout
+
+\begin_layout Subsubsection
+Special Nodes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Special Nodes
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+FeatureNodes=(features)
+\end_layout
+
+\begin_layout Plain Layout
+
+LabelNodes=(labels)
+\end_layout
+
+\begin_layout Plain Layout
+
+CriteriaNodes=(CE)
+\end_layout
+
+\begin_layout Plain Layout
+
+EvalNodes=(ErrPredict)
+\end_layout
+
+\begin_layout Plain Layout
+
+OutputNodes=(Plus2)
+\end_layout
+
+\end_inset
+
+After defining the network, it’s important to let CNTK know what the special
+ nodes are in the network.
+ For example, CNTK needs to know which input nodes are features and which
+ are labels.
+ It also needs to know the default output nodes, evaluation nodes and training
+ criteria nodes.
+ CNTK supports multiple inputs and outputs which can be represented by comma
+ separated variable names surrounded by parentheses.
+\end_layout
+
+\begin_layout Standard
+These special nodes can be specified in two different ways, the node arrays,
+ or by use of special tags we will discuss later.
+ If both methods are used the values are combined.
+\end_layout
+
+\begin_layout Subsubsection
+Comments
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Comments
+\end_layout
+
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+ to be interpreted as a comment.
+ The following are valid comments:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#Test Objective Function
+\end_layout
+
+\begin_layout Plain Layout
+
+ErrPredict=ErrorPrediction(labels, Plus2) # classification error
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# the following variable is set to infinity and 
+\end_layout
+
+\begin_layout Plain Layout
+
+# the # in 1#INF is not interpreted as a comment marker
+\end_layout
+
+\begin_layout Plain Layout
+
+var = 1#INF
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Macros
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Macros
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+While creating a network using the syntax shown above is not all that difficult,
+ it can get wordy when creating deep neural networks with many layers.
+ To alleviate this problem, common definitions can be combined into macros.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Defining Macros
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Defining Macros
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Macros can be defined as a one line function, or as a block of code.
+ For example, the single-line macro
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+RFF(x1, w1, b1)=RectifiedLinear(Plus(Times(w1,x1),b1))
+\end_layout
+
+\end_inset
+
+defines the three steps involved in the hidden layer computation in the
+ previous section, all in one line.
+ When the functions calls are nested they will be evaluated from the innermost
+ nested function call to the outermost.
+\end_layout
+
+\begin_layout Standard
+A macro can also be defined as a block of code, for example
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+FF(X1, W1, B1)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+  T=Times(W1,X1)
+\end_layout
+
+\begin_layout Plain Layout
+
+  FF=Plus(T, B1)
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+defines the feed forward computation without the activation function.
+ It shows an alternate format of a macro.
+ Semicolons are not required, but can be used if desired.
+ The variables and parameters used inside the macros are local to the macro
+ but are accessible externally with dot operators we will discuss later.
+ The return value of a macro is defined by a local macro variable that has
+ the same name as the macro.
+ In this case the FF() macro's return value is the FF local variable.
+ If no variable matches, the last variable in the macro will be returned.
+\end_layout
+
+\begin_layout Standard
+The macro 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+BFF(in, rows, cols)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+  B=Parameter(rows)
+\end_layout
+
+\begin_layout Plain Layout
+
+  W=Parameter(rows, cols)
+\end_layout
+
+\begin_layout Plain Layout
+
+  BFF = FF(in, w, b)
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+shows how parameters are declared within a macro.
+ As in this example, a macro may call another macro.
+ However recursion (i.e., calling itself) is not supported.
+\end_layout
+
+\begin_layout Standard
+The macro
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+RBFF(input,rowCount,colCount)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+  F = BFF(input, rowCount, colCount);
+\end_layout
+
+\begin_layout Plain Layout
+
+  RBFF = RectifiedLinear(F);
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+calls the previous macro and adds the RectifiedLinear() activation function.
+ The macro
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SMBFF(x,r,c, labels)
+\end_layout
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+  F = BFF(x,r,c);
+\end_layout
+
+\begin_layout Plain Layout
+
+  SM = CrossEntropyWithSoftmax(labels, F)
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+computes the output layer value and the cross entropy training criterion.
+ Since no variable matches the name of the macro, the last variable defined
+ in the macro, SM in this case, is used as a return value.
+\end_layout
+
+\begin_layout Subsubsection
+Using Macros
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Using Macros
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The following example uses the macros defined above.
+ It describes the same one-hidden-layer network discussed in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:NDL-Basic-Concepts"
+
+\end_inset
+
+ but is much simpler and easier to understand because of the use of macros.
+ One new feature shown in this network definition is the access to macro-region
+ variables.
+ ErrorPrediction() needs to access an intermediate result from SMBFF before
+ the CrossEntropyWithSoftmax() is applied.
+ Although the needed variable is local to the macro, it can be accessed
+ via the 
+\emph on
+dot
+\emph default
+ syntax.
+ The return value of the macro is CE, so CE.F can be used to access the local
+ variable F defined in the macro.
+  This does requires the user to know the names used in the macro, so having
+ all macro definitions available is important.
+ In the single line version of macros, there are no user defined variable
+ names, so this feature cannot be used.
+ Since macros can be nested, dot names can be several layers deep if necessary.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+# Sample, Hidden, and Label dimensions
+\end_layout
+
+\begin_layout Plain Layout
+
+SDim=784
+\end_layout
+
+\begin_layout Plain Layout
+
+HDim=256
+\end_layout
+
+\begin_layout Plain Layout
+
+LDim=10
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Inputs
+\end_layout
+
+\begin_layout Plain Layout
+
+features=Input(SDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+labels=Input(LDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Layer operations
+\end_layout
+
+\begin_layout Plain Layout
+
+L1 = RBFF(features, HDim, SDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+CE = SMBFF(L1, LDim, HDim, labels)
+\end_layout
+
+\begin_layout Plain Layout
+
+Err=ErrorPrediction(labels, CE.F)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Optional Parameters
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Optional Parameters
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter ! Optional
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Optional Parameters are a feature that allows additional parameters to be
+ specified to a function.
+ While optional parameters can be specified for any function or macro, they
+ are limited to constant values.
+ In addition, the underlying function must support the passed optional parameter
+s, or there is no effect on the network.
+ When optional parameters are used on a macro, the macro must define local
+ variables that match the optional parameter name and value.
+\end_layout
+
+\begin_layout Subsubsection
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter ! initialization
+\end_layout
+
+\end_inset
+
+Parameter initialization
+\end_layout
+
+\begin_layout Standard
+One common use of these optional parameters is to define how parameters
+ will be initialized.
+ In the example
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+B0=Parameter(HDim, init=zero)
+\end_layout
+
+\begin_layout Plain Layout
+
+W0=Parameter(HDim, SDim, init=uniform)
+\end_layout
+
+\end_inset
+
+the Bias matrix will be zero initialized, and the weight matrix will be
+ initialized with uniform random numbers.
+ Please consult Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:NDL-Functions"
+
+\end_inset
+
+ to find which functions accept optional parameters
+\end_layout
+
+\begin_layout Subsubsection
+Tagging special values
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter ! special values
+\end_layout
+
+\end_inset
+
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Tagging special values
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+As an alternate to providing an array of special nodes that are used as
+ features, labels, criteria, etc, optional parameters can be used.
+ So instead of using
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+FeatureNodes=(features)
+\end_layout
+
+\begin_layout Plain Layout
+
+LabelNodes=(labels)
+\end_layout
+
+\begin_layout Plain Layout
+
+CriteriaNodes=(CE)
+\end_layout
+
+\begin_layout Plain Layout
+
+EvalNodes=(ErrPredict)
+\end_layout
+
+\end_inset
+
+we can tag these nodes as they are defined.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+features=Input(SDim, tag=feature)
+\end_layout
+
+\begin_layout Plain Layout
+
+labels=Input(LDim, tag=label)
+\end_layout
+
+\begin_layout Plain Layout
+
+CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
+\end_layout
+
+\begin_layout Plain Layout
+
+Err=ErrorPrediction(labels, CE.F, tag=Eval)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The acceptable tag names correspond to the special node types and are as
+ follows:
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+feature
+\emph default
+: feature input.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+label
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+: label input
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+criteria
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+: training criteria 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+eval
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+: evaluation node
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+output
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+: output node
+\end_layout
+
+\begin_layout Subsection
+NDL Functions
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDL ! Functions
+\end_layout
+
+\end_inset
+
+
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:NDL-Functions"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This section describe the currently implemented NDL functions (operators).
+ These operations are implemented as computation nodes internally and are
+ discussed in Chapter 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CN"
+
+\end_inset
+
+.
+ As CNTK is expanded, additional functions become available.
+ In the following discussion, 
+\emph on
+ordered optional
+\emph default
+ parameters are operational parameters that are identified by the position
+ of the parameter in the argument list, and named optional parameters are
+ optional parameters that are specified by an augment name.
+ For example, if cols is an ordered optional parameter in 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Function(rows, [cols=1])
+\end_layout
+
+\end_inset
+
+we can use 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Function(rowsValue, colsValue)
+\end_layout
+
+\end_inset
+
+to specify the cols value.
+ If cols is a named optional parameter, we need to call the function as
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Function(rowsValue, cols=colsValue)
+\end_layout
+
+\end_inset
+
+instead.
+\end_layout
+
+\begin_layout Subsubsection
+InputValue
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+InputValue
+\end_layout
+
+\end_inset
+
+ or Input
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Input
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Standard
+Defines input data for the network.
+ Inputs are read from a datasource.The datasource information is specified
+ in the configuration file separately, allowing the same network to be used
+ with multiple datasets easily.
+ The syntax is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+InputValue(rows, [cols=1], {tag=feature|label})
+\end_layout
+
+\begin_layout Plain Layout
+
+Input(rows, [cols=1], {tag=feature|label})  #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+rows - row dimension of the data.
+\end_layout
+
+\begin_layout Itemize
+cols - [ordered optional] column dimension of the data, default to 1.
+ Each column is considered as a sample in CNTK.
+ Default value is often used since the actual value may be determined by
+ the minibatch size.
+\end_layout
+
+\begin_layout Itemize
+tag - [named optional] tag for the inputs to indicate the intended usage.
+ It can be either feature or label.
+\end_layout
+
+\begin_layout Subsubsection
+ImageInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ImageInput
+\end_layout
+
+\end_inset
+
+ or Image
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Image
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Defines the three-dimensional (channel_id, img_row, img_col) image input
+ data stored in column-major for the network.
+ ImageInputs are read from a datasource which is specified in the configuration
+ file separately, allowing the same network to be used with multiple datasets
+ easily.
+ The syntax is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ImageInput(width, height, channels, [numImages=1], 
+\end_layout
+
+\begin_layout Plain Layout
+
+          {tag=feature|label})
+\end_layout
+
+\begin_layout Plain Layout
+
+Image(width, height, channels, [numImages=1], 
+\end_layout
+
+\begin_layout Plain Layout
+
+          {tag=feature|label}) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+width - width of the image data.
+\end_layout
+
+\begin_layout Itemize
+height  - height of the image data.
+\end_layout
+
+\begin_layout Itemize
+channels - number of channels in the image data (i.e.
+ RGB would have 3 channels)
+\end_layout
+
+\begin_layout Itemize
+numImages - [ordered optional] number of images, defaults to 1.
+ Each image is stored as a column vector with size 
+\begin_inset Formula $width\times height\times channels$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Itemize
+tag - [named optional] tag for the inputs to indicate the intended usage.
+ It can be either feature or label.
+\end_layout
+
+\begin_layout Standard
+CNTK uses column-major (similar to matlab) to store the matrices.
+ Each image is represented as a column vector internally and should be stored
+ as [channel_id, img_row, img_col].
+\end_layout
+
+\begin_layout Subsubsection
+LearnableParameter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LearnableParameter
+\end_layout
+
+\end_inset
+
+ or Parameter
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Parameter
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Defines a parameter in the network that will be trained and stored as part
+ of the model.
+ Normally used for weight and bias matrices/vectors.
+ These two function names mean the same thing but Parameter is a shorter
+ name.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+LearnableParameter(row, [cols=1], 
+\end_layout
+
+\begin_layout Plain Layout
+
+         {computeGradient=true|false, 
+\end_layout
+
+\begin_layout Plain Layout
+
+         init=fixedValue|Uniform|Gaussian|fromFile, 
+\end_layout
+
+\begin_layout Plain Layout
+
+         value=0, initValueScale=number})
+\end_layout
+
+\begin_layout Plain Layout
+
+Parameter(row, [cols=1], {needGradient=true|false, 
+\end_layout
+
+\begin_layout Plain Layout
+
+          init=fixedValue|Uniform|Gaussian|fromFile, 
+\end_layout
+
+\begin_layout Plain Layout
+
+          value=0, initValueScale=number}) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+rows - number of rows in the parameter.
+\end_layout
+
+\begin_layout Itemize
+cols - [ordered optional] number of columns in the parameter, defaults to
+ 1.
+ 
+\end_layout
+
+\begin_layout Itemize
+needGradient- [named optional] determines whether the parameter should be
+ updated by the training algorithm.
+ Defaults is true.
+\end_layout
+
+\begin_layout Itemize
+init - [named optional] parameter initialization method.
+ 
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+fixedValue- initialize all the values in the parameter with a fixed value
+ determined by the optional value argument.
+\end_layout
+
+\begin_layout Itemize
+fromFile - No initialization is required, should only be used if the network
+ will be initializing it in some other way
+\end_layout
+
+\begin_layout Itemize
+Uniform - Initializes the parameter matrix with uniform random numbers in
+ the range of 
+\begin_inset Formula $\left[-0.05\times initValueScale,0.05\times initValueScale\right]$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Gaussian - Initializes the parameter matrix with Gaussian random numbers
+ with zero mean and standard deviation of 
+\begin_inset Formula $0.2\times initValueScale/\sqrt{cols}$
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+initValueScale - [named optional] scale the range of the random numbers
+ used for initialization.
+ Only meaningful when Uniform or Gaussian is used as a init method.
+ Default is 1.
+ 
+\end_layout
+
+\begin_layout Itemize
+value - [named optional] the initial value of all the parameters when the
+ initialization method is set to fixedValue.
+ Default is 0.
+\end_layout
+
+\begin_layout Subsubsection
+Constant
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Constant
+\end_layout
+
+\end_inset
+
+ or Const
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Const
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Defines a constant parameter (i.e., will not change during the training process)
+ that will be saved as part of the model.
+ The syntax is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Constant(value, [rows=1, cols=1])
+\end_layout
+
+\begin_layout Plain Layout
+
+Const(value, [rows=1, cols=1])  #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+value - the value of the constant.
+\end_layout
+
+\begin_layout Itemize
+rows - [ordered optional] row dimension of the data, default to 1.
+\end_layout
+
+\begin_layout Itemize
+cols - [ordered optional] column dimension of the data, default to 1.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+RectifiedLinear
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RectifiedLinear
+\end_layout
+
+\end_inset
+
+ or ReLU
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ReLU
+\end_layout
+
+\end_inset
+
+, Sigmoid
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Sigmoid
+\end_layout
+
+\end_inset
+
+, Tanh
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Tanh
+\end_layout
+
+\end_inset
+
+, Log
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Log
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Apply the rectified linear function (RectifiedLinear or ReLU), Sigmoid function
+ (Sigmoid), hyperbolic tangent (Tanh), or natural logarithm (Log) to each
+ element of the input matrix.
+ The resulting matrix has the same dimension as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+RectifiedLinear(m)
+\end_layout
+
+\begin_layout Plain Layout
+
+ReLU(m) #deprecated
+\end_layout
+
+\begin_layout Plain Layout
+
+Sigmoid(m)
+\end_layout
+
+\begin_layout Plain Layout
+
+Tanh(m)
+\end_layout
+
+\begin_layout Plain Layout
+
+Log(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+ Can be any matrix except when it's input to the log function under which
+ condition each element must be positive (otherwise exception will be thrown).
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Softmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Softmax
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the softmax of the input matrix for each column.
+ The resulting matrix has the same dimensions as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Softmax(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+LogSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LogSoftmax
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the log of softmax of the input matrix for each column.
+ The resulting matrix has the same dimensions as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+LogSoftmax(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+SumElements
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SumElements
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Calculate the sum of all elements in the input matrix.
+ The result is a scalar (or one by one matrix).
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SumElements(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix 
+\end_layout
+
+\begin_layout Subsubsection
+Negate
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Negate
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Negate each element of the matrix.
+ The resulting matrix has the same dimension as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Negate(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+\end_layout
+
+\begin_layout Subsubsection
+RowSlice
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RowSlice
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Select a row slice from the input matrix for all columns (samples).
+ The resulting matrix is a numRows by m.cols matrix.
+ This function is often used to extract a portion of the input.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+RowSlicete(startRow, numRows, m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+\end_layout
+
+\begin_layout Itemize
+startRow - the start row to get a slice
+\end_layout
+
+\begin_layout Itemize
+numRows - the number of rows to get
+\end_layout
+
+\begin_layout Subsubsection
+Scale
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Scale
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Scale each element in the input matrix by a scalar value.
+ The resulting matrix has the same dimension as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Scale(scaleFactor, m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+scaleFactor - floating point scalar scale factor
+\end_layout
+
+\begin_layout Itemize
+m - input matrix 
+\end_layout
+
+\begin_layout Subsubsection
+Times
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Times
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Calculate the product of two matrices.
+ The resulting matrix has a size of m1.rows by m2.cols.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Times(m1, m2)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ The m1.cols must equal m2.rows.
+\end_layout
+
+\begin_layout Subsubsection
+DiagTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DiagTimes
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Calculate the product of two matrices in which the first matrix is a diagonal
+ matrix whose diagonal values are represented as a vector.
+ The resulting matrix is m1.rows by m2.cols.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+DiagTimes(m1, m2)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1 - the diagonal matrix whose diagonal values are represented as a vector
+ of size m2.rows by one.
+\end_layout
+
+\begin_layout Itemize
+m2 - a normal input matrix.
+ m1.rows must equal m2.rows.
+\end_layout
+
+\begin_layout Subsubsection
+Plus
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Plus
+\end_layout
+
+\end_inset
+
+, Minus
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Minus
+\end_layout
+
+\end_inset
+
+, ElementTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ElementTimes
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Calculate the sum (Plus), difference (Minus), or element-wise product (ElementTi
+mes) of two matrices.
+ The resulting matrices have the same dimension as that of the input matrices.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Plus(m1, m2)
+\end_layout
+
+\begin_layout Plain Layout
+
+Minus(m1, m2)
+\end_layout
+
+\begin_layout Plain Layout
+
+ElementTimes(m1, m2)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ Must be the same dimensions.
+\end_layout
+
+\begin_layout Subsubsection
+KhatriRaoProduct
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+KhatriRaoProduct
+\end_layout
+
+\end_inset
+
+ or ColumnwiseCrossProduct
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ColumnwiseCrossProduct
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the cross product of each column of two input matrices.
+ These two functions mean the same thing but ColumnwiseCrossProduct is easier
+ to understand for most people.
+ The resulting matrix is a (m1.rows times m2.rows) by m1.cols matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+KhatriRaoProduct(m1, m2)
+\end_layout
+
+\begin_layout Plain Layout
+
+ColumnwiseCrossProduct(m1, m2) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ The matrices should have same columns.
+\end_layout
+
+\begin_layout Subsubsection
+GMMLogLikelihood
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GMMLogLikelihood
+\end_layout
+
+\end_inset
+
+ or GMMLL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+GMMLL
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the Gaussian mixture model log likelihood of feature values given
+ the unnormalized Gaussian mixture weights (i.e., priors), Gaussian means
+ and log standard deviation.
+ The resulting matrix is a 1 by FeatureValues.cols matrix.
+ This node can be used in generative models to implement normal Gaussian
+ mixture models or mixture density network.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+GMMLogLikelihood(UnnormedPrior, Means, LogStddev, FeatureValues)
+\end_layout
+
+\begin_layout Plain Layout
+
+GMMLL(UnnormedPrior, Means, LogStddev, FeatureValues) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+UnnormedPrior- unnormalized Gaussian mixture weights (or prior).
+ The actual prior is the softmax of UnnormedPrior to make sure each prior
+ is non-negative and all priors sum to 1.
+ UnnormedPrior.rows equals to the number of Gaussian components.
+ 
+\end_layout
+
+\begin_layout Itemize
+Means - the mean vectors of all the Gaussian components.
+ Means.rows equals to the number of Gaussian components times feature size.
+\end_layout
+
+\begin_layout Itemize
+LogStddev - the log of the standard deviation for each Gaussian component.
+ All dimensions share the same LogStddev.
+ The actual standard deviation is the exponential of LogStddev to make sure
+ it's positive.
+ LogStddev.rows equals to the number of Gaussian components.
+\end_layout
+
+\begin_layout Itemize
+FeatureValues - the feature values on which to compute the log likelihood.
+ 
+\end_layout
+
+\begin_layout Standard
+Note, UnnormedPrior, Means and LogStddev should have the same number of
+ columns which should be either 1 or the same as the columns in FeatureValues.
+\end_layout
+
+\begin_layout Subsubsection
+SquareError
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SquareError
+\end_layout
+
+\end_inset
+
+ or SE
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SE
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the sum of the squared difference between elements in the two input
+ matrices.
+ The result is a scalar (i.e., one by one matrix).
+ This is often used as a training criterion node.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SquareError(m1, m2)
+\end_layout
+
+\begin_layout Plain Layout
+
+SE(m1, m2) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ Must have the same dimensions.
+\end_layout
+
+\begin_layout Subsubsection
+CrossEntropyWithSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+ or CEWithSM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CEWithSM
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the softmax for each column of the input matrix, compare the result
+ against the ground truth labels and compute sum of the cross entropy value
+ for all the columns (i.e., samples).
+ The result is a scalar (i.e., one by one matrix).
+ This is often used as a training criterion node.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+CrossEntropyWithSoftmax(labels, matrix)
+\end_layout
+
+\begin_layout Plain Layout
+
+CEWithSM(labels, matrix) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+labels - the ground truth labels
+\end_layout
+
+\begin_layout Itemize
+matrix - input matrix.
+\end_layout
+
+\begin_layout Subsubsection
+ClassBasedCrossEntropyWithSoftmax
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ClassBasedCrossEntropyWithSoftmax
+\end_layout
+
+\end_inset
+
+ or CBCEWithSM
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CNCEWithSM
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the sum of the cross entropy value for all the columns (i.e., samples)
+ using the class-based evaluation trick to reduce the computation cost.
+ The result is a scalar (i.e., one by one matrix).
+ This is often used as a training criterion node when the number of classes
+ is huge (e.g., in language model).
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ClassBasedCrossEntropyWithSoftmax(labels, matrix)
+\end_layout
+
+\begin_layout Plain Layout
+
+CBCEWithSM(labels, mainInputInfo, mainWeight, classProbBeforeSoftmax) #deprecate
+d
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+labels - the ground truth labels.
+ This is a 4 by T matrix, where T is the number of samples.
+ The first row is the ground truth output id.
+ The second row is the ground truth class id.
+ The third and fourth rows are the start (inclusive) and end (exclusive)
+ output ids corresponding to the ground trueth class id.
+\end_layout
+
+\begin_layout Itemize
+mainInputInfo - contains the main information to make the classfication
+ decision.
+ It's an inputDim by T matrix.
+ In language model, inputDim is often the hidden layer size.
+\end_layout
+
+\begin_layout Itemize
+mainWeight - the inputDim by outputDim weight matrix, where inputDim is
+ the number of rows in mainInputInfo and outputDim is the number of output
+ nodes (e.g., number of words in language model).
+ During the computation, only the column slice corresponding to the start
+ and end output ids of the class id is used to reduce the computation.
+\end_layout
+
+\begin_layout Itemize
+classProbBeforeSoftmax - applying softmax on this matrix will result in
+ class probabilities.
+ This is a numOfClass by T matrix, where numOfClass is the number of classes.
+\end_layout
+
+\begin_layout Subsubsection
+ErrorPrediction
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ErrorPrediction
+\end_layout
+
+\end_inset
+
+ or ClassificationError
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ClassificationError
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Evaluate the classification error of the predictions made by the model.
+ It finds the index of the highest value for each column in the input matrix
+ and compares it to the actual ground truth label.
+ The result is a scalar (i.e., one by one matrix).
+ This is often used as an evaluation criterion.
+ It cannot be used as a training criterion though since the gradient is
+ not defined for this operation.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ErrorPrediction(labels, m)
+\end_layout
+
+\begin_layout Plain Layout
+
+ClassificationError(labels, m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+labels - the ground truth labels
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+\end_layout
+
+\begin_layout Subsubsection
+CosDistance
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosDistance
+\end_layout
+
+\end_inset
+
+ or CosDist
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosDist
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Evaluate the cosine distance between each column of two input matrices.
+ The resulting matrix is a one by m1.cols row vector.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+CosDistance(m1, m2)
+\end_layout
+
+\begin_layout Plain Layout
+
+CosDist(m1, m2) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ The matrices should have same dimensions.
+\end_layout
+
+\begin_layout Subsubsection
+CosDistanceWithNegativeSamples
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosDistanceWithNegativeSamples
+\end_layout
+
+\end_inset
+
+ or CosWithNegSamples
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CosWithNegSamples
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Evaluate the cosine distance between each column of two input matrices as
+ the distance of positive samples, and the cosine distance between each
+ column of the left matrix (m1) and 
+\emph on
+numNegSamples
+\emph default
+ of samples in the right matrix (m2) selected by shifting the column 
+\emph on
+numShifts
+\emph default
+ times as the negative samples.
+ The resulting matrix is 
+\emph on
+numNegSamples+1
+\emph default
+ by m1.cols matrix.
+ Often used in the deep structured semantic model (DSSM).
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+CosDistanceWithNegativeSamples(m1, m2, numShifts, numNegSamples)
+\end_layout
+
+\begin_layout Plain Layout
+
+CosWithNegSamples(m1, m2, numShifts, numNegSamples) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ The matrices should have same dimensions.
+\end_layout
+
+\begin_layout Itemize
+numShifts - number of shifts in m2 for choosing negative samples, a 1 by
+ 1 matrix
+\end_layout
+
+\begin_layout Itemize
+numNegSamples- number of negative samples to use in m2, a 1 by 1 matrix
+\end_layout
+
+\begin_layout Subsubsection
+MatrixL1Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MatrixL1Reg
+\end_layout
+
+\end_inset
+
+ or L1Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+L1Reg
+\end_layout
+
+\end_inset
+
+, MatrixL2Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MatrixL2Reg
+\end_layout
+
+\end_inset
+
+ or L2Reg
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+L2Reg
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the L1 (MatrixL1Reg, L1Reg) or Frobenius (MatrixL2Reg, L2Reg) norm
+ of the input matrix.
+ The result is a scalar (i.e., one by one matrix).
+ This is often used as regularization terms.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+MatrixL1Reg(m)
+\end_layout
+
+\begin_layout Plain Layout
+
+L1Reg(m) #deprecated
+\end_layout
+
+\begin_layout Plain Layout
+
+MatrixL2Reg(m)
+\end_layout
+
+\begin_layout Plain Layout
+
+L2Reg(m) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix
+\end_layout
+
+\begin_layout Subsubsection
+Mean
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Mean
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the mean vector of the input matrix by sweeping the whole dataset.
+ The resulting matrix is a m.rows by one matrix.
+ This operation is precomputed before the first training pass.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Mean(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+m - input matrix
+\end_layout
+
+\begin_layout Subsubsection
+InvStdDev
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+InvStdDev
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the per-dimensional (i.e., assume each dimension is independent with
+ each other and the covariance matrix is a diagonal) inversed standard deviation
+ vector of the input matrix by sweeping the whole dataset.
+ The resulting matrix is a m.rows by one matrix.
+ This operation is precomputed before the first training pass.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+InvStdDev(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix
+\end_layout
+
+\begin_layout Subsubsection
+PerDimMeanVarNormalization
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMeanVarNormalization
+\end_layout
+
+\end_inset
+
+ or PerDimMVNorm
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMVNorm
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the mean-variance normalized matrix for each column (i.e., sample)
+ of the input matrix.
+ The resulting matrix has the same dimensions as the input matrix.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+PerDimMeanVarNormalization(m, mean, invStdDev)
+\end_layout
+
+\begin_layout Plain Layout
+
+PerDimMVNorm(m, mean, invStdDev) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix than needs to be normalized
+\end_layout
+
+\begin_layout Itemize
+mean - the mean vector.
+ It's a m.rows by one matrix.
+\end_layout
+
+\begin_layout Itemize
+invStdDev - the per-dimensional inversed standard deviation vector.
+ It's a m.rows by one matrix in which all values are non-negative.
+\end_layout
+
+\begin_layout Subsubsection
+PerDimMeanVarDeNormalization
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMeanVarDeNormalization
+\end_layout
+
+\end_inset
+
+ or PerDimMVDeNorm
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+PerDimMVDeNorm
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+De-normalize from the mean-variance normalized input matrix for each column
+ (i.e., sample).
+ It is often used in the generative model where during the training the
+ network's output node is normalized which needs to be de-normalized at
+ the actual generation process.
+ The resulting matrix has the same dimensions as the input matrix.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+PerDimMeanVarDeNormalization(m, mean, invStdDev)
+\end_layout
+
+\begin_layout Plain Layout
+
+PerDimMVDeNorm(m, mean, invStdDev) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix than needs to be de-normalized
+\end_layout
+
+\begin_layout Itemize
+mean - the mean vector.
+ It's a m.rows by one matrix.
+\end_layout
+
+\begin_layout Itemize
+invStdDev - the per-dimensional inversed standard deviation vector.
+ It's a m.rows by one matrix in which all values are non-negative.
+\end_layout
+
+\begin_layout Subsubsection
+Dropout
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dropout
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute a new matrix with some percentage of random elements in the input
+ matrix set to zero.
+ The percentage (called dropout rate) is often set as part of the training
+ configuration (e.g., the stochastic gradient descent block we will discuss
+ in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Stochastic-Gradient-Descent"
+
+\end_inset
+
+).
+ During evaluation the dropout rate is set to zero and this operation has
+ no effect (i.e., just pass the input matrix through).
+ It is commonly used to prevent overfitting during the training process
+ or to pretrain a model.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Dropout(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix
+\end_layout
+
+\begin_layout Subsubsection
+Convolution
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Convolution
+\end_layout
+
+\end_inset
+
+ or Convolve
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Convolve
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Compute the convolution of a weight matrix with an image.
+ The resulting matrix may have different dimension depends on the parameters
+ passed in.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Convolution(w, image, kernelWidth, kernelHeight, 
+\end_layout
+
+\begin_layout Plain Layout
+
+            outputChannels, horizontalSubsample, 
+\end_layout
+
+\begin_layout Plain Layout
+
+            verticalSubsample, [zeroPadding=false, 
+\end_layout
+
+\begin_layout Plain Layout
+
+            maxTempMemSizeInSamples=0])
+\end_layout
+
+\begin_layout Plain Layout
+
+Convolve(w, image, kernelWidth, kernelHeight, 
+\end_layout
+
+\begin_layout Plain Layout
+
+            outputChannels, horizontalSubsample, 
+\end_layout
+
+\begin_layout Plain Layout
+
+            verticalSubsample, [zeroPadding=false, 
+\end_layout
+
+\begin_layout Plain Layout
+
+            maxTempMemSizeInSamples=0]) #deprecated
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+w - convolution weight matrix, it has the dimensions of [outputChannels,
+ kernelWidth * kernelHeight * inputChannels].
+ If w's dimensions are not specified (i.e., all are zero's) they will be automatic
+ally set by CNTK using a depth-first traversing pass.
+\end_layout
+
+\begin_layout Itemize
+image - the input image.
+ 
+\end_layout
+
+\begin_layout Itemize
+kernelWidth - width of the kernel
+\end_layout
+
+\begin_layout Itemize
+kernelHeight - height of the kernel
+\end_layout
+
+\begin_layout Itemize
+outputChannels - number of output channels
+\end_layout
+
+\begin_layout Itemize
+horizontalSubsample - subsamples (or stride) in the horizontal direction.
+ In most cases this should be set to 1.
+\end_layout
+
+\begin_layout Itemize
+verticalSubsample - subsamples (or stride) in the vertical direction.
+ In most cases this should be set to 1.
+\end_layout
+
+\begin_layout Itemize
+zeroPadding - [named optional] specify whether the sides of the image should
+ be padded with zeros.
+ Default is false.
+ When it's true, the convolution window can move out of the image.
+\end_layout
+
+\begin_layout Itemize
+maxTempMemSizeInSamples - [named optional] maximum amount of memory (in
+ samples) that should be reserved to do matrix packing.
+ Default is 0 which means the same as the input samples.
+\end_layout
+
+\begin_layout Subsubsection
+MaxPooling
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MaxPooling
+\end_layout
+
+\end_inset
+
+, AveragePooling
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+AveragePooling
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Computes a new matrix by selecting the maximum (MaxPooling) or computing
+ the average (AveragePooling) value in the pooling window.
+ This is used to aggregate information from the input and will reduce the
+ dimensions of a matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+MaxPooling(m, windowWidth, windowHeight, stepW, stepH)
+\end_layout
+
+\begin_layout Plain Layout
+
+AveragePooling(m, windowWidth, windowHeight, stepW, stepH)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix
+\end_layout
+
+\begin_layout Itemize
+windowWidth - width of the pooling window
+\end_layout
+
+\begin_layout Itemize
+windowHeight - height of the pooling window
+\end_layout
+
+\begin_layout Itemize
+stepW - step (or stride) used in the width direction
+\end_layout
+
+\begin_layout Itemize
+stepH - step (or stride) used in the height direction
+\end_layout
+
+\begin_layout Subsubsection
+Delay
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Delay
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Used to apply a value in the past to the current time.
+ It is most often used to create recurrent networks.
+ The resulting matrix has the same dimension as that of the input matrix.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+rows - the number of rows in the delay node (and in the input matrix).
+ This parameter is needed because under some loopy conditions the dimensions
+ cannot be automatically inferred from the input matrix.
+\end_layout
+
+\begin_layout Itemize
+cols - the number of columns in the delay node (and in the input matrix).
+ This parameter is optional since it will be set based on the minibatch
+ size during training and testing.
+\end_layout
+
+\begin_layout Itemize
+m - input matrix to be delayed.
+ Each column is a sample.
+ The samples may be from different utterances as explained in Chapter .
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "chap:CN"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+delayTime - [named optional] the amount of delay.
+ Default is 1.
+\end_layout
+
+\begin_layout Itemize
+defaultPastValue - [named optional] the default value to use if the past
+ value is not available.
+ Default is 0.1.
+\end_layout
+
+\begin_layout Section
+Model Editing Language
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Model Editing Language
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The model editing language (MEL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MEL
+\end_layout
+
+\end_inset
+
+) of the CNTK provides a means to modify both the structure and the model
+ parameters of an existing trained network using a set of provided commands.
+ It provides a number of functions to modify the network and can use network
+ description language (NDL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDL
+\end_layout
+
+\end_inset
+
+) to define new elements.
+ MEL is very important since it allows users, for example, to train a network
+ with one configuration and later use it as part of another network designed
+ for another purpose.
+ It also allows users to do discriminative pretraining 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "DNN-SWB-seide+2011,FeatEngInDNN-Seide+2011"
+
+\end_inset
+
+ on DNNs by building shallow networks first and then inserting new layers
+ one on top of another.
+\end_layout
+
+\begin_layout Standard
+It looks similar to a scripting language in syntax, but give a simple way
+ to modify an existing network.
+ This network must have been defined in a format that CNTK can read, currently
+ only the CNTK computational network disk format is supported.
+ 
+\end_layout
+
+\begin_layout Subsection
+Basic Features
+\end_layout
+
+\begin_layout Standard
+In this section we cover the basic features of the MEL by the following
+ example.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+model1 = LoadModel("c:
+\backslash
+models
+\backslash
+mymodel.dnn", format=cntk)
+\end_layout
+
+\begin_layout Plain Layout
+
+SetDefaultModel(model1)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+DumpModel(model1, "c:
+\backslash
+temp
+\backslash
+originalModel.dmp", includeData = true)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#create another hidden layer
+\end_layout
+
+\begin_layout Plain Layout
+
+Copy(L3.*, L4.*, copy=all)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Hook up the layer
+\end_layout
+
+\begin_layout Plain Layout
+
+SetInput(L4.*.T, 1, L3.RL) # Layer 3 output to Layer 4 input
+\end_layout
+
+\begin_layout Plain Layout
+
+SetInput(CE.*.T, 1, L4.RL) # Layer 4 output to Top layer input
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#Add mean variance normalization using in-line NDL
+\end_layout
+
+\begin_layout Plain Layout
+
+meanVal = Mean(features)
+\end_layout
+
+\begin_layout Plain Layout
+
+invstdVal = InvStdDev(features)
+\end_layout
+
+\begin_layout Plain Layout
+
+inputVal = PerDimMeanVarNormalization(features,meanVal,invstdVal)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#make the features input now take the normalized input
+\end_layout
+
+\begin_layout Plain Layout
+
+SetInput(L1.BFF.FF.T, 1, inputVal)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+#save model
+\end_layout
+
+\begin_layout Plain Layout
+
+SaveModel("c:
+\backslash
+models
+\backslash
+mymodel4HiddenWithMeanVarNorm.cn")
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This MEL script is using a network that was defined originally by the NDL
+ script
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+# constants defined
+\end_layout
+
+\begin_layout Plain Layout
+
+# Sample, Hidden, and Label dimensions
+\end_layout
+
+\begin_layout Plain Layout
+
+SDim=784
+\end_layout
+
+\begin_layout Plain Layout
+
+HDim=256
+\end_layout
+
+\begin_layout Plain Layout
+
+LDim=10
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+features=Input(SDim, tag=feature)
+\end_layout
+
+\begin_layout Plain Layout
+
+labels=Input(LDim, tag=label)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Layer operations
+\end_layout
+
+\begin_layout Plain Layout
+
+L1 = RBFF(features, HDim, SDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+L2 = RBFF(L1, HDim, HDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+L3 = RBFF(L2, HDim, HDim)
+\end_layout
+
+\begin_layout Plain Layout
+
+CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
+\end_layout
+
+\begin_layout Plain Layout
+
+Err=ErrorPrediction(labels, CE.F, tag=Eval)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# rootNodes defined here
+\end_layout
+
+\begin_layout Plain Layout
+
+OutputNodes=(CE.F)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Loading and Setting Default Models
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Default Models
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first command of a MEL script is usually a LoadModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadModel
+\end_layout
+
+\end_inset
+
+() command.
+ This function takes the name of a model file on disk, and an optional parameter
+ specifying the format of the model file.
+ Currently only CNTK format model files are accepted, and CNTK format is
+ the default value.
+ Programmers can write file converters to support more model formats.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+model1 = LoadModel("c:
+\backslash
+models
+\backslash
+mymodel.cn", format=cntk)
+\end_layout
+
+\begin_layout Plain Layout
+
+SetDefaultModel(model1)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Here 
+\emph on
+model1
+\emph default
+ is the name this model is within the MEL script.
+ This identifier is used in the next line to set this model as the default
+ model.
+ The default model defines the model that will be assumed in all name references
+ within the script, where a model name is required but not specified, and
+ the model to which any NDL commands will apply.
+ If no model has been explicitly set to be the default model, the last loaded
+ or created model is used as a default.
+ However, It is recommended that the SetDefaultModel() command be used to
+ make it explicit.
+\end_layout
+
+\begin_layout Subsubsection
+Viewing a Model File
+\end_layout
+
+\begin_layout Standard
+It is often necessary to view a model file to determine the names used in
+ the model file.
+ MEL uses the node names in most commands, to specify which node(s) should
+ be modified.
+ The Dump
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dump
+\end_layout
+
+\end_inset
+
+() command dumps the node names and optionally values to a readable file.
+ The parameters are the model name, the file name, and if the dump should
+ include data.
+ The includeData optional parameter defaults to false.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+DumpModel(model1, "c:
+\backslash
+temp
+\backslash
+originalModel.dmp", includeData = true)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The dump looks something like this:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+...
+\end_layout
+
+\begin_layout Plain Layout
+
+features=InputValue [784,32]
+\end_layout
+
+\begin_layout Plain Layout
+
+L1.BFF.B=LearnableParameter [256,1] NeedGradient=true
+\end_layout
+
+\begin_layout Plain Layout
+
+0.0127850091
+\end_layout
+
+\begin_layout Plain Layout
+
+-0.00473949127
+\end_layout
+
+\begin_layout Plain Layout
+
+0.0156492535
+\end_layout
+
+\begin_layout Plain Layout
+
+...
+\end_layout
+
+\begin_layout Plain Layout
+
+0.00529919751
+\end_layout
+
+\begin_layout Plain Layout
+
+####################################################################
+\end_layout
+
+\begin_layout Plain Layout
+
+L1.BFF.FF.P=Plus ( L1.BFF.FF.T , L1.BFF.B )
+\end_layout
+
+\begin_layout Plain Layout
+
+L1.BFF.FF.T=Times ( L1.BFF.W , normInput )
+\end_layout
+
+\begin_layout Plain Layout
+
+L1.BFF.W=LearnableParameter [256,784] NeedGradient=true
+\end_layout
+
+\begin_layout Plain Layout
+
+0.0174789988 0.0226208009 -0.00648776069 0.0346485041 -0.0449098013 -0.0233792514
+\end_layout
+
+\begin_layout Plain Layout
+
+0.0154407881 0.000157605857 0.0206625946 0.0491085015 0.00128563121
+\end_layout
+
+\begin_layout Plain Layout
+
+...
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Copy Nodes
+\end_layout
+
+\begin_layout Standard
+The copy
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Copy
+\end_layout
+
+\end_inset
+
+ command will copy a node, or a group of nodes from one location to another
+ location.
+ This can be done within the same model, or between different models:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#create another hidden layer
+\end_layout
+
+\begin_layout Plain Layout
+
+Copy(L3.*, L4.*, copy=all)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first parameter is the source of the copy and must exist, the second
+ is the target and may or may not exist.
+ If it does exist, those matching nodes will be overwritten by the copy.
+ The optional parameter 
+\series bold
+copy
+\series default
+ can be used to change this behavior, the options are: 
+\series bold
+all 
+\series default
+- the default, which copies all node data and links, or 
+\series bold
+value 
+\series default
+- which
+\series bold
+ 
+\series default
+copies the node values only, leaving the connections between nodes (if any)
+ unchanged.
+\end_layout
+
+\begin_layout Standard
+Since the L3 used in this copy command was originally defined in NDL as
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+L3 = RBFF(L2, HDim, HDim)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The new L4 layer will contain all the nodes L3 contains (RectifiedLinear,
+ Plus, Times, W and B Parameters) all connected just as they were in the
+ original L3 layer.
+\end_layout
+
+\begin_layout Subsubsection
+SetInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetInput
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To integrate this new layer into the model, the inputs and outputs of the
+ nodes must reset.
+ After the copy any node whose connected nodes were not copied will have
+ those connections set to an invalid value.
+ These need to be fixed in order to have a valid model.
+ Before a model can be saved CNTK first checkes to see if all nodes are
+ correctly connected.
+\end_layout
+
+\begin_layout Standard
+You can change connections between nodes with the SetInput() command.
+ This command takes a node to modify, the input number (zero-based) to modify,
+ and the new value for that input.
+ The following commands hook up the inputs and outputs for our copied nodes:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#hook up the layer
+\end_layout
+
+\begin_layout Plain Layout
+
+SetInput(L4.*.T, 1, L3.RL) # Layer 3 output to Layer 4 input
+\end_layout
+
+\begin_layout Plain Layout
+
+SetInput(CE.*.T, 1, L4.RL) # Layer 4 output to Top layer input
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To connect our new L4 layer, we need to set the second input of the Times
+ node (L4.BFF.FF.T) to L3.RL, which is the output of the L3 layer.
+ The input number is zero-based, so the first input is zero and the second
+ input would be '1'.
+ Likewise we need to hook the output of the L4 layer nodes to the input
+ of the top layer.
+ Once again this ends up being a Times node (CE.BFF.FF.T).
+\end_layout
+
+\begin_layout Subsubsection
+Adding New Nodes: In-line NDL
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+In-line NDL
+\end_layout
+
+\end_inset
+
+ and NDL Snippets
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NDL ! Snippets
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Adding new nodes to an existing model can be done just as a model was originally
+ defined in NDL.
+ There are two ways to do this, the simplest is to just type the NDL definitions
+ into the MEL script, as if it was NDL, like so:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#Add mean variance normalization using in-line NDL
+\end_layout
+
+\begin_layout Plain Layout
+
+meanVal = Mean(features)
+\end_layout
+
+\begin_layout Plain Layout
+
+invstdVal = InvStdDev(features)
+\end_layout
+
+\begin_layout Plain Layout
+
+inputVal = PerDimMeanVarNormalization(features,meanVal,invstdVal)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This is called in-line NDL and can be used for most tasks.
+ The new nodes will be placed in the current default model in the MEL script.
+ Note that the variable features used in the NDL is actually a node from
+ the default model.
+ In-line NDL may use node names from the default model as parameters, and
+ MEL commands may use NDL symbols as parameters.
+ There are a number of restrictions in using in-line NDL:
+\end_layout
+
+\begin_layout Itemize
+ Only fully quantified node names are accepted.
+\end_layout
+
+\begin_layout Itemize
+NDL symbols only apply to the default model at the time they were created
+ when used in MEL commands.
+\end_layout
+
+\begin_layout Itemize
+Macros may not be defined in in-line NDL (though they can in an NDL snippet)
+\end_layout
+
+\begin_layout Itemize
+Only macros defined in the default macro file referenced in the config file,
+ or macros defined in an NDL snippet in the MEL Script may be used.
+\end_layout
+
+\begin_layout Itemize
+NDL will be processed when the next MEL command that requires it to be processed
+ is encountered.
+ It is only at this time that the new nodes are fully created.
+ If forward references are used to variables, they must be resolved before
+ the next MEL command that requires the variables to be resolved.
+\end_layout
+
+\begin_layout Standard
+Using NDL Snippet is another way.
+ NDL snippets are sections of NDL definitions that generate new nodes.
+ Any NDL construct that is legal in an NDL script can be used.
+ This includes defining macros and other advanced NDL features.
+ Inside the snippets wildcard naming and use of symbols from another model
+ are not allowed.
+ The syntax for defining an NDL snippet are as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+[modelName]=[
+\end_layout
+
+\begin_layout Plain Layout
+
+#ndl commands go here
+\end_layout
+
+\begin_layout Plain Layout
+
+]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Upon the completion of the snippet, the modelName will be the name of the
+ newly defined model.
+ This model need not be fully defined.
+ For example, the special nodes (i.e.
+ criteria nodes) do not need to be defined in the model.
+ However, all referenced variables must be defined in the snippet.
+ It is often easier to use in-line NDL to define new nodes in MEL, and NDL
+ Snippets to define any macros.
+ Macros are defined in a global namespace and can be defined in any model
+ and used from any other model.
+ One possible use of an NDL snippet is to define an entirely new model,
+ and then use MEL to populate the new model with values.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+SaveModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveModel
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+After the model edits are complete, it's time to save the model:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+#save model
+\end_layout
+
+\begin_layout Plain Layout
+
+SaveModel("c:
+\backslash
+models
+\backslash
+mymodel4HiddenWithMeanVarNorm.cn")
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This command saves the default model to the path name specified.
+ Alternatively, you can specify the model name as the first parameter with
+ the path as the second to make the model name explicit.
+ Before the save happens the model is validated to ensure it is a valid
+ model.
+ Should there be an error in the model, an error message will be displayed
+ on the console and the model edit will terminate.
+\end_layout
+
+\begin_layout Subsubsection
+Name Matching
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Name Matching
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+You may have noticed the use of the ‘*
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+*
+\end_layout
+
+\end_inset
+
+’ wildcard character
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+wildcard character
+\end_layout
+
+\end_inset
+
+ in the commands presented to this point.
+ Those are name matching wildcards, and are useful in matching a group of
+ related nodes.
+ Because of the hierarchical dot-naming scheme used by NDL, it is easy to
+ select all the nodes that a particular macro generated because they will
+ all start with the same prefix.
+ Nodes generated by NDL macros have the following structure:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+[name]{.[macroName]}.[nameNode]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Where 
+\emph on
+name
+\emph default
+ is the name assigned in NDL, macroName is the name given to a macro called
+ by the initial macro, and can be several layers deep, and nameNode is the
+ name given to a single node in the final macro.
+ For example, this macro in NDL
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+L3 = RBFF(L2, HDim, HDim)
+\end_layout
+
+\end_inset
+
+generates the following nodes:
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.RL: RectifiedLinear node
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.BFF.B: Parameter node - used for bias
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.BFF.W: Parameter node - used for weight
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.BFF.FF.T: Times node
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.BFF.FF.P: Plus node
+\end_layout
+
+\begin_layout Standard
+These wildcard patterns can be used to access these nodes:
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.*: Select all the L3 nodes
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.*.P: Select the L3.BFF.FF.P node
+\end_layout
+
+\begin_layout Itemize
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+L3.*: All the L3 nodes in the model
+\end_layout
+
+\begin_layout Subsection
+MEL Command Reference
+\end_layout
+
+\begin_layout Standard
+This section contains the currently implemented MEL Command functions.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+CreateModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CreateModel
+\end_layout
+
+\end_inset
+
+, CreateModelWithName
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CreateModelWithName
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Creates a new empty model.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+m=CreateModel()
+\end_layout
+
+\begin_layout Plain Layout
+
+CreateModelWithName(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - the name of newly created model
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+LoadModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadModel
+\end_layout
+
+\end_inset
+
+, LoadModelWithName
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadModelWithName
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Load a model from a disk file and assign it a name.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+m=LoadModel(modelFileName, [format=cntk])
+\end_layout
+
+\begin_layout Plain Layout
+
+LoadModelWithName(m, modelFileName, [format=cntk])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - the name of loaded model
+\end_layout
+
+\begin_layout Itemize
+modelFileName - name of the model file, can be a full path name.
+  If it contains spaces, it must be enclosed in double quotes.
+\end_layout
+
+\begin_layout Itemize
+ Currently only the native CNTK format of model file is accepted.
+ Other formats may be supported in the future.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+SaveDefaultModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveDefaultModel
+\end_layout
+
+\end_inset
+
+, SaveModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SaveModel
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Save a model to disk in the specified model format.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SaveDefaultModel(modelFileName, [format=cntk])
+\end_layout
+
+\begin_layout Plain Layout
+
+SaveModel(m, modelFileName, [format=cntk])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - the name of the model to save
+\end_layout
+
+\begin_layout Itemize
+modelFileName - name of the model file, can be a full path name.
+  If it contains spaces, it must be enclosed in double quotes.
+\end_layout
+
+\begin_layout Itemize
+ Currently only the native CNTK format of model file is accepted.
+ Other formats may be supported in the future.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+UnloadModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+UnloadModel
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Unload the specified model from memory.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+UnloadModel(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m- the name of the model to unload.
+\end_layout
+
+\begin_layout Standard
+In general it is unnecessary to unload a model explicitly since it will
+ happen automatically at the end of the MEL script.
+ It is also not recommended that you reuse a model identifier after unloading
+ a model.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+LoadNDLSnippet
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+LoadNDLSnippet
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Load an NDL Snippet from a file, and process it, assigning the results to
+ a name.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+LoadNDLSnippet(m, nsdSnippetFileName, [section])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m- the name of the model that the snippet will be applied to.
+\end_layout
+
+\begin_layout Itemize
+ndlSnippetFileName - name of the file that contains the snippet we want
+ to load.
+\end_layout
+
+\begin_layout Itemize
+section - [named optional] name of the section that contains the snippet
+ we want to load.
+ If the entire file is the snippet no section name should be specified.
+ Default is the first section appear in the file.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+Dump
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Dump
+\end_layout
+
+\end_inset
+
+, DumpModel
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DumpModel
+\end_layout
+
+\end_inset
+
+
+\series default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Dump the contents and structure of a model to a file.
+ These two functions mean the same thing.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Dump(m, dumpFileName, [includeData=true|false])
+\end_layout
+
+\begin_layout Plain Layout
+
+DumpModel(m, dumpFileName, [includeData=true|false])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m- name of the model to dump.
+\end_layout
+
+\begin_layout Itemize
+dumpFileName- name of the file that we want to save the output.
+\end_layout
+
+\begin_layout Itemize
+includeData - [named optional] if set to true the contents of the nodes
+ that contain matrix values will also be dumped.
+ Default is false.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+DumpNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DumpNode
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Dump the contents and structure of a node to a file.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+DumpNode(node, dumpFileName, [includeData=true|false])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+node - node name, a wildcard name may be used to output multiple nodes in
+ one call
+\end_layout
+
+\begin_layout Itemize
+dumpFileName- name of the file that we want to save the output.
+\end_layout
+
+\begin_layout Itemize
+includeData - [named optional] if set to true the contents of the nodes
+ that contain matrix values will also be dumped.
+ Default is false.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+Copy
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Copy
+\end_layout
+
+\end_inset
+
+, CopyNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CopyNode
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Copy a node, or a group of nodes from one location to another location.
+ This can be done within the same model, or between different models.
+ The copy can create new nodes or overwrite/update existing nodes.
+ The network structure can be copied with multiple nodes, or just the values
+ in the nodes.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Copy(fromNode, toNode, [copy=all|value])
+\end_layout
+
+\begin_layout Plain Layout
+
+CopyNode(fromNode, toNode, [copy=all|value])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+fromNode - node identifier we are copying from.
+ This can also be a wildcard pattern.
+\end_layout
+
+\begin_layout Itemize
+toNode - node identifier we are copying to.
+ This can also be a wildcard pattern, but must match the fromNode pattern.
+ A copy from a single node to multiple nodes is also permitted.
+\end_layout
+
+\begin_layout Itemize
+copy - [named optional] specifies how the copy will be performed.
+ Default is all.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="3" columns="3">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="block" valignment="top" width="1cm">
+<column alignment="block" valignment="top" width="5cm">
+<column alignment="block" valignment="top" width="5cm">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+if destination node exists
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+if destination node does not exist
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+All
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Copies over the values of the nodes and any links between them overwriting
+ the existing node values.
+ Any node inputs that are not included in the copy set will remain unchanged.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Copies over the values of the nodes and any links between them creating
+ new nodes.
+ All nodes that include inputs in the copy set will still be connected.
+ All other nodes will have no inputs and will need to be set using SetInput()
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Value
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Copies over the node contents, the node inputs will remain unchanged
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Not a valid option, the nodes must exist to copy only values.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+CopySubTree
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+CopySubTree
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Copy all nodes in a subtree of a computational network from one location
+ to another location.
+ This can be done within the same model, or between different models.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+CopySubTree(fromRootNode, toRootNode, [copy=all|value])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+fromRootNode - node identifier we are copying from.
+ This can also be a wildcard pattern.
+\end_layout
+
+\begin_layout Itemize
+toRootNode - node identifier we are copying to.
+ This can also be a wildcard pattern, but must match the fromRootNode pattern.
+\end_layout
+
+\begin_layout Itemize
+copy - [named optional] specifies how the copy will be performed.
+ See the Copy and CopyNode command for details.
+ Default is all.
+ 
+\end_layout
+
+\begin_layout Standard
+If the fromRootNode is a wildcard pattern then the toRootNode must also
+ be a similar wildcard pattern.
+ The CopySubTree() command will execute separately for each root node.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+SetInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetInput
+\end_layout
+
+\end_inset
+
+ or SetNodeInput
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetNodeInput
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Set an input (child) of a node (i.e., operand of an operator) to a value.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SetInput(node, inputNumber, inputNode)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+node - node whose input will be set.
+ This can also be a wildcard pattern.
+\end_layout
+
+\begin_layout Itemize
+inputNumber - a zero-based index to the input that will be set.
+\end_layout
+
+\begin_layout Itemize
+inputNode - node identifier for input node.
+ This must be a single node.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+SetInputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetInputs
+\end_layout
+
+\end_inset
+
+ or SetNodeInputs
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetNodeInputs
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Set all the inputs (children) of a node (i.e., operands of an operator).
+ If only one input needs to be set use the SetInput() command instead.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SetInputs(node, inputNode1[, inputNode2, inputNode3])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+node - node whose input we are modifying .
+\end_layout
+
+\begin_layout Itemize
+inputNode1, inputNode2, inputNode3 - node identifier for input node.
+ The number of input parameters must match the number of inputs the referenced
+ node requires.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+SetProperty
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetProperty
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Set the property of a node to a specific value.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SetProperty(node, propertyName, propertyValue)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+node - the node whose properties will be set
+\end_layout
+
+\begin_layout Itemize
+propertyName - property name to modify.
+\end_layout
+
+\begin_layout Itemize
+propertyValue - the new property value.
+\end_layout
+
+\begin_layout Standard
+The acceptable property names and property values are as follows:
+\end_layout
+
+\begin_layout Itemize
+ComputeGradient
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ComputeGradient
+\end_layout
+
+\end_inset
+
+ or NeedsGradient
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+NeedsGradient
+\end_layout
+
+\end_inset
+
+=true|false: A flag that determine if a node participates in gradient calculatio
+ns.
+ Applies to Parameter nodes
+\end_layout
+
+\begin_layout Itemize
+Feature
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Feature
+\end_layout
+
+\end_inset
+
+=true|false: Sets the node as a feature input.
+ Applies to input nodes.
+\end_layout
+
+\begin_layout Itemize
+Label
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Label
+\end_layout
+
+\end_inset
+
+=true|false: Set the node as a label input.
+ Applies to input nodes.
+\end_layout
+
+\begin_layout Itemize
+FinalCriterionCriteria
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+FinalCriterionCriteria
+\end_layout
+
+\end_inset
+
+=true|false: Sets the node as one of the criteria nodes of the network.
+\end_layout
+
+\begin_layout Itemize
+EvaluationEval
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+EvaluationEval
+\end_layout
+
+\end_inset
+
+=true|false: Set the node as one of the evaluation nodes.
+\end_layout
+
+\begin_layout Itemize
+Output
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Output
+\end_layout
+
+\end_inset
+
+=true|false: Set the node as one of the output nodes.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+SetPropertyForSubTree
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SetPropertyForSubTree
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Set the property of a node to a specific value.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SetProperty(rootNode, propertyName, propertyValue)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+rootNode - the node at the root of the subtree
+\end_layout
+
+\begin_layout Itemize
+propertyName - property name to modify.
+\end_layout
+
+\begin_layout Itemize
+propertyValue - the new property value.
+\end_layout
+
+\begin_layout Standard
+The acceptable property names and property values for this command are as
+ follows:
+\end_layout
+
+\begin_layout Itemize
+ComputeGradient or NeedsGradient=true|false: A flag that determine if a
+ node participates in gradient calculations.
+ Applies to Parameter nodes
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+Remove
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Remove
+\end_layout
+
+\end_inset
+
+ or RemoveNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RemoveNode
+\end_layout
+
+\end_inset
+
+, Delete
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Delete
+\end_layout
+
+\end_inset
+
+ or DeleteNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DeleteNode
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Delete or Remove node(s) from a model.
+ All alternate commands perform the same operation.
+ The syntax is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Remove(node, [node2, node3]) #deprecated
+\end_layout
+
+\begin_layout Plain Layout
+
+Delete(node, [node2, node3]) #deprecated
+\end_layout
+
+\begin_layout Plain Layout
+
+RemoveNode(node, [node2, node3])
+\end_layout
+
+\begin_layout Plain Layout
+
+DeleteNode(node, [node2, node3])
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+node - the node to be removed.
+ This can be a wildcard name.
+\end_layout
+
+\begin_layout Itemize
+node2, node3 - additional optional nodes that will also be removed, These
+ can be wildcards
+\end_layout
+
+\begin_layout Standard
+This command can leave unconnected nodes in a model that would need to be
+ reconnected using the SetInput() or SetInputs() commands.
+\end_layout
+
+\begin_layout Subsubsection
+
+\series bold
+Rename
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Rename
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Rename a node.
+ Note that this only changes the name of a node (e.g., making it easier to
+ understand and to reference) but not how it connects with other nodes.
+ The syntax is 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Rename(oldNodeName, newNodeName)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+oldNodeName- the old node name.
+ Wildcard naming may be used.
+\end_layout
+
+\begin_layout Itemize
+newNodeName- the new node name.
+ Matching wildcard naming may be used if oldNodeName contains wildcards.
+\end_layout
+
+\end_body
+\end_document

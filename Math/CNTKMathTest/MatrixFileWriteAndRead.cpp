@@ -7,10 +7,10 @@
 #include <string>
 #include "CppUnitTest.h"
 #include "..\Math\Matrix.h"
-#include "..\..\common\include\basetypes.h"
+#include "..\..\common\include\Basics.h"
 #include "..\..\common\include\fileutil.h"
-#include "..\..\common\include\file.h"
-#include "..\..\common\file.cpp"
+#include "..\..\common\include\File.h"
+#include "..\..\common\File.cpp"
 #include "..\..\common\fileutil.cpp"
 
 

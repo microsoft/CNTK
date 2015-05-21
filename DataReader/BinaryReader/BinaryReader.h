@@ -6,6 +6,7 @@
 #pragma once
 #include "DataReader.h"
 #include "DataWriter.h"
+#include "commandArgUtil.h"
 #include <string>
 #include <map>
 #include <vector>

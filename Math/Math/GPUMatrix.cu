@@ -38,6 +38,8 @@ bool do_sync = true;
 
 #define DEFAULT_THREAD_PER_DIM		16
 
+#define UNCONST(t,c,uc)  GPUMatrix<t> &uc = const_cast<GPUMatrix<t>&>(c);
+
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
 __declspec (thread)
@@ -1777,6 +1779,113 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
         return *this;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
+        const GPUMatrix<ElemType>& b, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
+    {
+        UNCONST(ElemType, a, my_a);
+        UNCONST(ElemType, b, my_b);
+
+        cudaEvent_t done = nullptr;
+        if (do_sync) CUDA_CALL(cudaEventCreate(&done));
+
+        int p = 512;
+        int width = a.GetNumCols();
+        while (p / 2 > width) p = p / 2;
+        
+        _computeNceOutput<ElemType> << <m_nz, p >> >(
+            this->GetArray(),
+            m_numRows,
+            sampleCount,
+            my_a.GetArray(),//a
+            a.GetNumCols(),
+            my_b.GetArray(),//b
+            tmp.GetArray());//tmp
+
+        p = 512;
+        while (p / 2 > m_nz) p = p / 2;
+
+        // summing up objective must be done in one block
+        _assignNoiseContrastiveEstimation<ElemType> << <1, p >> >(
+            this->GetArray(),
+            m_numRows,
+            sampleCount, my_a.GetArray(),
+            a.GetNumCols(),
+            my_b.GetArray(),
+            tmp.GetArray(),
+            c.GetArray());
+
+        _computeNceError<ElemType> << <1, p >> >(
+            this->GetArray(),
+            m_numRows,
+            tmp.GetNumCols(),
+            tmp.GetArray());
+          
+        if (do_sync) CUDA_CALL(cudaEventRecord(done));
+        if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync) CUDA_CALL(cudaEventDestroy(done));
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GPUMatrix<ElemType>& a,
+        const GPUMatrix<ElemType>& b, size_t inputIndex, GPUMatrix<ElemType>& c)
+    {
+        UNCONST(ElemType, a, my_a);
+        UNCONST(ElemType, b, my_b);
+        cudaEvent_t done = nullptr;
+        if (do_sync) CUDA_CALL(cudaEventCreate(&done));
+        int p = 512;
+        int width = a.GetNumCols();
+        while (p / 2 > width) p = p / 2;
+        
+        _assignNceDerivative<ElemType> << <m_nz, p >> >(
+            GetArray(),
+            m_numRows,
+            tmp.GetNumCols(),
+            my_a.GetArray(),
+            a.GetNumCols(),
+            my_b.GetArray(),
+            tmp.GetArray(),
+            c.GetArray(),
+            inputIndex);
+           
+        if (do_sync) CUDA_CALL(cudaEventRecord(done));
+        if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync) CUDA_CALL(cudaEventDestroy(done));
+    }
+
+
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
+    {
+        assert(a.GetComputeDeviceId() == b.GetComputeDeviceId());
+        assert(GetNumRows() == a.GetNumRows());
+        assert(GetNumCols() == b.GetNumRows());
+        assert(a.GetNumCols() == b.GetNumRows());
+        a; b; c;  // TODO: this function seems like a stub
+        /*
+        EnsureAuxMemory();
+        int p = 512;
+        int width = a.GetNumCols();
+        while (p / 2 > width) p = p / 2;
+
+        // this kernel need be launched in nnz blocks
+        _sparseInnerProductDenseTimesDense<ElemType> << <m_nz, p >> >(
+        m_dVal,
+        m_buf,
+        m_dCol,
+        m_nz,
+        GetNumRows(),
+        a.GetArray(),
+        b.GetArray(),
+        b.GetNumRows(),
+        m_res);
+
+        //sum up the results
+        _reductionSum32<ElemType> << <1, 32 >> >(m_res, c.GetArray(), m_nz);*/
     }
 
 
@@ -3816,7 +3925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUMatrix<ElemType>::RCRFBackwardCompute(
         const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-        const GPUMatrix<ElemType>& lbls,
+        const GPUMatrix<ElemType>& /*lbls*/,
         const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift)
     {
         if (alpha.IsEmpty() || pos_scores.IsEmpty() || pair_scores.IsEmpty())
