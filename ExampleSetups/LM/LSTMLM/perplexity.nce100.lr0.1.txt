@@ -38,3 +38,5 @@ Final Results: Minibatch[1-8905]: Samples Seen = 73760    TrainNodeNCEBasedCross
 Final Results: Minibatch[1-8905]: Samples Seen = 73760    TrainNodeNCEBasedCrossEntropy: NCEBasedCrossEntropyWithSoftmax/Sample = 4.8943664    Perplexity = 133.53537    TrainNodeNCEBasedCrossEntropy: NCEBasedCrossEntropyWithSoftmax/Sample = 4.8943664    Perplexity = 133.53537    
 Final Results: Minibatch[1-8905]: Samples Seen = 73760    TrainNodeNCEBasedCrossEntropy: NCEBasedCrossEntropyWithSoftmax/Sample = 4.8943663    Perplexity = 133.53537    TrainNodeNCEBasedCrossEntropy: NCEBasedCrossEntropyWithSoftmax/Sample = 4.8943663    Perplexity = 133.53537    
 Final Results: Minibatch[1-82430]: Samples Seen = 82430    TrainNodeNCEBasedCrossEntropy: NCEBasedCrossEntropyWithSoftmax/Sample = 4.8084526    Perplexity = 122.54185    TrainNodeNCEBasedCrossEntropy: NCEBasedCrossEntropyWithSoftmax/Sample = 4.8084526    Perplexity = 122.54185    
+
+
