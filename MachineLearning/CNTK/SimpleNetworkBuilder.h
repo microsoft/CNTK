@@ -466,17 +466,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
                 if (layerType == "perceptron")
                 {
-                    fprintf(stderr, "DBN: Reading (%zu x %zu) perceptron\n", wts.GetNumRows(), wts.GetNumCols());
+                    fprintf(stderr, "DBN: Reading (%lu x %lu) perceptron\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
                     output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
                 }
                 else if (layerType == "rbmisalinearbernoulli" )
                 {
-                    fprintf(stderr, "DBN: Reading (%zu x %zu) linear layer\n", wts.GetNumRows(), wts.GetNumCols());
+                    fprintf(stderr, "DBN: Reading (%lu x %lu) linear layer\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
                     output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
                 }
                 else // assume rbmbernoullibernoulli
                 {
-                    fprintf(stderr, "DBN: Reading (%zu x %zu) non-linear layer\n", wts.GetNumRows(), wts.GetNumCols());
+                    fprintf(stderr, "DBN: Reading (%lu x %lu) non-linear layer\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
                     output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus), i, nameOfH);
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output, L"Drop" + nameOfH);
