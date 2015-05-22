@@ -600,7 +600,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (iter->second <= cutoff)
         wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
-        throw exception("no word remained after cutoff");
+        throw std::runtime_error("no word remained after cutoff");
 
     if (vocabSize > wordCountLessCutoff)
     {
