@@ -731,7 +731,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
         m_numTimesMatrixTypeChanged++;
         if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
-            fprintf(stderr, "WARNING: The same matrix with dim [%zu, %zu] has been transferred between different devices for %d times.\n", GetNumRows(), GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
 
         if (GetDeviceId()<0) //CPU
         {
@@ -3221,7 +3221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define NUM_DEVICE_CHANGED_WARN 20
         m_numTimesDeviceChanged++;
         if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN)
-            fprintf(stderr, "WARNING: The same matrix with dim [%zu, %zu] has been transferred between different devices for %d times.\n", GetNumRows(), GetNumCols(), NUM_DEVICE_CHANGED_WARN);
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_DEVICE_CHANGED_WARN);
 
         if (m_matrixType == MatrixType::SPARSE)
         {
