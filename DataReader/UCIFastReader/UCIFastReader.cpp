@@ -548,7 +548,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
         if (m_totalSamples == 0)
         {
             if (m_traceLevel > 0)
-                fprintf(stderr, "starting at epoch %zu counting lines to determine record count\n", m_epoch);
+                fprintf(stderr, "starting at epoch %lu counting lines to determine record count\n", (unsigned long)m_epoch);
             m_parser.SetParseMode(ParseLineCount);
             m_totalSamples = m_parser.Parse(size_t(-1), NULL, NULL);   
             m_parser.SetParseMode(ParseNormal);
@@ -556,14 +556,14 @@ void UCIFastReader<ElemType>::SetupEpoch()
             m_mbStartSample = 0;
             UpdateDataVariables(0); // update all the variables since we read to the end...
             if (m_traceLevel > 0)
-                fprintf(stderr, "\n %zu records found\n", m_totalSamples);
+                fprintf(stderr, "\n %lu records found\n", (unsigned long)m_totalSamples);
         }
 
         // make sure we are in the correct location for mid-dataset epochs
         size_t mbStartSample = m_epoch * m_epochSize;
 
         size_t fileRecord = m_totalSamples?mbStartSample % m_totalSamples:0;
-        fprintf(stderr, "starting epoch %zu at record count %zu, and file position %zu\n", m_epoch, mbStartSample, fileRecord);
+        fprintf(stderr, "starting epoch %lu at record count %lu, and file position %lu\n", (unsigned long)m_epoch, (unsigned long)mbStartSample, (unsigned long)fileRecord);
         size_t currentFileRecord = m_mbStartSample % m_totalSamples;
 
         // reset the next read sample
@@ -604,7 +604,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
                 m_parser.SetFilePosition(0); 
                 currentFileRecord = 0;
             }
-            fprintf(stderr, "reading from record %zu to %zu to be positioned properly for epoch\n", currentFileRecord, fileRecord);
+            fprintf(stderr, "reading from record %lu to %lu to be positioned properly for epoch\n", (unsigned long)currentFileRecord, (unsigned long)fileRecord);
             m_parser.SetParseMode(ParseLineCount);
             m_parser.Parse(fileRecord-currentFileRecord, NULL, NULL);
             m_parser.SetParseMode(ParseNormal);
