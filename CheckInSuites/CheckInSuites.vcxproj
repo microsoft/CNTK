@@ -140,6 +140,7 @@
     <None Include="MNIST\GPU\expectedresults.txt" />
     <None Include="MNIST\mnistCheckIn.config" />
     <None Include="MNIST\mnistlabels.txt" />
+    <None Include="runall.bat" />
     <None Include="SLU\atis.dev.IOB.simple" />
     <None Include="SLU\atis.test.apos.pred.pos.head.IOB.simple" />
     <None Include="SLU\atis.train.apos.pred.pos.head.IOB.simple" />
@@ -180,9 +181,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeBuildCommandLine>runall.bat $(Configuration)</NMakeBuildCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeBuildCommandLine>runall.bat $(Configuration)</NMakeBuildCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
