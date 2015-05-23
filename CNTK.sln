@@ -155,6 +155,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "figures", "figures", "{889C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{39E42C4B-A078-4CA4-9D92-B883D8129601}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CheckInSuites", "CheckInSuites\CheckInSuites.vcxproj", "{DBB3C106-B0B4-4059-8477-C89528CEC1B0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -214,6 +216,8 @@ Global
 		{D667AF32-028A-4A5D-BE19-F46776F0F6B2}.Debug|x64.Build.0 = Debug|x64
 		{D667AF32-028A-4A5D-BE19-F46776F0F6B2}.Release|x64.ActiveCfg = Release|x64
 		{D667AF32-028A-4A5D-BE19-F46776F0F6B2}.Release|x64.Build.0 = Release|x64
+		{DBB3C106-B0B4-4059-8477-C89528CEC1B0}.Debug|x64.ActiveCfg = Debug|x64
+		{DBB3C106-B0B4-4059-8477-C89528CEC1B0}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
