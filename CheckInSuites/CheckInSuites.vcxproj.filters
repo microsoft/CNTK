@@ -1,178 +1,520 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-<Filter Include="CheckInSuites"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0000}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\ASR"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0001}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\ASR\config"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0002}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\ASR\CPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0003}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\ASR\GPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0004}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\LM"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0005}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\LM\RNNLM"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0006}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\LM\RNNLM\CPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0007}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\LM\RNNLM\GPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0008}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\MNIST"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0009}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\MNIST\CPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0010}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\MNIST\GPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0011}</UniqueIdentifier></Filter>
-<Filter Include="CheckInSuites\SLU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0012}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0013}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0014}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0015}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\config"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0016}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\CPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0017}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\decoding"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0018}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\GPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0019}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\lib"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0020}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\lib\cf"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0021}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\lib\mlf"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0022}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\ASR\TIMIT\lib\scp"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0023}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\LM"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0024}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\LM\LSTMLM"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0025}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\LM\RNNLM"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0026}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\LM\RNNLM\CPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0027}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\LM\RNNLM\GPU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0028}</UniqueIdentifier></Filter>
-<Filter Include="ExampleSetups\SLU"><UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0029}</UniqueIdentifier></Filter>
+    <Filter Include="CheckInSuites">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0000}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\ASR">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0001}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\ASR\config">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0002}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\ASR\CPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0003}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\ASR\GPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0004}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\LM">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0005}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\LM\RNNLM">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0006}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\LM\RNNLM\CPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0007}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\LM\RNNLM\GPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0008}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\MNIST">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0009}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\MNIST\CPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0010}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\MNIST\GPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0011}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CheckInSuites\SLU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0012}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0013}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0014}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0015}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\config">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0016}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\CPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0017}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\decoding">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0018}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\GPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0019}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\lib">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0020}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\lib\cf">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0021}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\lib\mlf">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0022}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\ASR\TIMIT\lib\scp">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0023}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\LM">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0024}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\LM\LSTMLM">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0025}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\LM\RNNLM">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0026}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\LM\RNNLM\CPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0027}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\LM\RNNLM\GPU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0028}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ExampleSetups\SLU">
+      <UniqueIdentifier>{39d7aaf4-beea-43e1-8bc3-1c2a442f0029}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\add_layer.mel"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\ae.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\classify.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\create_1layer.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\default_macros.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\globals.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\lstm.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\mtl_fbank_mfcc.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\mtl_senones_dr.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\PAC-RNN.ndl"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\README.txt"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_AdaptLearnRate.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_EvalSimpleNetwork.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainAutoEncoder.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainLSTM.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainMultiInput.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainMultiTask.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainNDLNetwork.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainSimpleNetwork.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainWithPreTrain.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_WriteBottleneck.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_WriteScaledLogLike.config"><Filter>ExampleSetups\ASR\TIMIT\config</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\CPU\LSTM_ExpectedOutputs.txt"><Filter>ExampleSetups\ASR\TIMIT\CPU</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\CPU\TIMIT_DNN.config"><Filter>ExampleSetups\ASR\TIMIT\CPU</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\CPU\TIMIT_LSTM.config"><Filter>ExampleSetups\ASR\TIMIT\CPU</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.bigram.arpa"><Filter>ExampleSetups\ASR\TIMIT\decoding</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.dnn_map"><Filter>ExampleSetups\ASR\TIMIT\decoding</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.lookahead"><Filter>ExampleSetups\ASR\TIMIT\decoding</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.tfsa"><Filter>ExampleSetups\ASR\TIMIT\decoding</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.transitions"><Filter>ExampleSetups\ASR\TIMIT\decoding</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\GPU\DNN_ExpectedOutputs.txt"><Filter>ExampleSetups\ASR\TIMIT\GPU</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\GPU\LSTM_ExpectedOutputs.txt"><Filter>ExampleSetups\ASR\TIMIT\GPU</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\GPU\TIMIT_DNN.config"><Filter>ExampleSetups\ASR\TIMIT\GPU</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\GPU\TIMIT_LSTM.config"><Filter>ExampleSetups\ASR\TIMIT\GPU</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\cf\CF.fbank24_zda"><Filter>ExampleSetups\ASR\TIMIT\lib\cf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\make_dr_mlf.pl"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\make_mlf_cntk.pl"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.core.align_cistate.mlf"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.core.align_cistate.mlf.cntk"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.core.align_dr.mlf.cntk"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.dev.align_cistate.mlf"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.dev.align_cistate.mlf.cntk"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.dev.align_dr.mlf.cntk"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.statelist"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.train.align_cistate.mlf"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.train.align_cistate.mlf.cntk"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.train.align_dr.mlf.cntk"><Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.bottleneck.fullpath"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.bottleneck.fullpath.20"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.fbank.fullpath"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.fbank.fullpath.20"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.scaledloglike.fullpath"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.scaledloglike.fullpath.20"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.dev.scp.fbank.fullpath"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.dev.scp.fbank.fullpath.rnn"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.dev.scp.fbank.fullpath.rnn.20"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.100"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.rnn"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.rnn.100"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.mfcc.fullpath"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.mfcc.fullpath.100"><Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\ExpectedResults.log"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\global.config"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.config"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.nce.config.txt"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\lstmlmconfig.txt"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\perplexity.nce100.lr0.1.txt"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\ptb.test.cntk.100.txt"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\ptb.train.cntk.100.txt"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\LSTMLM\ptb.valid.cntk.100.txt"><Filter>ExampleSetups\LM\LSTMLM</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\CPU\ExpectedOutputs.txt"><Filter>ExampleSetups\LM\RNNLM\CPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\CPU\fnnlm.config"><Filter>ExampleSetups\LM\RNNLM\CPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\CPU\global.config"><Filter>ExampleSetups\LM\RNNLM\CPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\CPU\rnnlm.config"><Filter>ExampleSetups\LM\RNNLM\CPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\GPU\ExpectedOutputs.txt"><Filter>ExampleSetups\LM\RNNLM\GPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\GPU\fnnlm.config"><Filter>ExampleSetups\LM\RNNLM\GPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\GPU\global.config"><Filter>ExampleSetups\LM\RNNLM\GPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\GPU\rnnlm.config"><Filter>ExampleSetups\LM\RNNLM\GPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\GPU\rnnlm.gpu.config"><Filter>ExampleSetups\LM\RNNLM\GPU</Filter></None>
-<None Include="..\ExampleSetups\LM\RNNLM\rnnlm.ndl"><Filter>ExampleSetups\LM\RNNLM</Filter></None>
-<None Include="..\ExampleSetups\NDLExamples.ndl"><Filter>ExampleSetups</Filter></None>
-<None Include="..\ExampleSetups\SLU\conlleval.pl"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\feat.txt"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\globals.config"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\lbl.txt"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\lstmNDL.txt"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\README.txt"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\rnnlu.config"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\rnnluModelEditor.txt"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="..\ExampleSetups\SLU\score.sh"><Filter>ExampleSetups\SLU</Filter></None>
-<None Include="ASR\config\globals_cpu.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\globals_gpu.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\me.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\README.txt"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\runall.bat"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_EvalSimpleNetwork.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_TrainAutoEncoder.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_TrainMultiInput.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_TrainMultiTask.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_TrainNDLNetwork.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_TrainSimpleNetwork.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_WriteBottleneck.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\config\TIMIT_WriteScaledLogLike.config"><Filter>CheckInSuites\ASR\config</Filter></None>
-<None Include="ASR\CPU\EvalSimpleNetwork.output"><Filter>CheckInSuites\ASR\CPU</Filter></None>
-<None Include="ASR\CPU\TrainAutoEncoder.output"><Filter>CheckInSuites\ASR\CPU</Filter></None>
-<None Include="ASR\CPU\TrainMultiInput.output"><Filter>CheckInSuites\ASR\CPU</Filter></None>
-<None Include="ASR\CPU\TrainMultiTask.output"><Filter>CheckInSuites\ASR\CPU</Filter></None>
-<None Include="ASR\CPU\TrainNDLNetwork.output"><Filter>CheckInSuites\ASR\CPU</Filter></None>
-<None Include="ASR\CPU\TrainSimpleNetwork.output"><Filter>CheckInSuites\ASR\CPU</Filter></None>
-<None Include="ASR\GPU\EvalSimpleNetwork.output"><Filter>CheckInSuites\ASR\GPU</Filter></None>
-<None Include="ASR\GPU\TrainAutoEncoder.output"><Filter>CheckInSuites\ASR\GPU</Filter></None>
-<None Include="ASR\GPU\TrainMultiInput.output"><Filter>CheckInSuites\ASR\GPU</Filter></None>
-<None Include="ASR\GPU\TrainMultiTask.output"><Filter>CheckInSuites\ASR\GPU</Filter></None>
-<None Include="ASR\GPU\TrainNDLNetwork.output"><Filter>CheckInSuites\ASR\GPU</Filter></None>
-<None Include="ASR\GPU\TrainSimpleNetwork.output"><Filter>CheckInSuites\ASR\GPU</Filter></None>
-<None Include="LM\RNNLM\CPU\ExpectedOutputs.txt"><Filter>CheckInSuites\LM\RNNLM\CPU</Filter></None>
-<None Include="LM\RNNLM\CPU\global.config"><Filter>CheckInSuites\LM\RNNLM\CPU</Filter></None>
-<None Include="LM\RNNLM\CPU\rnnlm.config"><Filter>CheckInSuites\LM\RNNLM\CPU</Filter></None>
-<None Include="LM\RNNLM\GPU\ExpectedOutputs.txt"><Filter>CheckInSuites\LM\RNNLM\GPU</Filter></None>
-<None Include="LM\RNNLM\GPU\rnnlm.config"><Filter>CheckInSuites\LM\RNNLM\GPU</Filter></None>
-<None Include="MNIST\CPU\expectedresults.txt"><Filter>CheckInSuites\MNIST\CPU</Filter></None>
-<None Include="MNIST\DefaultMacros.ndl"><Filter>CheckInSuites\MNIST</Filter></None>
-<None Include="MNIST\Example.ndl"><Filter>CheckInSuites\MNIST</Filter></None>
-<None Include="MNIST\GPU\expectedresults.txt"><Filter>CheckInSuites\MNIST\GPU</Filter></None>
-<None Include="MNIST\mnistCheckIn.config"><Filter>CheckInSuites\MNIST</Filter></None>
-<None Include="MNIST\mnistlabels.txt"><Filter>CheckInSuites\MNIST</Filter></None>
-<None Include="SLU\atis.dev.IOB.simple"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\atis.test.apos.pred.pos.head.IOB.simple"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\atis.train.apos.pred.pos.head.IOB.simple"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\Expected.log"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\globals.config"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\input.txt"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\inputmap.txt"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\lstmNDL.txt"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\output.txt"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\README.txt"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\rnnlu.config"><Filter>CheckInSuites\SLU</Filter></None>
-<None Include="SLU\rnnlu.ndl.config"><Filter>CheckInSuites\SLU</Filter></None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\add_layer.mel">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\ae.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\classify.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\create_1layer.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\default_macros.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\globals.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\lstm.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\mtl_fbank_mfcc.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\mtl_senones_dr.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\PAC-RNN.ndl">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\README.txt">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_AdaptLearnRate.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_EvalSimpleNetwork.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainAutoEncoder.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainLSTM.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainMultiInput.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainMultiTask.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainNDLNetwork.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainSimpleNetwork.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_TrainWithPreTrain.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_WriteBottleneck.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\config\TIMIT_WriteScaledLogLike.config">
+      <Filter>ExampleSetups\ASR\TIMIT\config</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\CPU\LSTM_ExpectedOutputs.txt">
+      <Filter>ExampleSetups\ASR\TIMIT\CPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\CPU\TIMIT_DNN.config">
+      <Filter>ExampleSetups\ASR\TIMIT\CPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\CPU\TIMIT_LSTM.config">
+      <Filter>ExampleSetups\ASR\TIMIT\CPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.bigram.arpa">
+      <Filter>ExampleSetups\ASR\TIMIT\decoding</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.dnn_map">
+      <Filter>ExampleSetups\ASR\TIMIT\decoding</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.lookahead">
+      <Filter>ExampleSetups\ASR\TIMIT\decoding</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.tfsa">
+      <Filter>ExampleSetups\ASR\TIMIT\decoding</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\decoding\TIMIT.transitions">
+      <Filter>ExampleSetups\ASR\TIMIT\decoding</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\GPU\DNN_ExpectedOutputs.txt">
+      <Filter>ExampleSetups\ASR\TIMIT\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\GPU\LSTM_ExpectedOutputs.txt">
+      <Filter>ExampleSetups\ASR\TIMIT\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\GPU\TIMIT_DNN.config">
+      <Filter>ExampleSetups\ASR\TIMIT\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\GPU\TIMIT_LSTM.config">
+      <Filter>ExampleSetups\ASR\TIMIT\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\cf\CF.fbank24_zda">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\cf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\make_dr_mlf.pl">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\make_mlf_cntk.pl">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.core.align_cistate.mlf">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.core.align_cistate.mlf.cntk">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.core.align_dr.mlf.cntk">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.dev.align_cistate.mlf">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.dev.align_cistate.mlf.cntk">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.dev.align_dr.mlf.cntk">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.statelist">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.train.align_cistate.mlf">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.train.align_cistate.mlf.cntk">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\mlf\TIMIT.train.align_dr.mlf.cntk">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\mlf</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.bottleneck.fullpath">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.bottleneck.fullpath.20">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.fbank.fullpath">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.fbank.fullpath.20">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.scaledloglike.fullpath">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.core.scp.scaledloglike.fullpath.20">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.dev.scp.fbank.fullpath">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.dev.scp.fbank.fullpath.rnn">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.dev.scp.fbank.fullpath.rnn.20">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.100">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.rnn">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.rnn.100">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.mfcc.fullpath">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.mfcc.fullpath.100">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\ExpectedResults.log">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\global.config">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.config">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\lstmlm.gpu.nce.config.txt">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\lstmlmconfig.txt">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\perplexity.nce100.lr0.1.txt">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\ptb.test.cntk.100.txt">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\ptb.train.cntk.100.txt">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\LSTMLM\ptb.valid.cntk.100.txt">
+      <Filter>ExampleSetups\LM\LSTMLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\CPU\ExpectedOutputs.txt">
+      <Filter>ExampleSetups\LM\RNNLM\CPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\CPU\fnnlm.config">
+      <Filter>ExampleSetups\LM\RNNLM\CPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\CPU\global.config">
+      <Filter>ExampleSetups\LM\RNNLM\CPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\CPU\rnnlm.config">
+      <Filter>ExampleSetups\LM\RNNLM\CPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\GPU\ExpectedOutputs.txt">
+      <Filter>ExampleSetups\LM\RNNLM\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\GPU\fnnlm.config">
+      <Filter>ExampleSetups\LM\RNNLM\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\GPU\global.config">
+      <Filter>ExampleSetups\LM\RNNLM\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\GPU\rnnlm.config">
+      <Filter>ExampleSetups\LM\RNNLM\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\GPU\rnnlm.gpu.config">
+      <Filter>ExampleSetups\LM\RNNLM\GPU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\LM\RNNLM\rnnlm.ndl">
+      <Filter>ExampleSetups\LM\RNNLM</Filter>
+    </None>
+    <None Include="..\ExampleSetups\NDLExamples.ndl">
+      <Filter>ExampleSetups</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\conlleval.pl">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\feat.txt">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\globals.config">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\lbl.txt">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\lstmNDL.txt">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\README.txt">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\rnnlu.config">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\rnnluModelEditor.txt">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="..\ExampleSetups\SLU\score.sh">
+      <Filter>ExampleSetups\SLU</Filter>
+    </None>
+    <None Include="ASR\config\README.txt">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\runall.bat">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_EvalSimpleNetwork.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_TrainAutoEncoder.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_TrainMultiInput.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_TrainMultiTask.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_TrainNDLNetwork.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_TrainSimpleNetwork.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_WriteBottleneck.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\TIMIT_WriteScaledLogLike.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\CPU\EvalSimpleNetwork.output">
+      <Filter>CheckInSuites\ASR\CPU</Filter>
+    </None>
+    <None Include="ASR\CPU\TrainAutoEncoder.output">
+      <Filter>CheckInSuites\ASR\CPU</Filter>
+    </None>
+    <None Include="ASR\CPU\TrainMultiInput.output">
+      <Filter>CheckInSuites\ASR\CPU</Filter>
+    </None>
+    <None Include="ASR\CPU\TrainMultiTask.output">
+      <Filter>CheckInSuites\ASR\CPU</Filter>
+    </None>
+    <None Include="ASR\CPU\TrainNDLNetwork.output">
+      <Filter>CheckInSuites\ASR\CPU</Filter>
+    </None>
+    <None Include="ASR\CPU\TrainSimpleNetwork.output">
+      <Filter>CheckInSuites\ASR\CPU</Filter>
+    </None>
+    <None Include="ASR\GPU\EvalSimpleNetwork.output">
+      <Filter>CheckInSuites\ASR\GPU</Filter>
+    </None>
+    <None Include="ASR\GPU\TrainAutoEncoder.output">
+      <Filter>CheckInSuites\ASR\GPU</Filter>
+    </None>
+    <None Include="ASR\GPU\TrainMultiInput.output">
+      <Filter>CheckInSuites\ASR\GPU</Filter>
+    </None>
+    <None Include="ASR\GPU\TrainMultiTask.output">
+      <Filter>CheckInSuites\ASR\GPU</Filter>
+    </None>
+    <None Include="ASR\GPU\TrainNDLNetwork.output">
+      <Filter>CheckInSuites\ASR\GPU</Filter>
+    </None>
+    <None Include="ASR\GPU\TrainSimpleNetwork.output">
+      <Filter>CheckInSuites\ASR\GPU</Filter>
+    </None>
+    <None Include="LM\RNNLM\CPU\ExpectedOutputs.txt">
+      <Filter>CheckInSuites\LM\RNNLM\CPU</Filter>
+    </None>
+    <None Include="LM\RNNLM\CPU\global.config">
+      <Filter>CheckInSuites\LM\RNNLM\CPU</Filter>
+    </None>
+    <None Include="LM\RNNLM\CPU\rnnlm.config">
+      <Filter>CheckInSuites\LM\RNNLM\CPU</Filter>
+    </None>
+    <None Include="LM\RNNLM\GPU\ExpectedOutputs.txt">
+      <Filter>CheckInSuites\LM\RNNLM\GPU</Filter>
+    </None>
+    <None Include="LM\RNNLM\GPU\rnnlm.config">
+      <Filter>CheckInSuites\LM\RNNLM\GPU</Filter>
+    </None>
+    <None Include="MNIST\CPU\expectedresults.txt">
+      <Filter>CheckInSuites\MNIST\CPU</Filter>
+    </None>
+    <None Include="MNIST\DefaultMacros.ndl">
+      <Filter>CheckInSuites\MNIST</Filter>
+    </None>
+    <None Include="MNIST\Example.ndl">
+      <Filter>CheckInSuites\MNIST</Filter>
+    </None>
+    <None Include="MNIST\GPU\expectedresults.txt">
+      <Filter>CheckInSuites\MNIST\GPU</Filter>
+    </None>
+    <None Include="MNIST\mnistCheckIn.config">
+      <Filter>CheckInSuites\MNIST</Filter>
+    </None>
+    <None Include="MNIST\mnistlabels.txt">
+      <Filter>CheckInSuites\MNIST</Filter>
+    </None>
+    <None Include="SLU\atis.dev.IOB.simple">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\atis.test.apos.pred.pos.head.IOB.simple">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\atis.train.apos.pred.pos.head.IOB.simple">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\Expected.log">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\globals.config">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\input.txt">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\inputmap.txt">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\lstmNDL.txt">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\output.txt">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\README.txt">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\rnnlu.config">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="SLU\rnnlu.ndl.config">
+      <Filter>CheckInSuites\SLU</Filter>
+    </None>
+    <None Include="ASR\config\globals.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\select_cpu.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
+    <None Include="ASR\config\select_gpu.config">
+      <Filter>CheckInSuites\ASR\config</Filter>
+    </None>
   </ItemGroup>
 </Project>
