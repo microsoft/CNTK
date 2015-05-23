@@ -516,5 +516,8 @@
     <None Include="ASR\config\select_gpu.config">
       <Filter>CheckInSuites\ASR\config</Filter>
     </None>
+    <None Include="runall.bat">
+      <Filter>CheckInSuites</Filter>
+    </None>
   </ItemGroup>
 </Project>
