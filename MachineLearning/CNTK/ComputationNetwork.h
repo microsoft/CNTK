@@ -976,6 +976,8 @@ public:
                 newNode = new SumElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ScaleNode<ElemType>::TypeName())
                 newNode = new ScaleNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == TransposeNode<ElemType>::TypeName())
+                newNode = new TransposeNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TimesNode<ElemType>::TypeName())
                 newNode = new TimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ElementTimesNode<ElemType>::TypeName())
@@ -1149,6 +1151,8 @@ public:
                 newNode = new SumElementsNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ScaleNode<ElemType>::TypeName())
                 newNode = new ScaleNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == TransposeNode<ElemType>::TypeName())
+                newNode = new TransposeNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == TimesNode<ElemType>::TypeName())
                 newNode = new TimesNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ElementTimesNode<ElemType>::TypeName())
@@ -1471,7 +1475,7 @@ public:
         }
 
 
-        ComputationNodePtr Scale (const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"")
+        ComputationNodePtr Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new ScaleNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(scalar, matrix);
@@ -1479,7 +1483,15 @@ public:
             return newNode;
         }
 
-        ComputationNodePtr Times (const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+        ComputationNodePtr Transpose(const ComputationNodePtr matrix, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new TransposeNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(matrix);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new TimesNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(a, b);

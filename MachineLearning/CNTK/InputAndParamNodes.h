@@ -460,8 +460,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
         {
-            size_t rows1 =input1.GetNumRows(), cols1 = input1.GetNumCols();
-            int wordsInEachSample = rows1 / input0.GetNumCols();
+            size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
+            size_t cols0 = input0.GetNumCols();
+
+            if (rows1 % cols0 != 0)
+                LogicError("LookupTableNode: rows of input 1 and cols of input 0 are not modular. e.g., rows1 = 0.9 cols and this is not allowed. Check feature reader and network definition. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size. ");
+
+            int wordsInEachSample = rows1 / cols0;
 
             input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
