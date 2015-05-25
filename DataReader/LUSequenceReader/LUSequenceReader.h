@@ -40,6 +40,12 @@ enum LabelKind
     labelOther = 3, // some other type of label
 };
 
+enum ReaderMode
+{
+    Plain = 0,  // no class info
+    Class = 1, // category labels, creates mapping tables
+};
+
 template<class ElemType>
 class LUSequenceReader : public IDataReader<ElemType>
 {
@@ -129,6 +135,20 @@ protected:
 
         bool isproposal; /// whether this is for proposal generation
 
+        ReaderMode readerMode;
+        /**
+        word class info saved in file in format below
+        ! 29
+        # 58
+        $ 26
+        where the first column is the word and the second column is the class id, base 0
+        */
+        map<wstring, long> word4cls;
+        map<long, long> idx4class;
+        Matrix<ElemType>* m_id2classLocal; // CPU version
+        Matrix<ElemType>* m_classInfoLocal; // CPU version
+        int  mNbrClasses;
+        bool m_clsinfoRead; 
     } m_labelInfo[labelInfoMax];
 
     // caching support
@@ -152,8 +172,6 @@ protected:
 
 public:
     void Init(const ConfigParameters& ){};
-    void ReadLabelInfo(const wstring & vocfile,  map<LabelType, LabelIdType> & word4idx,
-        map<LabelIdType, LabelType>& idx4word);
     void ChangeMaping(const map<LabelType, LabelType>& maplist,
         const LabelType& unkstr,
         map<LabelType, LabelIdType> & word4idx);
@@ -227,7 +245,6 @@ public:
 	using LUSequenceReader<ElemType>::ChangeMaping;
 	using LUSequenceReader<ElemType>::GetIdFromLabel;
 	using LUSequenceReader<ElemType>::InitCache;
-	using LUSequenceReader<ElemType>::ReadLabelInfo;
 	using LUSequenceReader<ElemType>::mRandomize;
 	using LUSequenceReader<ElemType>::m_seed;
     using LUSequenceReader<ElemType>::mTotalSentenceSofar;
@@ -249,7 +266,7 @@ private:
 public:
     vector<bool> mProcessed; 
     LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
-    BatchLUSequenceReader() {
+    BatchLUSequenceReader() : mtSentenceBegin(CPUDEVICE), mtExistsSentenceBeginOrNoLabels(CPUDEVICE){
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
         mLastPosInSentence = 0;
@@ -259,12 +276,7 @@ public:
         mIgnoreSentenceBeginTag = false;
     }
 
-    ~BatchLUSequenceReader() {
-        if (m_labelTemp.size() > 0)
-            m_labelTemp.clear();
-        if (m_featureTemp.size() > 0)
-            m_featureTemp.clear();
-    };
+    ~BatchLUSequenceReader();
    
     void Init(const ConfigParameters& readerConfig);
     void Reset();
@@ -279,7 +291,8 @@ public:
     void   SetSentenceBegin(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceBegin((int)wrd, (int)pos, (int)actualMbSize); }
     void   SetSentenceEnd(size_t wrd, size_t pos, size_t actualMbSize) { SetSentenceEnd((int)wrd, (int)pos, (int)actualMbSize); }
 
-    size_t GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t actualmbsize);
+    size_t GetLabelOutput(std::map<std::wstring,
+        Matrix<ElemType>*>& matrices, LabelInfo& labelInfo, size_t actualmbsize);
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
@@ -291,6 +304,15 @@ public:
     void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
 public:
+    void GetClassInfo(LabelInfo& lblInfo);
+    void ReadLabelInfo(const wstring & vocfile,
+        map<wstring, long> & word4idx,
+        bool readClass,
+        map<wstring, long>& word4cls,
+        map<long, wstring>& idx4word,
+        map<long, long>& idx4class,
+        int & mNbrCls);
+
     void LoadWordMapping(const ConfigParameters& readerConfig);
     bool CanReadFor(wstring nodeName);  /// return true if this reader can output for a node with name nodeName
 

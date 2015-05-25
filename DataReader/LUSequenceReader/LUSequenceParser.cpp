@@ -95,13 +95,24 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
         for (size_t i = 0; i < vstr.size() - 1; i++)
         {
             if (inputlabel2id.find(vstr[i]) == inputlabel2id.end())
-                LogicError("cannot find item %ls in input label", vstr[i].c_str());
-
-            vtmp.push_back(inputlabel2id.find(vstr[i])->second);
+            {
+                if (inputlabel2id.find(mUnkStr) == inputlabel2id.end())
+                {
+                    LogicError("cannot find item %ls and unk str %ls in input label", vstr[i].c_str(), mUnkStr.c_str());
+                }
+                vtmp.push_back(inputlabel2id.find(mUnkStr)->second);
+            }
+            else
+                vtmp.push_back(inputlabel2id.find(vstr[i])->second);
         }
         if (outputlabel2id.find(vstr[vstr.size() - 1]) == outputlabel2id.end())
-            LogicError("cannot find item %ls in output label", vstr[vstr.size() - 1].c_str());
-        labels->push_back(outputlabel2id.find(vstr[vstr.size() - 1])->second);
+        {
+            if (outputlabel2id.find(mUnkStr) == outputlabel2id.end())
+                LogicError("cannot find item %ls and unk str %ls in output label", vstr[vstr.size() - 1].c_str(), mUnkStr.c_str());
+            labels->push_back(outputlabel2id.find(mUnkStr)->second);
+        }
+        else
+            labels->push_back(outputlabel2id.find(vstr[vstr.size() - 1])->second);
         input->push_back(vtmp);
         if ((vstr[vstr.size() - 1] == m_endSequenceOut ||
             /// below is for backward support

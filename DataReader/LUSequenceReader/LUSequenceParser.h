@@ -134,6 +134,9 @@ template <typename NumType, typename LabelType = wstring>
 class LUBatchLUSequenceParser : public LUSequenceParser<NumType, LabelType>
 {
 public:
+    wstring mUnkStr; 
+
+public:
     wifstream mFile; 
     std::wstring mFileName; 
     vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
@@ -160,7 +163,7 @@ public:
         mFile.close(); 
     }
 
-    void ParseInit(LPCWSTR fileName, size_t dimLabelsIn, size_t dimLabelsOut, wstring beginSequenceIn, wstring endSequenceIn, wstring beginSequenceOut, wstring endSequenceOut)
+    void ParseInit(LPCWSTR fileName, size_t dimLabelsIn, size_t dimLabelsOut, wstring beginSequenceIn, wstring endSequenceIn, wstring beginSequenceOut, wstring endSequenceOut, wstring unkstr = "<UNK>")
     {
         assert(fileName != NULL);
         mFileName = fileName;
@@ -175,6 +178,8 @@ public:
 
         m_beginTag = m_beginSequenceIn;
         m_endTag = m_endSequenceIn;
+
+        mUnkStr = unkstr; 
 
         mFile.close();
 
