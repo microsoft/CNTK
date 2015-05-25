@@ -82,7 +82,7 @@
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
-\listings_params "basicstyle={\small},breaklines=true,frame=tb"
+\listings_params "basicstyle={\ttfamily \small},columns=fullflexible,breaklines=true,frame=tb"
 \tracking_changes false
 \output_changes false
 \html_math_output 0
