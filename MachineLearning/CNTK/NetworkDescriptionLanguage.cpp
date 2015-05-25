@@ -154,6 +154,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, ScaleNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, TransposeNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, TimesNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, ElementTimesNode<ElemType>::TypeName()))

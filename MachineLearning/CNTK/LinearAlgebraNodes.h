@@ -2333,5 +2333,122 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	template class CosDistanceWithNegativeSamplesNode<float>;
 	template class CosDistanceWithNegativeSamplesNode<double>;
 
+    template<class ElemType>
+    class TransposeNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+        Matrix<ElemType> mOnes; 
+    public:
+        TransposeNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), mOnes(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        TransposeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), mOnes(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        TransposeNode(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId), mOnes(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new TransposeNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"Transpose"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 1)
+                throw std::invalid_argument("Times operation only takes two inputs.");
+
+            ComputeInputPartial(Inputs(0)->GradientValues(), mOnes, GradientValues());
+        }
+
+        static void WINAPI ComputeInputPartial(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& ones, const Matrix<ElemType>& gradientValues)
+        {
+#if DUMPOUTPUT
+            gradientValues.Print("Gradient-in");
+            inputGradientValues.Print("child Gradient-in/out");
+            inputFunctionValues.Print("child Function values");
+#endif
+
+            if (ones.GetNumRows() != inputGradientValues.GetNumRows() || ones.GetNumCols() != inputGradientValues.GetNumCols())
+                ones = Matrix<ElemType>::Ones(inputGradientValues.GetNumRows(), inputGradientValues.GetNumCols(), inputGradientValues.GetDeviceId());
+            Matrix<ElemType>::MultiplyAndAdd(ones, false, gradientValues, true, inputGradientValues);
+#if DUMPOUTPUT
+            inputGradientValues.Print("child Gradient-out");
+#endif
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0)
+        {
+#if DUMPOUTPUT
+            input0.Print("TransposeNode- Input0");
+#endif
+            functionValues.AssignTransposeOf(input0);
+#if NANCHECK
+            functionValues.HasNan("Transpose");
+#endif
+#if DUMPOUTPUT
+            functionValues.Print("TransposeNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("Transpose operation requires one input.");
+
+            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+
+            if (rows0 == 0 || cols0 == 0)
+                throw logic_error("Transpose operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 ");
+
+            FunctionValues().Resize(cols0, rows0);
+            mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, false); //the second one is the input since it's column wize
+
+            //after multiplication the structure is lost
+            m_outputWidth = 1;
+            m_outputHeight = Inputs(0)->FunctionValues().GetNumCols();
+            m_outputChannels = 1;
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr leftNode)
+        {
+            m_children.resize(1);
+            m_children[0] = leftNode;
+        }
+    };
+
+    template class TransposeNode<float>;
+    template class TransposeNode<double>;
 
 }}}

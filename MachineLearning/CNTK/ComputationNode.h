@@ -261,6 +261,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
             Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
 
+            if (m_existsSentenceBeginOrNoLabels.GetNumRows() != 1)
+            {
+                LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should be a one row matrix or a vector. ");
+            }
+            if (m_existsSentenceBeginOrNoLabels.GetNumElements() != nT / nS)
+            {
+                LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should have one element for each time of all streams. Check feature reader. ");
+            }
+
             colBegin.Resize(nS, nS);
             colSeg.Resize(nS, 1);
             newfunc.Resize(nd, nS);
