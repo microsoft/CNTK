@@ -612,7 +612,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 break;
             case TrainingCriterion::NCECrossEntropyWithSoftmax:
                 output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
-                
                 break;
          default:
                 throw std::logic_error("Unsupported training criterion.");

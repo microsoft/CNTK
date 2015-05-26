@@ -162,7 +162,6 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
             // loop through the labels for this entry
             while (label < spos.labelPos)  /// need to minus one since 
             {
-
                 // labelIn should be a category label 
                 LabelType labelValue = labelTemp[label++];
 
@@ -1387,19 +1386,20 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
-    string mode = featureConfig("mode","class");//class, softmax, nce
+    string mode = featureConfig("mode", "class");//class, softmax, nce
 
+    std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
     if (mode == "nce")
     {
         readerMode = ReaderMode::NCE;
-    
         this->noise_sample_size = featureConfig("noise_number", "0");
     }
     else if (mode == "softmax")
         readerMode = ReaderMode::Softmax;
     else if (mode == "class")
         readerMode = ReaderMode::Class;
-
+    else if (mode == "unnormalize")
+        readerMode = ReaderMode::Unnormalize;
     class_size = 0;
     m_featureDim = featureConfig("dim");
     for (int index = labelInfoMin; index < labelInfoMax; ++index)
@@ -1999,11 +1999,10 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     else
         labels->Resize(1, actualmbsize, false);
 
-
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-
+    ElemType epsilon = (ElemType)1e-6; // avoid all zero, although this is almost impossible.
     if (labels->GetCurrentMatrixLocation() == CPU)
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
@@ -2034,6 +2033,17 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                 labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
                 labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
             }
+        }
+        else if (readerMode == ReaderMode::Softmax)
+        {
+            if (wrd == 0)
+                labels->SetValue(0, j, epsilon + (ElemType)wrd);
+        }
+        else if (readerMode == ReaderMode::Unnormalize)
+        {
+            labels->SetValue(0, j, -(ElemType)wrd);
+            if (wrd == 0)
+                labels->SetValue(0, j, - epsilon - (ElemType)wrd);
         }
     }
     else // GPU

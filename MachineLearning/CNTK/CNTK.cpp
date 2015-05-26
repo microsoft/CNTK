@@ -569,7 +569,8 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     string token;
     while (getline(fp, str))
     {
-        str = trim(str);
+        str.erase(0, str.find_first_not_of(' '));       //prefixing spaces
+        str.erase(str.find_last_not_of(' ') + 1);         //surfixing spaces
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
         if (sposition == str.npos || eposition == str.npos)
@@ -578,7 +579,6 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         for (int i = 1; i < vstr.size(); i++)
             v_count[vstr[i]]++;
     }
-    //fclose(fp);
     fp.close();
 
     std::cerr << "no truncated vocabulary: " << v_count.size() << std::endl;

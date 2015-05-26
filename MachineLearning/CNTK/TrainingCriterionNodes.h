@@ -888,13 +888,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 MoveMatricesToDevice(deviceId);
                 InitRecurrentNode();
                 m_evalMode = xm_evalMode;
+           
             }
         NCEEvalMode &EvalMode(){ return m_evalMode; }
 
-        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", NCEEvalMode xm_evalMode = NCEEvalMode::None)
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
         {
+                m_evalMode = xm_evalMode;
                 m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
                 LoadFromFile(fstream, modelVersion, deviceId);
             }
@@ -941,7 +943,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            if (m_evalMode == NCEEvalMode::Softmax || Inputs(0)->FunctionValues().GetNumRows() == 1)
+            int positive = 0, negative = 0;
+            if (Inputs(0)->FunctionValues().GetNumRows() == 1)
+            {
+                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
+                if (Inputs(0)->FunctionValues()(0, i) > 0)
+                    positive++;
+                else if (Inputs(0)->FunctionValues()(0, i) < 0)
+                    negative++;
+                assert(positive * negative == 0);
+            }
+            if (m_evalMode == NCEEvalMode::Softmax || (Inputs(0)->FunctionValues().GetNumRows() == 1 && positive > 0))
             {
                 // evaluation uses softmax
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
@@ -954,12 +966,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FunctionValues().SetValue(0);
                 for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
                     FunctionValues()(0, 0) -= m_logSoftmax(i, (size_t)Inputs(0)->FunctionValues()(0, i));
-                ElemType val = FunctionValues()(0, 0);
-                val *= 1;
             }
-            else if (m_evalMode == NCEEvalMode::Unnormalized)
+            else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->FunctionValues().GetNumRows() == 1 && negative > 0))
             {
-                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
             }
             else
             {

@@ -148,7 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType>& AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex);
 
-        Matrix<ElemType>& AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c);
+        Matrix<ElemType>& AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias);
 
         Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
         Matrix<ElemType>& AssignTransposeOf (const Matrix<ElemType>& a);
