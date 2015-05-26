@@ -1,0 +1,43 @@
+# steps 1
+# generate LSTM LM on news comments
+
+# -----------------------------
+# preparing data
+# data is also saved at
+# \\speechstore5\transient\kaishengy\data\newscomments\2015\03-23
+# -----------------------------
+# first have </s> to the begining and ending of sentences
+# go to ../scripts directory
+python
+>>> import util
+>>> util.add_silence_ending('//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.txt', '//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.cntk.txt')
+# the output sentences look like
+# </s> god speed gentlemen . </s>
+
+# convert data to ASCII format
+>>> util.convert2ascii('//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.cntk.txt', '//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.cntk.ascii.txt')
+
+# create test (last 10%), validation (first 10%) data, and train (remaining 80%) data
+>>> util.split_data_into_train_valid_test('//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.cntk.ascii.txt', '//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.cntk.train.txt', '//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.cntk.valid.txt', '//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/comments.cntk.test.txt')
+
+
+# -----------------------------
+# create word cluster
+# -----------------------------
+# goto ../steps directory
+mkdir \\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments
+D:\dev\cntkcodeplex\x64\Debug\CNTK.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments
+# check $ExpDir$ and $DataFolder$ for outputs
+
+# -----------------------------
+# Train LSTM LM using NCE criterion
+# -----------------------------
+# in local
+D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments command=train
+# on server
+\\speechstore5\userdata\kaishengy\bin\binmay26\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments command=train
+
+# test PPL
+\\speechstore5\userdata\kaishengy\bin\binmay26\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments test=[modelPath=$ExpFolder$\modelRnnCNTK.0] command=test
+
+
