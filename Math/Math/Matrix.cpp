@@ -3525,14 +3525,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
     template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c)
+    Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias)
     {
-        if (a.GetMatrixType() != MatrixType::SPARSE)
-            NOT_IMPLEMENTED;
+        //if (a.GetMatrixType() != MatrixType::SPARSE)
+        //    NOT_IMPLEMENTED;
 
         this->Resize(1, 1);
         if (this->GetDeviceId() < 0)
-            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *this->m_CPUMatrix);
+            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *this->m_CPUMatrix);
         else
             a.m_GPUMatrix->AssignNCEUnnormalizedEval(*b.m_GPUMatrix, *c.m_GPUMatrix, *this->m_GPUMatrix);
         return *this;
