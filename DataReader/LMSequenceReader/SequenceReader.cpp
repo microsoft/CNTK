@@ -2069,6 +2069,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         RuntimeError("GetLabelOutput::should use CPU for labels ");
 
     }
+    labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 }
 
 template<class ElemType>
