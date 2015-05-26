@@ -1906,6 +1906,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
             m_net->FeatureNodes().push_back(input);
 
+            if (input->FunctionValues().GetDeviceId() != CPUDEVICE)
+                RuntimeError("BuildNCELSTMNetworkFromDescription : only support CPU sparse matrix input at this moment. Contact Yinggong Zhao (v-yinggz@microsoft.com) or Kaisheng Yao (kaisheny@microsoft.com) for updates.");
+
             if (m_applyMeanVarNorm)
             {
                 w = m_net->Mean(input);

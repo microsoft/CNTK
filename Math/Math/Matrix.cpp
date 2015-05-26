@@ -3595,7 +3595,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            size_t sampleCount = a.m_GPUSparseMatrix->GetNumNZElements() / a.m_GPUSparseMatrix->GetNumRows();
+            size_t sampleCount = a.m_GPUMatrix->GetNumElements() / a.m_GPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
             a.m_GPUMatrix->AssignNoiseContrastiveEstimation(*b.m_GPUMatrix, *c.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *this->m_GPUMatrix);
         }
