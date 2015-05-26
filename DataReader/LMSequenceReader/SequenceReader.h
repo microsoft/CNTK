@@ -244,7 +244,6 @@ public:
 
     void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
-    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/ , Matrix<ElemType>& /* sentenceExistsBeginOrNoLabels*/) { NOT_IMPLEMENTED;  };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
@@ -333,10 +332,13 @@ private:
     bool   mSentenceEnd; 
     bool   mSentenceBegin; 
 
+    Matrix<ElemType> mtSentenceBegin; 
+    Matrix<ElemType> mtExistsSentenceBeginOrNoLabels;
+
 public:
     vector<bool> mProcessed; 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
-    BatchSequenceReader() {
+    BatchSequenceReader() : mtSentenceBegin(CPUDEVICE), mtExistsSentenceBeginOrNoLabels(CPUDEVICE){
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
         mLastPosInSentence = 0;
@@ -371,6 +373,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
+    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
     void SetRandomSeed(int);
 };

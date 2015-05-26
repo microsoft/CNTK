@@ -1844,6 +1844,14 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
+        size_t nT = actualmbsize / mToProcess.size();
+        mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
+        mtSentenceBegin.Resize(mToProcess.size(), nT);
+        mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
+        mtExistsSentenceBeginOrNoLabels.Resize(1, nT);
+        mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);
@@ -1855,17 +1863,25 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             features.Reset();
         }
 
+        size_t timeIdx = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
         {
             // vector of feature data goes into matrix column
             size_t idx = (size_t)m_featureData[j];
 
+            /// actual time position
+            timeIdx = (size_t)j / mToProcess.size();
+            size_t uttIdx = (size_t)fmod(j, mToProcess.size());
+
             features.SetValue(idx, j, (ElemType)1);
-            SetSentenceBegin(idx, j, actualmbsize);
+            SetSentenceBegin(idx, uttIdx, timeIdx);
+
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
-                
+        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
+        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
+
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
         {
@@ -1922,19 +1938,25 @@ void BatchSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actualM
     }
 }
 
+/**
+timePos: the time position. for example, 100 actual minibatch with 10 streams,
+timePosition = [0,..,9] for each actual tiem
+*/
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*actualMbSize*/)
+void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int timePos)
 {
     // now get the labels
     LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     LabelIdType index = GetIdFromLabel(labelIn.beginSequence.c_str(), labelIn);
 
-    if (pos == 0) 
+    if (timePos == 0) 
     {
         if (wrd == (int)index)
+        {
             mSentenceBegin = true;
-        else
-            mSentenceBegin = false; 
+            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SENTENCE_BEGIN);
+            mtExistsSentenceBeginOrNoLabels.SetValue(0, timePos, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+        }
     }
 }
 
@@ -2048,6 +2070,20 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 
     }
 }
+
+template<class ElemType>
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+{
+    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
+    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
+    sentenceBegin.SetValue(mtSentenceBegin);
+    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
+
+    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, mtExistsSentenceBeginOrNoLabels.GetDeviceId(), true);
+    sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
+    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtExistsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
+}
+
 
 template class BatchSequenceReader<double>; 
 template class BatchSequenceReader<float>;
