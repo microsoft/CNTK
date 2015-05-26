@@ -384,7 +384,7 @@ template <>   const wchar_t* GetFormatString(const wchar_t*);
 
 // GetScanFormatString - get the format string for a particular type
 template <typename T>
-const wchar_t* GetScanFormatString(T t)
+const wchar_t* GetScanFormatString(T)
 {
     assert(false);  // need a specialization
     return NULL;
