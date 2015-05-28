@@ -218,7 +218,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias,
             size_t sampleCount, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c);
 
-        void AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
+        void AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
+            const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& c);
 
         CPUMatrix<ElemType>& AssignNCEDerivative(const CPUMatrix<ElemType>& tmp, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t inputIndex, CPUMatrix<ElemType>& c);
 

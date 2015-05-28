@@ -887,7 +887,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 MoveMatricesToDevice(deviceId);
                 InitRecurrentNode();
                 m_evalMode = xm_evalMode;
-        }
+           
+            }
         NCEEvalMode &EvalMode(){ return m_evalMode; }
 
         virtual void SaveToFile(File& fstream) const
@@ -912,9 +913,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
@@ -971,12 +972,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FunctionValues().SetValue(0);
                 for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
                     FunctionValues()(0, 0) -= m_logSoftmax(i, (size_t)Inputs(0)->FunctionValues()(0, i));
-                ElemType val = FunctionValues()(0, 0);
-                val *= 1;
             }
             else if (m_evalMode == NCEEvalMode::Unnormalized)
             {
-                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
             }
             else
             {
@@ -1339,7 +1338,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// add the class log posterior probability
                 try{
-                    Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
+                Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
                 }
                 catch (...)
                 {
