@@ -629,4 +629,8 @@ static inline std::wstring &wtrim(std::wstring &s) {
 vector<string> sep_string(const string & str, const string & sep);
 vector<wstring> wsep_string(const wstring & str, const wstring & sep);
 
+wstring s2ws(const string& str);
+
+string ws2s(const wstring& wstr);
+
 #endif    // _FILEUTIL_

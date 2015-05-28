@@ -39,7 +39,7 @@
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-
+#include <fileutil.h>
 
 // MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
 // HPC Pack 2012 R2 MS-MPI Redistributable Package
@@ -688,6 +688,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     ofvocab.close();
 
     /// write the outputs
+    msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
     fp = fopen(outputWord2Cls.c_str(), "wt");
     if (fp == nullptr)
         RuntimeError("cannot write to %s", outputWord2Cls.c_str());
