@@ -1,0 +1,15 @@
+# -----------------------------
+# Train LSTM LM using class-based criterion
+# -----------------------------
+# in local
+D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.classlm.config ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.comments command=train
+# on server
+\\speechstore5\userdata\kaishengy\bin\binmay27\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.comments command=train DEVICE=0
+
+# test PPL : 169 with 1 layer of 200 hidden dimension LSTM 
+\\speechstore5\userdata\kaishengy\bin\binmay27\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.comments test=[modelPath=$ExpFolder$\modelRnnCNTK.0] command=test
+
+# ---- 2 layers of LSTM --------
+# in local wit 2 layers of LSTM
+\\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.2layer.comments command=train train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:100:200:200:$VOCABSIZE$]] DEVICE=1
+
