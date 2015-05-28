@@ -1066,7 +1066,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
             ComputationNodePtr clslogpostprob = nullptr;
             ComputationNodePtr clsweight = nullptr;
-            ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = {nullptr}; 
 
             input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
             m_net->FeatureNodes().push_back(input);
@@ -1090,8 +1089,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     input = m_net->Dropout(output);
                 else
                     input = output;
-
-                outputFromEachLayer[1] = input;
+            }
+            else
+            {
+                LogicError("BuildCLASSLSTMNetworkFromDescription: LSTMNode cannot take sparse input. Need to project sparse input to continuous vector using LookupTable. Suggest using setups below\n layerSizes=$VOCABSIZE$:100:$HIDDIM$:$VOCABSIZE$ \nto have 100 dimension projection, and lookupTableOrder=1\n to project to a single window. To use larger context window, set lookupTableOrder=3 for example with width-3 context window.\n ");
             }
 
             int recur_idx = 0;
@@ -1102,32 +1103,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 /// previously used function. now uses LSTMNode which is correct and fast
                 input = output;
-                outputFromEachLayer[offset + 1] = input;
-
-                for (int i = 1 + offset; i<numHiddenLayers; i++)
+                for (int i = 1 + offset; i <numHiddenLayers; i++)
                 {
-                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
-                    {
-                        output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                    output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                         //                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
                         // previously used function, now uses LSTMnode, which is fast and correct
-
-                        recur_idx++;
-                    }
-                    else
-                    {
-                        u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
-                        m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-                        b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"B%d", i), m_layerSizes[i + 1], 1);
-                        output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-                    }
 
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output);
                     else
                         input = output;
-
-                    outputFromEachLayer[i + 1] = input;
                 }
             }
 
@@ -1901,7 +1886,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
             ComputationNodePtr clslogpostprob = nullptr;
             ComputationNodePtr bias = nullptr;
-            ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
 
             input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
             m_net->FeatureNodes().push_back(input);
@@ -1928,51 +1912,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     input = m_net->Dropout(output);
                 else
                     input = output;
-
-                outputFromEachLayer[1] = input;
             }
 
             /// direct connect from input node to output node
 
-            int recur_idx = 0;
             int offset = m_lookupTableOrder > 0 ? 1 : 0;
             if (numHiddenLayers > 0)
             {
                 output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 input = output;
-                outputFromEachLayer[offset + 1] = input;
 
                 for (int i = 1 + offset; i<numHiddenLayers; i++)
                 {
-                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i)
-                    {
-                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-
-                        recur_idx++;
-                    }
-                    else
-                    {
-                        u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
-                        m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-                        b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"B%d", i), m_layerSizes[i + 1], 1);
-                        output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-                    }
+                    output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
 
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output);
                     else
                         input = output;
 
-                    outputFromEachLayer[i + 1] = input;
                 }
-            }
-
-            for (size_t i = offset; i < m_layerSizes.size(); i++)
-            {
-                /// add direct connect from each layers' output to the layer before the output layer
-                output = BuildDirectConnect(randomSeed, mbSize, i, (i > 1) ? m_layerSizes[i] : ((offset == 0) ? m_layerSizes[i] : m_layerSizes[i] * m_lookupTableOrder), m_layerSizes[numHiddenLayers], outputFromEachLayer[i], input);
-                if (output != nullptr)
-                    input = output;
             }
 
             /// need to have [input_dim x output_dim] matrix
