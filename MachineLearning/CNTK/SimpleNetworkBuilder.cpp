@@ -1439,7 +1439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t layerIdx = 0;
             size_t idx = 0;
             int recur_idx = 0;
-            for (vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
+            for (typename vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
                 p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
@@ -1761,7 +1761,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t layerIdx = 0;
             size_t idx = 0;
             int recur_idx = 0;
-            for (vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
+            for (typename vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
                 p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
