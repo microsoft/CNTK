@@ -1355,6 +1355,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             CopyImageSizeFromInputs();
 
+            if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)
+                LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
+
             if (Inputs(1)->OperationName() != LearnableParameter<ElemType>::TypeName() ||
                 Inputs(2)->OperationName() != LearnableParameter<ElemType>::TypeName() ||
                 Inputs(3)->OperationName() != LearnableParameter<ElemType>::TypeName() ||
