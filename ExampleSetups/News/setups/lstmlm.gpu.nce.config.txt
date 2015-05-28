@@ -17,7 +17,7 @@ DEVICEID=$DEVICE$
 
 NOISE=100
 RATE=0.1
-VOCABSIZE=10000
+VOCABSIZE=2263
 CLASSSIZE=50
 makeMode=true
 TRAINFILE=comments.cntk.train.txt
@@ -34,7 +34,7 @@ writeWordAndClassInfo=[
     outputWord2Cls=$ExpFolder$\word2cls.txt
     outputCls2Index=$ExpFolder$\cls2idx.txt
     vocabSize=$VOCABSIZE$
-	  cutoff=0
+	  cutoff=2
     nbrClass=$CLASSSIZE$
     printValues=true
 ]
