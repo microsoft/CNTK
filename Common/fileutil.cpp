@@ -1680,3 +1680,19 @@ vector<wstring> wsep_string(const wstring & istr, const wstring & sep)
 
     return vstr;
 }
+
+wstring s2ws(const string& str)
+{
+    typedef codecvt_utf8<wchar_t> convert_typeX;
+    wstring_convert<convert_typeX, wchar_t> converterX;
+
+    return converterX.from_bytes(str);
+}
+
+string ws2s(const wstring& wstr)
+{
+    typedef codecvt_utf8<wchar_t> convert_typeX;
+    wstring_convert<convert_typeX, wchar_t> converterX;
+
+    return converterX.to_bytes(wstr);
+}
