@@ -2260,7 +2260,7 @@ public:
             // first give criteria nodes as root node
             if (FinalCriterionNodes().size() > 0)
             {
-                for each (ComputationNodePtr node in FinalCriterionNodes())
+                for (auto node : FinalCriterionNodes())
                 {
                     if (!allowFragment) FormRecurentLoops(node);
                     size_t actualMBSize = this->GetActualMBSize();
@@ -2276,7 +2276,7 @@ public:
             // now output nodes
             if (OutputNodes().size() > 0)
             {
-                for each (ComputationNodePtr node in OutputNodes())
+                for (auto node : OutputNodes())
                     if (UnitTest(node) == false)
                         return false;
             }
@@ -2287,7 +2287,7 @@ public:
             // now evaluation nodes
             if (EvaluationNodes().size() > 0)
             {
-                for each (ComputationNodePtr node in EvaluationNodes())
+                for (auto node : EvaluationNodes())
                     if (UnitTest(node) == false)
                         return false;
             }

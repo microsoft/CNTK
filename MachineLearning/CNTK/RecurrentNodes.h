@@ -531,7 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         LSTMNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode(deviceId), mState(deviceId), mPastState(deviceId),
+            : ComputationNode<ElemType>(deviceId), mState(deviceId), mPastState(deviceId),
             mPastOutput(deviceId), mGi(deviceId), mGf(deviceId), mGo(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
             grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId),
             tanhState(deviceId), m_tempMatrix(deviceId),
@@ -552,7 +552,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         LSTMNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode(deviceId), mState(deviceId), mPastState(deviceId), mPastOutput(deviceId), mGi(deviceId), mGf(deviceId), mGo(deviceId), grdToObs(deviceId), grdToInputGate(deviceId), grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId), tanhState(deviceId), m_tempMatrix(deviceId), mSlicePrevState(deviceId), mSlicePrevOutput(deviceId),
+            : ComputationNode<ElemType>(deviceId), mState(deviceId), mPastState(deviceId), mPastOutput(deviceId), mGi(deviceId), mGf(deviceId), mGo(deviceId), grdToObs(deviceId), grdToInputGate(deviceId), grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId), tanhState(deviceId), m_tempMatrix(deviceId), mSlicePrevState(deviceId), mSlicePrevOutput(deviceId),
             grdBeforeInputGate(deviceId),
             grdBeforeForget(deviceId), grdBeforeGo(deviceId), grdToCell(deviceId),
             grdBeforeTanhInputGate(deviceId), m_obs_error_from_future_minibatch(deviceId),
@@ -568,7 +568,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         LSTMNode(const LSTMNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode(node->m_deviceId), mState(node->m_deviceId), mPastState(node->m_deviceId), mPastOutput(node->m_deviceId), mGi(node->m_deviceId), mGf(node->m_deviceId), mGo(node->m_deviceId), grdToObs(node->m_deviceId), grdToInputGate(node->m_deviceId), grdToForgetGate(node->m_deviceId), grdToOutputGate(node->m_deviceId), grdToCellWgt(node->m_deviceId), tanhObs(node->m_deviceId), tanhState(node->m_deviceId), m_tempMatrix(node->m_deviceId), mSlicePrevState(node->m_deviceId), mSlicePrevOutput(node->m_deviceId),
+            : ComputationNode<ElemType>(node->m_deviceId), mState(node->m_deviceId), mPastState(node->m_deviceId), mPastOutput(node->m_deviceId), mGi(node->m_deviceId), mGf(node->m_deviceId), mGo(node->m_deviceId), grdToObs(node->m_deviceId), grdToInputGate(node->m_deviceId), grdToForgetGate(node->m_deviceId), grdToOutputGate(node->m_deviceId), grdToCellWgt(node->m_deviceId), tanhObs(node->m_deviceId), tanhState(node->m_deviceId), m_tempMatrix(node->m_deviceId), mSlicePrevState(node->m_deviceId), mSlicePrevOutput(node->m_deviceId),
             grdBeforeInputGate(node->m_deviceId),
             grdBeforeForget(node->m_deviceId), grdBeforeGo(node->m_deviceId), grdToCell(node->m_deviceId),
             grdBeforeTanhInputGate(node->m_deviceId), m_obs_error_from_future_minibatch(node->m_deviceId),
@@ -1606,9 +1606,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
             WCHAR str[4096];
-            wsprintf(str, L"Input[Width:%lu]  \n", m_inputDim);
+            swprintf(str, L"Input[Width:%lu]  \n", m_inputDim);
             fstream << wstring(str);
-            wsprintf(str, L"Hidden[Width:%lu]    Output[Width:%lu]  \n", m_outputDim, m_outputDim);
+            swprintf(str, L"Hidden[Width:%lu]    Output[Width:%lu]  \n", m_outputDim, m_outputDim);
             fstream << wstring(str);
         }
 
