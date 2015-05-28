@@ -112,13 +112,15 @@ public:
     Matrix<ElemType>* m_id2Prob; // CPU version
     int class_size;
     map<int, vector<int>> class_words;
-    vector<int>class_cn;
 
     int noise_sample_size;
     noiseSampler<long> m;
 
     ReaderMode readerMode;
     int eos_idx, unk_idx;
+
+    string mUnk; /// unk symbol
+
 public:
 //    typedef std::string LabelType;
 //    typedef unsigned LabelIdType;
@@ -216,7 +218,7 @@ public:
     virtual void Init(const ConfigParameters& config);
     void ReadClassInfo(const wstring & vocfile, bool flatten) ;
     void ReadWord(char *wrod, FILE *fin);
-    void OrganizeClass();
+
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                        size_t m_mbStartSample, size_t actualmbsize);
     void GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices);
@@ -244,7 +246,6 @@ public:
 
     void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
-    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/ , Matrix<ElemType>& /* sentenceExistsBeginOrNoLabels*/) { NOT_IMPLEMENTED;  };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
@@ -273,7 +274,6 @@ public:
 	using SequenceReader<ElemType>::nwords;
 	using SequenceReader<ElemType>::ReadClassInfo;
 	using SequenceReader<ElemType>::LoadLabelFile;
-	using SequenceReader<ElemType>::OrganizeClass;
 	using SequenceReader<ElemType>::word4idx;
 	using SequenceReader<ElemType>::m_mbStartSample;
 	using SequenceReader<ElemType>::m_epoch;
@@ -333,10 +333,13 @@ private:
     bool   mSentenceEnd; 
     bool   mSentenceBegin; 
 
+    Matrix<ElemType> mtSentenceBegin; 
+    Matrix<ElemType> mtExistsSentenceBeginOrNoLabels;
+
 public:
     vector<bool> mProcessed; 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
-    BatchSequenceReader() {
+    BatchSequenceReader() : mtSentenceBegin(CPUDEVICE), mtExistsSentenceBeginOrNoLabels(CPUDEVICE){
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
         mLastPosInSentence = 0;
@@ -371,6 +374,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
+    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
     void SetRandomSeed(int);
 };

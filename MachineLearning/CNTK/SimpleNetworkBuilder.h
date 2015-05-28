@@ -674,9 +674,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
                 (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
-                (m_evalCriterion == EvalCriterion::CRF && m_trainCriterion == TrainingCriterion::CRF) ||
-                (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax) ||
-                (m_evalCriterion == EvalCriterion::NCECrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::NCECrossEntropyWithSoftmax)))
+                (m_evalCriterion == EvalCriterion::CRF && m_trainCriterion == TrainingCriterion::CRF)))
             {
                 switch (m_evalCriterion)
                 {
@@ -687,7 +685,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);
                     break;  
                 case EvalCriterion::NCECrossEntropyWithSoftmax:
-                    output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"NoiseContrastiveEstimationNode" : evalNodeName);
+                    output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"NoiseContrastiveEstimationNode" : evalNodeName, NCEEvalMode::Softmax);
                     break;
                 case EvalCriterion::SquareError:
                     output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"SquareError":evalNodeName);
