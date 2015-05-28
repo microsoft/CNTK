@@ -887,16 +887,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 MoveMatricesToDevice(deviceId);
                 InitRecurrentNode();
                 m_evalMode = xm_evalMode;
-            }
+        }
         NCEEvalMode &EvalMode(){ return m_evalMode; }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_evalMode;
+        }
+
+        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+            fstream >> m_evalMode;
+        }
+
+        void SetEvalMode(NCEEvalMode& xevMode)
+        {
+            m_evalMode = xevMode;
+        }
 
         NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                LoadFromFile(fstream, modelVersion, deviceId);
-            }
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
@@ -1313,6 +1331,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 softMax_t.InplaceExp();  /// 1 x 148
 
                 /// add the word log posterior probability
+                if (y_t < lft_bnd)
+                    LogicError("ClassBasedCrossEntropyWithSoftmax::EvaluateThisNodeS : the word index is smaller than its left bound of its class. This could happen because of reader issues. ");
+
                 size_t idx_in_class = y_t - lft_bnd;
                 Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
 

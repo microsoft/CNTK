@@ -39,7 +39,7 @@
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-
+#include <fileutil.h>
 
 // MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
 // HPC Pack 2012 R2 MS-MPI Redistributable Package
@@ -573,8 +573,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         str = trim(str);
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
-        if (sposition == str.npos || eposition == str.npos)
-            str = "</s> " + str + " </s>";
+        if (sposition == str.npos)
+            str = "</s> " + str;
+        if (eposition == str.npos)
+            str = str + " </s>";
         vstr = msra::strfun::split(str, "\t ");
         for (int i = 1; i < vstr.size(); i++)
             v_count[vstr[i]]++;
@@ -594,7 +596,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble> >
         q(compare_second<stringdouble>(), std::vector<stringdouble>(v_count.begin(), v_count.end()));
     
-    size_t wordCountLessCutoff = v_count.size();
+    int wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
         for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
             if (iter->second <= cutoff)
@@ -686,6 +688,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     ofvocab.close();
 
     /// write the outputs
+    msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
     fp = fopen(outputWord2Cls.c_str(), "wt");
     if (fp == nullptr)
         RuntimeError("cannot write to %s", outputWord2Cls.c_str());
