@@ -40,7 +40,8 @@ enum ReaderMode
     Softmax = 0,  // no labels to worry about
     Class = 1, // category labels, creates mapping tables
     NCE = 2,  // sentence mapping (predicts next word)
-    None = 3, // some other type of label
+    Unnormalize = 3,
+    None = 4, // some other type of label
 };
 
 template <typename Count>
@@ -112,7 +113,6 @@ public:
     Matrix<ElemType>* m_id2Prob; // CPU version
     int class_size;
     map<int, vector<int>> class_words;
-    vector<int>class_cn;
 
     int noise_sample_size;
     noiseSampler<long> m;
@@ -219,7 +219,7 @@ public:
     virtual void Init(const ConfigParameters& config);
     void ReadClassInfo(const wstring & vocfile, bool flatten) ;
     void ReadWord(char *wrod, FILE *fin);
-    void OrganizeClass();
+
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                        size_t m_mbStartSample, size_t actualmbsize);
     void GetInputToClass(std::map<std::wstring, Matrix<ElemType>*>& matrices);
@@ -275,7 +275,6 @@ public:
 	using SequenceReader<ElemType>::nwords;
 	using SequenceReader<ElemType>::ReadClassInfo;
 	using SequenceReader<ElemType>::LoadLabelFile;
-	using SequenceReader<ElemType>::OrganizeClass;
 	using SequenceReader<ElemType>::word4idx;
 	using SequenceReader<ElemType>::m_mbStartSample;
 	using SequenceReader<ElemType>::m_epoch;
