@@ -511,7 +511,6 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
                     }
                     m_labelInfo[index].idMax = (LabelIdType)(iMax+1);
 
-                    OrganizeClass();
 
                 }
                 m_labelInfo[index].mapName = labelPath;
@@ -1295,28 +1294,6 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     return true;
 }
 
-template<class ElemType>
-void SequenceReader<ElemType>::OrganizeClass()
-{
-    //allocate auxiliary class variables (for faster search when normalizing probability at output layer)
-    int cl, i;
-    for (i=0; i<class_size; i++) {
-        class_cn.push_back(0); 
-    }
-
-    for (i=0; i<nwords; i++) {
-        cl=idx4class[i];
-        class_words[cl].push_back(i); 
-        class_cn[cl]++;
-    }
-
-    for (i=0; i<class_size; i++) {
-        if (class_cn[i] == 0) {
-            RuntimeError ("class is empty");
-        }
-    }
-}
-
 // GetLabelMapping - Gets the label mapping from integer index to label type 
 // returns - a map from numeric datatype to native label type 
 template<class ElemType>
@@ -1487,8 +1464,6 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
                         m_labelInfo[index].mapLabelToId[label] = i;
                     }
                     m_labelInfo[index].idMax = (LabelIdType)(iMax+1);
-
-                    OrganizeClass();
 
                 }
                 m_labelInfo[index].mapName = labelPath;
