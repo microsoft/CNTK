@@ -25,19 +25,26 @@ python
 # create word cluster
 # -----------------------------
 # goto ../steps directory
+# use cutoff = 2
 mkdir \\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments
-D:\dev\cntkcodeplex\x64\Debug\CNTK.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments
+D:\dev\cntkcodeplex\x64\Debug\CNTK.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments command=writeWordAndClassInfo
 # check $ExpDir$ and $DataFolder$ for outputs
 
 # -----------------------------
 # Train LSTM LM using NCE criterion
 # -----------------------------
+# the vocabulary size is 2263
 # in local
 D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments command=train
 # on server
 \\speechstore5\userdata\kaishengy\bin\binmay26\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments command=train
 
-# test PPL
-\\speechstore5\userdata\kaishengy\bin\binmay26\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments test=[modelPath=$ExpFolder$\modelRnnCNTK.0] command=test
+# test PPL : 61.31 with 1 layer of 200 hidden dimension LSTM 
+\\speechstore5\userdata\kaishengy\bin\binmay26\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments test=[modelPath=$ExpFolder$\modelRnnCNTK] command=test
 
+# ---- 2 layers of LSTM --------
+# in local wit 2 layers of LSTM
+D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.nce.config.txt ExpDir=d:\exp\news\s1.lstmlm.comments.2layers command=train train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:200:200:$VOCABSIZE$]] DataDir=d:\data\newscomments\2015\03-23
 
+# on server
+\\speechstore5\userdata\kaishengy\bin\binmay26\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments.2layers command=train train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:200:200:$VOCABSIZE$]]
