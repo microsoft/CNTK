@@ -119,6 +119,9 @@ public:
 
     ReaderMode readerMode;
     int eos_idx, unk_idx;
+
+    string mUnk; /// unk symbol
+
 public:
 //    typedef std::string LabelType;
 //    typedef unsigned LabelIdType;
