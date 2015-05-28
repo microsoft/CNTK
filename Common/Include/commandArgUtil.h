@@ -41,11 +41,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     std::string::size_type ParseKeyValue(const std::string& token, std::string::size_type pos, ConfigParameters& dict);
 
     // ConfigValue - value of one configuration parameter
-    // Parses from string to resultant value on assignment
+    // Parses from string to resultant value on assignment. Basically a ConfigValue is a std::string with type casts to convert it to numeric types, boolean, etc.,
+    // by simply type-casting it or assigning it to a value of the desired type.
+    // ConfigParameters::ConfigDictionary is a collection of names ConfigValues, which know which collection they belong to (their 'parent').
+    // Often, they get constructed on the fly and passed around by value, e.g. in modified form or when falling back to a default value, without being added to the collection.
     class ConfigValue : public std::string
     {
-        std::string m_configName;       // name of this configuration, e.g. for error messages, optional
-        const ConfigParameters* m_parent;     // keep track of parent pointer
+        std::string m_configName;               // name of this configuration, e.g. for error messages, optional
+        const ConfigParameters* m_parent;       // we belong to this collection of ConfigValues
     public:
         std::string Name() const 
         {return m_configName;}
@@ -232,19 +235,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConfigParser& operator=(const ConfigParser& configParser) = default;
 
     public:
-        // FindBraces - find matching braces in a string starting at the current position
+        // FindBraces - parser helper function to find matching braces in a string starting at the current position (any leading whitespace must have been consumed).
+        // Basically this tokenizes an entire bracketed section into a single token.
+        // This function assumes that all the underlying languages involved have matching braces.
+        // Braces matched by this function are:
+        //  - [ ... ]
+        //  - { ... }
+        //  - ( ... )
+        //  - " ... "  (yes)
         // str - string to search
         // tokenStart - start location in the string to search
-        // returns: position of last brace, -1 if no braces at current position
+        // returns: character position of matching closing brace, string::npos if no brace present at start position
+        // BUGBUG: This seems to only work for one kind of braces at a time. Nested other braces are not understood. Also, braces in strings are not protected. [fseide]
         static std::string::size_type FindBraces(const std::string& str, std::string::size_type tokenStart)
         {
-            static const std::string openBraces = OPENBRACES; // open braces and quote
+            static const std::string openBraces = OPENBRACES;       // open braces and quote
             static const std::string closingBraces = CLOSINGBRACES; // close braces and quote
+            const auto len = str.length();
+            if (tokenStart >= len)                                  // start is outside (or rather, at end of string): no brace here
+                return npos;
             auto braceFound = openBraces.find(str[tokenStart]);
-            auto len = str.length();
-            if (braceFound == npos || tokenStart >= len)
+            if (braceFound == npos)                                 // no brace present at tokenStart
                 return npos;
 
+            // string begins with a brace--find the closing brace, while correctly handling nested braces
             std::vector<std::string::size_type> bracesFound;
             std::string::size_type current, opening;
             current = opening = tokenStart; //str.find_first_of(openBraces, tokenStart);
@@ -287,7 +301,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return current;
         }
 
-        // Parse - Parse the string; segment string by top-level a=b expressions and call (virtual) ParseValue() on them.
+        // ParseValue - virtual function to parse a "token" as tokenized by Parse() below.
+        // Parse() calls into ParseValue() which is a virtual function that implements how an assignment token is to be processed.
+        virtual std::string::size_type ParseValue(const std::string& stringParse, std::string::size_type tokenStart, std::string::size_type tokenEnd) = 0;
+
+        // Parse - Break a string into "records" and pass each to a user-specified function, where
+        //  - record separator is newline and an optional record separator character (such as semicolon)
+        //  - leading and trailing white space is trimmed from records
+        //  - nested blocks (braces, string literals) are honored: record separators inside braces or quotes are ignored
+        // In the simplest case, "records" are lines of text, e.g. the lines of a configuration file. Any further parsing of these lines, e.g. of the form a=b, is up to the user-specified ParseValue()).
+        // The above is subject to some special behaviors:
+        //  - records that are complete brace expressions themselves are flattened, e.g. a ; [ x ; [ u ; v ] ] ; b emits the tokens "a", "x", "[ u ; v ]", and "b"
+        //    This is meant for the case where the entire string is a brace expression (TODO: is that true? [fseide]).
+        //  - the separator character can be changed inside a brace expression by appending the different separator right after the brace, e.g. [- a - b] will separate using '-' instead of ';'. TODO: document what this is used for.
         // This function is used at lots of places for various purposes.
         //  - (ConfigParameters from file) config-file parsing passes in expressions of the type a1=b1 \n a2=b2 \n ..., creates a ConfigDictionary entry for each top-level a=b expression, where b can be a block in braces
         //  - (ConfigParameters) right-hand side that is an array of parameters [ a1=b1; a2=b2 ...], with surrounding braces
@@ -298,83 +324,87 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - more to be added
         // stringParse - string to parse
         // pos - postion to start parsing at
-        void Parse(const std::string& stringParse, std::string::size_type pos=0)
+        // m_separator - extra separator character between tokens, typically ';' (in addition to comma and newline)
+        void Parse(const std::string& stringParse, std::string::size_type pos = 0)
         {
-            // list of possible custom separators
-            const std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
-            std::string seps = ",\r\n";   // default separators
-            // add braces and current separator to the separators list so we skip them
-            seps += m_separator;
-            std::string sepsBraces(seps);
-            sepsBraces += OPENBRACES;
+            // set of record separator characters
+            std::string seps = ",\r\n";     // default separators
+            seps += m_separator;            // and one extra caller-specified one (typically ';'). Note that this gets temporarily changed inside content level, see below.
+            // set that includes both record separators and all open-brace characters
+            std::string sepsBraces = seps + OPENBRACES; // OPENBRACES includes anything that requires a closing, including "
 
-            // Establish string and get the first token:
-            auto tokenEnd = pos;
-            auto totalLength = stringParse.length();
+            // set up for token loop
+            auto tokenEnd = pos;            // current token's end
+            const auto totalLength = stringParse.length();
             auto braceEnd = totalLength;
-            bool contentLevel = false;  // content level (not surrounding braces)
+            bool contentLevel = false;      // are we inside content? (=an outer level of braces)
 
-            do
+            do  // loop over tokens
             {
+                // consume separators (newline, comma, semicolon)
                 auto tokenStart = stringParse.find_first_not_of(seps, tokenEnd);
                 if (tokenStart==npos)   // no more tokens
                     break;
-                // skip any leading spaces
+                // consume any leading spaces
                 tokenStart = stringParse.find_first_not_of(" \t", tokenStart);
                 if (tokenStart == npos)
                     break;
 
-                auto braceEndFound = FindBraces(stringParse, tokenStart);
+                // lex one token--this determines 'tokenEnd' (we already got 'tokenStart')
+
+                // First check whether we are in a braced condition (including ").
+                const auto braceEndFound = FindBraces(stringParse, tokenStart);
                 bool quoteFound = false;
 
-                if (braceEndFound != npos && tokenStart+1 < totalLength)
+                if (braceEndFound != npos)                          // opening braces found
                 {
-                    if (!contentLevel)
+                    // consume one level of braces right here, enter "content level" mode
+                    if (!contentLevel && tokenStart + 1 < totalLength/*[fseide] why is this test necessary?*/)
                     {
-                        tokenStart++; // skip the brace
+                        tokenStart++;                               // consume the opening brace
                         // check for custom separator character
+                        // If the opening brace is immediately followed by any of the customSeparators, change m_separator (inside seps) to that character.
+                        const static std::string customSeperators = "`~!@$%^&*_-+|:;,?.";   // TODO: document what this is for, where it is used [fseide]
                         if (customSeperators.find(stringParse[tokenStart]) != npos)
                         {
                             char separator = stringParse[tokenStart];
-                            seps[seps.length()-1] = separator;
+                            seps[seps.length()-1] = separator;      // this was m_separator; on content level, we change it to a custom separator (it gets changed back when we exit content level)
                             sepsBraces = seps + OPENBRACES;
-                            tokenStart++; // skip the separator
+                            tokenStart++; // consume the separator
                         }
                         braceEnd = braceEndFound;
                         tokenEnd = tokenStart;
                         contentLevel = true;    // now at content level
-                        continue;
+                        continue;               // this sort of "recursively" calls ourselves with contentLevel flag set. [fseide] does this make sense for strings??
                     }
-                }
 
-                // content level braces, just find the end of the braces
-                if (braceEndFound != npos)
-                {
-                    if (stringParse[braceEndFound] == '"')
+                    // content level braces: just find the end of the braces, and that's our token
+                    if (stringParse[braceEndFound] == '"')  // special case for strings
                     {   // for quoted string we skip the quotes
                         tokenStart++;
-                        tokenEnd = braceEndFound;
-                        quoteFound = true;
+                        tokenEnd = braceEndFound;           // position of closing "
+                        quoteFound = true;                  // tells code below to consume the closing "
                     }
-                    else
+                    else            // a regular brace: the entire brace expression becomes the token, including the braces themselves
                     {
                         tokenEnd = braceEndFound+1; // tokenEnd is one past the character we want
                     }
                 }
-                else
+                else        // not braces
                 {
                     // find the end of the token
                     tokenEnd = stringParse.find_first_of(sepsBraces, tokenStart);
 
                     // now look for contained braces before the next break
                     if (tokenEnd != npos)
-                        braceEndFound = FindBraces(stringParse, tokenEnd);
-                    // found an embedded brace, go to matching end brace to end token
-                    if (braceEndFound != npos)
                     {
-                        tokenEnd = braceEndFound+1; // token includes the closing brace
+                        const auto braceEndFound = FindBraces(stringParse, tokenEnd);
+                        // found an embedded brace, extend token to the end of the braces
+                        if (braceEndFound != npos)
+                        {
+                            tokenEnd = braceEndFound+1; // token includes the closing brace
+                        }
                     }
-
 
                     if (tokenEnd==npos || tokenEnd > braceEnd)   // no more seperators
                     {   // use the length of the string as the boundary
@@ -383,20 +413,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             break;
                     }
                 }
+                // token has been determined to range from tokenStart to tokenEnd
 
-                // now parse the value
+                // now parse the value in a caller-specific fashion (through a virtual call into our host class)
                 if (tokenEnd > tokenStart)
                 {
                     tokenEnd = ParseValue(stringParse, tokenStart, tokenEnd);
                 }
+
+                // prepare to advance to next token
                 // if we hit the end of a brace block, move past the ending brace and reset
                 if (tokenEnd == braceEnd)
                 {
-                    tokenEnd++;
+                    tokenEnd++;                             // consume closing brace
                     braceEnd = totalLength;
                     seps[seps.length()-1] = m_separator;    // restore default separator
                     sepsBraces = seps + OPENBRACES;
-                    contentLevel = false;
+                    contentLevel = false;                   // pop out of content level
                 }
                 if (quoteFound)
                 {   // skip the closing quote
@@ -414,7 +447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //      If there is no comment, simply return the original 'configString'
         //      If there is a comment, remove the part of 'configString' corresponding to the comment
         //      Note that midline comments need to be preceded by whitespace, otherwise they are not treated as comments.
-        std::string StripComments(const std::string &configLine) const
+        static std::string StripComments(const std::string &configLine)
         {
             std::string::size_type pos = configLine.find_first_not_of(" \t");
 
@@ -435,7 +468,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return (chPrev == ' ' || chPrev == '\t') ? configLine.substr(pos, midLineCommentPos - pos) : configLine;
         }
 
-        virtual std::string::size_type ParseValue(const std::string& stringParse, std::string::size_type tokenStart, std::string::size_type tokenEnd) = 0;
         std::string ReadConfigFile(const std::string &filePath);
         std::string ReadConfigFile(const std::wstring &filePath);
         std::string ReadConfigFiles(const std::string &filePaths);
