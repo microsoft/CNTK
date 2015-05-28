@@ -975,7 +975,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (m_evalMode == NCEEvalMode::Unnormalized)
             {
-                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
+                FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
             }
             else
             {
