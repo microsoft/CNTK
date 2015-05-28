@@ -1331,6 +1331,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 softMax_t.InplaceExp();  /// 1 x 148
 
                 /// add the word log posterior probability
+                if (y_t < lft_bnd)
+                    LogicError("ClassBasedCrossEntropyWithSoftmax::EvaluateThisNodeS : the word index is smaller than its left bound of its class. This could happen because of reader issues. ");
+
                 size_t idx_in_class = y_t - lft_bnd;
                 Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
 
