@@ -1058,10 +1058,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t ibest = 0;
             while (from_queue.size() > 0)
             {
+                Token<ElemType> seq(from_queue.top().score, from_queue.top().sequence, from_queue.top().state); 
+
                 best_path.clear();
 
                 assert(best_path.empty());
-                best_path.swap(from_queue.top().sequence);
+                best_path = seq.sequence;
                 if (ibest == 0)
                     WriteNbest(ibest, best_path, outputNodes, dataWriter);
 
