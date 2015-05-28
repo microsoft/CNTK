@@ -697,18 +697,20 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     ofvocab.close();
     if (nbrCls > 0)
     {
-    /// write the outputs
+        /// write the outputs
+        msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
         ofstream ofp(outputWord2Cls.c_str());
         if (!ofp)
-        RuntimeError("cannot write to %s", outputWord2Cls.c_str());
-    for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
+            RuntimeError("cannot write to %s", outputWord2Cls.c_str());
+        for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
             ofp << (int)wrd2cls(r, 0) << endl;
         ofp.close();
 
+        msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
         ofp.open(outputCls2Index.c_str());
         if (!ofp)
-        RuntimeError("cannot write to %s", outputCls2Index.c_str());
-    for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
+            RuntimeError("cannot write to %s", outputCls2Index.c_str());
+        for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
             ofp << (int)cls2idx(r, 0) << endl;
         ofp.close();
     }
