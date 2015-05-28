@@ -1386,6 +1386,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
     string mode = featureConfig("mode","class");//class, softmax, nce
+    std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
 
     if (mode == "nce")
     {
@@ -1397,6 +1398,8 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         readerMode = ReaderMode::Softmax;
     else if (mode == "class")
         readerMode = ReaderMode::Class;
+    else 
+        LogicError("unsupported format %s", mode.c_str()); 
 
     /// read unk sybol
     mUnk = readerConfig("unk", "<unk>");

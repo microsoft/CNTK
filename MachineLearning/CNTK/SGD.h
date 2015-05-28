@@ -992,7 +992,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             trainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
             
-            startReadMBTime=Timer::MilliSecondElapsed();
+            startReadMBTime=Timer::MilliSecondElapsed();            
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
 #ifdef MPI_SUPPORT
