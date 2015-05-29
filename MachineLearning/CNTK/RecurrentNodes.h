@@ -1605,11 +1605,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
 
-            WCHAR str[4096];
-            swprintf(str, L"Input[Width:%lu]  \n", m_inputDim);
-            fstream << wstring(str);
-            swprintf(str, L"Hidden[Width:%lu]    Output[Width:%lu]  \n", m_outputDim, m_outputDim);
-            fstream << wstring(str);
+            fstream << L"Input[Width:" << m_inputDim << L"]  \n" ; 
+            fstream << L"Hidden[Width:" << m_outputDim << L"]    Output[Width:" << m_outputDim << L"]  \n";
         }
 
 
