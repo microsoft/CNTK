@@ -70,7 +70,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
 
     wstring wstr = L" ";
     b = 0;
-    nwords = 0;
+    this->nwords = 0;
     int prevcls = -1;
 
     mNbrCls = 0;
@@ -83,7 +83,11 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
         if (readClass)
         {
             vector<wstring> wordandcls = wsep_string(strtmp, wstr);
+#ifdef __unix__
+            long cls = (long)wcstol(wordandcls[1].c_str(),nullptr,10);
+#else
             long cls = (long)_wtoi(wordandcls[1].c_str());
+#endif
             word4cls[wordandcls[0]] = cls;
 
             idx4class[b] = cls;
@@ -104,7 +108,7 @@ void BatchLUSequenceReader<ElemType>::ReadLabelInfo(const wstring & vocfile,
             word4idx[strtmp] = b;
             idx4word[b++] = strtmp;
         }
-        nwords++;
+        this->nwords++;
     }
     vin.close();
 
@@ -132,7 +136,7 @@ void BatchLUSequenceReader<ElemType>::GetClassInfo(LabelInfo& lblInfo)
 
     int clsidx;
     int prvcls = -1;
-    for (size_t j = 0; j < nwords; j++)
+    for (size_t j = 0; j < this->nwords; j++)
     {
         clsidx = lblInfo.idx4class[(long)j];
         if (prvcls != clsidx)
@@ -143,7 +147,7 @@ void BatchLUSequenceReader<ElemType>::GetClassInfo(LabelInfo& lblInfo)
             (*lblInfo.m_classInfoLocal)(0, prvcls) = (float)j;
         }
     }
-    (*lblInfo.m_classInfoLocal)(1, prvcls) = (float)nwords;
+    (*lblInfo.m_classInfoLocal)(1, prvcls) = (float)this->nwords;
 
     lblInfo.m_classInfoLocal->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
@@ -250,12 +254,17 @@ void LUSequenceReader<ElemType>::LoadLabelFile(const std::wstring &filePath, std
     wstring str; 
     retLabels.resize(0);
     wifstream vin;
+#ifdef __unix__
+    vin.open(ws2s(path).c_str(), ifstream::in);
+#else
     vin.open(path.c_str(), ifstream::in);
+#endif
 
     while (vin.good())
     {
         vin.getline(stmp, MAX_STRING);
-        str = wtrim(stmp);
+        wstring temp = stmp;
+        str = wtrim(temp);
         if (str.length() == 0)
             break; 
 
@@ -359,8 +368,8 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         for (int index = labelInfoMin; index < labelInfoMax; ++index)
         {
             m_labelInfo[index].idMax = 0;
-            m_labelInfo[index].beginSequence = labelConfig[index]("beginSequence", "");
-            m_labelInfo[index].endSequence = labelConfig[index]("endSequence", "");
+            m_labelInfo[index].beginSequence = (wstring) labelConfig[index]("beginSequence", "");
+            m_labelInfo[index].endSequence = (wstring) labelConfig[index]("endSequence", "");
             m_labelInfo[index].busewordmap = labelConfig[index]("usewordmap", "false");
 
             m_labelInfo[index].isproposal = labelConfig[index]("isproposal", "false");
@@ -591,7 +600,7 @@ size_t BatchLUSequenceReader<ElemType>::FindNextSentences(size_t numRead)
                 {
                     sln.push_back(ln);
                     mToProcess.push_back(seq);
-                    mMaxSentenceLength = max(mMaxSentenceLength, ln);
+                    mMaxSentenceLength = max((int)mMaxSentenceLength, ln);
                     if (previousLn == -1)
                         mLastProcssedSentenceId = seq + 1;  /// update index for the next retrieval
                     previousLn = ln;
@@ -669,9 +678,9 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 #ifndef DEBUG_READER
             if (mRandomize)
             {
-                unsigned seed = m_seed; 
+                unsigned seed = this->m_seed; 
                 std::shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end(), std::default_random_engine(seed));
-                m_seed++;
+                this->m_seed++;
             }
 #endif
 
@@ -867,7 +876,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
         if (matrices.find(m_featuresName) == matrices.end())
         {
-            RuntimeError("LUsequence reader cannot find l%s", m_featuresName);
+            RuntimeError("LUsequence reader cannot find %s", m_featuresName.c_str());
         }
 
         locObs.Resize(featInfo.dim * m_wordContext.size(), actualmbsize);
@@ -1076,7 +1085,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
 
         if (matrices.find(m_featuresName) == matrices.end())
         {
-            RuntimeError("LUSequenceReader cannot find l%s", m_featuresName);
+            RuntimeError("LUSequenceReader cannot find l%s", m_featuresName.c_str());
         }
         locObs.Resize(featInfo.dim * m_wordContext.size(), mBlgSize);
 
@@ -1120,7 +1129,7 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(std::map<std::wstring, Matrix<Ele
         features.SetValue(locObs);
     }
     else {
-        for (map<wstring, Matrix<ElemType>>::iterator p = mMatrices.begin(); p != mMatrices.end(); p++)
+        for (typename map<wstring, Matrix<ElemType>>::iterator p = mMatrices.begin(); p != mMatrices.end(); p++)
         {
             assert(mMatrices[p->first].GetNumCols() > tidx);
             if (matrices.find(p->first) != matrices.end())
@@ -1173,7 +1182,7 @@ void BatchLUSequenceReader<ElemType>::LoadWordMapping(const ConfigParameters& re
         }
         fp.close();
     }
-    mUnkStr = readerConfig("unk", "<unk>");
+    mUnkStr = (wstring)readerConfig("unk", "<unk>");
 }
 
 
@@ -1190,7 +1199,7 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring,
         for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             bool bFound = false;
-            for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+            for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
             {
                 if ((p->second)->CanReadFor(iter->first))
                 {
@@ -1201,20 +1210,20 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring,
                 }
             }
             if (bFound == false)
-                RuntimeError("GetMinibatch: cannot find a node that can feed in features for L%s", iter->first);
+                RuntimeError("GetMinibatch: cannot find a node that can feed in features for L%s", iter->first.c_str());
         }
         mCheckDictionaryKeys = false;
     }
 
     /// set the same random seed
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
-        p->second->SetRandomSeed(m_seed);
+        p->second->SetRandomSeed(this->m_seed);
     }
-    m_seed++;
+    this->m_seed++;
 
     /// run for each reader
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         if ((p->second)->GetMinibatch(matrices) == false)
             return false;
@@ -1227,10 +1236,10 @@ bool MultiIOBatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring,
 template<class ElemType>
 void MultiIOBatchLUSequenceReader<ElemType>::SetRandomSeed(int us)
 {
-    m_seed = us;
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    this->m_seed = us;
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
-        p->second->SetRandomSeed(m_seed);
+        p->second->SetRandomSeed(this->m_seed);
     }
 }
 
@@ -1269,7 +1278,7 @@ template<class ElemType>
 void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     /// run for each reader
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         (p->second)->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
     }
@@ -1283,7 +1292,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType
     size_t rows = 0, cols = 0;
     if (mReader.size() > 1)
         LogicError("MultiIOBatchLUSequenceReader::SetSentenceSegBatch only supports processing from one BatchLUSequenceReader");
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         (p->second)->SetSentenceSegBatch(sentenceBegin, sentenceExistBeginOrNolabels);
         if (rows == 0)
@@ -1310,7 +1319,7 @@ int MultiIOBatchLUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
         LogicError("GetSentenceEndIdFromOutputLabel: support only for one reader in MultiIOBatchLUSequenceReader");
     int iret = -1;
 
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         iret = (p->second)->GetSentenceEndIdFromOutputLabel();
     }
@@ -1321,7 +1330,7 @@ template<class ElemType>
 bool MultiIOBatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 {
     bool ret = true;
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         ret |= (p->second)->DataEnd(endDataType);
     }
@@ -1333,7 +1342,7 @@ template<class ElemType>
 bool MultiIOBatchLUSequenceReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
 {
     /// run for each reader
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         if ((p->second)->GetFrame(matrices, tidx, history) == false)
         {
@@ -1349,7 +1358,7 @@ template<class ElemType>
 void MultiIOBatchLUSequenceReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     /// run for each reader
-    for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         (p->second)->InitProposals(matrices);
     }
