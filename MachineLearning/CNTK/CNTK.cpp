@@ -881,7 +881,7 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     wstring decoderModelPath = config("decoderModelPath");
     intargvector mbSize = minibatchSize;
 
-    UINT16 traceLevel = config("traceLevel", "0");
+    int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
     ComputationNetwork<ElemType> encoderNet(deviceId);
@@ -951,7 +951,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     wstring modelPath = config("modelPath");
     intargvector mbSize = minibatchSize;
 
-    UINT16 traceLevel = config("traceLevel", "0");
+    int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
     ComputationNetwork<ElemType> net(deviceId);
