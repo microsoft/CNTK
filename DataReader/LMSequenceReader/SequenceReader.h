@@ -102,6 +102,7 @@ protected:
 public:
 	using LabelType = typename IDataReader<ElemType>::LabelType;
 	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;

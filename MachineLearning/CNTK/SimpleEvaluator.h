@@ -1,3 +1,4 @@
+//p
 //
 // <copyright file="SimpleEvaluator.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -9,7 +10,7 @@
 #include <string>
 #include <stdexcept>
 #include <fstream>
-
+#include <queue>
 #include "Basics.h"
 #include "fileutil.h"
 #include "DataReader.h"
@@ -360,7 +361,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetEncoderDecoderNodePairs(std::list<pair<ComputationNodePtr, ComputationNodePtr>>& lst_pair_encoder_decoder_nodes)
         {
             m_lst_pair_encoder_decoder_nodes.clear();
-            for (std::list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
+            for (typename std::list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
                 m_lst_pair_encoder_decoder_nodes.push_back(*iter);
         }
 
@@ -509,7 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 decoderDataReader.SetSentenceSegBatch(decoderNet.m_sentenceSeg, decoderNet.m_sentenceExistsBeginOrNoLabels);
 
                 /// get the pair of encode and decoder nodes
-                for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
+                for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
                 {
                     /// past hidden layer activity from encoder network to decoder network
                     ComputationNodePtr encoderNode = iter->first;
@@ -707,7 +708,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t mNutt = encoderDataReader.NumberSlicesInEachRecurrentIter();
 
                 /// get the pair of encode and decoder nodes
-                for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
+                for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
                 {
                     /// past hidden layer activity from encoder network to decoder network
                     ComputationNodePtr encoderNode = iter->first;
@@ -759,7 +760,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::sort(tPairs.begin(), tPairs.end(), comparator<ElemType>);
 
             bool bAboveThreshold = false;
-            for (vector<pair<int, ElemType>>::iterator itr = tPairs.begin(); itr != tPairs.end(); itr++)
+            for (typename vector<pair<int, ElemType>>::iterator itr = tPairs.begin(); itr != tPairs.end(); itr++)
             {
                 if (itr->second < 0.0)
                     LogicError("This means to use probability so the value should be non-negative");
@@ -1020,7 +1021,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             continue;
 
                         evalnet.GetHistory(state.hidden_activity, true);
-                        for (vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
+                        for (typename vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
                         {
                             vector<size_t> history = from_token.sequence;
                             history.push_back(itr->first);
@@ -1099,14 +1100,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NN_state<ElemType> state;
             NN_state<ElemType> null_state;
 
-            priority_queue<Token<ElemType>> n_bests;  /// save n-bests
+            std::priority_queue<Token<ElemType>> n_bests;  /// save n-bests
 
             /**
             loop over all the candidates for the featureDelayTarget,
             evaluate their scores, save their histories
             */
-            priority_queue<Token<ElemType>> from_queue, to_queue;
-            priority_queue<Token<ElemType>> result_queue;
+            std::priority_queue<Token<ElemType>> from_queue, to_queue;
+            std::priority_queue<Token<ElemType>> result_queue;
             vector<ElemType> evalResults;
 
             size_t mbSize = inputLength;
@@ -1170,7 +1171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             continue;
 
                         evalnet.GetHistory(state.hidden_activity, true);
-                        for (vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
+                        for (typename vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
                         {
                             vector<size_t> history = from_token.sequence;
                             history.push_back(itr->first);
@@ -1220,9 +1221,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             while (result_queue.size() > 0)
             {
                 best_path.clear();
-
+                //vector<size_t> *p = &result_queue.top().sequence;
                 assert(best_path.empty());
-                best_path.swap(result_queue.top().sequence);
+                best_path.swap(const_cast<vector<size_t>&>(result_queue.top().sequence));
                 {
                     ElemType score = result_queue.top().score;
                     best_score = score;

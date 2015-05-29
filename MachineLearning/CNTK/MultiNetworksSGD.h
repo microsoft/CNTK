@@ -36,7 +36,40 @@ namespace Microsoft {
             template<class ElemType>
             class MultiNetworksSGD : SGD<ElemType>
             {
+            ElemType  m_default_activity; 
+
+            typedef SGD<ElemType> SGD;
+
             public:
+                using SGD::m_modelPath;
+                using SGD::m_maxEpochs;
+                using SGD::m_doUnitTest;
+                using SGD::m_learnRateAdjustInterval;
+                using SGD::m_mbSize;
+                using SGD::m_momentumInputPerMB;
+                using SGD::m_learningRatesPerSample;
+                using SGD::m_dropoutRates;
+                using SGD::m_autoLearnRateSearchType;
+                using SGD::m_minLearnRate;
+                using SGD::m_loadBestModel;
+                using SGD::m_validateAfterModelReloading;
+                using SGD::m_continueReduce;
+                using SGD::m_reduceLearnRateIfImproveLessThan;
+                using SGD::m_epochSize;
+                using SGD::m_learnRateDecreaseFactor;
+                using SGD::m_increaseLearnRateIfImproveMoreThan;
+                using SGD::m_learnRateIncreaseFactor;
+                using SGD::m_keepCheckPointFiles;
+                using SGD::m_doGradientCheck;
+                using SGD::m_L2RegWeight;
+                using SGD::m_L1RegWeight;
+                using SGD::m_needAveMultiplier;
+                using SGD::m_traceLevel;
+                using SGD::m_numMBsToShowResult;
+                using SGD::m_gradientCheckSigDigit;
+                
+                typedef ComputationNode<ElemType>* ComputationNodePtr;
+
                 /// for encoder and decoder nodes pairing
                 wstring m_decoderModelPath;
                 wstring m_encoderModelPath;
@@ -115,14 +148,14 @@ namespace Microsoft {
                     wstring modelFileName = GetEncoderModelNameForEpoch(int(startEpoch) - 1);
                     fprintf(stderr, "encoderFileName=%ls\n", modelFileName.c_str());
                     if (startEpoch >= 0)
-                        fprintf(stderr, "Starting from checkpoint. Load Encoder Network From File %ws.\n", modelFileName);
+                        fprintf(stderr, "Starting from checkpoint. Load Encoder Network From File %ls.\n", modelFileName.c_str());
                     ComputationNetwork<ElemType>& encoderNet =
                         startEpoch<0 ? encoderNetBuilder->BuildNetworkFromDescription() : encoderNetBuilder->LoadNetworkFromFile(modelFileName, true, true);
 
                     modelFileName = GetDecoderModelNameForEpoch(int(startEpoch) - 1);
                     fprintf(stderr, "decoderFileName=%ls\n", modelFileName.c_str());
                     if (startEpoch >= 0)
-                        fprintf(stderr, "Starting from checkpoint. Load Decoder Network From File %ws.\n", modelFileName);
+                        fprintf(stderr, "Starting from checkpoint. Load Decoder Network From File %ws.\n", modelFileName.c_str());
 
                     ComputationNetwork<ElemType>& decoderNet =
                         startEpoch<0 ? decoderNetBuilder->BuildNetworkFromDescription() : decoderNetBuilder->LoadNetworkFromFile(modelFileName);
@@ -335,7 +368,7 @@ namespace Microsoft {
                             for (size_t j = 0; j<epochEvalErrors.size(); j++)
                                 fprintf(stderr, "[%lu]=%.8g ", j, epochEvalErrors[j]);
                             fprintf(stderr, "Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", learnRatePerSample, epochTime);
-                            fprintf(stderr, "Finished Epoch[%lu]: Criterion Node [%ws] Per Sample = %.8g\n", i + 1, decoderCriterionNodes[0]->NodeName().c_str(), epochCriterion);
+                            fprintf(stderr, "Finished Epoch[%lu]: Criterion Node [%ls] Per Sample = %.8g\n", i + 1, decoderCriterionNodes[0]->NodeName().c_str(), epochCriterion[i+1]);
                             for (size_t j = 0; j<epochEvalErrors.size(); j++)
                                 fprintf(stderr, "Finished Epoch[%lu]: Evaluation Node [%ws] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
                         }
@@ -438,7 +471,7 @@ namespace Microsoft {
                         encoderNet.SaveToFile(GetEncoderModelNameForEpoch(i));
                         SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
                         if (!m_keepCheckPointFiles)
-                            DeleteFile(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
+                            _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
 
                         if (learnRatePerSample < 1e-12)
                             fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n", learnRatePerSample);
@@ -678,7 +711,7 @@ namespace Microsoft {
                     {
                         ComputationNodePtr node = (*nodeIter);
 
-                        for (size_t itry = 0; itry < min(10, node->FunctionValues().GetNumElements()); itry++)
+                        for (size_t itry = 0; itry < min((size_t)10, node->FunctionValues().GetNumElements()); itry++)
                         {
 
                             int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
@@ -755,7 +788,7 @@ namespace Microsoft {
                             // check if they are consistent
                             ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
                             ElemType diff = (ElemType)fabs(grdErr - grdNum);
-                            bool wrong = (_isnan(diff) || diff > threshold);
+                            bool wrong = (std::isnan(diff) || diff > threshold);
                             if (wrong)
                             {
                                 char serr[2048];
@@ -773,7 +806,7 @@ namespace Microsoft {
                     {
                         ComputationNodePtr node = (*nodeIter);
 
-                        for (size_t itry = 0; itry < min(10, node->FunctionValues().GetNumElements()); itry++)
+                        for (size_t itry = 0; itry < min((size_t)10, node->FunctionValues().GetNumElements()); itry++)
                         {
 
                             int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
@@ -848,7 +881,7 @@ namespace Microsoft {
                             // check if they are consistent
                             ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
                             ElemType diff = (ElemType)fabs(grdErr - grdNum);
-                            bool wrong = (_isnan(diff) || diff > threshold);
+                            bool wrong = (std::isnan(diff) || diff > threshold);
                             if (wrong)
                             {
                                 char serr[2048];
@@ -896,7 +929,7 @@ namespace Microsoft {
                         decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceSeg, decoderNet.m_sentenceExistsBeginOrNoLabels);
 
                         /// get the pair of encode and decoder nodes
-                        for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
+                        for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
                         {
                             /// past hidden layer activity from encoder network to decoder network
                             ComputationNodePtr encoderNode = iter->first;
@@ -954,7 +987,7 @@ namespace Microsoft {
                         
                         try{
                             /// get the pair of encode and decoder nodes
-                            for (list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
+                            for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
                             {
                                 /// past gradients to hidden layer activity from decoder network to encoder network
                                 ComputationNodePtr encoderNode = iter->first;

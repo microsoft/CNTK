@@ -61,7 +61,7 @@ template<class ElemType>
 typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
-    string unk = mUnk;
+    string unk = this->mUnk;
     // not yet found, add to the map
     if (found == labelInfo.mapLabelToId.end())
     {
@@ -1402,7 +1402,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         LogicError("unsupported format %s", mode.c_str()); 
 
     /// read unk sybol
-    mUnk = readerConfig("unk", "<unk>");
+    this->mUnk = readerConfig("unk", "<unk>");
 
     class_size = 0;
     m_featureDim = featureConfig("dim");
