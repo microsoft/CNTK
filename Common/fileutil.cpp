@@ -36,7 +36,6 @@
 #include <algorithm>    // for std::find
 #include <limits.h>
 #include <memory>
-
 #ifndef UNDER_CE  // some headers don't exist under winCE - the appropriate definitions seem to be in stdlib.h
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <fcntl.h>      // for _O_BINARY/TEXT - not needed for wince
@@ -1680,19 +1679,44 @@ vector<wstring> wsep_string(const wstring & istr, const wstring & sep)
 
     return vstr;
 }
+static inline std::string wcstombs(const std::wstring & p)  // output: MBCS
+{
+    size_t len = p.length();
+    msra::basetypes::fixed_vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
+    std::fill(buf.begin(), buf.end(), 0);
+    ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
+    return std::string(&buf[0]);
+}
+static inline std::wstring mbstowcs(const std::string & p)  // input: MBCS
+{
+    size_t len = p.length();
+    msra::basetypes::fixed_vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
+    std::fill(buf.begin(), buf.end(), (wchar_t)0);
+    OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
+    ::mbstowcs(&buf[0], p.c_str(), len + 1);
+    return std::wstring(&buf[0]);
+}
 
 wstring s2ws(const string& str)
 {
-    typedef codecvt_utf8<wchar_t> convert_typeX;
-    wstring_convert<convert_typeX, wchar_t> converterX;
-
+#ifdef __unix__
+    return mbstowcs(str);
+#else
+    typedef std::codecvt_utf8<wchar_t> convert_typeX;
+    std::wstring_convert<convert_typeX, wchar_t> converterX;
     return converterX.from_bytes(str);
+
+#endif
 }
 
 string ws2s(const wstring& wstr)
 {
+#ifdef __unix__
+    return wcstombs(wstr);
+#else
     typedef codecvt_utf8<wchar_t> convert_typeX;
     wstring_convert<convert_typeX, wchar_t> converterX;
-
     return converterX.to_bytes(wstr);
+#endif
+
 }

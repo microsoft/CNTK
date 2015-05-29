@@ -18,3 +18,5 @@ D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\s
 # increase class number to 100
 \\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmcls100lm  DEVICE=0 CLASSSIZE=100
 
+# increase class number to 100 with 2 layers of LSTM
+\\speechstore5\userdata\kaishengy\bin\binmay28a\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmcls100lm.2layer  CLASSSIZE=100 train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:100:200:200:$VOCABSIZE$]] DEVICE=1

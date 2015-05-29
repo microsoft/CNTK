@@ -35,7 +35,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingComputationNodeMembers;
 
     public:
-        ParallelNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode(deviceId)
+        ParallelNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -43,14 +43,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        ParallelNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode(deviceId)
+        ParallelNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        ParallelNode(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode(node->m_deviceId)
+        ParallelNode(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }

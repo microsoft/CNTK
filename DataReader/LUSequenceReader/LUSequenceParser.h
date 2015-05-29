@@ -10,6 +10,7 @@
 #include <vector>
 #include <assert.h>
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <stdint.h>
 #include "Platform.h"
@@ -137,7 +138,7 @@ public:
     wstring mUnkStr; 
 
 public:
-    wifstream mFile; 
+    std::wifstream mFile; 
     std::wstring mFileName; 
     vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
 
@@ -182,8 +183,11 @@ public:
         mUnkStr = unkstr; 
 
         mFile.close();
-
+#ifdef __unix__
+        mFile.open(ws2s(fileName), wifstream::in);
+#else
         mFile.open(fileName, wifstream::in);
+#endif
         if (!mFile.good())
             RuntimeError("cannot open file %ls", fileName);
     }
@@ -191,7 +195,11 @@ public:
     void ParseReset()
     {
         mFile.close();
-        mFile.open(mFileName.c_str(), wifstream::in);
+#ifdef __unix__
+        mFile.open(ws2s(mFileName), wifstream::in);
+#else
+        mFile.open(mFileName, wifstream::in);
+#endif
         if (!mFile.good())
             RuntimeError("cannot open file %ls", mFileName.c_str());
     }
