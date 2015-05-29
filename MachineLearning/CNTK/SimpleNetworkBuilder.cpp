@@ -1099,16 +1099,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int offset = m_lookupTableOrder > 0 ? 1 : 0;
             if (numHiddenLayers > 0)
             {
-                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-                //                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+//                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 /// previously used function. now uses LSTMNode which is correct and fast
                 input = output;
                 for (int i = 1 + offset; i <numHiddenLayers; i++)
                 {
-                    output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                        //                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                        // previously used function, now uses LSTMnode, which is fast and correct
-
+//                    output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                    output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                    
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output);
                     else
@@ -1439,7 +1438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t layerIdx = 0;
             size_t idx = 0;
             int recur_idx = 0;
-            for (vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
+            for (typename vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
                 p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
@@ -1761,7 +1760,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t layerIdx = 0;
             size_t idx = 0;
             int recur_idx = 0;
-            for (vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
+            for (typename vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes().begin();
                 p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0

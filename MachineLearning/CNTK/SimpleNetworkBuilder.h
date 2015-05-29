@@ -516,17 +516,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
                 if (layerType == "perceptron")
                 {
-                    fprintf(stderr, "DBN: Reading (%zu x %zu) perceptron\n", wts.GetNumRows(), wts.GetNumCols());
+                    fprintf(stderr, "DBN: Reading (%lu x %lu) perceptron\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
                     output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
                 }
                 else if (layerType == "rbmisalinearbernoulli" )
                 {
-                    fprintf(stderr, "DBN: Reading (%zu x %zu) linear layer\n", wts.GetNumRows(), wts.GetNumCols());
+                    fprintf(stderr, "DBN: Reading (%lu x %lu) linear layer\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
                     output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
                 }
                 else // assume rbmbernoullibernoulli
                 {
-                    fprintf(stderr, "DBN: Reading (%zu x %zu) non-linear layer\n", wts.GetNumRows(), wts.GetNumCols());
+                    fprintf(stderr, "DBN: Reading (%lu x %lu) non-linear layer\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
                     output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus), i, nameOfH);
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output, L"Drop" + nameOfH);
@@ -651,24 +651,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             switch (m_trainCriterion)
             {
-                case TrainingCriterion::CrossEntropyWithSoftmax:
-                    output = m_net->CrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"")?L"CrossEntropyWithSoftmax":trainNodeName);
-                    break;
-                case TrainingCriterion::SquareError:
-                    output = m_net->SquareError(label, tinput, (trainNodeName == L"")?L"SquareError":trainNodeName);
-                    break;
+            case TrainingCriterion::CrossEntropyWithSoftmax:
+                output = m_net->CrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"")?L"CrossEntropyWithSoftmax":trainNodeName);
+                break;
+            case TrainingCriterion::SquareError:
+                output = m_net->SquareError(label, tinput, (trainNodeName == L"")?L"SquareError":trainNodeName);
+                break;
                 case TrainingCriterion::CRF:
                     assert(trans != nullptr);
                     output = m_net->CRF(label, input, trans, (trainNodeName == L"") ? L"CRF" : trainNodeName);
                     break;
-                case TrainingCriterion::ClassCrossEntropyWithSoftmax:
-                    output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
-                    break;
-                case TrainingCriterion::NCECrossEntropyWithSoftmax:
-                    output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
-                    break;
-                default:
-                    throw std::logic_error("Unsupported training criterion.");
+            case TrainingCriterion::ClassCrossEntropyWithSoftmax:
+                output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
+                break;
+            case TrainingCriterion::NCECrossEntropyWithSoftmax:
+                output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
+                break;
+         default:
+                throw std::logic_error("Unsupported training criterion.");
             }
             m_net->FinalCriterionNodes().push_back(output);
 
@@ -690,14 +690,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 case EvalCriterion::SquareError:
                     output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"SquareError":evalNodeName);
                     break;
-				case EvalCriterion::ErrorPrediction:
+                case EvalCriterion::ErrorPrediction:
 					output = m_net->ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"ErrorPrediction" : evalNodeName);
 					break;
 				case EvalCriterion::CRF:
 					assert(trans != nullptr);
 					output = m_net->CRF(label, tinput, trans, (evalNodeName == L"") ? L"CRF" : evalNodeName);
-					break;
-				default:
+                    break;
+                default:
                     throw std::logic_error("Unsupported training criterion.");
                 }
             }
@@ -797,7 +797,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType m_forgetGateInitVal;
         ElemType m_inputGateInitVal;
         ElemType m_outputGateInitVal;
-
+  
         intargvector m_streamSizes;  /// for multiple stream data
         intargvector m_lookupTabelOrderSizes; /// each stream has its own projection, so need to provide with the lookup table order size for each stream
 

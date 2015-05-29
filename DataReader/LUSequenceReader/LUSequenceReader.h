@@ -388,7 +388,7 @@ public:
     }
 
     ~MultiIOBatchLUSequenceReader() {
-        for (map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+        for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
         {
             delete[] p->second;
         }

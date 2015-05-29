@@ -3805,7 +3805,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void CPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
-        const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
+        const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& c)
         //this: samples+probs
         // a:   hidden
         // b:   embedding
@@ -3813,28 +3813,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  c: loglikelihood
     {
         ElemType log_likelihood = 0.0;
-        size_t sample_size = this->GetNumRows() / 2;
         size_t batch_size = this->GetNumCols();
-        size_t num_noise_samples = sample_size - 1;
-        ElemType log_num_noise_samples = (ElemType)std::log(num_noise_samples);
 #pragma omp parallel for reduction(+:log_likelihood)
         for (int instance_id = 0; instance_id < batch_size; instance_id++)
-        for (int sample_id = 0; sample_id < sample_size; sample_id++)
-        {
-            int sample =(int) (*this)(2 * sample_id, instance_id);
-            ElemType prob = -(*this)(2 * sample_id + 1, instance_id);
-            if (sample_id == 0)
-                prob = -prob;
-            double score = 0;// a[sample];
-            for (int dim = 0; dim < b.GetNumCols(); dim++)
-                score += a(sample, dim)* b(dim, instance_id);
-            double score_noise = log_num_noise_samples + prob;
-            double z = logadd(score, score_noise);
-            double logprob = score - z;
-            double logprob_noise = score_noise - z;
-            log_likelihood += sample_id == 0 ? (ElemType)logprob : (ElemType)logprob_noise;
+        {            
+            int sample = -(int)(*this)(0, instance_id);
+            ElemType score = bias(sample, 0);
+            for (int dim = 0; dim < b.GetNumRows(); dim++)
+                score += b(dim, sample)* a(dim, instance_id);
+            log_likelihood += score;
         }
-        c(0, 0) = log_likelihood;
+        c(0, 0) = -log_likelihood;
     }
 
     //samples+prob                         gradient           hidden               embedding          embedding/hidden

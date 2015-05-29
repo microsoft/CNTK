@@ -301,7 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_numRows != numRows || m_numCols != numCols)
             keepExistingValues = false;  
 
-        numNZElemToReserve = max(numNZElemToReserve, 1);
+        numNZElemToReserve = max(numNZElemToReserve, (size_t)1);
         size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
         bool reallocate = (m_elemSizeAllocated < numNZElemToReserve || (m_elemSizeAllocated > numNZElemToReserve && !growOnly) || m_compIndexSize < newCompIndexSize);
 

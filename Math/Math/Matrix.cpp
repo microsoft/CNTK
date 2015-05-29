@@ -743,7 +743,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (GetMatrixType() == MatrixType::DENSE && m_CPUMatrix != nullptr)
                     {
-                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols());
+                        m_CPUSparseMatrix->Resize(GetNumRows(), GetNumCols(), 1, true, false);
                         if (keepValues)
                             CopyElementsFromDenseToSparse(*m_CPUMatrix, *m_CPUSparseMatrix);
                     }
@@ -788,7 +788,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (keepValues)
                                 m_GPUSparseMatrix->SetValue(*m_GPUMatrix);
                             else
-                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
+                                m_GPUSparseMatrix->Resize(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), 0, true, false);
                         }
 
                         delete m_GPUMatrix;
@@ -978,16 +978,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (this == &deepCopyFrom)
             return;
-
-        if (this->GetDeviceId() != CPUDEVICE && (this->GetMatrixType() == MatrixType::SPARSE) &&
-            deepCopyFrom.GetMatrixType() == MatrixType::SPARSE)
-        {
-            if (deepCopyFrom.GetDeviceId() == CPUDEVICE)
-                this->m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix);
-            else
-                this->m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix);
-            return;
-        }
 
         this->m_preferredDeviceId = deepCopyFrom.m_preferredDeviceId;
         DecideAndMoveToRightDevice(deepCopyFrom, *this);
@@ -1234,14 +1224,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (numRows != GetNumRows() || numCols != GetNumCols())
         {
-            DISPATCH_MATRIX_ON_FLAG(this,
-                this,
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
                 m_CPUMatrix->Reshape(numRows, numCols),
                 m_GPUMatrix->Reshape(numRows, numCols),
-                NOT_IMPLEMENTED,
-                NOT_IMPLEMENTED
-                );
-        }
+            NOT_IMPLEMENTED, 
+            NOT_IMPLEMENTED
+            );
+    }
     }
 
     template<class ElemType>
@@ -3255,7 +3245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define NUM_DEVICE_CHANGED_WARN 20
         m_numTimesDeviceChanged++;
         if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN)
-            fprintf(stderr, "WARNING: The same matrix with dim [%d, %d] has been transferred between different devices for %d times.\n", GetNumRows(), GetNumCols(), NUM_DEVICE_CHANGED_WARN);
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_DEVICE_CHANGED_WARN);
 
         if (m_matrixType == MatrixType::SPARSE)
         {
@@ -3560,14 +3550,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
     template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c)
+    Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias)
     {
-        if (a.GetMatrixType() != MatrixType::SPARSE)
-            NOT_IMPLEMENTED;
+        //if (a.GetMatrixType() != MatrixType::SPARSE)
+        //    NOT_IMPLEMENTED;
 
         this->Resize(1, 1);
         if (this->GetDeviceId() < 0)
-            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *this->m_CPUMatrix);
+            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *this->m_CPUMatrix);
         else
             a.m_GPUMatrix->AssignNCEUnnormalizedEval(*b.m_GPUMatrix, *c.m_GPUMatrix, *this->m_GPUMatrix);
         return *this;
@@ -4250,7 +4240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
     }
-
+        
     template<class ElemType>
     bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
     {
@@ -4369,7 +4359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    template<class ElemType>
+	template<class ElemType>
 	Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
 	{
 		if (a.IsEmpty() || b.IsEmpty())

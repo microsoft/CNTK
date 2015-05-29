@@ -40,7 +40,8 @@ enum ReaderMode
     Softmax = 0,  // no labels to worry about
     Class = 1, // category labels, creates mapping tables
     NCE = 2,  // sentence mapping (predicts next word)
-    None = 3, // some other type of label
+    Unnormalize = 3,
+    None = 4, // some other type of label
 };
 
 template <typename Count>
@@ -101,6 +102,7 @@ protected:
 public:
 	using LabelType = typename IDataReader<ElemType>::LabelType;
 	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
