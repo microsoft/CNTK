@@ -22,6 +22,17 @@
 #include "Matrix.h"
 #include "ComputationNode.h"
 
+/**
+to-dos:
+delay_node : has another input that points to additional observations. 
+memory_node: M x N node, with a argument telling whether to save the last observation, or save a window size of observations, or save all observations
+pair_node : copy function values and gradient values from one node in source network to target network
+
+decoder delay_node -> memory_node -> pair(source, target) pair(source, target) -> memory_node -> encoder output node
+
+
+*/
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
