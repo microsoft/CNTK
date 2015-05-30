@@ -1,0 +1,49 @@
+# no regularization but small learning rate
+# run multipass of data
+
+
+# even larger learning rate
+# s36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=1 LSTM=[SGD=[learningRatesPerSample=0.01]] LSTM=[SGD=[L2RegWeight=0.0]] LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=\\speechstore5\transient\kaishengy\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2
+for %i in (0, 1, 5) do q sub -J bm%is36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 -x \\speechstore5\userdata\kaishengy\exp\lts\exes\job.s36.bat 46 \\speechstore5\transient\kaishengy\exp\lts\result\s36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 %i
+
+# in local directory
+# does unit test
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=C:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+C:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=0 LSTM=[SGD=[learningRatesPerSample=0.01]] LSTM=[SGD=[L2RegWeight=0.0]] LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=d:\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 DeviceNumber=-1 LSTM=[SGD=[gradientcheck=true]] LSTM=[SGD=[unittest=true]]
+
+# in local directory
+# does gradient checking on CPU
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=c:\dev\cntk5\examplesetups\g2p\setups\global.lstm.config+C:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=Auto LSTM=[SGD=[learningRatesPerSample=0.01]] LSTM=[SGD=[L2RegWeight=0.0]] LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=d:\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 DeviceNumber=Auto LSTM=[SGD=[gradientcheck=true]]
+
+# in local directory
+# does gradient checking on GPU
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=C:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+C:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=Auto LSTM=[SGD=[learningRatesPerSample=0.01]] LSTM=[SGD=[L2RegWeight=0.0]] LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=d:\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 LSTM=[SGD=[gradientcheck=true]]
+
+# decoder and encoder networks are on different devices. For example, encoder network is on GPU and decoder network is on CPU
+# intereting, didn't notice this before. 
+# use more data
+# gradient check passed
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=C:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+C:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=Auto LSTM=[SGD=[learningRatesPerSample=0.01]] LSTM=[SGD=[L2RegWeight=0.0]] LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=d:\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 LSTM=[SGD=[gradientcheck=true]] LSTM=[epochSize=70] LSTM=[minibatchSize=30] DataDir=d:/data/lts
+
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=C:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+C:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=Auto LSTM=[SGD=[learningRatesPerSample=0.01]] LSTM=[SGD=[L2RegWeight=0.0]] LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=d:\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 LSTM=[epochSize=70] LSTM=[minibatchSize=30] DeviceNumber=0
+
+#test 
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=C:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+C:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=-1 command=LSTMTest Iter=0 MdlDir=d:\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 bw=0 LSTMTest=[beamWidth=$bw$] LSTMTest=[encoderModelPath=$MdlDir$\cntkdebug.dnn.encoder.$Iter$] LSTMTest=[decoderModelPath=$MdlDir$\cntkdebug.dnn.decoder.$Iter$] ExpDir=$MdlDir$\test_bw$bw$_iter$Iter$ DataDir=d:/data/lts
+
+--------------------------- full train/test -----------------------------------
+# train on full data
+# reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2
+\\speechstore5\transient\kaishengy\bin\binluapr22\cn.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=\\speechstore5\transient\kaishengy\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 DeviceNumber=Auto
+# run in local
+C:\dev\cntk5\x64\Release\CNTK.exe configFile=c:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+c:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config LSTM=[SGD=[numMBsToShowResult=100]] ExpDir=d:\temp\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 DeviceNumber=0
+
+
+# test 
+for %i in (0,1) do q sub -J s36bw%i -x \\speechstore5\userdata\kaishengy\exp\lts\exes\jobs.s36.bat 43 \\speechstore5\transient\kaishengy\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 %i
+
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=-1 command=LSTMTest Iter=46 MdlDir=\\speechstore5\transient\kaishengy\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 bw=1 LSTMTest=[beamWidth=$bw$] LSTMTest=[encoderModelPath=$MdlDir$\cntkdebug.dnn.encoder.$Iter$] LSTMTest=[decoderModelPath=$MdlDir$\cntkdebug.dnn.decoder.$Iter$] ExpDir=$MdlDir$\test_bw$bw$_iter$Iter$
+
+-------------------- test on the old models to make sure that decoder and forward pass is right --------------
+for %i in (0,1) do q sub -J olds36bw%i -x \\speechstore5\userdata\kaishengy\exp\lts\exes\jobs.s36.bat 43 \\speechstore5\transient\kaishengy\exp\lts\result\s36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 %i
+
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config DeviceNumber=-1 command=LSTMTest Iter=43 MdlDir=\\speechstore5\transient\kaishengy\exp\lts\result\s36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 bw=0 LSTMTest=[beamWidth=$bw$] LSTMTest=[encoderModelPath=$MdlDir$\cntkdebug.dnn.encoder.$Iter$] LSTMTest=[decoderModelPath=$MdlDir$\cntkdebug.dnn.decoder.$Iter$] ExpDir=$MdlDir$\test_bw$bw$_iter$Iter$
