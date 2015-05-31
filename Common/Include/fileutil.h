@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>     // for strerror()
+#include <stdexcept>    // for exception
 
 using namespace std;
 
