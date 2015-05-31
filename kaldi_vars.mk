@@ -4,7 +4,7 @@
 KALDI_PATH = /data/sls/scratch/leoliu/software/kaldi-hostd/
 
 KALDI_INCLUDES = -I $(KALDI_PATH)/src
-KALDI_LIBS = -L$(KALDI_PATH)/src/lib -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet
+KALDI_LIBS = -L$(KALDI_PATH)/src/lib -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet -lkaldi-lat
 
 ########## Copy includes and defines from $(KALDI_PATH)/src/kaldi.mk ##########
 

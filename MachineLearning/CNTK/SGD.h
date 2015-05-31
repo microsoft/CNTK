@@ -122,7 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SGD(const ConfigParameters& configSGD)
         {
             ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
-			m_needToNormalizeLRByParallUtterance = false;
+            m_needToNormalizeLRByParallUtterance = false;
             floatargvector learningRatesPerMB = learningRatesPerMBStr;
 
             ConfigArray learningRatesPerSampleStr = configSGD("learningRatesPerSample", "");
@@ -206,7 +206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
 
-			bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
+            bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
 
             Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB, gradientClippingWithTruncation, 
                 clippingThresholdPerSample,autoAdjustLRType, increaseLearnRateIfImproveMoreThan, learnRateIncreaseFactor, 
@@ -273,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_trainCriterionNodeName = trainCriterionNodeName;
             m_evalCriterionNodeName = evalCriterionNodeName;
-			m_useAllDataForPreComputedNode = UsingAllDataForPreComputed;
+            m_useAllDataForPreComputedNode = UsingAllDataForPreComputed;
 
             m_needAveMultiplier = needAveMultiplier;
             m_L2RegWeight = L2RegWeight;
@@ -304,7 +304,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     m_learningRatesPerSample[i] = learningRatesPerMB[i]/m_mbSize[i];
                 }
-				m_needToNormalizeLRByParallUtterance = true; 
+                m_needToNormalizeLRByParallUtterance = true; 
             }
             m_momentumPerMB = 0.9f;
             if  (momentumPerMB.size() >0)
@@ -344,7 +344,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Adapt(wstring origModelFileName, wstring refNodeName, IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader, const DEVICEID_TYPE deviceID, const bool makeMode = true)
         {
             if (origModelFileName == L"" || trainSetDataReader == nullptr)
-                    throw std::invalid_argument ("origModel and trainSetDataReader should not be null.");
+                throw std::invalid_argument ("origModel and trainSetDataReader should not be null.");
 
             int startEpoch = DetermineStartEpoch(makeMode);
             if (startEpoch == m_maxEpochs)
@@ -387,6 +387,74 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             
             TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
+        }
+
+        void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName, IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader, const DEVICEID_TYPE deviceID, const bool makeMode = true)
+        {
+            if (netBuilder == nullptr || origModelFileName == L"" || trainSetDataReader == nullptr)
+                throw std::invalid_argument ("netBuilder, origModel and trainSetDataReader should not be null.");
+
+            int startEpoch = DetermineStartEpoch(makeMode);
+            if (startEpoch == m_maxEpochs)
+            {
+                fprintf(stderr, "Final model exists. No further training is necessary.\n");
+                return;
+            }
+
+            // Initializes the model from original model.
+            ComputationNetwork<ElemType> origNet(deviceID);
+            ComputationNetwork<ElemType>& sequenceNet = 
+                (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : origNet;
+            std::vector<ComputationNodePtr> addedFeatureNodes;
+            std::vector<ComputationNodePtr> replacedCriterionNodes;
+            if (startEpoch < 0)
+            {
+                // Loads models.
+                origNet.LoadFromFile(origModelFileName);
+
+                // Processes feature nodes.
+                std::vector<ComputationNodePtr> sequenceFeatureNodes = sequenceNet.FeatureNodes();
+                for (size_t i = 0; i < sequenceFeatureNodes.size(); ++i)
+                {
+                    if (!origNet.NodeNameExist(sequenceFeatureNodes[i]->NodeName()))
+                    {
+                        addedFeatureNodes.push_back(sequenceFeatureNodes[i]);
+                        origNet.AddFeatureNode(sequenceFeatureNodes[i]);
+                    }
+                }
+
+                // Processes criterion nodes.
+                std::vector<ComputationNodePtr> origCriterionNodes = GetTrainCriterionNodes(origNet);
+                std::vector<ComputationNodePtr> sequenceCriterionNodes = GetTrainCriterionNodes(sequenceNet);
+                if (origCriterionNodes.size() == 0 || sequenceCriterionNodes.size() == 0)
+                    throw std::runtime_error("Training criterion node does not exist.");
+                replacedCriterionNodes.push_back(origCriterionNodes[0]);
+                origNet.ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);
+                origNet.ResetEvalTimeStamp();
+            }
+
+            wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
+            if (startEpoch >= 0)
+                fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
+            else
+                fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
+            ComputationNetwork<ElemType>& net =
+                (startEpoch < 0) ? origNet : netBuilder->LoadNetworkFromFile(modelFileName);
+
+            startEpoch = max(startEpoch, 0);
+
+            TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
+
+            // Handles deletions carefully here.
+            if (startEpoch < 0)
+            {
+                for (size_t i = 0; i < addedFeatureNodes.size(); ++i)
+                {
+                    origNet.RemoveFeatureNode(addedFeatureNodes[i]);
+                }
+                std::vector<ComputationNodePtr> origCriterionNodes = GetTrainCriterionNodes(origNet);
+                origNet.ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), replacedCriterionNodes[0]);
+            }
         }
 
         void Train(IComputationNetBuilder<ElemType>* netBuilder, IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader, const bool makeMode = true)
@@ -516,14 +584,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (0 == myRank) // only needs to be done by one process
                     net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
 
-			// first, we need to normalize the effect of nbruttsineachrecurrentiter
-			if (trainSetDataReader->NumberSlicesInEachRecurrentIter()>1 && m_needToNormalizeLRByParallUtterance)
-			{
-				for (auto & x : m_learningRatesPerSample)
-				{
-					x /= trainSetDataReader->NumberSlicesInEachRecurrentIter();
-				}
-			}
+            // first, we need to normalize the effect of nbruttsineachrecurrentiter
+            if (trainSetDataReader->NumberSlicesInEachRecurrentIter()>1 && m_needToNormalizeLRByParallUtterance)
+            {
+                for (auto & x : m_learningRatesPerSample)
+                {
+                    x /= trainSetDataReader->NumberSlicesInEachRecurrentIter();
+                }
+            }
             bool learnRateInitialized = false;
             if (startEpoch > 0)
             {
@@ -553,7 +621,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //set dropout rate
                 SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
-				setMomentum(m_momentumInputPerMB[i]);
+                setMomentum(m_momentumInputPerMB[i]);
                 //learning rate adjustment
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
                 {
@@ -586,12 +654,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 #ifdef MPI_SUPPORT
-				INT32 mySamples = (INT32)
+                INT32 mySamples = (INT32);
 #endif
-					fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", i,  learnRatePerSample, m_momentumPerMB);
+                fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n", i,  learnRatePerSample, m_momentumPerMB);
                 TrainOneEpoch(net, refNet, refNode, i, m_epochSize, trainSetDataReader, learnRatePerSample, FeatureNodes, labelNodes,
-                    criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
-                    epochCriterion, epochEvalErrors, totalSamplesSeen);
+                              criterionNodes, evaluationNodes, inputMatrices, learnableNodes, smoothedGradients,
+                              epochCriterion, epochEvalErrors, totalSamplesSeen);
 
                 auto t_end_epoch = Timer::MilliSecondElapsed();
                 ElemType epochTime = (t_end_epoch - t_start_epoch) / ElemType(MS_PER_SEC);
@@ -779,11 +847,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //compute
             //trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize); 
             // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
-			// [1/12/2015 erw] to support large dataset, we usually paritition whole dataset into several epoches, so we need to use all the data to do precomputing
-			if (m_useAllDataForPreComputedNode)
-				trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0); // using all the data
-			else 
-				trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0, m_epochSize); // using all the data
+            // [1/12/2015 erw] to support large dataset, we usually paritition whole dataset into several epoches, so we need to use all the data to do precomputing
+            if (m_useAllDataForPreComputedNode)
+                trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0); // using all the data
+            else
+                trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0, m_epochSize); // using all the data
 
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
@@ -799,7 +867,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     net.Evaluate( *nodeIter);
                 }
-
             }
 
             //mark done
@@ -950,6 +1017,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, learnRate, smoothedGradients, prevCriterion);  
         }
 
+        // Tries to compute derivatives for the whole utterances, which will be
+        // fed to the neural network as features.
+        void AttemptUtteranceDerivativeFeatures(ComputationNetwork<ElemType>& net,
+                                                IDataReader<ElemType>* trainSetDataReader,
+                                                const std::vector<ComputationNodePtr>& FeatureNodes,
+                                                std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
+        {
+            // Tries to read an utterance and run forward computation on the
+            // whole utterance.
+            assert(trainSetDataReader != NULL);
+            std::wstring uttID;
+            if (trainSetDataReader->GetForkedUtterance(uttID, inputMatrices))
+            {
+                UpdateEvalTimeStamps(FeatureNodes);
+
+                std::vector<ComputationNodePtr>& outputNodes = net.OutputNodes();
+                if (outputNodes.size() < 1)
+                {
+                    throw std::logic_error("no output node was found.");
+                }
+                size_t actualMBSize = net.GetActualMBSize();
+                net.SetActualMiniBatchSize(actualMBSize);
+                net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                // We always start a new sentence.
+                for (size_t i = 0; i < net.m_sentenceEnd.size(); ++i)
+                {
+                    net.m_sentenceEnd[i] = 0;
+                }
+                net.Evaluate(outputNodes[0]);   // Only evaluate the first output
+                trainSetDataReader->ComputeDerivativeFeatures(uttID, outputNodes[0]->FunctionValues());
+            }
+        }
+
         size_t TrainOneEpoch(ComputationNetwork<ElemType>& net, ComputationNetwork<ElemType>& refNet, const ComputationNodePtr refNode, 
             const int epochNumber, const size_t epochSize, 
             IDataReader<ElemType>* trainSetDataReader, const ElemType learnRatePerSample,
@@ -983,7 +1083,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             localEpochEvalErrors.SetValue(0);
 
             trainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
-            
+
+            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
             startReadMBTime=Timer::MilliSecondElapsed();
             while (trainSetDataReader->GetMinibatch(inputMatrices))
             {
@@ -1046,6 +1147,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 
+                // Tries to set up derivative features for the next utterance.
+                AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
+
                 endComputeMBTime=Timer::MilliSecondElapsed();
                 numMBsRun ++;
                 if (m_traceLevel > 0)
@@ -1091,7 +1195,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// call DataEnd function 
                 /// DataEnd does reader specific process if sentence ending is reached
                 trainSetDataReader->DataEnd(endDataSentence);
-
             }
 
             localEpochCriterion /= float(totalEpochSamples);
@@ -1266,10 +1369,11 @@ protected:
             int epoch1Base = epoch + 1;
             if (epoch1Base == m_maxEpochs || bLastModel) 
                 return m_modelPath;          
-            else {
-				wstring w = msra::strfun::wstrprintf (L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
-				return w;
-			}
+            else
+            {
+                wstring w = msra::strfun::wstrprintf (L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
+                return w;
+            }
  
         } 
 
@@ -1431,7 +1535,7 @@ protected:
     protected:
 
         floatargvector m_learningRatesPerSample; /// learning rate per sample provided outside
-		bool			m_needToNormalizeLRByParallUtterance;			// only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
+        bool m_needToNormalizeLRByParallUtterance; // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
         intargvector m_mbSize;
         size_t m_epochSize;
         size_t m_maxEpochs;
@@ -1482,7 +1586,7 @@ protected:
 
         bool m_validateAfterModelReloading;
 
-		bool m_useAllDataForPreComputedNode;
+        bool m_useAllDataForPreComputedNode;
 
         bool m_needAveMultiplier;
         ElemType m_L2RegWeight;

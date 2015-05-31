@@ -1759,5 +1759,164 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     };
 
+    // This training criterion node needs derivatives and objectives to be
+    // computed out of the node. Derivatives and objectives will be fed to the
+    // node as input features. It has 3 inputs:
+    // 1. feature node that feeds objectives
+    // 2. feature node that feeds derivatives
+    // 3. neural network output
+    //
+    // This node is useful in sequence training for speech recognition, so that
+    // we can separate lattice computation (which may rely other softwares, such
+    // as Kaldi) with the neural network training.
+    template<class ElemType>
+    class DummyCriterionNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        DummyCriterionNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L""? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            //- MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        DummyCriterionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L""? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const {return TypeName();}
+        static const std::wstring TypeName() {return L"DummyCriterion";} 
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 2)
+                throw std::invalid_argument("DummyCriterionNode only takes three inputs.");
+
+            if (inputIndex == 0)
+            {
+                throw std::logic_error("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
+            }
+            else if (inputIndex == 1)
+            {
+                throw std::logic_error("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
+            }
+            else
+            {
+                ComputeInputPartialThree(Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
+        {
+            throw std::logic_error("DummyCriterionNode node should never be in a loop.");
+        }
+
+        static void WINAPI ComputeInputPartialThree(const Matrix<ElemType>& inputFunctionValues1,
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        {
+            Matrix<ElemType>::ScaleAndAdd(gradientValues.Get00Element(), inputFunctionValues1, inputGradientValues);
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
+        {
+            throw std::logic_error("DummyCriterionNode should never be in a loop.");
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0)  
+        {
+            if (inputFunctionValues0.GetNumRows() != 1 || inputFunctionValues0.GetNumCols() != 1)
+            {
+                throw std::logic_error("DummyCriterionNode expects first input has dimension (1, 1).\n");
+            }
+            functionValues.Resize(1, 1);
+            functionValues.SetValue(inputFunctionValues0.Get00Element());
+#if NANCHECK
+            functionValues.HasNan("DummyCriterionNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 3) 
+                throw std::logic_error("DummyCriterionNode criterion requires three inputs.");
+
+            if (Inputs(0)->OperationName() != L"InputValue")
+                throw std::logic_error("DummyCriterionNode criterion requires the first input to be computed objectives.");
+
+            if (Inputs(0)->OperationName() != L"InputValue")
+                throw std::logic_error("DummyCriterionNode criterion requires the first input to be computed derivatives.");
+
+            if (Inputs(0)->FunctionValues().GetNumRows() != 1)
+                throw std::logic_error("DummyCriterionNode criterion requires the first input to have dimension 1.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0 || Inputs(2)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("DummyCriterionNode operation: one of the operants has 0 element.");
+
+            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(2)->FunctionValues().GetNumRows())
+                throw std::logic_error("The Matrix dimension in the DummyCriterionNode operation does not match.");
+
+            if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(2)->FunctionValues().GetNumCols())
+                Inputs(1)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(2)->FunctionValues().GetNumCols()); 
+
+            FunctionValues().Resize(1,1);
+            CopyImageSizeFromInputs(); 
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, false);
+
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;        
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, ComputationNodePtr prediction) 
+        {
+            m_children.resize(3);
+            m_children[0] = objectives;
+            m_children[1] = derivatives;
+            m_children[2] = prediction;
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            DummyCriterionNode<ElemType>* node = (DummyCriterionNode<ElemType>*) nodeP;
+        }
+
+        // copy constructor
+        DummyCriterionNode(const DummyCriterionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+                
+            ComputationNodePtr node = new DummyCriterionNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    };
+
+    template class DummyCriterionNode<float>; 
+    template class DummyCriterionNode<double>;
+
 
 }}}

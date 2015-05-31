@@ -62,6 +62,15 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;
     virtual bool DataEnd(EndDataType endDataType) = 0;
     virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd) = 0;
+
+    // Gets utterance before getting the actual minibatch, which will not affect
+    // getting the minibatches. This can be useful in sequence training.
+    virtual bool GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices) { return false; }
+
+    // Computes certain derivatives given outputs from neural networks, which
+    // will later be fed to the neural network as features. This can be useful
+    // in sequence training.
+    virtual bool ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs) { return false; }
 };
 
 // GetReader - get a reader type from the DLL
@@ -157,6 +166,21 @@ public:
 
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
+
+    // Gets utterance before getting the actual minibatch, which will not affect
+    // getting the minibatches. This can be useful in sequence training.
+    virtual bool GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    {
+        return m_dataReader->GetForkedUtterance(uttID, matrices);
+    }
+
+    // Computes certain derivatives given outputs from neural networks, which
+    // will later be fed to the neural network as features. This can be useful
+    // in sequence training.
+    virtual bool ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs)
+    {
+        return m_dataReader->ComputeDerivativeFeatures(uttID, outputs);
+    }
 };
 
 }}}
