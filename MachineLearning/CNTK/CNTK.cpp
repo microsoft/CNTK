@@ -781,6 +781,54 @@ void DoAdapt(const ConfigParameters& config)
 }
 
 template <typename ElemType>
+void DoSequenceTrain(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    ConfigParameters configSGD(config("SGD"));
+    bool makeMode = config("makeMode", "true");
+
+    ConfigParameters readerConfig(config("reader"));
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    IComputationNetBuilder<ElemType>* netBuilder = NULL;
+    if (config.Exists("NDLNetworkBuilder"))
+    {
+        ConfigParameters configNDL(config("NDLNetworkBuilder"));
+        netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
+    }
+    else if (config.Exists("SimpleNetworkBuilder"))
+    {
+        ConfigParameters configSNB(config("SimpleNetworkBuilder"));
+        netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+    {
+        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
+    }
+
+    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
+
+    DataReader<ElemType>* cvDataReader = nullptr;
+    ConfigParameters cvReaderConfig(config("cvReader", L""));
+
+    if (cvReaderConfig.size() != 0)
+    {
+        cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+        cvDataReader = new DataReader<ElemType>(cvReaderConfig);
+    }
+
+    wstring origModelFileName = config("origModelFileName", L"");
+
+    SGD<ElemType> sgd(configSGD);
+
+    sgd.SequenceTrain(netBuilder, origModelFileName, dataReader, cvDataReader, deviceId, makeMode);
+
+    delete dataReader;
+    delete cvDataReader;
+}
+
+template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
     wstring editPath = config("editPath");
@@ -880,6 +928,8 @@ void DoCommand(const ConfigParameters& config)
         {
             if (action[j] == "train" || action[j] == "trainRNN")
                 DoTrain<ElemType>(commandParams);
+            else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
+                DoSequenceTrain<ElemType>(commandParams);
             else if (action[j] == "adapt")
                 DoAdapt<ElemType>(commandParams);
             else if (action[j] == "test" || action[j] == "eval")

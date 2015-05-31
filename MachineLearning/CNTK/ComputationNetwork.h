@@ -97,7 +97,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_learnableParameters.clear();
 
             for (auto nodeIter=m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-                delete nodeIter->second;      
+                delete nodeIter->second;
             m_nameToNodeMap.clear();
         }
 
@@ -997,6 +997,8 @@ public:
                 newNode = new NoiseContrastiveEstimationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CRFNode<ElemType>::TypeName())
                 newNode = new CRFNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == DummyCriterionNode<ElemType>::TypeName())
+                newNode = new DummyCriterionNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName); 
             else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
                 newNode = new CrossEntropyNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
@@ -1164,6 +1166,8 @@ public:
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CRFNode<ElemType>::TypeName())
                 newNode = new CRFNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == DummyCriterionNode<ElemType>::TypeName())
+                newNode = new DummyCriterionNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
                 newNode = new MatrixL1RegNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
@@ -1314,6 +1318,15 @@ public:
         {
             ComputationNodePtr newNode(new CRFNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, postDepScore, transition_score);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives,
+            const ComputationNodePtr prediction, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new DummyCriterionNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(objectives, derivatives, prediction);
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -1720,7 +1733,6 @@ public:
 
             for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
             {
-
                 EvaluateLoop(allNodes, (*nodeIter));
 
                 if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
@@ -1980,6 +1992,78 @@ public:
             DeleteNode(oldNodeName);
             //RemoveOrphanNode(oldNode);
         }
+
+        void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodePtr newNode)
+        {
+            ComputationNodePtr oldNode = GetNodeFromName(oldNodeName);
+
+            // Checks if the node is a criterion node.
+            int index = -1;
+            for (int i = 0; i < m_finalCriteria.size(); ++i)
+            {
+                if (m_finalCriteria[i]->NodeName() == oldNodeName)
+                {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == -1)
+                throw std::runtime_error("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
+
+            // Replaces children.
+            for (int i = 0; i < newNode->ChildrenSize(); ++i)
+            {
+                if (m_nameToNodeMap.find(newNode->Inputs(i)->NodeName()) == m_nameToNodeMap.end())
+                    throw std::runtime_error("Child node does not exist.");
+                newNode->SetInput(i, m_nameToNodeMap[newNode->Inputs(i)->NodeName()]);
+            }
+
+            // Addes it to criterion node list.
+            m_finalCriteria[index] = newNode;
+            m_nameToNodeMap[newNode->NodeName()] = newNode;
+        }
+
+        void AddFeatureNode(ComputationNodePtr featureNode)
+        {
+            wstring nodeName = featureNode->NodeName();
+            if (NodeNameExist(nodeName))
+                throw std::runtime_error("AddFeatureNode: feature node already exists.");
+            m_nameToNodeMap[nodeName] = featureNode;
+            m_features.push_back(featureNode);
+        }
+
+        // We only remove the node, not delete it.
+        void RemoveFeatureNode(ComputationNodePtr featureNode)
+        {
+            wstring nodeName = featureNode->NodeName();
+            if (!NodeNameExist(nodeName))
+                throw std::runtime_error("RemoveFeatureNode: feature node does not exist.");
+
+            ClearCaches();
+
+            // Removes links.
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); ++nodeIter)
+            {
+                ComputationNodePtr node = nodeIter->second;
+                for (size_t i = 0; i < node->ChildrenSize(); ++i)
+                {
+                    ComputationNodePtr child = node->Inputs(i);
+                    if (child == featureNode)
+                    {
+                        node->SetInput(i,NULL);
+                        break;
+                    }
+                }
+            }
+
+            // Removes from feature list.
+            auto search = std::find(m_features.begin(), m_features.end(), featureNode);
+            if (search != m_features.end())
+                m_features.erase(search);
+
+            m_nameToNodeMap.erase(nodeName);
+        }
+
         std::vector<ComputationNodePtr> GetAllNodes() const
         {
             std::vector<ComputationNodePtr> nodes;

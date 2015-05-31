@@ -64,7 +64,7 @@ include kaldi_vars.mk
 INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(MATHLIB_INCLUDE)  $(KALDI_INCLUDES)
 
 
-CFLAGS = -msse3 -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(KALDI_DEFINES) $(MATHLIB_DEFINE) -fopenmp -fpermissive -fPIC
+CFLAGS = -msse3 -std=c++0x -std=c++11 -DHAVE_OPENFST_GE_10400 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(KALDI_DEFINES) $(MATHLIB_DEFINE) -fopenmp -fpermissive -fPIC
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp  Common/TimerUtility.cpp
@@ -76,7 +76,7 @@ CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CN
 BINARYREADER_SRC = DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
 KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp
-KALDI2READER_SRC = DataReader/Kaldi2Reader/HTKMLFWriter.cpp DataReader/Kaldi2Reader/DataWriter.cpp DataReader/Kaldi2Reader/DataReader.cpp DataReader/Kaldi2Reader/HTKMLFReader.cpp
+KALDI2READER_SRC = DataReader/Kaldi2Reader/HTKMLFWriter.cpp DataReader/Kaldi2Reader/DataWriter.cpp DataReader/Kaldi2Reader/DataReader.cpp DataReader/Kaldi2Reader/HTKMLFReader.cpp DataReader/Kaldi2Reader/KaldiSequenceTrainingIO.cpp
 SEQUENCEREADER_SRC = DataReader/LMSequenceReader/SequenceReader.cpp DataReader/LMSequenceReader/SequenceParser.cpp DataReader/LMSequenceReader/Exports.cpp
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
 UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
