@@ -172,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         msra::files::make_intermediate_dirs (outputFile);
         msra::util::attempt (5, [&]()
         {
-            msra::asr::htkfeatwriter::write (outputFile, "USER", sampPeriod, output);
+            msra::asr::htkfeatwriter::write (outputFile, "USER", this->sampPeriod, output);
         });
                         
         fprintf (stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());
