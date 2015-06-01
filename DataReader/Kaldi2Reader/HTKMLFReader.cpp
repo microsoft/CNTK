@@ -118,7 +118,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Checks if noMix is set. If <m_noMix> is true, then frames from next
         // sentence will not be used to fill up the current minibatch. It is
         // only meaningful when <m_framemode> is false. 
-        m_noMix = readerConfig("noMix", "true");
+        m_noMix = readerConfig("noMix", "false");
         if (m_framemode == false)
         {
             if (m_numberOfuttsPerMinibatch != 1 && m_noMix == true)
