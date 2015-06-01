@@ -201,8 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (trans_id != 0)
                     {
                         kaldi::int32 pdf_id = m_transModel.TransitionIdToPdf(trans_id);
-                        // arc.weight.SetValue2(-logLikelihood(pdf_id, t) + arc.weight.Value2());
-                        arc.weight.SetValue2(-logLikelihood(pdf_id, t));
+                        arc.weight.SetValue2(-logLikelihood(pdf_id, t) + arc.weight.Value2());
                         aiter.SetValue(arc);
                     }
                 }
