@@ -155,3 +155,5 @@ if [[ $CNTK_CLEANUP == 1 ]]; then
   done
   rm -rf $TMP_ROOT
 fi
+
+echo "============ Build and test of CNTK was successful!  ============"
