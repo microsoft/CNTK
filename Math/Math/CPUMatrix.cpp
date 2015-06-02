@@ -3837,7 +3837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void CPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a,
-        const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, size_t sampleCount, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c)
+        const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c)
         //this: samples+probs
         // a:   hidden
         // b:   embedding
@@ -3852,7 +3852,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::cerr << endl;
         }
         */
-        sampleCount *= 1;
         double log_likelihood = 0.0;
         size_t sample_size = this->GetNumRows() / 2;
         size_t batch_size = this->GetNumCols();
