@@ -3556,7 +3556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t sampleCount = a.m_CPUMatrix->GetNumElements() / a.m_CPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
-            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, sampleCount, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
+            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
         }
         else
         {

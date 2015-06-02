@@ -216,7 +216,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignVectorNorm2Of(CPUMatrix<ElemType>& a, const bool isColWise);
 
         void AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias,
-            size_t sampleCount, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c);
+            CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c);
 
         void AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
             const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& c);
