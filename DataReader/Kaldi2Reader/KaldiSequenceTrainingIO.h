@@ -28,6 +28,10 @@ private:
     kaldi::RandomAccessCompactLatticeReader* m_denlatReader;  /*denominator lattices*/
     kaldi::RandomAccessInt32VectorReader* m_aliReader;        /*alignment*/
 
+    // Rescores the lattice with the lastest posteriors from the neural network.
+    void LatticeAcousticRescore(const std::vector<kaldi::int32>& stateTimes,
+                                const Matrix<ElemType>& outputs, kaldi::Lattice* lat);
+
 public:
     // Constructor.
     KaldiSequenceTrainingIO(const wstring& denlatRspecifier, const wstring& aliRspecifier,
@@ -44,10 +48,6 @@ public:
     bool HasDerivatives(const wstring& uttID);
 
     bool ComputeDerivatives(const wstring& uttID, const Matrix<ElemType>& outputs);
-
-    // Rescores the lattice with the lastest posteriors from the neural network.
-    void LatticeAcousticRescore(const std::vector<kaldi::int32>& stateTimes,
-                                const Matrix<ElemType>& outputs, kaldi::Lattice* lat);
 
     // Gets the computed derivatives for given utterance.
     void GetDerivatives(size_t startFrame, size_t endFrame,
