@@ -101,7 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Checks if framemode is false in sequence training.
-        bool m_framemode = readerConfig("frameMode", "true");
+        m_framemode = readerConfig("frameMode", "true");
         if (m_framemode && m_doSeqTrain)
         {
             LogicError("frameMode has to be false in sequence training.\n");
