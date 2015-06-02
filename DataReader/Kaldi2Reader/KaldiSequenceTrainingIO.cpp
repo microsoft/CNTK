@@ -75,8 +75,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     bool KaldiSequenceTrainingIO<ElemType>::ComputeDerivatives(
-        const wstring& uttID, const Matrix<ElemType>& logLikelihood)
+        const wstring& uttID, const Matrix<ElemType>& logLikelihoodIn)
     {
+        // Checks if we need to move data to CPU.
+        Matrix<ElemType> logLikelihood(logLikelihoodIn);
+        if (logLikelihood.GetDeviceId() >= 0)
+            logLikelihood.TransferFromDeviceToDevice(logLikelihood.GetDeviceId(), CPUDEVICE, true, false, false);
+
         std::string uttIDStr = msra::asr::toStr(uttID);
 
         // Sanity check.
@@ -175,9 +180,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const std::vector<kaldi::int32>& stateTimes,
         const Matrix<ElemType>& logLikelihood, kaldi::Lattice* lat)
     {
-        // TODO(Guoguo): If we use GPUs, we may have to copy the <logLikelihood>
-        // to CPUs first, as the lattice computation happens on CPUs. Otherwise
-        // each call to get a single element in the matrix will be slow?
         std::vector<std::vector<kaldi::int32>> timeStateMap(logLikelihood.GetNumCols());
         size_t num_states = lat->NumStates();
         for (size_t s = 0; s < num_states; s++)
@@ -220,8 +222,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void KaldiSequenceTrainingIO<ElemType>::GetDerivatives(size_t startFrame,
                                                            size_t endFrame,
                                                            const std::wstring& uttID,
-                                                           Matrix<ElemType>& derivatives)
+                                                           Matrix<ElemType>& derivativesIn)
     {
+        Matrix<ElemType> derivatives(CPUDEVICE);
+
         // Does some sanity check first.
         if (uttID != m_currentUttID)
         {
@@ -234,9 +238,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(startFrame >= 0);
         assert(endFrame <= m_currentUttLength);
 
-        // TODO(Guoguo): If we use GPUs, we may have to copy the <m_posteriors>
-        // to CPUs first, as the lattice computation happens on CPUs. Otherwise
-        // each call to get a single element in the matrix will be slow?
         derivatives.Resize(m_transModel.NumPdfs(), endFrame - startFrame);
         derivatives.SetValue(0);
         for (size_t t = startFrame; t < endFrame; ++t)
@@ -248,6 +249,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 derivatives(pdf_id, t - startFrame) -= m_posteriors[t][i].second; /* Flip the sign */
             }
         }
+
+        // Checks if we need to move data to GPU.
+        if (derivativesIn.GetDeviceId() >= 0)
+            derivatives.TransferFromDeviceToDevice(CPUDEVICE, derivativesIn.GetDeviceId(), true, false, false);
+
+        derivativesIn.SetValue(derivatives);
 
         // We've used up all the derivatives, reset it.
         if (endFrame >= m_currentUttLength)
@@ -266,8 +273,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void KaldiSequenceTrainingIO<ElemType>::GetObjectives(size_t startFrame,
                                                           size_t endFrame,
                                                           const std::wstring& uttID,
-                                                          Matrix<ElemType>& objectives)
+                                                          Matrix<ElemType>& objectivesIn)
     {
+        Matrix<ElemType> objectives(CPUDEVICE);
+
         // Does some sanity check first.
         if (uttID != m_currentUttID)
         {
@@ -282,6 +291,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         objectives.Resize(1, 1);
         objectives.SetValue(m_objective * static_cast<ElemType>(endFrame - startFrame) / static_cast<ElemType>(m_currentUttLength));
+
+        // Checks if we need to move data to GPU.
+        if (objectivesIn.GetDeviceId() >= 0)
+            objectives.TransferFromDeviceToDevice(CPUDEVICE, objectivesIn.GetDeviceId(), true, false, false);
+
+        objectivesIn.SetValue(objectives);
 
         // We've used up all the objectives, reset it.
         if (endFrame >= m_currentUttLength)
