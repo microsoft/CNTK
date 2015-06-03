@@ -632,16 +632,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if it's externally managed, then populate the structure
         if (matrixFlags&matrixFlagDontOwnBuffer)
         {
+            // free previous array allocation if any before overwriting
             if (m_pArray != nullptr)
                 delete [] m_pArray;
 
             m_pArray = pArray;
             m_numRows = numRows;
             m_numCols = numCols;
-            // free previous array allocation if any before overwriting
-            if (m_pArray != nullptr)
-                delete[] m_pArray;
-            m_pArray = pArray;
             m_elemSizeAllocated = GetNumElements();
             m_externalBuffer = true;
         }
