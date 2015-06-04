@@ -21,5 +21,6 @@ KALDI_DEFINES = \
 -DHAVE_EXECINFO_H=1 \
 -DHAVE_CXXABI_H \
 -DHAVE_ATLAS \
+-DHAVE_OPENFST_GE_10400 \
 
 ########## KALDI_LIBS, KALDI_INCLUDES, and KALDI_DEFINES are the only variables used outside this file ##########
