@@ -175,11 +175,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
 
-            size_t utt_t = (size_t)timeIdxInSeq / m_samplesInRecurrentStep;
             Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
-            colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
+            colBegin = m_sentenceSeg.ColumnSlice(timeIdxInSeq, 1);
 
-            ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(utt_t,1));
+            ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(timeIdxInSeq, 1));
         }
 
         /// to-do: need to change to the new way of resetting state
@@ -239,10 +238,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_pastActivity = Inputs(0)->FunctionValues();
             }
             
-            size_t utt_t = (size_t) timeIdxInSeq / m_samplesInRecurrentStep;
             Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
-            colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
-            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(utt_t,1));
+            colBegin = m_sentenceSeg.ColumnSlice(timeIdxInSeq, 1);
+            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(timeIdxInSeq, 1));
 
         }
 
