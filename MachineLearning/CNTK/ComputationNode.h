@@ -68,10 +68,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        Matrix<ElemType> m_sentenceSeg;
-        Matrix<ElemType> m_existsSentenceBeginOrNoLabels;
+        Matrix<ElemType> * m_sentenceSeg; 
+        /// conditionally point to either a pointer to that provided by network, or point to 
+        /// an indiviaul sentence boundary info, which happens if delay > 1 is required for delay node
+        Matrix<ElemType> * m_existsSentenceBeginOrNoLabels;
+        Matrix<ElemType> mBoundaryInfo; /// individual sentence boundary information 
+        Matrix<ElemType> mExistSentenceBeginOrNoLabels; // individual the corresponding information 
     public:
-        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), m_sentenceSeg(deviceId), m_existsSentenceBeginOrNoLabels(deviceId)
+        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), mBoundaryInfo(deviceId), mExistSentenceBeginOrNoLabels(deviceId)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -212,16 +216,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ResetBound(const Matrix<ElemType> & seg, const Matrix<ElemType>& existsSentenceBeginOrNoLabels)
+        virtual void ResetBound(Matrix<ElemType> * seg, Matrix<ElemType> *existsSentenceBeginOrNoLabels)
         {
-            DEVICEID_TYPE device = m_sentenceSeg.GetDeviceId();
-            m_sentenceSeg.TransferFromDeviceToDevice(device, seg.GetDeviceId(), true);
             m_sentenceSeg = seg;
-            m_sentenceSeg.TransferFromDeviceToDevice(seg.GetDeviceId(), device, true);
-
-            m_existsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, existsSentenceBeginOrNoLabels.GetDeviceId(), true);
             m_existsSentenceBeginOrNoLabels = existsSentenceBeginOrNoLabels;
-            m_existsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(existsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
         }
 
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin, 
@@ -1029,7 +1027,8 @@ public: \
 protected:  \
         using B::m_loopId; using B::m_samplesInRecurrentStep; \
         using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop; using B::m_sentenceSeg; using B::m_existsSentenceBeginOrNoLabels; \
+        using B::m_indexInLoop; using B::mBoundaryInfo; using B::mExistSentenceBeginOrNoLabels; \
+        using B::m_sentenceSeg; using B::m_existsSentenceBeginOrNoLabels; \
         using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
         using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
         using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter
