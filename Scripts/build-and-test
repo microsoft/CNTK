@@ -1,8 +1,10 @@
 #!/bin/bash
 
 # Setting some default values
-CNTK_CLEANUP=1
-QUIET_MAKE=
+BUILD=1
+RUN=1
+CLEAN_AFTER=0
+CLEAN_BEFORE=0
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
@@ -13,20 +15,32 @@ case $key in
     -h|--help)
     echo "Usage: build-and-test [options]"
     echo "Options:"
-    echo "  -q|--quiet-make - redirect build output to files"
-    echo "  -n|--no-cleanup - leave build binaries intact"
-    echo "If CNTK root is empty and branch is not specified then master CNTK branch is built"
+    echo "  -q|--quiet-build - redirect build output to files"
+    echo "  -r|--run-only - assume that binaries are already built"
+    echo "  -b|--build-only - just build, do not run"
+    echo "  -cb|--clean-build - clean up the enlistment binaries before build"
+    echo "  -o|--output-directory <output_dir> - specify output directory to use"
+    echo "Script location in the enlistment is used for finding root directory to build and run"
     exit 1
     ;;
-    -n|--no-cleanup)
-    CNTK_CLEANUP=0
+    -q|--quiet)
+    QUIET_BUILD=1
     ;;
-    -q|--quiet-make)
-    QUIET_MAKE=1
+    -r|--run-only)
+    BUILD=0
+    RUN=1
     ;;
-    -*)
-    echo Unkown option $key
-    exit 1
+    -b|--build-only)
+    BUILD=1
+    RUN=0
+    ;;
+    -cb|--clean-build)
+    CLEAN_BEFORE=1
+    BUILD=1
+    ;;
+    -o|--output-directory)
+    OUTPUT_DIR="$2"
+    shift # past argument
     ;;
     *)
     echo Unkown option $key
@@ -36,124 +50,177 @@ esac
 shift # past argument or value
 done
 
-# Step 0 -- Validate all necessary prerequisites
+# Step 0 -- Validate all necessary prerequisites and check for incompatible options
 # It is possible to use this script on Windows to build CNTK
 # from Cygwin window with Visual C++ environment loaded.
 # In that case OS environment variable will be set and we 
 # can use it to differentiate from Linux.
-if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
-  DEBUG_DIR=Debug
-  RELEASE_DIR=Release
-  PREFIX_DIR=x64
-  BIN_NAME=CNTK.exe
-  
-  if [[ $VCINSTALLDIR == "" ]]; then
-    echo "============ Visual Studio environment not properly setup ============"
-    echo "============ Please find and run the appropriate vcvarsall.bat script ============"
+if [[ $CLEAN_BEFORE == 1 && $RUN == 1 && $BUILD == 0 ]]; then
+    echo "============ ERROR: Incompatible options RUN and CLEAN_BEFORE set without BUILD ============"
     exit 1
-  fi
+fi
+
+if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
+    DEBUG_DIR=Debug
+    RELEASE_DIR=Release
+    PREFIX_DIR=x64
+    BIN_NAME=CNTK.exe
+  
+    if [[ $VS120COMNTOOLS == "" ]]; then
+        echo "============ Visual Studio 12.0 environment not properly setup or VS not installed ============"
+        echo "============ Please find and run the appropriate vcvarsall.bat script ============"
+        exit 1
+    fi
+
+    if [[ $ACML_PATH == "" ]]; then
+        echo "============ ACML path not set  ============"
+        echo "============ ACML libraries are needed to successfully build CNTK ============"
+        exit 1
+    fi
 elif [[ $OSTYPE == "linux-gnu" ]]; then
-  DEBUG_DIR=x86_64.gpu.debug.acml
-  RELEASE_DIR=x86_64.gpu.release.acml
-  PREFIX_DIR=bin
-  BIN_NAME=cntk
+    DEBUG_DIR=x86_64.gpu.debug.acml
+    RELEASE_DIR=x86_64.gpu.release.acml
+    PREFIX_DIR=bin
+    BIN_NAME=cntk
+    MAKEFILE=Makefile.gpu
 else
-  echo "============ ERROR: Unsupported OS ============"
-  echo "============ Scripts supports only building from Linux and Windows through Cygwin ============"
-  exit 1
+    echo "============ ERROR: Unsupported OS ============"
+    echo "============ Scripts supports only building from Linux and Windows through Cygwin ============"
+    exit 1
 fi
 
 # Step 1 -- Prepare temporary folders and files, tweak settings if necessary
-TMP_ROOT=`mktemp -d /tmp/cntk.XXXXX || exit $?`
-echo "============ Creating CNTK temp directory in $TMP_ROOT ============"
+if [[ $OUTPUT_DIR == "" ]]; then
+    TMP_ROOT=`mktemp -d /tmp/cntk.XXXXX || exit $?`
+    echo "============ Creating CNTK temp directory in $TMP_ROOT ============"
+    OUTPUT_DIR=$TMP_ROOT
+fi
 
-TMP_CONF_FILE=`mktemp $TMP_ROOT/Simple.conf.XXXXX || exit $?`
-TMP_RESULT_FILE=`mktemp $TMP_ROOT/Result.XXXXX || exit $?`
+CONF_FILE="$OUTPUT_DIR/Simple.conf"
+BUILD_FILE="$OUTPUT_DIR/Build"
+RUN_FILE="$OUTPUT_DIR/Result"
 
+# Get to the root path from which we know how to build and run
 SCRIPT=`readlink -f $0`
 SCRIPT_DIR=`dirname $SCRIPT`
 CNTK_ROOT=`dirname $SCRIPT_DIR`
 
 if ! [[ -d "$CNTK_ROOT/.git" ]]; then
-  echo "============ ERROR: Build script located in the wrong directory ($SCRIPT_DIR) ============"
-  error 1
+    echo "============ ERROR: Build script located in the wrong directory ($SCRIPT_DIR) ============"
+    error 1
 fi
 
 cd $CNTK_ROOT
-cp Demos/Simple/Simple.config $TMP_CONF_FILE || exit $?
-MAKEFILE=Makefile.gpu
 
-# Our make is too noisy right now and it is difficult to spot
-# issues from stdout and stderr. In the quiet mode these are
-# redirected to a file where they could be examined after the fact
-if [[ $QUIET_MAKE == 1 ]]; then
-  exec 6>>$TMP_ROOT/stdout || exit $?
-  exec 7>>$TMP_ROOT/stderr || exit $?
-else
-  exec 6>&1 || exit $?
-  exec 7>&2 || exit $?
+if ! [[ -f $CONF_FILE ]]; then
+    cp Demos/Simple/Simple.config $CONF_FILE || exit $?
+    chmod a+r $CONF_FILE
 fi
 
-# Step 2 -- Perform necessary builds
-for FLAVOR in debug release
-do
-  echo "============ Building CNTK $FLAVOR  ============"
-  if [[ $OS == "Windows_NT" ]]; then
-    msbuild.exe /property:Configuration=$FLAVOR /t:Clean || exit $?
-    msbuild.exe /property:Configuration=$FLAVOR || exit $?
-  else
-    make BUILDTYPE=$FLAVOR -f $MAKEFILE clean || exit $?
-    make BUILDTYPE=$FLAVOR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
-  fi
-done
-
-if ! [[ -f "$CNTK_ROOT/$PREFIX_DIR/$DEBUG_DIR/$BIN_NAME" && -f "$CNTK_ROOT/$PREFIX_DIR/$RELEASE_DIR/$BIN_NAME" ]]; then
-  echo "============ ERROR: CNTK did not build properly  ============"
-  exit 1
+if [[ $QUIET_BUILD == 1 ]]; then
+    echo "============ WARNING: You have selected quiet build. All build output will be placed in ($OUTPUT_DIR) ============"
 fi
 
-# Step 3 -- Run the tests to verify that everything works properly
-cd $PREFIX_DIR
+# Step 2 -- Build the project debug and release, if requested
+if [[ $BUILD == 1 ]]; then
+    # Step 2 -- Perform necessary builds
+    for FLAVOR in debug release
+    do
+        # Our make is too noisy right now and it is difficult to spot
+        # issues from stdout and stderr. In the quiet mode these are
+        # redirected to a file where they could be examined after the fact
+        if [[ $QUIET_BUILD == 1 ]]; then
+            exec 6>$BUILD_FILE.$FLAVOR.out || exit $?
+            exec 7>$BUILD_FILE.$FLAVOR.err || exit $?
+        else
+            exec 6>&1 || exit $?
+            exec 7>&2 || exit $?
+        fi
 
-for TARGET in CPU GPU
-do
-  # These sed scripts are simply toggling DeviceNumber argument in the config file
-  # If it is set to Auto, it will pick GPU over CPU. At -1 CPU is selected.
-  if [[ $TARGET == CPU ]]; then
-    sed -i -e 's/^DeviceNumber.*/DeviceNumber=-1/g' $TMP_CONF_FILE || exit $?
-  else
-    sed -i -e 's/^DeviceNumber.*/DeviceNumber=Auto/g' $TMP_CONF_FILE || exit $?
-  fi
+        echo "============ Building CNTK $FLAVOR (clean=$CLEAN_BEFORE)  ============"
 
-  for FLAVOR_DIR in $DEBUG_DIR $RELEASE_DIR
-  do
-    echo "============ Running CNTK ($FLAVOR_DIR) ($TARGET) ============"
+        if [[ $OS == "Windows_NT" ]]; then
+            if [[ $CLEAN_BEFORE == 1 ]]; then
+                msbuild.exe /property:Configuration=$FLAVOR /t:Clean 1>&6 2>&7 || exit $?
+            fi
+            msbuild.exe /property:Configuration=$FLAVOR /m 1>&6 2>&7 || exit $?
+        else
+            if [[ $CLEAN_BEFORE == 1 ]]; then
+                make BUILDTYPE=$FLAVOR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+            fi
+            make BUILDTYPE=$FLAVOR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
+        fi
+        chmod a+r $BUILD_FILE.*
+    done
+fi
+
+# Step 3 -- Run the project tests, both debug and release, if requested
+if [[ $RUN == 1 ]]; then
+    if ! [[ -f "$CNTK_ROOT/$PREFIX_DIR/$DEBUG_DIR/$BIN_NAME" && -f "$CNTK_ROOT/$PREFIX_DIR/$RELEASE_DIR/$BIN_NAME" ]]; then
+        echo "============ ERROR: CNTK did not build properly  ============"
+        exit 1
+    fi
+
+    cd $PREFIX_DIR
+
+    for TARGET in CPU GPU
+    do
+        # These sed scripts are simply toggling DeviceNumber argument in the config file
+        # If it is set to Auto, it will pick GPU over CPU. At -1 CPU is selected.
+        if [[ $TARGET == CPU ]]; then
+            sed -i -e 's/^DeviceNumber.*/DeviceNumber=-1/g' $CONF_FILE || exit $?
+        else
+            sed -i -e 's/^DeviceNumber.*/DeviceNumber=Auto/g' $CONF_FILE || exit $?
+        fi
+
+        for FLAVOR in debug release
+        do
+            if [[ FLAVOR == "debug" ]]; then
+                FLAVOR_DIR="$DEBUG_DIR"
+            else
+                FLAVOR_DIR="$RELEASE_DIR"
+            fi
+            OUT_FILE="$RUN_FILE.$FLAVOR.out"
+
+            echo "============ Running CNTK for ($FLAVOR) ($TARGET), output in ($RUN_FILE.*) ============"
+            rm -rf models
+            if [[ $OS == "Windows_NT" ]]; then
+                # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
+                time ./$FLAVOR_DIR/$BIN_NAME configFile="`cygpath -w $CONF_FILE`" &>$OUT_FILE || exit $?
+            else
+                time ./$FLAVOR_DIR/$BIN_NAME configFile=$CONF_FILE &>$OUT_FILE || exit $?
+            fi
+            chmod a+r $RUN_FILE.*
+
+            # Check if execution was successful
+            grep -q "Using $TARGET" "$OUT_FILE" || {
+                echo "============ ERROR: Run output (in $OUT_FILE) did not contain information about target device ($TARGET) ============"
+                exit 1
+            }
+
+            grep -q "EXCEPTION" "$OUT_FILE" && {
+                echo "============ ERROR: Run output in ($OUT_FILE) contains exceptions ============"
+                grep "EXCEPTION" "$OUT_FILE"
+                exit 1
+            }
+        done
+    done
+fi
+
+# Step 5 -- Optionally clean after builds and tests
+if [[ $CLEAN_AFTER == 1 ]]; then
     rm -rf models
-    if [[ $OS == "Windows_NT" ]]; then
-      # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
-      time ./$FLAVOR_DIR/$BIN_NAME configFile="`cygpath -w $TMP_CONF_FILE`" 2>$TMP_RESULT_FILE || exit $?
-    else
-      time ./$FLAVOR_DIR/$BIN_NAME configFile=$TMP_CONF_FILE 2>$TMP_RESULT_FILE || exit $?
-    fi
-    grep -q "Using $TARGET" $TMP_RESULT_FILE || exit $?
-    grep -q "EXCEPTION" $TMP_RESULT_FILE && exit $?
-  done
-done
-
-# Step 4 -- Optionally cleanup after builds and tests
-if [[ $CNTK_CLEANUP == 1 ]]; then
-  rm -rf models
-  cd $CNTK_ROOT
-  for FLAVOR in debug release
-  do
-    echo "============ Cleaning up CNTK $FLAVOR  ============"
-    if [[ $OS == "Windows_NT" ]]; then
-      msbuild.exe /property:Configuration=$FLAVOR /t:Clean || exit $?
-    else
-      make BUILDTYPE=$FLAVOR -f $MAKEFILE clean || exit $?
-    fi
-  done
-  rm -rf $TMP_ROOT
+    cd $CNTK_ROOT
+    for FLAVOR in debug release
+    do
+        echo "============ Cleaning up CNTK $FLAVOR  ============"
+        if [[ $OS == "Windows_NT" ]]; then
+            msbuild.exe /property:Configuration=$FLAVOR /t:clean 1>&6 2>&7 || exit $?
+        else
+            make BUILDTYPE=$FLAVOR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+        fi
+    done
+    rm -rf $OUTPUT_DIR
 fi
 
 echo "============ Build and test of CNTK was successful!  ============"
