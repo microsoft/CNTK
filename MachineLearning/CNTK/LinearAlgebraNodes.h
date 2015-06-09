@@ -966,6 +966,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (rowsc == 1 && rowsp != 1)
                 Matrix<ElemType>::MultiplyAndAdd(ConstOnes(1, rowsp,functionValues.GetDeviceId()), false, gradientValues, false, inputGradientValues);
+            else if (colsc != 1 && colsp % colsc == 0)
+            {
+                /// the children matrix is [a b] and the parent considers it as [a a a b b b]
+                size_t ratio = colsp / colsc; 
+                for (size_t i = 0; i < colsc; i++)
+                {
+                    size_t colspExpand = rowsp*colsp / rowsc / colsc;
+                    Matrix<ElemType> tmp = gradientValues.ColumnSlice(i * ratio, ratio);
+                    tmp.Reshape(rowsc, colspExpand);
+                    Matrix<ElemType> res = inputGradientValues.ColumnSlice(i, 1);
+                    Matrix<ElemType>::MultiplyAndAdd(tmp, false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, res);
+                    inputGradientValues.ColumnSlice(i, 1).SetValue(res);
+                }
+            }
             else
                 throw std::runtime_error("Plus partial: unexpected condition.");
 #if DUMPOUTPUT
@@ -1031,7 +1045,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 inputFunctionValues0.Reshape(rows0, cols0);
                 functionValues.Reshape(max(rows0, rows1), max(cols0,cols1));
             }       
-
+            else if (cols1 < cols0 && rows0 == rows1 && cols0 % cols1 == 0)  //one is a matrix with number of columns that is a multiples of the column number of another matrix
+            {
+                /// the children matrix is [a b] and the parent considers it as [a a a b b b]
+                Matrix<ElemType> tmpMat(inputFunctionValues1.GetDeviceId());
+                size_t ratio = cols0 / cols1; 
+                for (size_t i = 0; i < cols1; i++)
+                {
+                    tmpMat = Matrix<ElemType>::RepMat(inputFunctionValues1.ColumnSlice(i, 1), 1, ratio);
+                    functionValues.ColumnSlice(i*ratio, ratio).SetValue(tmpMat + inputFunctionValues0.ColumnSlice(i * ratio, ratio)); 
+                }
+            }       
+            else
+            {
+                LogicError("Plus node not supported format");
+            }
 #if NANCHECK
             functionValues.HasNan("Plus");
 #endif
@@ -1072,9 +1100,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if ((!(rows0 == rows1 && cols0 == cols1) &&  //match size
                 !((rows0 == 1 || rows1 == 1) && cols0 == cols1) && //one is row vec
-                !((cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))&& this->LoopId() < 0) //one is col vec with divisable rows, including scalar
+                !(  (cols0 > cols1 && cols0 % cols1 == 0) || 
+                    (cols0 == 1 && rows1 % rows0 == 0) || 
+                    (cols1 == 1 && rows0 % rows1 == 0))) && this->LoopId() < 0) //one is col vec with divisable rows, including scalar
             {
-                throw std::logic_error("The Matrix dimension in the Plus operation does not match.");
+                LogicError("The Matrix dimension in the Plus operation does not match.");
             }       
 
             FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
