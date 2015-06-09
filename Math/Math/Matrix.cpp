@@ -1239,11 +1239,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
-            m_CPUMatrix->Resize(numRows,numCols,growOnly), 
-            m_GPUMatrix->Resize(numRows,numCols,growOnly), 
+            m_CPUMatrix->Resize(numRows, numCols, growOnly),
+            m_GPUMatrix->Resize(numRows, numCols, growOnly),
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
+    }
+
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::RepMat(const Matrix<ElemType>& frmMat, const size_t rowRatio, const size_t colRatio)
+    {
+        size_t nCols = frmMat.GetNumCols(); 
+        size_t nRows = frmMat.GetNumRows();
+
+        if (rowRatio > 1)
+            RuntimeError("RepMat not yet supporting raw ratio larger than 1");
+        size_t newCols = colRatio * nCols;
+
+        Matrix<ElemType> c(nRows, newCols, frmMat.GetDeviceId());
+        for (size_t i = 0; i < colRatio; i++)
+        {
+            c.ColumnSlice(i * nCols, nCols) = frmMat;
+        }
+
+        return c;
     }
 
     template<class ElemType>
