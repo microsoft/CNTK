@@ -15,12 +15,12 @@ case $key in
     -h|--help)
     echo "Usage: build-and-test [options]"
     echo "Options:"
-    echo "  -q|--quiet-build - redirect build output to files"
-    echo "  -r|--run-only - assume that binaries are already built"
+    echo "  -q|--quiet-build - redirect build output to file (by default those will be in <cntk_root>.run-<operating_system>-*)"
+    echo "  -r|--run-only - elides build step, runs the binaries that have already been built"
     echo "  -b|--build-only - just build, do not run"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
     echo "  -o|--output-directory <output_dir> - specify output directory to use"
-    echo "Script location in the enlistment is used for finding root directory to build and run"
+    echo "The root directory used to build and run CNTK is hosts the Scripts directory that contains this script"
     exit 1
     ;;
     -q|--quiet)
@@ -65,6 +65,7 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
     RELEASE_DIR=Release
     PREFIX_DIR=x64
     BIN_NAME=CNTK.exe
+    BUILD_OS="windows"
   
     if [[ $VS120COMNTOOLS == "" ]]; then
         echo "============ Visual Studio 12.0 environment not properly setup or VS not installed ============"
@@ -83,6 +84,7 @@ elif [[ $OSTYPE == "linux-gnu" ]]; then
     PREFIX_DIR=bin
     BIN_NAME=cntk
     MAKEFILE=Makefile.gpu
+    BUILD_OS="linux"
 else
     echo "============ ERROR: Unsupported OS ============"
     echo "============ Scripts supports only building from Linux and Windows through Cygwin ============"
@@ -90,31 +92,33 @@ else
 fi
 
 # Step 1 -- Prepare temporary folders and files, tweak settings if necessary
-if [[ $OUTPUT_DIR == "" ]]; then
-    TMP_ROOT=`mktemp -d /tmp/cntk.XXXXX || exit $?`
-    echo "============ Creating CNTK temp directory in $TMP_ROOT ============"
-    OUTPUT_DIR=$TMP_ROOT
-fi
-
-CONF_FILE="$OUTPUT_DIR/Simple.conf"
-BUILD_FILE="$OUTPUT_DIR/Build"
-RUN_FILE="$OUTPUT_DIR/Result"
 
 # Get to the root path from which we know how to build and run
 SCRIPT=`readlink -f $0`
 SCRIPT_DIR=`dirname $SCRIPT`
 CNTK_ROOT=`dirname $SCRIPT_DIR`
 
-if ! [[ -d "$CNTK_ROOT/.git" ]]; then
+# Setup the output directory
+if [[ $OUTPUT_DIR == "" ]]; then
+    OUTPUT_DIR="$CNTK_ROOT/.run-$BUILD_OS-$RANDOM"
+fi
+
+echo "============ Creating CNTK temp directory in $TMP_ROOT ============"
+mkdir -p $OUTPUT_DIR || exit $?
+
+CONF_FILE="$OUTPUT_DIR/Simple.conf"
+BUILD_FILE="$OUTPUT_DIR/Build"
+RUN_FILE="$OUTPUT_DIR/Result"
+
+if ! [[ -d "$CNTK_ROOT/MachineLearning" ]]; then
     echo "============ ERROR: Build script located in the wrong directory ($SCRIPT_DIR) ============"
-    error 1
+    exit 1
 fi
 
 cd $CNTK_ROOT
 
 if ! [[ -f $CONF_FILE ]]; then
     cp Demos/Simple/Simple.config $CONF_FILE || exit $?
-    chmod a+r $CONF_FILE
 fi
 
 if [[ $QUIET_BUILD == 1 ]]; then
