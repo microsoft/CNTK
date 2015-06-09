@@ -177,6 +177,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
+            assert(m_sentenceSeg != nullptr);
+            assert(m_existsSentenceBeginOrNoLabels != nullptr);
 
             Matrix<ElemType> colBegin(m_sentenceSeg->GetDeviceId());
             colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
@@ -213,9 +215,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     colSegPastActivity.SetValue(colBegin);
                     colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
                     colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
-                    Matrix<ElemType>::MultiplyAndAdd(frm, false, colSegPastActivity, false, to);
-                }
-                else
+
+                    Matrix<ElemType> lclFrm((DEVICEID_TYPE)inputGradientValues.GetDeviceId());
+                    lclFrm = frm;
+                    colSegPastActivity.Reshape(1, colSegPastActivity.GetNumRows());
+                    lclFrm.RowElementMultiplyWith(colSegPastActivity);  
+                    to += lclFrm;
+                }else 
                     to += frm;
             }
         }
@@ -236,6 +242,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             /// reset past activity as it reached to the begining of a minibatch
             /// the node pointed hasn't yet updated, so it is the past activity 
+            assert(m_sentenceSeg != nullptr);
+            assert(m_existsSentenceBeginOrNoLabels != nullptr);
+
             if (timeIdxInSeq == 0)
             {
                 m_pastActivity = Inputs(0)->FunctionValues();
