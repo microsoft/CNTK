@@ -79,6 +79,11 @@ private:
     std::map<LabelIdType, LabelType> m_mapIdToLabel;
     std::map<LabelType, LabelIdType> m_mapLabelToId;
 
+    /**
+    for reading one line per file, i.e., a file has only one line of data
+    */
+    bool mOneLinePerFile;
+    
     // caching support
     DataReader<ElemType>* m_cachingReader;
     DataWriter<ElemType>* m_cachingWriter;
@@ -105,8 +110,7 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    size_t NumberSlicesInEachRecurrentIter() { return 1 ;} 
-    void SetNbrSlicesEachRecurrentIter(const size_t) { };
+    size_t NumberSlicesInEachRecurrentIter() { return mBlgSize; }
     void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/){};
     void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/) {};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
@@ -114,6 +118,9 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
+    void SetSentenceSegBatch(Matrix<ElemType>&, Matrix<ElemType>&) { };
+
+    void SetNbrSlicesEachRecurrentIter(const size_t sz);
 
     void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
 };
