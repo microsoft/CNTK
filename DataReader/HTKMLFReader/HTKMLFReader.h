@@ -85,21 +85,15 @@ private:
     size_t NumberSlicesInEachRecurrentIter() { return m_numberOfuttsPerMinibatch ;} 
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
 
-     void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
+    void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
 
-    
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
-    
-    void ExpandDotDotDot(wstring & featPath, const wstring & scpPath, wstring & scpDirCached);
 
-    
     enum InputOutputTypes
     {
         real,
         category,
     };
-
-
 
 public:
     virtual void Init(const ConfigParameters& config);

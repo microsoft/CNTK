@@ -73,6 +73,7 @@
     <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.100" />
     <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.rnn" />
     <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.fullpath.rnn.100" />
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.relpath" />
     <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.mfcc.fullpath" />
     <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.mfcc.fullpath.100" />
     <None Include="..\ExampleSetups\LM\LSTMLM\ExpectedResults.log" />

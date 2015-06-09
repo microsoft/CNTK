@@ -236,20 +236,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (iFeat!=scriptpaths.size() || iLabel!=mlfpathsmulti.size())
             throw std::runtime_error(msra::strfun::strprintf ("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n"));
 
+        // randomization window
         if (readerConfig.Exists("randomize"))
         {
             const std::string& randomizeString = readerConfig("randomize");
             if (randomizeString == "None")
             {
-                randomize = randomizeNone;
+                randomize = randomizeNone;              // don't randomize --use this if your data is pre-randomized
             }
             else if (randomizeString == "Auto")
             {
-                randomize = randomizeAuto;
+                randomize = randomizeAuto;              // randomize over entire database (no window) --use this if your entire data fits into RAM
             }
             else
             {
-                randomize = readerConfig("randomize");
+                randomize = readerConfig("randomize");  // randomize over a rolling window of this many samples --use this if data is too large to fit
             }
         }
 
@@ -258,7 +259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::string& framemodeString = readerConfig("frameMode");
             if (framemodeString == "false")
             {
-                framemode = false;
+                framemode = false;                      // this means utterance mode
             }
         }
 
@@ -268,7 +269,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::string minibatchMode(readerConfig("minibatchMode","Partial"));
         m_partialMinibatch = !_stricmp(minibatchMode.c_str(),"Partial");
 
-        // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
+        // get the read method, defaults to "blockRandomize" (preferrred option) other option is "rollingWindow" (somewhat outdated reader)
         std::string readMethod(readerConfig("readMethod","blockRandomize"));
 
         if (readMethod == "blockRandomize" && randomize == randomizeNone)
@@ -280,8 +281,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // see if they want to use readAhead
         m_readAhead = readerConfig("readAhead", "false");
 
+        wstring pathPrefix = readerConfig("pathnamePrefix", "");
+        if (!pathPrefix.empty() && pathPrefix.find_last_of(L"/\\") != pathPrefix.size() - 1)
+            pathPrefix += '/';  // give it a directory separator if none present
+
         // read all input files (from multiple inputs)
-        // TO DO: check for consistency (same number of files in each script file)
         numFiles=0;
         foreach_index(i,scriptpaths)
         {
@@ -289,9 +293,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::wstring scriptpath = scriptpaths[i];
             fprintf(stderr, "reading script file %S ...", scriptpath.c_str());
             size_t n = 0;
-            for (msra::files::textreader reader(scriptpath); reader && filelist.size() <= firstfilesonly/*optimization*/; )
+            wstring scpdircached;   // for ExpandDotDotDot()
+            for (msra::files::textreader reader(scriptpath); reader && filelist.size() <= firstfilesonly/*optimization*/;)
             {
-                filelist.push_back (reader.wgetline());
+                wstring entry = reader.wgetline();          // get line from the script
+
+                /*
+                do "..." expansion if SCP uses relative path names
+                "..." in the SCP means full path is the same as the SCP file
+                for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
+                and contains entry like
+                .../file1.feat
+                .../file2.feat
+                etc.
+                the features will be read from
+                //aaa/bbb/ccc/file1.feat
+                //aaa/bbb/ccc/file2.feat
+                etc.
+                This works well if you store the scp file with the features but
+                do not want different scp files everytime you move or create new features
+                */
+                ExpandDotDotDot(entry, scriptpath, scpdircached);
+
+                // expand path prefix if given
+                // This allows the use of partial paths, where the actual data directory is supplied as an external parameter at runtime.
+                // This is useful where config files are shared by users that use different data-storage locations.
+                if (!pathPrefix.empty())
+                    ExpandPathPrefix(entry, pathPrefix);
+
+                filelist.push_back(entry);
+
                 n++;
             }
 
@@ -303,32 +334,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (n!=numFiles)
                     throw std::runtime_error (msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
-            /* 
-                do "..." expansion if SCP uses relative path names
-                "..." in the SCP means full path is the same as the SCP file
-                for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
-                and contains entry like 
-                    .../file1.feat
-                    .../file2.feat
-                    etc.
-                the features will be read from
-                    //aaa/bbb/ccc/file1.feat
-                    //aaa/bbb/ccc/file2.feat
-                    etc. 
-                This works well if you store the scp file with the features but 
-                do not want different scp files everytime you move or create new features
-            */
-            wstring scpdircached;
-            for (auto & entry : filelist)
-                ExpandDotDotDot(entry, scriptpath, scpdircached);
-
-            infilesmulti.push_back(filelist);
+            infilesmulti.push_back(move(filelist));
         }
 
         if (readerConfig.Exists("unigram"))
             unigrampath = readerConfig("unigram");
 
-        // load a unigram if needed (this is used for MMI training)
+        // load a unigram if needed (this is used for MMI training--this is currently not used in CNTK)
         msra::lm::CSymbolSet unigramsymbols;
         std::unique_ptr<msra::lm::CMGramLM> unigram;
         size_t silencewordid = SIZE_MAX;
@@ -346,7 +358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!unigram)
             fprintf (stderr, "trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion\n");
 
-        // currently assumes all mlfs will have same root name (key)
+        // currently assumes all MLFs will have same root name (key)
         set<wstring> restrictmlftokeys;     // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
         if (infilesmulti[0].size() <= 100)
         {
@@ -357,12 +369,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 restrictmlftokeys.insert (key);
             }
         }
+
         // get labels
 
         //if (readerConfig.Exists("statelist"))
         //    statelistpath = readerConfig("statelist");
 
-        double htktimetoframe = 100000.0;           // default is 10ms 
+        double htktimetoframe = 100000.0;           // default is 10ms   --TODO: make this a parameter
         //std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
         std::vector<std::map<std::wstring,std::vector<msra::asr::htkmlfentry>>> labelsmulti;
         //std::vector<std::wstring> pagepath;
@@ -374,17 +387,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             labelsmulti.push_back(labels);
         }
 
-
+        // instantiate the actual reader
         if (!_stricmp(readMethod.c_str(),"blockRandomize"))
         {
-            // construct all the parameters we don't need, but need to be passed to the constructor...
+            // construct all the parameters we don't need (not used in CNTK currently), but need to be passed to the constructor...
             std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
             std::unordered_map<std::string,size_t> modelsymmap;
             m_lattices = new msra::dbn::latticesource(latticetocs, modelsymmap);
 
             // now get the frame source. This has better randomization and doesn't create temp files
             m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, framemode);
-			m_frameSource->setverbosity(verbosity);
+            m_frameSource->setverbosity(verbosity);
             //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, framemode);
 
         }
@@ -432,7 +445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            RuntimeError("readMethod must be rollingWindow or blockRandomize");
+            RuntimeError("readMethod must be 'rollingWindow' or 'blockRandomize'");
         }
 
     }
@@ -1577,8 +1590,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    template<class ElemType>
-    void HTKMLFReader<ElemType>::ExpandDotDotDot(wstring & featPath, const wstring & scpPath, wstring & scpDirCached) 
+    // replace the string "..." in featPath by the directory portion of scpPath
+    // This way, SCP files can be located next to actual data and use path names relative to themselves.
+    static void ExpandDotDotDot(wstring & featPath, const wstring & scpPath, wstring & scpDirCached) 
     {
         wstring delim = L"/\\";
 
@@ -1598,6 +1612,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t pos = featPath.find(L"...");
         if (pos != featPath.npos)
             featPath = featPath.substr(0, pos) + scpDirCached + featPath.substr(pos + 3);
+    }
+
+    // inject a directory path prefix into the filename in an SCP entry
+    //  - if the SCP entry has the form 'id=path[b,e]' then it will be replaced by 'id=prefixpath[b,e]'.
+    //  - if the entry has the form 'id' then it will be replaced by 'id=prefixid'
+    // prefix is assumed to have a directory separator
+    static void ExpandPathPrefix(wstring & entry, const wstring & prefix)
+    {
+        const auto pos = entry.find('=');
+        if (pos != entry.npos)
+            entry.insert(entry.begin() + pos + 1, prefix.begin(), prefix.end());
+        else
+            entry = entry + L"=" + prefix + entry;
     }
 
     template class HTKMLFReader<float>;

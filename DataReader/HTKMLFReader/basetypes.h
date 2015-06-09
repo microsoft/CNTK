@@ -809,28 +809,26 @@ namespace msra { namespace files {
 // Note: Not suitable for pipes or typed input due to readahead (fixable if needed).
 // ----------------------------------------------------------------------------
 
-class textreader
-{
-    msra::basetypes::auto_file_ptr f;
-    std::vector<char> buf;  // read buffer (will only grow, never shrink)
-    int ch;                 // next character (we need to read ahead by one...)
-    char getch() { char prevch = (char) ch; ch = fgetc (f); return prevch; }
-public:
-    textreader (const std::wstring & path) : f (path.c_str(), "rb") { buf.reserve (10000); ch = fgetc (f); }
-    operator bool() const { return ch != EOF; } // true if still a line to read
-    std::string getline()                       // get and consume the next line
+    class textreader
     {
-        if (ch == EOF) throw std::logic_error ("textreader: attempted to read beyond EOF");
-        assert (buf.empty());
-        // get all line's characters --we recognize UNIX (LF), DOS (CRLF), and Mac (CR) convention
-        while (ch != EOF && ch != '\n' && ch != '\r') buf.push_back (getch());
-        if (ch != EOF && getch() == '\r' && ch == '\n') getch();    // consume EOLN char
-        std::string line (buf.begin(), buf.end());
-        buf.clear();
-        return line;
-    }
-    std::wstring wgetline() { return msra::strfun::utf16 (getline()); }
-};
+        msra::basetypes::auto_file_ptr f;
+        std::string buf;        // read buffer (will only grow, never shrink)
+        int ch;                 // next character (we need to read ahead by one...)
+        char getch() { char prevch = (char)ch; ch = fgetc(f); return prevch; }
+        void fillbuf()
+        {
+            if (ch == EOF) throw std::logic_error("textreader: attempted to read beyond EOF");
+            buf.clear();
+            // get all line's characters --we recognize UNIX (LF), DOS (CRLF), and Mac (CR) convention
+            while (ch != EOF && ch != '\n' && ch != '\r') buf.push_back(getch());
+            if (ch != EOF && getch() == '\r' && ch == '\n') getch();    // consume EOLN char
+        }
+    public:
+        textreader(const std::wstring & path) : f(path.c_str(), "rb") { buf.reserve(10000); ch = fgetc(f); }
+        operator bool() const { return ch != EOF; } // true if still a line to read
+        const std::string & getline() { fillbuf(); return buf; }            // get and consume the next line
+        std::wstring wgetline() { return msra::strfun::utf16(getline()); }  // wchar_t version
+    };
 
 };};
 

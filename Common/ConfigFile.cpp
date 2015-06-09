@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else // One or more config file paths specified in a "+"-separated list.
             {
-                const std::string filePaths = msra::strfun::utf8(str.substr(configDescriptor.length()));
+                const std::string filePaths = msra::strfun::utf8(str.substr(configDescriptor.length()));     // TODO: would be nice to be able to use variables here already, e.g. for pathnames
                 std::vector<std::string> filePathsVec = msra::strfun::split(filePaths, "+");
                 for (auto filePath : filePathsVec)
                 {

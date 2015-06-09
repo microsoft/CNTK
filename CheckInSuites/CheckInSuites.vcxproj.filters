@@ -519,5 +519,8 @@
     <None Include="runall.bat">
       <Filter>CheckInSuites</Filter>
     </None>
+    <None Include="..\ExampleSetups\ASR\TIMIT\lib\scp\TIMIT.train.scp.fbank.relpath">
+      <Filter>ExampleSetups\ASR\TIMIT\lib\scp</Filter>
+    </None>
   </ItemGroup>
 </Project>
