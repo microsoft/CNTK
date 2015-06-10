@@ -11,6 +11,11 @@
 #include <stdexcept>
 #include <stdint.h>
 
+#if WIN32
+#define ftell64 _ftelli64
+#else
+#define ftell64 ftell
+#endif
 
 // SetState for a particular value
 template <typename NumType, typename LabelType>
@@ -377,7 +382,7 @@ void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeat
 template <typename NumType, typename LabelType>
 int64_t UCIParser<NumType, LabelType>::GetFilePosition()
 {
-    int64_t position = _ftelli64(m_pFile);
+    int64_t position = ftell64(m_pFile);
     if (position == -1L)
         throw std::runtime_error("UCIParser::GetFilePosition - error retrieving file position in file");
     return position;
