@@ -548,7 +548,7 @@ public:
                     }
 
                     ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-                    std::vector<const ComputationNodePtr> childrenNodes;
+                    std::vector<ComputationNodePtr> childrenNodes;
                     childrenNodes.resize(numChildren);
                     for (int j = 0; j < numChildren; j++)
                         childrenNodes[j] = GetNodeFromName(childrenNames[j]);
@@ -1530,7 +1530,7 @@ public:
             return newNode;
         }
 
-        ComputationNodePtr RowStack(const std::vector<const ComputationNodePtr> inputs, const std::wstring nodeName = L"")
+        ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> inputs, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new RowStackNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(inputs);

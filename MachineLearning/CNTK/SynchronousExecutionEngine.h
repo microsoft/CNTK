@@ -393,7 +393,7 @@ public:
 
             if (cnNodeType == RowStackNode<ElemType>::TypeName()) //support variable length inputs
             {
-                std::vector<const ComputationNodePtr> inputNodes;
+                std::vector<ComputationNodePtr> inputNodes;
                 inputNodes.resize(inputs.size());
                 for (int i = 0; i < inputs.size(); i++)
                     inputNodes[i] = ComputationNodePtr(inputs[i]);
