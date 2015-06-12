@@ -574,7 +574,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
-        virtual void AttachInputs(const std::vector<const ComputationNodePtr>& inputs)
+        virtual void AttachInputs(const std::vector<ConstComputationNodePtr>& inputs)
         {
             unsigned int numInputs = inputs.size();
             m_children.resize(numInputs);

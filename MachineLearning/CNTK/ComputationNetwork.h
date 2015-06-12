@@ -41,6 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     protected:
         typedef ComputationNode<ElemType>* ComputationNodePtr;
+        typedef const ComputationNode<ElemType>* ConstComputationNodePtr;
 		typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
         typedef struct stRecurrentInfo{
             std::vector<ComputationNodePtr> m_recurrentNodes;
@@ -548,7 +549,7 @@ public:
                     }
 
                     ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-                    std::vector<const ComputationNodePtr> childrenNodes;
+                    std::vector<ConstComputationNodePtr> childrenNodes;
                     childrenNodes.resize(numChildren);
                     for (int j = 0; j < numChildren; j++)
                         childrenNodes[j] = GetNodeFromName(childrenNames[j]);
@@ -1530,7 +1531,7 @@ public:
             return newNode;
         }
 
-        ComputationNodePtr RowStack(const std::vector<const ComputationNodePtr> inputs, const std::wstring nodeName = L"")
+        ComputationNodePtr RowStack(const std::vector<ConstComputationNodePtr> inputs, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new RowStackNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(inputs);
