@@ -389,6 +389,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        if (sliceNumCols == 0)
+            LogicError("AssignRowStackValuesOf: sliceNumCols should > 0.");
+
+        size_t totalRows = 0;
+        size_t* startRowIndeces = new size_t[inputMatrices.size()];
+        startRowIndeces[0] = 0;
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const CPUMatrix<ElemType>& a = *inputMatrices[i];
+            if (a.IsEmpty())
+                LogicError("AssignRowStackValuesOf: input matrix (%d) is empty.", i);
+
+            if (a.GetNumCols() < sliceStartCol + sliceNumCols)
+                LogicError("AssignRowStackValuesOf: input matrix (%d) GetNumCols() < sliceStartCol + sliceNumCols.", i);
+
+            totalRows += a.GetNumRows();
+            if (i<inputMatrices.size()-1)
+                startRowIndeces[i + 1] = startRowIndeces[i] + a.GetNumRows();
+        }
+
+        Resize(totalRows, sliceNumCols);
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<sliceNumCols; j++)
+        {
+            for (int i = 0; i < inputMatrices.size(); i++)
+            {
+                memcpy(&us(startRowIndeces[i], j), &(*inputMatrices[i])(0, sliceStartCol+j), inputMatrices[i]->GetNumRows() * sizeof(ElemType));
+            }
+        }
+        
+        delete [] startRowIndeces;
+
+        return *this;
+    }  
+
     template<class ElemType>
     void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t position)
     {
