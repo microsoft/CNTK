@@ -393,7 +393,7 @@ public:
 
             if (cnNodeType == RowStackNode<ElemType>::TypeName()) //support variable length inputs
             {
-                std::vector<ConstComputationNodePtr> inputNodes;
+                std::vector<const ComputationNodePtr> inputNodes;
                 inputNodes.resize(inputs.size());
                 for (int i = 0; i < inputs.size(); i++)
                     inputNodes[i] = ComputationNodePtr(inputs[i]);
@@ -734,7 +734,6 @@ public:
 private:
     ComputationNetwork<ElemType>& m_net;
     typedef ComputationNode<ElemType>* ComputationNodePtr;
-    typedef const ComputationNode<ElemType>* ConstComputationNodePtr;
     void operator=(const SynchronousNodeEvaluator&);
 };
 
