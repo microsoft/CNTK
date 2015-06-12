@@ -119,6 +119,10 @@ cd $CNTK_ROOT
 
 if ! [[ -f $CONF_FILE ]]; then
     cp Demos/Simple/Simple.config $CONF_FILE || exit $?
+
+    # This chmod is necessary due to restrictive Cygwin interpretation of Windows permissions.
+    # Cygwin interprets Windows permissions as ----rwx---, which lacks read permissions for user.
+    chmod a+r $CONF_FILE || exit $?
 fi
 
 if [[ $QUIET_BUILD == 1 ]]; then
