@@ -365,6 +365,27 @@ __global__ void _addWithRowSliceValuesOf(ElemType * dest, ElemType * src, const 
 }
 
 template<class ElemType>
+__global__ void _assignRowStackValuesOf(ElemType * dest, ElemType ** srces, size_t* startRowIndeces, const LONG64 numSrces, const LONG64 N, const long destRows, const long destCols)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / destRows;  //dest is the full matrix, rowslice is taken from the src
+    long row = id - (col * destRows);
+
+    //can we replace the for loop with something better?
+    int srcId = 0;
+    for (; srcId < numSrces; srcId++)
+    {
+        if (startRowIndeces[srcId + 1]>row)
+            break;
+    }
+
+    dest[id] = srces[srcId][IDX2C(row - startRowIndeces[srcId], col, startRowIndeces[srcId+1] - startRowIndeces[srcId])];
+}
+
+template<class ElemType>
 __global__ void _assignRepeatOf(ElemType * dest, ElemType * src, const LONG64 N, const long srcRows, const long srcCols, const long destRows)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;

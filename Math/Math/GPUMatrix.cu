@@ -650,6 +650,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        if (sliceNumCols == 0)
+            LogicError("AssignRowStackValuesOf: sliceNumCols should > 0.");
+
+        size_t totalRows = 0;
+        size_t* startRowIndeces = new size_t[inputMatrices.size()+1];
+        ElemType ** bufferPointersInInputMatrices = new ElemType*[inputMatrices.size()];
+
+        startRowIndeces[0] = 0;       
+
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const GPUMatrix<ElemType>& a = *inputMatrices[i];
+            if (a.IsEmpty())
+                LogicError("AssignRowStackValuesOf: input matrix (%d) is empty.", i);
+
+            if (a.GetNumCols() < sliceStartCol + sliceNumCols)
+                LogicError("AssignRowStackValuesOf: input matrix (%d) GetNumCols() < sliceStartCol + sliceNumCols.", i);
+
+            totalRows += a.GetNumRows();
+            startRowIndeces[i + 1] = startRowIndeces[i] + a.GetNumRows();
+
+            bufferPointersInInputMatrices[i] = a.m_pArray + a.LocateColumn(sliceStartCol);
+        }
+
+        Resize(totalRows, sliceNumCols);
+
+        PrepareDevice();
+
+        ElemType** bufferPointersInGPU = NULL;
+        CUDA_CALL(cudaMalloc((void***)&bufferPointersInGPU, inputMatrices.size()*sizeof(ElemType*)));
+        CUDA_CALL(cudaMemcpy(bufferPointersInGPU, bufferPointersInInputMatrices, inputMatrices.size()*sizeof(ElemType*), cudaMemcpyHostToDevice));
+        delete[] bufferPointersInInputMatrices;
+
+        size_t* startRowIndecesInGPU = NULL;
+        CUDA_CALL(cudaMalloc((void**)&startRowIndecesInGPU, (1+inputMatrices.size())*sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(startRowIndecesInGPU, startRowIndeces, (1+inputMatrices.size())*sizeof(size_t), cudaMemcpyHostToDevice));
+        delete[] startRowIndeces;
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignRowStackValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, bufferPointersInGPU, startRowIndecesInGPU, (long) inputMatrices.size(), N, (long)GetNumRows(), (long)GetNumCols());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        CUDA_CALL(cudaFree(bufferPointersInGPU));
+        CUDA_CALL(cudaFree(startRowIndecesInGPU));
+
+        return *this;
+    }
+
     /// c = c - 1.0 for a specific position
     template<class ElemType>
     void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t position)

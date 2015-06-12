@@ -1477,6 +1477,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const Matrix<ElemType>& a = *inputMatrices[i];
+            DecideAndMoveToRightDevice(*this, a);
+
+            //WARNING: a and this must have same type
+            if (!(GetMatrixType() == a.GetMatrixType()))
+                NOT_IMPLEMENTED;
+        }
+
+        CurrentDataLocation curLocation = GetCurrentMatrixLocation();
+        if (curLocation == CurrentDataLocation::GPU || curLocation == CurrentDataLocation::BOTH)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //GPUDense;
+                std::vector<const GPUMatrix<ElemType>*> gpuInputMatrices;
+                gpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    gpuInputMatrices[i] = inputMatrices[i]->m_GPUMatrix;
+
+                m_GPUMatrix->AssignRowStackValuesOf(gpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else if (curLocation == CurrentDataLocation::CPU)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //CPUDense;
+                std::vector<const CPUMatrix<ElemType>*> cpuInputMatrices;
+                cpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    cpuInputMatrices[i] = inputMatrices[i]->m_CPUMatrix;
+
+                m_CPUMatrix->AssignRowStackValuesOf(cpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Matrices do not exist in either CPU or GPU.");
+        }
+
+        return *this;
+    } 
+
+
     template<class ElemType>
     Matrix<ElemType>&  Matrix<ElemType>::AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
     {
