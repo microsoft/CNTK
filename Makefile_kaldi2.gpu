@@ -24,6 +24,18 @@
 # You may need to do the following or something similar for all this to work
 # export LD_LIBRARY_PATH=/usr/local/acml5.3.0/gfortran64/lib:/usr/local/cuda/lib64:/usr/local/lib
 # export PATH=$PATH:/usr/local/bin:/usr/local/cuda/bin
+#
+# WARNING:
+# Since we now compile against Kaldi lattices, which depend on OpenFst, you
+# will have to re-compile Kaldi with OpenFst 1.4.1 (lower version of OpenFst
+# does not support c++11). You can do the following:
+# 1. In kaldi-trunk/tools/Makefile, uncomment # OPENFST_VERSION = 1.4.1, and
+#    re-install OpenFst using the makefile.
+# 2. In kaldi-trunk/src/, do ./configure --shared; make depend -j 8; make -j 8;
+#    and re-compile Kaldi.
+#
+# Besides, if you compile Kaldi with -O4 option instead of -g, it will be faster
+# in sequence training.
 
 CC = g++-4.8
 NVCC = nvcc
