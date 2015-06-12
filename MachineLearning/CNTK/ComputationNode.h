@@ -57,6 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef ComputationNode<ElemType>* ComputationNodePtr;
+        typedef const ComputationNode<ElemType>* ConstComputationNodePtr;
 		typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
         int     m_loopId;
         size_t  m_samplesInRecurrentStep; 
@@ -152,7 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("This operation does not support six inputs.");
         }
 
-        virtual void AttachInputs(const std::vector<const ComputationNodePtr>& /*inputs*/)
+        virtual void AttachInputs(const std::vector<ConstComputationNodePtr>& /*inputs*/)
         {
             throw std::logic_error("This operation does not support variable-length inputs.");
         }
@@ -919,6 +920,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> B; \
 protected:  \
         typedef ComputationNode<ElemType>* ComputationNodePtr;  \
+        typedef const ComputationNode<ElemType>* ConstComputationNodePtr;  \
 public: \
         using B::AttachInputs; using B::ChildrenNeedGradient; using B::ChildrenSize; using B::ClearGradientForChildren; \
         using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::CopyImageSizeFromInput; \
