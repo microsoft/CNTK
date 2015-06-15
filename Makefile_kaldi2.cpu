@@ -61,7 +61,7 @@ endif
 # Add KALDI (you need to add your Kaldi path into this file)
 include kaldi_vars.mk
 
-INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/cn -I $(MATHLIB_INCLUDE)  $(KALDI_INCLUDES)
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(MATHLIB_INCLUDE)  $(KALDI_INCLUDES)
 
 
 CFLAGS = -msse3 -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(KALDI_DEFINES) $(MATHLIB_DEFINE) -fopenmp -fpermissive -fPIC
