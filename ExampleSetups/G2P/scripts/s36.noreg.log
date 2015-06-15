@@ -32,8 +32,8 @@ for %i in (0, 1, 5) do q sub -J bm%is36noregrnds2sencoderh500c500decoderh500c500
 
 --------------------------- full train/test -----------------------------------
 # train on full data
-# reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2
-\\speechstore5\transient\kaishengy\bin\binluapr22\cn.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=\\speechstore5\transient\kaishengy\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 DeviceNumber=Auto
+# reprs36noregrnds2sencoderh500c500decoderh500c50mb100mpdlr01layers2
+\\speechstore5\transient\kaishengy\bin\binmay29\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=\\speechstore5\transient\kaishengy\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 DeviceNumber=0
 # run in local
 C:\dev\cntk5\x64\Release\CNTK.exe configFile=c:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+c:\dev\cntk5\ExampleSetups\G2P\setups\s2s.mpd.rnd.hiddenstate.2nets.500.100mb.2layers.config LSTM=[SGD=[numMBsToShowResult=100]] ExpDir=d:\temp\exp\lts\result\reprs36noregrnds2sencoderh500c500decoderh500c500mb100mpdlr01layers2 DeviceNumber=0
 
