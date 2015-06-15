@@ -164,7 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
 
-            size_t utt_t = (size_t)timeIdxInSeq / m_samplesInRecurrentStep;
+            size_t utt_t = (size_t)timeIdxInSeq;
             Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
             colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
 
@@ -189,21 +189,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(timeIdxInSeq >= 0);
             if ((timeIdxInSeq - delay) >= 0)
             {
-                Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-                Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
-
                 if (colExistsBeginNoLabels.GetNumElements() != 1)
                     LogicError("When computing delay node error propagation, a matrix saving whether a frame exists sentence_begin or no_labels has more than one element. This is usually a problem in data reader that feeds wrong dimension when setting a matrix mtExistsSentenceBeginOrNoLabels. This matrix should have one row. ");
                 if (colExistsBeginNoLabels.Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
                 {
-                    Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)inputGradientValues.GetDeviceId());
-                    colSegPastActivity.SetValue(colBegin);
-                    colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
-                    colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
-                    Matrix<ElemType>::MultiplyAndAdd(frm, false, colSegPastActivity, false, to);
+                    //Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)inputGradientValues.GetDeviceId());
+                    //colSegPastActivity.SetValue(colBegin);
+                    //colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+                    //colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
+                    //Matrix<ElemType>::MultiplyAndAdd(frm, false, colSegPastActivity, false, to);
+                    
+                    for (int i = 0; i < mNbr; i++)
+                    {
+                        if (colBegin(i,0) == SENTENCE_MIDDLE)
+                        {
+                            Matrix<ElemType> to1 = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr + i, 1);
+                            Matrix<ElemType> frm1= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
+
+                            to1 += frm1;
+                        }
+                    }
+
                 }
                 else
+                {
+                    Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
+                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr, mNbr);
+
                     to += frm;
+                }
             }
         }
 
@@ -228,7 +242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_pastActivity = Inputs(0)->FunctionValues();
             }
             
-            size_t utt_t = (size_t) timeIdxInSeq / m_samplesInRecurrentStep;
+            size_t utt_t = (size_t) timeIdxInSeq;
             Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
             colBegin = m_sentenceSeg.ColumnSlice(utt_t, 1);
             EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, m_existsSentenceBeginOrNoLabels.ColumnSlice(utt_t,1));
@@ -291,27 +305,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (iPastIndex < 0)
-                inp = pastActivity.ColumnSlice(d, mNbr);
-            else
-                inp = inputFunctionValues.ColumnSlice(d, mNbr);
-
             if (existsSentenceBeginorNoLabels.Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
             {
-                Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
-                Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
-                colSeg.Resize(mNbr, mNbr);
-                colSeg.SetValue(0);
-                colSegPastActivity.SetValue(colBegin);
-                colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
-                colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
-                colSeg.SetDiagonalValue(colSegPastActivity);
-                Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
+                //Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
+                //Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
+                //colSeg.Resize(mNbr, mNbr);
+                //colSeg.SetValue(0);
+                //colSegPastActivity.SetValue(colBegin);
+                //colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+                //colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
+                for (int i = 0; i < mNbr; i ++)
+                {
+                    out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i,1);
+                    if (iPastIndex < 0)
+                        inp = pastActivity.ColumnSlice(d+i, 1);
+                    else
+                        inp = inputFunctionValues.ColumnSlice(d+i, 1);
 
-                SetToInitStateValueForResetSeg(colBegin, mNbr, initStateValue, out);
+                    if (colBegin(i,0) == SENTENCE_BEGIN)
+                    {
+                        out.SetValue(initStateValue);
+                    }else
+                    {
+                        out.SetValue(inp);
+                    }
+                }
+                //colSeg.SetDiagonalValue(colSegPastActivity);
+                //Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
+
+                //SetToInitStateValueForResetSeg(colBegin, mNbr, initStateValue, out);
             }
             else
+            {
+                if (iPastIndex < 0)
+                    inp = pastActivity.ColumnSlice(d, mNbr);
+                else
+                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
+
+
                 out.SetValue(inp);
+            }
         }
 
 
