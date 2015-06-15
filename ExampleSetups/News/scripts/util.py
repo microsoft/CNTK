@@ -65,3 +65,28 @@ def convert2ascii(fn, fnout):
 				of.write('\n')
 
 	of.close()
+
+'''
+remove agency 
+util.removeagency('//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/news.ascii.txt', '//speechstore5/transient/kaishengy/data/newscomments/2015/03-23/news.ascii.noagency.txt')
+'''
+def removeagency(fn, fnout):
+	import codecs
+	of = open(fnout, 'wt')
+	with open (fn) as infile:
+		for line in infile:
+			line = line.strip()
+			agency_index = 0
+			if ') -' in line:
+				agency_index = line.find(') -')
+				agency_index += 4
+			if agency_index == 0 and ') ' in line:
+				agency_index = line.find(') ')
+				agency_index += 3
+
+			nline = line[agency_index:]
+
+			of.write(nline)
+			of.write('\n')
+
+	of.close()

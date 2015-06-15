@@ -61,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } RecurrentInfo;
 
     public:
-        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), m_sentenceSeg(deviceId), m_sentenceExistsBeginOrNoLabels(deviceId)
+        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), mSentenceBoundary(deviceId), mExistsBeginOrNoLabels(deviceId)
         {
             m_randomSeedOffset = 0;
             m_actMiniBSize = 0;
@@ -1773,7 +1773,7 @@ public:
                         (*nodeIter)->OperationName() == L"LSTM" ||
                         IsCriterionNode(*nodeIter))
                     {
-                        (*nodeIter)->ResetBound(m_sentenceSeg, m_sentenceExistsBeginOrNoLabels);
+                        (*nodeIter)->ResetBound(&mSentenceBoundary, &mExistsBeginOrNoLabels);
                     }
                 }
 
@@ -2967,8 +2967,14 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
 
             return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
         }
-        Matrix<ElemType> m_sentenceSeg;
-        Matrix<ElemType> m_sentenceExistsBeginOrNoLabels; 
+
+        /**
+        The below is used for sentence boundary information passed from reader. 
+        This information can be used to reset RNN state or disregard gradient proprogation such as those
+        used in reinforcement learning
+        */
+        Matrix<ElemType> mSentenceBoundary;  /// sentence boudary information. passed from reader
+        Matrix<ElemType> mExistsBeginOrNoLabels;  /// whether there is a sentence begining or no_label at a time. note that one time can include many sentences. 
 protected:
         std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode, std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap, const bool forwardCompute) 
         {
