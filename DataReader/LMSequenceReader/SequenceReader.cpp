@@ -61,7 +61,7 @@ template<class ElemType>
 typename IDataReader<ElemType>::LabelIdType SequenceReader<ElemType>::GetIdFromLabel(const std::string& labelValue, LabelInfo& labelInfo)
 {
     auto found = labelInfo.mapLabelToId.find(labelValue);
-    string unk = "<unk>";
+    string unk = this->mUnk;
     // not yet found, add to the map
     if (found == labelInfo.mapLabelToId.end())
     {
@@ -162,6 +162,7 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
             // loop through the labels for this entry
             while (label < spos.labelPos)  /// need to minus one since 
             {
+
                 // labelIn should be a category label 
                 LabelType labelValue = labelTemp[label++];
 
@@ -510,7 +511,6 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
                     }
                     m_labelInfo[index].idMax = (LabelIdType)(iMax+1);
 
-                    OrganizeClass();
 
                 }
                 m_labelInfo[index].mapName = labelPath;
@@ -571,6 +571,10 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
+
+    /// read unk sybol
+    mUnk = readerConfig("unk", "<unk>");
+
 }
 
 template<class ElemType>
@@ -646,10 +650,20 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*fla
     fin.close();
     class_size++;
  
+    if (idx4class.size() < nwords)
+    {
+        LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", idx4class.size(), nwords);
+    }
     std::vector<double> counts(idx4cnt.size());
     for (auto p : idx4cnt)
         counts[p.first] = (double)p.second;
     m = noiseSampler<long>(counts);
+
+    /// check if unk is the same used in vocabulary file
+    if (word4idx.find(mUnk.c_str()) == word4idx.end())
+    {
+        LogicError("SequenceReader::ReadClassInfo unk symbol %s is not in vocabulary file", mUnk.c_str());
+    }
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -1098,15 +1112,22 @@ void SequenceReader<ElemType>::GetClassInfo()
     for (size_t j = 0; j < nwords; j++) 
     {
         clsidx = idx4class[(int)j]; 
-        if (prvcls != clsidx)
+        if (prvcls != clsidx && clsidx > prvcls)
         {
             if (prvcls >= 0)
                 (*m_classInfoLocal)(1, prvcls) = (float)j;
             prvcls = clsidx;
             (*m_classInfoLocal)(0, prvcls) = (float)j;
         }
+        else if (prvcls > clsidx)
+        {
+            /// nwords is larger than the actual number of words
+            LogicError("LMSequenceReader::GetClassInfo probably the number of words specified is larger than the actual number of words. Check network builder and data reader. ");
+        }
     }
     (*m_classInfoLocal)(1, prvcls) = (float)nwords;
+
+//    (*m_classInfoLocal).Print();
 
     m_classInfoLocal->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
@@ -1273,28 +1294,6 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     return true;
 }
 
-template<class ElemType>
-void SequenceReader<ElemType>::OrganizeClass()
-{
-    //allocate auxiliary class variables (for faster search when normalizing probability at output layer)
-    int cl, i;
-    for (i=0; i<class_size; i++) {
-        class_cn.push_back(0); 
-    }
-
-    for (i=0; i<nwords; i++) {
-        cl=idx4class[i];
-        class_words[cl].push_back(i); 
-        class_cn[cl]++;
-    }
-
-    for (i=0; i<class_size; i++) {
-        if (class_cn[i] == 0) {
-            RuntimeError ("class is empty");
-        }
-    }
-}
-
 // GetLabelMapping - Gets the label mapping from integer index to label type 
 // returns - a map from numeric datatype to native label type 
 template<class ElemType>
@@ -1386,20 +1385,25 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
-    string mode = featureConfig("mode", "class");//class, softmax, nce
-
+    string mode = featureConfig("mode","class");//class, softmax, nce
     std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
+
     if (mode == "nce")
     {
         readerMode = ReaderMode::NCE;
+    
         this->noise_sample_size = featureConfig("noise_number", "0");
     }
     else if (mode == "softmax")
         readerMode = ReaderMode::Softmax;
     else if (mode == "class")
         readerMode = ReaderMode::Class;
-    else if (mode == "unnormalize")
-        readerMode = ReaderMode::Unnormalize;
+    else 
+        LogicError("unsupported format %s", mode.c_str()); 
+
+    /// read unk sybol
+    this->mUnk = readerConfig("unk", "<unk>");
+
     class_size = 0;
     m_featureDim = featureConfig("dim");
     for (int index = labelInfoMin; index < labelInfoMax; ++index)
@@ -1464,8 +1468,6 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
                     }
                     m_labelInfo[index].idMax = (LabelIdType)(iMax+1);
 
-                    OrganizeClass();
-
                 }
                 m_labelInfo[index].mapName = labelPath;
 
@@ -1527,6 +1529,12 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+}
+
+template<class ElemType>
+void BatchSequenceReader<ElemType>::SetRandomSeed(int)
+{
+    NOT_IMPLEMENTED;
 }
 
 template<class ElemType>
@@ -1838,6 +1846,14 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
+        size_t nT = actualmbsize / mToProcess.size();
+        mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
+        mtSentenceBegin.Resize(mToProcess.size(), nT);
+        mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
+        mtExistsSentenceBeginOrNoLabels.Resize(1, nT);
+        mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);
@@ -1849,17 +1865,25 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             features.Reset();
         }
 
+        size_t timeIdx = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
         {
             // vector of feature data goes into matrix column
             size_t idx = (size_t)m_featureData[j];
 
+            /// actual time position
+            timeIdx = (size_t)j / mToProcess.size();
+            size_t uttIdx = (size_t)fmod(j, mToProcess.size());
+
             features.SetValue(idx, j, (ElemType)1);
-            SetSentenceBegin(idx, j, actualmbsize);
+            SetSentenceBegin(idx, uttIdx, timeIdx);
+
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
-                
+//        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
+//        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
+
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
         {
@@ -1916,24 +1940,30 @@ void BatchSequenceReader<ElemType>::SetSentenceEnd(int wrd, int pos, int actualM
     }
 }
 
+/**
+timePos: the time position. for example, 100 actual minibatch with 10 streams,
+timePosition = [0,..,9] for each actual tiem
+*/
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int pos, int /*actualMbSize*/)
+void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int timePos)
 {
     // now get the labels
     LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     LabelIdType index = GetIdFromLabel(labelIn.beginSequence.c_str(), labelIn);
 
-    if (pos == 0) 
+    if (timePos == 0) 
     {
         if (wrd == (int)index)
+        {
             mSentenceBegin = true;
-        else
-            mSentenceBegin = false; 
+            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SENTENCE_BEGIN);
+            mtExistsSentenceBeginOrNoLabels.SetValue(0, timePos, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+        }
     }
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
 {
     sentenceEnd.resize(mToProcess.size());
     if (mSentenceBegin)
@@ -1999,10 +2029,11 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     else
         labels->Resize(1, actualmbsize, false);
 
+
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-    ElemType epsilon = (ElemType)1e-6; // avoid all zero, although this is almost impossible.
+
     if (labels->GetCurrentMatrixLocation() == CPU)
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
@@ -2030,32 +2061,40 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                 labels->SetValue(1, j, (ElemType)clsidx);
 
                 /// save the [begining ending_indx) of the class 
+                size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
+                size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
+                if (wrd < lft || lft > rgt || wrd >= rgt)
+                {
+                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
+                }
                 labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
                 labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
             }
-        }
-        else if (readerMode == ReaderMode::Softmax)
-        {
-            if (wrd == 0)
-                labels->SetValue(0, j, epsilon + (ElemType)wrd);
-        }
-        else if (readerMode == ReaderMode::Unnormalize)
-        {
-            labels->SetValue(0, j, -(ElemType)wrd);
-            if (wrd == 0)
-                labels->SetValue(0, j, - epsilon - (ElemType)wrd);
         }
     }
     else // GPU
     {
         RuntimeError("GetLabelOutput::should use CPU for labels ");
-
     }
     if (curDevId != CPUDEVICE)
     {
         labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
     }
 }
+
+template<class ElemType>
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+{
+    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
+    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
+    sentenceBegin.SetValue(mtSentenceBegin);
+    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
+
+    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, mtExistsSentenceBeginOrNoLabels.GetDeviceId(), true);
+    sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
+    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtExistsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
+}
+
 
 template class BatchSequenceReader<double>; 
 template class BatchSequenceReader<float>;

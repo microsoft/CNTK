@@ -36,7 +36,7 @@
 
 //version number to control how to read and write 
 #define CNTK_MODEL_VERSION_1 1
-#define CURRENT_CNTK_MODEL_VERSION 1
+#define CURRENT_CNTK_MODEL_VERSION 2
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -68,9 +68,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        vector<size_t> m_sentenceEnd;
+        Matrix<ElemType> * m_sentenceSeg; 
+        /// conditionally point to either a pointer to that provided by network, or point to 
+        /// an indiviaul sentence boundary info, which happens if delay > 1 is required for delay node
+        Matrix<ElemType> * m_existsSentenceBeginOrNoLabels;
+        Matrix<ElemType> mBoundaryInfo; /// individual sentence boundary information 
+        Matrix<ElemType> mExistSentenceBeginOrNoLabels; // individual the corresponding information 
     public:
-        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
+        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), mBoundaryInfo(deviceId), mExistSentenceBeginOrNoLabels(deviceId)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -115,10 +120,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             NOT_IMPLEMENTED;
         }
+
         virtual void Validate() = 0;
-        
-        virtual void Reset() {}
-        virtual void NotReset() {}
+        virtual bool UnitTest() { return true; }
 
         virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
@@ -187,6 +191,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool RequirePreCompute() const { return false;}
 
+        // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
+        virtual bool RequireBatchMode() const { return false; }
+
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
         {
             fstream << L"\n" + NodeName() + L"=" + OperationName();
@@ -213,10 +220,80 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gradientValues.Resize(numRows, numSamples); 
             }
         }
-        void ResetBound(size_t indexInBatch, size_t frameNum)
+
+        virtual void ResetBound(Matrix<ElemType> * seg, Matrix<ElemType> *existsSentenceBeginOrNoLabels)
         {
-            m_sentenceEnd[indexInBatch] = frameNum;
+            m_sentenceSeg = seg;
+            m_existsSentenceBeginOrNoLabels = existsSentenceBeginOrNoLabels;
         }
+
+        static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin, 
+            size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
+        {
+            Matrix<ElemType> colSeg(sentenceBegin.GetDeviceId());
+            colSeg.Resize(nStream, nStream);
+            size_t nStateRow = newprevstate.GetNumRows();
+
+            assert(nStream == sentenceBegin.GetNumRows());
+
+            /// only set state to init state value for segmentation = 0, and -1
+            /// e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0 
+
+            Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
+            colPos.SetValue(sentenceBegin); /// -1 0 1
+            colPos.InplaceTruncateBottom(SENTENCE_BEGIN);
+            Matrix<ElemType>::Scale((ElemType)-1.0, colPos);
+            colPos += SENTENCE_MIDDLE;
+            colSeg.SetDiagonalValue(colPos);
+            Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
+            ones.Resize(nStateRow, nStream);
+            ones.SetValue((ElemType)1);
+            /// add default state value if it is for reset
+            Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate);  /// += [0 initStateValue 0 ]
+        }
+
+        /**
+        reset to error signals to 0 for any elements without labele
+        */
+        void ResetForNoLabels(Matrix<ElemType>& toChange)
+        {
+            size_t nT = toChange.GetNumCols();
+            size_t nd = toChange.GetNumRows();
+            size_t nS = m_sentenceSeg.GetNumRows();
+            Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
+            Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
+
+            if (m_existsSentenceBeginOrNoLabels.GetNumRows() != 1)
+            {
+                LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should be a one row matrix or a vector. ");
+            }
+            if (m_existsSentenceBeginOrNoLabels.GetNumElements() != nT / nS)
+            {
+                LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should have one element for each time of all streams. Check feature reader. ");
+            }
+
+            colBegin.Resize(nS, nS);
+            colSeg.Resize(nS, 1);
+            newfunc.Resize(nd, nS);
+            for (int utt_t = 0; utt_t < nT; utt_t += nS)
+            {
+                size_t j = utt_t / nS;
+                if (m_existsSentenceBeginOrNoLabels.ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+                {
+                    colSeg.SetValue(m_sentenceSeg.ColumnSlice(j, 1)); // -1 0 1 
+                    colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
+                    colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
+                    colBegin.SetDiagonalValue(colSeg);
+
+                    /// this is the begining of this minibatch
+                    Matrix<ElemType>::Multiply(toChange.ColumnSlice(utt_t, nS), false, colBegin, false, newfunc);
+
+                    toChange.ColumnSlice(utt_t, nS).SetValue(newfunc);
+                }
+            }
+        }
+
         void SetLoopId(const int id)
         {
             m_loopId = id;
@@ -280,15 +357,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_indexInLoop;
         }
 
-        std::wstring GetName() const
-        {
-            return m_nodeName;
-        }
+		std::wstring GetName() const
+		{
+			return m_nodeName;
+		}
 
-        std::vector<ComputationNodePtr>	GetChildren() const
-        {
-            return m_children;
-        }
+		std::vector<ComputationNodePtr>	GetChildren() const
+		{
+			return m_children;
+		}
 
         bool isVisisted()
         {
@@ -307,7 +384,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
         {
             m_samplesInRecurrentStep = bsz;
-            m_sentenceEnd.resize(bsz);
+        }
+
+        size_t GetNbrSlicesInEachRecurrentIteration()
+        {
+            return m_samplesInRecurrentStep;
         }
 
         int64_t UpdateEvalTimeStamp()
@@ -590,38 +671,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        //  [1/13/2015 erw] add to enumerate all the edges 
-        void EnumerateArcs(std::unordered_set<ComputationNodePtr>& vistied, std::list<ComputationArc>& arcs)
-            //  enumerate arcs that can be reached starting from the current node's children
-            //  [in/out] visited record already visited nodes 
-        {
-            std::list<ComputationNodePtr>	tovisit;
+		//  [1/13/2015 erw] add to enumerate all the edges 
+		void EnumerateArcs(std::unordered_set<ComputationNodePtr>& vistied, std::list<ComputationArc>& arcs )
+			//  enumerate arcs that can be reached starting from the current node's children
+			//  [in/out] visited record already visited nodes 
+		{
+			std::list<ComputationNodePtr>	tovisit; 
 
-            if (vistied.find(this) == vistied.end()) // only do when this node has not been visited before
-            {
-                tovisit.push_back(this);
+			if (vistied.find(this) == vistied.end()) // only do when this node has not been visited before
+			{
+				tovisit.push_back(this);
 
-                while (!tovisit.empty())
-                {
-                    ComputationNodePtr curNode = tovisit.front();
-                    tovisit.pop_front();
+				while (!tovisit.empty())
+				{
+					ComputationNodePtr curNode = tovisit.front();
+					tovisit.pop_front();
 
-                    if (vistied.find(curNode) == vistied.end())
-                    {
-                        for (size_t i = 0; i < curNode->m_children.size(); i++)
-                        {
-                            arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));
+					if (vistied.find(curNode) == vistied.end())
+					{
+						for (size_t i = 0; i < curNode->m_children.size(); i++)
+						{
+							arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));	
 
-                            if (vistied.find(curNode->m_children[i]) == vistied.end()) // this children has not been visited before 
-                            {
-                                tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
-                            }
-                        }
-                        vistied.insert(curNode);
-                    }
-                }
-            }
-        }
+							if (vistied.find(curNode->m_children[i]) == vistied.end()) // this children has not been visited before 
+							{
+								tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
+							}
+						}
+						vistied.insert(curNode);
+					}
+				}
+			}
+		}
+		
 
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
         // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
@@ -727,6 +809,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             return nodes;
         }
+
+
 
         std::wstring CreateUniqNodeName() const
         {
@@ -891,6 +975,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
 
+        /// these are used to export hidden state activity
+        virtual bool GetHistory(Matrix<ElemType>& , bool )
+        {
+            return false;
+        }
+
+        virtual void SetHistory(const Matrix<ElemType>& )
+        {
+        }
+
+        /// these two are used to pass gradients from future minibatch
+        virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
+        virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
+
     protected:
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
@@ -927,14 +1025,15 @@ public: \
         using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
         using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
         using B::IsChildAnImage; using B::IsEqualTo; using B::IsFuncValueOlderThanInputs; using B::IsLeaf; using B::IsSmaller; \
-        using B::LoadFromFile; using B::MoveMatricesToDevice; using B::NeedGradient; using B::NodeName; using B::NotReset; \
+        using B::LoadFromFile; using B::MoveMatricesToDevice; using B::NeedGradient; using B::NodeName; \
         using B::OperationName; using B::PrintNodeValuesToFile; using B::PrintSelf; using B::PrintSelfBeforeValidation; \
-        using B::RequirePreCompute; using B::Reset; using B::ReshuffleNodes; using B::ReshuffleNodesForEvalWithRecurrentLoops; \
+        using B::RequirePreCompute; using B::ReshuffleNodes; using B::ReshuffleNodesForEvalWithRecurrentLoops; \
         using B::SaveToFile; using B::SetFunctionAndGradientSize; using B::SetInput; using B::Validate; \
 protected:  \
         using B::m_loopId; using B::m_samplesInRecurrentStep; \
         using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop; using B::m_sentenceEnd; \
+        using B::m_indexInLoop; using B::mBoundaryInfo; using B::mExistSentenceBeginOrNoLabels; \
+        using B::m_sentenceSeg; using B::m_existsSentenceBeginOrNoLabels; \
         using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
         using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
         using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter

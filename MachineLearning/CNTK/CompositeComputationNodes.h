@@ -20,6 +20,208 @@
 //composite nodes can save memory, computation, or both
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+
+    /**
+    parallel node to join two streams into one 
+    
+    join parallel children node, avoids any operations except putting outputs from children to corresponding columns
+    input(0) : [nDim0 X T]
+    input(1) : [nDim1 X T]
+    output   : [[nDim0 + nDim1] X T]
+    */
+    template<class ElemType>
+    class ParallelNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+    public:
+        ParallelNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        ParallelNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        ParallelNode(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new ParallelNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"Parallel"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 1)
+                throw std::invalid_argument("Parallel operation only takes two input.");
+            ComputationNodePtr child = Inputs(inputIndex);
+            size_t startidx = (inputIndex == 0) ? 0 : Inputs(0)->FunctionValues().GetNumRows();
+            size_t nrows = child->FunctionValues().GetNumRows();
+
+            if (child->GradientValues().GetNumRows() != child->FunctionValues().GetNumRows() || child->GradientValues().GetNumCols() != FunctionValues().GetNumCols())
+            {
+                child->GradientValues().Resize(child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                child->GradientValues().SetValue(0);
+            }
+
+            Matrix<ElemType> tmpMat(m_deviceId);
+            tmpMat.AssignRowSliceValuesOf(GradientValues(), startidx, nrows);
+
+            ComputeInputPartialS(tmpMat, child->GradientValues());
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
+        {
+            inputGradientValues += gradientValues;
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
+        {
+            size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
+            size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
+
+            if (cols0 != cols1)
+                LogicError("ParallelNode: column dimension mismatched!");
+
+            functionValues.Resize(rows0 + rows1, cols0);
+            functionValues.SetValue(0);
+
+            functionValues.AssignToRowSliceValuesOf(inputFunctionValues0, 0, rows0);
+            functionValues.AssignToRowSliceValuesOf(inputFunctionValues1, rows0, rows1);
+        }
+
+        /// input(0) : [nDim1 X T]
+        /// input(1) : [nDim2 X T]
+        /// output   : [[nDim1 + nDim2] X T]
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 2)
+                throw std::logic_error("Parallel operation requires two inputs.");
+
+            size_t rows1, cols1;
+            rows1 = Inputs(1)->FunctionValues().GetNumRows();
+            cols1 = Inputs(1)->FunctionValues().GetNumCols();
+
+            size_t rows0, cols0;
+            rows0 = Inputs(0)->FunctionValues().GetNumRows();
+            cols0 = Inputs(0)->FunctionValues().GetNumCols();
+
+            if (cols0 != cols1)
+                LogicError("ParallelNode: column dimension mismatched!");
+
+            size_t rows = rows0 + rows1;
+            size_t cols = cols0;
+            FunctionValues().Resize(rows, cols);
+
+            CopyImageSizeFromInput(0);
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
+        {
+            m_children.resize(2);
+            m_children[0] = c1;
+            m_children[1] = c2;
+        }
+
+    public:
+        virtual bool UnitTest() {
+            size_t nT = 3;
+            size_t nInput0 = 3;
+            size_t nInput1 = 3;
+
+            Matrix<ElemType> f0(m_deviceId), func(m_deviceId), f1(m_deviceId);
+
+            f0 = Inputs(0)->FunctionValues();
+            f1 = Inputs(1)->FunctionValues();
+            func = FunctionValues();
+
+            Inputs(0)->FunctionValues().Resize(nInput0, nT);
+            Inputs(0)->FunctionValues().SetValue(0);
+            Inputs(0)->FunctionValues()(0, 0) = 1;
+            Inputs(0)->FunctionValues()(0, 1) = 2;
+            Inputs(0)->FunctionValues()(0, 2) = 3;
+
+            Inputs(1)->FunctionValues().Resize(nInput1, nT);
+            Inputs(1)->FunctionValues().SetValue(0);
+            Inputs(1)->FunctionValues()(0, 0) = 4;
+            Inputs(1)->FunctionValues()(0, 1) = 5;
+            Inputs(1)->FunctionValues()(0, 2) = 6;
+            FunctionValues().Resize(nInput0 + nInput1, nT);
+
+            EvaluateThisNode();
+
+            /// check with expected values
+            if (!ISCLOSE(FunctionValues()(0, 0), 1, EPSILON) ||
+                !ISCLOSE(FunctionValues()(0, 1), 2, EPSILON) ||
+                !ISCLOSE(FunctionValues()(0, 2), 3, EPSILON) ||
+                !ISCLOSE(FunctionValues()(3, 0), 4, EPSILON) ||
+                !ISCLOSE(FunctionValues()(3, 1), 5, EPSILON) ||
+                !ISCLOSE(FunctionValues()(3, 2), 6, EPSILON))
+                return false;
+            if (FunctionValues().GetDeviceId() != m_deviceId)
+                FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+            GradientValues().Resize(nInput0 + nInput1, nT);
+            GradientValues().SetValue(0);
+            Inputs(0)->GradientValues().Resize(nInput0, nT);
+            Inputs(1)->GradientValues().Resize(nInput1, nT);
+            Inputs(0)->GradientValues().SetValue(0);
+            Inputs(1)->GradientValues().SetValue(0);
+            GradientValues()(0, 0) = 1;
+            GradientValues()(0, 1) = 2;
+            GradientValues()(0, 2) = 3;
+            GradientValues()(3, 0) = 4;
+            GradientValues()(3, 1) = 5;
+            GradientValues()(3, 2) = 6;
+
+            ComputeInputPartial(0);
+            ComputeInputPartial(1);
+
+            /// check with expected values
+            if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 1, EPSILON)
+                || !ISCLOSE(Inputs(0)->GradientValues()(0, 1), 2, EPSILON)
+                || !ISCLOSE(Inputs(0)->GradientValues()(0, 2), 3, EPSILON)
+                || !ISCLOSE(Inputs(1)->GradientValues()(0, 0), 4, EPSILON)
+                || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 5, EPSILON)
+                || !ISCLOSE(Inputs(1)->GradientValues()(0, 2), 6, EPSILON))
+                return false;
+
+            if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+            if (Inputs(1)->GradientValues().GetDeviceId() != m_deviceId)
+                Inputs(1)->GradientValues().TransferFromDeviceToDevice(Inputs(1)->GradientValues().GetDeviceId(), m_deviceId, true);
+
+            return true;
+        }
+
+    };
+
+    template class ParallelNode<float>;
+    template class ParallelNode<double>;
+
     template<class ElemType>
     class PreComputedNode : public ComputationNode<ElemType>  //this is a noninstantiable virtual class, all nodes require precomputation should derive from it
     {
@@ -696,11 +898,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
     It differs from PreComputeNode in that precompute done is done before the entire corpus.
     This is done before forward computation of all nodes. 
-    This node is similar to the PreComputeNode, but is an abstract of it.
     */
     template<class ElemType>
     class BatchModeNode : public ComputationNode<ElemType>
-        // all nodes require precomputation should derive from it
     {
         UsingComputationNodeMembers;
 

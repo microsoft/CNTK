@@ -1,0 +1,15 @@
+# this reproduces uni-directional model performances
+
+# from so far best, increase projection layer dimension, use more forward observations
+# reps23mb100fw6
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\lstm.2streams.lw7.conditional.mb100.fw6.config DeviceNumber=Auto LSTM=[SGD=[learningRatesPerSample=0.05]] ExpDir=\\speechstore5\transient\kaishengy\exp\lts\result\reps23mb100fw6
+for %i in (0,1) do q sub -J testbm%is23mb100fw6conditionallstmp400n400lr005 -x \\speechstore5\userdata\kaishengy\exp\lts\exes\job.s23mb100.fw6.bat 34 \\speechstore5\transient\kaishengy\exp\lts\result\reps23mb100fw6 %i
+
+
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=\\speechstore5\userdata\kaishengy\exp\lts\setups\global.lstm.config+\\speechstore5\userdata\kaishengy\exp\lts\setups\lstm.2streams.lw7.conditional.mb100.fw6.config DeviceNumber=-1 command=LSTMTest Iter=8 MdlDir=\\speechstore5\transient\kaishengy\exp\lts\result\reps23mb100fw6 bw=1 LSTMTest=[beamWidth=$bw$] LSTMTest=[modelPath=$MdlDir$\cntkdebug.dnn.$Iter$] ExpDir=$MdlDir$\test_bw$bw$_iter$Iter$
+
+for %i in (0,1) do q sub -J s23bw%i -x \\speechstore5\userdata\kaishengy\exp\lts\exes\jobs.s23.bat 35 \\speechstore5\transient\kaishengy\exp\lts\result\reps23mb100fw6 %i
+
+# small scale
+\\speechstore5\transient\kaishengy\bin\binluapr20\cn.exe configFile=C:\dev\cntk5\ExampleSetups\G2P\setups\global.lstm.config+C:\dev\cntk5\ExampleSetups\G2P\setups\lstm.2streams.lw7.conditional.mb100.fw6.config DeviceNumber=-1 LSTM=[SGD=[learningRatesPerSample=0.05]] ExpDir=d:\exp\lts\result\reps23mb100fw6conditionallstmp400n400lr005 LSTM=[SGD=[gradientcheck=true]] LSTM=[SGD=[unittest=true]]
+

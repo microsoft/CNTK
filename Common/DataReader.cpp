@@ -34,7 +34,11 @@ void DataReader<ElemType>::Init(const ConfigParameters& /*config*/)
 template<class ElemType>
 void DataReader<ElemType>::Destroy()
 {
-    m_dataReader->Destroy();
+    /// newer code that explicitly place multiple streams for inputs
+    foreach_index(i, m_ioNames) // inputNames should map to node names
+    {
+        m_dataReader[m_ioNames[i]]->Destroy();
+    }
 }
 
 // DataReader Constructor
@@ -42,17 +46,40 @@ void DataReader<ElemType>::Destroy()
 template<class ElemType>
 void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
 {
-    typedef void (*GetReaderProc)(IDataReader<ElemType>** preader);
+    typedef void(*GetReaderProc)(IDataReader<ElemType>** preader);
 
     // initialize just in case
-    m_dataReader = NULL;
+    m_dataReader.clear();
 
-    // get the name for the reader we want to use, default to UCIFastReader
     // create a variable of each type just to call the proper templated version
     ElemType elemType = ElemType();
-    GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName(elemType));
-    //assert(getReaderProc != NULL);
-    getReaderProc(&m_dataReader);
+
+    ConfigArray ioNames = config("readers", "");
+    if (ioNames.size() > 0)
+    {
+        /// newer code that explicitly place multiple streams for inputs
+        foreach_index(i, ioNames) // inputNames should map to node names
+        {
+            ConfigParameters thisIO = config(ioNames[i]);
+            // get the name for the reader we want to use, default to UCIFastReader
+            GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(thisIO("readerType", "UCIFastReader"), GetReaderName(elemType));
+            //assert(getReaderProc != NULL);
+            m_configure[ioNames[i]] = thisIO;
+            m_ioNames.push_back(ioNames[i]);
+            getReaderProc(&m_dataReader[ioNames[i]]);
+        }
+    }
+    else
+    {
+        wstring ioName = L"ioName";
+        /// backward support to use only one type of data reader
+        // get the name for the reader we want to use, default to UCIFastReader
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config("readerType", "UCIFastReader"), GetReaderName(elemType));
+        //assert(getReaderProc != NULL);
+        m_configure[ioName] = config;
+        m_ioNames.push_back(ioName);
+        getReaderProc(&m_dataReader[ioName]);
+    }
 }
 
 // DataReader Constructor
@@ -62,9 +89,12 @@ DataReader<ElemType>::DataReader(const ConfigParameters& config)
 {
     GetDataReader(config);
     // now pass that to concurrent reader so we can read ahead
-    //m_dataReader = new ConcurrentReader<ElemType>(m_dataReader);
+    //m_DataReader = new ConcurrentReader<ElemType>(m_DataReader);
     // NOW we can init
-    m_dataReader->Init(config);
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        m_dataReader[m_ioNames[i]]->Init(m_configure[m_ioNames[i]]);
+    }
 }
 
 
@@ -73,11 +103,10 @@ template<class ElemType>
 DataReader<ElemType>::~DataReader()
 {
     // free up resources
-    if (m_dataReader != NULL)
-    {
-        m_dataReader->Destroy();
-        m_dataReader = NULL;
-    }
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReader[m_ioNames[i]]->Destroy(); 
+
+    m_dataReader.clear(); 
 }
 
 //StartMinibatchLoop - Startup a minibatch loop 
@@ -87,7 +116,8 @@ DataReader<ElemType>::~DataReader()
 template<class ElemType>
 void DataReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
-    m_dataReader->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReader[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)
@@ -97,31 +127,76 @@ void DataReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
 template<class ElemType>
 bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    return m_dataReader->GetMinibatch(matrices);
+    bool bRet = true;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch(matrices);
+    return bRet;
 }
 
 template<class ElemType>
 size_t DataReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
-    return m_dataReader->NumberSlicesInEachRecurrentIter();
+    size_t nNbr = 0; 
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        IDataReader<ElemType> * ptr = m_dataReader[m_ioNames[i]];
+        if (nNbr == 0)
+            nNbr = ptr->NumberSlicesInEachRecurrentIter();
+        if (nNbr != ptr->NumberSlicesInEachRecurrentIter())
+            LogicError("NumberSlicesInEachRecurrentIter: number of slices in each minibatch not consistent for these streams");
+    }
+    return nNbr;
+}
+
+template<class ElemType>
+void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReader[m_ioNames[i]]->InitProposals(matrices);
+}
+
+template<class ElemType>
+int DataReader<ElemType>::GetSentenceEndIdFromOutputLabel()
+{
+    NOT_IMPLEMENTED;
+}
+
+template<class ElemType>
+bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+{
+    bool bRet = true;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        bRet &= m_dataReader[m_ioNames[i]]->GetProposalObs(matrices, tidx, history);
+    return bRet;
 }
 
 template<class ElemType>
 void DataReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz)
 {
-    m_dataReader->SetNbrSlicesEachRecurrentIter(sz);
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReader[m_ioNames[i]]->SetNbrSlicesEachRecurrentIter(sz);
 }
+
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd)
+void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
 {
-    m_dataReader->SetSentenceEndInBatch(sentenceEnd);
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, sentenceExistsBeginOrNoLabels);
 }
+
+template<class ElemType>
+void DataReader<ElemType>::SetRandomSeed(int seed)
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReader[m_ioNames[i]]->SetRandomSeed(seed);
+}
+
 // GetLabelMapping - Gets the label mapping from integer index to label type 
 // returns - a map from numeric datatype to native label type 
 template<class ElemType>
-const std::map<typename DataReader<ElemType>::LabelIdType, typename DataReader<ElemType>::LabelType>& DataReader<ElemType>::GetLabelMapping(const std::wstring& sectionName)
+const std::map<typename DataReader<ElemType>::LabelIdType, typename DataReader<ElemType>::LabelType>& DataReader<ElemType>::GetLabelMapping(const std::wstring& )
 {
-    return m_dataReader->GetLabelMapping(sectionName);
+    NOT_IMPLEMENTED;
 }
 
 // SetLabelMapping - Sets the label mapping from integer index to label 
@@ -130,7 +205,8 @@ const std::map<typename DataReader<ElemType>::LabelIdType, typename DataReader<E
 template<class ElemType>
 void DataReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping)
 {
-    m_dataReader->SetLabelMapping(sectionName, labelMapping);
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReader[m_ioNames[i]]->SetLabelMapping(sectionName, labelMapping);
 }
 
 // GetData - Gets metadata from the specified section (into CPU memory) 
@@ -144,17 +220,23 @@ void DataReader<ElemType>::SetLabelMapping(const std::wstring& sectionName, cons
 template<class ElemType>
 bool DataReader<ElemType>::GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart)
 {
-    return m_dataReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
+    bool bRet = true; 
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        bRet &= m_dataReader[m_ioNames[i]]->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
+    return bRet;
 }
 
 template<class ElemType>
 bool DataReader<ElemType>::DataEnd(EndDataType endDataType)
 {
-    return m_dataReader->DataEnd(endDataType); 
+    bool bRet = true;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        bRet &= m_dataReader[m_ioNames[i]]->DataEnd(endDataType);
+    return bRet;
 }
 
 //The explicit instantiation
-template class DataReader<double>; 
+template class DataReader<double>;
 template class DataReader<float>;
 
 }}}
