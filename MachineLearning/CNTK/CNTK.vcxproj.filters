@@ -151,6 +151,12 @@
     <ClInclude Include="InputAndParamNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="DecoderNode.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiNetworksSGD.h">
+      <Filter>Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

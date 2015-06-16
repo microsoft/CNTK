@@ -16,6 +16,160 @@ using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
 template<class ElemType>
+void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
+    size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
+{
+    Matrix<ElemType> colSeg(sentenceBegin.GetDeviceId());
+    colSeg.Resize(nStream, nStream);
+    size_t nStateRow = newprevstate.GetNumRows();
+
+    assert(nStream == sentenceBegin.GetNumRows());
+
+    /// only set state to init state value for segmentation = 0, and -1
+    /// e.g., -1 0 1 -> 0 0 1 -> 0 0 -1 -> 1 1 0 
+
+    Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
+    colPos.SetValue(sentenceBegin); /// -1 0 1
+    colPos.InplaceTruncateBottom(SENTENCE_BEGIN);
+    Matrix<ElemType>::Scale((ElemType)-1.0, colPos); 
+    colPos += SENTENCE_MIDDLE;
+    colSeg.SetDiagonalValue(colPos);  
+    Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
+    ones.Resize(nStateRow, nStream);
+    ones.SetValue((ElemType)1);
+    /// add default state value if it is for reset
+    Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate);  /// += [0 initStateValue 0 ]
+}
+
+template<class ElemType>
+void rnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& colBegin, const Matrix<ElemType>& needToCompute)
+{
+    size_t ncol = functionValues.GetNumCols();
+    size_t ntime = ncol / mNbr;
+    Matrix<ElemType> out = functionValues.ColumnSlice(0, mNbr);
+    Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
+
+    for (size_t d = 0; d < ntime; d++)
+    {
+        if (d == 0)
+            inp = pastActivity.ColumnSlice(d, mNbr);
+        else
+            inp = inputFunctionValues.ColumnSlice(d, mNbr);
+
+        if (needToCompute.ColumnSlice(d, 1).Get00Element() == 1)
+        {
+            Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
+            Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
+            colSeg.Resize(mNbr, mNbr);
+            colSeg.SetValue(0);
+            colSegPastActivity.SetValue(colBegin);
+            colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colSeg.SetDiagonalValue(colSegPastActivity);
+            Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
+            ElemType initStateValue = (ElemType) 0.1;
+            SetToInitStateValueForResetSeg<ElemType>(colBegin, mNbr, initStateValue, out);
+        }
+    }
+}
+
+template<class ElemType>
+void oldRnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matrix<ElemType>& pastActivity, Matrix<ElemType>& inputFunctionValues)
+{
+    size_t ncol = functionValues.GetNumCols();
+    size_t ntime = ncol / mNbr;
+    for (size_t timeIdxInSeq = 0; timeIdxInSeq < ntime; timeIdxInSeq++)
+    {
+        for (size_t i = 0; i < mNbr; i++)
+        {
+            bool reset = false;
+
+            if (timeIdxInSeq == 0)
+            {
+                reset = true;
+            }
+            oldRNNEvaluateThisNodeSRP<ElemType>(timeIdxInSeq, 1, reset, (ElemType) 0.1, functionValues, pastActivity, inputFunctionValues, i, mNbr);
+        }
+    }
+}
+
+template<class ElemType>
+void oldRNNEvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t indexInBatch, const size_t mNbr)
+{
+    ASSERT(delay > 0);
+
+    if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
+        functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
+        functionValues.Resize(inputFunctionValues.GetNumRows(),
+        inputFunctionValues.GetNumCols());
+
+    int iPastIndex = (int)((int) timeIdxInSeq - (int)delay) * (int)mNbr;
+    int d = iPastIndex;
+    if (d < 0)
+        d = (int)functionValues.Mod((float)iPastIndex, (float)pastActivity.GetNumCols());
+    /// this can point to the past activity of the previous mninibatch
+
+    Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + indexInBatch, 1);
+    Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
+
+    if (reset)
+        out.SetValue(default_activity);
+    else
+    {
+        if (iPastIndex < 0)
+            inp = pastActivity.ColumnSlice(d + indexInBatch, 1);
+        else
+            inp = inputFunctionValues.ColumnSlice(d + indexInBatch, 1);
+        out.SetValue(inp);
+    }
+}
+
+/**
+The new way of resetting RNN state. 
+*/
+template<class ElemType>
+void TestRnnEvaluateThisNodeSRP(size_t nRow = 100, size_t nCol = 1000, size_t mNbr = 10, DEVICEID_TYPE deviceID = 0)
+{
+    Matrix<ElemType> functionValues(deviceID);
+    Matrix<ElemType> colBegin(deviceID);
+    Matrix<ElemType> pastActivity(deviceID);
+    Matrix<ElemType> inputFunctionValues(deviceID);
+    Matrix<ElemType> needToCompute(deviceID);
+
+    functionValues.Resize(nRow, nCol);
+    colBegin.Resize(mNbr, 1);
+    pastActivity.Resize(nRow, nCol);
+    inputFunctionValues.Resize(nRow, nCol);
+    needToCompute.Resize(1, nCol / mNbr);
+    needToCompute.SetValue(0);
+    needToCompute.ColumnSlice(0, 1).SetValue(1);
+    auto t_start = clock();
+    rnnEvaluateThisNodeSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues, colBegin, needToCompute);
+    auto t_end = clock();
+    std::cout << "testRnnEvaluateThisNodeSRP: " << 1.0*(t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
+}
+
+/**
+The old way of resetting RNN state, which used if statement. Also only supports up to two sentences within a minibatch
+*/
+template<class ElemType>
+void TestOldRnnEvaluateThisNodeSRP(size_t nRow = 100, size_t nCol = 1000, size_t mNbr = 10, DEVICEID_TYPE deviceID = 0)
+{
+    Matrix<ElemType> functionValues(deviceID);
+    Matrix<ElemType> colBegin(deviceID);
+    Matrix<ElemType> pastActivity(deviceID);
+    Matrix<ElemType> inputFunctionValues(deviceID);
+
+    functionValues.Resize(nRow, nCol);
+    colBegin.Resize(mNbr, 1);
+    pastActivity.Resize(nRow, nCol);
+    inputFunctionValues.Resize(nRow, nCol);
+    auto t_start = clock();
+    oldRnnEvaluateThisNodeSRP<ElemType>(functionValues, mNbr, pastActivity, inputFunctionValues);
+    auto t_end = clock();
+    std::cout << "TestOldRnnEvaluateThisNodeSRP: " << 1.0*(t_end - t_start) / CLOCKS_PER_SEC << " seconds" << endl;
+}
+
+template<class ElemType>
 void randomInitializeCPUMatrix(CPUMatrix<ElemType> &M, float min=-10, float max=10)
 {
     foreach_coord(i,j,M)
@@ -285,6 +439,10 @@ void MandSTest(int count, int devId)
 int wmain()
 {
     ColumnSliceMultAndAddTest<float>(2048, 2048, 256, 0);
+
+    TestRnnEvaluateThisNodeSRP<float>();
+
+    TestOldRnnEvaluateThisNodeSRP<float>();
 
     //MandSTest<float>(100, 2);
 

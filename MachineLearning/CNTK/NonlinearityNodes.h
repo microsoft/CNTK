@@ -307,6 +307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SigmoidNode<float>; 
     template class SigmoidNode<double>;
 
+
     template<class ElemType>
     class TanhNode : public ComputationNode<ElemType>
     {
@@ -446,6 +447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TanhNode<float>; 
     template class TanhNode<double>;
 
+
     template<class ElemType>
     class LogNode : public ComputationNode<ElemType>
     {
@@ -583,6 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LogNode<float>;
     template class LogNode<double>;
+
 
 
     template<class ElemType>
@@ -1148,6 +1151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LogSoftmaxNode<float>;
     template class LogSoftmaxNode<double>;
+
 
     //calculates: the log likelihood of a feature given GMM parameters
     template<class ElemType>

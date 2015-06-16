@@ -228,7 +228,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
             }
-
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
@@ -892,11 +891,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         NCEEvalMode &EvalMode(){ return m_evalMode; }
 
-        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", NCEEvalMode xm_evalMode = NCEEvalMode::None)
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_evalMode;
+        }
+
+        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+            fstream >> m_evalMode;
+        }
+
+        void SetEvalMode(NCEEvalMode& xevMode)
+        {
+            m_evalMode = xevMode;
+        }
+
+        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
         {
-                m_evalMode = xm_evalMode;
                 m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
                 LoadFromFile(fstream, modelVersion, deviceId);
             }
@@ -943,17 +959,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            int positive = 0, negative = 0;
-            if (Inputs(0)->FunctionValues().GetNumRows() == 1)
-            {
-                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
-                if (Inputs(0)->FunctionValues()(0, i) > 0)
-                    positive++;
-                else if (Inputs(0)->FunctionValues()(0, i) < 0)
-                    negative++;
-                assert(positive * negative == 0);
-            }
-            if (m_evalMode == NCEEvalMode::Softmax || (Inputs(0)->FunctionValues().GetNumRows() == 1 && positive > 0))
+            if (m_evalMode == NCEEvalMode::Softmax || Inputs(0)->FunctionValues().GetNumRows() == 1)
             {
                 // evaluation uses softmax
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
@@ -967,7 +973,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
                     FunctionValues()(0, 0) -= m_logSoftmax(i, (size_t)Inputs(0)->FunctionValues()(0, i));
             }
-            else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->FunctionValues().GetNumRows() == 1 && negative > 0))
+            else if (m_evalMode == NCEEvalMode::Unnormalized)
             {
                 FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
             }
@@ -1137,11 +1143,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 /// compute prb - 1 and prb
                 Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
-                assert(lbl_t.GetDeviceId() == CPUDEVICE);
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
                 size_t nbr_wrd = rgt_bnd - lft_bnd; // number of words in the class
+                if (nbr_wrd == 0)
+                {
+                    continue;
+                }
 
                 Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
 
@@ -1173,7 +1182,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 sz += nbr_wrd;
             }
-
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
@@ -1215,6 +1223,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);
                     size_t nbr_wrd = rgt_bnd - lft_bnd;// number of words in the class
 
+                    if (nbr_wrd == 0)
+                    {
+                        if (y_t == 0)
+                            /// initialization of labels is usually zero, this case corresponds to no label is assigned at that time
+                            continue; /// skip this time, because there is no label
+                        else
+                            LogicError("ClassbasedCrossEntropyWithSoftmax::ComputeSoftMaxPartial label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
+                    }
+
                     Matrix<ElemType> softMax = m_softMax.ColumnSlice(sz, nbr_wrd);
 
                     ComputeCEPartialToSoftmaxInputs(softMax, GradientValues(), y_t - lft_bnd);
@@ -1230,6 +1247,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
+            if (Inputs(0)->FunctionValues().GetDeviceId() != CPUDEVICE)
+            {
+                LogicError("ClassBasedCrossEntropyWithSoftmax: evaluatethisnode. the label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
+            }
+
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(),
                 Inputs(3)->FunctionValues(), m_logSoftmax, m_softMax, m_clsLogSoftmax, m_clsSoftmax, m_totalNbrWords);
             m_needRecomputeGradientToSoftmaxInput = true;
@@ -1280,6 +1302,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t rgt_bnd = (size_t)lblInfo(3, 0);
                 size_t nbr_wrd = rgt_bnd - lft_bnd;
 
+                if (nbr_wrd == 0)
+                {
+                    if (y_t == 0)
+                        /// initialization of labels is usually zero, this case corresponds to no label is assigned at that time
+                        /// skip this time
+                        continue;
+                    else
+                        LogicError("ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
+                }
+
                 /// e.g., 200 x 148
                 Matrix<ElemType> weightForClass = input_weight.ColumnSlice(lft_bnd, nbr_wrd);
 
@@ -1298,12 +1330,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 softMax_t.InplaceExp();  /// 1 x 148
 
                 /// add the word log posterior probability
+                if (y_t < lft_bnd)
+                    LogicError("ClassBasedCrossEntropyWithSoftmax::EvaluateThisNodeS : the word index is smaller than its left bound of its class. This could happen because of reader issues. ");
+
                 size_t idx_in_class = y_t - lft_bnd;
                 Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
 
                 /// add the class log posterior probability
+                try{
                 Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
-
+                }
+                catch (...)
+                {
+                    LogicError("EvaluateThisNodeS for ClassBasedCrossEntropyWithSoftmaxNode : number of classes is smaller than the dimension to read. Check network builder such as nbrClass and vocabulary file with class index to see if the number of classes and the maximum class index match. The right number should be number of classes == maximum class index number + 1\n");
+                }
                 sz += nbr_wrd;
             }
 

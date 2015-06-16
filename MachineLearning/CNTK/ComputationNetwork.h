@@ -31,6 +31,7 @@
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
+#include "DecoderNode.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
@@ -60,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } RecurrentInfo;
 
     public:
-        ComputationNetwork(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX) : m_deviceId(deviceId)
+        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), mSentenceBoundary(deviceId), mExistsBeginOrNoLabels(deviceId)
         {
             m_randomSeedOffset = 0;
             m_actMiniBSize = 0;
@@ -501,7 +502,8 @@ public:
             return actualMBSize;
         }
 
-        virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary)
+        virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary, 
+            const bool bAllowNoCriterionNode = false)
         {
             ClearNet();
 
@@ -642,7 +644,8 @@ public:
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
             
 
-            ValidateNetwork();  //some internal values in the nodes are computed during validation
+            ValidateNetwork(false, bAllowNoCriterionNode);  //some internal values in the nodes are computed during validation
+
         }
 
 #pragma region Network Modification
@@ -970,6 +973,8 @@ public:
                 newNode = new SumElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ScaleNode<ElemType>::TypeName())
                 newNode = new ScaleNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == TransposeNode<ElemType>::TypeName())
+                newNode = new TransposeNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TimesNode<ElemType>::TypeName())
                 newNode = new TimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ElementTimesNode<ElemType>::TypeName())
@@ -994,6 +999,8 @@ public:
                 newNode = new NoiseContrastiveEstimationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CRFNode<ElemType>::TypeName())
                 newNode = new CRFNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == LSTMNode<ElemType>::TypeName())
+                newNode = new LSTMNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
                 newNode = new CrossEntropyNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
@@ -1022,10 +1029,14 @@ public:
                 newNode = new RowStackNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
+                newNode = new SequenceDecoderNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
 			else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TimeReverseNode<ElemType>::TypeName())
                 newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == ParallelNode<ElemType>::TypeName())
+                newNode = new ParallelNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1139,6 +1150,8 @@ public:
                 newNode = new SumElementsNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ScaleNode<ElemType>::TypeName())
                 newNode = new ScaleNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == TransposeNode<ElemType>::TypeName())
+                newNode = new TransposeNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == TimesNode<ElemType>::TypeName())
                 newNode = new TimesNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ElementTimesNode<ElemType>::TypeName())
@@ -1163,6 +1176,8 @@ public:
                 newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CRFNode<ElemType>::TypeName())
                 newNode = new CRFNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == LSTMNode<ElemType>::TypeName())
+                newNode = new LSTMNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
                 newNode = new MatrixL1RegNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
@@ -1185,10 +1200,14 @@ public:
                 newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
+                newNode = new SequenceDecoderNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == TimeReverseNode<ElemType>::TypeName())
                 newNode = new TimeReverseNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == ParallelNode<ElemType>::TypeName())
+                newNode = new ParallelNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == RowStackNode<ElemType>::TypeName())
                 newNode = new RowStackNode<ElemType>(m_deviceId, nodeName);
             else
@@ -1284,6 +1303,15 @@ public:
             return newNode;
         }
 
+
+        ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new SequenceDecoderNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(label, prediction, pairscore);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
         ComputationNodePtr CrossEntropyWithSoftmax (const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
@@ -1315,6 +1343,14 @@ public:
         {
             ComputationNodePtr newNode(new CRFNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(label, postDepScore, transition_score);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr LSTM(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new LSTMNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(obs, inputGate, forgetGate, outputGate, memoryCellWgt);
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -1440,7 +1476,7 @@ public:
         }
 
 
-        ComputationNodePtr Scale (const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"")
+        ComputationNodePtr Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new ScaleNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(scalar, matrix);
@@ -1448,7 +1484,15 @@ public:
             return newNode;
         }
 
-        ComputationNodePtr Times (const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+        ComputationNodePtr Transpose(const ComputationNodePtr matrix, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new TransposeNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(matrix);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new TimesNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(a, b);
@@ -1516,6 +1560,15 @@ public:
         {
             ComputationNodePtr newNode(new DelayNode<ElemType>(m_deviceId, initHiddenActivity, row_size, col_size, nodeName));
             newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+
+            return newNode;
+        }
+
+        ComputationNodePtr Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new ParallelNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a, b);
             AddNodeToNet(newNode);
 
             return newNode;
@@ -1693,57 +1746,68 @@ public:
             }
         }
 
+        bool IsCriterionNode(ComputationNodePtr nodePtr)
+        {
+            if (nodePtr->OperationName() == L"SquareError" ||
+                nodePtr->OperationName() == L"CrossEntropyWithSoftmax" ||
+                nodePtr->OperationName() == L"CrossEntropy" ||
+                nodePtr->OperationName() == L"MatrixL1Reg" ||
+                nodePtr->OperationName() == L"MatrixL2Reg" ||
+                nodePtr->OperationName() == L"ClassBasedCrossEntropyWithSoftmax" ||
+                nodePtr->OperationName() == L"CRF")
+                return true;
+            return false;
+        }
+
         void Evaluate(const ComputationNodePtr rootNode)
         {
-            BuildAndValidateNetwork(rootNode);
+            try{
+                BuildAndValidateNetwork(rootNode);
 
-            std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
+                std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
 
 #ifdef DISPLAY_DEBUG
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-#endif
-
-            for (int i=0; i < m_recurrentInfo.size(); i++)
-            {
-                m_recurrentInfo[i].m_completedEvaluate = false;
-            }
-
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
-                (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                if ((*nodeIter)->OperationName() == L"Delay")
-                {
-                    for (size_t i = 0; i < m_nbrSlicesInEachRecurrentIteration; i++)
-                    {
-                        (*nodeIter)->ResetBound(i, m_sentenceEnd[i]);
-                    }
-                    if (m_sentenceEnd[0] <= m_actMiniBSize)
-                    {
-                        (*nodeIter)->Reset();
-                    } else
-                    {
-                        (*nodeIter)->NotReset();
-                    }
-                }
-            }
-
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
-
-                EvaluateLoop(allNodes, (*nodeIter));
-
-                if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
-                {
-#ifdef DISPLAY_DEBUG
+                for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
                     fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
-#if DUMPOUTPUT
-                    fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
-#endif
-                    (*nodeIter)->EvaluateThisNode(); // we manage time stamp here so that derived classes don't need to worry about it
-                    (*nodeIter)->UpdateEvalTimeStamp();
+
+                for (int i = 0; i < m_recurrentInfo.size(); i++)
+                {
+                    m_recurrentInfo[i].m_completedEvaluate = false;
                 }
+
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
+                    (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                    if ((*nodeIter)->OperationName() == L"Delay" ||
+                        (*nodeIter)->OperationName() == L"LSTM" ||
+                        IsCriterionNode(*nodeIter))
+                    {
+                        (*nodeIter)->ResetBound(&mSentenceBoundary, &mExistsBeginOrNoLabels);
+                    }
+                }
+
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
+
+                    EvaluateLoop(allNodes, (*nodeIter));
+
+                    if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
+                    {
+#ifdef DISPLAY_DEBUG
+                        fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+#endif
+#if DUMPOUTPUT
+                        fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
+#endif
+                        (*nodeIter)->EvaluateThisNode(); // we manage time stamp here so that derived classes don't need to worry about it
+                        (*nodeIter)->UpdateEvalTimeStamp();
+                    }
+                }
+            }
+            catch (...)
+            {
+                RuntimeError("Error in evaluation");
             }
         }
 
@@ -1778,7 +1842,6 @@ public:
         void SetActualNbrSlicesInEachRecIter(const size_t aSize)
         {
             m_nbrSlicesInEachRecurrentIteration = aSize;
-            m_sentenceEnd.assign(aSize, m_actMiniBSize/aSize);
         }
 
         void ComputeGradientLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
@@ -1805,31 +1868,46 @@ public:
             }
         }
 
-        virtual void ComputeGradient(const ComputationNodePtr rootNode)
+        virtual void ComputeGradient(const ComputationNodePtr rootNode, 
+            bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
+            const Matrix<ElemType>* rootGradientInitValue = nullptr
+            )
         {
-            if (rootNode->FunctionValues().GetNumElements() != 1)
-                throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
+            try{
+                if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
+                    throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
-            //run forward pass first
-            Evaluate(rootNode);
+                //run forward pass first
+                Evaluate(rootNode);
 
-            ClearGradientForAllNodes(rootNode);
+                ClearGradientForAllNodes(rootNode);
 
-            //run backward pass
-            std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
-            rootNode->GradientValues().Resize(1,1);
-            rootNode->GradientValues().SetValue(1);
+                //run backward pass
+                std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+                if (bResetToOne)
+                {
+                    rootNode->GradientValues().Resize(1, 1);
+                    rootNode->GradientValues().SetValue(1);
+                }
 
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
+                if (rootGradientInitValue != nullptr)
+                    rootNode->GradientValues().SetValue(*rootGradientInitValue);
+
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
 #ifdef DISPLAY_DEBUG
-                fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
-                    (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
-                    (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+                    fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
+                        (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
+                        (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
-                ComputeGradientLoop(allNodes, *nodeIter);
+                    ComputeGradientLoop(allNodes, *nodeIter);
 
-                (*nodeIter)->ComputeGradientForChildren();
+                    (*nodeIter)->ComputeGradientForChildren();
+                }
+            }
+            catch (...)
+            {
+                RuntimeError("Error in ComputeGradient");
             }
         }
 
@@ -2064,8 +2142,44 @@ public:
             return nodesRequirePreComputation;
         }
 
+        //return list of nodes that require precomputation and not precomputed yet.
+        std::list<ComputationNodePtr> GetNodesRequireBatchMode(const ComputationNodePtr rootNode = nullptr, bool checkComputed = true)
+        {
+            std::list<ComputationNodePtr> nodesRequirePreComputation;
+
+            if (rootNode == nullptr) //find nodes from all available nodes
+            {
+                for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+                {
+                    ComputationNodePtr node = nodeIter->second;
+                    if (node->RequireBatchMode())
+                    {
+                        BatchModeNode<ElemType> * preComputedNode = static_cast<BatchModeNode<ElemType> *> (node);
+                        if (!checkComputed || !preComputedNode->HasComputed())
+                            nodesRequirePreComputation.push_back(node);
+                    }
+                }
+            }
+            else //for calculating a specific node
+            {
+                std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
+                for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+                {
+                    ComputationNodePtr node = (*nodeIter);
+                    if (node->RequireBatchMode())
+                    {
+                        BatchModeNode<ElemType> * preComputedNode = static_cast<BatchModeNode<ElemType> *> (node);
+                        if (!checkComputed || !preComputedNode->HasComputed())
+                            nodesRequirePreComputation.push_back(node);
+                    }
+                }
+            }
+
+            return nodesRequirePreComputation;
+        }
+
         // Validate - Validate the network 
-        void ValidateNetwork(bool allowFragment=false)
+        void ValidateNetwork(bool allowFragment=false, const bool bAllowNoCriterion = false)
         {
             // currently only validates nodes, we should validate everything we can
             if (FeatureNodes().size() == 0 && !allowFragment)
@@ -2083,6 +2197,10 @@ public:
                     this->SetActualMiniBatchSize(actualMBSize);
                     ValidateNetwork(node);
                 }
+            }
+            else if (bAllowNoCriterion == true)
+            {
+                // do nothing
             }
             else if (!allowFragment)
             {
@@ -2136,6 +2254,71 @@ public:
                 ValidateNetwork(rootNode);
                 CollectInputAndLeanableParameters(rootNode);
             }
+        }
+
+        /** 
+        call unit test of each node
+        this adds a verification of the correctness of node operations. 
+        */
+        bool UnitTest(bool allowFragment = false)
+        {
+            // currently only validates nodes, we should validate everything we can
+            if (FeatureNodes().size() == 0 && !allowFragment)
+            {
+                throw std::runtime_error("No Feature nodes specified");
+            }
+            // first give criteria nodes as root node
+            if (FinalCriterionNodes().size() > 0)
+            {
+                for (auto node : FinalCriterionNodes())
+                {
+                    if (!allowFragment) FormRecurentLoops(node);
+                    size_t actualMBSize = this->GetActualMBSize();
+                    this->SetActualMiniBatchSize(actualMBSize);
+                    if (UnitTest(node) == false)
+                        return false;
+                }
+            }
+            else if (!allowFragment)
+            {
+                throw std::runtime_error("No Criterion nodes specified");
+            }
+            // now output nodes
+            if (OutputNodes().size() > 0)
+            {
+                for (auto node : OutputNodes())
+                    if (UnitTest(node) == false)
+                        return false;
+            }
+            else if (!allowFragment)
+            {
+                throw std::runtime_error("No Output nodes specified");
+            }
+            // now evaluation nodes
+            if (EvaluationNodes().size() > 0)
+            {
+                for (auto node : EvaluationNodes())
+                    if (UnitTest(node) == false)
+                        return false;
+            }
+            return true;
+        }
+
+        bool UnitTest(const ComputationNodePtr rootNode)
+        {
+            fprintf(stderr, "\n\n Unit test node %ws \n", rootNode->NodeName().c_str());
+
+            std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
+
+            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            {
+                if ((*nodeIter)->UnitTest() == false)
+                    return false;
+            }
+
+            fprintf(stderr, "\n\n");
+
+            return true;
         }
 
         //========================================
@@ -2272,6 +2455,33 @@ public:
             RebuildNetwork(m_finalCriteria[0]);
         }
 
+    public:
+        virtual void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
+        {
+            //put all node info first
+            Matrix<ElemType> hist;
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            {
+                ComputationNodePtr nodePtr = nodeIter->second;
+                if (nodePtr->GetHistory(hist, bLastTime))
+                {
+                    history[nodeIter->first] = hist;
+                }
+            }
+        };
+
+        void SetHistory(map<wstring, Matrix<ElemType>>& history)
+        {
+            //put all node info first
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            {
+                ComputationNodePtr nodePtr = nodeIter->second;
+                if (history.find(nodeIter->first) != history.end())
+                {
+                    nodePtr->SetHistory(history[nodeIter->first]);
+                }
+            }
+        };
     protected:
         // Copy constructor, should never be called.
 #pragma warning (push)
@@ -2722,19 +2932,25 @@ public:
 public: // public so PTask can use eval/gradient order, and pre-compute matrix sizes
         void ClearGradientForAllNodes(const ComputationNodePtr rootNode) 
         {
-            std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+            try{
+                std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
-            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            {
-                (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
+                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                {
+                    (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
+                }
+                for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+                {
+                    (*nodeIter).m_completedGradient = false;
+                }
+                for (int i = 0; i < m_recurrentInfo.size(); i++)
+                {
+                    m_recurrentInfo[i].m_completedGradient = false;
+                }
             }
-            for (auto nodeIter=m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+            catch (...)
             {
-                (*nodeIter).m_completedGradient = false;
-            }
-            for (int i=0; i < m_recurrentInfo.size(); i++)
-            {
-                m_recurrentInfo[i].m_completedGradient = false;
+                RuntimeError("Error in ClearGradientForAllNodes");
             }
         }
 
@@ -2761,7 +2977,14 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
 
             return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
         }
-        vector<size_t> m_sentenceEnd;
+
+        /**
+        The below is used for sentence boundary information passed from reader. 
+        This information can be used to reset RNN state or disregard gradient proprogation such as those
+        used in reinforcement learning
+        */
+        Matrix<ElemType> mSentenceBoundary;  /// sentence boudary information. passed from reader
+        Matrix<ElemType> mExistsBeginOrNoLabels;  /// whether there is a sentence begining or no_label at a time. note that one time can include many sentences. 
 protected:
         std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode, std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap, const bool forwardCompute) 
         {
