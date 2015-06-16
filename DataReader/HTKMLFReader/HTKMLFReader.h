@@ -102,6 +102,12 @@ private:
 
 
 public:
+	Matrix<ElemType> mtSentenceBegin;
+	Matrix<ElemType> mtExistsSentenceBeginOrNoLabels;
+
+	bool mIgnoreSentenceBeginTag;
+	HTKMLFReader() : mtSentenceBegin(CPUDEVICE), mtExistsSentenceBeginOrNoLabels(CPUDEVICE) {
+	}
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
     virtual ~HTKMLFReader();
@@ -112,7 +118,7 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceSegBatch(vector<size_t> &/*sentenceEnd*/);
+	void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int);
 };
