@@ -980,8 +980,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             // dereference matrix that corresponds to key (input/output name) and 
                             // populate based on whether its a feature or a label
-                            //Matrix<ElemType>& data =
-                                                        *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                             if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                             {
@@ -1058,8 +1057,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             // dereference matrix that corresponds to key (input/output name) and 
                             // populate based on whether its a feature or a label
-                            //Matrix<ElemType>& data =
-                                                        *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data =*matrices[iter->first]; // can be features or labels
 
                             if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                             {
@@ -1134,8 +1132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             // dereference matrix that corresponds to key (input/output name) and 
                             // populate based on whether its a feature or a label
-                            //Matrix<ElemType>& data =
-                                                        *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                             if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                             {
