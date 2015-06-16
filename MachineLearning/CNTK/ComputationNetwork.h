@@ -550,41 +550,38 @@ public:
                     }
 
                     ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-                    ComputationNodePtr childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4;
-                    switch (numChildren)
+                    std::vector<ComputationNodePtr> childrenNodes;
+                    childrenNodes.resize(numChildren);
+                    for (int j = 0; j < numChildren; j++)
+                        childrenNodes[j] = GetNodeFromName(childrenNames[j]);
+
+                    if (nodePtr->OperationName() == RowStackNode<ElemType>::TypeName()) //allow for variable input nodes
+                        nodePtr->AttachInputs(childrenNodes);
+                    else //fixed input nodes
                     {
-                    case 1:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        nodePtr->AttachInputs(childNodePtr0);
-                        break;
-                    case 2:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1);
-                        break;
-                    case 3:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2);
-                        break;
-                    case 4:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
-                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3);
-                        break;
-                    case 5:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
-                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
-                        childNodePtr4 = GetNodeFromName(childrenNames[4]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4);
-                        break;
-                    default:
-                        throw std::logic_error("Invalid number of children.");
+                        switch (numChildren)
+                        {
+                        case 1:
+                            nodePtr->AttachInputs(childrenNodes[0]);
+                            break;
+                        case 2:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
+                            break;
+                        case 3:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2]);
+                            break;
+                        case 4:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3]);
+                            break;
+                        case 5:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4]);
+                            break;
+                        case 6:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4], childrenNodes[5]);
+                            break;
+                        default:
+                            throw std::logic_error("Invalid number of children.");
+                        }
                     }
                 }
             }
@@ -1028,6 +1025,8 @@ public:
                 newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == RowSliceNode<ElemType>::TypeName())
                 newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == RowStackNode<ElemType>::TypeName())
+                newNode = new RowStackNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
@@ -1209,6 +1208,8 @@ public:
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ParallelNode<ElemType>::TypeName())
                 newNode = new ParallelNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == RowStackNode<ElemType>::TypeName())
+                newNode = new RowStackNode<ElemType>(m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1577,6 +1578,15 @@ public:
         {
             ComputationNodePtr newNode(new RowSliceNode<ElemType>(m_deviceId, start_index, num_rows, nodeName));
             newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+
+            return newNode;
+        }
+
+        ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> inputs, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new RowStackNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(inputs);
             AddNodeToNet(newNode);
 
             return newNode;

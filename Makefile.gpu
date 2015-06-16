@@ -32,11 +32,11 @@ DEVICE = gpu
 BUILDTYPE = debug
 #BUILDTYPE = release
 # comment following and uncomment the next one to enable MKL library
-#MATHLIB = acml
-MATHLIB = mkl
+MATHLIB = acml
+#MATHLIB = mkl
 # modify relevant path below for your system
 MKL_PATH = /usr/users/chiaying/intel/composer_xe_2013.2.146
-ACML_PATH = /usr/local/acml5.3.0/gfortran64
+ACML_PATH = /usr/local/acml5.3.1/ifort64
 #######
 
 BUILDFOR = $(ARCH).$(DEVICE).$(BUILDTYPE).$(MATHLIB)
@@ -48,8 +48,8 @@ ifeq ($(BUILDTYPE),debug)
 	BUILDTYPE_OPT = -g
 	GPU_BUILDTYPE_OPT = -G
 else
-	BUILDTYPE_OPT = -O4
-	GPU_BUILDTYPE_OPT =
+	BUILDTYPE_OPT = -O3 -flto
+	GPU_BUILDTYPE_OPT = -O3
 endif
 
 ifeq ($(MATHLIB),mkl)
@@ -142,7 +142,7 @@ $(OBJDIR)/%.o : %.cu Makefile
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
-	$(NVCC) -c $< -o $@ $(BUILDTYPE_OPT) $(GPU_BUILDTYPE_OPT) $(NVCCFLAGS) $(INCFLAGS) -Xcompiler -fPIC
+	$(NVCC) -c $< -o $@ $(GPU_BUILDTYPE_OPT) $(NVCCFLAGS) $(INCFLAGS) -Xcompiler -fPIC
 
 $(OBJDIR)/%.o : %.cpp Makefile
 	@echo $(SEPARATOR)

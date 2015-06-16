@@ -278,7 +278,7 @@ namespace CNTKMathTest
             Assert::IsTrue(M2.IsEqualTo(M3, 0.0001f)); 
         }
 
-        TEST_METHOD(GPUMatrixRowSlice)
+        TEST_METHOD(GPUMatrixRowSliceAndStack)
         {
             float *fArray = new float[15];
             fArray[0] = 1; fArray[5] = 6; fArray[10] = 11;
@@ -308,6 +308,27 @@ namespace CNTKMathTest
             M3 += M0;
             M0.AddToRowSliceValuesOf(M1, 2,2);
             Assert::IsTrue(M3.IsEqualTo(M0, 0.0001)); 
+
+            M2.AddWithRowSliceValuesOf(M1, 0, 2);
+            float *fArray4 = new float[6];
+            fArray4[0] = 6; fArray4[2] = 16; fArray4[4] = 26;
+            fArray4[1] = 8; fArray4[3] = 18; fArray4[5] = 28;
+            GPUMatrix<float> M4(2, 3, fArray4, matrixFlagNormal);
+            Assert::IsTrue(M2.IsEqualTo(M4, 0.0001));
+
+            GPUMatrix<float>  M5, M6, M7, M8;
+            M5.AssignRowSliceValuesOf(M0, 0, 2);
+            M6.AssignRowSliceValuesOf(M0, 2, 1);
+            M7.AssignRowSliceValuesOf(M0, 3, 2);
+
+            std::vector<const GPUMatrix<float> *> inputMatrices;
+            inputMatrices.resize(3);
+            inputMatrices[0] = &M5;
+            inputMatrices[1] = &M6;
+            inputMatrices[2] = &M7;
+            M8.AssignRowStackValuesOf(inputMatrices, 0, 3);
+
+            Assert::IsTrue(M8.IsEqualTo(M0, 0.0001));
         }
 
         TEST_METHOD(GPUKhatriRaoProduct)

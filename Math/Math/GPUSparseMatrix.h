@@ -79,16 +79,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t MajorIndexCount() const
         {
-            return MajorIndexCount(m_numRows, m_numCols, m_elemSizeAllocated, m_format);
+            return MajorIndexCount(m_numRows, m_numCols, m_nz, m_format);
         }
-        size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZReserved, const MatrixFormat format) const
+        size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
         { 
             if (format == matrixFormatSparseBlockCol)
                 return numCols;
             else if (format == matrixFormatSparseBlockRow)
                 return numRows;
             else
-                return numNZReserved;
+                return numNZ;
         }
         size_t MajorIndexSize() const // actual number of major index bytes in use
         { 

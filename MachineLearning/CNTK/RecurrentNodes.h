@@ -218,10 +218,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (colBegin(i,0) == SENTENCE_MIDDLE)
                         {
-                            Matrix<ElemType> to1 = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr + i, 1);
-                            Matrix<ElemType> frm1= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
+							Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
+                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - delay)*mNbr + i, 1);
 
-                            to1 += frm1;
+                            to += frm;
                         }
                     }
 
