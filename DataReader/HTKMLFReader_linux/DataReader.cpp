@@ -114,9 +114,9 @@ void DataReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz)
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd)
+void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
 {
-    m_dataReader->SetSentenceEndInBatch(sentenceEnd);
+    m_dataReader->SetSentenceSegBatch(sentenceEnd, sentenceExistsBeginOrNoLabels);
 }
 
 // GetLabelMapping - Gets the label mapping from integer index to label type 
