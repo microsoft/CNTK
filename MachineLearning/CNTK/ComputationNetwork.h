@@ -1729,85 +1729,107 @@ public:
 
                 size_t iCnt = 0; 
                 size_t iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
-                do{
+                do {
                     bLoopCompleted = true;
                     for (auto nodeIter=recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                     {
-                        (*nodeIter)->EvaluateThisNode(iCnt); 
+                        (*nodeIter)->EvaluateThisNodeGivenInputs(iCnt);
 
                         (*nodeIter)->UpdateEvalTimeStamp();
 
                     }
 
                     iCnt ++;
-                }while (iCnt < iMBSize);
+                } while (iCnt < iMBSize);
 
                 m_recurrentInfo[iLoopId].m_completedEvaluate = true;
             }
         }
 
-        bool IsCriterionNode(ComputationNodePtr nodePtr)
+        bool IsTypicalCriterionNode(ComputationNodePtr nodePtr)
         {
-            if (nodePtr->OperationName() == L"SquareError" ||
-                nodePtr->OperationName() == L"CrossEntropyWithSoftmax" ||
-                nodePtr->OperationName() == L"CrossEntropy" ||
-                nodePtr->OperationName() == L"MatrixL1Reg" ||
-                nodePtr->OperationName() == L"MatrixL2Reg" ||
-                nodePtr->OperationName() == L"ClassBasedCrossEntropyWithSoftmax" ||
-                nodePtr->OperationName() == L"CRF")
+            if (nodePtr->OperationName() == SquareErrorNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == CrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == CrossEntropyNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == ErrorPredictionNode<ElemType>::TypeName() ||               
+                nodePtr->OperationName() == CRFNode<ElemType>::TypeName())
                 return true;
+
             return false;
+        }
+
+        void SetNodesReqMultiSeqHandling()
+        {
+            for (auto node : m_nodesReqMultiSeqHandling)
+            {
+                //SumElements node will generate a scalar value and so it should never require special handling
+                //TransposeNode will change the size of columns and so it should also not included for special handling
+                //their child node should instead
+                if (node->OperationName() != SumElementsNode<ElemType>::TypeName() &&
+                    node->OperationName() != TransposeNode<ElemType>::TypeName() &&
+                    node->OperationName() != MeanNode<ElemType>::TypeName() &&
+                    node->OperationName() != InvStdDevNode<ElemType>::TypeName() 
+                    )
+                    node->SetReqMultiSeqHandlingTo(true);
+            }
+
+            //if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
+            //this is for backward compatibility
+            for (auto node : m_finalCriteria)
+            {
+                if (IsTypicalCriterionNode(node))
+                    node->SetReqMultiSeqHandlingTo(true);
+            }
+
+            for (auto node : m_evalNodes)
+            {
+                if (IsTypicalCriterionNode(node))
+                    node->SetReqMultiSeqHandlingTo(true);
+            }
         }
 
         void Evaluate(const ComputationNodePtr rootNode)
         {
-            try{
-                BuildAndValidateNetwork(rootNode);
+            BuildAndValidateNetwork(rootNode);
 
-                std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
 
 #ifdef DISPLAY_DEBUG
-                for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                    fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
 
-                for (int i = 0; i < m_recurrentInfo.size(); i++)
+            for (int i = 0; i < m_recurrentInfo.size(); i++)
+            {
+                m_recurrentInfo[i].m_completedEvaluate = false;
+            }
+
+            for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+            {
+                (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                if ((*nodeIter)->ReqMultiSeqHandling())
                 {
-                    m_recurrentInfo[i].m_completedEvaluate = false;
-                }
-
-                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                {
-                    (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                    if ((*nodeIter)->OperationName() == L"Delay" ||
-                        (*nodeIter)->OperationName() == L"LSTM" ||
-                        IsCriterionNode(*nodeIter))
-                    {
-                        (*nodeIter)->ResetBound(&mSentenceBoundary, &mExistsBeginOrNoLabels);
-                    }
-                }
-
-                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                {
-
-                    EvaluateLoop(allNodes, (*nodeIter));
-
-                    if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
-                    {
-#ifdef DISPLAY_DEBUG
-                        fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-#endif
-#if DUMPOUTPUT
-                        fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
-#endif
-                        (*nodeIter)->EvaluateThisNode(); // we manage time stamp here so that derived classes don't need to worry about it
-                        (*nodeIter)->UpdateEvalTimeStamp();
-                    }
+                    (*nodeIter)->ResetBound(&mSentenceBoundary, &mExistsBeginOrNoLabels);
                 }
             }
-            catch (...)
+
+            for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
             {
-                RuntimeError("Error in evaluation");
+
+                EvaluateLoop(allNodes, (*nodeIter));
+
+                if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
+                {
+#ifdef DISPLAY_DEBUG
+                    fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+#endif
+#if DUMPOUTPUT
+                    fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
+#endif
+                    (*nodeIter)->EvaluateThisNodeGivenInputs(); // we manage time stamp here so that derived classes don't need to worry about it
+                    (*nodeIter)->UpdateEvalTimeStamp();
+                }
             }
         }
 
@@ -2253,6 +2275,7 @@ public:
                 FormRecurentLoops(rootNode);
                 ValidateNetwork(rootNode);
                 CollectInputAndLeanableParameters(rootNode);
+                SetNodesReqMultiSeqHandling();
             }
         }
 
@@ -3020,6 +3043,7 @@ protected:
         std::vector<ComputationNodePtr> m_finalCriteria;
         std::vector<ComputationNodePtr> m_evalNodes;
         std::vector<ComputationNodePtr> m_outputNodes;
+        std::vector<ComputationNodePtr> m_nodesReqMultiSeqHandling;
         std::vector<RecurrentInfo>      m_recurrentInfo;
 
         int m_actMiniBSize; 
