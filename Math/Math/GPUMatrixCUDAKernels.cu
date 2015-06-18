@@ -710,154 +710,138 @@ __global__ void _logSoftMaxColWise(
 //    }
 //}
 
+// each block processes one column. There must be 512 threads in a block
 template<class ElemType>
 __global__ void _assignColumnwiseLogSoftmaxOf(
     const ElemType *a,
     ElemType* us,
     const long m_numCols,
-    const long m_numRows) // each block processes one column. There must be 512 threads in a block
+    const long m_numRows) 
 {
-    //we first find max per column
+    // We first find max per column
     __shared__ ElemType colMax[1];
-    __shared__ ElemType partials[512];    
-    colMax[0]=-10000000;
-    partials[threadIdx.x]=-10000000;
+    __shared__ ElemType partials[512];
+    colMax[0] = -10000000;
+    partials[threadIdx.x] = -10000000;
 
-    //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    int loadPerThread = m_numRows/blockDim.x; 
-
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x],a[IDX2C(i,blockIdx.x,m_numRows)]);
+        partials[threadIdx.x] = max(partials[threadIdx.x], a[IDX2C(i, blockIdx.x, m_numRows)]);
     }
     __syncthreads();
 
-    //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+256],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 256], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+128],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 128], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+64],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 64], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+32],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 32], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+16],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 16], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+8],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 8], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+4],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 4], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        colMax[0] = max(max(partials[0],partials[1]),max(partials[2],partials[3]));        
+        colMax[0] = max(max(partials[0], partials[1]), max(partials[2], partials[3]));
     }
-    partials[threadIdx.x]=0.0f;
+    partials[threadIdx.x] = 0.0f;
     __syncthreads();
-    //end of finding max
-    //now start finding sums
+
+    // Now start finding sums
     __shared__ ElemType colSum[1];
-    colSum[0]=0.0f;
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
+    colSum[0] = 0.0f;
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
-        ElemType tmp=a[IDX2C(i,blockIdx.x,m_numRows)]-colMax[0];
-        us[IDX2C(i,blockIdx.x,m_numRows)]=tmp;
-        partials[threadIdx.x]+=(sizeof(ElemType)==sizeof(float)?expf(tmp):exp(tmp));
+        ElemType tmp = a[IDX2C(i, blockIdx.x, m_numRows)] - colMax[0];
+        us[IDX2C(i, blockIdx.x, m_numRows)] = tmp;
+        partials[threadIdx.x] += (sizeof(ElemType) == sizeof(float)) ? expf(tmp) : exp(tmp);
     }
     __syncthreads();
 
-    //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+256];
+        partials[threadIdx.x] += partials[threadIdx.x + 256];
     }
     __syncthreads();
 
-    //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+128];
+        partials[threadIdx.x] += partials[threadIdx.x + 128];
     }
     __syncthreads();
 
-    //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+64];
+        partials[threadIdx.x] += partials[threadIdx.x + 64];
     }
     __syncthreads();
 
-    //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+32];
+        partials[threadIdx.x] += partials[threadIdx.x + 32];
     }
     __syncthreads();
 
-    //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+16];
+        partials[threadIdx.x] += partials[threadIdx.x + 16];
     }
     __syncthreads();
 
-    //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+8];
+        partials[threadIdx.x] += partials[threadIdx.x + 8];
     }
     __syncthreads();
 
-    //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+4];
+        partials[threadIdx.x] += partials[threadIdx.x + 4];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        colSum[0] = partials[0]+partials[1]+partials[2]+partials[3];
-        colSum[0] = (sizeof(ElemType)==sizeof(float)?logf(colSum[0]):log(colSum[0]));
+        colSum[0] = partials[0] + partials[1] + partials[2] + partials[3];
+        colSum[0] = (sizeof(ElemType) == sizeof(float)) ? logf(colSum[0]) : log(colSum[0]);
     }
     __syncthreads();
-    //end of finding sums
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
-    {        
-        us[IDX2C(i,blockIdx.x,m_numRows)]-=colSum[0];        
+
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
+    {
+        us[IDX2C(i, blockIdx.x, m_numRows)] -= colSum[0];
     }
 }
 
@@ -1839,19 +1823,19 @@ __global__ void _addSignOf(
     a[id] += (v == (ElemType)0? (ElemType)0 : (v > 0? (ElemType)1 : (ElemType)(-1)));
 }
 
-template<class ElemType>
-__global__ void _vectorMaxMinReduce( //this function processes 1 column per block. this function needs 512 threads
-                                 const ElemType* us,
-                                 ElemType* Indexes,
-                                 ElemType* Values,
-                                 const long m,  //number of rows
-                                 const long n,
-                                 bool isMax)  //number of cols
+// This function processes 1 column per block. this function needs 512 threads
+template<class ElemType, bool IsMax>
+__global__ void _vectorMaxMinReduce( 
+    const ElemType* us,
+    ElemType* Indexes,
+    ElemType* Values,
+    const long numRows,
+    const long numCols)
 {
     //we first find max per column    
     __shared__ ElemType partials[512];        
     __shared__ int partialsInd[512];
-    if (isMax)
+    if (IsMax)
     {
         partials[threadIdx.x]=-10000000;
     }
@@ -1861,118 +1845,101 @@ __global__ void _vectorMaxMinReduce( //this function processes 1 column per bloc
     }
     partialsInd[threadIdx.x]=-1;
 
-    //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    int loadPerThread = m/blockDim.x; 
-
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m : (threadIdx.x+1)*loadPerThread);++i)
+    for (int i = threadIdx.x; i < numRows; i += 512)
     {
-        if (( isMax ? us[IDX2C(i,blockIdx.x,m)]>partials[threadIdx.x] : us[IDX2C(i,blockIdx.x,m)]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (us[IDX2C(i, blockIdx.x, numRows)] > partials[threadIdx.x]) : (us[IDX2C(i, blockIdx.x, numRows)] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=us[IDX2C(i,blockIdx.x,m)];
+            partials[threadIdx.x] = us[IDX2C(i, blockIdx.x, numRows)];
             partialsInd[threadIdx.x]=i;       
         }
     }
     __syncthreads();
 
-    //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+256],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+256]>partials[threadIdx.x] : partials[threadIdx.x+256]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 256] > partials[threadIdx.x]) : (partials[threadIdx.x + 256] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+256];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+256];
+            partials[threadIdx.x] = partials[threadIdx.x + 256];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 256];
         }
     }
     __syncthreads();
 
-    //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+128],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+128]>partials[threadIdx.x] : partials[threadIdx.x+128]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 128] > partials[threadIdx.x]) : (partials[threadIdx.x + 128] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+128];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+128];
+            partials[threadIdx.x] = partials[threadIdx.x + 128];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 128];
         }
     }
     __syncthreads();
 
-    //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+64],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+64]>partials[threadIdx.x] : partials[threadIdx.x+64]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 64] > partials[threadIdx.x]) : (partials[threadIdx.x + 64] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+64];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+64];
+            partials[threadIdx.x] = partials[threadIdx.x + 64];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 64];
         }
     }
     __syncthreads();
 
-    //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+32],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+32]>partials[threadIdx.x] : partials[threadIdx.x+32]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 32] > partials[threadIdx.x]) : (partials[threadIdx.x + 32] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+32];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+32];
+            partials[threadIdx.x] = partials[threadIdx.x + 32];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 32];
         }
     }
     __syncthreads();
 
-    //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+16],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+16]>partials[threadIdx.x] : partials[threadIdx.x+16]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 16] > partials[threadIdx.x]) : (partials[threadIdx.x + 16] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+16];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+16];
+            partials[threadIdx.x] = partials[threadIdx.x + 16];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 16];
         }
     }
     __syncthreads();
 
-    //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+8],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+8]>partials[threadIdx.x] : partials[threadIdx.x+8]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 8] > partials[threadIdx.x]) : (partials[threadIdx.x + 8] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+8];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+8];
+            partials[threadIdx.x] = partials[threadIdx.x + 8];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 8];
         }
     }
     __syncthreads();
 
-    //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+4],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+4]>partials[threadIdx.x] : partials[threadIdx.x+4]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 4] > partials[threadIdx.x]) : (partials[threadIdx.x + 4] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+4];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+4];
+            partials[threadIdx.x] = partials[threadIdx.x + 4];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 4];
         }
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
         ElemType mx = partials[0];
         int ind = partialsInd[0];
-        if ((isMax ? mx<partials[1] : mx>partials[1]) || ind ==-1)
+        if ((IsMax ? (mx < partials[1]) : (mx > partials[1])) || (ind == -1))
         {
             mx = partials[1];
             ind = partialsInd[1];
         }
-        if ((isMax ? mx<partials[2] : mx>partials[2]) || ind ==-1)
+        if ((IsMax ? (mx < partials[2]) : (mx > partials[2])) || (ind == -1))
         {
             mx = partials[2];
             ind = partialsInd[2];
         }
-        if ((isMax ? mx<partials[3] : mx>partials[3]) || ind ==-1)
+        if ((IsMax ? (mx < partials[3]) : (mx > partials[3])) || (ind == -1))
         {
             mx = partials[3];
             ind = partialsInd[3];
