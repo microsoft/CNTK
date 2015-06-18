@@ -36,8 +36,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-                
-        virtual const std::wstring OperationName() const {return TypeName();}
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"SquareError";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -45,7 +45,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 1)
                 throw std::invalid_argument("SquareError criteria only takes two inputs.");
 
-            //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
                 ComputeInputPartialLeft(Inputs(0)->GradientValues(), GradientValues(), m_leftMinusRight);
@@ -73,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight,this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -81,9 +80,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SquareError node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight)  
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
         {
             leftMinusRight.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
+            curNode->ResetForNoLabels(leftMinusRight);
             ElemType v = leftMinusRight.FrobeniusNorm();
             functionValues.Resize(1,1);
             functionValues.SetValue(v*v/2);
@@ -182,6 +182,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         Matrix<ElemType> m_leftMinusRight;
     };
@@ -210,8 +213,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-                
-        virtual const std::wstring OperationName() const {return TypeName();}
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"CrossEntropyWithSoftmax";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -226,7 +229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), this);
             }
         }
 
@@ -252,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues, 
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
@@ -262,6 +265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
+            curNode->ResetForNoLabels(inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
@@ -270,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -279,11 +283,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight)  
+            Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, ComputationNodePtr curNode)
         {
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
+            curNode->ResetForNoLabels(logSoftmaxOfRight);
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -399,6 +404,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
+    protected:
         Matrix<ElemType> m_logSoftmaxOfRight;
         Matrix<ElemType> m_softmaxOfRight;       
     };
@@ -429,7 +437,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"CrossEntropy";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -444,7 +452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), this);
             }
         }
 
@@ -461,16 +469,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& leftDivRight, 
             const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-
+            curNode->ResetForNoLabels(leftDivRight);
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(right_i))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -479,10 +487,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            Matrix<ElemType>& logOfRight)  
+            Matrix<ElemType>& logOfRight, ComputationNodePtr curNode)
         {
             logOfRight.SetValue(inputFunctionValues1);
             logOfRight.InplaceLog();
+            curNode->ResetForNoLabels(logOfRight);
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -593,6 +602,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         // matrix value passed from evaluate to computePartial
         Matrix<ElemType> m_logOfRight;
@@ -624,7 +636,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"MatrixL1Reg";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
@@ -649,7 +661,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -657,9 +669,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL1Reg node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues, ComputationNodePtr curNode)
         {
-            functionValues.Resize(1,1);
+            curNode->ResetForNoLabels(inputFunctionValues);
+            functionValues.Resize(1, 1);
             functionValues.SetValue(inputFunctionValues.MatrixNorm1());
 #if NANCHECK
             functionValues.HasNan("MatrixL1Reg");
@@ -733,6 +746,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         // temporary
         Matrix<ElemType> m_gradientOfL1Norm;
@@ -762,9 +778,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"MatrixL2Reg";} 
-
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
@@ -779,15 +794,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL2RegNode node should never be in a loop.");
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& /*inputFunctionValues*/, const Matrix<ElemType>& functionValues)  
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
         {
             ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);
-            inputGradientValues.AddWithScaleOf(v, gradientValues);
+            inputGradientValues.AddWithScaleOf(v, inputFunctionValues);
         }
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -795,8 +810,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL2RegNode node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues, ComputationNodePtr curNode)
         {
+            curNode->ResetForNoLabels(inputFunctionValues);
             functionValues.Resize(1,1);
             functionValues.SetValue(inputFunctionValues.FrobeniusNorm());
 #if NANCHECK
@@ -861,6 +877,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         Matrix<ElemType> m_temp;
     };
@@ -882,13 +901,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                m_deviceId = deviceId;
-                MoveMatricesToDevice(deviceId);
-                InitRecurrentNode();
-                m_evalMode = xm_evalMode;
-           
-            }
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+            m_evalMode = xm_evalMode;
+        }
         NCEEvalMode &EvalMode(){ return m_evalMode; }
 
         virtual void SaveToFile(File& fstream) const
@@ -1068,7 +1086,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
         {
                 node->CopyTo(this, newName, flags);
-            }
+        }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1077,6 +1095,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr node = new NoiseContrastiveEstimationNode<ElemType>(this, name, flags);
             return node;
         }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     protected:
         Matrix<ElemType> m_logSoftmax;
@@ -1449,6 +1470,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
+    protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
 
@@ -1495,6 +1519,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int mStartLbl;
         int mEndLbl;
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     public:
         CRFNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")

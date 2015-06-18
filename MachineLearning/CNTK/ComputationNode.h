@@ -36,6 +36,7 @@
 
 //version number to control how to read and write 
 #define CNTK_MODEL_VERSION_1 1
+#define CNTK_MODEL_VERSION_2 2
 #define CURRENT_CNTK_MODEL_VERSION 2
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -58,24 +59,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef ComputationNode<ElemType>* ComputationNodePtr;
 		typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
-        int     m_loopId;
-        size_t  m_samplesInRecurrentStep; 
 
-        /// the order in reverse graph. 
-        int     m_visitedOrder;  
-        int m_index;
-        int m_lowlink;
-        bool m_visited;
-        bool m_inStack;
-        int m_indexInLoop;
-        Matrix<ElemType> * m_sentenceSeg; 
-        /// conditionally point to either a pointer to that provided by network, or point to 
-        /// an indiviaul sentence boundary info, which happens if delay > 1 is required for delay node
-        Matrix<ElemType> * m_existsSentenceBeginOrNoLabels;
-        Matrix<ElemType> mBoundaryInfo; /// individual sentence boundary information 
-        Matrix<ElemType> mExistSentenceBeginOrNoLabels; // individual the corresponding information 
     public:
-        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), mBoundaryInfo(deviceId), mExistSentenceBeginOrNoLabels(deviceId)
+        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), m_boundaryInfo(deviceId)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -86,6 +72,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop = 0;
             m_visited = false;
             m_inStack = false;
+
+            m_reqMultiSeqHandling = false;
         }
 
         virtual ~ComputationNode()
@@ -119,6 +107,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
         {
             NOT_IMPLEMENTED;
+        }
+
+        void EvaluateThisNodeGivenInputs()
+        {
+            EvaluateThisNode();
+
+            if (!UseCustomizedMultiSeqHandling())
+                ResetForNoLabels(m_functionValues);
+        }
+
+        void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq)
+        {
+            EvaluateThisNode(timeIdxInSeq);
+
+            if (!UseCustomizedMultiSeqHandling())
+                ResetForNoLabels(m_functionValues);
         }
 
         virtual void Validate() = 0;
@@ -259,16 +263,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t nT = toChange.GetNumCols();
             size_t nd = toChange.GetNumRows();
-            size_t nS = m_sentenceSeg.GetNumRows();
-            Matrix<ElemType> colBegin(m_sentenceSeg.GetDeviceId());
-            Matrix<ElemType> colSeg(m_sentenceSeg.GetDeviceId());
-            Matrix<ElemType> newfunc(m_sentenceSeg.GetDeviceId());
+            size_t nS = m_sentenceSeg->GetNumRows();
+            Matrix<ElemType> colBegin(m_sentenceSeg->GetDeviceId());
+            Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
+            Matrix<ElemType> newfunc(m_sentenceSeg->GetDeviceId());
 
-            if (m_existsSentenceBeginOrNoLabels.GetNumRows() != 1)
+            if (m_existsSentenceBeginOrNoLabels->GetNumRows() != 1)
             {
                 LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should be a one row matrix or a vector. ");
             }
-            if (m_existsSentenceBeginOrNoLabels.GetNumElements() != nT / nS)
+            if (m_existsSentenceBeginOrNoLabels->GetNumElements() != nT / nS)
             {
                 LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should have one element for each time of all streams. Check feature reader. ");
             }
@@ -279,9 +283,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int utt_t = 0; utt_t < nT; utt_t += nS)
             {
                 size_t j = utt_t / nS;
-                if (m_existsSentenceBeginOrNoLabels.ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+                if (m_existsSentenceBeginOrNoLabels->ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
                 {
-                    colSeg.SetValue(m_sentenceSeg.ColumnSlice(j, 1)); // -1 0 1 
+                    colSeg.SetValue(m_sentenceSeg->ColumnSlice(j, 1)); // -1 0 1 
                     colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
                     colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
                     colBegin.SetDiagonalValue(colSeg);
@@ -441,6 +445,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool& NeedGradient() {return m_needGradient;}
         const bool& NeedGradient() const {return m_needGradient; }
 
+        void SetReqMultiSeqHandlingTo(const bool v) { m_reqMultiSeqHandling = v; }
+        bool ReqMultiSeqHandling() const { return m_reqMultiSeqHandling; }
+
         void InitRecurrentNode() 
         {
             SetLoop(0);     // TODO: SetLoop() takes a bool, not an int?
@@ -523,6 +530,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (size_t i=0; i<m_children.size(); i++)
             {
+                if (!UseCustomizedMultiSeqHandling())
+                    ResetForNoLabels(m_gradientValues);
+
                 ComputationNodePtr child = m_children[i];
                 if (child->NeedGradient())
                 {
@@ -547,9 +557,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ComputeGradientForChildren(const size_t timeIdxInSeq)
         {
-
             for (size_t i=0; i<m_children.size(); i++)
             {
+                if (!UseCustomizedMultiSeqHandling())
+                    ResetForNoLabels(m_gradientValues);
+
                 ComputationNodePtr child = m_children[i];
                 if (child->NeedGradient())
                 {
@@ -970,6 +982,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->m_functionValues = m_functionValues; 
                 node->m_gradientValues = m_gradientValues;
+
+                node->m_reqMultiSeqHandling = m_reqMultiSeqHandling;
             }
         }
 
@@ -989,11 +1003,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
 
+        // indicatess whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
+        virtual bool UseCustomizedMultiSeqHandling() { return false; }
+
     protected:
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
-
+        bool m_reqMultiSeqHandling;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
 
@@ -1006,6 +1023,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
         static std::map<size_t, std::map<size_t, Matrix<ElemType>*>> s_constOnes;
+
+        int     m_loopId;
+        size_t  m_samplesInRecurrentStep;
+
+        /// the order in reverse graph. 
+        int m_visitedOrder;
+        int m_index;
+        int m_lowlink;
+        bool m_visited;
+        bool m_inStack;
+        int m_indexInLoop;
+        Matrix<ElemType> * m_sentenceSeg;
+        /// conditionally point to either a pointer to that provided by network, or point to 
+        /// an indiviaul sentence boundary info, which happens if delay > 1 is required for delay node
+        Matrix<ElemType> * m_existsSentenceBeginOrNoLabels;
+        Matrix<ElemType> m_boundaryInfo; /// individual sentence boundary information 
 
     private:
         // for loop nodes
@@ -1032,224 +1065,15 @@ public: \
 protected:  \
         using B::m_loopId; using B::m_samplesInRecurrentStep; \
         using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop; using B::mBoundaryInfo; using B::mExistSentenceBeginOrNoLabels; \
+        using B::m_indexInLoop; using B::m_boundaryInfo; \
         using B::m_sentenceSeg; using B::m_existsSentenceBeginOrNoLabels; \
+        using B::m_reqMultiSeqHandling; using B::UseCustomizedMultiSeqHandling; \
         using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
         using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
         using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter
 
 #pragma endregion base computation class
 
-#pragma region derived operations
 
-    template<class ElemType>
-    class DropoutNode : public ComputationNode<ElemType>
-    {
-        UsingComputationNodeMembers;
-    public:
-
-        DropoutNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_dropoutRate = 0;
-            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
-            InitRecurrentNode();
-        }
-
-        DropoutNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
-            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
-
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-
-        virtual void ComputeInputPartial(const size_t inputIndex)
-        {
-            if (inputIndex > 0)
-                throw std::invalid_argument("Dropout operation only takes one input.");
-            ComputeInputPartialS(m_dropoutRate, Inputs(0)->GradientValues(), m_maskOfDropout, GradientValues());
-        }
-
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
-        {
-            if (inputIndex > 0)
-                throw std::invalid_argument("Dropout operation only takes one input.");
-
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            Matrix<ElemType> sliceMask = Matrix<ElemType>();
-            if(m_dropoutRate > 0)
-            {
-                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            }
-
-            ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
-        }
-
-        static void WINAPI ComputeInputPartialS(const ElemType dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
-        {
-            if (dropoutRate > 0)
-            {
-                inputGradientValues.AddElementProductOf(gradientValues, maskOfDropout);
-            }
-            else
-            {   
-                inputGradientValues += gradientValues;
-            }
-        }
-
-        virtual void EvaluateThisNode()  
-        {
-            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, FunctionValues(), m_maskOfDropout, Inputs(0)->FunctionValues());
-        }
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
-        {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-			Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
-
-            Matrix<ElemType> sliceMask = Matrix<ElemType>();
-            if(m_dropoutRate > 0)
-            {
-                FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-                m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            }
-
-            sliceOutputValue = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
-        }
-
-        static void WINAPI EvaluateThisNodeS(const ElemType dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
-        {
-            if(dropoutRate > 0)
-            {
-                maskOfDropout.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
-
-                maskOfDropout.SetUniformRandomMask(dropoutRate, ElemType(1.0) / (ElemType(1) - dropoutRate), randomSeed);
-                randomSeed += 1073807359;  //1073807359 is a very large prime number to avoid collision with other dropout nodes
-
-                functionValues.AssignElementProductOf(maskOfDropout, inputFunctionValues);
-#if NANCHECK
-                functionValues.HasNan("DropOut");
-#endif
-            }
-            else
-            {
-                //remove this line since we can get same effect by overwritting the FunctionValues functions without copying the values
-                //functionValues = inputFunctionValues;
-            }
-        }
-
-        virtual const Matrix<ElemType>& FunctionValues() const 
-        {
-            if(m_dropoutRate > 0)
-                 return m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
-
-        virtual Matrix<ElemType>& FunctionValues() 
-        {
-            if(m_dropoutRate > 0)
-                 return m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
-
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1) 
-                throw std::logic_error("Dropout operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
-                throw std::logic_error("Dropout operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr inputNode) 
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
-
-        void SetDropoutRate(const ElemType val)
-        {
-            if (val < 0 || val >= 1) 
-                throw std::logic_error("DropoutRate must be >= 0 and < 1.");
-            m_dropoutRate = val;
-        }
-
-        void SetRandomSeed(const unsigned long val)
-        {
-            m_randomSeed = (unsigned long) val;
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_maskOfDropout.GetDeviceId() != deviceId)
-                    m_maskOfDropout.TransferFromDeviceToDevice(m_maskOfDropout.GetDeviceId(), deviceId, true);
-            }
-        }
-
-        static const std::wstring TypeName() {return L"Dropout";} 
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            DropoutNode<ElemType>* node = (DropoutNode<ElemType>*) nodeP;
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_dropoutRate = m_dropoutRate;
-                node->m_randomSeed = m_randomSeed;
-                node->m_maskOfDropout = m_maskOfDropout;
-            }
-        }
-
-        // copy constructor
-        DropoutNode(const DropoutNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_maskOfDropout(node->m_deviceId)
-        {
-            node->CopyTo(this, newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new DropoutNode<ElemType>(this, name, flags);
-            return node;
-        }
-
-    private:
-        ElemType m_dropoutRate;
-        unsigned long m_randomSeed;
-
-        Matrix<ElemType> m_maskOfDropout;
-    };
-
-    template class DropoutNode<float>; 
-    template class DropoutNode<double>;
-
-#pragma endregion derived operations
 
 }}}
