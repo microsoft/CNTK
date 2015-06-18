@@ -51,6 +51,21 @@ void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
     // initialize just in case
     m_dataReader.clear();
 
+    mNbrUttPerMinibatch = config("nbruttsineachrecurrentiter", "1");
+    if (config.Exists("randomize"))
+    {
+        string randomizeString = config("randomize");
+        if (randomizeString == "None")
+        {
+            mDoRandomize = false;
+        }
+        else if (randomizeString == "Auto")
+        {
+            mDoRandomize = true;
+        }
+    }
+
+
     // create a variable of each type just to call the proper templated version
     ElemType elemType = ElemType();
 
@@ -80,6 +95,7 @@ void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
         m_ioNames.push_back(ioName);
         getReaderProc(&m_dataReader[ioName]);
     }
+
 }
 
 // DataReader Constructor
@@ -94,6 +110,7 @@ DataReader<ElemType>::DataReader(const ConfigParameters& config)
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         m_dataReader[m_ioNames[i]]->Init(m_configure[m_ioNames[i]]);
+        m_dataReader[m_ioNames[i]]->SetNbrSlicesEachRecurrentIter(mNbrUttPerMinibatch);
     }
 }
 
@@ -128,8 +145,28 @@ template<class ElemType>
 bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     bool bRet = true;
+    vector<size_t> vNbrSentences;
+    size_t nbr = 0; 
+    size_t thisNbr = 0;
+    /**
+    each reader reads data with number of columns as  nbr_utterances_per_minibatch * mbSize
+    notice that readers may differ in their actual mbsize, though it is supposedly to be nbr_utterances_per_minibatch * mbSize.
+    To handle with this, readers use their getminibatch function and then return their exact number of utterance in each minbatch. 
+    This exact number, which is specified for the next reader, is passed to the next reader. 
+    The next reader then returns the exact number of utterances per minibatch, after calling its getminibatch function.
+    Then this returned number is compared against the specified number. If these two numbers are not consistent, return with logic error.
+    The logic error can be avoided usually with an exchange of reading orders. 
+    */
     for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        if (nbr > 0)
+            m_dataReader[m_ioNames[i]]->SetNbrSlicesEachRecurrentIter(nbr);
         bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch(matrices);
+        thisNbr = m_dataReader[m_ioNames[i]]->NumberSlicesInEachRecurrentIter();
+        if (nbr > 0 && thisNbr != nbr)
+            LogicError("DataReader<ElemType>::GetMinibatch: The specified number of utterances per minibatch is not consistent to the actual number of utterances per minibatch");
+        nbr = thisNbr;
+    }
     return bRet;
 }
 
@@ -168,13 +205,6 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
     for (size_t i = 0; i < m_ioNames.size(); i++)
         bRet &= m_dataReader[m_ioNames[i]]->GetProposalObs(matrices, tidx, history);
     return bRet;
-}
-
-template<class ElemType>
-void DataReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz)
-{
-    for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetNbrSlicesEachRecurrentIter(sz);
 }
 
 template<class ElemType>

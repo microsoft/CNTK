@@ -72,6 +72,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop = 0;
             m_visited = false;
             m_inStack = false;
+            m_existsSentenceBeginOrNoLabels = nullptr;
+            m_sentenceSeg = nullptr;
 
             m_reqMultiSeqHandling = false;
         }

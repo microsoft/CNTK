@@ -536,27 +536,6 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_traceLevel = readerConfig("traceLevel","0");
     m_parser.SetTraceLevel(m_traceLevel);
 
-    if (readerConfig.Exists("randomize"))
-    {
-        string randomizeString = readerConfig("randomize");
-        if (randomizeString == "None")
-        {
-            ;
-        }
-        else if (randomizeString == "Auto")
-        {
-            ;
-        }
-        else
-        {
-            ;//readerConfig("randomize");
-        }
-    }
-    else
-    {
-        ; //randomizeAuto;
-    }
-
     // The input data is a combination of the label Data and extra feature dims together
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
@@ -1457,6 +1436,10 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             {
                 if (wClassFile != L""){
                     ReadClassInfo(wClassFile  , false);
+                    if (word4idx.size() != nwords)
+                    {
+                        LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file L%s is not consistent", nwords, word4idx.size(), wClassFile.c_str());
+                    }
                     int iMax = -1, i; 
                     for (auto ptr = word4idx.begin(); ptr != word4idx.end(); ptr++)
                     {
@@ -1529,12 +1512,6 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
 
     mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
-}
-
-template<class ElemType>
-void BatchSequenceReader<ElemType>::SetRandomSeed(int)
-{
-    NOT_IMPLEMENTED;
 }
 
 template<class ElemType>
@@ -1730,7 +1707,8 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
         mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
         if (mNumRead == 0) return false;
 
-        std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+        if (mDoRandomize) 
+            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
 
         m_readNextSampleLine += mNumRead;
         sLn = FindNextSentences(mNumRead);
@@ -1803,12 +1781,6 @@ size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
     size_t sz = mToProcess.size();
     return sz; 
-}
-
-template<class ElemType>
-void BatchSequenceReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t mz)
-{
-    mBlgSize = mz;
 }
 
 template<class ElemType>
