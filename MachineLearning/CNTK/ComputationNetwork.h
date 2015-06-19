@@ -85,6 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_features.clear();
             m_labels.clear();
             m_finalCriteria.clear();
+            m_nodesReqMultiSeqHandling.clear();
             m_evalNodes.clear();
             m_outputNodes.clear();
             m_recurrentInfo.clear();
@@ -158,6 +159,7 @@ private:	// [erw] added for Toplological Plot only
 			wstring m_LearnableParameterStyle ; 
 			wstring m_featuresStyle; 
 			wstring m_CriteriaStyle;
+            wstring m_nodesReqMultiSeqHandlingStyle;
 			wstring m_labelsStyle; 
 			wstring m_normalNodeStyle; 
 			wstring m_PrecomputingNodeStyle;
@@ -168,7 +170,8 @@ private:	// [erw] added for Toplological Plot only
 				m_LearnableParameterStyle	= L"node [ shape = box     , color = gray , style = \"filled, rounded\"  ]; "; 
 				m_featuresStyle				= L"node [ shape = ellipse , color = red  , fillcolor = white ]; "; 
 				m_CriteriaStyle				= L"node [ shape = doublecircle , color =  red , fillcolor = white  ]; ";
-				m_normalNodeStyle			= L"node [ shape = ellipse, color = blue, fillcolor = white, style = solid ]; ";
+                m_nodesReqMultiSeqHandlingStyle = L"node [ shape = doublecircle , color =  brown , fillcolor = white  ]; ";
+                m_normalNodeStyle = L"node [ shape = ellipse, color = blue, fillcolor = white, style = solid ]; ";
 				m_PrecomputingNodeStyle		= L"node [ shape = box    , color = black, style = \"dashed, filled\",  fillcolor= limegreen ] ;";
 				m_labelsStyle				= L"node [ shape = diamond, color = brown, style = bold ] ;  ";
 				m_DelayNodeStyle			= L"node [ shape = box3d  , color = lightgray, style = \"filled\" , fillcolor = white ] ";
@@ -237,6 +240,8 @@ public:
 			fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
 			// critera 
 			fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
+            // nodes that requires multi sequence handling 
+            fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_nodesReqMultiSeqHandling);            
 			// pre-compute nodes
 			fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
 			// delay nodes 
@@ -278,7 +283,11 @@ public:
 			{
 				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
-			for (auto x : m_outputNodes)
+            for (auto x : m_nodesReqMultiSeqHandling)
+            {
+                line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
+            }
+            for (auto x : m_outputNodes)
 			{
 				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
@@ -338,7 +347,11 @@ public:
 			{
 				m_finalCriteria[i]->EnumerateArcs(visited, arcs);
 			}
-			for (size_t i = 0; i < m_outputNodes.size(); i++)
+            for (size_t i = 0; i < m_nodesReqMultiSeqHandling.size(); i++)
+            {
+                m_nodesReqMultiSeqHandling[i]->EnumerateArcs(visited, arcs);
+            }
+            for (size_t i = 0; i < m_outputNodes.size(); i++)
 			{
 				m_outputNodes[i]->EnumerateArcs(visited, arcs); 
 			}
@@ -431,6 +444,14 @@ public:
                 fstream << m_finalCriteria[i]->NodeName();
             }
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
+            fstream << m_nodesReqMultiSeqHandling.size();
+            for (size_t i = 0; i<m_nodesReqMultiSeqHandling.size(); i++)
+            {
+                fstream << m_nodesReqMultiSeqHandling[i]->NodeName();
+            }
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
             fstream << m_evalNodes.size();
@@ -619,6 +640,17 @@ public:
                 }
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
+                if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
+                {
+                    fstream >> num;
+                    for (size_t i = 0; i<num; i++)
+                    {
+                        fstream >> nodeName;
+                        m_nodesReqMultiSeqHandling.push_back(GetNodeFromName(nodeName));
+                    }
+                    fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
+                }
+
                 fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
                 fstream >> num;
                 for (size_t i=0; i<num; i++)
@@ -803,7 +835,12 @@ public:
 			{
 				m_finalCriteria.erase(search);
 			}
-			search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
+            search = std::find(m_nodesReqMultiSeqHandling.begin(), m_nodesReqMultiSeqHandling.end(), nodeToDelete);
+            if (search != m_nodesReqMultiSeqHandling.end())
+            {
+                m_nodesReqMultiSeqHandling.erase(search);
+            }
+            search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
 			if (search != m_evalNodes.end())
 			{
 				m_evalNodes.erase(search);
@@ -1929,7 +1966,8 @@ public:
             }
             catch (...)
             {
-                RuntimeError("Error in ComputeGradient");
+                fprintf(stderr, "Error in ComputeGradient");
+                throw;
             }
         }
 
@@ -2001,7 +2039,9 @@ public:
 
         inline std::vector<ComputationNodePtr>& FinalCriterionNodes() {return m_finalCriteria;}
 
-        inline std::vector<ComputationNodePtr>& EvaluationNodes() {return m_evalNodes;}
+        inline std::vector<ComputationNodePtr>& NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
+
+        inline std::vector<ComputationNodePtr>& EvaluationNodes() { return m_evalNodes; }
 
         inline std::vector<ComputationNodePtr>& OutputNodes() {return m_outputNodes;}
 
@@ -2057,7 +2097,12 @@ public:
                 if (m_finalCriteria[i] == oldNode)
                     m_finalCriteria[i] = newNode;
             }            
-            for (int i=0; i<m_evalNodes.size(); i++)
+            for (int i = 0; i<m_nodesReqMultiSeqHandling.size(); i++)
+            {
+                if (m_nodesReqMultiSeqHandling[i] == oldNode)
+                    m_nodesReqMultiSeqHandling[i] = newNode;
+            }
+            for (int i = 0; i<m_evalNodes.size(); i++)
             {
                 if (m_evalNodes[i] == oldNode)
                     m_evalNodes[i] = newNode;
@@ -2973,7 +3018,8 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
             }
             catch (...)
             {
-                RuntimeError("Error in ClearGradientForAllNodes");
+                fprintf(stderr, "Error in ClearGradientForAllNodes");
+                throw;
             }
         }
 
