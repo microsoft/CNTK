@@ -83,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
         {
             leftMinusRight.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->ResetForNoLabels(leftMinusRight);
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftMinusRight);  //we are fine since it will only be called with full minibatch.
             ElemType v = leftMinusRight.FrobeniusNorm();
             functionValues.Resize(1,1);
             functionValues.SetValue(v*v/2);
@@ -229,7 +229,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), this);
+                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+                MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
             }
         }
 
@@ -255,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues, 
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
@@ -265,7 +266,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
-            curNode->ResetForNoLabels(inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
@@ -288,7 +288,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
-            curNode->ResetForNoLabels(logSoftmaxOfRight);
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -472,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->ResetForNoLabels(leftDivRight);
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftDivRight);
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
@@ -491,7 +491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             logOfRight.SetValue(inputFunctionValues1);
             logOfRight.InplaceLog();
-            curNode->ResetForNoLabels(logOfRight);
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(logOfRight);
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -661,7 +661,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), this);
+            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -669,9 +670,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL1Reg node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues, ComputationNodePtr curNode)
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
         {
-            curNode->ResetForNoLabels(inputFunctionValues);
             functionValues.Resize(1, 1);
             functionValues.SetValue(inputFunctionValues.MatrixNorm1());
 #if NANCHECK
@@ -802,7 +802,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), this);
+            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -810,9 +811,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL2RegNode node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues, ComputationNodePtr curNode)
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
         {
-            curNode->ResetForNoLabels(inputFunctionValues);
             functionValues.Resize(1,1);
             functionValues.SetValue(inputFunctionValues.FrobeniusNorm());
 #if NANCHECK
@@ -1363,7 +1363,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 catch (...)
                 {
-                    LogicError("EvaluateThisNodeS for ClassBasedCrossEntropyWithSoftmaxNode : number of classes is smaller than the dimension to read. Check network builder such as nbrClass and vocabulary file with class index to see if the number of classes and the maximum class index match. The right number should be number of classes == maximum class index number + 1\n");
+                    fprintf(stderr, "EvaluateThisNodeS for ClassBasedCrossEntropyWithSoftmaxNode : number of classes is smaller than the dimension to read. Check network builder such as nbrClass and vocabulary file with class index to see if the number of classes and the maximum class index match. The right number should be number of classes == maximum class index number + 1\n");
+                    throw;
                 }
                 sz += nbr_wrd;
             }

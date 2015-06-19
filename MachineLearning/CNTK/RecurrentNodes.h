@@ -562,6 +562,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         Matrix<ElemType> m_pastActivity;  /// saves the past activity this delay node points to
         int      m_delay;    /// steps for delay 
@@ -797,7 +800,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     catch (...)
                     {
-                        RuntimeError("Error in computing gradient in function ComputeInputPartial for LSTMnode at position %ld, length %ld", timeIdxInSeq, nT);
+                        fprintf(stderr, "Error in computing gradient in function ComputeInputPartial for LSTMnode at position %ld, length %ld", timeIdxInSeq, nT);
+                        throw;
                     }
                     grdToObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
@@ -1150,7 +1154,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     catch (...)
                     {
-                        RuntimeError("Error in evaluating LSTMnode at position %ld out of %ld", timeIdxInSeq, nT);
+                        fprintf(stderr, "Error in evaluating LSTMnode at position %ld out of %ld", timeIdxInSeq, nT);
+                        throw;
                     }
                 }
 
@@ -1178,7 +1183,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             catch (...)
             {
-                RuntimeError("Error in evaluation of LSTMNode with %ld observations", nT);
+                fprintf(stderr, "Error in evaluation of LSTMNode with %ld observations", nT);
+                throw;
             }
         }
 
@@ -1746,6 +1752,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     protected:
         size_t m_inputDim;

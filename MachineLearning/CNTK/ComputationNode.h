@@ -116,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode();
 
             if (!UseCustomizedMultiSeqHandling())
-                ResetForNoLabels(m_functionValues);
+                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
         }
 
         void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq)
@@ -124,7 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode(timeIdxInSeq);
 
             if (!UseCustomizedMultiSeqHandling())
-                ResetForNoLabels(m_functionValues);
+                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
         }
 
         virtual void Validate() = 0;
@@ -261,41 +261,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labele
         */
-        void ResetForNoLabels(Matrix<ElemType>& toChange)
+        void MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1)
         {
-            size_t nT = toChange.GetNumCols();
-            size_t nd = toChange.GetNumRows();
-            size_t nS = m_sentenceSeg->GetNumRows();
-            Matrix<ElemType> colBegin(m_sentenceSeg->GetDeviceId());
-            Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
-            Matrix<ElemType> newfunc(m_sentenceSeg->GetDeviceId());
+            if (m_sentenceSeg != nullptr && m_existsSentenceBeginOrNoLabels != nullptr)
+            {
+                size_t nT = matrixToBeMasked.GetNumCols();
+                size_t nS = m_sentenceSeg->GetNumRows();
 
-            if (m_existsSentenceBeginOrNoLabels->GetNumRows() != 1)
-            {
-                LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should be a one row matrix or a vector. ");
-            }
-            if (m_existsSentenceBeginOrNoLabels->GetNumElements() != nT / nS)
-            {
-                LogicError("ResetForNoLabels: m_existsSentenceBeginOrNoLabels should have one element for each time of all streams. Check feature reader. ");
-            }
-
-            colBegin.Resize(nS, nS);
-            colSeg.Resize(nS, 1);
-            newfunc.Resize(nd, nS);
-            for (int utt_t = 0; utt_t < nT; utt_t += nS)
-            {
-                size_t j = utt_t / nS;
-                if (m_existsSentenceBeginOrNoLabels->ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+                if (m_existsSentenceBeginOrNoLabels->GetNumRows() != 1)
                 {
-                    colSeg.SetValue(m_sentenceSeg->ColumnSlice(j, 1)); // -1 0 1 
-                    colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
-                    colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
-                    colBegin.SetDiagonalValue(colSeg);
+                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_existsSentenceBeginOrNoLabels should be a one row matrix or a vector. ");
+                }
+                if (m_existsSentenceBeginOrNoLabels->GetNumElements() != nT / nS)
+                {
+                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_existsSentenceBeginOrNoLabels should have one element for each time of all streams. Check feature reader. ");
+                }
 
-                    /// this is the begining of this minibatch
-                    Matrix<ElemType>::Multiply(toChange.ColumnSlice(utt_t, nS), false, colBegin, false, newfunc);
+                Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
 
-                    toChange.ColumnSlice(utt_t, nS).SetValue(newfunc);
+                size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;
+                size_t endT = (timeIdxInSeq == (size_t)-1) ? nT : timeIdxInSeq * nS + nS;
+                for (size_t utt_t = startT; utt_t < endT; utt_t += nS)
+                {
+                    size_t j = utt_t / nS;
+                    if (m_existsSentenceBeginOrNoLabels->ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+                    {
+                        //Are we able to find a more efficient way?
+                        colSeg.SetValue(m_sentenceSeg->ColumnSlice(j, 1)); // -1 0 1 copy to new matrix colseg so that m_sentenceSeg not destroyed
+                        colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
+                        colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
+                        colSeg.Reshape(1, nS);
+                        matrixToBeMasked.ColumnSlice(utt_t, nS).RowElementMultiplyWith(colSeg);
+                    }
                 }
             }
         }
@@ -438,8 +435,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const std::wstring& NodeName() const { return m_nodeName;}
         std::wstring& NodeName() { return m_nodeName;}
         
-        const std::wstring& DerivativeName() const {return L"D_" + m_nodeName;}
-
         const Matrix<ElemType>& GradientValues() const {return m_gradientValues;}
         Matrix<ElemType>& GradientValues() {return m_gradientValues;}
 
@@ -533,7 +528,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 if (!UseCustomizedMultiSeqHandling())
-                    ResetForNoLabels(m_gradientValues);
+                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues);
 
                 ComputationNodePtr child = m_children[i];
                 if (child->NeedGradient())
@@ -562,7 +557,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 if (!UseCustomizedMultiSeqHandling())
-                    ResetForNoLabels(m_gradientValues);
+                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues, timeIdxInSeq);
 
                 ComputationNodePtr child = m_children[i];
                 if (child->NeedGradient())
@@ -1046,6 +1041,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // for loop nodes
         bool m_hasloop; 
     };
+
     // add this at the start of each derived class, to get access to the members of ComputationNode
     // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
 #define UsingComputationNodeMembers    \
@@ -1055,7 +1051,7 @@ protected:  \
 public: \
         using B::AttachInputs; using B::ChildrenNeedGradient; using B::ChildrenSize; using B::ClearGradientForChildren; \
         using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::CopyImageSizeFromInput; \
-        using B::CopyImageSizeFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DerivativeName; using B::DetachInputs; \
+        using B::CopyImageSizeFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DetachInputs; \
         using B::DumpNodeInfo; using B::Duplicate; using B::EnumerateNodes; using B::EnumerateNodesForEval; \
         using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
         using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
