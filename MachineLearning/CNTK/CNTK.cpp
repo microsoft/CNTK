@@ -1006,6 +1006,15 @@ void PrintBuiltInfo()
 }
 #endif
 
+void PrintUsageInfo()
+{
+    fprintf(stderr, "-------------------------------------------------------------------\n");
+    fprintf(stderr, "Usage: cntk configFile=yourConfigFile\n");
+    fprintf(stderr, "For detailed information please consult the CNTK book\n");
+    fprintf(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");    
+    fprintf(stderr, "-------------------------------------------------------------------\n");
+}
+
 int wmain(int argc, wchar_t* argv[])
 {
 
@@ -1119,17 +1128,13 @@ int wmain(int argc, wchar_t* argv[])
     catch (const std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
-#ifdef _DEBUG
-        DebugBreak();
-#endif
+        PrintUsageInfo();
         return EXIT_FAILURE;
     }
     catch (...)
     {
         fprintf(stderr, "Unknown ERROR occurred");
-#ifdef _DEBUG
-        DebugBreak();
-#endif
+        PrintUsageInfo();
         return EXIT_FAILURE;
     }
 #ifdef MPI_SUPPORT
