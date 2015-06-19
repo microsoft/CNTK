@@ -2786,7 +2786,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             maxIndexes.Resize(1, n);
 
             int blocksPerGrid = n; //we'll have 1 block processing 1 column
-            _vectorMaxMinReduce<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,true);
+            _vectorMaxMinReduce<ElemType, true><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n);
 
             /*int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
             _vectorMax<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,isColWise);*/
@@ -2823,7 +2823,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             minIndexes.Resize(1, n);
 
             int blocksPerGrid = n; //we'll have 1 block processing 1 column
-            _vectorMaxMinReduce<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,minIndexes.m_pArray,minValues.m_pArray,m,n,false);
+            _vectorMaxMinReduce<ElemType, false><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,minIndexes.m_pArray,minValues.m_pArray,m,n);
 
             /*
             int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
