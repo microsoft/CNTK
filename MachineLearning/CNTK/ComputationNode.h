@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         */
         void MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1)
         {
-            if (m_sentenceSeg != nullptr && m_existsSentenceBeginOrNoLabels != nullptr)
+            if (m_sentenceSeg != nullptr && m_existsSentenceBeginOrNoLabels != nullptr && !m_sentenceSeg->IsEmpty() && !m_existsSentenceBeginOrNoLabels->IsEmpty())
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
                 size_t nS = m_sentenceSeg->GetNumRows();
