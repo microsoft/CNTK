@@ -261,8 +261,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labele
         */
-        void MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1)
+        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1)
         {
+            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
+
             if (m_sentenceSeg != nullptr && m_existsSentenceBeginOrNoLabels != nullptr && !m_sentenceSeg->IsEmpty() && !m_existsSentenceBeginOrNoLabels->IsEmpty())
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
@@ -292,9 +294,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
                         colSeg.Reshape(1, nS);
                         matrixToBeMasked.ColumnSlice(utt_t, nS).RowElementMultiplyWith(colSeg);
+
+                        processedExistsNoLabelorFeatureMissing = true;
                     }
                 }
             }
+
+            return processedExistsNoLabelorFeatureMissing;
         }
 
         void SetLoopId(const int id)
