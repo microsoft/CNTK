@@ -399,6 +399,13 @@ private:
     vector<SectionFile*> m_secFiles;
     std::map<std::wstring, Section*, nocase_compare> m_sections;
 
+    /** 
+    for reading one line per file, i.e., a file has only one line of data
+    */
+    bool mOneLinePerFile;
+    size_t m_dim; 
+    vector<FILE*> m_fStream;
+
     void SetupEpoch();
     void LoadSections(Section* parentSection, MappingType mapping, size_t windowSize);
     void DisplayProperties();

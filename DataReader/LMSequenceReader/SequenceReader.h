@@ -103,6 +103,7 @@ public:
 	using LabelType = typename IDataReader<ElemType>::LabelType;
 	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
 
+
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
@@ -246,7 +247,6 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
@@ -321,9 +321,13 @@ public:
 	using SequenceReader<ElemType>::GetIdFromLabel;
 	using SequenceReader<ElemType>::GetInputToClass;
 	using SequenceReader<ElemType>::GetClassInfo;
+    using IDataReader<ElemType>::mBlgSize;
+    using IDataReader<ElemType>::mDoRandomize;
+
+
 private:
     size_t mLastProcssedSentenceId ; 
-    size_t mBlgSize; 
+
     size_t mPosInSentence;
     vector<size_t> mToProcess;
     size_t mLastPosInSentence; 
@@ -347,6 +351,7 @@ public:
         mLastPosInSentence = 0;
         mNumRead = 0;
         mSentenceEnd = false; 
+        mDoRandomize = false; 
     }
     ~BatchSequenceReader() {
         if (m_labelTemp.size() > 0)
@@ -374,11 +379,10 @@ public:
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool EnsureDataAvailable(size_t mbStartSample);
     size_t NumberSlicesInEachRecurrentIter();
-    void SetNbrSlicesEachRecurrentIter(const size_t mz);
+
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
     void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
-    void SetRandomSeed(int);
 };
 
 }}}

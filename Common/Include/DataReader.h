@@ -50,6 +50,8 @@ public:
     typedef std::string LabelType;
     typedef unsigned LabelIdType;
     unsigned m_seed;
+    size_t   mBlgSize;  /// number of utterances per minibatch
+    bool     mDoRandomize; 
 
     virtual void Init(const ConfigParameters& /*config*/)
     {
@@ -69,10 +71,8 @@ public:
     }
     virtual size_t NumberSlicesInEachRecurrentIter() { NOT_IMPLEMENTED; }
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
-    virtual void SetNbrSlicesEachRecurrentIter(const size_t) 
-    {
-        NOT_IMPLEMENTED;
-    }
+    virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
+
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
@@ -89,6 +89,7 @@ public:
         NOT_IMPLEMENTED;
     }
 
+    void SetDoRandomize(bool b){ mDoRandomize = b; }
 };
 
 // GetReader - get a reader type from the DLL
@@ -142,6 +143,11 @@ public:
     // NOTE: this destroys the object, and it can't be used past this point
     virtual void Destroy();
 
+    /// number of utterances per minibatch, for data parallelsim
+    size_t mNbrUttPerMinibatch; 
+
+    bool mDoRandomize; 
+
 public:
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader 
@@ -162,8 +168,6 @@ public:
 
     size_t NumberSlicesInEachRecurrentIter();
     int GetSentenceEndIdFromOutputLabel();
-
-    void SetNbrSlicesEachRecurrentIter(const size_t);
 
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
@@ -187,7 +191,7 @@ public:
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
-    virtual void SetRandomSeed(int);
+    void SetRandomSeed(int);
 
     bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&);
     void InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices);

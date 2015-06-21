@@ -399,6 +399,167 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowSliceNode<float>; 
     template class RowSliceNode<double>;
 
+    //this node is used to extract part of the input by rows as the output
+    //it has to be continuous segments of rows since each column is treated as one sample
+    template<class ElemType>
+    class RowStackNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        RowStackNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        RowStackNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        RowStackNode(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new RowStackNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            RowStackNode<ElemType>* node = (RowStackNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeChildren)
+            {
+                node->m_children = m_children;
+                node->m_startRowIndeces = m_startRowIndeces;
+                node->m_inputMatrices = m_inputMatrices;
+            }
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"RowStack"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex >= ChildrenSize())
+                throw std::invalid_argument("RowStack-ComputeInputPartial: inputIndex out of range.");
+
+            ComputeInputPartialS(Inputs(inputIndex)->GradientValues(), GradientValues(), m_startRowIndeces[inputIndex], m_startRowIndeces[inputIndex + 1] - m_startRowIndeces[inputIndex]);
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex >= ChildrenSize())
+                throw std::invalid_argument("RowStack-ComputeInputPartial: inputIndex out of range.");
+
+            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startRowIndeces[inputIndex], m_startRowIndeces[inputIndex+1] - m_startRowIndeces[inputIndex]);
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex, const size_t numRows)
+        {
+            inputGradientValues.AddWithRowSliceValuesOf(gradientValues, startIndex, numRows);
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_functionValues, m_inputMatrices,  0, Inputs(0)->FunctionValues().GetNumCols());
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceFunctionValues = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceFunctionValues, m_inputMatrices, timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+        {
+            functionValues.AssignRowStackValuesOf(inputMatrices, sliceStartCol, sliceNumCols);
+#if NANCHECK
+            functionValues.HasNan("RowStack");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+            
+            unsigned int numInputs = ChildrenSize();
+            if (numInputs < 2)
+                LogicError("RowStack operation: must have two or more inputs.");
+
+            if (Inputs(0) == nullptr)
+                LogicError("RowStack operation: the input node is NULL.");
+
+            size_t numCols = Inputs(0)->FunctionValues().GetNumCols();
+            m_startRowIndeces.resize(ChildrenSize()+1);
+            m_inputMatrices.resize(ChildrenSize());
+
+            size_t totalRows = 0;
+            m_startRowIndeces[0] = 0;
+
+            for (int i = 0; i < ChildrenSize(); i++)
+            {
+                if (Inputs(i) == nullptr)
+                    LogicError("RowStack operation: the input node is NULL.");
+
+                Matrix<ElemType>& childMatrix = Inputs(i)->FunctionValues();
+                size_t numRows = childMatrix.GetNumRows();
+                if (numRows == 0)
+                    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
+                
+                if (childMatrix.GetNumCols() != numCols)
+                    LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
+
+                totalRows += numRows;
+                m_inputMatrices[i] = &childMatrix;
+                m_startRowIndeces[i + 1] = m_startRowIndeces[i] + numRows;
+            }
+
+            FunctionValues().Resize(totalRows, numCols);
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, true);
+            m_outputHeight = FunctionValues().GetNumRows();
+
+            //WARNING: this node will destroy the image size information from the child
+            if (m_inputWidth * m_inputChannels != 1)
+                fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
+        {
+            unsigned int numInputs = inputs.size();
+            m_children.resize(numInputs);
+            for (unsigned int i = 0; i < numInputs; i++)
+                m_children[i] = inputs[i];
+        }
+
+    private:
+        std::vector<size_t> m_startRowIndeces; //start row number in the stacked matrix of each input (child)
+        std::vector<const Matrix<ElemType>*> m_inputMatrices;
+    };
+
+    template class RowStackNode<float>;
+    template class RowStackNode<double>;
+
     template<class ElemType>
     class ScaleNode : public ComputationNode<ElemType>
     {
