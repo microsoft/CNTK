@@ -1618,4 +1618,212 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
 
+    template<class ElemType>
+    class DropoutNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+
+        DropoutNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                m_dropoutRate = 0;
+                m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
+                InitRecurrentNode();
+            }
+
+        DropoutNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
+                m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
+
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Dropout operation only takes one input.");
+            ComputeInputPartialS(m_dropoutRate, Inputs(0)->GradientValues(), m_maskOfDropout, GradientValues());
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Dropout operation only takes one input.");
+
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
+            if (m_dropoutRate > 0)
+            {
+                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            }
+
+            ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
+        }
+
+        static void WINAPI ComputeInputPartialS(const ElemType dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        {
+            if (dropoutRate > 0)
+            {
+                inputGradientValues.AddElementProductOf(gradientValues, maskOfDropout);
+            }
+            else
+            {
+                inputGradientValues += gradientValues;
+            }
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, FunctionValues(), m_maskOfDropout, Inputs(0)->FunctionValues());
+        }
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
+
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
+            if (m_dropoutRate > 0)
+            {
+                FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+                m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            }
+
+            sliceOutputValue = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
+        }
+
+        static void WINAPI EvaluateThisNodeS(const ElemType dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
+        {
+            if (dropoutRate > 0)
+            {
+                maskOfDropout.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
+
+                maskOfDropout.SetUniformRandomMask(dropoutRate, ElemType(1.0) / (ElemType(1) - dropoutRate), randomSeed);
+                randomSeed += 1073807359;  //1073807359 is a very large prime number to avoid collision with other dropout nodes
+
+                functionValues.AssignElementProductOf(maskOfDropout, inputFunctionValues);
+#if NANCHECK
+                functionValues.HasNan("DropOut");
+#endif
+            }
+            else
+            {
+                //remove this line since we can get same effect by overwritting the FunctionValues functions without copying the values
+                //functionValues = inputFunctionValues;
+            }
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            if (m_dropoutRate > 0)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual Matrix<ElemType>& FunctionValues()
+        {
+            if (m_dropoutRate > 0)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("Dropout operation should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("Dropout operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr inputNode)
+        {
+            m_children.resize(1);
+            m_children[0] = inputNode;
+        }
+
+        void SetDropoutRate(const ElemType val)
+        {
+            if (val < 0 || val >= 1)
+                throw std::logic_error("DropoutRate must be >= 0 and < 1.");
+            m_dropoutRate = val;
+        }
+
+        void SetRandomSeed(const unsigned long val)
+        {
+            m_randomSeed = (unsigned long)val;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_maskOfDropout.GetDeviceId() != deviceId)
+                    m_maskOfDropout.TransferFromDeviceToDevice(m_maskOfDropout.GetDeviceId(), deviceId, true);
+            }
+        }
+
+        static const std::wstring TypeName() { return L"Dropout"; }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            DropoutNode<ElemType>* node = (DropoutNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_dropoutRate = m_dropoutRate;
+                node->m_randomSeed = m_randomSeed;
+                node->m_maskOfDropout = m_maskOfDropout;
+            }
+        }
+
+        // copy constructor
+        DropoutNode(const DropoutNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_maskOfDropout(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new DropoutNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    private:
+        ElemType m_dropoutRate;
+        unsigned long m_randomSeed;
+
+        Matrix<ElemType> m_maskOfDropout;
+    };
+
+    template class DropoutNode<float>;
+    template class DropoutNode<double>;
+
 }}}

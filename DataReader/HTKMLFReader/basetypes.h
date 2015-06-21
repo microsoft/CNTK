@@ -142,6 +142,15 @@ extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp)
 #endif
 #endif
 
+/**
+These macros are used for sentence segmentation information.
+*/
+#define SENTENCE_BEGIN 0 
+#define SENTENCE_MIDDLE 1
+#define NO_LABELS -1
+#define EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 0
+#define NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 1
+
 // ----------------------------------------------------------------------------
 // basic data types
 // ----------------------------------------------------------------------------

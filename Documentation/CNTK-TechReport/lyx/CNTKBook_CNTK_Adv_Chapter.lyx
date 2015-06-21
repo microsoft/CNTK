@@ -692,14 +692,26 @@ EvalNodes=(ErrPredict)
 OutputNodes=(Plus2)
 \end_layout
 
+\begin_layout Plain Layout
+
+NodesReqMultiSeqHandling=(CE)
+\end_layout
+
 \end_inset
 
 After defining the network, it’s important to let CNTK know what the special
  nodes are in the network.
- For example, CNTK needs to know which input nodes are features and which
- are labels.
+ For example, CNTK needs to know which input nodes are features and labels.
  It also needs to know the default output nodes, evaluation nodes and training
  criteria nodes.
+ Note here the specification of the nodes that require special handling
+ (NodesReqMultiSeqHandling) when the network is evalauted or trained with
+ multiple sequences, e.g., when the network itself is an RNN or the model
+ is trained with the sequence-level criterion.
+ Since in these cases multiple sequences will be stitched together to improve
+ the speed and special handling is needed for, e.g., the criterion node, to
+ reset the RNN states at the right time and to mask out the samples when
+ the features/labels are missing.
  CNTK supports multiple inputs and outputs which can be represented by comma
  separated variable names surrounded by parentheses.
 \end_layout
@@ -1254,6 +1266,11 @@ CriteriaNodes=(CE)
 EvalNodes=(ErrPredict)
 \end_layout
 
+\begin_layout Plain Layout
+
+NodesReqMultiSeqHandling=(CE)
+\end_layout
+
 \end_inset
 
 we can tag these nodes as they are defined.
@@ -1282,6 +1299,11 @@ CE = SMBFF(L3, LDim, HDim, labels, tag=Criteria)
 \begin_layout Plain Layout
 
 Err=ErrorPrediction(labels, CE.F, tag=Eval)
+\end_layout
+
+\begin_layout Plain Layout
+
+CE = SMBFF(L3, LDim, HDim, labels, tag=MultiSeq)
 \end_layout
 
 \end_inset
@@ -2142,6 +2164,47 @@ startRow - the start row to get a slice
 
 \begin_layout Itemize
 numRows - the number of rows to get
+\end_layout
+
+\begin_layout Subsubsection
+RowStack
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RowStack
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Concatnate rows of input matrices to form a bigger matrix.
+ The resulting matrix is a sumof(rows) by m1.cols matrix.
+ It supports variable-length input.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+RowStack(m1, m2, ...)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ can be any number of input matrices.
 \end_layout
 
 \begin_layout Subsubsection
@@ -5519,6 +5582,21 @@ Output
 \end_inset
 
 =true|false: Set the node as one of the output nodes.
+\end_layout
+
+\begin_layout Itemize
+MultiSeq
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+MultiSeq
+\end_layout
+
+\end_inset
+
+=true|false: Set the node as one of the nodes that require special handling
+ when multiple sequences are used in the training or evaluation.
 \end_layout
 
 \begin_layout Subsubsection
