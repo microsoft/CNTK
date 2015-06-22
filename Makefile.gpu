@@ -74,6 +74,8 @@ CFLAGS = -msse3 -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__US
 
 NVCCFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -arch=compute_20
 
+LDFLAGS=-Wl,-rpath,'$$ORIGIN'
+
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp Common/TimerUtility.cpp
 MATH_SRC = Math/Math/Matrix.cpp Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKernels.cu Math/Math/GPUSparseMatrix.cu Math/Math/GPUWatcher.cu \
@@ -105,7 +107,6 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 SEPARATOR = "=-----------------------------------------------------------="
 
 all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so
-	ln -sf $(CURDIR)/$(BINDIR)/* bin
 
 $(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
 	@echo $(SEPARATOR)
@@ -134,7 +135,7 @@ $(BINDIR)/cntk: $(CORE_OBJ)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CC) $(BUILDTYPE_OPT) -o $@ $^ $(CUDA_LIB) $(MATHLIB_LIB) -fopenmp -ldl -fPIC 
+	$(CC) $(BUILDTYPE_OPT) $(LDFLAGS) -o $@ $^ $(CUDA_LIB) $(MATHLIB_LIB) -fopenmp -ldl -fPIC 
 
 -include ${DEP}
 
