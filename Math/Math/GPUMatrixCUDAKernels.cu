@@ -106,33 +106,36 @@ __global__ void _assignSigmoidOf(
     const LONG64 N)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (sizeof(ElemType)==sizeof(double))
+
+    if (id >= N)
     {
-        if (a[id]>=0)
-        {
-            double e = exp(-1*a[id]);
-            res[id]=1/(1+e);
-        }
-        else
-        {
-            double e = exp(a[id]);
-            res[id]=e/(1+e);
-        }
+        return;
+    }
+
+    // TODO: Many of these kernels are the same for float and double except for
+    // the underlying math function called, which can be handled through overloads.
+
+    // This function computes e^|x| / (1 + e^|x|) if x is positive, and
+    // 1 / (1 + e^|x|) if x is negative. The kernel computes common
+    // math computation for as long as possible: 1 / (1 + e^|x|) and
+    // uses conditional assignment at the end to avoid thread divergence.
+    if (sizeof(ElemType) == sizeof(double))
+    {
+        double elem = a[id];
+        double negElem = -fabs(elem);
+        double e = exp(negElem);
+        double ep1Recip = 1 / (e + 1);
+
+        res[id] = (elem == negElem) ? e * ep1Recip : ep1Recip;
     }
     else
     {
-        if (a[id]>=0)
-        {
-            float e = expf(-1*a[id]);
-            res[id]=1/(1+e);
-        }
-        else
-        {
-            float e = exp(a[id]);
-            res[id]=e/(1+e);
-        }
+        float elem = a[id];
+        float negElem = -fabsf(elem);
+        float e = expf(negElem);
+        float ep1Recip = 1 / (e + 1);
+
+        res[id] = (elem == negElem) ? e * ep1Recip : ep1Recip;
     }
 };
 
