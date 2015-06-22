@@ -1,5 +1,9 @@
 # WORK IN PROGRESS, not currently complete nor usable
 
+# NOTE: We are in the process of consolidating all Makefile's into a single one,
+# with different build options. In the meantime, all active work will go into Makefile.gpu
+# and other Makefile's, like this one, may fall behind.
+
 # makefile for a Linux/GCC build of CNTK
 # This needs ACML_PATH. E.g. in tcsh, say: setenv ACML_PATH C:/AMD/acml5.3.1/ifort64_mp
 
