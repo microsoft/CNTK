@@ -1795,7 +1795,7 @@ public:
             }
         }
 
-        virtual void ComputeGradient(const ComputationNodePtr rootNode)
+        virtual void ComputeGradient(const ComputationNodePtr rootNode, bool incrementalMode = false)
         {
             if (rootNode->FunctionValues().GetNumElements() != 1)
                 throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
@@ -1803,7 +1803,10 @@ public:
             //run forward pass first
             Evaluate(rootNode);
 
-            ClearGradientForAllNodes(rootNode);
+            // If computing gradient incrementally (minibatch paging)
+            // skipping clearing step: gradient values will be accumulated
+            if (!incrementalMode)
+                ClearGradientForAllNodes(rootNode);
 
             //run backward pass
             std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);

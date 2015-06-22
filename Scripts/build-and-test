@@ -67,8 +67,7 @@ fi
 TMP_ROOT=`mktemp -d /tmp/cntk.XXXXX || exit $?`
 echo "============ Creating CNTK temp directory in $TMP_ROOT ============"
 
-TMP_CONF_FILE=`mktemp $TMP_ROOT/Simple.conf.XXXXX || exit $?`
-TMP_RESULT_FILE=`mktemp $TMP_ROOT/Result.XXXXX || exit $?`
+TMP_CONF_FILE=$TMP_ROOT/Simple.conf
 
 SCRIPT=`readlink -f $0`
 SCRIPT_DIR=`dirname $SCRIPT`
@@ -102,7 +101,7 @@ do
     msbuild.exe /property:Configuration=$FLAVOR /t:Clean || exit $?
     msbuild.exe /property:Configuration=$FLAVOR || exit $?
   else
-    make BUILDTYPE=$FLAVOR -f $MAKEFILE clean || exit $?
+    #make BUILDTYPE=$FLAVOR -f $MAKEFILE clean || exit $?
     make BUILDTYPE=$FLAVOR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
   fi
 done
@@ -124,10 +123,15 @@ do
   else
     sed -i -e 's/^DeviceNumber.*/DeviceNumber=Auto/g' $TMP_CONF_FILE || exit $?
   fi
-
-  for FLAVOR_DIR in $DEBUG_DIR $RELEASE_DIR
+  ORIG_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+  for FLAVOR in DEBUG RELEASE
   do
+    FLAVOR_DIR_VAR="${FLAVOR}_DIR"
+    FLAVOR_DIR=${!FLAVOR_DIR_VAR}
+    TMP_RESULT_FILE=$TMP_ROOT/Result.$TARGET.$FLAVOR.log
     echo "============ Running CNTK ($FLAVOR_DIR) ($TARGET) ============"
+    export LD_LIBRARY_PATH=$ORIG_LD_LIBRARY_PATH:$FLAVOR_DIR
+    echo $LD_LUBRARY_PATH
     rm -rf models
     if [[ $OS == "Windows_NT" ]]; then
       # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.

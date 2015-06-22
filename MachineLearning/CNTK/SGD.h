@@ -17,6 +17,7 @@
 #include "commandArgUtil.h"
 #include <chrono> 
 #include <random>
+#include <signal.h>
 #include "TimerUtility.h"
 
 #ifdef MPI_SUPPORT
@@ -390,7 +391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void Train(IComputationNetBuilder<ElemType>* netBuilder, IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader, const bool makeMode = true)
-        {
+	  {
             if (netBuilder == nullptr || trainSetDataReader == nullptr)
                     throw std::invalid_argument ("netBuilder and trainSetDataReader should not be null.\n");
 
@@ -996,32 +997,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UpdateEvalTimeStamps(FeatureNodes);
                 UpdateEvalTimeStamps(labelNodes);
 
+                MiniBatchPageIterator pageIterator(inputMatrices, 10/*TODO:vlivan:pageSize*/);
+
                 size_t actualMBSize = net.GetActualMBSize();
                 if (0 == actualMBSize)
                     continue;
 
-                net.SetActualMiniBatchSize(actualMBSize);
-                net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd); 
+                while (pageIterator.MoveToNextPage())
+                {
+                    size_t actualPageSize = net.GetActualMBSize();
+                    net.SetActualMiniBatchSize(actualPageSize);
+                    net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                    trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd);
 
 #ifndef EVALDLL
-                if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
-                {
-                     throw std::logic_error("cannot pass gradient checker");
-                }
+                    if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
+                    {
+                         throw std::logic_error("cannot pass gradient checker");
+                    }
 #endif
-                if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr) //TODO: currently only support one node regularization
-                {
-                    refNet.SetActualMiniBatchSize(actualMBSize);
-                    refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                    refNet.Evaluate(refNode);
-                    Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight, refNode->FunctionValues(), 1-m_adaptationRegWeight, labelNodes[0]->FunctionValues()); 
+                    if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr) //TODO: currently only support one node regularization
+                    {
+                        refNet.SetActualMiniBatchSize(actualPageSize);
+                        refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        refNet.Evaluate(refNode);
+                        Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight, refNode->FunctionValues(), 1-m_adaptationRegWeight, labelNodes[0]->FunctionValues());
+                    }
+
+                    if (learnRatePerSample > m_minLearnRate * 0.01)  //only compute gradient when learning rate is large enough
+                        net.ComputeGradient(criterionNodes[0], pageIterator.currentPage() > 0);  //use only the first criterion. Is there any possibility to use more?
+                    else
+                        net.Evaluate(criterionNodes[0]); //use only the first criterion. Is there any possibility to use more?
+                    //TODO:vlivan:^^^^^^^^^^what to do with the 2nd branch?
                 }
-                   
-                if (learnRatePerSample > m_minLearnRate * 0.01)  //only compute gradient when learning rate is large enough
-                    net.ComputeGradient(criterionNodes[0]);  //use only the first criterion. Is there any possibility to use more?
-                else
-                    net.Evaluate(criterionNodes[0]); //use only the first criterion. Is there any possibility to use more?
 
                 Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
 
@@ -1045,7 +1053,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }                    
                 }
 
-
                 endComputeMBTime=Timer::MilliSecondElapsed();
                 numMBsRun ++;
                 if (m_traceLevel > 0)
@@ -1064,7 +1071,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t i=0; i< numEvalNodes; i++)
                             epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0,i);
 
-                        fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d    Train Loss Per Sample = %.8g    ",epochNumber+1, numMBsRun-m_numMBsToShowResult+1, numMBsRun, numSamplesLastMBs,
+			fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d    Train Loss Per Sample = %.8g    ",epochNumber+1, numMBsRun-m_numMBsToShowResult+1, numMBsRun, numSamplesLastMBs,
                             (epochCriterion-epochCriterionLastMBs)/numSamplesLastMBs);
                         for (size_t i=0; i<numEvalNodes; i++)
                         {
@@ -1344,6 +1351,93 @@ protected:
         GradientsUpdateType GradUpdateType() const {return m_gradType.mType;}
         ElemType GradientUpdateNoiseStd() const {return m_gradType.mGaussianNoiseInjectStd;}
         ElemType MomentumPerMB() const {return m_momentumPerMB;}
+
+    private:
+        // This helper class simplifies handling of large mini-batches.
+        // It takes a map of named matrices as input and a size of the page (max number of columns),
+        // and allows to iterate all pages by slicing the matrices vertically in left-to-right order.
+        // if pageSize is -1 then no paging is performed (the whole minibatch is handled as a single page)
+        class MiniBatchPageIterator
+        {
+            // reference to the map of the current matrices
+            std::map<std::wstring, Matrix<ElemType>*>& m_currentMatrices;
+            // stores snapshot of original matrices
+            std::map<std::wstring, Matrix<ElemType>> m_snapshot;
+
+            // size of the page (number of columns)
+            int m_pageSize;
+            // 0-based index of the current page
+            int m_currentPage;
+            // number of pages
+            int m_numOfPages;
+
+        public:
+
+            // Creates page iterator for the given inputMatrices and desired pageSize
+            // if pageSize == -1 then no paging is performed (all input is interpreted as a single page)
+            MiniBatchPageIterator(std::map<std::wstring, Matrix<ElemType>*>& inputMatrices, int pageSize)
+                :m_currentMatrices(inputMatrices),
+                m_pageSize(pageSize),
+                m_currentPage(-1),
+                m_numOfPages(1)
+            {
+                assert(pageSize == -1 || pageSize > 0);
+                // Creating a snapshot of the input and computing number of columns
+                int cols = -1;
+                for (auto& nameValue: inputMatrices)
+                {
+                    if (cols == -1)
+                        cols = nameValue.second->GetNumCols();
+                    else
+                        assert(cols == nameValue.second->GetNumCols());
+
+                    // This creates a snapshot of each input matrix
+                    // Note: no memory is moved/copied
+                    m_snapshot[nameValue.first].SetValue(*nameValue.second);
+                }
+                assert(cols > 0);
+
+                // Computing number of pages
+                if (pageSize < 0)
+                    m_numOfPages = 1; // we don't do paging
+                else
+                    m_numOfPages = (cols + pageSize - 1)/pageSize;
+            }
+
+            // returns the index of the current page
+            int currentPage()
+            {
+                return m_currentPage;
+            }
+
+            // reconfigure inputMatrices to point to the next page
+            // returns false if there is no more pages
+            bool MoveToNextPage()
+            {
+                // Has last page been already processed?
+                if (m_currentPage + 1 >= m_numOfPages)
+                    return false;
+                m_currentPage++;
+                if (m_numOfPages == 1)
+                    return true; // No-op if we have only 1 page
+
+                // moving the matrix view to the next page
+                // (shallow operation - no memory moves/copies here)
+
+                for (auto& snap: m_snapshot)
+                {
+                    Matrix<ElemType>& orig = snap.second;
+                    Matrix<ElemType>*& pageView = m_currentMatrices[snap.first];
+                    // Computing current page start and size
+                    size_t startColumn = m_currentPage * m_pageSize;
+                    size_t numOfColumns = min((size_t)m_pageSize, orig.GetNumCols() - startColumn);
+                    // Adjusting the view to the current page
+                    pageView->SetValue(orig.ColumnSlice(startColumn, numOfColumns));
+                }
+
+                return true;
+            }
+        };
 
     public:
 
