@@ -18,6 +18,7 @@
 #include <chrono> 
 #include <random>
 #include "TimerUtility.h"
+#include "Profiler.h"
 
 #ifdef MPI_SUPPORT
 #include "mpi.h"
@@ -161,6 +162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             int traceLevel = configSGD("traceLevel", "0");
             size_t numMBsToShowResult = configSGD("numMBsToShowResult", "10");
+            size_t numMBsToCUDAProfile = configSGD("numMBsToCUDAProfile", "0");
 
             bool keepCheckPointFiles = configSGD("keepCheckPointFiles", "false");
 
@@ -211,7 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB, gradientClippingWithTruncation, 
                 clippingThresholdPerSample,autoAdjustLRType, increaseLearnRateIfImproveMoreThan, learnRateIncreaseFactor, 
                 reduceLearnRateIfImproveLessThan, continueReduce, learnRateDecreaseFactor, dropoutRates,
-                loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult,
+                loadBestModel, numMiniBatch4LRSearch, numPrevLearnRates, numBestSearchEpoch, traceLevel, numMBsToShowResult, numMBsToCUDAProfile,
                 maxTempMemSizeInSamplesForCNN, gUpdateInfo, keepCheckPointFiles, adaptationRegType, adaptationRegWeight,
                 trainCriterionNodeName, evalCriterionNodeName, doGradientCheck, gradientCheckSigDigit, validateAfterModelReloading,
                 rpi, learnRateAdjustInterval, UsingAllDataForPreComputedNode, needAveMultiplier, L2RegWeight, L1RegWeight);
@@ -232,7 +234,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const ElemType reduceLearnRateIfImproveLessThan=0, const bool continueReduce=false, const ElemType learnRateDecreaseFactor = 0.618f, floatargvector dropoutRates = floatargvector(L"0.0f"),
             const bool loadBestModel=true, const intargvector& numMiniBatch4LRSearch=intargvector(L"500"), const size_t numPrevLearnRates = 5, 
             const size_t numBestSearchEpoch = 1, const int traceLevel = 0,
-            const size_t numMBsToShowResult = 10, const size_t maxTempMemSizeInSamplesForCNN = 0,
+            const size_t numMBsToShowResult = 10, const size_t numMBsToCUDAProfile = 0, const size_t maxTempMemSizeInSamplesForCNN = 0,
             const GradientUpdateInfo gradUpdateType = GradientUpdateInfo(), const bool keepCheckPointFiles=false, const AdaptationRegType adaptationRegType = AdaptationRegType::None,
             const ElemType adaptationRegWeight = 0.0f, const wstring trainCriterionNodeName= L"", const wstring evalCriterionNodeName=L"",
             const bool doGradientCheck = false, const ElemType gradientCheckSigDigit = 6, const bool validateAfterModelReloading = true,
@@ -262,6 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numMiniBatch4LRSearch=numMiniBatch4LRSearch;
             m_dropoutRates=dropoutRates;
             m_numMBsToShowResult=int(numMBsToShowResult);
+            m_numMBsToCUDAProfile=int(numMBsToCUDAProfile);
             m_numBestSearchEpoch=numBestSearchEpoch;
             m_maxTempMemSizeInSamplesForCNN=maxTempMemSizeInSamplesForCNN;
             m_gradType = gradUpdateType;
@@ -981,6 +984,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             localEpochCriterion.SetValue(0);
             localEpochEvalErrors.SetValue(0);
+            Profiler profiler(m_numMBsToCUDAProfile);
+            m_numMBsToCUDAProfile = 0; // resetting this, so profiling is performed for one epoch only
 
             trainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
             
@@ -1092,6 +1097,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// DataEnd does reader specific process if sentence ending is reached
                 trainSetDataReader->DataEnd(endDataSentence);
 
+                profiler.NextSample();
             }
 
             localEpochCriterion /= float(totalEpochSamples);
@@ -1476,6 +1482,7 @@ protected:
         bool m_keepCheckPointFiles;
 
         int m_numMBsToShowResult;
+        int m_numMBsToCUDAProfile;
 
         bool m_doGradientCheck;
         ElemType m_gradientCheckSigDigit;
