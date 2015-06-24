@@ -560,6 +560,7 @@ protected:
         {
             inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
         }
+
         for (size_t i = 0; i < labelNodes.size(); i++)
         {
             inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();
@@ -1177,7 +1178,8 @@ protected:
         fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: Train Loss Per Sample = %.8g    ",
                 epochCriterion);
 
-        if (epochEvalErrors.size() == 1) {
+        if (epochEvalErrors.size() == 1)
+        {
             fprintf(stderr, "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g\n",
                     epochEvalErrors[0], learnRatePerSample);
         }
@@ -1342,7 +1344,9 @@ protected:
                     // get the epoch Values updated
                     epochCriterion = localEpochCriterion.Get00Element();
                     for (size_t i = 0; i < numEvalNodes; i++)
+                    {
                         epochEvalErrors[i] = (const ElemType) localEpochEvalErrors(0, i);
+                    }
 
                     fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d    Train Loss Per Sample = %.8g    ",
                             epochNumber + 1, numMBsRun - m_numMBsToShowResult + 1,
@@ -1354,6 +1358,7 @@ protected:
                         fprintf(stderr, "EvalErr[%lu] Per Sample = %.8g    ",
                                 i, (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs);
                     }
+
                     fprintf(stderr, "ReadData Time = %.8g Computing Time=%.8g Total Time Per Sample=%.8g\n",
                             readTimeInMBs, ComputeTimeInMBs,
                             (readTimeInMBs + ComputeTimeInMBs) / numSamplesLastMBs);
@@ -1435,7 +1440,8 @@ public:
         }
 
         // L2 regularizer
-        if (L2RegWeight > 0) {
+        if (L2RegWeight > 0)
+        {
             //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             Matrix<ElemType>::ScaleAndAdd(L2RegWeight * actualMBSize, functionValues, gradientValues);
         }
@@ -1901,7 +1907,7 @@ protected:
     ElemType m_L2RegWeight;
     ElemType m_L1RegWeight;
 };
-template class SGD<float> ;
-template class SGD<double> ;
+template class SGD<float>;
+template class SGD<double>;
 
 }}}
