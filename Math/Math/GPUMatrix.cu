@@ -1833,10 +1833,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
-        const GPUMatrix<ElemType>& b, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
+        const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
+        //this: samples+probs
+        // a:   hidden
+        // b:   embedding
+        // tmp:  softmax
+        //  c: loglikelihood
     {
         UNCONST(ElemType, a, my_a);
         UNCONST(ElemType, b, my_b);
+        UNCONST(ElemType, bias, my_bias);
 
         cudaEvent_t done = nullptr;
         if (do_sync) CUDA_CALL(cudaEventCreate(&done));
@@ -1844,7 +1850,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int p = 512;
         int width = a.GetNumCols();
         while (p / 2 > width) p = p / 2;
-        
+
         _computeNceOutput<ElemType> << <m_nz, p >> >(
             this->GetArray(),
             m_numRows,
@@ -1852,6 +1858,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             my_a.GetArray(),//a
             a.GetNumCols(),
             my_b.GetArray(),//b
+            my_bias.GetArray(),
             tmp.GetArray());//tmp
 
         p = 512;
@@ -1872,7 +1879,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numRows,
             tmp.GetNumCols(),
             tmp.GetArray());
-          
+
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
