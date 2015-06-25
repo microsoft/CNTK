@@ -855,8 +855,9 @@ protected:
 
                 if (m_continueReduce)
                 {
-                    if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
-                        prevCriterion != std::numeric_limits<ElemType>::infinity())
+                    if (std::isnan(avgCriterion) || 
+                        (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
+                        prevCriterion != std::numeric_limits<ElemType>::infinity()))
                     {
                         if (learnRateReduced == false)
                         {
@@ -882,8 +883,9 @@ protected:
                 }
                 else
                 {
-                    if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
-                        prevCriterion != std::numeric_limits<ElemType>::infinity())
+                    if (std::isnan(avgCriterion) || 
+                        (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
+                        prevCriterion != std::numeric_limits<ElemType>::infinity()))
                     {
 
                         learnRatePerSample *= m_learnRateDecreaseFactor;
@@ -1085,7 +1087,7 @@ protected:
                                             totalSamplesSeen);
 
         }
-        while (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate);
+        while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
 
         bestLearnRatePerSample = learnRatePerSample;
 
