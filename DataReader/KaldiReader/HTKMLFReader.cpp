@@ -965,12 +965,23 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                     mtSentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
                     mtExistsSentenceBeginOrNoLabels.Resize(1, m_mbSize);
 
-                    mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+                    //mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+                    for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                    {
+                        for (size_t j = 0; j < m_mbSize; j++)
+                        {
+                            mtSentenceBegin.SetValue(i,j,(ElemType) SENTENCE_MIDDLE);
+                        }
+                    }
                     DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
                     //mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-                    mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                    //mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
                     //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-
+                    for (size_t j = 0; j < m_mbSize; j++)
+                    {
+                        mtExistsSentenceBeginOrNoLabels.SetValue(0,j,(ElemType) (ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                    }
+ 
 
                     vector<size_t> actualmbsize;
                     actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
