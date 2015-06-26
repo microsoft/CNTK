@@ -207,6 +207,7 @@
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="NetworkDescriptionLanguage.cpp" />
     <ClCompile Include="SimpleNetworkBuilder.cpp" />
+    <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="tests.cpp" />
   </ItemGroup>
