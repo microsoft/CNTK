@@ -2858,6 +2858,7 @@ __global__ void _computeNceOutput(
     const ElemType* a,
     int numCols_a,
     const ElemType* b,
+    const ElemType* bias,
     ElemType* res)
 {
     // val and col are in CSR format

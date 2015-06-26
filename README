@@ -50,13 +50,15 @@ Then add ${CUDA_PATH}/lib, ${CUDA_PATH}/lib64 to your ${LD_LIBRARY_PATH} to make
 
 == Build ==
 To build the cpu version, run
-	make -f Makefile.cpu 
+	make DEVICE=cpu 
 To build the gpu version, run
-	make -f Makefile.gpu
+	make
 To clean the compile, just run
-	make -f Makefile.cpu clean
+	make DEVICE=cpu clean
 or
-	make -f Makefile.gpu clean
+	make clean
+
+For release version, just add BUILDTYPE=release to the make command line.
 
 == Run ==
 All executables are in bin/ directory:
