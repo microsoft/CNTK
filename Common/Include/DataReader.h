@@ -29,9 +29,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-const size_t randomizeAuto = ((size_t)-1)>>2; // randomize range set automatically, parameter value for Init()
-const size_t randomizeNone = 0;  // don't randomize, parameter value for Init()
-const size_t requestDataSize = randomizeAuto;   // StartMinibatchLoop default parameter, sets number of requested frames equal to the number of frames in the dataset
+// randomize range set automatically, parameter value for Init()
+const size_t randomizeAuto = ((size_t) -1) >> 2;
+
+// don't randomize, parameter value for Init()
+const size_t randomizeNone = 0;
+
+// StartMinibatchLoop default parameter, sets number of requested
+// frames equal to the constant 3fffffffffffffff computed by ((size_t) -1) >> 2 above.
+// We use this constant as a stand in for the total number of frames in the dataset.
+const size_t requestDataSize = randomizeAuto;
 
 enum EndDataType
 {
@@ -52,7 +59,7 @@ public:
 
     virtual void Init(const ConfigParameters& config) = 0;
     virtual void Destroy() = 0;
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) = 0;
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
     virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
     virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;
@@ -80,7 +87,7 @@ class DataReader : public IDataReader<ElemType>, protected Plugin
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
 private:
-    IDataReader<ElemType> *m_dataReader;  // reader
+    IDataReader<ElemType>* m_dataReader;  // reader
 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
@@ -123,7 +130,7 @@ public:
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
 
     // GetMinibatch - Get the next minibatch (features and labels)
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
@@ -152,10 +159,10 @@ public:
     //                  [out] size of buffer filled with data
     // recordStart - record to start reading from, defaults to zero (start of data)
     // returns: true if data remains to be read, false if the end of data was reached
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
+    void SetSentenceEndInBatch(std::vector<size_t>& sentenceEnd);
 };
 
 }}}
