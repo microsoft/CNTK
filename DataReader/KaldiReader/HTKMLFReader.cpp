@@ -776,7 +776,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (!(*m_mbiter))
                         return false;
-                    DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
 
                     // now, access all features and and labels by iterating over map of "matrices"
                     bool first = true;
@@ -924,8 +923,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                                 data.SetValue(dim,uids.size(),m_labelsBufferMultiIO[id],matrixFlagNormal);
                             }
-                            //mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
-                            //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
 
                         }
                         else{
@@ -1229,8 +1226,6 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         }
                     }
                     skip=false;
-                    //mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
-                    //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
 
                 }
             }   // keep going if we didn't get the right size minibatch
