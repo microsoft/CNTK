@@ -1408,7 +1408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t i = t % nS;
                 if (m_existsSentenceBeginOrNoLabels->ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
                 {
-                    if ((*m_sentenceSeg)(j, i) == NO_LABELS)
+                    if ((*m_sentenceSeg)(i,j) == NO_LABELS)
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
 

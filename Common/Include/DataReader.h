@@ -78,7 +78,7 @@ public:
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
     virtual void SetSentenceSegBatch(Matrix<ElemType>&, Matrix<ElemType>&) { NOT_IMPLEMENTED; };
-    virtual void SetRandomSeed(int) { NOT_IMPLEMENTED; };
+    virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
     virtual bool CanReadFor(wstring /* nodeName */) {

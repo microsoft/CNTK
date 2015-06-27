@@ -543,8 +543,8 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        //fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
-        std::wcerr << "reading sequence file" << m_file.c_str() << endl;
+        fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
+        //std::wcerr << "reading sequence file" << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -1503,8 +1503,8 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        //fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
-        std::wcerr << "reading sequence file " << m_file.c_str() << endl;
+        fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
+        //std::wcerr << "reading sequence file " << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -1986,8 +1986,8 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 /// notice that indices are defined as follows [begining ending_indx) of the class 
 /// i.e., the ending_index is 1 plus of the true ending index
 template<class ElemType>
-void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-    Matrix<ElemType>*>& matrices,
+void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
+    Matrix<ElemType>* > & matrices,
     size_t m_mbStartSample, size_t actualmbsize)
 {
     size_t j = 0;
@@ -2007,50 +2007,46 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
 
     if (labels->GetCurrentMatrixLocation() == CPU)
-    for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
-    {
-        // pick the right sample with randomization if desired
-        size_t jRand = jSample;
-        int    wrd = m_labelIdData[jRand];
-        labels->SetValue(0, j, (ElemType)wrd);
-        SetSentenceEnd(wrd, j, actualmbsize);
-
-        if (readerMode == ReaderMode::NCE)
+        for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
-            labels->SetValue(1, j, (ElemType)m.logprob(wrd));
-            for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
+            // pick the right sample with randomization if desired
+            size_t jRand = jSample;
+            int    wrd = m_labelIdData[jRand];
+            labels->SetValue(0, j, (ElemType)wrd);
+            SetSentenceEnd(wrd, j, actualmbsize);
+
+            if (readerMode == ReaderMode::NCE)
             {
-                int wid = m.sample();
-                labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
-                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m.logprob(wid));
-            }
-        }
-        else if (readerMode == ReaderMode::Class)
-        {
-            int clsidx = idx4class[wrd];
-            if (class_size > 0){
-
-                labels->SetValue(1, j, (ElemType)clsidx);
-
-                /// save the [begining ending_indx) of the class 
-                size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
-                size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
-                if (wrd < lft || lft > rgt || wrd >= rgt)
+                labels->SetValue(1, j, (ElemType)m.logprob(wrd));
+                for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
                 {
-                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
+                    int wid = m.sample();
+                    labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
+                    labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m.logprob(wid));
                 }
-                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
-                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+            }
+            else if (readerMode == ReaderMode::Class)
+            {
+                int clsidx = idx4class[wrd];
+                if (class_size > 0){
+
+                    labels->SetValue(1, j, (ElemType)clsidx);
+
+                    /// save the [begining ending_indx) of the class 
+                    size_t lft = (size_t)(*m_classInfoLocal)(0, clsidx);
+                    size_t rgt = (size_t)(*m_classInfoLocal)(1, clsidx);
+                    if (wrd < lft || lft > rgt || wrd >= rgt)
+                    {
+                        LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
+                    }
+                    labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
+                    labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+                }
             }
         }
-    }
     else // GPU
     {
         RuntimeError("GetLabelOutput::should use CPU for labels ");
-    }
-    if (curDevId != CPUDEVICE)
-    {
-        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
     }
 }
 

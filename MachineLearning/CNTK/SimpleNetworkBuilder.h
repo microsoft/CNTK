@@ -36,7 +36,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NPLM = 32, CLASSLSTM = 64, NCELSTM = 128, 
 			CLSTM = 256, RCRF = 512, 
             UNIDIRECTIONALLSTM=19,
-            BIDIRECTIONALLSTM= 20} RNNTYPE;
+            BIDIRECTIONALLSTM= 20,
+            ALIGNMENTSIMILARITYGENERATOR=21
+    } RNNTYPE;
 
 
     enum class TrainingCriterion : int
@@ -179,6 +181,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
                 std::find(strType.begin(), strType.end(), L"BIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
                 m_rnnType = BIDIRECTIONALLSTM;
+            if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGENERATOR") != strType.end())
+                m_rnnType = ALIGNMENTSIMILARITYGENERATOR;
         }
 
         // Init - Builder Initialize for multiple data sets
@@ -235,7 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-            bool bAllowNoCriterion = false) 
+            bool bAllowNoCriterion = false, ComputationNetwork<ElemType>* anotherNetwork=nullptr) 
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {
@@ -252,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterion);
+                    m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterion, anotherNetwork);
                 }
             }
 
@@ -260,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return *m_net;
         }
 
-        ComputationNetwork<ElemType>& BuildNetworkFromDescription()
+        ComputationNetwork<ElemType>& BuildNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet)
         {
             size_t mbSize = 1; 
 
@@ -288,6 +292,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
             if (m_rnnType == BIDIRECTIONALLSTM)
                 return BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
+            if (m_rnnType == ALIGNMENTSIMILARITYGENERATOR)
+                return BuildAlignmentDecoderNetworkFromDescription(encoderNet, mbSize);
 
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
@@ -421,7 +427,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
  
-        
+        ComputationNetwork<ElemType>& BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet, size_t mbSize = 1);
+
         ComputationNetwork<ElemType>& BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName)
         {
             

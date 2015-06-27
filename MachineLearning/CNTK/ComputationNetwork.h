@@ -524,7 +524,7 @@ public:
         }
 
         virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary, 
-            const bool bAllowNoCriterionNode = false)
+            const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork=nullptr)
         {
             ClearNet();
 
@@ -574,7 +574,7 @@ public:
                     std::vector<ComputationNodePtr> childrenNodes;
                     childrenNodes.resize(numChildren);
                     for (int j = 0; j < numChildren; j++)
-                        childrenNodes[j] = GetNodeFromName(childrenNames[j]);
+                        childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
 
                     if (nodePtr->OperationName() == RowStackNode<ElemType>::TypeName()) //allow for variable input nodes
                         nodePtr->AttachInputs(childrenNodes);
@@ -1074,6 +1074,10 @@ public:
                 newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ParallelNode<ElemType>::TypeName())
                 newNode = new ParallelNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == AlignmentNode<ElemType>::TypeName())
+                newNode = new AlignmentNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == PairNetworkNode<ElemType>::TypeName())
+                newNode = new PairNetworkNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1106,6 +1110,14 @@ public:
             return newNode;
         }
 
+        ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
         ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
         {
             ComputationNodePtr newNode(new SparseInputValue<ElemType>(rows, cols, m_deviceId, inputName));
@@ -1128,7 +1140,14 @@ public:
             return newNode;
         }
 
-        ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName, 
+        ComputationNodePtr CreatePairNetworkNode(const std::wstring inputName, const size_t rows, const size_t cols)
+        {
+            ComputationNodePtr newNode(new PairNetworkNode<ElemType>(rows, cols, m_deviceId, inputName));
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName,
                         const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
                         const size_t horizontalSubsample, const size_t verticalSubsample, 
                         const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0)
@@ -1247,6 +1266,10 @@ public:
                 newNode = new ParallelNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == RowStackNode<ElemType>::TypeName())
                 newNode = new RowStackNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == AlignmentNode<ElemType>::TypeName())
+                newNode = new AlignmentNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == PairNetworkNode<ElemType>::TypeName())
+                newNode = new PairNetworkNode<ElemType>(m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1653,19 +1676,29 @@ public:
             return newNode;
         }
 
+        ComputationNodePtr Alignment(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new AlignmentNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a, b, c);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
         bool NodeNameExist(const std::wstring& name) const
         {
             auto iter = m_nameToNodeMap.find(name);
             return (iter != m_nameToNodeMap.end());
         }
 
-        ComputationNodePtr GetNodeFromName(const std::wstring& name)  const
+        ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr)  const
         {
             auto iter = m_nameToNodeMap.find(name);
             if (iter != m_nameToNodeMap.end()) //found
                 return iter->second;
-            else  //should never try to get a node from nonexisting name
-                throw std::runtime_error("GetNodeFromName: Node name does not exist.");
+            if (anotherNetwork != nullptr)
+                return anotherNetwork->GetNodeFromName(name);
+            
+            RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
         }
 
         // GetNodesFromName - Get all the nodes from a name that may match a wildcard '*' pattern

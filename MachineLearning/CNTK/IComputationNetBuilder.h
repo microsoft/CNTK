@@ -15,8 +15,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     public:
         virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const std::wstring& modelFileName, bool forceLoad = true, 
-            bool bAllowNoCriterion = false) = 0;
-        virtual ComputationNetwork<ElemType>& BuildNetworkFromDescription() = 0;
+            bool bAllowNoCriterion = false, ComputationNetwork<ElemType>* = nullptr) = 0;
+        virtual ComputationNetwork<ElemType>& BuildNetworkFromDescription(ComputationNetwork<ElemType>* = nullptr) = 0;
         virtual ~IComputationNetBuilder() {};
     };
 }}}
