@@ -286,15 +286,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t utt_t = startT; utt_t < endT; utt_t += nS)
                 {
                     size_t j = utt_t / nS;
+
                     if (m_existsSentenceBeginOrNoLabels->ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
                     {
                         //Are we able to find a more efficient way?
-                        colSeg.SetValue(m_sentenceSeg->ColumnSlice(j, 1)); // -1 0 1 copy to new matrix colseg so that m_sentenceSeg not destroyed
-                        colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
-                        colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
-                        colSeg.Reshape(1, nS);
-                        matrixToBeMasked.ColumnSlice(utt_t, nS).RowElementMultiplyWith(colSeg);
-
+                        //colSeg.SetValue(m_sentenceSeg->ColumnSlice(j, 1)); // -1 0 1 copy to new matrix colseg so that m_sentenceSeg not destroyed
+                        //colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
+                        //colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
+                        //colSeg.Reshape(1, nS);
+                        //matrixToBeMasked.ColumnSlice(utt_t, nS).RowElementMultiplyWith(colSeg);
+                        colSeg = m_sentenceSeg->ColumnSlice(j,1);
+                        for (int i = 0; i < nS; i++)
+                        {
+                            if (colSeg(i,0) == NO_LABELS)
+                            {
+                                matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
+                            }
+                        }
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }

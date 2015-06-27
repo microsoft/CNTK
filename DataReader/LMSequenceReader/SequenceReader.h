@@ -103,6 +103,7 @@ public:
 	using LabelType = typename IDataReader<ElemType>::LabelType;
 	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
 
+
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
@@ -319,6 +320,10 @@ public:
 	using SequenceReader<ElemType>::GetIdFromLabel;
 	using SequenceReader<ElemType>::GetInputToClass;
 	using SequenceReader<ElemType>::GetClassInfo;
+    using IDataReader<ElemType>::mBlgSize;
+    using IDataReader<ElemType>::mDoRandomize;
+
+
 private:
     size_t mLastProcssedSentenceId ; 
 
