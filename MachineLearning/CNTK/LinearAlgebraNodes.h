@@ -772,7 +772,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
             {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -2578,8 +2578,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputFunctionValues.Print("child Function values");
 #endif
 
-            if (ones.GetNumRows() != inputGradientValues.GetNumRows() || ones.GetNumCols() != inputGradientValues.GetNumCols())
-                ones = Matrix<ElemType>::Ones(inputGradientValues.GetNumRows(), inputGradientValues.GetNumCols(), inputGradientValues.GetDeviceId());
+            if (ones.GetNumRows() != inputGradientValues.GetNumRows() || ones.GetNumCols() != inputGradientValues.GetNumRows())
+                ones = Matrix<ElemType>::Ones(inputGradientValues.GetNumRows(), inputGradientValues.GetNumRows(), inputGradientValues.GetDeviceId());
             Matrix<ElemType>::MultiplyAndAdd(ones, false, gradientValues, true, inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");

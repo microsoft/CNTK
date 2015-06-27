@@ -27,7 +27,7 @@ to-dos:
 delay_node : has another input that points to additional observations. 
 memory_node: M x N node, with a argument telling whether to save the last observation, or save a window size of observations, or save all observations
 pair_node : copy function values and gradient values from one node in source network to target network
-
+sequential_alignment_node: compute similarity of the previous time or any matrix, versus a block of input, and output a weighted average from the input
 decoder delay_node -> memory_node -> pair(source, target) pair(source, target) -> memory_node -> encoder output node
 
 
@@ -581,7 +581,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     Developed by Kaisheng Yao
     Used in the following works:
-    K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", submitted to Interspeech 2015
+    K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", in Interspeech 2015
     */
     template<class ElemType>
     class LSTMNode : public ComputationNode<ElemType>
@@ -1793,4 +1793,270 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LSTMNode<float>;
     template class LSTMNode<double>;
+
+    /**
+    This node uses softmax to compute the similarity of an input versus the second input, which is a block of memory, and outputs
+    the weighed average of the second input. 
+    */
+    template<class ElemType>
+    class AlignmentNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        AlignmentNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_memoryBlk4EachUtt(deviceId), m_softmax(deviceId), m_ones(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        AlignmentNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_memoryBlk4EachUtt(deviceId), m_softmax(deviceId), m_ones(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"Alignment"; }
+
+        virtual void ComputeInputPartial(const size_t )
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex == 0)
+                return; 
+
+            if (inputIndex > 2)
+                throw std::invalid_argument("Alignment has three inputs.");
+
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> mTmp(m_deviceId);
+            Matrix<ElemType> mTmp1(m_deviceId);
+            Matrix<ElemType> mTmp2(m_deviceId);
+            Matrix<ElemType> mTmp3(m_deviceId);
+            Matrix<ElemType> mGBeforeSoftmax(m_deviceId);
+            Matrix<ElemType> mTmp4(m_deviceId);
+            Matrix<ElemType> mGToMemblk(m_deviceId);
+            size_t T = Inputs(1)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+            size_t e = Inputs(0)->FunctionValues().GetNumRows();
+            size_t d = Inputs(1)->FunctionValues().GetNumRows();
+            Matrix<ElemType> mGBeforeSoftmaxTimes(m_deviceId);
+            mGBeforeSoftmaxTimes.Resize(T, e);
+            mGBeforeSoftmaxTimes.SetValue(0);
+            mGToMemblk.Resize(d, T);
+            mGToMemblk.SetValue(0);
+
+            if (m_ones.GetNumRows() != e || m_ones.GetNumCols() != e)
+            {
+                m_ones = Matrix<ElemType>::Ones(e, e, m_deviceId);
+            }
+
+            mGBeforeSoftmax.Resize(m_softmax.GetNumRows(),1);
+            mGBeforeSoftmax.SetValue(0);
+            for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
+            {
+                size_t i = timeIdxInSeq * m_samplesInRecurrentStep + k;
+
+                /// right branch with softmax
+                mTmp4 = m_memoryBlk4EachUtt.ColumnSlice(k*T, T);
+                TimesNode<ElemType>::ComputeInputPartialRight(mTmp4, mTmp, sliceOutputGrad.ColumnSlice(k, 1));  /// before times
+                SoftmaxNode<ElemType>::ComputeInputPartialS(mTmp1, mTmp2, mGBeforeSoftmax, mTmp, m_softmax.ColumnSlice(k, 1)); /// before softmax
+                TimesNode<ElemType>::ComputeInputPartialLeft(Inputs(0)->FunctionValues().ColumnSlice(i, 1), mGBeforeSoftmaxTimes, mGBeforeSoftmax); /// before times
+
+                switch (inputIndex)
+                {
+                case 0:
+                    LogicError("no gradients should be backpropagated to past observation");
+                case 1: //derivative to memory block 
+                    TimesNode<ElemType>::ComputeInputPartialLeft(m_softmax.ColumnSlice(k, 1), mGToMemblk,
+                        sliceOutputGrad.ColumnSlice(k,1));
+
+                    mTmp4.Resize(T,e);
+                    mTmp4.SetValue(0);
+                    TimesNode<ElemType>::ComputeInputPartialLeft(Inputs(2)->FunctionValues(), mTmp4, mGBeforeSoftmaxTimes);
+                    TransposeNode<ElemType>::ComputeInputPartial(mGToMemblk, m_ones, mTmp4);
+
+                    for (size_t j = 0; j < T; j++)
+                        Inputs(1)->GradientValues().ColumnSlice(j*m_samplesInRecurrentStep + k, 1) += mGToMemblk.ColumnSlice(j, 1);
+
+                    break;
+                case 2: // derivative to similarity matrix
+                    mTmp2 = m_memoryBlk4EachUtt.ColumnSlice(k*T, T);
+                    Matrix<ElemType>::MultiplyAndAdd(mTmp2, false, mGBeforeSoftmaxTimes, false, Inputs(2)->GradientValues()); /// before times
+
+                    break;
+                }
+            }
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(),
+                m_memoryBlk4EachUtt, m_softmax);
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_memoryBlk4EachUtt, m_softmax);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, 
+            const Matrix<ElemType>& refFunction, const Matrix<ElemType>& memoryBlk, 
+            const Matrix<ElemType>& wgtMatrix, 
+            Matrix<ElemType>& tmpMemoryBlk4EachUtt, Matrix<ElemType>& tmpSoftMax)
+        {
+            size_t e = wgtMatrix.GetNumCols();
+            size_t nbrUttPerSample = refFunction.GetNumCols();
+            size_t T = memoryBlk.GetNumCols() / nbrUttPerSample;
+
+            tmpMemoryBlk4EachUtt.Resize(memoryBlk.GetNumRows(), memoryBlk.GetNumCols());
+            tmpSoftMax.Resize(T, nbrUttPerSample);
+            Matrix<ElemType> tmpMat(tmpMemoryBlk4EachUtt.GetDeviceId());
+            Matrix<ElemType> tmpMat3(tmpMemoryBlk4EachUtt.GetDeviceId());
+            tmpMat3.Resize(e, T);
+            Matrix<ElemType> tmpMat4(tmpMemoryBlk4EachUtt.GetDeviceId());
+            Matrix<ElemType> tmpMat2(tmpMemoryBlk4EachUtt.GetDeviceId());
+
+            for (size_t k = 0; k < nbrUttPerSample; k++)
+            {
+                for (size_t t = 0; t < T; t++)
+                {
+                    size_t i = t * nbrUttPerSample + k;
+                    tmpMat3.ColumnSlice(t, 1).SetValue(memoryBlk.ColumnSlice(i, 1));
+                }
+                /// d x T
+                tmpMemoryBlk4EachUtt.ColumnSlice(k*T, T) = tmpMat3;
+                
+                Matrix<ElemType>::Multiply(tmpMat3, true, wgtMatrix, false, tmpMat);
+                /// T x d x (d x e) = T x e
+
+                Matrix<ElemType>::Multiply(tmpMat, false, refFunction.ColumnSlice(k,1), false, tmpMat2);
+                /// T x e x (e x 1) = T x 1
+
+                tmpSoftMax.ColumnSlice(k, 1) = tmpMat2;
+                tmpMat2.InplaceLogSoftmax(true);
+                tmpMat2.InplaceExp();
+
+                Matrix<ElemType>::Multiply(tmpMat3, false, tmpMat2, false, tmpMat4);
+                functionValues.ColumnSlice(k, 1).SetValue(tmpMat4);
+                /// d x 1
+            }
+            /// d x k
+
+#if NANCHECK
+            functionValues.HasNan("Alignment");
+#endif
+        }
+
+        /**
+        input 0, denoted as r (in d x k) : this is an input that is treated as given observation, so no gradient is backpropagated into it. 
+        input 1, denoted as M (in e x k x T) : this is a block of memory
+        input 2, denoted as W (in d x e) : this is a matrix to compute similarity
+        d : input 0 feature dimension
+        k : number of utterances per minibatch
+        T : input 1 time dimension
+        e : input 1 feature dimension
+        the operation is 
+        s = r^T W M  in k x T
+        w = softmax(s) in k x T
+        o = M w^T in e x k
+        */
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+            size_t k, T, e, d, i;
+
+            if (m_children.size() != 3)
+                throw std::logic_error("AlignmentNode operation should have three input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || 
+                Inputs(1)->FunctionValues().GetNumElements() == 0 || 
+                Inputs(2)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("AlignmentNode operation: the input nodes have 0 element.");
+
+            d = Inputs(0)->FunctionValues().GetNumRows();
+            k = Inputs(0)->FunctionValues().GetNumCols();
+            i = Inputs(1)->FunctionValues().GetNumCols();
+            e = Inputs(1)->FunctionValues().GetNumRows();
+            T = i / k;
+            if (Inputs(2)->FunctionValues().GetNumRows() != d ||
+                Inputs(2)->FunctionValues().GetNumCols() != e)
+                LogicError("AlignmentNode operation: the weight matrix dimension doesn't match input feature dimensions.");
+            
+            FunctionValues().Resize(e, k); 
+
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr refFeature, const ComputationNodePtr memoryBlk, const ComputationNodePtr wgtMatrix)
+        {
+            m_children.resize(3);
+            m_children[0] = refFeature;
+            m_children[1] = memoryBlk;
+            m_children[2] = wgtMatrix;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_memoryBlk4EachUtt.GetDeviceId() != deviceId)
+                    m_memoryBlk4EachUtt.TransferFromDeviceToDevice(m_memoryBlk4EachUtt.GetDeviceId(), deviceId);
+                if (m_softmax.GetDeviceId() != deviceId)
+                    m_softmax.TransferFromDeviceToDevice(m_softmax.GetDeviceId(), deviceId);
+                if (m_weight.GetDeviceId() != deviceId)
+                    m_weight.TransferFromDeviceToDevice(m_weight.GetDeviceId(), deviceId);
+            }
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            AlignmentNode<ElemType>* node = (AlignmentNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_memoryBlk4EachUtt = m_memoryBlk4EachUtt;
+                node->m_softmax = m_softmax;
+                node->m_weight = m_weight;
+                node->m_ones = m_ones; 
+            }
+        }
+
+        // copy constructor
+        AlignmentNode(const AlignmentNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_memoryBlk4EachUtt(node->m_deviceId), m_softmax(node->m_deviceId), m_ones(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new AlignmentNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    private:
+        Matrix<ElemType> m_memoryBlk4EachUtt;
+        Matrix<ElemType> m_softmax;
+        Matrix<ElemType> m_weight;
+        Matrix<ElemType> m_ones;
+    };
+
+    template class AlignmentNode<float>;
+    template class AlignmentNode<double>;
+
 }}}

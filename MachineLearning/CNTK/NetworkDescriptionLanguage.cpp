@@ -238,6 +238,10 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), L"LSTM"))
         ret = true;
+    else if (EqualInsensitive(nodeType, AlignmentNode<ElemType>::TypeName(), L"Alignment"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, AlignmentNode<ElemType>::TypeName(), L"PairNetwork"))
+        ret = true;
 
     // return the actual node name in the parameter if we found something
     if (ret)
