@@ -916,7 +916,7 @@ namespace Microsoft {
 
                         encoderNet.SetActualMiniBatchSize(actualMBSize);
                         encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-                        encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.SentenceBoundary(), encoderNet.ExistsBeginOrNoLabels());
+                        encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.SentenceBoundary(), encoderNet.MinibatchPackingFlags());
 
                         encoderNet.Evaluate(encoderEvaluationNodes[0]);
 
@@ -926,7 +926,7 @@ namespace Microsoft {
                         decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
                         /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                        decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.SentenceBoundary(), decoderNet.ExistsBeginOrNoLabels());
+                        decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.SentenceBoundary(), decoderNet.MinibatchPackingFlags());
 
                         /// get the pair of encode and decoder nodes
                         for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)

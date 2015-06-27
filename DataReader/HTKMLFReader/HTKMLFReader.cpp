@@ -795,14 +795,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
 					if (first)
 					{
-						mtSentenceBegin.Resize((size_t)1, (size_t)1);
-						mtExistsSentenceBeginOrNoLabels.Resize((size_t)1, (size_t)feat.cols());
+						m_sentenceBegin.Resize((size_t)1, (size_t)1);
+						m_minibatchPackingFlag.resize(feat.cols());
 
-						mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
-						mtSentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
+						m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+						m_sentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
 
-						mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-						mtExistsSentenceBeginOrNoLabels.SetValue(0, 0 ,(ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
 						first = false;
 					}
 
@@ -947,11 +947,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t numOfFea = m_featuresBufferMultiIO.size();
                 size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-				mtSentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
-				mtExistsSentenceBeginOrNoLabels.Resize(1, m_mbSize);
+				m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
+				m_minibatchPackingFlag.resize(m_mbSize);
 
-				mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-				mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+				m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+                std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
                 vector<size_t> actualmbsize;
                 actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
@@ -970,8 +970,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             m_switchFrame[i] = 0;
                             m_sentenceEnd[i] = true;
-							mtSentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-							mtExistsSentenceBeginOrNoLabels.SetValue(0, 0, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+							m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
                         }
                         actualmbsize[i] = m_mbSize;
                         endFr = startFr + actualmbsize[i];
@@ -1122,8 +1122,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_switchFrame[i] = actualmbsize[i];
 						if (actualmbsize[i] < m_mbSize)
 						{
-							mtSentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
-							mtExistsSentenceBeginOrNoLabels.SetValue(0, actualmbsize[i], (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+							m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
+                            m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]] | MinibatchPackingFlag::UtteranceStart;
 						}
                         startFr = m_switchFrame[i];
                         endFr = m_mbSize;
@@ -1269,14 +1269,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
 					if (first)
 					{
-						mtSentenceBegin.Resize((size_t)1, (size_t)1);
-						mtExistsSentenceBeginOrNoLabels.Resize((size_t)1, (size_t)feat.cols());
+						m_sentenceBegin.Resize((size_t)1, (size_t)1);
+						m_minibatchPackingFlag.resize((size_t)feat.cols());
 
-						mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-						mtSentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+						m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+						m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
 
-						mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-						mtExistsSentenceBeginOrNoLabels.SetValue(0, 0, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
 						first = false;
 					}
 
@@ -1582,10 +1582,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
-		sentenceBegin.SetValue(mtSentenceBegin);
-		sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
+		sentenceBegin.SetValue(m_sentenceBegin);
+        minibatchPackingFlag = m_minibatchPackingFlag;
     }
 
     template<class ElemType>

@@ -44,7 +44,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingComputationNodeMembers;
     public:
         DelayNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_shiftedExistSentenceBeginOrNoLabels(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
                 
         DelayNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_shiftedExistSentenceBeginOrNoLabels(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
 
@@ -129,8 +129,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         0 1 1 0 1 1 1
         Its corresponding mask for delay time = 2 is
         0 0 1 0 0 1 1
-        This can be computed as 
-        Elementwiseproduct(A, A right shift 1)
 
         Using the mask for segmentation, it is easy to orgnize data streams. Examples are in the following
         Case 1: Data parallelism with two sentences processed in parallel. Suppose the second sentence is 5 words only. The first format is an interleaved format of two parallel processes
@@ -144,19 +142,57 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         When delay node reads above, it simply use matrix multiplication on its hidden state and the natural outcome is a reset of hidden state, since 0 times anything is 0.
         With the above way of representing sentence-beginning, the node is flexible to have either BPTT with sentence truncation or BPTT w/o sentence truncation. Also, it can deal with the situation that there are long sentences and short sentences in one minibatch.
         */
-        void ResetBound(Matrix<ElemType> * seg, Matrix<ElemType>* existBeginOrNoLabels)
+        void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> * minibatchPackingFlag)
         {
-            ComputationNode<ElemType>::ResetBound(seg, existBeginOrNoLabels);
+            ComputationNode<ElemType>::ResetBound(seg, minibatchPackingFlag);
             if (m_delay > 1)
             {
+                m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
                 m_boundaryInfo = *seg;
-                m_boundaryInfo.Shift(*seg, m_delay - 1);
-                m_boundaryInfo.ElementMultiplyWith(*seg);
 
-                m_shiftedExistSentenceBeginOrNoLabels = *existBeginOrNoLabels;
-                m_shiftedExistSentenceBeginOrNoLabels.Shift(*existBeginOrNoLabels, m_delay - 1);
-                m_shiftedExistSentenceBeginOrNoLabels.ElementMultiplyWith(*existBeginOrNoLabels);
-                m_existsSentenceBeginOrNoLabels = &m_shiftedExistSentenceBeginOrNoLabels;
+                //each row has a number to indicate how many values should be reset for that utterance
+                int numRows = (int)seg->GetNumRows();
+                vector<int> numResetLeft;
+                numResetLeft.resize(numRows);
+                std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
+
+                for (int i = 0; i < minibatchPackingFlag->size(); i++)
+                {
+                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceStart)
+                    {
+                        //we set delay-1 elements following it to be UtteranceStart until met NoLabel
+                        for (int j = 0; j < numRows; j++)
+                        {
+                            if ((*seg)(j, i) == SENTENCE_BEGIN)
+                            {
+                                numResetLeft[j] = m_delay;
+                            }
+                            else if ((*seg)(j, i) == NO_LABELS)
+                            {
+                                numResetLeft[j] = 0;
+                            }
+                        }
+                    }
+
+                    //now set the UtteranceStart
+                    bool valueChanged = false;
+                    for (int j = 0; j < numRows; j++)
+                    {
+                        if (numResetLeft[j]-- > 0)
+                        {
+                            m_boundaryInfo(j, i) = SENTENCE_BEGIN;
+                            valueChanged = true;
+                        }
+                    }
+
+                    if (valueChanged)
+                    {
+                        m_shiftedMinibatchPackingFlag[i] = m_shiftedMinibatchPackingFlag[i] | MinibatchPackingFlag::UtteranceStart;
+                    }
+                }
+
+                m_minibatchPackingFlag = &m_shiftedMinibatchPackingFlag;
+                m_sentenceSeg = &m_boundaryInfo;
             }
 
             if (m_delay <= 0)
@@ -182,12 +218,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
             assert(m_sentenceSeg != nullptr);
-            assert(m_existsSentenceBeginOrNoLabels != nullptr);
+            assert(m_minibatchPackingFlag != nullptr);
 
             Matrix<ElemType> colBegin(m_sentenceSeg->GetDeviceId());
             colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
 
-            ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, m_existsSentenceBeginOrNoLabels->ColumnSlice(timeIdxInSeq, 1));
+            ComputeInputPartialSRP(timeIdxInSeq, m_delay, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
         }
 
         /// to-do: need to change to the new way of resetting state
@@ -203,21 +239,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay,  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin, const Matrix<ElemType>& colExistsBeginNoLabels)
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int delay, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin, MinibatchPackingFlag minibatchPackingFlag)
         {
             assert(timeIdxInSeq >= 0);
             if ((timeIdxInSeq - delay) >= 0)
             {
-                if (colExistsBeginNoLabels.GetNumElements() != 1)
-                    LogicError("When computing delay node error propagation, a matrix saving whether a frame exists sentence_begin or no_labels has more than one element. This is usually a problem in data reader that feeds wrong dimension when setting a matrix mtExistsSentenceBeginOrNoLabels. This matrix should have one row. ");
-                if (colExistsBeginNoLabels.Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
-                {
-                    //Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)inputGradientValues.GetDeviceId());
-                    //colSegPastActivity.SetValue(colBegin);
-                    //colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
-                    //colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
-                    //Matrix<ElemType>::MultiplyAndAdd(frm, false, colSegPastActivity, false, to);
-                    
+                if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceStartOrNoLabel)
+                {                   
                     for (int i = 0; i < mNbr; i++)
                     {
                         if (colBegin(i,0) == SENTENCE_MIDDLE)
@@ -257,7 +285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// reset past activity as it reached to the begining of a minibatch
             /// the node pointed hasn't yet updated, so it is the past activity 
             assert(m_sentenceSeg != nullptr);
-            assert(m_existsSentenceBeginOrNoLabels != nullptr);
+            assert(m_minibatchPackingFlag != nullptr);
 
             if (timeIdxInSeq == 0)
             {
@@ -266,7 +294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             Matrix<ElemType> colBegin(m_sentenceSeg->GetDeviceId());
             colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, m_existsSentenceBeginOrNoLabels->ColumnSlice(timeIdxInSeq, 1));
+            EvaluateThisNodeSRP(timeIdxInSeq, m_delay, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
 
         }
 
@@ -308,7 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             and ~sentenceBegin is computed as - 1 * (colBegin - 1), assuming that colBegin is either 0 or 1. For example, when colBegin == 1, ~sentenceBegin == 0.
         colBegin is truncated to the range of 0 to 1 to satisify the assumption. For NO_LABELS case, it is converted to its absolute value, which is 1, and treated in ~colBegin as SENTENCE_MIDDLE, which results in 0 so that zero is output for NO_LABELS case. 
         */
-        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin, const Matrix<ElemType>& existsSentenceBeginorNoLabels)
+        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int delay, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin, const MinibatchPackingFlag minibatchPackingFlag)
         {
             ASSERT(delay > 0);
 
@@ -326,15 +354,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (existsSentenceBeginorNoLabels.Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+            if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceStartOrNoLabel)
             {
-                //Matrix<ElemType> colSegPastActivity((DEVICEID_TYPE)functionValues.GetDeviceId());
-                //Matrix<ElemType> colSeg((DEVICEID_TYPE)functionValues.GetDeviceId());
-                //colSeg.Resize(mNbr, mNbr);
-                //colSeg.SetValue(0);
-                //colSegPastActivity.SetValue(colBegin);
-                //colSegPastActivity.InplaceTruncateBottom(SENTENCE_BEGIN);
-                //colSegPastActivity.InplaceTruncateTop(SENTENCE_MIDDLE);
                 for (int i = 0; i < mNbr; i ++)
                 {
                     out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i,1);
@@ -410,11 +431,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 boundary.Resize(1, nT);
                 boundary.SetValue(SENTENCE_MIDDLE);
                 boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
-                Matrix<ElemType> existsSentenceBegin(m_deviceId);
-                existsSentenceBegin.Resize(1, nT);
-                existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                existsSentenceBegin.ColumnSlice(0,1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                ResetBound(&boundary, &existsSentenceBegin);
+                vector<MinibatchPackingFlag> minibatchPackingFlag;
+                minibatchPackingFlag.resize(nT);
+                std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);   
+                minibatchPackingFlag[1] = MinibatchPackingFlag::UtteranceStart;
+                ResetBound(&boundary, &minibatchPackingFlag);
 
                 f0 = Inputs(0)->FunctionValues();
                 func = FunctionValues();
@@ -523,12 +544,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_functionValues.GetDeviceId() != deviceId)
-                    m_functionValues.TransferFromDeviceToDevice(m_functionValues.GetDeviceId(), deviceId);
+                if (m_boundaryInfo.GetDeviceId() != deviceId)
+                    m_boundaryInfo.TransferFromDeviceToDevice(m_boundaryInfo.GetDeviceId(), deviceId);
                 if (m_pastActivity.GetDeviceId() != deviceId)
                     m_pastActivity.TransferFromDeviceToDevice(m_pastActivity.GetDeviceId(), deviceId, true);
-                if (m_shiftedExistSentenceBeginOrNoLabels.GetDeviceId() != deviceId)
-                    m_shiftedExistSentenceBeginOrNoLabels.TransferFromDeviceToDevice(m_shiftedExistSentenceBeginOrNoLabels.GetDeviceId(), deviceId, true);
             }
         }
 
@@ -568,7 +587,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         Matrix<ElemType> m_pastActivity;  /// saves the past activity this delay node points to
         int      m_delay;    /// steps for delay 
-        Matrix<ElemType> m_shiftedExistSentenceBeginOrNoLabels;
+        vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
+        Matrix<ElemType> m_boundaryInfo; /// individual sentence boundary information 
     };
 
     template class DelayNode<float>; 
@@ -1484,11 +1504,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 boundary.Resize(1, nT);
                 boundary.SetValue(SENTENCE_MIDDLE);
                 boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
-                Matrix<ElemType> existsSentenceBegin(m_deviceId);
-                existsSentenceBegin.Resize(1, nT);
-                existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                existsSentenceBegin.ColumnSlice(0,1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                ResetBound(&boundary, &existsSentenceBegin);
+
+                vector<MinibatchPackingFlag> minibatchPackingFlag;
+                minibatchPackingFlag.resize(nT);
+                std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                minibatchPackingFlag[1] = MinibatchPackingFlag::UtteranceStart;
+                ResetBound(&boundary, &minibatchPackingFlag);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();

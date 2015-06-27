@@ -84,7 +84,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
                 m_net.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
-                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.ExistsBeginOrNoLabels());
+                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.MinibatchPackingFlags());
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
@@ -172,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
-                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.ExistsBeginOrNoLabels());
+                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.MinibatchPackingFlags());
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {

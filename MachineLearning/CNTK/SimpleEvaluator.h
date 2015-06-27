@@ -134,7 +134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
                 m_net.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
-                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.ExistsBeginOrNoLabels());
+                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.MinibatchPackingFlags());
 
                 for (int i=0; i<evalNodes.size(); i++)
                 {
@@ -496,7 +496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 encoderNet.SetActualMiniBatchSize(actualMBSize);
                 encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
-                encoderDataReader.SetSentenceSegBatch(encoderNet.SentenceBoundary(), encoderNet.ExistsBeginOrNoLabels());
+                encoderDataReader.SetSentenceSegBatch(encoderNet.SentenceBoundary(), encoderNet.MinibatchPackingFlags());
 
                 assert(encoderEvalNodes.size() == 1);
                 for (int i = 0; i < encoderEvalNodes.size(); i++)
@@ -507,7 +507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 decoderNet.SetActualNbrSlicesInEachRecIter(decoderDataReader.NumberSlicesInEachRecurrentIter());
-                decoderDataReader.SetSentenceSegBatch(decoderNet.SentenceBoundary(), decoderNet.ExistsBeginOrNoLabels());
+                decoderDataReader.SetSentenceSegBatch(decoderNet.SentenceBoundary(), decoderNet.MinibatchPackingFlags());
 
                 /// get the pair of encode and decoder nodes
                 for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
@@ -697,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 encoderNet.SetActualMiniBatchSize(actualMBSize);
                 encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
-                encoderDataReader.SetSentenceSegBatch(encoderNet.SentenceBoundary(), encoderNet.ExistsBeginOrNoLabels());
+                encoderDataReader.SetSentenceSegBatch(encoderNet.SentenceBoundary(), encoderNet.MinibatchPackingFlags());
 
                 assert(encoderEvalNodes.size() == 1);
                 for (int i = 0; i<encoderEvalNodes.size(); i++)
@@ -961,7 +961,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// is the begining of sentence
             evalnet.SetActualMiniBatchSize(mbSize);
             evalnet.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
-            dataReader.SetSentenceSegBatch(evalnet.SentenceBoundary(), evalnet.ExistsBeginOrNoLabels());
+            dataReader.SetSentenceSegBatch(evalnet.SentenceBoundary(), evalnet.MinibatchPackingFlags());
 
             clock_t start, now;
             start = clock();
@@ -981,7 +981,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             evalnet.SetActualMiniBatchSize(1);
-            dataReader.SetSentenceSegBatch(evalnet.SentenceBoundary(), evalnet.ExistsBeginOrNoLabels());
+            dataReader.SetSentenceSegBatch(evalnet.SentenceBoundary(), evalnet.MinibatchPackingFlags());
             /// need to set the sentence begining segmentation info
             evalnet.SentenceBoundary().SetValue(SENTENCE_BEGIN);
 

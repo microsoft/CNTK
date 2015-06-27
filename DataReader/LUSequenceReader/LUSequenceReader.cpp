@@ -715,12 +715,12 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         1 : case exists
         */
         mtSentenceBegin.Resize(mToProcess.size(), mMaxSentenceLength);
-        mtExistsSentenceBeginOrNoLabels.Resize(1, mMaxSentenceLength);
         mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
         DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
         mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-        mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
+
+        m_minibatchPackingFlag.resize(mMaxSentenceLength);
+        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
         for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
         {
@@ -736,7 +736,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
                     {
                         mtSentenceBegin.SetValue(k, j, (ElemType)SENTENCE_BEGIN);
-                        mtExistsSentenceBeginOrNoLabels.SetValue(0, j, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                        m_minibatchPackingFlag[j] = m_minibatchPackingFlag[j] | MinibatchPackingFlag::UtteranceStart;
                     }
                 }
 
@@ -799,7 +799,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
                     mtSentenceBegin.SetValue(k, j, (ElemType) NO_LABELS);
-                    mtExistsSentenceBeginOrNoLabels.SetValue(0, j, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS); // mark need matrix computation to figure out no_label position
+                    m_minibatchPackingFlag[j] = m_minibatchPackingFlag[j] | MinibatchPackingFlag::NoLabel;
                 }
 
             }
@@ -808,7 +808,6 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         mLastPosInSentence = (i == mMaxSentenceLength)?0:i;
 
         mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
-        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
     }
 
     return bDataIsThere;
@@ -985,16 +984,14 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
     sentenceBegin.SetValue(mtSentenceBegin); 
     mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
 
-    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, mtExistsSentenceBeginOrNoLabels.GetDeviceId(), true);
-    sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
-    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtExistsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
+    minibatchPackingFlag = m_minibatchPackingFlag;
 }
 
 template<class ElemType>
@@ -1294,7 +1291,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistBeginOrNolabels)
+void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     /// run for each reader
     vector<size_t> col;
@@ -1303,7 +1300,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType
         LogicError("MultiIOBatchLUSequenceReader::SetSentenceSegBatch only supports processing from one BatchLUSequenceReader");
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
-        (p->second)->SetSentenceSegBatch(sentenceBegin, sentenceExistBeginOrNolabels);
+        (p->second)->SetSentenceSegBatch(sentenceBegin, minibatchPackingFlag);
         if (rows == 0)
             rows = sentenceBegin.GetNumRows();
         else

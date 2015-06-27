@@ -2270,7 +2270,7 @@ public:
             (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
             if ((*nodeIter)->ReqMultiSeqHandling())
             {
-                    (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_ExistsBeginOrNoLabels);
+                    (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
             }
         }
 
@@ -3077,9 +3077,9 @@ public:
         return m_SentenceBoundary;
     }
 
-    Matrix<ElemType> & ExistsBeginOrNoLabels()
+    vector<MinibatchPackingFlag> & MinibatchPackingFlags()
     {
-        return m_ExistsBeginOrNoLabels;
+        return m_minibatchPackingFlag;
     }
 
 protected:
@@ -3642,8 +3642,8 @@ protected:
 
     //used for sentence boundary information passed from reader to reset RNN state 
     Matrix<ElemType> m_SentenceBoundary; 
-    // whether there is a sentence begining or no_label at a time.
-    Matrix<ElemType> m_ExistsBeginOrNoLabels;  
+    // specify how the minibatch is packed for each sample
+    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
     int m_actMiniBSize;
     size_t m_nbrSlicesInEachRecurrentIteration;

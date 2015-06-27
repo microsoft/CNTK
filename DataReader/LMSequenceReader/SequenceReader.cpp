@@ -1822,9 +1822,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
         mtSentenceBegin.Resize(mToProcess.size(), nT);
         mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
-        mtExistsSentenceBeginOrNoLabels.Resize(1, nT);
-        mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+        m_minibatchPackingFlag.resize(nT);
+        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
@@ -1854,7 +1853,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
 //        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-//        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
+//        m_minibatchPackingFlag.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
@@ -1929,7 +1928,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         {
             mSentenceBegin = true;
             mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SENTENCE_BEGIN);
-            mtExistsSentenceBeginOrNoLabels.SetValue(0, timePos, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+            m_minibatchPackingFlag[timePos] = MinibatchPackingFlag::UtteranceStart;
         }
     }
 }
@@ -2055,16 +2054,14 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
     sentenceBegin.SetValue(mtSentenceBegin);
     mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
 
-    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, mtExistsSentenceBeginOrNoLabels.GetDeviceId(), true);
-    sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
-    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtExistsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
+    minibatchPackingFlag = m_minibatchPackingFlag;
 }
 
 
