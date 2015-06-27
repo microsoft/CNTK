@@ -912,15 +912,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("SetValue: Matrix is empty.");
 
-        LONG64 N=(LONG64)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _setValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,v,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        LONG64 N = (LONG64) GetNumElements();
+
+        // Check if value is zero, which can be set using cudaMemset
+        bool isZero = true;
+        const char * valArray = reinterpret_cast<const char *>(&v);
+
+        for (int i = 0; i < sizeof(ElemType); i++)
+        {
+            if (valArray[i] != 0)
+            {
+                isZero = false;
+                break;
+            }
+        }
+
+        if (isZero)
+        {
+            CUDA_CALL(cudaMemset(m_pArray, 0, N * sizeof(ElemType)));
+        }
+        else
+        {
+            int blocksPerGrid = (int) ceil(1.0 * N / threadsPerBlock);
+            PrepareDevice();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _setValue<ElemType> <<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, v, N);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
     }
 
     template<class ElemType>
