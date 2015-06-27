@@ -61,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
 
     public:
-        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId), m_boundaryInfo(deviceId)
+        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop = 0;
             m_visited = false;
             m_inStack = false;
-            m_existsSentenceBeginOrNoLabels = nullptr;
+            m_minibatchPackingFlag = nullptr;
             m_sentenceSeg = nullptr;
 
             m_reqMultiSeqHandling = false;
@@ -227,10 +227,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ResetBound(Matrix<ElemType> * seg, Matrix<ElemType> *existsSentenceBeginOrNoLabels)
+        virtual void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> *minibatchPackingFlag)
         {
             m_sentenceSeg = seg;
-            m_existsSentenceBeginOrNoLabels = existsSentenceBeginOrNoLabels;
+            m_minibatchPackingFlag = minibatchPackingFlag;
         }
 
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin, 
@@ -265,18 +265,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_sentenceSeg != nullptr && m_existsSentenceBeginOrNoLabels != nullptr && !m_sentenceSeg->IsEmpty() && !m_existsSentenceBeginOrNoLabels->IsEmpty())
+            if (m_sentenceSeg != nullptr && 
+                m_minibatchPackingFlag != nullptr && 
+                !m_sentenceSeg->IsEmpty() && 
+                !m_minibatchPackingFlag->size() == 0)
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
                 size_t nS = m_sentenceSeg->GetNumRows();
 
-                if (m_existsSentenceBeginOrNoLabels->GetNumRows() != 1)
+                if (m_minibatchPackingFlag->size() != nT / nS)
                 {
-                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_existsSentenceBeginOrNoLabels should be a one row matrix or a vector. ");
-                }
-                if (m_existsSentenceBeginOrNoLabels->GetNumElements() != nT / nS)
-                {
-                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_existsSentenceBeginOrNoLabels should have one element for each time of all streams. Check feature reader. ");
+                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_minibatchPackingFlag should have one element for each timestep of all streams. Check feature reader. ");
                 }
 
                 Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
@@ -287,14 +286,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     size_t j = utt_t / nS;
 
-                    if (m_existsSentenceBeginOrNoLabels->ColumnSlice(j, 1).Get00Element() == EXISTS_SENTENCE_BEGIN_OR_NO_LABELS)
+                    if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
                     {
-                        //Are we able to find a more efficient way?
-                        //colSeg.SetValue(m_sentenceSeg->ColumnSlice(j, 1)); // -1 0 1 copy to new matrix colseg so that m_sentenceSeg not destroyed
-                        //colSeg += SENTENCE_MIDDLE;  // change to 0 1 2
-                        //colSeg.InplaceTruncateTop(SENTENCE_MIDDLE); // change to 0 1 1
-                        //colSeg.Reshape(1, nS);
-                        //matrixToBeMasked.ColumnSlice(utt_t, nS).RowElementMultiplyWith(colSeg);
                         colSeg = m_sentenceSeg->ColumnSlice(j,1);
                         for (int i = 0; i < nS; i++)
                         {
@@ -1048,8 +1041,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> * m_sentenceSeg;
         /// conditionally point to either a pointer to that provided by network, or point to 
         /// an indiviaul sentence boundary info, which happens if delay > 1 is required for delay node
-        Matrix<ElemType> * m_existsSentenceBeginOrNoLabels;
-        Matrix<ElemType> m_boundaryInfo; /// individual sentence boundary information 
+        vector<MinibatchPackingFlag> * m_minibatchPackingFlag;
 
     private:
         // for loop nodes
@@ -1077,8 +1069,8 @@ public: \
 protected:  \
         using B::m_loopId; using B::m_samplesInRecurrentStep; \
         using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop; using B::m_boundaryInfo; \
-        using B::m_sentenceSeg; using B::m_existsSentenceBeginOrNoLabels; \
+        using B::m_indexInLoop;  \
+        using B::m_sentenceSeg; using B::m_minibatchPackingFlag; \
         using B::m_reqMultiSeqHandling; using B::UseCustomizedMultiSeqHandling; \
         using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
         using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \

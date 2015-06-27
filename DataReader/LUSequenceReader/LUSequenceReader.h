@@ -266,7 +266,7 @@ private:
 public:
     vector<bool> mProcessed; 
     LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
-    BatchLUSequenceReader() : mtSentenceBegin(CPUDEVICE), mtExistsSentenceBeginOrNoLabels(CPUDEVICE){
+    BatchLUSequenceReader() : mtSentenceBegin(CPUDEVICE){
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
         mLastPosInSentence = 0;
@@ -301,7 +301,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
 
-    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
 public:
     void GetClassInfo(LabelInfo& lblInfo);
@@ -364,7 +364,7 @@ public:
     /// a matrix of 1 x n_length
     /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
     /// 0 denotes such case is not in this frame
-    Matrix<ElemType> mtExistsSentenceBeginOrNoLabels;
+    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
     /// by default it is false
     /// if true, reader will set to SENTENCE_MIDDLE for time positions that are orignally correspond to SENTENCE_BEGIN
@@ -399,7 +399,7 @@ public:
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
-    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     size_t NumberSlicesInEachRecurrentIter();
 

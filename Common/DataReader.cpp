@@ -208,10 +208,10 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, sentenceExistsBeginOrNoLabels);
+        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, minibatchPackingFlag);
 }
 
 template<class ElemType>
