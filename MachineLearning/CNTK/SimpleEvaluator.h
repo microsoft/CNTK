@@ -487,9 +487,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 UpdateEvalTimeStamps(encoderFeatureNodes);
                 UpdateEvalTimeStamps(decoderFeatureNodes);
 
-                actualMBSize = decoderNet.GetActualMBSize();
+                actualMBSize = encoderNet.GetActualMBSize();
                 if (actualMBSize == 0)
-                    LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
+                    LogicError("decoderTrainSetDataReader read data but encoderNet reports no data read");
 
                 encoderNet.SetActualMiniBatchSize(actualMBSize);
                 encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
@@ -503,6 +503,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                actualMBSize = decoderNet.GetActualMBSize();
+                decoderNet.SetActualMiniBatchSize(actualMBSize);
+                if (actualMBSize == 0)
+                    LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
                 decoderNet.SetActualNbrSlicesInEachRecIter(decoderDataReader.NumberSlicesInEachRecurrentIter());
                 decoderDataReader.SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
 
