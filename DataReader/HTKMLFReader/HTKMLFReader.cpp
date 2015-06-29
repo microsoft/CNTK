@@ -795,7 +795,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
 					if (first)
 					{
-						m_sentenceBegin.Resize((size_t)1, (size_t)1);
+						m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
 						m_minibatchPackingFlag.resize(feat.cols());
 
 						m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
@@ -950,7 +950,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 				m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
 				m_minibatchPackingFlag.resize(m_mbSize);
 
-				m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+                //mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+                for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                {
+                    for (size_t j = 0; j < m_mbSize; j++)
+                    {
+                        m_sentenceBegin.SetValue(i,j,(ElemType) SENTENCE_MIDDLE);
+                    }
+                }
                 std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
                 vector<size_t> actualmbsize;
@@ -1269,7 +1276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
 					if (first)
 					{
-						m_sentenceBegin.Resize((size_t)1, (size_t)1);
+						m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
 						m_minibatchPackingFlag.resize((size_t)feat.cols());
 
 						m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
