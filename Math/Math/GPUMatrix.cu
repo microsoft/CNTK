@@ -1851,7 +1851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int width = a.GetNumCols();
         while (p / 2 > width) p = p / 2;
 
-        _computeNceOutput<ElemType> << <m_nz, p >> >(
+        _computeNceOutput<ElemType> << <this->GetNumElements() / 2, p >> >(
             this->GetArray(),
             m_numRows,
             sampleCount,
@@ -1862,7 +1862,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             tmp.GetArray());//tmp
 
         p = 512;
-        while (p / 2 > m_nz) p = p / 2;
+        while (p / 2 > this->GetNumElements() / 2) p = p / 2;
 
         // summing up objective must be done in one block
         _assignNoiseContrastiveEstimation<ElemType> << <1, p >> >(
@@ -1912,9 +1912,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
     }
-
-
-
+    
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
     {
