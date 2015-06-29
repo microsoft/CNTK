@@ -731,7 +731,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
         m_numTimesMatrixTypeChanged++;
         if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
-            fprintf(stderr, "WARNING: The same matrix with dim [%zu, %zu] has been transferred between different devices for %d times.\n", GetNumRows(), GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
 
         if (GetDeviceId()<0) //CPU
         {
@@ -1476,6 +1476,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
         return *this;
     }
+
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const Matrix<ElemType>& a = *inputMatrices[i];
+            DecideAndMoveToRightDevice(*this, a);
+
+            //WARNING: a and this must have same type
+            if (!(GetMatrixType() == a.GetMatrixType()))
+                NOT_IMPLEMENTED;
+        }
+
+        CurrentDataLocation curLocation = GetCurrentMatrixLocation();
+        if (curLocation == CurrentDataLocation::GPU || curLocation == CurrentDataLocation::BOTH)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //GPUDense;
+                std::vector<const GPUMatrix<ElemType>*> gpuInputMatrices;
+                gpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    gpuInputMatrices[i] = inputMatrices[i]->m_GPUMatrix;
+
+                m_GPUMatrix->AssignRowStackValuesOf(gpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else if (curLocation == CurrentDataLocation::CPU)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //CPUDense;
+                std::vector<const CPUMatrix<ElemType>*> cpuInputMatrices;
+                cpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    cpuInputMatrices[i] = inputMatrices[i]->m_CPUMatrix;
+
+                m_CPUMatrix->AssignRowStackValuesOf(cpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Matrices do not exist in either CPU or GPU.");
+        }
+
+        return *this;
+    } 
+
 
     template<class ElemType>
     Matrix<ElemType>&  Matrix<ElemType>::AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
@@ -3221,7 +3283,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define NUM_DEVICE_CHANGED_WARN 20
         m_numTimesDeviceChanged++;
         if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN)
-            fprintf(stderr, "WARNING: The same matrix with dim [%zu, %zu] has been transferred between different devices for %d times.\n", GetNumRows(), GetNumCols(), NUM_DEVICE_CHANGED_WARN);
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_DEVICE_CHANGED_WARN);
 
         if (m_matrixType == MatrixType::SPARSE)
         {
@@ -3525,14 +3587,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
     template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c)
+    Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias)
     {
-        if (a.GetMatrixType() != MatrixType::SPARSE)
-            NOT_IMPLEMENTED;
+        //if (a.GetMatrixType() != MatrixType::SPARSE)
+        //    NOT_IMPLEMENTED;
 
         this->Resize(1, 1);
         if (this->GetDeviceId() < 0)
-            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *this->m_CPUMatrix);
+            a.m_CPUMatrix->AssignNCEUnnormalizedEval(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *this->m_CPUMatrix);
         else
             a.m_GPUMatrix->AssignNCEUnnormalizedEval(*b.m_GPUMatrix, *c.m_GPUMatrix, *this->m_GPUMatrix);
         return *this;
@@ -3556,13 +3618,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t sampleCount = a.m_CPUMatrix->GetNumElements() / a.m_CPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
-            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, sampleCount, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
+            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix,
+                *bias.m_CPUMatrix, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
         }
         else
         {
-            size_t sampleCount = a.m_GPUSparseMatrix->GetNumNZElements() / a.m_GPUSparseMatrix->GetNumRows();
+            size_t sampleCount = a.m_GPUMatrix->GetNumElements() / a.m_GPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
-            a.m_GPUMatrix->AssignNoiseContrastiveEstimation(*b.m_GPUMatrix, *c.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *this->m_GPUMatrix);
+            a.m_GPUMatrix->AssignNoiseContrastiveEstimation(*b.m_GPUMatrix, *c.m_GPUMatrix,
+                *bias.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *this->m_GPUMatrix);
         }
         return *this;
     }

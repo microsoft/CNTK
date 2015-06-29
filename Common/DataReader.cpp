@@ -10,6 +10,7 @@
 #define DATAREADER_LOCAL
 #include "Basics.h"
 #include "DataReader.h"
+#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

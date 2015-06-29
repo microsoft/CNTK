@@ -58,8 +58,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
-        
+        // now, configString is a concatenation of lines, including parameters from the command line, with comments stripped
+
+        // expand any lines of the form include=
         configString = config.ResolveIncludeStatements(configString, resolvedConfigFiles);
+
+        // convert into a ConfigDictionary--top-level expressions of the form var=val; if val is a block in braces, it is kept verbatim (not parsed inside)
         config.FileParse(configString);
         return configString;
     }
@@ -182,7 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return ReadConfigFile(msra::strfun::utf16(filePath));
     }
 
-    // ReadConfigFile - read a configuration file, and return as a string
+    // ReadConfigFile - read a configuration file, and return all lines, stripped of comments, concatenated by newlines, as one long string (no other processing, expansion etc.)
     // filePath - the path to the config file to read
     // returns: a string with the concatentated file contents
     std::string ConfigParser::ReadConfigFile(const std::wstring &filePath)
@@ -205,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         while (!file.IsEOF())
         {
             file.GetLine(str);
-            str = PreprocessConfigLine(str);
+            str = StripComments(str);
             if (str != "")
             {
                 configFile.append(str);

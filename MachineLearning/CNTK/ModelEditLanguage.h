@@ -4,12 +4,14 @@
 // </copyright>
 //
 #pragma once
+
+#include <stdarg.h>
+
 #include "commandArgUtil.h"
 #include "ComputationNetwork.h"
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
 #include "NDLUtil.h"
-#include <stdarg.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

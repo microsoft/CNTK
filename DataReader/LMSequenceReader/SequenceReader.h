@@ -9,6 +9,7 @@
 
 #include "DataReader.h"
 #include "DataWriter.h"
+#include "commandArgUtil.h"
 #include "SequenceParser.h"
 #include <string>
 #include <map>
@@ -39,7 +40,8 @@ enum ReaderMode
     Softmax = 0,  // no labels to worry about
     Class = 1, // category labels, creates mapping tables
     NCE = 2,  // sentence mapping (predicts next word)
-    None = 3, // some other type of label
+    Unnormalize = 3,
+    None = 4, // some other type of label
 };
 
 template <typename Count>

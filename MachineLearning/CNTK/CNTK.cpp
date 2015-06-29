@@ -9,20 +9,7 @@
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
-#include "ComputationNetwork.h"
-#include "ComputationNode.h"
-#include "DataReader.h"
-#include "DataWriter.h"
-#include "SimpleNetworkBuilder.h"
-#include "NDLNetworkBuilder.h"
-#include "SynchronousExecutionEngine.h"
-#include "ModelEditLanguage.h"
-#include "SGD.h"
 #include <string>
-#include "Basics.h"
-#include "commandArgUtil.h"
-#include "SimpleEvaluator.h"
-#include "SimpleOutputWriter.h"
 #include <chrono>
 #include <algorithm>
 #if defined(_WIN32)
@@ -37,6 +24,20 @@
 #include <iostream>
 #include <queue>
 #include <set>
+
+#include "Basics.h"
+#include "ComputationNetwork.h"
+#include "ComputationNode.h"
+#include "DataReader.h"
+#include "DataWriter.h"
+#include "SimpleNetworkBuilder.h"
+#include "NDLNetworkBuilder.h"
+#include "SynchronousExecutionEngine.h"
+#include "ModelEditLanguage.h"
+#include "SGD.h"
+#include "commandArgUtil.h"
+#include "SimpleEvaluator.h"
+#include "SimpleOutputWriter.h"
 #include "BestGpu.h"
 
 
@@ -546,30 +547,30 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     string outputVocabFile = config("outputVocabFile");
     string outputCls2Index = config("outputCls2Index");
     size_t  vocabSize = config("vocabSize");
-    size_t  nbrCls = config("nbrClass");
+    int  nbrCls = config("nbrClass", "0");
     int  cutoff = config("cutoff", "1");
 
     DEVICEID_TYPE deviceId = CPUDEVICE;
     Matrix<ElemType> wrd2cls(deviceId);
     Matrix<ElemType> cls2idx(deviceId);
 
-    FILE *fp = fopen(inputFile.c_str(), "rt");
-    if (fp == nullptr)
+    //FILE *fp = fopen(inputFile.c_str(), "rt");
+    ifstream fp(inputFile.c_str());
+    if (!fp)
         RuntimeError("inputFile cannot be read");
-
-    cls2idx.Resize(nbrCls, 1);
+    if (nbrCls > 0)
+        cls2idx.Resize(nbrCls, 1);
     std::unordered_map<string, double> v_count;
 
     /// get line
-    char ch2[2048];
     string str;
     vector<string> vstr;
     long long prevClsIdx = -1;
     string token;
-    while (fgets(ch2, 2048, fp) != nullptr)
+    while (getline(fp, str))
     {
-        str = ch2;
-        str = trim(str);
+        str.erase(0, str.find_first_not_of(' '));       //prefixing spaces
+        str.erase(str.find_last_not_of(' ') + 1);         //surfixing spaces
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
         if (sposition == str.npos || eposition == str.npos)
@@ -578,7 +579,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         for (int i = 1; i < vstr.size(); i++)
             v_count[vstr[i]]++;
     }
-    fclose(fp);
+    fp.close();
 
     std::cerr << "no truncated vocabulary: " << v_count.size() << std::endl;
 
@@ -588,19 +589,19 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
     std::vector<double> m_count;
     std::vector<int> m_class;// class index of each word
-    
+
     typedef std::pair<std::string, double> stringdouble;
     std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble> >
         q(compare_second<stringdouble>(), std::vector<stringdouble>(v_count.begin(), v_count.end()));
-    
+
     size_t wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
-        for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
-            if (iter->second <= cutoff)
-                wordCountLessCutoff--;
+    for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
+    if (iter->second <= cutoff)
+        wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
-        RuntimeError("no word remained after cutoff\n");
-    
+        throw std::runtime_error("no word remained after cutoff");
+
     if (vocabSize > wordCountLessCutoff)
     {
         std::cerr << "warning: actual vocabulary size is less than required." << endl;
@@ -641,11 +642,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     m_count.resize(removed.size());
     double total = 0;
     double dd = 0;
+    if (nbrCls > 0)
+    {
+        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+            total += iter->second;
+        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+            dd += sqrt(iter->second / total);
+    }
 
-    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        total += iter->second;
-    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        dd += sqrt(iter->second / total);
     double df = 0;
     size_t class_id = 0;
     m_class.resize(p.size());
@@ -654,11 +658,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     {
         std::string word = p.top().first;
         double freq = p.top().second;
-        df += sqrt(freq / total) / dd;
-        if (df > 1)
-            df = 1;
-        if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
-            class_id++;
+        if (nbrCls > 0)
+        {
+            df += sqrt(freq / total) / dd;
+            if (df > 1)
+                df = 1;
+            if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
+                class_id++;
+        }
 
         size_t wid = m_words.size();
         bool inserted = m_index.insert(make_pair(word, wid)).second;
@@ -666,39 +673,43 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
             m_words.push_back(word);
 
         m_count[wid] = freq;
-        m_class[wid] = class_id;
+        if (nbrCls > 0)
+            m_class[wid] = class_id;
         p.pop();
     }
+
     std::ofstream ofvocab;
     ofvocab.open(outputVocabFile.c_str());
     for (size_t i = 0; i < m_index.size(); i++)
     {
-        wrd2cls(i, 0) = (ElemType)m_class[i];
-        long long clsIdx = m_class[i];
-        if (clsIdx != prevClsIdx)
+        if (nbrCls > 0)
+            wrd2cls(i, 0) = (ElemType)m_class[i];
+        long long clsIdx = nbrCls > 0 ? m_class[i] : 0;
+        if (nbrCls > 0 && clsIdx != prevClsIdx)
         {
             cls2idx(clsIdx, 0) = (ElemType)i; /// the left boundary of clsIdx
             prevClsIdx = m_class[i];
         }
-        ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << m_class[i] << std::endl;
+        ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
     }
     ofvocab.close();
+    if (nbrCls > 0)
+    {
+        /// write the outputs
+        ofstream ofp(outputWord2Cls.c_str());
+        if (!ofp)
+            RuntimeError("cannot write to %s", outputWord2Cls.c_str());
+        for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
+            ofp << (int)wrd2cls(r, 0) << endl;
+        ofp.close();
 
-    /// write the outputs
-    fp = fopen(outputWord2Cls.c_str(), "wt");
-    if (fp == nullptr)
-        RuntimeError("cannot write to %s", outputWord2Cls.c_str());
-
-    for (size_t r = 0; r < wrd2cls.GetNumRows(); r++)
-        fprintf(fp, "%d\n", (int)wrd2cls(r, 0));
-    fclose(fp);
-
-    fp = fopen(outputCls2Index.c_str(), "wt");
-    if (fp == nullptr)
-        RuntimeError("cannot write to %s", outputCls2Index.c_str());
-    for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
-        fprintf(fp, "%d\n", (int)cls2idx(r, 0));
-    fclose(fp);
+        ofp.open(outputCls2Index.c_str());
+        if (!ofp)
+            RuntimeError("cannot write to %s", outputCls2Index.c_str());
+        for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
+            ofp << (int)cls2idx(r, 0) << endl;
+        ofp.close();
+    }
 }
 
 template <typename ElemType>
@@ -1045,6 +1056,15 @@ void PrintBuiltInfo()
 }
 #endif
 
+void PrintUsageInfo()
+{
+    fprintf(stderr, "-------------------------------------------------------------------\n");
+    fprintf(stderr, "Usage: cntk configFile=yourConfigFile\n");
+    fprintf(stderr, "For detailed information please consult the CNTK book\n");
+    fprintf(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");    
+    fprintf(stderr, "-------------------------------------------------------------------\n");
+}
+
 int wmain(int argc, wchar_t* argv[])
 {
 
@@ -1153,21 +1173,18 @@ int wmain(int argc, wchar_t* argv[])
             fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
             fcloseOrDie(fp);
         }
+        fprintf(stderr, "COMPLETED\n");
     }
     catch (const std::exception &err)
     {
-        fprintf(stderr, "EXCEPTION occurred: %s", err.what());
-#ifdef _DEBUG
-        DebugBreak();
-#endif
+        fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
+        PrintUsageInfo();
         return EXIT_FAILURE;
     }
     catch (...)
     {
         fprintf(stderr, "Unknown ERROR occurred");
-#ifdef _DEBUG
-        DebugBreak();
-#endif
+        PrintUsageInfo();
         return EXIT_FAILURE;
     }
 #ifdef MPI_SUPPORT
@@ -1177,8 +1194,10 @@ int wmain(int argc, wchar_t* argv[])
 }
 
 #ifdef __UNIX__
+/// UNIX main function converts arguments in UTF-8 encoding and passes to Visual-Studio style wmain() which takes wchar_t strings.
 int main(int argc, char* argv[])
 {
+    // TODO: change to STL containers
     wchar_t **wargs = new wchar_t*[argc];
     for (int i = 0; i < argc; ++i)
     {

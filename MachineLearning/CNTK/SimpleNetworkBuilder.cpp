@@ -1273,8 +1273,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-            double val = w->FunctionValues()(0, 0);
-
             /// the label is a dense matrix. each element is the word index
             label = m_net->CreateInputNode(L"labels", 2 * (this->nce_noises + 1), mbSize);
 

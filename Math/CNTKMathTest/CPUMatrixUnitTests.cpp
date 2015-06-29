@@ -563,7 +563,7 @@ namespace CNTKMathTest
             Assert::IsTrue(C.IsEqualTo(D1, 0.0001)); 
         }
 
-        TEST_METHOD(CPUMatrixRowSlice)
+        TEST_METHOD(CPUMatrixRowSliceAndStack)
         {
             Matrix M0(5,3);
             M0(0,0) = 1; M0(0,1) = 6; M0(0,2) = 11;
@@ -590,6 +590,26 @@ namespace CNTKMathTest
             M3 += M0;
             M0.AddToRowSliceValuesOf(M1, 2,2);
             Assert::IsTrue(M3.IsEqualTo(M0, 0.0001)); 
+
+            M2.AddWithRowSliceValuesOf(M1, 0, 2);
+            Matrix M4(2, 3);
+            M4(0, 0) = 6; M4(0, 1) = 16; M4(0, 2) = 26;
+            M4(1, 0) = 8; M4(1, 1) = 18; M4(1, 2) = 28;
+            Assert::IsTrue(M2.IsEqualTo(M4, 0.0001));
+
+            Matrix M5, M6, M7, M8;
+            M5.AssignRowSliceValuesOf(M0, 0, 2);
+            M6.AssignRowSliceValuesOf(M0, 2, 1);
+            M7.AssignRowSliceValuesOf(M0, 3, 2);
+
+            std::vector<const Matrix*> inputMatrices;
+            inputMatrices.resize(3);
+            inputMatrices[0] = &M5;
+            inputMatrices[1] = &M6;
+            inputMatrices[2] = &M7;
+            M8.AssignRowStackValuesOf(inputMatrices, 0, 3);
+            
+            Assert::IsTrue(M8.IsEqualTo(M0, 0.0001));
         }
 
         TEST_METHOD(CPUAssignRepeatOf)
