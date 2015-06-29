@@ -26,7 +26,6 @@
 #include <map>
 #include <string>
 #include "Basics.h"
-#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

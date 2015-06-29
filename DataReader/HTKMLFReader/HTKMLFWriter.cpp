@@ -12,18 +12,10 @@
 
 #include "htkfeatio.h"                  // for reading HTK features
 #include "ssematrix.h"
-//#include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
-//#include "simplesenonehmm.h"            // for MMI scoring
-//#include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
-
-//#include "rollingwindowsource.h"        // minibatch sources
-//#include "utterancesource.h"
-//#include "readaheadsource.h"
-//#include "chunkevalsource.h"
-//#include "minibatchiterator.h"
 
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
+#include "commandArgUtil.h"
 #include "HTKMLFWriter.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection

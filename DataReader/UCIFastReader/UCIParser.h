@@ -90,8 +90,8 @@ private:
     int m_elementsConvertedThisLine;
 
     // global stats
-    int m_totalNumbersConverted;
-    int m_totalLabelsConverted;
+    int64_t m_totalNumbersConverted;
+    int64_t m_totalLabelsConverted;
 
     // file positions/buffer
     FILE * m_pFile;

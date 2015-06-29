@@ -3676,6 +3676,58 @@ which contains the actual gradient computation code.
 \end_layout
 
 \begin_layout Subsubsection
+Customization of the Multi-Sequence Handling Code
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Customization of the Multi-Sequence Handling Code
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If your node will generate an output (function values) that has different
+ number of columns (recall that each column is a sample) than the input
+ (e.g., all the ciretrion nodes will generate a scalar value as the output),
+ you need to add the protected virtual function
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+    protected:         
+\end_layout
+
+\begin_layout Plain Layout
+
+         virtual bool UseCustomizedMultiSeqHandling() { return true; }
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This function indicates that you will use your customized code to handle
+ the condition in which multi-sequences are used in each minibatch (e.g.,
+ when training an RNN).
+ You need to add the MaskToZeroWhenLabelAndFeatureMissing calls at the approriat
+e places in your code to mask out both the function values and the gradient
+ values when a segment of the minibatch does not have features/labels.
+ An example of the customized handling code can be found inside the CrossEntropy
+WithSoftmaxNode.
+\end_layout
+
+\begin_layout Subsubsection
 The CNTKMath Library
 \begin_inset Index idx
 status open

@@ -303,6 +303,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (n!=numFiles)
                     throw std::runtime_error (msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
+            /* 
+                do "..." expansion if SCP uses relative path names
+                "..." in the SCP means full path is the same as the SCP file
+                for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
+                and contains entry like 
+                    .../file1.feat
+                    .../file2.feat
+                    etc.
+                the features will be read from
+                    //aaa/bbb/ccc/file1.feat
+                    //aaa/bbb/ccc/file2.feat
+                    etc. 
+                This works well if you store the scp file with the features but 
+                do not want different scp files everytime you move or create new features
+            */
+            wstring scpdircached;
+            for (auto & entry : filelist)
+                ExpandDotDotDot(entry, scriptpath, scpdircached);
+
             infilesmulti.push_back(filelist);
         }
 
@@ -745,7 +764,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter=matrices.begin();iter!=matrices.end();iter++)
             {
                 if (m_nameToTypeMap.find(iter->first)==m_nameToTypeMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ls not found in reader - cannot generate input\n",iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
 
             }
             m_checkDictionaryKeys=false;
@@ -1168,7 +1187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (matrices.find(iter->first)==matrices.end())
                 {
-                    fprintf(stderr,"GetMinibatchToWrite: feature node %ls specified in reader not found in the network\n",iter->first.c_str());
+                    fprintf(stderr,"GetMinibatchToWrite: feature node %ws specified in reader not found in the network\n",iter->first.c_str());
                     throw std::runtime_error("GetMinibatchToWrite: feature node specified in reader not found in the network.");
                 }
             }
@@ -1176,7 +1195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter=matrices.begin();iter!=matrices.end();iter++)
             {
                 if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ls not found in reader - cannot generate input\n",iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
             }
             */
             m_checkDictionaryKeys=false;
@@ -1556,6 +1575,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
         }
+    }
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::ExpandDotDotDot(wstring & featPath, const wstring & scpPath, wstring & scpDirCached) 
+    {
+        wstring delim = L"/\\";
+
+        if (scpDirCached.empty()) 
+        {
+            scpDirCached = scpPath;
+            wstring tail; 
+            auto pos = scpDirCached.find_last_of(delim);
+            if (pos != wstring::npos)
+            {
+                tail = scpDirCached.substr(pos + 1);
+                scpDirCached.resize(pos);
+            }
+            if (tail.empty()) // nothing was split off: no dir given, 'dir' contains the filename
+                scpDirCached.swap(tail);            
+        }
+        size_t pos = featPath.find(L"...");
+        if (pos != featPath.npos)
+            featPath = featPath.substr(0, pos) + scpDirCached + featPath.substr(pos + 3);
     }
 
     template class HTKMLFReader<float>;
