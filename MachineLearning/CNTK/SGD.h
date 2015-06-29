@@ -23,8 +23,8 @@
 #ifdef MPI_SUPPORT
 #include "mpi.h"
 #endif
-extern int myRank;
-extern int numProcs;
+extern int mpiRank;
+extern int mpiNumProcesses;
 
 using namespace std;
 
@@ -34,14 +34,14 @@ template<class ElemType>
 void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb)
 {
     size_t rv = 0;
-    if (numProcs > 1)
+    if (mpiNumProcesses > 1)
     {
         for (auto it = mb.begin(); it != mb.end(); ++it)
         {
             MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
             size_t nCols = mat.GetNumCols();
-            size_t col_start = (nCols * myRank) / numProcs;
-            size_t col_end = (nCols * (myRank + 1)) / numProcs;
+            size_t col_start = (nCols * mpiRank) / mpiNumProcesses;
+            size_t col_end = (nCols * (mpiRank + 1)) / mpiNumProcesses;
             if (col_end > nCols)
             {
                 // this shouldn't happen
@@ -489,7 +489,7 @@ public:
         ComputationNetwork<ElemType>& net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
                                                              netBuilder->LoadNetworkFromFile(modelFileName);
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
-        // strategy should be to run the initializer above on myRank==0, and then broadcast parameters.
+        // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
 
         startEpoch = max(startEpoch, 0);
         m_needRegularization = false;
@@ -620,7 +620,7 @@ protected:
         //precompute mean and invStdDev nodes and save initial model
         if (PreCompute(net, trainSetDataReader, FeatureNodes, labelNodes, inputMatrices) || startEpoch == 0)
         {
-            if (myRank == 0)
+            if (mpiRank == 0)
             {
                 // only needs to be done by one process
                 net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
@@ -760,7 +760,7 @@ protected:
 
 #ifdef MPI_SUPPORT
             // model reduction and averaging
-            if (numProcs > 0)
+            if (mpiNumProcesses > 0)
             {
                 ElemType factor; // weight for the parameter of my model
                 {
@@ -800,7 +800,7 @@ protected:
 #endif
 
             // only evaluate once, on the master process. TODO: This could be faster by farming out the validation parts
-            if (myRank == 0)
+            if (mpiRank == 0)
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
                 {
@@ -865,7 +865,7 @@ protected:
                         }
                         else
                         {
-                            if (myRank == 0)
+                            if (mpiRank == 0)
                             {
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
                             }
@@ -908,7 +908,7 @@ protected:
             }
 
             //persist model and check-point info
-            if (myRank == 0)
+            if (mpiRank == 0)
             {
                 net.SaveToFile(GetModelNameForEpoch(i));
                 SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
