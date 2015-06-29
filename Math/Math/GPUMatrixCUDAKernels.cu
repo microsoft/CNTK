@@ -2849,7 +2849,6 @@ __global__ void computeNCEForwardProp(
     }
 }
 
-
 template<class ElemType>
 __global__ void _computeNceOutput(
     const ElemType* col,
