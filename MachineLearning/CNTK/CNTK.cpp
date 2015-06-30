@@ -68,11 +68,11 @@ struct compare_second
 void RedirectStdErr(wstring logpath)
 {
     fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
-    msra::files::make_intermediate_dirs(logpath);
-    auto_file_ptr f(logpath.c_str(), "wb");
-    if (dup2(fileno(f), 2) == -1)
+    auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
+    if (dup2(fileno(*f), 2) == -1)
         RuntimeError("unexpected failure to redirect stderr to log file");
     setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
+    static auto fKept = f;                  // keep it around (until it gets changed)
 }
 
 std::string WCharToString(const wchar_t* wst)
@@ -1017,7 +1017,6 @@ void PrintUsageInfo()
 
 int wmain(int argc, wchar_t* argv[])
 {
-
     try
     {
 #ifdef MPI_SUPPORT
