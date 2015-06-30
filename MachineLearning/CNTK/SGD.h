@@ -223,6 +223,11 @@ public:
         bool doGradientCheck = configSGD("gradientcheck", "false");
         ElemType gradientCheckSigDigit = configSGD("sigFigs", "6");
 
+        if (doGradientCheck && sizeof(ElemType) != sizeof(double))
+            LogicError("Gradient check needs to use type = double");
+
+        m_doUnitTest = configSGD("unittest", "false");
+
         bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
 
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
@@ -565,6 +570,14 @@ public:
                                                              netBuilder->LoadNetworkFromFile(modelFileName);
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on myRank==0, and then broadcast parameters.
+
+        if (m_doUnitTest)
+        {
+            if (net.UnitTest() == false)
+                LogicError("unit test on decoder network not passed");
+
+            return;
+        }
 
         startEpoch = max(startEpoch, 0);
         m_needRegularization = false;
@@ -1057,7 +1070,7 @@ protected:
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd);
+            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
 
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
@@ -1304,11 +1317,7 @@ protected:
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            // We always start a new sentence.
-            for (size_t i = 0; i < net.m_sentenceEnd.size(); ++i)
-            {
-                net.m_sentenceEnd[i] = 0;
-            }
+            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->ComputeDerivativeFeatures(uttID, outputNodes[0]->FunctionValues());
         }
@@ -1380,7 +1389,7 @@ protected:
 
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceEndInBatch(net.m_sentenceEnd);
+            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
 
 #ifndef EVALDLL
             if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
@@ -2013,6 +2022,8 @@ protected:
     bool m_doGradientCheck;
     ElemType m_gradientCheckSigDigit;
 
+    bool m_doUnitTest;
+
     bool m_validateAfterModelReloading;
 
     bool m_useAllDataForPreComputedNode;
@@ -2020,6 +2031,7 @@ protected:
     bool m_needAveMultiplier;
     ElemType m_L2RegWeight;
     ElemType m_L1RegWeight;
+
 };
 template class SGD<float>;
 template class SGD<double>;

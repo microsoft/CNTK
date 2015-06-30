@@ -1188,5 +1188,40 @@ public:
     }
 };
 #endif
+#define EPSILON 1e-5
+#define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
+
+/**
+These macros are used for sentence segmentation information. 
+*/
+#define SENTENCE_BEGIN 0 
+#define SENTENCE_MIDDLE 1
+#define NO_LABELS -1
+
+enum class MinibatchPackingFlag : unsigned char
+{
+    None = 0,
+    UtteranceStart = 1 << 0,   //binary 0001
+    NoLabel = 1 << 1,      //binary 0010
+
+    UtteranceStartOrNoLabel = UtteranceStart | NoLabel
+};
+
+inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+}
+
+inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
+}
+
+template<class F>
+static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
+{
+    return l.second > r.second;
+}
+
 
 #endif    // _BASETYPES_

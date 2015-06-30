@@ -51,6 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_sequenceTrainingIO = NULL;
         m_noData = false;
         m_convertLabelsToTargets = false;
+        m_doSeqTrain = false;
 
         if (readerConfig.Exists("legacyMode"))
         {
@@ -1068,7 +1069,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            // Iterates over utterances.
+            // Iterates over utterances. m_numberOfuttsPerMinibatch = 1 is a
+            // special case.
             for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
             {
                 // If <m_truncated> is false, we will take whatever length we
@@ -1080,6 +1082,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     assert(m_numberOfuttsPerMinibatch = 1);
                     currentMBSize = m_currentBufferFrames[i];
+                }
+
+                // We set the sentence begin information when we process the
+                // first sentence.
+                if (i == 0) {
+                  m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, currentMBSize);
+                  m_minibatchPackingFlag.resize(currentMBSize);
+
+                  for (size_t k = 0; k < m_numberOfuttsPerMinibatch; k++)
+                  {
+                      for (size_t l = 0; l < currentMBSize; l++)
+                      {
+                          m_sentenceBegin.SetValue(k, l, (ElemType) SENTENCE_MIDDLE);
+                      }
+                  }
+                  std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                 }
 
                 size_t startFrame = m_processedFrame[i];
@@ -1096,6 +1114,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         m_sentenceEnd[i] = true;
                         m_switchFrame[i] = 0;
+                        m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
                     }
                     endFrame = startFrame + currentMBSize;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
@@ -1128,6 +1148,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
                     m_processedFrame[i] += (endFrame - startFrame);
                     m_switchFrame[i] = endFrame - startFrame;
+                    if (m_switchFrame[i] < m_minibatchPackingFlag.size()) {
+                        m_sentenceBegin.SetValue(i, m_switchFrame[i], (ElemType)SENTENCE_BEGIN);
+                        m_minibatchPackingFlag[m_switchFrame[i]] = m_minibatchPackingFlag[m_switchFrame[i]] | MinibatchPackingFlag::UtteranceStart;
+                    }
                     bool reNewSucc = ReNewBufferForMultiIO(i);
 
                     // If we are not truncating the utterances, we should always
@@ -1136,6 +1160,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         assert(startFrame == 0);
                         m_switchFrame[i] = 0;
+                        m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
                     }
 
                     // Pulls frames from next sentence.
@@ -1224,7 +1250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_fileEvalSource->CreateEvalMinibatch();
 
             // populate input matrices
-
+            bool first = true;
             typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
             for (iter = matrices.begin();iter!=matrices.end(); iter++)
             {
@@ -1238,6 +1264,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t dim = m_featureNameToDimMap[iter->first];
 
                     const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
+                    if (first)
+                    {
+                        m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
+                        m_minibatchPackingFlag.resize((size_t)feat.cols());
+
+                        m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+                        m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+
+                        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                        first = false;
+                    }
 
                     // copy the features over to our array type
                     assert(feat.rows()==dim); dim; // check feature dimension matches what's expected
@@ -1680,6 +1718,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    {
+        sentenceBegin.SetValue(m_sentenceBegin);
+        minibatchPackingFlag = m_minibatchPackingFlag;
+    }
+
     // For Kaldi2Reader, we now make the following assumptions
     // 1. feature sections will always have prefix "features"
     // 2. label sections will always have prefix "labels"
@@ -1702,4 +1747,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class HTKMLFReader<float>;
     template class HTKMLFReader<double>;
-    }}}
+}}}

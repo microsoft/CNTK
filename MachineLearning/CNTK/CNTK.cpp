@@ -35,11 +35,11 @@
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "SGD.h"
-#include "commandArgUtil.h"
+#include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-
+#include <fileutil.h>
 
 // MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
 // HPC Pack 2012 R2 MS-MPI Redistributable Package
@@ -559,7 +559,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (!fp)
         RuntimeError("inputFile cannot be read");
     if (nbrCls > 0)
-        cls2idx.Resize(nbrCls, 1);
+    cls2idx.Resize(nbrCls, 1);
     std::unordered_map<string, double> v_count;
 
     /// get line
@@ -573,8 +573,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         str.erase(str.find_last_not_of(' ') + 1);         //surfixing spaces
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
-        if (sposition == str.npos || eposition == str.npos)
-            str = "</s> " + str + " </s>";
+        if (sposition == str.npos)
+            str = "</s> " + str;
+        if (eposition == str.npos)
+            str = str + " </s>";
         vstr = msra::strfun::split(str, "\t ");
         for (int i = 1; i < vstr.size(); i++)
             v_count[vstr[i]]++;
@@ -594,11 +596,11 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble> >
         q(compare_second<stringdouble>(), std::vector<stringdouble>(v_count.begin(), v_count.end()));
 
-    size_t wordCountLessCutoff = v_count.size();
+    int wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
-    for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
-    if (iter->second <= cutoff)
-        wordCountLessCutoff--;
+        for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
+            if (iter->second <= cutoff)
+                wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
         throw std::runtime_error("no word remained after cutoff");
 
@@ -644,10 +646,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     double dd = 0;
     if (nbrCls > 0)
     {
-        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-            total += iter->second;
-        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-            dd += sqrt(iter->second / total);
+    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+        total += iter->second;
+    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+        dd += sqrt(iter->second / total);
     }
 
     double df = 0;
@@ -660,11 +662,11 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         double freq = p.top().second;
         if (nbrCls > 0)
         {
-            df += sqrt(freq / total) / dd;
-            if (df > 1)
-                df = 1;
-            if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
-                class_id++;
+        df += sqrt(freq / total) / dd;
+        if (df > 1)
+            df = 1;
+        if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
+            class_id++;
         }
 
         size_t wid = m_words.size();
@@ -674,7 +676,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
         m_count[wid] = freq;
         if (nbrCls > 0)
-            m_class[wid] = class_id;
+        m_class[wid] = class_id;
         p.pop();
     }
 
@@ -683,7 +685,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     for (size_t i = 0; i < m_index.size(); i++)
     {
         if (nbrCls > 0)
-            wrd2cls(i, 0) = (ElemType)m_class[i];
+        wrd2cls(i, 0) = (ElemType)m_class[i];
         long long clsIdx = nbrCls > 0 ? m_class[i] : 0;
         if (nbrCls > 0 && clsIdx != prevClsIdx)
         {
@@ -696,6 +698,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (nbrCls > 0)
     {
         /// write the outputs
+        msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
         ofstream ofp(outputWord2Cls.c_str());
         if (!ofp)
             RuntimeError("cannot write to %s", outputWord2Cls.c_str());
@@ -703,6 +706,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
             ofp << (int)wrd2cls(r, 0) << endl;
         ofp.close();
 
+        msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
         ofp.open(outputCls2Index.c_str());
         if (!ofp)
             RuntimeError("cannot write to %s", outputCls2Index.c_str());
@@ -789,6 +793,192 @@ void DoAdapt(const ConfigParameters& config)
 
     delete dataReader;
     delete cvDataReader;
+}
+
+/**
+This implements sequence to sequence translation paper in
+http://arxiv.org/pdf/1409.3215.pdf
+
+*/
+template <typename ElemType>
+void DoEncoderDecoder(const ConfigParameters& config)
+{
+
+    ConfigParameters configSGD = config("SGD");
+    bool makeMode = config("makeMode", "true");
+    IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* decoderNetBuilder = NULL;
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
+
+    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
+
+    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
+
+    if (config.Exists("EncoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need encoder network");
+
+    if (config.Exists("DecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        decoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    MultiNetworksSGD<ElemType> sgd(configSGD);
+
+    sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
+
+    sgd.EncoderDecoder(encoderNetBuilder, decoderNetBuilder, encoderDataReader, decoderDataReader,
+        cvEncoderDataReader, cvDecoderDataReader, makeMode);
+
+    delete encoderDataReader;
+    delete decoderDataReader;
+    delete cvEncoderDataReader;
+    delete cvDecoderDataReader;
+}
+
+/**
+this is for testing models trained using the sequence to sequence translation method below
+http://arxiv.org/pdf/1409.3215.pdf
+*/
+template <typename ElemType>
+void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> encoderReader(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    decoderReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> decoderReader(decoderReaderConfig);
+
+    ConfigArray minibatchSize = config("minibatchSize", "40960");
+    size_t epochSize = config("epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+    wstring encoderModelPath = config("encoderModelPath");
+    wstring decoderModelPath = config("decoderModelPath");
+    intargvector mbSize = minibatchSize;
+
+    int traceLevel = config("traceLevel", "0");
+    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+
+    ComputationNetwork<ElemType> encoderNet(deviceId);
+    encoderNet.LoadFromFile(encoderModelPath, FileOptions::fileOptionsBinary, true);
+    encoderNet.ResetEvalTimeStamp();
+
+    ComputationNetwork<ElemType> decoderNet(deviceId);
+    decoderNet.LoadFromFile(decoderModelPath);
+    decoderNet.ResetEvalTimeStamp();
+
+    ConfigArray evalNodeNames = config("evalNodeNames");
+    vector<wstring> evalNodeNamesVector;
+    for (int i = 0; i < evalNodeNames.size(); ++i)
+    {
+        evalNodeNamesVector.push_back(evalNodeNames[i]);
+    }
+
+    ConfigArray outputNodeNames = config("outputNodeNames");
+    vector<wstring> outputNodeNamesVector;
+    for (int i = 0; i < outputNodeNames.size(); ++i)
+    {
+        outputNodeNamesVector.push_back(outputNodeNames[i]);
+    }
+
+    ElemType beamWidth = config("beamWidth", "1");
+
+    ConfigParameters writerConfig = config("writer");
+    DataWriter<ElemType> testDataWriter(writerConfig);
+
+    SimpleEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
+    eval.InitTrainEncoderDecoderWithHiddenStates(config);
+
+    eval.EncodingEvaluateDecodingBeamSearch(encoderNet, decoderNet, encoderReader, decoderReader,
+        testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
+}
+
+/**
+  This is beam search decoder. 
+
+  Developed by Kaisheng Yao. 
+
+  It is used in the following work:
+  K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" submitted to Interspeech 2015
+*/
+template <typename ElemType>
+void DoBeamSearchDecoding(const ConfigParameters& config)
+{
+    //test
+    ConfigParameters readerConfig = config("reader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> testDataReader(readerConfig);
+
+    DoEvalBeamSearch(config, testDataReader);
+}
+
+template <typename ElemType>
+void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& reader)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    ConfigArray minibatchSize = config("minibatchSize", "40960");
+    size_t epochSize = config("epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+    wstring modelPath = config("modelPath");
+    intargvector mbSize = minibatchSize;
+
+    int traceLevel = config("traceLevel", "0");
+    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+
+    ComputationNetwork<ElemType> net(deviceId);
+    net.LoadFromFile(modelPath);
+    net.ResetEvalTimeStamp();
+
+    ConfigArray evalNodeNames = config("evalNodeNames");
+    vector<wstring> evalNodeNamesVector;
+    for (int i = 0; i < evalNodeNames.size(); ++i)
+    {
+        evalNodeNamesVector.push_back(evalNodeNames[i]);
+    }
+
+    ConfigArray outputNodeNames = config("outputNodeNames");
+    vector<wstring> outputNodeNamesVector;
+    for (int i = 0; i < outputNodeNames.size(); ++i)
+    {
+        outputNodeNamesVector.push_back(outputNodeNames[i]);
+    }
+
+    ElemType beamWidth = config("beamWidth", "1");
+
+    ConfigParameters writerConfig = config("writer");
+    DataWriter<ElemType> testDataWriter(writerConfig);
+
+    SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+    eval.BeamSearch(reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
 }
 
 template <typename ElemType>
@@ -967,6 +1157,12 @@ void DoCommand(const ConfigParameters& config)
                 DoTopologyPlot<ElemType>(commandParams);
             else if (action[j] == "SVD")
                 DoParameterSVD<ElemType>(commandParams);
+            else if (action[j] == "trainEncoderDecoder")
+                DoEncoderDecoder<ElemType>(commandParams);
+            else if (action[j] == "testEncoderDecoder")
+                DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
+            else if (action[j] == "beamSearch")
+                DoBeamSearchDecoding<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 
