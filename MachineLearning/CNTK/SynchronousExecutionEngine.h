@@ -254,6 +254,44 @@ public:
                 nodePtr->NeedGradient() = needGradient;
             }
         }
+        else if (cnNodeType == RowRepeatNode<ElemType>::TypeName())
+        {
+            if (parameter.size() != 2)
+                RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats.");
+
+            nodeParamCount = 1;
+            nodeParamStart = 0;
+
+            if (pass == ndlPassInitial)
+            {
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                size_t num_repeat = ((NDLNode<ElemType>*)params[1])->GetScalar();
+
+                bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                nodePtr = m_net.RowRepeat(NULL, num_repeat, name);
+                nodePtr->NeedGradient() = needGradient;
+            }
+        }
+        else if (cnNodeType == ReshapeNode<ElemType>::TypeName())
+        {
+            if (parameter.size() != 2)
+                RuntimeError("Reshape should have two parameters. Usage: Reshape(origNodeName, numRows.");
+
+            nodeParamCount = 1;
+            nodeParamStart = 0;
+
+            if (pass == ndlPassInitial)
+            {
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                size_t num_rows = ((NDLNode<ElemType>*)params[1])->GetScalar();
+
+                bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                nodePtr = m_net.Reshape(NULL, num_rows, name);
+                nodePtr->NeedGradient() = needGradient;
+            }
+        }
         else if (cnNodeType == DelayNode<ElemType>::TypeName())
         {
             if (parameter.size() <2 || parameter.size() >3)

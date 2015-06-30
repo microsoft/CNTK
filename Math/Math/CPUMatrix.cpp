@@ -485,6 +485,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowRepeatValuesOf(const CPUMatrix<ElemType>& a, const size_t numRepeats)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddToRowRepeatValuesOf: input matrix a is empty.");
+
+        if (a.GetNumRows() != GetNumRows() * numRepeats)
+            throw std::logic_error("AddToRowRepeatValuesOf: a.GetNumRows() != GetNumRows() * numRepeats.");
+
+        long n = (long)a.GetNumCols(), m = (long)GetNumRows();
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (long i = 0; i<(m & ~3); i += 4)
+            {
+                for (long k = 0; k < numRepeats; k++)
+                {
+                    us(i, j) += a(k * m + i, j);
+                    us(i + 1, j) += a(k * m + i + 1, j);
+                    us(i + 2, j) += a(k * m + i + 2, j);
+                    us(i + 3, j) += a(k * m + i + 3, j);
+                }
+            }
+            //handle remaining stuffs
+            for (long i = m & ~3; i<m; i++)
+            {
+                for (long k = 0; k < numRepeats; k++)
+                {
+                    us(i, j) += a(k * m + i, j);
+                }
+            }
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
     CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
     {
         a; posNumber;  negNumber; shiftNumber;

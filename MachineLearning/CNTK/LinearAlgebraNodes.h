@@ -429,6 +429,206 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowSliceNode<float>; 
     template class RowSliceNode<double>;
 
+    template<class ElemType>
+    class RowRepeatNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+    public:
+
+        RowRepeatNode(const DEVICEID_TYPE deviceId, size_t numRepeats, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                m_numRepeat = numRepeats;
+
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        RowRepeatNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_numRepeat(1)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        RowRepeatNode(const RowRepeatNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        RowRepeatNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            ComputationNodePtr node = new RowRepeatNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            RowRepeatNode<ElemType>* node = (RowRepeatNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_numRepeat = m_numRepeat;
+            }
+        }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_numRepeat;
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+
+            fstream >> m_numRepeat;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"RowRepeat"; }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, true);
+            m_outputHeight = m_inputHeight * m_numRepeat;
+
+            //WARNING: this node will destroy the image size information from the child
+            if (m_inputWidth * m_inputChannels != 1)
+                fprintf(stderr, "WARNING: RowRepeat operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i<ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        throw runtime_error("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                }
+
+                fprintf(stderr, ", numRepeats=%lu)", m_numRepeat);
+            }
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("RowRepeat operation should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("RowRepeat  operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * m_numRepeat, Inputs(0)->FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), m_numRepeat);
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)
+        {
+            functionValues.AssignRepeatOf(inputFunctionValues, numRepeats, 1);
+#if NANCHECK
+            functionValues.HasNan("RowRepeat");
+#endif
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("RowRepeat only has one input.");
+
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRepeat);
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("RowRepeat only has one input.");
+
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRepeat);
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t numRepeats)
+        {
+            inputGradientValues.AddToRowRepeatValuesOf(gradientValues, numRepeats);
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            if (m_numRepeat == 1)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+        }
+
+    private:
+        size_t m_numRepeat;
+    };
+
+    template class RowRepeatNode<float>;
+    template class RowRepeatNode<double>;
+
     //this node is used to extract part of the input by rows as the output
     //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
