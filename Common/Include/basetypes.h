@@ -179,6 +179,8 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 #define ASSERT assert
 #endif
 
+#define UNUSED(x) (void)(x)
+
 // ----------------------------------------------------------------------------
 // basic data types
 // ----------------------------------------------------------------------------
@@ -252,7 +254,13 @@ template<class _T> class fixed_vector
 {
     _T * p;                 // pointer array
     size_t n;               // number of elements
-    void check (int index) const { index/*avoid compiler warning*/;ASSERT (index >= 0 && (size_t) index < n); }
+    void check (int index) const 
+    { 
+        ASSERT (index >= 0 && (size_t) index < n);
+#ifdef NDEBUG
+        UNUSED(index);
+#endif
+    }
     void check (size_t index) const { ASSERT (index < n); }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
     //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }

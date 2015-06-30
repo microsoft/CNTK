@@ -11,8 +11,8 @@
 #endif
 
 // The SGD CLass is MPI-aware and expects these globals to exist.
-int myRank = 0;
-int numProcs = 1;
+int mpiRank = 0;
+int mpiNumProcesses = 1;
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/,
                        DWORD  ul_reason_for_call,
@@ -29,4 +29,3 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/,
     }
     return TRUE;
 }
-

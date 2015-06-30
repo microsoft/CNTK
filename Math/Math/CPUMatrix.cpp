@@ -3868,7 +3868,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int sample_id = 0; sample_id < sample_size; sample_id++)
             {
                 int sample =(int) (*this)(2 * sample_id, instance_id);
-                c(sample, 0) -= tmp(sample_id, instance_id);
+                c(0, sample) -= tmp(sample_id, instance_id);
             }
         }
         return *this;
@@ -3901,7 +3901,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (int sample_id = 0; sample_id < sample_size; sample_id++)
         {
             int sample =(int) (*this)(2 * sample_id, instance_id);
-            double score = bias(sample, 0);
+            double score = bias(0, sample);
             for (int dim = 0; dim < b.GetNumRows(); dim++)
                 score += a(dim, instance_id)* b(dim, sample);
             double sample_prob = -(*this)(2 * sample_id + 1, instance_id);

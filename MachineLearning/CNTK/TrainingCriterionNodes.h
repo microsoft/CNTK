@@ -957,10 +957,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // evaluation uses softmax
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
+                /*
 #pragma omp parallel for
                 for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
                 for (int j = 0; j < Inputs(3)->FunctionValues().GetNumRows(); j++)
                     m_logSoftmax(i, j) += Inputs(3)->FunctionValues()(j, 0);
+                */
+                m_logSoftmax += Inputs(3)->FunctionValues().Transpose();
                 m_logSoftmax.InplaceLogSoftmax(false);
                 FunctionValues().Resize(1, 1);
                 FunctionValues().SetValue(0);
