@@ -11,7 +11,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
-#include "basetypes.h" // for RuntimeError()
+#include "Basics.h" // for RuntimeError()
 
 #ifdef    _WIN32
 #ifdef MATH_EXPORTS
@@ -215,6 +215,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWise) const;
         CPUMatrix<ElemType>& AssignVectorNorm2Of(CPUMatrix<ElemType>& a, const bool isColWise);
 
+        void AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias,
+            CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c);
+
+        void AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
+            const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& c);
+
+        CPUMatrix<ElemType>& AssignNCEDerivative(const CPUMatrix<ElemType>& tmp, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t inputIndex, CPUMatrix<ElemType>& c);
+
         void VectorNormInf(CPUMatrix<ElemType>& c, const bool isColWise) const;
         CPUMatrix<ElemType>& AssignVectorNormInfOf(CPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -236,6 +244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>&  AssignRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         CPUMatrix<ElemType>&  AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         CPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
+        CPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
         CPUMatrix<ElemType>&  AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
         CPUMatrix<ElemType>&  AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);

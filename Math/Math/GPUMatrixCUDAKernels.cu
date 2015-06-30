@@ -106,33 +106,36 @@ __global__ void _assignSigmoidOf(
     const LONG64 N)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id>=N)
-        return;
-    if (sizeof(ElemType)==sizeof(double))
+
+    if (id >= N)
     {
-        if (a[id]>=0)
-        {
-            double e = exp(-1*a[id]);
-            res[id]=1/(1+e);
-        }
-        else
-        {
-            double e = exp(a[id]);
-            res[id]=e/(1+e);
-        }
+        return;
+    }
+
+    // TODO: Many of these kernels are the same for float and double except for
+    // the underlying math function called, which can be handled through overloads.
+
+    // This function computes e^|x| / (1 + e^|x|) if x is positive, and
+    // 1 / (1 + e^|x|) if x is negative. The kernel computes common
+    // math computation for as long as possible: 1 / (1 + e^|x|) and
+    // uses conditional assignment at the end to avoid thread divergence.
+    if (sizeof(ElemType) == sizeof(double))
+    {
+        double elem = a[id];
+        double negElem = -fabs(elem);
+        double e = exp(negElem);
+        double ep1Recip = 1 / (e + 1);
+
+        res[id] = (elem == negElem) ? e * ep1Recip : ep1Recip;
     }
     else
     {
-        if (a[id]>=0)
-        {
-            float e = expf(-1*a[id]);
-            res[id]=1/(1+e);
-        }
-        else
-        {
-            float e = exp(a[id]);
-            res[id]=e/(1+e);
-        }
+        float elem = a[id];
+        float negElem = -fabsf(elem);
+        float e = expf(negElem);
+        float ep1Recip = 1 / (e + 1);
+
+        res[id] = (elem == negElem) ? e * ep1Recip : ep1Recip;
     }
 };
 
@@ -362,6 +365,27 @@ __global__ void _addWithRowSliceValuesOf(ElemType * dest, ElemType * src, const 
     long row = id - (col * destRows);
 
     dest[id] += src[IDX2C(row + startIndex, col, srcRows)];
+}
+
+template<class ElemType>
+__global__ void _assignRowStackValuesOf(ElemType * dest, ElemType ** srces, size_t* startRowIndeces, const LONG64 numSrces, const LONG64 N, const long destRows, const long destCols)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / destRows;  //dest is the full matrix, rowslice is taken from the src
+    long row = id - (col * destRows);
+
+    //can we replace the for loop with something better?
+    int srcId = 0;
+    for (; srcId < numSrces; srcId++)
+    {
+        if (startRowIndeces[srcId + 1]>row)
+            break;
+    }
+
+    dest[id] = srces[srcId][IDX2C(row - startRowIndeces[srcId], col, startRowIndeces[srcId+1] - startRowIndeces[srcId])];
 }
 
 template<class ElemType>
@@ -689,154 +713,138 @@ __global__ void _logSoftMaxColWise(
 //    }
 //}
 
+// each block processes one column. There must be 512 threads in a block
 template<class ElemType>
 __global__ void _assignColumnwiseLogSoftmaxOf(
     const ElemType *a,
     ElemType* us,
     const long m_numCols,
-    const long m_numRows) // each block processes one column. There must be 512 threads in a block
+    const long m_numRows) 
 {
-    //we first find max per column
+    // We first find max per column
     __shared__ ElemType colMax[1];
-    __shared__ ElemType partials[512];    
-    colMax[0]=-10000000;
-    partials[threadIdx.x]=-10000000;
+    __shared__ ElemType partials[512];
+    colMax[0] = -10000000;
+    partials[threadIdx.x] = -10000000;
 
-    //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    int loadPerThread = m_numRows/blockDim.x; 
-
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x],a[IDX2C(i,blockIdx.x,m_numRows)]);
+        partials[threadIdx.x] = max(partials[threadIdx.x], a[IDX2C(i, blockIdx.x, m_numRows)]);
     }
     __syncthreads();
 
-    //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+256],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 256], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+128],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 128], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+64],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 64], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+32],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 32], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+16],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 16], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+8],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 8], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partials[threadIdx.x]=max(partials[threadIdx.x+4],partials[threadIdx.x]);
+        partials[threadIdx.x] = max(partials[threadIdx.x + 4], partials[threadIdx.x]);
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        colMax[0] = max(max(partials[0],partials[1]),max(partials[2],partials[3]));        
+        colMax[0] = max(max(partials[0], partials[1]), max(partials[2], partials[3]));
     }
-    partials[threadIdx.x]=0.0f;
+    partials[threadIdx.x] = 0.0f;
     __syncthreads();
-    //end of finding max
-    //now start finding sums
+
+    // Now start finding sums
     __shared__ ElemType colSum[1];
-    colSum[0]=0.0f;
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
+    colSum[0] = 0.0f;
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
-        ElemType tmp=a[IDX2C(i,blockIdx.x,m_numRows)]-colMax[0];
-        us[IDX2C(i,blockIdx.x,m_numRows)]=tmp;
-        partials[threadIdx.x]+=(sizeof(ElemType)==sizeof(float)?expf(tmp):exp(tmp));
+        ElemType tmp = a[IDX2C(i, blockIdx.x, m_numRows)] - colMax[0];
+        us[IDX2C(i, blockIdx.x, m_numRows)] = tmp;
+        partials[threadIdx.x] += (sizeof(ElemType) == sizeof(float)) ? expf(tmp) : exp(tmp);
     }
     __syncthreads();
 
-    //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+256];
+        partials[threadIdx.x] += partials[threadIdx.x + 256];
     }
     __syncthreads();
 
-    //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+128];
+        partials[threadIdx.x] += partials[threadIdx.x + 128];
     }
     __syncthreads();
 
-    //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+64];
+        partials[threadIdx.x] += partials[threadIdx.x + 64];
     }
     __syncthreads();
 
-    //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+32];
+        partials[threadIdx.x] += partials[threadIdx.x + 32];
     }
     __syncthreads();
 
-    //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+16];
+        partials[threadIdx.x] += partials[threadIdx.x + 16];
     }
     __syncthreads();
 
-    //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+8];
+        partials[threadIdx.x] += partials[threadIdx.x + 8];
     }
     __syncthreads();
 
-    //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        partials[threadIdx.x]+=partials[threadIdx.x+4];
+        partials[threadIdx.x] += partials[threadIdx.x + 4];
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
-        colSum[0] = partials[0]+partials[1]+partials[2]+partials[3];
-        colSum[0] = (sizeof(ElemType)==sizeof(float)?logf(colSum[0]):log(colSum[0]));
+        colSum[0] = partials[0] + partials[1] + partials[2] + partials[3];
+        colSum[0] = (sizeof(ElemType) == sizeof(float)) ? logf(colSum[0]) : log(colSum[0]);
     }
     __syncthreads();
-    //end of finding sums
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m_numRows : (threadIdx.x+1)*loadPerThread);++i)
-    {        
-        us[IDX2C(i,blockIdx.x,m_numRows)]-=colSum[0];        
+
+    for (int i = threadIdx.x; i < m_numRows; i += 512)
+    {
+        us[IDX2C(i, blockIdx.x, m_numRows)] -= colSum[0];
     }
 }
 
@@ -1818,19 +1826,19 @@ __global__ void _addSignOf(
     a[id] += (v == (ElemType)0? (ElemType)0 : (v > 0? (ElemType)1 : (ElemType)(-1)));
 }
 
-template<class ElemType>
-__global__ void _vectorMaxMinReduce( //this function processes 1 column per block. this function needs 512 threads
-                                 const ElemType* us,
-                                 ElemType* Indexes,
-                                 ElemType* Values,
-                                 const long m,  //number of rows
-                                 const long n,
-                                 bool isMax)  //number of cols
+// This function processes 1 column per block. this function needs 512 threads
+template<class ElemType, bool IsMax>
+__global__ void _vectorMaxMinReduce( 
+    const ElemType* us,
+    ElemType* Indexes,
+    ElemType* Values,
+    const long numRows,
+    const long numCols)
 {
     //we first find max per column    
     __shared__ ElemType partials[512];        
     __shared__ int partialsInd[512];
-    if (isMax)
+    if (IsMax)
     {
         partials[threadIdx.x]=-10000000;
     }
@@ -1840,118 +1848,101 @@ __global__ void _vectorMaxMinReduce( //this function processes 1 column per bloc
     }
     partialsInd[threadIdx.x]=-1;
 
-    //int id = blockDim.x * blockIdx.x + threadIdx.x;
-    int loadPerThread = m/blockDim.x; 
-
-    for (int i= threadIdx.x*loadPerThread; i< (threadIdx.x == blockDim.x - 1 ? m : (threadIdx.x+1)*loadPerThread);++i)
+    for (int i = threadIdx.x; i < numRows; i += 512)
     {
-        if (( isMax ? us[IDX2C(i,blockIdx.x,m)]>partials[threadIdx.x] : us[IDX2C(i,blockIdx.x,m)]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (us[IDX2C(i, blockIdx.x, numRows)] > partials[threadIdx.x]) : (us[IDX2C(i, blockIdx.x, numRows)] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=us[IDX2C(i,blockIdx.x,m)];
+            partials[threadIdx.x] = us[IDX2C(i, blockIdx.x, numRows)];
             partialsInd[threadIdx.x]=i;       
         }
     }
     __syncthreads();
 
-    //256
-    if (threadIdx.x<256)
+    if (threadIdx.x < 256)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+256],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+256]>partials[threadIdx.x] : partials[threadIdx.x+256]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 256] > partials[threadIdx.x]) : (partials[threadIdx.x + 256] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+256];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+256];
+            partials[threadIdx.x] = partials[threadIdx.x + 256];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 256];
         }
     }
     __syncthreads();
 
-    //128
-    if (threadIdx.x<128)
+    if (threadIdx.x < 128)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+128],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+128]>partials[threadIdx.x] : partials[threadIdx.x+128]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 128] > partials[threadIdx.x]) : (partials[threadIdx.x + 128] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+128];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+128];
+            partials[threadIdx.x] = partials[threadIdx.x + 128];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 128];
         }
     }
     __syncthreads();
 
-    //64
-    if (threadIdx.x<64)
+    if (threadIdx.x < 64)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+64],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+64]>partials[threadIdx.x] : partials[threadIdx.x+64]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 64] > partials[threadIdx.x]) : (partials[threadIdx.x + 64] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+64];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+64];
+            partials[threadIdx.x] = partials[threadIdx.x + 64];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 64];
         }
     }
     __syncthreads();
 
-    //32
-    if (threadIdx.x<32)
+    if (threadIdx.x < 32)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+32],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+32]>partials[threadIdx.x] : partials[threadIdx.x+32]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 32] > partials[threadIdx.x]) : (partials[threadIdx.x + 32] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+32];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+32];
+            partials[threadIdx.x] = partials[threadIdx.x + 32];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 32];
         }
     }
     __syncthreads();
 
-    //16
-    if (threadIdx.x<16)
+    if (threadIdx.x < 16)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+16],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+16]>partials[threadIdx.x] : partials[threadIdx.x+16]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 16] > partials[threadIdx.x]) : (partials[threadIdx.x + 16] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+16];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+16];
+            partials[threadIdx.x] = partials[threadIdx.x + 16];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 16];
         }
     }
     __syncthreads();
 
-    //8
-    if (threadIdx.x<8)
+    if (threadIdx.x < 8)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+8],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+8]>partials[threadIdx.x] : partials[threadIdx.x+8]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 8] > partials[threadIdx.x]) : (partials[threadIdx.x + 8] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+8];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+8];
+            partials[threadIdx.x] = partials[threadIdx.x + 8];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 8];
         }
     }
     __syncthreads();
 
-    //4
-    if (threadIdx.x<4)
+    if (threadIdx.x < 4)
     {
-        //partials[threadIdx.x]=max(partials[threadIdx.x+4],partials[threadIdx.x]);
-        if ((isMax ? partials[threadIdx.x+4]>partials[threadIdx.x] : partials[threadIdx.x+4]<partials[threadIdx.x]) || partialsInd[threadIdx.x]==-1)
+        if ((IsMax ? (partials[threadIdx.x + 4] > partials[threadIdx.x]) : (partials[threadIdx.x + 4] < partials[threadIdx.x])) || (partialsInd[threadIdx.x] == -1))
         {
-            partials[threadIdx.x]=partials[threadIdx.x+4];
-            partialsInd[threadIdx.x]=partialsInd[threadIdx.x+4];
+            partials[threadIdx.x] = partials[threadIdx.x + 4];
+            partialsInd[threadIdx.x] = partialsInd[threadIdx.x + 4];
         }
     }
     __syncthreads();
 
-    if (threadIdx.x==0)
+    if (threadIdx.x == 0)
     {
         ElemType mx = partials[0];
         int ind = partialsInd[0];
-        if ((isMax ? mx<partials[1] : mx>partials[1]) || ind ==-1)
+        if ((IsMax ? (mx < partials[1]) : (mx > partials[1])) || (ind == -1))
         {
             mx = partials[1];
             ind = partialsInd[1];
         }
-        if ((isMax ? mx<partials[2] : mx>partials[2]) || ind ==-1)
+        if ((IsMax ? (mx < partials[2]) : (mx > partials[2])) || (ind == -1))
         {
             mx = partials[2];
             ind = partialsInd[2];
         }
-        if ((isMax ? mx<partials[3] : mx>partials[3]) || ind ==-1)
+        if ((IsMax ? (mx < partials[3]) : (mx > partials[3])) || (ind == -1))
         {
             mx = partials[3];
             ind = partialsInd[3];
@@ -2423,7 +2414,7 @@ __global__ void _determineBlockIds(
     size_t blockIndex = numCols;
     if (blockId2Col[index] > 0)
     {
-        blockIndex = atomicAdd(blockSize, 1);
+        blockIndex = atomicAdd((unsigned int *)blockSize, (unsigned int)1);
         col2BlockId[index] = blockIndex;
     }
 
@@ -2727,6 +2718,550 @@ __global__ void _computeGradientOfInput(
     }    
 
     atomicAdd(&grd[IDX2C(h,j,numrows)], sum);
+}
+
+
+template<class ElemType>
+__global__ void computeNCEForwardProp(
+    const ElemType* val,
+    const int* col,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int numCols_a,
+    const ElemType* b,
+    ElemType* res)
+{
+    // val and col are in CSR format
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // res is the buffer to store computed output (sparse)
+
+    // follow the convention, this kernel must be run on 512 threads per block
+    __shared__ ElemType partials[512];
+    partials[threadIdx.x] = 0;
+
+    // determine the elements to be handled by this block
+    int total = numRows * sampleCount;
+    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
+
+    int start = loadPerBlock * blockIdx.x;
+    int end = min(total, loadPerBlock * (blockIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        int colIndex = col[i];
+        int rowIndex = i / sampleCount;
+
+        int loadPerThread = (numCols_a + blockDim.x - 1) / blockDim.x;
+        int tstart = loadPerThread * threadIdx.x;
+        int tend = min(numCols_a, loadPerThread * (threadIdx.x + 1));
+
+        for (int j = tstart; j < tend; j++)
+            partials[threadIdx.x] = a[IDX2C(rowIndex, j, numRows)] * b[IDX2C(j, colIndex, numCols_a)];
+
+        __syncthreads();
+
+        // sum up
+        int nTotalThreads = blockDim.x;
+
+        while (nTotalThreads >1)
+        {
+            int halfPoint = (nTotalThreads >> 1);
+
+            if (threadIdx.x < halfPoint)
+                partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
+
+            __syncthreads();
+
+            nTotalThreads = (nTotalThreads >> 1);
+        }
+
+        if (threadIdx.x == 0)
+            res[i] = partials[0];
+    }
+}
+
+template<class ElemType>
+__global__ void _computeNceOutput(
+    const ElemType* col,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int numCols_a,
+    const ElemType* b,
+    const ElemType* bias,
+    ElemType* res)
+{
+    // val and col are in CSR format
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // res is the buffer to store computed output (sparse)
+
+    // follow the convention, this kernel must be run on 512 threads per block
+    __shared__ ElemType partials[512];
+    partials[threadIdx.x] = 0;
+
+    //threadIdx.x range from[0 ~ 512)
+    //blockIdx.x range from[0 ~ nnz)
+    //blockDim.x equal to 512
+    //gridDim.x equal to nnz
+
+    // determine the elements to be handled by this block
+    int total = numRows * sampleCount;
+    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
+
+    int start = loadPerBlock * blockIdx.x;
+    int end = min(total, loadPerBlock * (blockIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        int colIndex = (int)col[2 * i];
+        int rowIndex = i / sampleCount;
+
+        int loadPerThread = (numCols_a + blockDim.x - 1) / blockDim.x;
+        int tstart = loadPerThread * threadIdx.x;
+        int tend = min(numCols_a, loadPerThread * (threadIdx.x + 1));
+
+        for (int j = tstart; j < tend; j++)
+            partials[threadIdx.x] = a[IDX2C(rowIndex, j, numRows)] * b[IDX2C(j, colIndex, numCols_a)];
+
+        __syncthreads();
+
+        // sum up
+        int nTotalThreads = blockDim.x;
+
+        while (nTotalThreads >1)
+        {
+            int halfPoint = (nTotalThreads >> 1);
+
+            if (threadIdx.x < halfPoint)
+                partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
+
+            __syncthreads();
+
+            nTotalThreads = (nTotalThreads >> 1);
+        }
+
+        if (threadIdx.x == 0)
+            res[i] = partials[0];
+    }
+}
+
+template<class ElemType>
+__global__ void _computeNceOutput(
+    const ElemType* val,
+    const int* col,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int numCols_a,
+    const ElemType* b,
+    ElemType* res)
+{
+    // val and col are in CSR format
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // res is the buffer to store computed output (sparse)
+
+    // follow the convention, this kernel must be run on 512 threads per block
+    __shared__ ElemType partials[512];
+    partials[threadIdx.x] = 0;
+
+    //threadIdx.x range from[0 ~ 512)
+    //blockIdx.x range from[0 ~ nnz)
+    //blockDim.x equal to 512
+    //gridDim.x equal to nnz
+
+    // determine the elements to be handled by this block
+    int total = numRows * sampleCount;
+    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
+
+    int start = loadPerBlock * blockIdx.x;
+    int end = min(total, loadPerBlock * (blockIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        int colIndex = col[i];
+        int rowIndex = i / sampleCount;
+
+        int loadPerThread = (numCols_a + blockDim.x - 1) / blockDim.x;
+        int tstart = loadPerThread * threadIdx.x;
+        int tend = min(numCols_a, loadPerThread * (threadIdx.x + 1));
+
+        for (int j = tstart; j < tend; j++)
+            partials[threadIdx.x] = a[IDX2C(rowIndex, j, numRows)] * b[IDX2C(j, colIndex, numCols_a)];
+
+        __syncthreads();
+
+        // sum up
+        int nTotalThreads = blockDim.x;
+
+        while (nTotalThreads >1)
+        {
+            int halfPoint = (nTotalThreads >> 1);
+
+            if (threadIdx.x < halfPoint)
+                partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
+
+            __syncthreads();
+
+            nTotalThreads = (nTotalThreads >> 1);
+        }
+
+        if (threadIdx.x == 0)
+            res[i] = partials[0];
+    }
+}
+
+
+template<class ElemType>
+__global__ void _assignNoiseContrastiveEstimation(
+    const ElemType* val,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int width, // number of columns in a
+    const ElemType* b,
+    const ElemType* tmp,
+    ElemType* c) // run on 512 threads per block
+{
+    // val and col are in CSR format
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // tmp is the buffer that stores NCE output calculated from _computeNceOutput
+    // c is the matrix to store objective
+
+    __shared__ ElemType partials[512];
+    partials[threadIdx.x] = 0;
+
+    int total = numRows * sampleCount;
+    int loadPerThread = (total + 511) / 512;
+
+    // find out the items this thread is responsible for
+    int start = loadPerThread * threadIdx.x;
+    int end = min(total, loadPerThread * (threadIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        //int colIndex = col[i];
+        //int rowIndex = i / sampleCount;
+
+        // add to objective
+        ElemType log_pnw = val[2 * i + 1];
+        if (log_pnw < 0) // positive sample: log(pw / (pw + k * pnw))
+        {
+            ElemType den = tmp[i];
+            logadd(den, log((ElemType)(sampleCount - 1)) + log_pnw);
+            partials[threadIdx.x] += (tmp[i] - den);
+        }
+        else // negative sample: log(k * pnw / (pw + k * pnw))
+        {
+            ElemType nom = log((ElemType)(sampleCount - 1)) - log_pnw;
+            ElemType den = nom;
+            logadd(den, tmp[i]);
+            partials[threadIdx.x] += (nom - den);
+        }
+    }
+
+    __syncthreads();
+
+    // now sum up the objective function
+    int nTotalThreads = blockDim.x;
+
+    while (nTotalThreads >1)
+    {
+        int halfPoint = (nTotalThreads >> 1);
+
+        if (threadIdx.x < halfPoint)
+            partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
+
+        __syncthreads();
+
+        nTotalThreads = (nTotalThreads >> 1);
+    }
+
+    if (threadIdx.x == 0)
+        c[0] = -partials[0];
+}
+
+template<class ElemType>
+__global__ void _assignNoiseContrastiveEstimation(
+    const ElemType* val,
+    const int* col,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int width, // number of columns in a
+    const ElemType* b,
+    const ElemType* tmp,
+    ElemType* c) // run on 512 threads per block
+{
+    // val and col are in CSR format
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // tmp is the buffer that stores NCE output calculated from _computeNceOutput
+    // c is the matrix to store objective
+
+    __shared__ ElemType partials[512];
+    partials[threadIdx.x] = 0;
+
+    int total = numRows * sampleCount;
+    int loadPerThread = (total + 511) / 512;
+
+    // find out the items this thread is responsible for
+    int start = loadPerThread * threadIdx.x;
+    int end = min(total, loadPerThread * (threadIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        //int colIndex = col[i];
+        //int rowIndex = i / sampleCount;
+
+        // add to objective
+        ElemType log_pnw = val[i];
+        if (log_pnw < 0) // positive sample: log(pw / (pw + k * pnw))
+        {
+            ElemType den = tmp[i];
+            logadd(den, log((ElemType)(sampleCount - 1)) + log_pnw);
+            partials[threadIdx.x] += (tmp[i] - den);
+        }
+        else // negative sample: log(k * pnw / (pw + k * pnw))
+        {
+            ElemType nom = log((ElemType)(sampleCount - 1)) - log_pnw;
+            ElemType den = nom;
+            logadd(den, tmp[i]);
+            partials[threadIdx.x] += (nom - den);
+        }
+    }
+
+    __syncthreads();
+
+    // now sum up the objective function
+    int nTotalThreads = blockDim.x;
+
+    while (nTotalThreads >1)
+    {
+        int halfPoint = (nTotalThreads >> 1);
+
+        if (threadIdx.x < halfPoint)
+            partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
+
+        __syncthreads();
+
+        nTotalThreads = (nTotalThreads >> 1);
+    }
+
+    if (threadIdx.x == 0)
+        c[0] = -partials[0];
+}
+
+template<class ElemType>
+__global__ void _computeNceError(
+    const ElemType* val,
+
+    int numRows,
+    int sampleCount,
+    ElemType* tmp) // run on one block 
+{
+    int total = numRows * sampleCount;
+    int loadPerThread = (total + blockDim.x - 1) / blockDim.x;
+
+    // find out the items this thread is responsible for
+    int start = loadPerThread * threadIdx.x;
+    int end = min(total, loadPerThread * (threadIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        ElemType ac = tmp[i]; // precalculated NCE output
+        ElemType log_pnw = val[2 * i + 1];
+
+        ElemType er = 0;
+        if (log_pnw < 0) // positive sample: k * pnw / (pw + k * pnw)
+        {
+            ElemType nom = log((ElemType)(sampleCount - 1)) + log_pnw;
+            logadd(ac, nom);
+            er = -1 * exp(nom - ac);
+
+        }
+        else // negative sample: pw / (pw + k * pnw);
+        {
+            logadd(ac, log((ElemType)(sampleCount - 1)) - log_pnw);
+            er = exp(tmp[i] - ac);
+        }
+
+        tmp[i] = er;
+    }
+}
+
+template<class ElemType>
+__global__ void _computeNceError(
+    const ElemType* val,
+    const int* col,
+    int numRows,
+    int sampleCount,
+    ElemType* tmp) // run on one block 
+{
+    int total = numRows * sampleCount;
+    int loadPerThread = (total + blockDim.x - 1) / blockDim.x;
+
+    // find out the items this thread is responsible for
+    int start = loadPerThread * threadIdx.x;
+    int end = min(total, loadPerThread * (threadIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        ElemType ac = tmp[i]; // precalculated NCE output
+        ElemType log_pnw = val[i];
+
+        ElemType er = 0;
+        if (log_pnw < 0) // positive sample: k * pnw / (pw + k * pnw)
+        {
+            ElemType nom = log((ElemType)(sampleCount - 1)) + log_pnw;
+            logadd(ac, nom);
+            er = -1 * exp(nom - ac);
+
+        }
+        else // negative sample: pw / (pw + k * pnw);
+        {
+            logadd(ac, log((ElemType)(sampleCount - 1)) - log_pnw);
+            er = exp(tmp[i] - ac);
+        }
+
+        tmp[i] = er;
+    }
+}
+
+template<class ElemType>
+__global__ void _assignNceDerivativeInJbor(
+    const ElemType* val,
+    const int* col,
+    const int* colndx,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int width, // number of columns in a
+    const ElemType* b,
+    const ElemType* tmp,
+    unsigned char* c,
+    size_t jborBlockSize)
+{
+    // val and col are CSR format sparse matrix for label
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // tmp is a matrix of precalculated error
+    // c is the output array to store intermediate results
+
+
+    /*
+    int total = numRows * sampleCount;
+    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
+
+    // find out the items this block is responsible for
+    int start = loadPerBlock * blockIdx.x;
+    int end = min(total, loadPerBlock * (blockIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+    int colIndex = col[i];
+    int rowIndex = i / sampleCount;
+
+    ElemType er = tmp[i]; // precalculated error for this output node
+    ElemType log_pnw = val[i];
+
+    // calculate gradients
+    int loadPerThread = (width + blockDim.x - 1) / blockDim.x;
+    int tstart = loadPerThread * threadIdx.x;
+    int tend = min(width, loadPerThread*(threadIdx.x + 1));
+    for (int j = tstart; j < tend; j++)
+    {
+    ElemType val = er * a[IDX2C(rowIndex, j, numRows)];
+
+    unsigned char* pj = c + (j*jborBlockSize + colndx[i]) * sizeof(JborRecord<ElemType>);
+    atomicExch((int*)pj, colIndex);
+    atomicAdd((ElemType*)(pj + sizeof(int)), val);
+    }
+    }*/
+}
+
+template<class ElemType>
+__global__ void _assignNceDerivative(
+    const ElemType* val,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int width, // number of columns in a
+    const ElemType* b,
+    const ElemType* tmp,
+    ElemType* c,
+    size_t inputIndex)
+{
+    // val and col are CSR format sparse matrix for label
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // tmp is a matrix of precalculated error
+    // c is the output matrix to store calculated gradients
+
+    int total = numRows * sampleCount;
+    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
+
+    // find out the items this block is responsible for
+    int start = loadPerBlock * blockIdx.x;
+    int end = min(total, loadPerBlock * (blockIdx.x + 1));
+
+    for (int i = start; i < end; i++)
+    {
+        int colIndex = (int)val[2 * i];
+        int rowIndex = i / sampleCount;
+
+        ElemType er = tmp[i]; // precalculated error for this output node
+        //ElemType log_pnw = val[2 * i + 1];
+
+        // calculate gradients
+        int loadPerThread = (width + blockDim.x - 1) / blockDim.x;
+        int tstart = loadPerThread * threadIdx.x;
+        int tend = min(width, loadPerThread*(threadIdx.x + 1));
+
+        if (inputIndex == 1) // hidden layer output
+        {
+            for (int j = tstart; j < tend; j++)
+            {
+                ElemType val = er * b[IDX2C(j, colIndex, width)];
+                atomicAdd(c + IDX2C(rowIndex, j, numRows), val);
+                //c[IDX2C(rowIndex, j, numRows)] += val;
+            }
+        }
+        else // weight
+        {
+            for (int j = tstart; j < tend; j++)
+            {
+                ElemType val = er * a[IDX2C(rowIndex, j, numRows)];
+                atomicAdd(c + IDX2C(j, colIndex, width), val);
+                //c[IDX2C(j, colIndex, width)] += val;
+            }
+        }
+    }
 }
 
 // compute gradients of weights in cross entropy node

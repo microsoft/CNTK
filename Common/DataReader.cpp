@@ -8,8 +8,9 @@
 
 #include "stdafx.h"
 #define DATAREADER_LOCAL
-#include "basetypes.h"
+#include "Basics.h"
 #include "DataReader.h"
+#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

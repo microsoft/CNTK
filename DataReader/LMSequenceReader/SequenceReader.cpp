@@ -162,7 +162,6 @@ bool SequenceReader<ElemType>::EnsureDataAvailable(size_t mbStartSample, bool /*
             // loop through the labels for this entry
             while (label < spos.labelPos)  /// need to minus one since 
             {
-
                 // labelIn should be a category label 
                 LabelType labelValue = labelTemp[label++];
 
@@ -340,7 +339,7 @@ void SequenceReader<ElemType>::WriteLabelFile()
             }
             else if (!m_cachingWriter)
             {
-                //fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                //fprintf(stderr, "WARNING: file %ls NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
                 std::wcerr << "WARNING: file " << labelInfo.fileToWrite.c_str() << " NOT written to disk, label files only written when starting at epoch zero!" << endl;
             }
         }
@@ -565,7 +564,7 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        //fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+        //fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
         std::wcerr << "reading sequence file" << m_file.c_str() << endl;
     }
 
@@ -646,6 +645,11 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*fla
     }
     fin.close();
     class_size++;
+ 
+    std::vector<double> counts(idx4cnt.size());
+    for (auto p : idx4cnt)
+        counts[p.first] = (double)p.second;
+    m = noiseSampler<long>(counts);
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -970,9 +974,11 @@ bool SequenceReader<ElemType>::SentenceEnd()
     return false; 
 }
 
-/// the output label is a [2 x T] matrix.
+/// the output label is a [4 x T] matrix, where T is the number of words observed
 /// the first row is the word index
 /// the second row is the class id of this word
+/// the third row is begining index of the class for this word
+/// the fourth row is the ending index + 1 of the class for this word
 template<class ElemType>
 void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                                               size_t m_mbStartSample, size_t actualmbsize)
@@ -981,27 +987,67 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
     Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr) return;
     
-    labels->Resize(4, actualmbsize);
+    if (readerMode == ReaderMode::NCE)
+        labels->Resize(2 * (this->noise_sample_size + 1), actualmbsize);
+    else if (readerMode == ReaderMode::Class)
+        labels->Resize(4, actualmbsize);
+    else if (readerMode == ReaderMode::Softmax)
+        labels->Resize(1, actualmbsize);
         
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
         // pick the right sample with randomization if desired
-        size_t jRand = jSample;
-         
-        int    wrd = m_labelIdData[jRand];
-        int    clsidx = idx4class[wrd]; 
-        
+        size_t jRand = jSample;         
+        int    wrd = m_labelIdData[jRand];        
         labels->SetValue(0, j, (ElemType)wrd); 
 
-        if (class_size > 0){
-            labels->SetValue(1, j, (ElemType)clsidx);
-            
-            /// save the [begining ending_indx) of the class 
-            labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
-            labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+        if (readerMode == ReaderMode::NCE)
+        {
+            labels->SetValue(1, j, (ElemType)m.logprob(wrd));
+            for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
+            {
+                int wid = m.sample();
+                labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
+                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m.logprob(wid));
+            }
+        }
+        else if (readerMode == ReaderMode::Class)
+        {
+            int clsidx = idx4class[wrd];
+            if (class_size > 0){
+                labels->SetValue(1, j, (ElemType)clsidx);
+                /// save the [begining ending_indx) of the class 
+                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
+                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+            }
         }
     }
+}
+template<class ElemType>
+void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+{
+    Matrix<ElemType>* idx2prob = matrices[STRIDX2PROB];
+    if (idx2prob == nullptr) return;
 
+    if (m_idx2probRead) return;
+
+    // populate local CPU matrix
+    m_id2Prob->SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
+    m_id2Prob->Resize(nwords, 1, false);
+
+    //move to CPU since element-wise operation is expensive and can go wrong in GPU
+    int curDevId = m_id2Prob->GetDeviceId();
+    m_id2Prob->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+    for (size_t j = 0; j < nwords; j++)
+        (*m_id2Prob)((int)j, 0) = (float)m.prob((int)j);
+    m_id2Prob->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
+
+    int oldDeviceId = idx2prob->GetDeviceId();
+    // caution, SetValue changes idx2cls from GPU to CPU, may change this behavior later
+    idx2prob->SetValue(*m_id2Prob);
+    idx2prob->TransferFromDeviceToDevice(idx2prob->GetDeviceId(), oldDeviceId, true);
+
+    m_idx2probRead = true;
 }
 
 template<class ElemType>
@@ -1340,7 +1386,20 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     ConfigParameters featureConfig = readerConfig(m_featuresName,"");
     ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
+    string mode = featureConfig("mode", "class");//class, softmax, nce
 
+    std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
+    if (mode == "nce")
+    {
+        readerMode = ReaderMode::NCE;
+        this->noise_sample_size = featureConfig("noise_number", "0");
+    }
+    else if (mode == "softmax")
+        readerMode = ReaderMode::Softmax;
+    else if (mode == "class")
+        readerMode = ReaderMode::Class;
+    else if (mode == "unnormalize")
+        readerMode = ReaderMode::Unnormalize;
     class_size = 0;
     m_featureDim = featureConfig("dim");
     for (int index = labelInfoMin; index < labelInfoMax; ++index)
@@ -1802,8 +1861,11 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
                 
         // TODO: move these two methods to startMiniBatchLoop()
-        GetInputToClass(matrices);
-        GetClassInfo();
+        if (readerMode == ReaderMode::Class)
+        {
+            GetInputToClass(matrices);
+            GetClassInfo();
+        }
         GetLabelOutput(matrices, 0, actualmbsize);
 
         // go to the next sequence
@@ -1910,44 +1972,61 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 
 }
 
+/// labels are in [L x T] matrix
+/// where L depends on reader mode:
+///     4             under CLASS           [wid, class-id, beg-class, end-class]
+///     2*(noise + 1) under NCE training    [wid, prob, (noise-id, noise-prob)+]
+///     1             o.w.                  [wid]
+/// the following comments are obsolete now
+/// 1st row is the word id
+/// 2nd row is the class id of this word
+/// 3rd and 4th rows are the begining and ending indices of this class
+/// notice that indices are defined as follows [begining ending_indx) of the class 
+/// i.e., the ending_index is 1 plus of the true ending index
 template<class ElemType>
-void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, 
-    Matrix<ElemType>*>& matrices, 
+void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
+    Matrix<ElemType>*>& matrices,
     size_t m_mbStartSample, size_t actualmbsize)
 {
     size_t j = 0;
-    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]]; 
+    Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
     if (labels == nullptr) return;
-    
-    if(labels->GetMatrixType() == MatrixType::DENSE) 
-    {
+
+    if (readerMode == ReaderMode::NCE)
+        labels->Resize(2 * (this->noise_sample_size + 1), actualmbsize);
+    else if (readerMode == ReaderMode::Class)
         labels->Resize(4, actualmbsize, false);
-    }
-    else 
-    {
-        RuntimeError("GetLabelOutput::should use dense matrix for labels which only save index of words"); 
-    }
+    else
+        labels->Resize(1, actualmbsize, false);
 
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+    ElemType epsilon = (ElemType)1e-6; // avoid all zero, although this is almost impossible.
+    if (labels->GetCurrentMatrixLocation() == CPU)
+    for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
+    {
+        // pick the right sample with randomization if desired
+        size_t jRand = jSample;
+        int    wrd = m_labelIdData[jRand];
+        labels->SetValue(0, j, (ElemType)wrd);
+        SetSentenceEnd(wrd, j, actualmbsize);
 
-
-    if(labels->GetCurrentMatrixLocation() == CPU) {
-        for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
+        if (readerMode == ReaderMode::NCE)
         {
-            // pick the right sample with randomization if desired
-            size_t jRand = jSample;
-
-            int    wrd = m_labelIdData[jRand];
-            int    clsidx = idx4class[wrd]; 
-
-            labels->SetValue(0, j, (ElemType)wrd); 
-
-            SetSentenceEnd(wrd, j, actualmbsize);
-
-            if (class_size > 0)
+            labels->SetValue(1, j, (ElemType)m.logprob(wrd));
+            for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
             {
+                int wid = m.sample();
+                labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
+                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m.logprob(wid));
+            }
+        }
+        else if (readerMode == ReaderMode::Class)
+        {
+            int clsidx = idx4class[wrd];
+            if (class_size > 0){
+
                 labels->SetValue(1, j, (ElemType)clsidx);
 
                 /// save the [begining ending_indx) of the class 
@@ -1955,11 +2034,26 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                 labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
             }
         }
+        else if (readerMode == ReaderMode::Softmax)
+        {
+            if (wrd == 0)
+                labels->SetValue(0, j, epsilon + (ElemType)wrd);
+        }
+        else if (readerMode == ReaderMode::Unnormalize)
+        {
+            labels->SetValue(0, j, -(ElemType)wrd);
+            if (wrd == 0)
+                labels->SetValue(0, j, - epsilon - (ElemType)wrd);
+        }
     }
     else // GPU
     {
         RuntimeError("GetLabelOutput::should use CPU for labels ");
 
+    }
+    if (curDevId != CPUDEVICE)
+    {
+        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
     }
 }
 

@@ -442,7 +442,7 @@ public:
         long TickDelta = TickStop - TickStart;
 
         if (m_traceLevel > 2)
-            fprintf(stderr, "\n%d ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
+            fprintf(stderr, "\n%l ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
         return lineCount;
     }
 
@@ -602,7 +602,7 @@ public:
         long TickDelta = TickStop - TickStart;
 
         if (m_traceLevel > 2)
-            fprintf(stderr, "\n%d ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
+            fprintf(stderr, "\n%l ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
         return lineCount;
     }
 

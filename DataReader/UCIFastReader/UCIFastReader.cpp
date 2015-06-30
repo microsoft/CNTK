@@ -231,12 +231,12 @@ void UCIFastReader<ElemType>::WriteLabelFile()
             {
                 labelFile << m_mapIdToLabel[i] << '\n';
             }
-            fprintf(stderr, "label file %ws written to disk\n", m_labelFileToWrite.c_str());
+            fprintf(stderr, "label file %ls written to disk\n", m_labelFileToWrite.c_str());
             m_labelFileToWrite.clear();
         }
         else if (!m_cachingWriter)
         {
-            fprintf(stderr, "WARNING: file %ws NOT written to disk yet, will be written the first time the end of the entire dataset is found.\n", m_labelFileToWrite.c_str());
+            fprintf(stderr, "WARNING: file %ls NOT written to disk yet, will be written the first time the end of the entire dataset is found.\n", m_labelFileToWrite.c_str());
         }
     }
 }
@@ -381,7 +381,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring file = configFeatures("file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading uci file %ws\n", file.c_str());
+        fprintf(stderr, "reading uci file %ls\n", file.c_str());
 
     m_parser.ParseInit(file.c_str(), startFeatures, dimFeatures, startLabels, dimLabels);
 
@@ -409,7 +409,7 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
             if (allowLabelCreation)
                 m_labelFileToWrite = labelPath;
             else
-                RuntimeError("label mapping file %ws not found, can be created with a 'createLabelMap' command/action\n", labelPath.c_str());
+                RuntimeError("label mapping file %ls not found, can be created with a 'createLabelMap' command/action\n", labelPath.c_str());
         }
     }
 
@@ -548,7 +548,7 @@ void UCIFastReader<ElemType>::SetupEpoch()
         if (m_totalSamples == 0)
         {
             if (m_traceLevel > 0)
-                fprintf(stderr, "starting at epoch %d counting lines to determine record count\n", m_epoch);
+                fprintf(stderr, "starting at epoch %lu counting lines to determine record count\n", (unsigned long)m_epoch);
             m_parser.SetParseMode(ParseLineCount);
             m_totalSamples = m_parser.Parse(size_t(-1), NULL, NULL);   
             m_parser.SetParseMode(ParseNormal);
@@ -556,14 +556,14 @@ void UCIFastReader<ElemType>::SetupEpoch()
             m_mbStartSample = 0;
             UpdateDataVariables(0); // update all the variables since we read to the end...
             if (m_traceLevel > 0)
-                fprintf(stderr, "\n %lld records found\n", m_totalSamples);
+                fprintf(stderr, "\n %lu records found\n", (unsigned long)m_totalSamples);
         }
 
         // make sure we are in the correct location for mid-dataset epochs
         size_t mbStartSample = m_epoch * m_epochSize;
 
         size_t fileRecord = m_totalSamples?mbStartSample % m_totalSamples:0;
-        fprintf(stderr, "starting epoch %lld at record count %lld, and file position %lld\n", m_epoch, mbStartSample, fileRecord);
+        fprintf(stderr, "starting epoch %lu at record count %lu, and file position %lu\n", (unsigned long)m_epoch, (unsigned long)mbStartSample, (unsigned long)fileRecord);
         size_t currentFileRecord = m_mbStartSample % m_totalSamples;
 
         // reset the next read sample
@@ -604,13 +604,13 @@ void UCIFastReader<ElemType>::SetupEpoch()
                 m_parser.SetFilePosition(0); 
                 currentFileRecord = 0;
             }
-            fprintf(stderr, "reading from record %lld to %lld to be positioned properly for epoch\n", currentFileRecord, fileRecord);
+            fprintf(stderr, "reading from record %lu to %lu to be positioned properly for epoch\n", (unsigned long)currentFileRecord, (unsigned long)fileRecord);
             m_parser.SetParseMode(ParseLineCount);
             m_parser.Parse(fileRecord-currentFileRecord, NULL, NULL);
             m_parser.SetParseMode(ParseNormal);
             if (!m_labelFileToWrite.empty())
             {
-                fprintf(stderr, "WARNING: file %ws NOT written to disk, label file will only be written when starting epochs at the beginning of the dataset\n", m_labelFileToWrite.c_str());
+                fprintf(stderr, "WARNING: file %ls NOT written to disk, label file will only be written when starting epochs at the beginning of the dataset\n", m_labelFileToWrite.c_str());
                 m_labelFileToWrite.clear();
                 RuntimeError("LabelMappingFile not provided in config, must be provided if not starting from epoch Zero (0)");
             }

@@ -38,6 +38,8 @@ bool do_sync = true;
 
 #define DEFAULT_THREAD_PER_DIM		16
 
+#define UNCONST(t,c,uc)  GPUMatrix<t> &uc = const_cast<GPUMatrix<t>&>(c);
+
 #ifdef _WIN32
 // thread local storage to access the current stream, initalize to default stream
 __declspec (thread)
@@ -648,6 +650,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        if (sliceNumCols == 0)
+            LogicError("AssignRowStackValuesOf: sliceNumCols should > 0.");
+
+        size_t totalRows = 0;
+        size_t* startRowIndeces = new size_t[inputMatrices.size()+1];
+        ElemType ** bufferPointersInInputMatrices = new ElemType*[inputMatrices.size()];
+
+        startRowIndeces[0] = 0;       
+
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const GPUMatrix<ElemType>& a = *inputMatrices[i];
+            if (a.IsEmpty())
+                LogicError("AssignRowStackValuesOf: input matrix (%d) is empty.", i);
+
+            if (a.GetNumCols() < sliceStartCol + sliceNumCols)
+                LogicError("AssignRowStackValuesOf: input matrix (%d) GetNumCols() < sliceStartCol + sliceNumCols.", i);
+
+            totalRows += a.GetNumRows();
+            startRowIndeces[i + 1] = startRowIndeces[i] + a.GetNumRows();
+
+            bufferPointersInInputMatrices[i] = a.m_pArray + a.LocateColumn(sliceStartCol);
+        }
+
+        Resize(totalRows, sliceNumCols);
+
+        PrepareDevice();
+
+        ElemType** bufferPointersInGPU = NULL;
+        CUDA_CALL(cudaMalloc((void***)&bufferPointersInGPU, inputMatrices.size()*sizeof(ElemType*)));
+        CUDA_CALL(cudaMemcpy(bufferPointersInGPU, bufferPointersInInputMatrices, inputMatrices.size()*sizeof(ElemType*), cudaMemcpyHostToDevice));
+        delete[] bufferPointersInInputMatrices;
+
+        size_t* startRowIndecesInGPU = NULL;
+        CUDA_CALL(cudaMalloc((void**)&startRowIndecesInGPU, (1+inputMatrices.size())*sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(startRowIndecesInGPU, startRowIndeces, (1+inputMatrices.size())*sizeof(size_t), cudaMemcpyHostToDevice));
+        delete[] startRowIndeces;
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignRowStackValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, bufferPointersInGPU, startRowIndecesInGPU, (long) inputMatrices.size(), N, (long)GetNumRows(), (long)GetNumCols());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        CUDA_CALL(cudaFree(bufferPointersInGPU));
+        CUDA_CALL(cudaFree(startRowIndecesInGPU));
+
+        return *this;
+    }
+
     /// c = c - 1.0 for a specific position
     template<class ElemType>
     void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t position)
@@ -825,15 +884,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("SetValue: Matrix is empty.");
 
-        LONG64 N=(LONG64)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _setValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,v,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        LONG64 N = (LONG64) GetNumElements();
+
+        // Check if value is zero, which can be set using cudaMemset
+        bool isZero = true;
+        const char * valArray = reinterpret_cast<const char *>(&v);
+
+        for (int i = 0; i < sizeof(ElemType); i++)
+        {
+            if (valArray[i] != 0)
+            {
+                isZero = false;
+                break;
+            }
+        }
+
+        if (isZero)
+        {
+            CUDA_CALL(cudaMemset(m_pArray, 0, N * sizeof(ElemType)));
+        }
+        else
+        {
+            int blocksPerGrid = (int) ceil(1.0 * N / threadsPerBlock);
+            PrepareDevice();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _setValue<ElemType> <<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, v, N);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
     }
 
     template<class ElemType>
@@ -1751,6 +1831,118 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
+        const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
+        //this: samples+probs
+        // a:   hidden
+        // b:   embedding
+        // tmp:  softmax
+        //  c: loglikelihood
+    {
+        UNCONST(ElemType, a, my_a);
+        UNCONST(ElemType, b, my_b);
+        UNCONST(ElemType, bias, my_bias);
+
+        cudaEvent_t done = nullptr;
+        if (do_sync) CUDA_CALL(cudaEventCreate(&done));
+
+        int p = 512;
+        int width = a.GetNumCols();
+        while (p / 2 > width) p = p / 2;
+
+        _computeNceOutput<ElemType> << <this->GetNumElements() / 2, p >> >(
+            this->GetArray(),
+            m_numRows,
+            sampleCount,
+            my_a.GetArray(),//a
+            a.GetNumCols(),
+            my_b.GetArray(),//b
+            my_bias.GetArray(),
+            tmp.GetArray());//tmp
+
+        p = 512;
+        while (p / 2 > this->GetNumElements() / 2) p = p / 2;
+
+        // summing up objective must be done in one block
+        _assignNoiseContrastiveEstimation<ElemType> << <1, p >> >(
+            this->GetArray(),
+            m_numRows,
+            sampleCount, my_a.GetArray(),
+            a.GetNumCols(),
+            my_b.GetArray(),
+            tmp.GetArray(),
+            c.GetArray());
+
+        _computeNceError<ElemType> << <1, p >> >(
+            this->GetArray(),
+            m_numRows,
+            tmp.GetNumCols(),
+            tmp.GetArray());
+
+        if (do_sync) CUDA_CALL(cudaEventRecord(done));
+        if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync) CUDA_CALL(cudaEventDestroy(done));
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GPUMatrix<ElemType>& a,
+        const GPUMatrix<ElemType>& b, size_t inputIndex, GPUMatrix<ElemType>& c)
+    {
+        UNCONST(ElemType, a, my_a);
+        UNCONST(ElemType, b, my_b);
+        cudaEvent_t done = nullptr;
+        if (do_sync) CUDA_CALL(cudaEventCreate(&done));
+        int p = 512;
+        int width = a.GetNumCols();
+        while (p / 2 > width) p = p / 2;
+        
+        _assignNceDerivative<ElemType> << <m_nz, p >> >(
+            GetArray(),
+            m_numRows,
+            tmp.GetNumCols(),
+            my_a.GetArray(),
+            a.GetNumCols(),
+            my_b.GetArray(),
+            tmp.GetArray(),
+            c.GetArray(),
+            inputIndex);
+           
+        if (do_sync) CUDA_CALL(cudaEventRecord(done));
+        if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync) CUDA_CALL(cudaEventDestroy(done));
+    }
+    
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
+    {
+        assert(a.GetComputeDeviceId() == b.GetComputeDeviceId());
+        assert(GetNumRows() == a.GetNumRows());
+        assert(GetNumCols() == b.GetNumRows());
+        assert(a.GetNumCols() == b.GetNumRows());
+        UNUSED(a); UNUSED(b); UNUSED(c);  // TODO: this function seems like a stub
+        /*
+        EnsureAuxMemory();
+        int p = 512;
+        int width = a.GetNumCols();
+        while (p / 2 > width) p = p / 2;
+
+        // this kernel need be launched in nnz blocks
+        _sparseInnerProductDenseTimesDense<ElemType> << <m_nz, p >> >(
+        m_dVal,
+        m_buf,
+        m_dCol,
+        m_nz,
+        GetNumRows(),
+        a.GetArray(),
+        b.GetArray(),
+        b.GetNumRows(),
+        m_res);
+
+        //sum up the results
+        _reductionSum32<ElemType> << <1, 32 >> >(m_res, c.GetArray(), m_nz);*/
+    }
+
 
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTanh()
@@ -2592,7 +2784,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             maxIndexes.Resize(1, n);
 
             int blocksPerGrid = n; //we'll have 1 block processing 1 column
-            _vectorMaxMinReduce<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,true);
+            _vectorMaxMinReduce<ElemType, true><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n);
 
             /*int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
             _vectorMax<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,isColWise);*/
@@ -2629,7 +2821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             minIndexes.Resize(1, n);
 
             int blocksPerGrid = n; //we'll have 1 block processing 1 column
-            _vectorMaxMinReduce<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,minIndexes.m_pArray,minValues.m_pArray,m,n,false);
+            _vectorMaxMinReduce<ElemType, false><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,minIndexes.m_pArray,minValues.m_pArray,m,n);
 
             /*
             int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
@@ -3757,7 +3949,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUMatrix<ElemType>::RCRFBackwardCompute(
         const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-        const GPUMatrix<ElemType>& lbls,
+        const GPUMatrix<ElemType>& /*lbls*/,
         const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift)
     {
         if (alpha.IsEmpty() || pos_scores.IsEmpty() || pair_scores.IsEmpty())

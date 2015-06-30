@@ -11,6 +11,11 @@
 #include <stdexcept>
 #include <stdint.h>
 
+#if WIN32
+#define ftell64 _ftelli64
+#else
+#define ftell64 ftell
+#endif
 
 // SetState for a particular value
 template <typename NumType, typename LabelType>
@@ -362,10 +367,10 @@ void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeat
 
     errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
     if (err)
-        std::runtime_error("UCIParser::ParseInit - error opening file"); 
+        throw std::runtime_error("UCIParser::ParseInit - error opening file"); 
     int rc = _fseeki64(m_pFile, 0, SEEK_END);
     if (rc)
-        std::runtime_error("UCIParser::ParseInit - error seeking in file");
+        throw std::runtime_error("UCIParser::ParseInit - error seeking in file");
 
     m_fileSize = GetFilePosition();
     m_fileBuffer = new BYTE[m_bufferSize];
@@ -377,9 +382,9 @@ void UCIParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeat
 template <typename NumType, typename LabelType>
 int64_t UCIParser<NumType, LabelType>::GetFilePosition()
 {
-    int64_t position = _ftelli64(m_pFile);
+    int64_t position = ftell64(m_pFile);
     if (position == -1L)
-        std::runtime_error("UCIParser::GetFilePosition - error retrieving file position in file");
+        throw std::runtime_error("UCIParser::GetFilePosition - error retrieving file position in file");
     return position;
 }
 
@@ -392,7 +397,7 @@ void UCIParser<NumType, LabelType>::SetFilePosition(int64_t position)
 {
     int rc = _fseeki64(m_pFile, position, SEEK_SET);
     if (rc)
-        std::runtime_error("UCIParser::SetFilePosition - error seeking in file");
+        throw std::runtime_error("UCIParser::SetFilePosition - error seeking in file");
 
     // setup state machine to start at this position
     PrepareStartPosition(position);
@@ -445,7 +450,7 @@ size_t UCIParser<NumType, LabelType>::UpdateBuffer()
     size_t bytesToRead = min(m_bufferSize, m_fileSize-m_bufferStart)-saveBytes;
     size_t bytesRead = fread(m_fileBuffer+saveBytes, 1, bytesToRead, m_pFile);
     if (bytesRead == 0 && ferror(m_pFile))
-        std::runtime_error("UCIParser::UpdateBuffer - error reading file");
+        throw std::runtime_error("UCIParser::UpdateBuffer - error reading file");
     return bytesRead;
 }
 
@@ -648,7 +653,7 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
     long TickDelta = TickStop - TickStart;
 
     if (m_traceLevel > 2)
-        fprintf(stderr, "\n%d ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
+        fprintf(stderr, "\n%ld ms, %d numbers parsed\n\n", TickDelta, m_totalNumbersConverted );
     return recordCount;
 }
 
