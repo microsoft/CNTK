@@ -2822,15 +2822,15 @@ __global__ void _computeNceOutput(
 
     for (int i = start; i < end; i++)
     {
-        int colIndex = (int)col[2 * i];
-        int rowIndex = i / sampleCount;
+        int wid = (int)col[2 * i];
+        int batchid = i / sampleCount;
 
         int loadPerThread = (numCols_a + blockDim.x - 1) / blockDim.x;
         int tstart = loadPerThread * threadIdx.x;
         int tend = min(numCols_a, loadPerThread * (threadIdx.x + 1));
 
         for (int j = tstart; j < tend; j++)
-            partials[threadIdx.x] = a[IDX2C(rowIndex, j, numRows)] * b[IDX2C(j, colIndex, numCols_a)];
+            partials[threadIdx.x] = a[IDX2C(j, batchid, numCols_a)] * b[IDX2C(j, wid, numCols_a)];
 
         __syncthreads();
 
