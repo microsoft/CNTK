@@ -117,7 +117,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
-        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource) const
+        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource, int verbosity=0) const
         {
 
             if (numutterances() == 0)
@@ -148,7 +148,8 @@ class minibatchutterancesourcemulti : public minibatchsource
                         latticesource.getlattices (utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
                 //fprintf (stderr, "\n");
-                fprintf (stderr, "requiredata: %zu utterances read\n", utteranceset.size());
+                if (verbosity)
+                    fprintf (stderr, "requiredata: %zu utterances read\n", utteranceset.size());
             }
             catch (...)
             {
@@ -961,7 +962,7 @@ private:
                     fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
-                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices);
+                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices, verbosity);
                 });
             }
             chunksinram++;
