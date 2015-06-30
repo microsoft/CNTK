@@ -168,12 +168,14 @@
     <ClInclude Include="ComputationNetworkHelper.h" />
     <ClInclude Include="ComputationNode.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
+    <ClInclude Include="DecoderNode.h" />
     <ClInclude Include="EvaluationCriterionNodes.h" />
     <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="InputAndParamNodes.h" />
     <ClInclude Include="LinearAlgebraNodes.h" />
     <ClInclude Include="ModelEditLanguage.h" />
+    <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="NDLNetworkBuilder.h" />
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />

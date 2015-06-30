@@ -7,6 +7,7 @@
 #pragma once
 #include "DataReader.h"
 #include "KaldiSequenceTrainingIO.h"
+#include "commandArgUtil.h" // for intargvector
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -50,7 +51,7 @@ private:
 
     bool m_trainOrTest; // if false, in file writing mode
     using LabelType = typename IDataReader<ElemType>::LabelType;
-	  using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
  
     std::map<LabelIdType, LabelType> m_idToLabelMap;
     
@@ -118,6 +119,37 @@ private:
 
 
 public:
+   
+    /// a matrix of n_stream x n_length
+    /// n_stream is the number of streams
+    /// n_length is the maximum lenght of each stream
+    /// for example, two sentences used in parallel in one minibatch would be
+    /// [2 x 5] if the max length of one of the sentences is 5
+    /// the elements of the matrix is 0, 1, or -1, defined as SENTENCE_BEGIN, SENTENCE_MIDDLE, NO_LABELS in cbasetype.h 
+    /// 0 1 1 0 1
+    /// 1 0 1 0 0 
+    /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
+    /// the second data stream has two sentences, with 0 indicating begining of sentences
+    /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
+    /// frame.
+    Matrix<ElemType> m_sentenceBegin;
+
+    /// a matrix of 1 x n_length
+    /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
+    /// 0 denotes such case is not in this frame
+
+
+    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+
+    /// by default it is false
+    /// if true, reader will set to SENTENCE_MIDDLE for time positions that are orignally correspond to SENTENCE_BEGIN
+    /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
+    /// default will have truncated BPTT, which only does BPTT inside a minibatch
+
+    bool mIgnoreSentenceBeginTag;
+    HTKMLFReader() : m_sentenceBegin(CPUDEVICE) {
+    }
+
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
     virtual ~HTKMLFReader();
@@ -134,6 +166,8 @@ public:
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
+
+    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
 };
 
 }}}

@@ -48,19 +48,48 @@ class DATAREADER_API IDataReader
 {
 public:
     typedef std::string LabelType;
-    typedef unsigned int LabelIdType;
+    typedef unsigned LabelIdType;
+    unsigned m_seed;
+    size_t   mBlgSize;  /// number of utterances per minibatch
+    bool     mDoRandomize; 
 
-    virtual void Init(const ConfigParameters& config) = 0;
-    virtual void Destroy() = 0;
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
-    virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
-    virtual void SetNbrSlicesEachRecurrentIter(const size_t) = 0;
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) = 0; 
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart) = 0;
-    virtual bool DataEnd(EndDataType endDataType) = 0;
-    virtual void SetSentenceEndInBatch(vector<size_t> &sentenceEnd) = 0;
+    virtual void Init(const ConfigParameters& /*config*/)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual void Destroy() 
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual void StartMinibatchLoop(size_t /*mbSize*/, size_t /*epoch*/, size_t = requestDataSize)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/)
+    {
+        NOT_IMPLEMENTED;
+    }
+    virtual size_t NumberSlicesInEachRecurrentIter() { NOT_IMPLEMENTED; }
+    virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
+    virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
+
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
+    virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
+    virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
+    virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
+    virtual void SetSentenceSegBatch(Matrix<ElemType>&, vector<MinibatchPackingFlag>&) { NOT_IMPLEMENTED; };
+    virtual void SetRandomSeed(int) { NOT_IMPLEMENTED; };
+    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false; }
+    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
+    virtual bool CanReadFor(wstring /* nodeName */) {
+        return false;
+    }
+    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    void SetDoRandomize(bool b){ mDoRandomize = b; }
 
     // Gets utterance before getting the actual minibatch, which will not affect
     // getting the minibatches. This can be useful in sequence training.
@@ -84,13 +113,14 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader);
 // interface for clients of the Data Reader
 // mirrors the IDataReader interface, except the Init method is private (use the constructor)
 template<class ElemType>
-class DataReader : public IDataReader<ElemType>, protected Plugin
+class DataReader: public IDataReader<ElemType>, protected Plugin
 {
     typedef typename IDataReader<ElemType>::LabelType LabelType;
     typedef typename IDataReader<ElemType>::LabelIdType LabelIdType;
-private:
-    IDataReader<ElemType> *m_dataReader;  // reader
-
+public:
+    vector<wstring> m_ioNames;
+    map<wstring, IDataReader<ElemType> *> m_dataReader;  // readers
+    map<wstring, ConfigParameters> m_configure; 
     // Init - Reader Initialize for multiple data sets
     // config - [in] configuration parameters for the datareader
     // Sample format below for UCIReader:
@@ -122,6 +152,11 @@ private:
     // NOTE: this destroys the object, and it can't be used past this point
     virtual void Destroy();
 
+    /// number of utterances per minibatch, for data parallelsim
+    size_t mNbrUttPerMinibatch; 
+
+    bool mDoRandomize; 
+
 public:
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader 
@@ -132,7 +167,7 @@ public:
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
 
     // GetMinibatch - Get the next minibatch (features and labels)
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
@@ -140,9 +175,8 @@ public:
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    size_t NumberSlicesInEachRecurrentIter() ;
-
-    void SetNbrSlicesEachRecurrentIter(const size_t );
+    size_t NumberSlicesInEachRecurrentIter();
+    int GetSentenceEndIdFromOutputLabel();
 
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
@@ -161,25 +195,27 @@ public:
     //                  [out] size of buffer filled with data
     // recordStart - record to start reading from, defaults to zero (start of data)
     // returns: true if data remains to be read, false if the end of data was reached
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd);
 
     // Gets utterance before getting the actual minibatch, which will not affect
     // getting the minibatches. This can be useful in sequence training.
-    virtual bool GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices)
-    {
-        return m_dataReader->GetForkedUtterance(uttID, matrices);
-    }
+    virtual bool GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     // Computes certain derivatives given outputs from neural networks, which
     // will later be fed to the neural network as features. This can be useful
     // in sequence training.
-    virtual bool ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs)
-    {
-        return m_dataReader->ComputeDerivativeFeatures(uttID, outputs);
-    }
+    virtual bool ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs);
+
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+
+    void SetRandomSeed(int);
+
+    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&);
+    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
 };
 
 }}}

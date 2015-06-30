@@ -1,0 +1,40 @@
+# this use K-N ngram model to construct a language model
+
+set BINDIR=\\speechstore5\transient\kaishengy\tools\SRILM\SRILM\bin\msvc64
+set DATADIR=\\speechstore5\transient\kaishengy\data\newscomments\2015\03-23
+set TRAINFILE=%DATADIR%\comments.cntk.train.txt
+set TESTFILE=%DATADIR%\comments.cntk.test.txt
+set EXPDIR=\\speechstore5\transient\kaishengy\exp\news\s2.knlm.comments
+set OUTLMFN=%EXPDIR%\kn3.lm
+
+# ----------------------
+# 3-gram
+# ----------------------
+%BINDIR%\ngram-count.exe -no-sos -no-eos -text %TRAINFILE% -lm %OUTLMFN% -unk
+
+# test PPL 
+%BINDIR%\ngram.exe -lm %OUTLMFN% -ppl %TESTFILE% >  %EXPDIR%\ppl_3gm.ppl
+
+# results from KN 3-gram model 
+# D:\dev\cntkcodeplex\ExampleSetups\News\steps>more %EXPDIR%\ppl_3gm.ppl
+# file \\speechstore5\transient\kaishengy\data\newscomments\2015\03-23\comments.cntk.test.txt: 153 sentences, 8848 words, 0 OOVs
+# 0 zeroprobs, logprob= -17617.4 ppl= 90.6291 ppl1= 97.9744
+
+
+# ----------------------
+# class-based LM
+# ----------------------
+set CLASSCNTFILE=%EXPDIR%\class.cnt
+set CLASSFILE=%EXPDIR%\class.txt
+
+%BINDIR%\ngram-class -numclasses 50 -class-counts %CLASSCNTFILE% -classes %CLASSFILE% -text %TRAINFILE%
+
+
+# test PPL 
+%BINDIR%\ngram.exe -lm %OUTLMFN% -classes %CLASSFILE% -ppl %TESTFILE% >  %EXPDIR%\ppl_3gm.50classes.ppl
+
+# results from 50 class 3-gram LM
+# D:\dev\cntkcodeplex\ExampleSetups\News\steps>more %EXPDIR%\ppl_3gm.50classes.ppl
+# file \\speechstore5\transient\kaishengy\data\newscomments\2015\03-23\comments.cntk.test.txt: 153 sentences, 8848 words, 0 OOVs
+# 0 zeroprobs, logprob= -17617.4 ppl= 90.629 ppl1= 97.9744
+

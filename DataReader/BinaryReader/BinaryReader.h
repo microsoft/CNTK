@@ -399,6 +399,13 @@ private:
     vector<SectionFile*> m_secFiles;
     std::map<std::wstring, Section*, nocase_compare> m_sections;
 
+    /** 
+    for reading one line per file, i.e., a file has only one line of data
+    */
+    bool mOneLinePerFile;
+    size_t m_dim; 
+    vector<FILE*> m_fStream;
+
     void SetupEpoch();
     void LoadSections(Section* parentSection, MappingType mapping, size_t windowSize);
     void DisplayProperties();
@@ -414,13 +421,15 @@ public:
 
     size_t NumberSlicesInEachRecurrentIter() { return 1 ;} 
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
-    void SetSentenceEndInBatch(std::vector<size_t> &/*sentenceEnd*/) {};
+    void SetSentenceSegBatch(std::vector<size_t> &/*sentence begin*/) {};
+    void SetSentenceSegBatch(Matrix<ElemType>&/*sentence begin*/) {};
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
+    void SetRandomSeed(int){ NOT_IMPLEMENTED; };
 };
 
 template<class ElemType>

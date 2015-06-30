@@ -327,6 +327,19 @@ __global__ void _setValue(
 };
 
 template<class ElemType>
+__global__ void _assignToRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / srcRows;
+    long row = id - (col * srcRows);
+
+    dest[col*destRows + row + startIndex] = src[id];
+}
+
+template<class ElemType>
 __global__ void _assignRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -989,6 +1002,23 @@ __global__ void _areEqual(
         }
     }
 
+}
+
+template<class ElemType>
+__global__ void _hasElement(
+    const ElemType* a,
+    const LONG64 N,
+    ElemType *d_res  /// [2x1] vector. The first is the value to be compared and the second is the 0/1 to return
+    )
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    if (a[id] == d_res[0])
+    {
+        d_res[1] = 1;
+    }
 }
 
 template<class ElemType>
@@ -2380,6 +2410,40 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     c[IDX2C(rowInC, colInC, m)] = alpha * s + beta * c[IDX2C(rowInC, colInC, m)];
 }
 
+/// c += alpha * a * b^T
+template<class ElemType>
+__global__ void _denseMultSparseCSCTransposeAndAddToDense(
+    int m, //rowDense
+    int n,   //number of columns in sparse matrix
+    int colInC, /// column index of the sparse matrix
+    ElemType alpha,
+    const ElemType* a,  //dense
+    const ElemType* bnzValues,  //sparse nz values
+    const GPUSPARSE_INDEX_TYPE* rowIndex,
+    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    ElemType* c  //dense target
+    )
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m)
+        return;
+
+    int rowInC = id;
+    int start = colCSCIndex[colInC];
+    int end = colCSCIndex[colInC + 1];
+
+    ElemType s = 0;
+    ElemType val = 0;
+    for (int j = start; j<end; j++)  //j points to the value that are in the same row
+    {
+        int i = rowIndex[j];  /// actually the column index because of transpose
+        val = bnzValues[j];   /// the b[][j] value
+        s = a[IDX2C(rowInC, colInC, m)] * val;
+
+        atomicAdd(&c[IDX2C(rowInC, i, m)], alpha * s);
+    }
+}
+
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
 //what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
 //input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
@@ -2784,7 +2848,6 @@ __global__ void computeNCEForwardProp(
             res[i] = partials[0];
     }
 }
-
 
 template<class ElemType>
 __global__ void _computeNceOutput(

@@ -473,7 +473,9 @@ namespace Microsoft {
 
             //for each column of a, we assign numRows starting from startIndex to this
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
-
+            //for each column of a, we assign all rows of a to this starting from startIndex
+            template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows) { return *this; }
+ 
             //for each column of a, we add all rows of a to this starting from startIndex
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
@@ -969,6 +971,7 @@ namespace Microsoft {
             template<class ElemType> //c = alpha * a
             void GPUMatrix<ElemType>::Scale(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c) { }
 
+            template<class ElemType> bool GPUMatrix<ElemType>::HasElement(const GPUMatrix<ElemType>& a, const ElemType value) { return false; }
 
             template<class ElemType> void GPUMatrix<ElemType>::InnerProduct(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c, const bool isColWise) { }
 
