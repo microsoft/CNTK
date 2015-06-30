@@ -67,11 +67,11 @@ cudaStream_t MATH_API GetStream()
 
 void CURAND_CALL(curandStatus x)
 {
-    if(x!=CURAND_STATUS_SUCCESS) 
-    { 
+    if (x != CURAND_STATUS_SUCCESS)
+    {
         std::cerr << "!!!!!!!!CURAND EXCEPTION: " << std::endl;
         throw std::runtime_error("CURAND fail");
-    }        
+    }
 }
 
 void CUBLAS_CALL(cublasStatus_t x)
@@ -1853,7 +1853,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         _computeNceOutput<ElemType> << <this->GetNumElements() / 2, p >> >(
             this->GetArray(),
-            m_numRows,
+            m_numRows / 2,
             sampleCount,
             my_a.GetArray(),//a
             a.GetNumCols(),
@@ -1880,6 +1880,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             tmp.GetNumCols(),
             tmp.GetArray());
 
+        cerr << "log-likelihood:" << Get00Element() << endl;
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
