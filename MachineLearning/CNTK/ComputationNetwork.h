@@ -2363,6 +2363,7 @@ public:
         */
         bool UnitTest(bool allowFragment = false)
         {
+            vector<wstring> vErrors;
             // currently only validates nodes, we should validate everything we can
             if (FeatureNodes().size() == 0 && !allowFragment)
             {
@@ -2377,7 +2378,7 @@ public:
                     size_t actualMBSize = this->GetActualMBSize();
                     this->SetActualMiniBatchSize(actualMBSize);
                     if (UnitTest(node) == false)
-                        return false;
+                        vErrors.push_back(node->NodeName().c_str());
                 }
             }
             else if (!allowFragment)
@@ -2389,7 +2390,7 @@ public:
             {
                 for (auto node : OutputNodes())
                     if (UnitTest(node) == false)
-                        return false;
+                        vErrors.push_back(node->NodeName().c_str());
             }
             else if (!allowFragment)
             {
@@ -2400,8 +2401,10 @@ public:
             {
                 for (auto node : EvaluationNodes())
                     if (UnitTest(node) == false)
-                        return false;
+                        vErrors.push_back(node->NodeName().c_str());
             }
+            if (vErrors.size() > 0)
+                return false; 
             return true;
         }
 
