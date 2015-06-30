@@ -67,11 +67,11 @@ cudaStream_t MATH_API GetStream()
 
 void CURAND_CALL(curandStatus x)
 {
-    if(x!=CURAND_STATUS_SUCCESS) 
-    { 
+    if (x != CURAND_STATUS_SUCCESS)
+    {
         std::cerr << "!!!!!!!!CURAND EXCEPTION: " << std::endl;
         throw std::runtime_error("CURAND fail");
-    }        
+    }
 }
 
 void CUBLAS_CALL(cublasStatus_t x)
@@ -1846,17 +1846,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         cudaEvent_t done = nullptr;
         if (do_sync) CUDA_CALL(cudaEventCreate(&done));
-
+        //a: dim * minibatch
+        //b: dim * |vocab|
         int p = 512;
-        int width = a.GetNumCols();
+        int width = a.GetNumRows(); //dimension of hidden vector
+        //int width = a.GetNumCols(); original setup, considering column-major
+        //
         while (p / 2 > width) p = p / 2;
 
         _computeNceOutput<ElemType> << <this->GetNumElements() / 2, p >> >(
             this->GetArray(),
-            m_numRows,
+            m_numRows / 2,
             sampleCount,
             my_a.GetArray(),//a
-            a.GetNumCols(),
+            a.GetNumRows(),
             my_b.GetArray(),//b
             my_bias.GetArray(),
             tmp.GetArray());//tmp
@@ -1867,7 +1870,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // summing up objective must be done in one block
         _assignNoiseContrastiveEstimation<ElemType> << <1, p >> >(
             this->GetArray(),
-            m_numRows,
+            m_numRows / 2,
             sampleCount, my_a.GetArray(),
             a.GetNumCols(),
             my_b.GetArray(),
@@ -1876,10 +1879,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         _computeNceError<ElemType> << <1, p >> >(
             this->GetArray(),
-            m_numRows,
+            m_numRows / 2,
             tmp.GetNumCols(),
             tmp.GetArray());
 
+        cerr << "log-likelihood:" << Get00Element() << endl;
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
@@ -1920,7 +1924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(GetNumRows() == a.GetNumRows());
         assert(GetNumCols() == b.GetNumRows());
         assert(a.GetNumCols() == b.GetNumRows());
-        a; b; c;  // TODO: this function seems like a stub
+        UNUSED(a); UNUSED(b); UNUSED(c);  // TODO: this function seems like a stub
         /*
         EnsureAuxMemory();
         int p = 512;
