@@ -436,16 +436,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (t == 0)
                     {
                         /// check with expected values
-                        if (!ISCLOSE(FunctionValues()(0, 0), 0.0, EPSILON) ||
+                        if (!ISCLOSE(FunctionValues()(0, 0), m_default_activity, EPSILON) ||
                             !ISCLOSE(FunctionValues()(0, 1), 0, EPSILON) ||
-                            !ISCLOSE(FunctionValues()(0, 2), 0, EPSILON) )
+                            !ISCLOSE(FunctionValues()(0, 2), 0, EPSILON))
                             throw("Delaynode forward computation error");
                     }
 
                     if (t == 1)
                     {
                         /// check with expected values
-                        if (!ISCLOSE(FunctionValues()(0, 0), 0.0, EPSILON) ||
+                        if (!ISCLOSE(FunctionValues()(0, 0), m_default_activity, EPSILON) ||
                             !ISCLOSE(FunctionValues()(0, 1), 0.1, EPSILON) ||
                             !ISCLOSE(FunctionValues()(0, 2), 0, EPSILON) )
                             throw("Delaynode forward computation error");
@@ -454,7 +454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (t == 2)
                     {
                         /// check with expected values
-                        if (!ISCLOSE(FunctionValues()(0, 0), 0.0, EPSILON) ||
+                        if (!ISCLOSE(FunctionValues()(0, 0), m_default_activity, EPSILON) ||
                             !ISCLOSE(FunctionValues()(0, 1), 0.1, EPSILON) ||
                             !ISCLOSE(FunctionValues()(0, 2), 0.1, EPSILON) )
                             throw("Delaynode forward computation error");
@@ -1852,9 +1852,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mGToMemblk.Resize(d, T);
             mGToMemblk.SetValue(0);
 
-            if (m_ones.GetNumRows() != e || m_ones.GetNumCols() != e)
+            if (m_ones.GetNumRows() != d || m_ones.GetNumCols() != d)
             {
-                m_ones = Matrix<ElemType>::Ones(e, e, m_deviceId);
+                m_ones = Matrix<ElemType>::Ones(d, d, m_deviceId);
             }
 
             mGBeforeSoftmax.Resize(m_softmax.GetNumRows(),1);
@@ -1865,6 +1865,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// right branch with softmax
                 mTmp4 = m_memoryBlk4EachUtt.ColumnSlice(k*T, T);
+                mTmp.Resize(T,1);
+                mTmp.SetValue(0);
+                mGBeforeSoftmax.SetValue(0);
+                mGBeforeSoftmaxTimes.SetValue(0);
+                mGToMemblk.SetValue(0);
+
                 TimesNode<ElemType>::ComputeInputPartialRight(mTmp4, mTmp, sliceOutputGrad.ColumnSlice(k, 1));  /// before times
                 SoftmaxNode<ElemType>::ComputeInputPartialS(mTmp1, mTmp2, mGBeforeSoftmax, mTmp, m_softmax.ColumnSlice(k, 1)); /// before softmax
                 TimesNode<ElemType>::ComputeInputPartialLeft(Inputs(0)->FunctionValues().ColumnSlice(i, 1), mGBeforeSoftmaxTimes, mGBeforeSoftmax); /// before times
@@ -1877,10 +1883,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     TimesNode<ElemType>::ComputeInputPartialLeft(m_softmax.ColumnSlice(k, 1), mGToMemblk,
                         sliceOutputGrad.ColumnSlice(k,1));
 
-                    mTmp4.Resize(T,e);
-                    mTmp4.SetValue(0);
-                    TimesNode<ElemType>::ComputeInputPartialLeft(Inputs(2)->FunctionValues(), mTmp4, mGBeforeSoftmaxTimes);
-                    TransposeNode<ElemType>::ComputeInputPartial(mGToMemblk, m_ones, mTmp4);
+                    mTmp2.Resize(T,d);
+                    mTmp2.SetValue(0);
+                    TimesNode<ElemType>::ComputeInputPartialLeft(Inputs(2)->FunctionValues(), mTmp2, mGBeforeSoftmaxTimes);
+                    TransposeNode<ElemType>::ComputeInputPartial(mGToMemblk, m_ones, mTmp2);
 
                     for (size_t j = 0; j < T; j++)
                         Inputs(1)->GradientValues().ColumnSlice(j*m_samplesInRecurrentStep + k, 1) += mGToMemblk.ColumnSlice(j, 1);
@@ -1914,15 +1920,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType>& wgtMatrix, 
             Matrix<ElemType>& tmpMemoryBlk4EachUtt, Matrix<ElemType>& tmpSoftMax)
         {
-            size_t e = wgtMatrix.GetNumCols();
+            size_t d = wgtMatrix.GetNumRows();
             size_t nbrUttPerSample = refFunction.GetNumCols();
             size_t T = memoryBlk.GetNumCols() / nbrUttPerSample;
 
             tmpMemoryBlk4EachUtt.Resize(memoryBlk.GetNumRows(), memoryBlk.GetNumCols());
             tmpSoftMax.Resize(T, nbrUttPerSample);
             Matrix<ElemType> tmpMat(tmpMemoryBlk4EachUtt.GetDeviceId());
+            Matrix<ElemType> tmpMat1(tmpMemoryBlk4EachUtt.GetDeviceId());
             Matrix<ElemType> tmpMat3(tmpMemoryBlk4EachUtt.GetDeviceId());
-            tmpMat3.Resize(e, T);
+            Matrix<ElemType> tmpMat5(tmpMemoryBlk4EachUtt.GetDeviceId());
+            tmpMat3.Resize(d, T);
             Matrix<ElemType> tmpMat4(tmpMemoryBlk4EachUtt.GetDeviceId());
             Matrix<ElemType> tmpMat2(tmpMemoryBlk4EachUtt.GetDeviceId());
 
@@ -1936,17 +1944,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// d x T
                 tmpMemoryBlk4EachUtt.ColumnSlice(k*T, T) = tmpMat3;
                 
-                Matrix<ElemType>::Multiply(tmpMat3, true, wgtMatrix, false, tmpMat);
+                TransposeNode<ElemType>::EvaluateThisNodeS(tmpMat1, tmpMat3);
+
+                TimesNode<ElemType>::EvaluateThisNodeS(tmpMat, tmpMat1, wgtMatrix);
                 /// T x d x (d x e) = T x e
 
-                Matrix<ElemType>::Multiply(tmpMat, false, refFunction.ColumnSlice(k,1), false, tmpMat2);
+                TimesNode<ElemType>::EvaluateThisNodeS(tmpMat2, tmpMat, refFunction.ColumnSlice(k, 1));
                 /// T x e x (e x 1) = T x 1
 
-                tmpSoftMax.ColumnSlice(k, 1) = tmpMat2;
-                tmpMat2.InplaceLogSoftmax(true);
-                tmpMat2.InplaceExp();
+                SoftmaxNode<ElemType>::EvaluateThisNodeS(tmpMat5, tmpMat2);
+                tmpSoftMax.ColumnSlice(k, 1) = tmpMat5;
 
-                Matrix<ElemType>::Multiply(tmpMat3, false, tmpMat2, false, tmpMat4);
+                TimesNode<ElemType>::EvaluateThisNodeS(tmpMat4, tmpMat3, tmpMat5);
+
                 functionValues.ColumnSlice(k, 1).SetValue(tmpMat4);
                 /// d x 1
             }
@@ -1995,6 +2005,147 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().Resize(e, k); 
 
             CopyImageSizeFromInputs();
+        }
+
+        bool UnitTest()
+        {
+            try{
+                size_t T = 2;
+                size_t k = 2;
+                size_t d = 2;
+                size_t e = 3; 
+                size_t nT = T * k;
+
+                /// backup 
+                Matrix<ElemType> f0(m_deviceId), f1(m_deviceId), f2(m_deviceId);
+                Matrix<ElemType> boundary(m_deviceId);
+                boundary.Resize(k, T);
+                boundary.SetValue(SENTENCE_MIDDLE);
+                boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+                Matrix<ElemType> existsSentenceBegin(m_deviceId);
+                existsSentenceBegin.Resize(1, T);
+                existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                existsSentenceBegin.ColumnSlice(0, 1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                ResetBound(&boundary, &existsSentenceBegin);
+
+                m_samplesInRecurrentStep = 2;
+                f0 = Inputs(0)->FunctionValues();
+                f1 = Inputs(1)->FunctionValues();
+                f2 = Inputs(2)->FunctionValues();
+
+                Inputs(1)->FunctionValues().Resize(d, nT);
+                Inputs(1)->FunctionValues().ColumnSlice(0, 1).SetValue((ElemType)0.5);
+                Inputs(1)->FunctionValues()(0, 1) = (ElemType) 1.0;
+                Inputs(1)->FunctionValues()(1, 1) = (ElemType) 0.5;
+                Inputs(1)->FunctionValues()(0, 2) = (ElemType) 0.3;
+                Inputs(1)->FunctionValues()(1, 2) = (ElemType) 0.3;
+                Inputs(1)->FunctionValues()(0, 3) = (ElemType) 0.4;
+                Inputs(1)->FunctionValues()(1, 3) = (ElemType) 0.1;
+                Inputs(0)->FunctionValues().Resize(e, k);
+                Inputs(0)->FunctionValues().SetValue(0); 
+                Inputs(0)->FunctionValues()(0, 0) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(1, 1) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(2, 0) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(2, 1) = (ElemType) 1.0;
+                Inputs(2)->FunctionValues().Resize(d, e);
+                Inputs(2)->FunctionValues().SetValue((ElemType)1.0);
+                Inputs(2)->FunctionValues()(0, 2) = (ElemType) 0; 
+
+                FunctionValues().Resize(d, k);
+
+                EvaluateThisNode();
+
+                /// check with expected values
+                if (!ISCLOSE(FunctionValues()(0, 0), 0.42913, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(0, 1), 0.88131, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(1, 0), 0.42913, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(1, 1), 0.42087, EPSILON))
+                    throw("alignment node forward computation error");
+
+                if (FunctionValues().GetDeviceId() != m_deviceId)
+                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                /// perturb parameters
+                for (size_t i = 1; i < 3;i++)
+                {
+                    for (size_t itry = 0; itry < min((size_t)10, Inputs(i)->FunctionValues().GetNumElements()); itry++)
+                    {
+                        Matrix<ElemType> postFun(m_deviceId);
+                        Matrix<ElemType> negFun(m_deviceId);
+
+                        int irow = (int)fmod(rand(), Inputs(i)->FunctionValues().GetNumRows() - 1);
+                        int icol = (int)fmod(rand(), Inputs(i)->FunctionValues().GetNumCols() - 1);
+                        irow = max(0, irow);
+                        icol = max(0, icol);
+
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        ElemType eOrg = Inputs(i)->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                        /// perturb parameter
+                        ElemType ePos = eOrg + (ElemType)EPSILON;
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, ePos);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        postFun = FunctionValues();
+
+                        ElemType eNeg = eOrg - (ElemType)EPSILON;
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, eNeg);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        negFun = FunctionValues();
+
+                        Matrix<ElemType> grdNum = postFun - negFun;
+
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, eOrg);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        /// do backpropagation
+                        GradientValues() = grdNum;
+
+                        Inputs(0)->GradientValues().Resize(e, k);
+                        Inputs(0)->GradientValues().SetValue(0);
+                        Inputs(1)->GradientValues().Resize(d, nT);
+                        Inputs(1)->GradientValues().SetValue(0);
+                        Inputs(2)->GradientValues().Resize(d, e);
+                        Inputs(2)->GradientValues().SetValue(0);
+
+                        for (int t = k / m_samplesInRecurrentStep - 1; t >= 0; t--)
+                        {
+                            ComputeInputPartial(i, t);
+                        }
+                        ElemType grdErr = Inputs(i)->GradientValues()(irow, icol);
+
+                        // check if they are consistent
+                        ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(EPSILON))))) - (int)6);
+                        ElemType diff = (ElemType)fabs(grdErr - EPSILON);
+                        bool wrong = (std::isnan(diff) || diff > threshold);
+                        if (wrong)
+                            throw("DelayNode gradient error on input gates");
+                    }
+                }
+
+                if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                    Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+            }
+            catch (...)
+            {
+                fprintf(stderr, "alignment node unit test is not passed!");
+                return false;
+            }
+
+            fprintf(stderr, "alignment node unit test passed!\n");
+            return true;
         }
 
         virtual void AttachInputs(const ComputationNodePtr refFeature, const ComputationNodePtr memoryBlk, const ComputationNodePtr wgtMatrix)
