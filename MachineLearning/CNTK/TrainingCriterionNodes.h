@@ -302,8 +302,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2) 
                 throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
 
-            if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
-                throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
+            // This breaks re-shaping of the label matrix
+            /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+            throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;

@@ -405,6 +405,20 @@ __global__ void _assignRepeatOf(ElemType * dest, ElemType * src, const LONG64 N,
 }
 
 template<class ElemType>
+__global__ void _addToRowRepeatValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long srcRows, const long srcCols, const long destRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / srcRows;
+    long row = (id - (col * srcRows)) % destRows;
+
+    //dest[col*destRows + row + startIndex] += src[id];
+    dest[IDX2C(row, col, destRows)] += src[id];
+}
+
+template<class ElemType>
 __global__ void _assignPositiveAndShiftedNegSample(ElemType * dest, const ElemType * src, const LONG64 N, const long srcRows, const long srcCols, const long destRows, const long posNumber, const long shiftNumber)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;

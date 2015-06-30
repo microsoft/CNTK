@@ -749,7 +749,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     }
-        
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowRepeatValuesOf(const GPUMatrix<ElemType>& a, const size_t numRepeats)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddToRowRepeatValuesOf: input matrix a is empty.");
+
+        if (a.GetNumRows() != GetNumRows() * numRepeats)
+            throw std::logic_error("AddToRowSliceValuesOf: a.GetNumRows() != GetNumRows() * numRepeats.");
+
+        Resize(a.GetNumRows() / numRepeats, a.GetNumCols());
+
+        LONG64 N = (LONG64)a.GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _addToRowRepeatValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (long)a.GetNumRows(), (long)a.GetNumCols(), (long)GetNumRows());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
     template<class ElemType>
     GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
     {
