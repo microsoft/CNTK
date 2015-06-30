@@ -768,7 +768,8 @@ private:
         if (chunkdata.isinram())
             return false;
 
-        fprintf (stderr, "requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
+        if (verbosity)
+            fprintf (stderr, "requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
         msra::util::attempt (5, [&]()   // (reading from network)
         {
             chunkdata.requiredata (featkind, featdim, sampperiod, this->lattices);
