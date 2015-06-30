@@ -957,7 +957,8 @@ private:
             {
                 auto & chunk = randomizedchunks[m][chunkindex];
                 auto & chunkdata = chunk.getchunkdata();
-                fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
+                if (verbosity)
+                    fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
                     chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices);
