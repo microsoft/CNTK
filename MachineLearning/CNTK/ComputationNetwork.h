@@ -1965,42 +1965,35 @@ public:
             const Matrix<ElemType>* rootGradientInitValue = nullptr
             )
         {
-            try{
-                if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
-                    throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
+            if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
+                throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
-                //run forward pass first
-                Evaluate(rootNode);
+            //run forward pass first
+            Evaluate(rootNode);
 
-                ClearGradientForAllNodes(rootNode);
+            ClearGradientForAllNodes(rootNode);
 
-                //run backward pass
-                std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
-                if (bResetToOne)
-                {
-                    rootNode->GradientValues().Resize(1, 1);
-                    rootNode->GradientValues().SetValue(1);
-                }
-
-                if (rootGradientInitValue != nullptr)
-                    rootNode->GradientValues().SetValue(*rootGradientInitValue);
-
-                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                {
-#ifdef DISPLAY_DEBUG
-                    fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
-                        (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
-                        (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-#endif
-                    ComputeGradientLoop(allNodes, *nodeIter);
-
-                    (*nodeIter)->ComputeGradientForChildren();
-                }
-            }
-            catch (...)
+            //run backward pass
+            std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+            if (bResetToOne)
             {
-                fprintf(stderr, "Error in ComputeGradient");
-                throw;
+                rootNode->GradientValues().Resize(1, 1);
+                rootNode->GradientValues().SetValue(1);
+            }
+
+            if (rootGradientInitValue != nullptr)
+                rootNode->GradientValues().SetValue(*rootGradientInitValue);
+
+            for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+            {
+#ifdef DISPLAY_DEBUG
+                fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
+                    (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
+                    (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+#endif
+                ComputeGradientLoop(allNodes, *nodeIter);
+
+                (*nodeIter)->ComputeGradientForChildren();
             }
         }
 
