@@ -423,7 +423,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"MatForSimilarity%d", i), m_layerSizes[i], m_layerSizes[i]);
                 m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
 
-                alignoutput = (ComputationNodePtr)m_net->Alignment(delay, encoderOutput, e, L"alignment");
+                alignoutput = m_net->Times(encoderOutput, m_net->Softmax(m_net->Times(m_net->Times(m_net->Transpose(encoderOutput), e), delay)));
+//                alignoutput = (ComputationNodePtr)m_net->Alignment(delay, encoderOutput, e, L"alignment");
 
                 output = ApplyNonlinearFunction(
                     m_net->Plus(
