@@ -188,7 +188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void InplaceTranspose();
         GPUSparseMatrix<ElemType>& AssignTransposeOf(const GPUSparseMatrix<ElemType>& a);
 
-        GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+        GPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
         GPUMatrix<ElemType> CopyToDenseMatrix() const;
         void CopyToDenseMatrix(GPUMatrix<ElemType> &denseMatrix) const;
