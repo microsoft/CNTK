@@ -749,7 +749,8 @@ private:
         if (!chunkdata.isinram())
             return;       // already out
 
-        fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
+        if (verbosity)
+            fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
                  k, randomizedchunks[k].globalts, randomizedchunks[k].globalte()-1, chunksinram-1);
         chunkdata.releasedata();
         chunksinram--;
