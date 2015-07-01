@@ -242,6 +242,31 @@ void fflushOrDie (FILE * f)
 // ----------------------------------------------------------------------------
 size_t filesize (FILE * f)
 {
+#ifdef WIN32
+    size_t curPos = _ftelli64 (f);
+    if (curPos == -1L)
+    {
+    RuntimeError ("error determining file position: %s", strerror (errno));
+    }
+    int rc = fseek (f, 0, SEEK_END);
+    int rc = _fseeki64 (f, 0, SEEK_END);
+    if (rc != 0)
+    {
+    RuntimeError ("error seeking to end of file: %s", strerror (errno));
+    }
+    size_t len = _ftelli64 (f);
+    if (len == -1L)
+    {
+    RuntimeError ("error determining file position: %s", strerror (errno));
+    }
+    rc = _fseeki64 (f, curPos, SEEK_SET);
+    if (rc != 0)
+    {
+    RuntimeError ("error resetting file position: %s", strerror (errno));
+    }
+    return len;
+#else
+    // linux version 
     long curPos = ftell (f);
     if (curPos == -1L)
     {
