@@ -913,8 +913,9 @@ private:
             auto & chunkdata = randomizedchunks[m][k].getchunkdata();
             if (chunkdata.isinram())
             {
-                fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
-                     k, randomizedchunks[m][k].globalts, randomizedchunks[m][k].globalte()-1, chunksinram-1);
+                if (verbosity)
+                    fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
+                         k, randomizedchunks[m][k].globalts, randomizedchunks[m][k].globalte()-1, chunksinram-1);
                 chunkdata.releasedata();
                 numreleased++;
             }
