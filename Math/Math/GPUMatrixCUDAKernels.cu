@@ -3248,18 +3248,22 @@ __global__ void _assignNceDerivative(
             for (int j = tstart; j < tend; j++)
             {
                 ElemType val = er * b[IDX2C(j, colIndex, width)];
-                atomicAdd(c + IDX2C(rowIndex, j, numRows), val);
+                atomicAdd(c + IDX2C(j, rowIndex, width), val);
                 //c[IDX2C(rowIndex, j, numRows)] += val;
             }
         }
-        else // weight
+        else if (inputIndex == 2) // weight
         {
             for (int j = tstart; j < tend; j++)
             {
-                ElemType val = er * a[IDX2C(rowIndex, j, numRows)];
+                ElemType val = er * a[IDX2C(j, rowIndex, width)];
                 atomicAdd(c + IDX2C(j, colIndex, width), val);
                 //c[IDX2C(j, colIndex, width)] += val;
             }
+        }
+        else //bias vector
+        {
+            c[colIndex] += er;
         }
     }
 }

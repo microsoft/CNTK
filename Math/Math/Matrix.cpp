@@ -3609,9 +3609,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
             NOT_IMPLEMENTED;
 
-        //if (a.GetMatrixType() == MatrixType::DENSE)
-        //    NOT_IMPLEMENTED;
-
         this->Resize(1, 1);
 
         if (this->GetDeviceId() < 0)
