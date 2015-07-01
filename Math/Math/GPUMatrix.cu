@@ -1870,17 +1870,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         cudaEvent_t done = nullptr;
         if (do_sync) CUDA_CALL(cudaEventCreate(&done));
-
+        //a: dim * minibatch
+        //b: dim * |vocab|
         int p = 512;
-        int width = a.GetNumCols();
+        int width = a.GetNumRows(); //dimension of hidden vector
+        //int width = a.GetNumCols(); original setup, considering column-major
+        //
         while (p / 2 > width) p = p / 2;
 
         _computeNceOutput<ElemType> << <this->GetNumElements() / 2, p >> >(
-            this->GetArray(),
-            m_numRows / 2,
+            this->GetArray(), 
             sampleCount,
+            m_numRows / 2,
             my_a.GetArray(),//a
-            a.GetNumCols(),
+            a.GetNumRows(),
             my_b.GetArray(),//b
             my_bias.GetArray(),
             tmp.GetArray());//tmp
@@ -1891,8 +1894,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // summing up objective must be done in one block
         _assignNoiseContrastiveEstimation<ElemType> << <1, p >> >(
             this->GetArray(),
-            m_numRows,
-            sampleCount, my_a.GetArray(),
+            sampleCount,
+            m_numRows / 2,
+             my_a.GetArray(),
             a.GetNumCols(),
             my_b.GetArray(),
             tmp.GetArray(),
@@ -1900,7 +1904,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         _computeNceError<ElemType> << <1, p >> >(
             this->GetArray(),
-            m_numRows,
+            m_numRows / 2,
             tmp.GetNumCols(),
             tmp.GetArray());
 
@@ -1919,20 +1923,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEvent_t done = nullptr;
         if (do_sync) CUDA_CALL(cudaEventCreate(&done));
         int p = 512;
-        int width = a.GetNumCols();
+        int width = a.GetNumRows();
         while (p / 2 > width) p = p / 2;
-        
+
         _assignNceDerivative<ElemType> << <m_nz, p >> >(
             GetArray(),
-            m_numRows,
             tmp.GetNumCols(),
+            m_numRows / 2,
             my_a.GetArray(),
-            a.GetNumCols(),
+            a.GetNumRows(),
             my_b.GetArray(),
             tmp.GetArray(),
             c.GetArray(),
             inputIndex);
-           
+
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));

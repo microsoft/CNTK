@@ -1276,7 +1276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// the label is a dense matrix. each element is the word index
             label = m_net->CreateInputNode(L"labels", 2 * (this->nce_noises + 1), mbSize);
 
-            bias = m_net->CreateLearnableParameter(L"BiasVector", m_layerSizes[m_layerSizes.size() - 1], 1);
+            bias = m_net->CreateLearnableParameter(L"BiasVector", 1, m_layerSizes[m_layerSizes.size() - 1]);
             bias->FunctionValues().SetValue((ElemType)-std::log(m_layerSizes[m_layerSizes.size() - 1]));
             //m_net->InitLearnableParameters(bias, m_uniformInit, randomSeed++, std::log(m_layerSizes[m_layerSizes.size() - 1])* m_initValueScale);
             //clslogpostprob = m_net->Times(clsweight, input, L"ClassPostProb");
