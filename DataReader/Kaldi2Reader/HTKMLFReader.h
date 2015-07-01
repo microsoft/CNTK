@@ -92,7 +92,7 @@ private:
     
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices);
-    bool PopulateUtteranceInMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t uttIndex, size_t startFrame, size_t endFrame, size_t mbSize);
+    bool PopulateUtteranceInMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t uttIndex, size_t startFrame, size_t endFrame, size_t mbSize, size_t mbOffset = 0);
 
     //-void GetCurrentUtteranceInfo(size_t uttIndex, size_t startFrame, size_t endFrame, wstring& uttID, size_t& startFrameInUtt, size_t& endFrameInUtt);
 
