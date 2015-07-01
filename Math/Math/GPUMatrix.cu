@@ -1855,9 +1855,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         while (p / 2 > width) p = p / 2;
 
         _computeNceOutput<ElemType> << <this->GetNumElements() / 2, p >> >(
-            this->GetArray(),
-            m_numRows / 2,
+            this->GetArray(), 
             sampleCount,
+            m_numRows / 2,
             my_a.GetArray(),//a
             a.GetNumRows(),
             my_b.GetArray(),//b
@@ -1870,8 +1870,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // summing up objective must be done in one block
         _assignNoiseContrastiveEstimation<ElemType> << <1, p >> >(
             this->GetArray(),
+            sampleCount,
             m_numRows / 2,
-            sampleCount, my_a.GetArray(),
+             my_a.GetArray(),
             a.GetNumCols(),
             my_b.GetArray(),
             tmp.GetArray(),
@@ -1898,20 +1899,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEvent_t done = nullptr;
         if (do_sync) CUDA_CALL(cudaEventCreate(&done));
         int p = 512;
-        int width = a.GetNumCols();
+        int width = a.GetNumRows();
         while (p / 2 > width) p = p / 2;
-        
+
         _assignNceDerivative<ElemType> << <m_nz, p >> >(
             GetArray(),
-            m_numRows,
             tmp.GetNumCols(),
+            m_numRows / 2,
             my_a.GetArray(),
-            a.GetNumCols(),
+            a.GetNumRows(),
             my_b.GetArray(),
             tmp.GetArray(),
             c.GetArray(),
             inputIndex);
-           
+
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
