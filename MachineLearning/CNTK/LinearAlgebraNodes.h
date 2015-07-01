@@ -814,6 +814,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
         {
+            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            FunctionValues().Resize(rows0, cols1);
+
             Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
