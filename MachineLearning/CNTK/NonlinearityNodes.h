@@ -911,8 +911,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(m_gradientDotValue, m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues, 
-            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)  
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues,
+            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradientDotValue.AssignInnerProductOf(gradientValues, functionValues, true);
             diff.AssignDifferenceOf(gradientValues, gradientDotValue);
@@ -920,14 +920,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        virtual void EvaluateThisNode()  
+        virtual void EvaluateThisNode()
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)
         {
+            size_t r = Inputs(0)->FunctionValues().GetNumRows(), c = Inputs(0)->FunctionValues().GetNumCols();
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (m_functionValues.GetNumCols() != c ||
+                m_functionValues.GetNumRows() != r)
+                m_functionValues.Resize(r, c);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
@@ -989,7 +993,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         SoftmaxNode(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId) 
+            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
@@ -1000,6 +1004,128 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
             ComputationNodePtr node = new SoftmaxNode<ElemType>(this, name, flags);
             return node;
+        }
+
+        bool UnitTest()
+        {
+            try{
+                size_t T = 2;
+                size_t k = 2;
+                size_t e = 3;
+
+                /// backup 
+                Matrix<ElemType> f0(m_deviceId);
+                Matrix<ElemType> boundary(m_deviceId);
+                boundary.Resize(k, T);
+                boundary.SetValue(SENTENCE_MIDDLE);
+                boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+                Matrix<ElemType> existsSentenceBegin(m_deviceId);
+                existsSentenceBegin.Resize(1, T);
+                existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                existsSentenceBegin.ColumnSlice(0, 1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                ResetBound(&boundary, &existsSentenceBegin);
+
+                m_samplesInRecurrentStep = k;
+                f0 = Inputs(0)->FunctionValues();
+
+                Inputs(0)->FunctionValues().Resize(e, k);
+                Inputs(0)->FunctionValues().SetValue(0);
+                Inputs(0)->FunctionValues()(0, 0) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(1, 1) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(2, 0) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(2, 1) = (ElemType) 1.0;
+
+                FunctionValues().Resize(e, k);
+
+                EvaluateThisNode();
+
+                /// check with expected values
+                if (!ISCLOSE(FunctionValues()(0, 0), 0.42232, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(0, 1), 0.15536, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(1, 0), 0.15536, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(1, 1), 0.42232, EPSILON))
+                    throw("softmax node forward computation error");
+
+                if (FunctionValues().GetDeviceId() != m_deviceId)
+                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                /// perturb parameters
+                size_t i = 0;
+                {
+                    for (size_t itry = 0; itry < min((size_t)10, Inputs(i)->FunctionValues().GetNumElements()); itry++)
+                    {
+                        Matrix<ElemType> postFun(m_deviceId);
+                        Matrix<ElemType> negFun(m_deviceId);
+
+                        int irow = (int)fmod(rand(), Inputs(i)->FunctionValues().GetNumRows() - 1);
+                        int icol = (int)fmod(rand(), Inputs(i)->FunctionValues().GetNumCols() - 1);
+                        irow = max(0, irow);
+                        icol = max(0, icol);
+
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        ElemType eOrg = Inputs(i)->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                        /// perturb parameter
+                        ElemType ePos = eOrg + (ElemType)EPSILON;
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, ePos);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        postFun = FunctionValues();
+
+                        ElemType eNeg = eOrg - (ElemType)EPSILON;
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, eNeg);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        negFun = FunctionValues();
+
+                        Matrix<ElemType> grdNum = postFun - negFun;
+
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, eOrg);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        /// do backpropagation
+                        GradientValues() = grdNum;
+
+                        Inputs(0)->GradientValues().Resize(e, k);
+                        Inputs(0)->GradientValues().SetValue(0);
+
+                        for (int t = k / m_samplesInRecurrentStep - 1; t >= 0; t--)
+                        {
+                            ComputeInputPartial(i, t);
+                        }
+                        ElemType grdErr = Inputs(i)->GradientValues()(irow, icol);
+
+                        // check if they are consistent
+                        ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(EPSILON))))) - (int)6);
+                        ElemType diff = (ElemType)fabs(grdErr - EPSILON);
+                        bool wrong = (std::isnan(diff) || diff > threshold);
+                        if (wrong)
+                            throw("DelayNode gradient error on input gates");
+                    }
+                }
+
+                if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                    Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+            }
+            catch (...)
+            {
+                fprintf(stderr, "softmax node unit test is not passed!");
+                return false;
+            }
+
+            fprintf(stderr, "softmax node unit test passed!\n");
+            return true;
         }
 
     private:
