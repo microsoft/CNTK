@@ -47,6 +47,8 @@ __declspec (thread)
 static
 #endif
 cudaStream_t t_stream = cudaStreamDefault;
+cudaStream_t t_readAheadStream = nullptr;
+cudaEvent_t t_computeEvent = nullptr;
 
 #define DEFAULT_THREAD_PER_DIM		16
 
@@ -63,7 +65,6 @@ cudaStream_t MATH_API GetStream()
 {
     return t_stream;
 }
-
 
 void CURAND_CALL(curandStatus x)
 {
@@ -158,6 +159,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cublasHandle_t cuHandle;
         CUBLAS_CALL(cublasCreate(&cuHandle));
         return cuHandle;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::RecordComputeSyncPoint()
+    {
+        if (t_computeEvent == nullptr)
+        {
+            CUDA_CALL(cudaEventCreate(&t_computeEvent));
+        }
+        CUDA_CALL(cudaEventRecord(t_computeEvent, t_stream));
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::SyncComputeBeforeRead()
+    {
+        assert(t_readAheadStream != nullptr);
+        if (t_computeEvent != nullptr)
+        {
+            CUDA_CALL(cudaStreamWaitEvent(t_readAheadStream, t_computeEvent, 0 /*flags must be 0*/));
+        }
+    }
+
+    // TODO: We are leaking t_readAheadStream, call cudaStreamDestroy
+    // Not a big issue since it will be cleaned up on process shutdown
+    template<class ElemType>
+    void GPUMatrix<ElemType>::EnableConcurrentRead(DEVICEID_TYPE devId)
+    {
+        CUDA_CALL(cudaSetDevice(devId));
+        if (t_readAheadStream == nullptr)
+        {
+            CUDA_CALL(cudaStreamCreateWithFlags(&t_readAheadStream, cudaStreamNonBlocking));
+        }
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::SyncPendingRead()
+    {
+        assert(t_readAheadStream != nullptr);
+        CUDA_CALL(cudaStreamSynchronize(t_readAheadStream));
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::SyncPendingCompute()
+    {
+        CUDA_CALL(cudaStreamSynchronize(t_stream));
     }
 
     // GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
@@ -1054,8 +1100,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!(matrixFlags&matrixFormatRowMajor))
                 {
-                    CUDA_CALL(cudaMemcpy(m_pArray, pArray, sizeof(ElemType)*GetNumElements(), 
-                        (matrixFlags&matrixFlagSetValueOnDevice)?cudaMemcpyDeviceToDevice:cudaMemcpyHostToDevice));
+                    if (t_readAheadStream == nullptr)
+                    {
+                        CUDA_CALL(cudaMemcpy(m_pArray, pArray, sizeof(ElemType)*GetNumElements(),
+                            (matrixFlags&matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice));
+                    }
+                    else
+                    {
+                        // We are calling async version of the memcpy API to do the copy on a separate stream so that it can overlap with compute.
+                        CUDA_CALL(cudaMemcpyAsync(m_pArray, pArray, sizeof(ElemType)*GetNumElements(),
+                            (matrixFlags&matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice, t_readAheadStream));
+                    }
                 }
                 else
                 {

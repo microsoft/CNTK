@@ -19,6 +19,8 @@
 #include <random>
 #include "TimerUtility.h"
 #include "Profiler.h"
+#include "MinibatchFetcher.h"
+#include "MinibatchPrefetcher.h"
 
 #ifdef MPI_SUPPORT
 #include "mpi.h"
@@ -198,6 +200,9 @@ public:
         size_t numMBsToShowResult = configSGD("numMBsToShowResult", "10");
         size_t numMBsToCUDAProfile = configSGD("numMBsToCUDAProfile", "0");
 
+        // Whether it is OK for read to happen on a separate thread while compute is happening
+        bool doPrefetchTrainingData = configSGD("prefetchTrainingData", "true");
+
         bool keepCheckPointFiles = configSGD("keepCheckPointFiles", "false");
 
         bool gradientClippingWithTruncation = configSGD("gradientClippingWithTruncation", "true");
@@ -263,7 +268,8 @@ public:
              gradientCheckSigDigit, validateAfterModelReloading, rpi,
              learnRateAdjustInterval, UsingAllDataForPreComputedNode,
              needAveMultiplier, L2RegWeight, L1RegWeight,
-             autoAdjustMinibatch, minibatchSizeTuningFrequency, minibatchSizeTuningMax);
+             autoAdjustMinibatch, minibatchSizeTuningFrequency, minibatchSizeTuningMax,
+             doPrefetchTrainingData);
     }
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
@@ -309,7 +315,8 @@ public:
               const ElemType L1RegWeight = 0,
               const bool autoAdjustMinibatch = false,
               const size_t minibatchSizeTuningFrequency = 1,
-              const size_t minibatchSizeTuningMax = 1048576)
+              const size_t minibatchSizeTuningMax = 1048576,
+              bool doPrefetchTrainingData = true)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
@@ -467,6 +474,7 @@ public:
         m_doGradientCheck = doGradientCheck;
         m_gradientCheckSigDigit = gradientCheckSigDigit;
         m_validateAfterModelReloading = validateAfterModelReloading;
+        m_doPrefetchTrainingData = doPrefetchTrainingData;
 
         msra::files::make_intermediate_dirs(m_modelPath);
     }
@@ -799,7 +807,8 @@ protected:
 
         for (int i = startEpoch; i < (int)m_maxEpochs; i++)
         {
-            auto t_start_epoch = Timer::MilliSecondElapsed();
+            Timer timer;
+            timer.Start();
 
             // set dropout rate
             SetDropoutRate(net, (*criterionNodes)[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
@@ -896,8 +905,8 @@ protected:
                             learnableNodes, smoothedGradients,
                           epochCriterion, epochEvalErrors, totalSamplesSeen);
 
-            auto t_end_epoch = Timer::MilliSecondElapsed();
-            ElemType epochTime = (t_end_epoch - t_start_epoch) / ElemType(MS_PER_SEC);
+            timer.Stop();
+            double epochTime = timer.ElapsedSeconds();
 
             fprintf(stderr,
                     "Finished Epoch[%d]: [Training Set] TrainLossPerSample = %.8g; ",
@@ -1648,15 +1657,13 @@ protected:
                          /*out*/ size_t& totalSamplesSeen,
                          std::string prefixMsg = "")
     {
-        ElemType readTimeInMBs = 0;
-        ElemType ComputeTimeInMBs = 0;
+        // Since we are getting timing resolution of under microsecond we use double precision
+        // to ensure that we have enough digits to represent small time measurements.
+        double totalTimeInMBs = 0;
         ElemType epochCriterionLastMBs = 0;
 
         int numSamplesLastMBs = 0;
         std::vector<ElemType> epochEvalErrorsLastMBs(epochEvalErrors.size(), 0);
-
-        unsigned long long startReadMBTime = 0, startComputeMBTime = 0;
-        unsigned long long endReadMBTime = 0, endComputeMBTime = 0;
 
         // initialize statistics
         size_t totalEpochSamples = 0;
@@ -1680,14 +1687,21 @@ protected:
         trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
 
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
-        startReadMBTime = Timer::MilliSecondElapsed();
-        while (trainSetDataReader->GetMinibatch(*inputMatrices))
+        std::unique_ptr<MinibatchFetcher<ElemType>> mbFetcher(
+            m_doPrefetchTrainingData ?
+                new MinibatchPrefetcher<ElemType>(trainSetDataReader, inputMatrices) :
+                new MinibatchFetcher<ElemType>(trainSetDataReader, inputMatrices));
+
+        fprintf(stderr, "\nStarting minibatch loop, prefetching is: %s\n", m_doPrefetchTrainingData ? "ENABLED" : "DISABLED");
+
+        Timer timer;
+        timer.Start();
+
+        while (mbFetcher->GetMinibatch())
         {
 #ifdef MPI_SUPPORT
             DecimateMinibatch(inputMatrices);
 #endif
-            endReadMBTime = Timer::MilliSecondElapsed();
-            startComputeMBTime = Timer::MilliSecondElapsed();
 
             UpdateEvalTimeStamps(FeatureNodes);
             UpdateEvalTimeStamps(labelNodes);
@@ -1762,25 +1776,26 @@ protected:
             // Tries to set up derivative features for the next utterance.
             AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
 
-            endComputeMBTime = Timer::MilliSecondElapsed();
+            timer.Stop();
             numMBsRun++;
             if (m_traceLevel > 0)
             {
-                ElemType MBReadTime = (ElemType)(endReadMBTime - startReadMBTime) / (MS_PER_SEC);
-                ElemType MBComputeTime = (ElemType)(endComputeMBTime - startComputeMBTime) / MS_PER_SEC;
-
-                readTimeInMBs += MBReadTime;
-                ComputeTimeInMBs += MBComputeTime;
+                totalTimeInMBs += timer.ElapsedSeconds();
                 numSamplesLastMBs += int(actualMBSize);
 
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
                     // get the epoch Values updated
+                    timer.Restart();
                     epochCriterion = localEpochCriterion.Get00Element();
                     for (size_t i = 0; i < numEvalNodes; i++)
                     {
                         epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
                     }
+                    timer.Stop();
+
+                    // Add the last trailing compute
+                    totalTimeInMBs += timer.ElapsedSeconds();
 
                     fprintf(stderr, "%s Epoch[%d of %d]-Minibatch[%d-%d of %d]: SamplesSeen = %d; TrainLossPerSample = %.8g; ",
                             prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
@@ -1793,12 +1808,12 @@ protected:
                                 i, (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs);
                     }
 
-                    fprintf(stderr, "ReadDataTime = %.8g; ComputeTime=%.8g; TotalTimePerSample=%.8g\n",
-                            readTimeInMBs, ComputeTimeInMBs,
-                            (readTimeInMBs + ComputeTimeInMBs) / numSamplesLastMBs);
+                    fprintf(stderr, "TotalTime=%.8g; TotalTimePerSample=%.8g, SamplesPerSecond=%d\n",
+                            totalTimeInMBs, totalTimeInMBs / numSamplesLastMBs,
+                            static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
 
-                    //reset statistics
-                    readTimeInMBs = ComputeTimeInMBs = 0;
+                    // reset statistics
+                    totalTimeInMBs = 0;
                     numSamplesLastMBs = 0;
 
                     epochCriterionLastMBs = epochCriterion;
@@ -1808,7 +1823,7 @@ protected:
                     }
                 }
             }
-            startReadMBTime = Timer::MilliSecondElapsed();
+            timer.Restart();
             totalEpochSamples += actualMBSize;
             totalSamplesSeen += actualMBSize;
 
@@ -2365,7 +2380,7 @@ protected:
     bool m_needAveMultiplier;
     ElemType m_L2RegWeight;
     ElemType m_L1RegWeight;
-
+    bool m_doPrefetchTrainingData;
 };
 template class SGD<float>;
 template class SGD<double>;
