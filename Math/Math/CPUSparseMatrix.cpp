@@ -258,7 +258,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         if (numCols == 0)
             throw std::logic_error("The slice cannot have 0 columns.");

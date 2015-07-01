@@ -680,20 +680,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
         {
+            // TODO: Implement optimized ColumnSlice functions for sparse matrices. For now use the ColumnSliceToDense instead.
             if (devId == CPUDEVICE)
             {
                 if (slice.m_CPUMatrix != nullptr)
-                    slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                    slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
                 else
-                    slice.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                    slice.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
                 slice.SetDataLocation(CPU, DENSE);
             }
             else
             {
                 if (slice.m_GPUMatrix != nullptr)
-                    slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                    slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
                 else
-                    slice.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                    slice.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
                 slice.SetDataLocation(GPU, DENSE);
             }
         }
