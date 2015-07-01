@@ -249,11 +249,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::string& randomizeString = readerConfig("randomize");
             if (randomizeString == "None")
             {
-                randomize = m_htkRandomizeDisable; // randomizeNone;
+                randomize = randomizeNone;
             }
             else if (randomizeString == "Auto")
             {
-                randomize = m_htkRandomizeAuto; // randomizeAuto
+                randomize = randomizeAuto;
             }
             else
             {
@@ -379,8 +379,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //std::vector<std::wstring> pagepath;
         foreach_index(i, mlfpathsmulti)
         {
+            const map<string,size_t>* wordmap = NULL;
+#ifdef WIN32
+            wordmap = unigram ? &unigramsymbols : (map<string,size_t>*) NULL;
+#endif
             msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>  
-                labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], /*unigram ? &unigramsymbols :*/(map<string,size_t>*)  NULL, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
+                labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
             // get the temp file name for the page file
             labelsmulti.push_back(labels);
         }

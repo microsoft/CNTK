@@ -612,7 +612,8 @@ private:
             return sweep;
 
         currentsweep = sweep;
-        fprintf (stderr, "lazyrandomization: re-randomizing for sweep %zu in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
+        if (verbosity>0)
+            fprintf (stderr, "lazyrandomization: re-randomizing for sweep %zu in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
 
         const size_t sweepts = sweep * _totalframes;     // first global frame index for this sweep
 
