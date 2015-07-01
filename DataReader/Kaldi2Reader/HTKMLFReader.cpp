@@ -909,7 +909,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
         std::map<std::wstring, Matrix<ElemType>*>& matrices,
-        size_t uttIndex, size_t startFrame, size_t endFrame, size_t mbSize)
+        size_t uttIndex, size_t startFrame,
+        size_t endFrame, size_t mbSize, size_t mbOffset)
     {
         bool success = true;
 
@@ -953,7 +954,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {   // For float, we copy entire column.
                     for (size_t j = startFrame, k = 0; j < endFrame; j++, k++)
                     {
-                        memcpy_s(&m_featuresBufferMultiIO[id][(k * m_numberOfuttsPerMinibatch + uttIndex) * dim],
+                        memcpy_s(&m_featuresBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim],
                                  sizeof(ElemType) * dim,
                                  &m_featuresBufferMultiUtt[uttIndex][j * dim + m_featuresStartIndexMultiUtt[id + uttIndex * numOfFea]],
                                  sizeof(ElemType) * dim);
@@ -965,7 +966,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (int d = 0; d < dim; d++)
                         {
-                            m_featuresBufferMultiIO[id][(k * m_numberOfuttsPerMinibatch + uttIndex) * dim + d]
+                            m_featuresBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim + d]
                                 = m_featuresBufferMultiUtt[uttIndex][j * dim + d + m_featuresStartIndexMultiUtt[id + uttIndex * numOfFea]];
                         }
                     }
@@ -992,13 +993,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     for (int d = 0; d < dim; d++)
                     {
-                        m_labelsBufferMultiIO[id][(k * m_numberOfuttsPerMinibatch + uttIndex) * dim + d]
+                        m_labelsBufferMultiIO[id][((k + mbOffset) * m_numberOfuttsPerMinibatch + uttIndex) * dim + d]
                             = m_labelsBufferMultiUtt[uttIndex][j * dim + d + m_labelsStartIndexMultiUtt[id + uttIndex * numOfLabel]];
                     }
                 }
             }
             else if (m_doSeqTrain)
             {
+                // TODO(GUOGUO): if we are going to allow "m_truncate" for
+                //               sequence training, we will have to modify the
+                //               following -- the following always assume we
+                //               start filling the minibatch from index 0.
                 // If we do sequence training we have to populate the derivative
                 // features as well as the objective features. But unlike the
                 // features and labels, we put them in to <matrices> directly.
@@ -1169,7 +1174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         startFrame = m_switchFrame[i];
                         endFrame = currentMBSize;
-                        bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
+                        bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, endFrame - startFrame, currentMBSize, startFrame);
                         m_processedFrame[i] += endFrame - startFrame;
                     }
                 }
