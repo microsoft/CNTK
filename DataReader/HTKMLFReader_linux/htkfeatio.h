@@ -230,7 +230,7 @@ public:
     // We write to a tmp file first to ensure we don't leave broken files that would confuse make mode.
     template<class MATRIX> static void write (const wstring & path, const string & kindstr, unsigned int period, const MATRIX & feat)
     {
-        wstring tmppath = path + L""; // tmp path for make-mode compliant
+        wstring tmppath = path + L"$$"; // tmp path for make-mode compliant
         unlinkOrDie (path);             // delete if old file is already there
         // write it out
         size_t featdim = feat.rows();

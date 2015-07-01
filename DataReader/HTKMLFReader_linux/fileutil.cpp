@@ -248,7 +248,6 @@ size_t filesize (FILE * f)
     {
     RuntimeError ("error determining file position: %s", strerror (errno));
     }
-    int rc = fseek (f, 0, SEEK_END);
     int rc = _fseeki64 (f, 0, SEEK_END);
     if (rc != 0)
     {
