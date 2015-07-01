@@ -57,17 +57,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_truncated = readerConfig("Truncated", "false");
         m_convertLabelsToTargets = false;
 
-        m_numberOfuttsPerMinibatch = readerConfig("nbruttsineachrecurrentiter", "1");
+        ConfigArray numberOfuttsPerMinibatchForAllEpochs = readerConfig("nbruttsineachrecurrentiter", "1");
+        m_numberOfuttsPerMinibatchForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
 
-        if (m_numberOfuttsPerMinibatch < 1)
+        for (int i = 0; i < m_numberOfuttsPerMinibatchForAllEpochs.size(); i++)
         {
-            LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
+            m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[i];
+            if (m_numberOfuttsPerMinibatch < 1)
+            {
+                LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
+            }
+
+            if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
+            {
+                LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.");
+            }
         }
 
-        if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
-        {
-            LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.");
-        }
+        m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[0];
 
         m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
         m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
@@ -129,7 +136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             RuntimeError("network needs at least 1 input and 1 output specified!");
         }
-            
+
         //load data for all real-valued inputs (features)
         foreach_index(i, featureNames)
         {
@@ -158,7 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
             // that is what the lower level feature readers expect
             m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]); 
-            
+
             string type = thisFeature("type","Real");
             if (type=="Real"){
                 m_nameToTypeMap[featureNames[i]] = InputOutputTypes::real;
@@ -272,6 +279,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
         std::string readMethod(readerConfig("readMethod","blockRandomize"));
 
+        if (readMethod == "blockRandomize" && randomize == randomizeNone)
+        {
+            fprintf(stderr, "WARNING: Randomize cannot be set to None when readMethod is set to blockRandomize. Change it Auto");
+            randomize = randomizeAuto;
+        }
+
+
         // see if they want to use readAhead
         //m_readAhead = readerConfig("readAhead", "false");
 
@@ -297,6 +311,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 if (n!=numFiles)
                     throw std::runtime_error (msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
+
+            /* 
+               do "..." expansion if SCP uses relative path names
+               "..." in the SCP means full path is the same as the SCP file
+               for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
+               and contains entry like 
+               .../file1.feat
+               .../file2.feat
+               etc.
+               the features will be read from
+            //aaa/bbb/ccc/file1.feat
+            //aaa/bbb/ccc/file2.feat
+            etc. 
+            This works well if you store the scp file with the features but 
+            do not want different scp files everytime you move or create new features
+            */
+            wstring scpdircached;
+            for (auto & entry : filelist)
+                ExpandDotDotDot(entry, scriptpath, scpdircached);
 
             infilesmulti.push_back(filelist);
         }
@@ -346,8 +379,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //std::vector<std::wstring> pagepath;
         foreach_index(i, mlfpathsmulti)
         {
+            const map<string,size_t>* wordmap = NULL;
+#ifdef WIN32
+            wordmap = unigram ? &unigramsymbols : (map<string,size_t>*) NULL;
+#endif
             msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>  
-                labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], /*unigram ? &unigramsymbols :*/(map<string,size_t>*)  NULL, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
+                labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
             // get the temp file name for the page file
             labelsmulti.push_back(labels);
         }
@@ -362,6 +399,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // now get the frame source. This has better randomization and doesn't create temp files
             m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, framemode);
+            m_frameSource->setverbosity(verbosity);
             //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, framemode);
 
         }
@@ -540,7 +578,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_fileEvalSource = new msra::dbn::FileEvalSource(realDims, numContextLeft, numContextRight, evalchunksize);
     }
 
-    
+
 
     // destructor - virtual so it gets called properly 
     template<class ElemType>
@@ -599,6 +637,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void HTKMLFReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
     {
         m_mbSize = mbSize;
+        m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[epoch];
+
+        m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
+        m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
+        m_processedFrame.assign(m_numberOfuttsPerMinibatch, 0);
+        m_toProcess.assign(m_numberOfuttsPerMinibatch, 0);
+        m_switchFrame.assign(m_numberOfuttsPerMinibatch, 0);
 
         if (m_trainOrTest)
         {
@@ -649,18 +694,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         delete m_mbiter;
         msra::dbn::minibatchsource* source = m_frameSource;
         /*if (m_readAhead)
-        {
-            if (m_readAheadSource == NULL)
-            {
-                m_readAheadSource = new msra::dbn::minibatchreadaheadsource (*source, requestedEpochSamples);
-            }
-            else if (m_readAheadSource->epochsize() != requestedEpochSamples)
-            {
-                delete m_readAheadSource;
-                m_readAheadSource = new msra::dbn::minibatchreadaheadsource (*source, requestedEpochSamples);
-            }
-            source = m_readAheadSource;
-        }*/
+          {
+          if (m_readAheadSource == NULL)
+          {
+          m_readAheadSource = new msra::dbn::minibatchreadaheadsource (*source, requestedEpochSamples);
+          }
+          else if (m_readAheadSource->epochsize() != requestedEpochSamples)
+          {
+          delete m_readAheadSource;
+          m_readAheadSource = new msra::dbn::minibatchreadaheadsource (*source, requestedEpochSamples);
+          }
+          source = m_readAheadSource;
+          }*/
         m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, mbSize, datapasses);
         if (!m_featuresBufferMultiIO.empty())
         {
@@ -698,7 +743,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delete[] m_featuresBufferMultiUtt[u];
                     m_featuresBufferMultiUtt[u] = NULL;
                     m_featuresBufferAllocatedMultiUtt[u] = 0;
-    }
+                }
                 if (m_labelsBufferMultiUtt[u] != NULL)
                 {
                     delete[] m_labelsBufferMultiUtt[u];
@@ -761,7 +806,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter=matrices.begin();iter!=matrices.end();iter++)
             {
                 if (m_nameToTypeMap.find(iter->first)==m_nameToTypeMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n",iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ls not found in reader - cannot generate input\n",iter->first.c_str()));
 
             }
             m_checkDictionaryKeys=false;
@@ -771,144 +816,144 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_truncated == false)
             {
-            if (!(*m_mbiter))
-                return false;
+                if (!(*m_mbiter))
+                    return false;
 
-            // now, access all features and and labels by iterating over map of "matrices"
-            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-            for (iter = matrices.begin();iter!=matrices.end(); iter++)
-            {
-                // dereference matrix that corresponds to key (input/output name) and 
-                // populate based on whether its a feature or a label
-                Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
-
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                // now, access all features and and labels by iterating over map of "matrices"
+                typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                for (iter = matrices.begin();iter!=matrices.end(); iter++)
                 {
+                    // dereference matrix that corresponds to key (input/output name) and 
+                    // populate based on whether its a feature or a label
+                    Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
-                    id = m_featureNameToIdMap[iter->first];
-                    dim = m_featureNameToDimMap[iter->first];
-                    const msra::dbn::matrixstripe feat = m_mbiter->frames(id);
-                    const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
-                    assert (actualmbsize == m_mbiter->currentmbframes());
-                    skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
-
-                    // check to see if we got the number of frames we requested
-                    if (!skip)
+                    if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                     {
-                        // copy the features over to our array type
-                        assert(feat.rows()==dim); // check feature dimension matches what's expected
 
-                        if (m_featuresBufferMultiIO[id]==NULL)
-                        {
-                            m_featuresBufferMultiIO[id] = new ElemType[feat.rows()*feat.cols()];
-                            m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
-                        }
-                        else if (m_featuresBufferAllocatedMultiIO[id]<feat.rows()*feat.cols()) //buffer size changed. can be partial minibatch
-                        {
-                            delete[] m_featuresBufferMultiIO[id];
-                            m_featuresBufferMultiIO[id] = new ElemType[feat.rows()*feat.cols()];
-                            m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
-                        }
-                        // shouldn't need this since we fill up the entire buffer below
-                        //memset(m_featuresBufferMultiIO[id],0,sizeof(ElemType)*feat.rows()*feat.cols());
+                        id = m_featureNameToIdMap[iter->first];
+                        dim = m_featureNameToDimMap[iter->first];
+                        const msra::dbn::matrixstripe feat = m_mbiter->frames(id);
+                        const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
+                        assert (actualmbsize == m_mbiter->currentmbframes());
+                        skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
 
-                        if (sizeof(ElemType) == sizeof(float))
+                        // check to see if we got the number of frames we requested
+                        if (!skip)
                         {
-                            for (int j=0; j < feat.cols(); j++) // column major, so iterate columns
+                            // copy the features over to our array type
+                            assert(feat.rows()==dim); // check feature dimension matches what's expected
+
+                            if (m_featuresBufferMultiIO[id]==NULL)
                             {
-                                // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                memcpy_s(&m_featuresBufferMultiIO[id][j*feat.rows()],sizeof(ElemType)*feat.rows(),&feat(0,j),sizeof(ElemType)*feat.rows());
+                                m_featuresBufferMultiIO[id] = new ElemType[feat.rows()*feat.cols()];
+                                m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
                             }
-                        }
-                        else
-                        {
-                            for (int j=0; j < feat.cols(); j++) // column major, so iterate columns in outside loop
+                            else if (m_featuresBufferAllocatedMultiIO[id]<feat.rows()*feat.cols()) //buffer size changed. can be partial minibatch
                             {
-                                for (int i = 0; i < feat.rows(); i++)
+                                delete[] m_featuresBufferMultiIO[id];
+                                m_featuresBufferMultiIO[id] = new ElemType[feat.rows()*feat.cols()];
+                                m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
+                            }
+                            // shouldn't need this since we fill up the entire buffer below
+                            //memset(m_featuresBufferMultiIO[id],0,sizeof(ElemType)*feat.rows()*feat.cols());
+
+                            if (sizeof(ElemType) == sizeof(float))
+                            {
+                                for (int j=0; j < feat.cols(); j++) // column major, so iterate columns
                                 {
-                                    m_featuresBufferMultiIO[id][j*feat.rows()+i] = feat(i,j);
+                                    // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
+                                    memcpy_s(&m_featuresBufferMultiIO[id][j*feat.rows()],sizeof(ElemType)*feat.rows(),&feat(0,j),sizeof(ElemType)*feat.rows());
                                 }
                             }
+                            else
+                            {
+                                for (int j=0; j < feat.cols(); j++) // column major, so iterate columns in outside loop
+                                {
+                                    for (int i = 0; i < feat.rows(); i++)
+                                    {
+                                        m_featuresBufferMultiIO[id][j*feat.rows()+i] = feat(i,j);
+                                    }
+                                }
+                            }
+                            data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                         }
-                        data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                     }
-                }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
-                {
-                    id = m_labelNameToIdMap[iter->first];
-                    dim = m_labelNameToDimMap[iter->first];
-                    const vector<size_t> & uids = m_mbiter->labels(id);
-
-                    // need skip logic here too in case labels are first in map not features
-                    const size_t actualmbsize = uids.size();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
-                    assert (actualmbsize == m_mbiter->currentmbframes());
-                    skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
-
-                    if (!skip)
+                    else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
                     {
-                        // copy the labels over to array type
-                        //data.Resize(udims[id], uids.size());
-                        //data.SetValue((ElemType)0);
+                        id = m_labelNameToIdMap[iter->first];
+                        dim = m_labelNameToDimMap[iter->first];
+                        const vector<size_t> & uids = m_mbiter->labels(id);
 
-                        // loop through the columns and set one value to 1
-                        // in the future we want to use a sparse matrix here
-                        //for (int i = 0; i < uids.size(); i++)
-                        //{
-                        //    assert(uids[i] <udims[id]);
-                        //    data(uids[i], i) = (ElemType)1;
-                        //}
+                        // need skip logic here too in case labels are first in map not features
+                        const size_t actualmbsize = uids.size();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
+                        assert (actualmbsize == m_mbiter->currentmbframes());
+                        skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
 
-                        if (m_labelsBufferMultiIO[id]==NULL)
+                        if (!skip)
                         {
-                            m_labelsBufferMultiIO[id] = new ElemType[dim*uids.size()];
-                            m_labelsBufferAllocatedMultiIO[id] = dim*uids.size();
-                        }
-                        else if (m_labelsBufferAllocatedMultiIO[id]<dim*uids.size())
-                        {
-                            delete[] m_labelsBufferMultiIO[id];
-                            m_labelsBufferMultiIO[id] = new ElemType[dim*uids.size()];
-                            m_labelsBufferAllocatedMultiIO[id] = dim*uids.size();
-                        }
-                        memset(m_labelsBufferMultiIO[id],0,sizeof(ElemType)*dim*uids.size());                
+                            // copy the labels over to array type
+                            //data.Resize(udims[id], uids.size());
+                            //data.SetValue((ElemType)0);
 
-
-                        if (m_convertLabelsToTargetsMultiIO[id])
-                        {
-                            size_t labelDim = m_labelToTargetMapMultiIO[id].size();
-                            for (int i = 0; i < uids.size(); i++)
-                            {
-                                assert(uids[i] < labelDim); labelDim;
-                                size_t labelId = uids[i];
-                                for (int j = 0; j < dim; j++)
-                                {
-                                    m_labelsBufferMultiIO[id][i*dim + j] = m_labelToTargetMapMultiIO[id][labelId][j];
-                                }
-                            }
-                        }
-                        else
-                        {
                             // loop through the columns and set one value to 1
                             // in the future we want to use a sparse matrix here
-                            for (int i = 0; i < uids.size(); i++)
+                            //for (int i = 0; i < uids.size(); i++)
+                            //{
+                            //    assert(uids[i] <udims[id]);
+                            //    data(uids[i], i) = (ElemType)1;
+                            //}
+
+                            if (m_labelsBufferMultiIO[id]==NULL)
                             {
-                                assert(uids[i] < dim);
-                                //labels(uids[i], i) = (ElemType)1;
-                                m_labelsBufferMultiIO[id][i*dim+uids[i]]=(ElemType)1;
+                                m_labelsBufferMultiIO[id] = new ElemType[dim*uids.size()];
+                                m_labelsBufferAllocatedMultiIO[id] = dim*uids.size();
                             }
+                            else if (m_labelsBufferAllocatedMultiIO[id]<dim*uids.size())
+                            {
+                                delete[] m_labelsBufferMultiIO[id];
+                                m_labelsBufferMultiIO[id] = new ElemType[dim*uids.size()];
+                                m_labelsBufferAllocatedMultiIO[id] = dim*uids.size();
+                            }
+                            memset(m_labelsBufferMultiIO[id],0,sizeof(ElemType)*dim*uids.size());                
+
+
+                            if (m_convertLabelsToTargetsMultiIO[id])
+                            {
+                                size_t labelDim = m_labelToTargetMapMultiIO[id].size();
+                                for (int i = 0; i < uids.size(); i++)
+                                {
+                                    assert(uids[i] < labelDim); labelDim;
+                                    size_t labelId = uids[i];
+                                    for (int j = 0; j < dim; j++)
+                                    {
+                                        m_labelsBufferMultiIO[id][i*dim + j] = m_labelToTargetMapMultiIO[id][labelId][j];
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // loop through the columns and set one value to 1
+                                // in the future we want to use a sparse matrix here
+                                for (int i = 0; i < uids.size(); i++)
+                                {
+                                    assert(uids[i] < dim);
+                                    //labels(uids[i], i) = (ElemType)1;
+                                    m_labelsBufferMultiIO[id][i*dim+uids[i]]=(ElemType)1;
+                                }
+                            }
+
+
+                            data.SetValue(dim,uids.size(),m_labelsBufferMultiIO[id],matrixFlagNormal);
                         }
-
-
-                        data.SetValue(dim,uids.size(),m_labelsBufferMultiIO[id],matrixFlagNormal);
                     }
-                }
-                else{
-                    //default:
-                    throw runtime_error(msra::strfun::strprintf("GetMinibatchMultiIO:: unknown InputOutputType for %S\n",(iter->first).c_str()));
-                }
+                    else{
+                        //default:
+                        throw runtime_error(msra::strfun::strprintf("GetMinibatchMultiIO:: unknown InputOutputType for %S\n",(iter->first).c_str()));
+                    }
 
-            }
-            // advance to the next minibatch
-            (*m_mbiter)++;
+                }
+                // advance to the next minibatch
+                (*m_mbiter)++;
             }
             else
             {
@@ -1184,17 +1229,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (matrices.find(iter->first)==matrices.end())
                 {
-                    fprintf(stderr,"GetMinibatchToWrite: feature node %S specified in reader not found in the network\n",iter->first.c_str());
+                    fprintf(stderr,"GetMinibatchToWrite: feature node %ls specified in reader not found in the network\n",iter->first.c_str());
                     throw std::runtime_error("GetMinibatchToWrite: feature node specified in reader not found in the network.");
                 }
             }
             /*
-            for (auto iter=matrices.begin();iter!=matrices.end();iter++)
-            {
-                if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
-            }
-            */
+           for (auto iter=matrices.begin();iter!=matrices.end();iter++)
+           {
+               if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
+                   throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ls not found in reader - cannot generate input\n",iter->first.c_str()));
+           }
+           */
             m_checkDictionaryKeys=false;
         }
 
@@ -1329,7 +1374,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_labelsStartIndexMultiUtt[id+i*numOfLabel] = totalLabelsNum;
             totalLabelsNum = m_labelsStartIndexMultiUtt[id+i*numOfLabel] + dim * actualmbsizeOri;
         }
-        
+
         if (m_labelsBufferMultiUtt[i]==NULL)
         {
             m_labelsBufferMultiUtt[i] = new ElemType[totalLabelsNum];
@@ -1383,7 +1428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
-        
+
         for (auto it = m_labelNameToIdMap.begin(); it != m_labelNameToIdMap.end(); ++it) 
         {
             size_t id = m_labelNameToIdMap[it->first];
@@ -1425,8 +1470,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return true;    
     }
-    
-    
+
+
 
 
     // GetLabelMapping - Gets the label mapping from integer to type in file 
@@ -1451,7 +1496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (labelListFile==L"")
             throw std::runtime_error("HTKMLFReader::ReadLabelToTargetMappingFile(): cannot read labelToTargetMappingFile without a labelMappingFile!");
-        
+
         vector<std::wstring> labelList;
         size_t count, numLabels;
         count=0;
@@ -1573,7 +1618,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
     }
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::ExpandDotDotDot(wstring & featPath, const wstring & scpPath, wstring & scpDirCached) 
+    {
+        wstring delim = L"/\\";
+
+        if (scpDirCached.empty()) 
+        {
+            scpDirCached = scpPath;
+            wstring tail; 
+            auto pos = scpDirCached.find_last_of(delim);
+            if (pos != wstring::npos)
+            {
+                tail = scpDirCached.substr(pos + 1);
+                scpDirCached.resize(pos);
+            }
+            if (tail.empty()) // nothing was split off: no dir given, 'dir' contains the filename
+                scpDirCached.swap(tail);            
+        }
+        size_t pos = featPath.find(L"...");
+        if (pos != featPath.npos)
+            featPath = featPath.substr(0, pos) + scpDirCached + featPath.substr(pos + 3);
+    }
+
 
     template class HTKMLFReader<float>;
     template class HTKMLFReader<double>;
-    }}}
+}}}
