@@ -1227,7 +1227,10 @@ namespace Microsoft {
                                 decoderNet, encoderEvaluationNodes,
                                 decoderCriterionNodes);
 
+                            node->GradientValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             ElemType grdErr = node->GradientValues()(irow, icol);
+                            if (node->GradientValues().GetDeviceId() != deviceId)
+                                node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(), deviceId, true);
 
                             // check if they are consistent
                             ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
@@ -1400,29 +1403,12 @@ namespace Microsoft {
                     const std::vector<ComputationNodePtr>& encoderEvaluationNodes,
                     const std::vector<ComputationNodePtr>& decoderCriterionNodes)
                 {
-                    try{
-                        /// don't reevalute, need to call forward pass before call this function
-                        //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
-                        try{
-                            decoderNet.ComputeGradient(decoderCriterionNodes[0]);
-                        }
-                        catch (...)
-                        {
-                            RuntimeError("Error in evaluating gradients for decoder network");
-                        }
-                        
-                        try{
-                            encoderNet.ComputeGradient(encoderEvaluationNodes[0], false);
-                        }
-                        catch (...)
-                        {
-                            RuntimeError("Error in evaluating gradients for encoder network");
-                        }
-                    }
-                    catch (...)
-                    {
-                        RuntimeError("Errors in backpropagation");
-                    }
+                    /// don't reevalute, need to call forward pass before call this function
+                    //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
+
+                    decoderNet.ComputeGradient(decoderCriterionNodes[0]);
+
+                    encoderNet.ComputeGradient(encoderEvaluationNodes[0], false);
                 }
 
                 void sfbEncoderDecoderWithHiddenStatesErrorProp(
