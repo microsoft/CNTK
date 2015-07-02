@@ -1358,7 +1358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // gracefully later, e.g., remove the utterance in the reader.
             if (m_uttInfo[i].size() > 1)
             {
-                RuntimeError("Utterance length is smaller than the minibatch size, you may want to remove the utterance or reduce the minibatch size.\n");
+                fprintf(stderr, "WARNING: Utterance length is smaller than the minibatch size, you may want to remove the utterance or reduce the minibatch size.\n");
             }
         }
 
