@@ -54,6 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_delay = 1;
             m_functionValues.Resize(1,1);
             m_pastActivity.Resize(1,1);
+            m_historyAlreadySet = false;
             InitRecurrentNode();
         }
                 
@@ -67,6 +68,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.Resize(1,1);
             m_pastActivity.Resize(1,1);
             m_reqMultiSeqHandling = true;
+
+            m_historyAlreadySet = false; 
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
@@ -114,6 +117,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
+
+            m_historyAlreadySet = false;
 
             InitRecurrentNode();
         }
@@ -259,7 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_sentenceSeg != nullptr);
             assert(m_existsSentenceBeginOrNoLabels != nullptr);
 
-            if (timeIdxInSeq == 0)
+            if (timeIdxInSeq == 0 && m_historyAlreadySet == false)
             {
                 m_pastActivity = Inputs(0)->FunctionValues();
             }
@@ -367,8 +372,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 out.SetValue(inp);
             }
         }
-
-
 
         virtual const Matrix<ElemType>& FunctionValues() const 
         {
@@ -504,6 +507,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
+        bool GetHistory(Matrix<ElemType>& hist, bool)
+        {
+            DEVICEID_TYPE device = hist.GetDeviceId();
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
+
+            hist.SetValue(Inputs(0)->FunctionValues());
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
+            return true;
+        }
+
+        void SetHistory(const Matrix<ElemType>& hist)
+        {
+            DEVICEID_TYPE device = hist.GetDeviceId();
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
+
+            m_pastActivity.SetValue(hist);
+            m_historyAlreadySet = true;
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
+        }
+
         virtual void AttachInputs(const ComputationNodePtr inputNode)
         {
             m_children.resize(1);
@@ -569,6 +594,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_pastActivity;  /// saves the past activity this delay node points to
         int      m_delay;    /// steps for delay 
         Matrix<ElemType> m_shiftedExistSentenceBeginOrNoLabels;
+
+        bool m_historyAlreadySet;
     };
 
     template class DelayNode<float>; 
