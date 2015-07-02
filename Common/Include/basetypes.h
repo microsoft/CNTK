@@ -1039,6 +1039,19 @@ static inline void LogicError(const char * format, ...)
     throw std::logic_error(buffer);
 };
 
+// RuntimeError - throw a std::runtime_error with a formatted error string
+#ifdef _MSC_VER
+__declspec(noreturn)
+#endif
+static inline void Warning(const char * format, ...)
+{
+    va_list args;
+    char buffer[1024];
+
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+};
+
 // ----------------------------------------------------------------------------
 // dynamic loading of modules
 // ----------------------------------------------------------------------------

@@ -61,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } RecurrentInfo;
 
     public:
-        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), m_sentenceSeg(deviceId), m_sentenceExistsBeginOrNoLabels(deviceId)
+        ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) : m_deviceId(deviceId), mSentenceBoundary(deviceId), mExistsBeginOrNoLabels(deviceId)
         {
             m_randomSeedOffset = 0;
             m_actMiniBSize = 0;
@@ -85,6 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_features.clear();
             m_labels.clear();
             m_finalCriteria.clear();
+            m_nodesReqMultiSeqHandling.clear();
             m_evalNodes.clear();
             m_outputNodes.clear();
             m_recurrentInfo.clear();
@@ -158,6 +159,7 @@ private:	// [erw] added for Toplological Plot only
 			wstring m_LearnableParameterStyle ; 
 			wstring m_featuresStyle; 
 			wstring m_CriteriaStyle;
+            wstring m_nodesReqMultiSeqHandlingStyle;
 			wstring m_labelsStyle; 
 			wstring m_normalNodeStyle; 
 			wstring m_PrecomputingNodeStyle;
@@ -168,7 +170,8 @@ private:	// [erw] added for Toplological Plot only
 				m_LearnableParameterStyle	= L"node [ shape = box     , color = gray , style = \"filled, rounded\"  ]; "; 
 				m_featuresStyle				= L"node [ shape = ellipse , color = red  , fillcolor = white ]; "; 
 				m_CriteriaStyle				= L"node [ shape = doublecircle , color =  red , fillcolor = white  ]; ";
-				m_normalNodeStyle			= L"node [ shape = ellipse, color = blue, fillcolor = white, style = solid ]; ";
+                m_nodesReqMultiSeqHandlingStyle = L"node [ shape = doublecircle , color =  brown , fillcolor = white  ]; ";
+                m_normalNodeStyle = L"node [ shape = ellipse, color = blue, fillcolor = white, style = solid ]; ";
 				m_PrecomputingNodeStyle		= L"node [ shape = box    , color = black, style = \"dashed, filled\",  fillcolor= limegreen ] ;";
 				m_labelsStyle				= L"node [ shape = diamond, color = brown, style = bold ] ;  ";
 				m_DelayNodeStyle			= L"node [ shape = box3d  , color = lightgray, style = \"filled\" , fillcolor = white ] ";
@@ -237,6 +240,8 @@ public:
 			fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
 			// critera 
 			fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
+            // nodes that requires multi sequence handling 
+            fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_nodesReqMultiSeqHandling);            
 			// pre-compute nodes
 			fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
 			// delay nodes 
@@ -278,7 +283,11 @@ public:
 			{
 				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
-			for (auto x : m_outputNodes)
+            for (auto x : m_nodesReqMultiSeqHandling)
+            {
+                line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
+            }
+            for (auto x : m_outputNodes)
 			{
 				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
@@ -338,7 +347,11 @@ public:
 			{
 				m_finalCriteria[i]->EnumerateArcs(visited, arcs);
 			}
-			for (size_t i = 0; i < m_outputNodes.size(); i++)
+            for (size_t i = 0; i < m_nodesReqMultiSeqHandling.size(); i++)
+            {
+                m_nodesReqMultiSeqHandling[i]->EnumerateArcs(visited, arcs);
+            }
+            for (size_t i = 0; i < m_outputNodes.size(); i++)
 			{
 				m_outputNodes[i]->EnumerateArcs(visited, arcs); 
 			}
@@ -432,6 +445,14 @@ public:
             }
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
+            fstream << m_nodesReqMultiSeqHandling.size();
+            for (size_t i = 0; i<m_nodesReqMultiSeqHandling.size(); i++)
+            {
+                fstream << m_nodesReqMultiSeqHandling[i]->NodeName();
+            }
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
+
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
             fstream << m_evalNodes.size();
             for (size_t i=0; i<m_evalNodes.size(); i++)
@@ -503,7 +524,7 @@ public:
         }
 
         virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary, 
-            const bool bAllowNoCriterionNode = false)
+            const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork=nullptr)
         {
             ClearNet();
 
@@ -550,41 +571,38 @@ public:
                     }
 
                     ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-                    ComputationNodePtr childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4;
-                    switch (numChildren)
+                    std::vector<ComputationNodePtr> childrenNodes;
+                    childrenNodes.resize(numChildren);
+                    for (int j = 0; j < numChildren; j++)
+                        childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
+
+                    if (nodePtr->OperationName() == RowStackNode<ElemType>::TypeName()) //allow for variable input nodes
+                        nodePtr->AttachInputs(childrenNodes);
+                    else //fixed input nodes
                     {
-                    case 1:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        nodePtr->AttachInputs(childNodePtr0);
-                        break;
-                    case 2:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1);
-                        break;
-                    case 3:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2);
-                        break;
-                    case 4:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
-                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3);
-                        break;
-                    case 5:
-                        childNodePtr0 = GetNodeFromName(childrenNames[0]);
-                        childNodePtr1 = GetNodeFromName(childrenNames[1]);
-                        childNodePtr2 = GetNodeFromName(childrenNames[2]);
-                        childNodePtr3 = GetNodeFromName(childrenNames[3]);
-                        childNodePtr4 = GetNodeFromName(childrenNames[4]);
-                        nodePtr->AttachInputs(childNodePtr0, childNodePtr1, childNodePtr2, childNodePtr3, childNodePtr4);
-                        break;
-                    default:
-                        throw std::logic_error("Invalid number of children.");
+                        switch (numChildren)
+                        {
+                        case 1:
+                            nodePtr->AttachInputs(childrenNodes[0]);
+                            break;
+                        case 2:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
+                            break;
+                        case 3:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2]);
+                            break;
+                        case 4:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3]);
+                            break;
+                        case 5:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4]);
+                            break;
+                        case 6:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4], childrenNodes[5]);
+                            break;
+                        default:
+                            throw std::logic_error("Invalid number of children.");
+                        }
                     }
                 }
             }
@@ -621,6 +639,17 @@ public:
                     m_finalCriteria.push_back(GetNodeFromName(nodeName));
                 }
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
+
+                if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
+                {
+                    fstream >> num;
+                    for (size_t i = 0; i<num; i++)
+                    {
+                        fstream >> nodeName;
+                        m_nodesReqMultiSeqHandling.push_back(GetNodeFromName(nodeName));
+                    }
+                    fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
+                }
 
                 fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
                 fstream >> num;
@@ -806,7 +835,12 @@ public:
 			{
 				m_finalCriteria.erase(search);
 			}
-			search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
+            search = std::find(m_nodesReqMultiSeqHandling.begin(), m_nodesReqMultiSeqHandling.end(), nodeToDelete);
+            if (search != m_nodesReqMultiSeqHandling.end())
+            {
+                m_nodesReqMultiSeqHandling.erase(search);
+            }
+            search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
 			if (search != m_evalNodes.end())
 			{
 				m_evalNodes.erase(search);
@@ -1028,6 +1062,8 @@ public:
                 newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == RowSliceNode<ElemType>::TypeName())
                 newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == RowStackNode<ElemType>::TypeName())
+                newNode = new RowStackNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
                 newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
@@ -1038,6 +1074,10 @@ public:
                 newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ParallelNode<ElemType>::TypeName())
                 newNode = new ParallelNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == AlignmentNode<ElemType>::TypeName())
+                newNode = new AlignmentNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == PairNetworkNode<ElemType>::TypeName())
+                newNode = new PairNetworkNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1070,6 +1110,14 @@ public:
             return newNode;
         }
 
+        ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
         ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
         {
             ComputationNodePtr newNode(new SparseInputValue<ElemType>(rows, cols, m_deviceId, inputName));
@@ -1092,7 +1140,14 @@ public:
             return newNode;
         }
 
-        ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName, 
+        ComputationNodePtr CreatePairNetworkNode(const std::wstring inputName, const size_t rows, const size_t cols)
+        {
+            ComputationNodePtr newNode(new PairNetworkNode<ElemType>(rows, cols, m_deviceId, inputName));
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName,
                         const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
                         const size_t horizontalSubsample, const size_t verticalSubsample, 
                         const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0)
@@ -1209,6 +1264,12 @@ public:
 				newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ParallelNode<ElemType>::TypeName())
                 newNode = new ParallelNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == RowStackNode<ElemType>::TypeName())
+                newNode = new RowStackNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == AlignmentNode<ElemType>::TypeName())
+                newNode = new AlignmentNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == PairNetworkNode<ElemType>::TypeName())
+                newNode = new PairNetworkNode<ElemType>(m_deviceId, nodeName);
             else
             {
                 fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n", nodeType.c_str(), nodeName.c_str());
@@ -1582,6 +1643,15 @@ public:
             return newNode;
         }
 
+        ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> inputs, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new RowStackNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(inputs);
+            AddNodeToNet(newNode);
+
+            return newNode;
+        }
+
         ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName));
@@ -1606,19 +1676,29 @@ public:
             return newNode;
         }
 
+        ComputationNodePtr Alignment(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new AlignmentNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a, b, c);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
         bool NodeNameExist(const std::wstring& name) const
         {
             auto iter = m_nameToNodeMap.find(name);
             return (iter != m_nameToNodeMap.end());
         }
 
-        ComputationNodePtr GetNodeFromName(const std::wstring& name)  const
+        ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr)  const
         {
             auto iter = m_nameToNodeMap.find(name);
             if (iter != m_nameToNodeMap.end()) //found
                 return iter->second;
-            else  //should never try to get a node from nonexisting name
-                throw std::runtime_error("GetNodeFromName: Node name does not exist.");
+            if (anotherNetwork != nullptr)
+                return anotherNetwork->GetNodeFromName(name);
+            
+            RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
         }
 
         // GetNodesFromName - Get all the nodes from a name that may match a wildcard '*' pattern
@@ -1719,85 +1799,107 @@ public:
 
                 size_t iCnt = 0; 
                 size_t iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
-                do{
+                do {
                     bLoopCompleted = true;
                     for (auto nodeIter=recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                     {
-                        (*nodeIter)->EvaluateThisNode(iCnt); 
+                        (*nodeIter)->EvaluateThisNodeGivenInputs(iCnt);
 
                         (*nodeIter)->UpdateEvalTimeStamp();
 
                     }
 
                     iCnt ++;
-                }while (iCnt < iMBSize);
+                } while (iCnt < iMBSize);
 
                 m_recurrentInfo[iLoopId].m_completedEvaluate = true;
             }
         }
 
-        bool IsCriterionNode(ComputationNodePtr nodePtr)
+        bool IsTypicalCriterionNode(ComputationNodePtr nodePtr)
         {
-            if (nodePtr->OperationName() == L"SquareError" ||
-                nodePtr->OperationName() == L"CrossEntropyWithSoftmax" ||
-                nodePtr->OperationName() == L"CrossEntropy" ||
-                nodePtr->OperationName() == L"MatrixL1Reg" ||
-                nodePtr->OperationName() == L"MatrixL2Reg" ||
-                nodePtr->OperationName() == L"ClassBasedCrossEntropyWithSoftmax" ||
-                nodePtr->OperationName() == L"CRF")
+            if (nodePtr->OperationName() == SquareErrorNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == CrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == CrossEntropyNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
+                nodePtr->OperationName() == ErrorPredictionNode<ElemType>::TypeName() ||               
+                nodePtr->OperationName() == CRFNode<ElemType>::TypeName())
                 return true;
+
             return false;
+        }
+
+        void SetNodesReqMultiSeqHandling()
+        {
+            for (auto node : m_nodesReqMultiSeqHandling)
+            {
+                //SumElements node will generate a scalar value and so it should never require special handling
+                //TransposeNode will change the size of columns and so it should also not included for special handling
+                //their child node should instead
+                if (node->OperationName() != SumElementsNode<ElemType>::TypeName() &&
+                    node->OperationName() != TransposeNode<ElemType>::TypeName() &&
+                    node->OperationName() != MeanNode<ElemType>::TypeName() &&
+                    node->OperationName() != InvStdDevNode<ElemType>::TypeName() 
+                    )
+                    node->SetReqMultiSeqHandlingTo(true);
+            }
+
+            //if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
+            //this is for backward compatibility
+            for (auto node : m_finalCriteria)
+            {
+                if (IsTypicalCriterionNode(node))
+                    node->SetReqMultiSeqHandlingTo(true);
+            }
+
+            for (auto node : m_evalNodes)
+            {
+                if (IsTypicalCriterionNode(node))
+                    node->SetReqMultiSeqHandlingTo(true);
+            }
         }
 
         void Evaluate(const ComputationNodePtr rootNode)
         {
-            try{
-                BuildAndValidateNetwork(rootNode);
+            BuildAndValidateNetwork(rootNode);
 
-                std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodePtr>& allNodes = GetEvalOrder(rootNode);
 
 #ifdef DISPLAY_DEBUG
-                for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                    fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+            for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+                fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
 
-                for (int i = 0; i < m_recurrentInfo.size(); i++)
+            for (int i = 0; i < m_recurrentInfo.size(); i++)
+            {
+                m_recurrentInfo[i].m_completedEvaluate = false;
+            }
+
+            for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+            {
+                (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                if ((*nodeIter)->ReqMultiSeqHandling())
                 {
-                    m_recurrentInfo[i].m_completedEvaluate = false;
-                }
-
-                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                {
-                    (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                    if ((*nodeIter)->OperationName() == L"Delay" ||
-                        (*nodeIter)->OperationName() == L"LSTM" ||
-                        IsCriterionNode(*nodeIter))
-                    {
-                        (*nodeIter)->ResetBound(m_sentenceSeg, m_sentenceExistsBeginOrNoLabels);
-                    }
-                }
-
-                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                {
-
-                    EvaluateLoop(allNodes, (*nodeIter));
-
-                    if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
-                    {
-#ifdef DISPLAY_DEBUG
-                        fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-#endif
-#if DUMPOUTPUT
-                        fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
-#endif
-                        (*nodeIter)->EvaluateThisNode(); // we manage time stamp here so that derived classes don't need to worry about it
-                        (*nodeIter)->UpdateEvalTimeStamp();
-                    }
+                    (*nodeIter)->ResetBound(&mSentenceBoundary, &mExistsBeginOrNoLabels);
                 }
             }
-            catch (...)
+
+            for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
             {
-                RuntimeError("Error in evaluation");
+
+                EvaluateLoop(allNodes, (*nodeIter));
+
+                if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
+                {
+#ifdef DISPLAY_DEBUG
+                    fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+#endif
+#if DUMPOUTPUT
+                    fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
+#endif
+                    (*nodeIter)->EvaluateThisNodeGivenInputs(); // we manage time stamp here so that derived classes don't need to worry about it
+                    (*nodeIter)->UpdateEvalTimeStamp();
+                }
             }
         }
 
@@ -1863,41 +1965,35 @@ public:
             const Matrix<ElemType>* rootGradientInitValue = nullptr
             )
         {
-            try{
-                if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
-                    throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
+            if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
+                throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
-                //run forward pass first
-                Evaluate(rootNode);
+            //run forward pass first
+            Evaluate(rootNode);
 
-                ClearGradientForAllNodes(rootNode);
+            ClearGradientForAllNodes(rootNode);
 
-                //run backward pass
-                std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
-                if (bResetToOne)
-                {
-                    rootNode->GradientValues().Resize(1, 1);
-                    rootNode->GradientValues().SetValue(1);
-                }
-
-                if (rootGradientInitValue != nullptr)
-                    rootNode->GradientValues().SetValue(*rootGradientInitValue);
-
-                for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-                {
-#ifdef DISPLAY_DEBUG
-                    fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
-                        (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
-                        (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-#endif
-                    ComputeGradientLoop(allNodes, *nodeIter);
-
-                    (*nodeIter)->ComputeGradientForChildren();
-                }
-            }
-            catch (...)
+            //run backward pass
+            std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+            if (bResetToOne)
             {
-                RuntimeError("Error in ComputeGradient");
+                rootNode->GradientValues().Resize(1, 1);
+                rootNode->GradientValues().SetValue(1);
+            }
+
+            if (rootGradientInitValue != nullptr)
+                rootNode->GradientValues().SetValue(*rootGradientInitValue);
+
+            for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+            {
+#ifdef DISPLAY_DEBUG
+                fprintf (stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
+                    (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
+                    (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+#endif
+                ComputeGradientLoop(allNodes, *nodeIter);
+
+                (*nodeIter)->ComputeGradientForChildren();
             }
         }
 
@@ -1969,7 +2065,9 @@ public:
 
         inline std::vector<ComputationNodePtr>& FinalCriterionNodes() {return m_finalCriteria;}
 
-        inline std::vector<ComputationNodePtr>& EvaluationNodes() {return m_evalNodes;}
+        inline std::vector<ComputationNodePtr>& NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
+
+        inline std::vector<ComputationNodePtr>& EvaluationNodes() { return m_evalNodes; }
 
         inline std::vector<ComputationNodePtr>& OutputNodes() {return m_outputNodes;}
 
@@ -2025,7 +2123,12 @@ public:
                 if (m_finalCriteria[i] == oldNode)
                     m_finalCriteria[i] = newNode;
             }            
-            for (int i=0; i<m_evalNodes.size(); i++)
+            for (int i = 0; i<m_nodesReqMultiSeqHandling.size(); i++)
+            {
+                if (m_nodesReqMultiSeqHandling[i] == oldNode)
+                    m_nodesReqMultiSeqHandling[i] = newNode;
+            }
+            for (int i = 0; i<m_evalNodes.size(); i++)
             {
                 if (m_evalNodes[i] == oldNode)
                     m_evalNodes[i] = newNode;
@@ -2243,6 +2346,7 @@ public:
                 FormRecurentLoops(rootNode);
                 ValidateNetwork(rootNode);
                 CollectInputAndLeanableParameters(rootNode);
+                SetNodesReqMultiSeqHandling();
             }
         }
 
@@ -2252,6 +2356,7 @@ public:
         */
         bool UnitTest(bool allowFragment = false)
         {
+            vector<wstring> vErrors;
             // currently only validates nodes, we should validate everything we can
             if (FeatureNodes().size() == 0 && !allowFragment)
             {
@@ -2266,7 +2371,7 @@ public:
                     size_t actualMBSize = this->GetActualMBSize();
                     this->SetActualMiniBatchSize(actualMBSize);
                     if (UnitTest(node) == false)
-                        return false;
+                        vErrors.push_back(node->NodeName().c_str());
                 }
             }
             else if (!allowFragment)
@@ -2278,7 +2383,7 @@ public:
             {
                 for (auto node : OutputNodes())
                     if (UnitTest(node) == false)
-                        return false;
+                        vErrors.push_back(node->NodeName().c_str());
             }
             else if (!allowFragment)
             {
@@ -2289,8 +2394,10 @@ public:
             {
                 for (auto node : EvaluationNodes())
                     if (UnitTest(node) == false)
-                        return false;
+                        vErrors.push_back(node->NodeName().c_str());
             }
+            if (vErrors.size() > 0)
+                return false; 
             return true;
         }
 
@@ -2940,7 +3047,8 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
             }
             catch (...)
             {
-                RuntimeError("Error in ClearGradientForAllNodes");
+                fprintf(stderr, "Error in ClearGradientForAllNodes");
+                throw;
             }
         }
 
@@ -2967,8 +3075,14 @@ public: // public so PTask can use eval/gradient order, and pre-compute matrix s
 
             return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
         }
-        Matrix<ElemType> m_sentenceSeg;
-        Matrix<ElemType> m_sentenceExistsBeginOrNoLabels; 
+
+        /**
+        The below is used for sentence boundary information passed from reader. 
+        This information can be used to reset RNN state or disregard gradient proprogation such as those
+        used in reinforcement learning
+        */
+        Matrix<ElemType> mSentenceBoundary;  /// sentence boudary information. passed from reader
+        Matrix<ElemType> mExistsBeginOrNoLabels;  /// whether there is a sentence begining or no_label at a time. note that one time can include many sentences. 
 protected:
         std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode, std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap, const bool forwardCompute) 
         {
@@ -3004,6 +3118,7 @@ protected:
         std::vector<ComputationNodePtr> m_finalCriteria;
         std::vector<ComputationNodePtr> m_evalNodes;
         std::vector<ComputationNodePtr> m_outputNodes;
+        std::vector<ComputationNodePtr> m_nodesReqMultiSeqHandling;
         std::vector<RecurrentInfo>      m_recurrentInfo;
 
         int m_actMiniBSize; 

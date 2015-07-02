@@ -158,7 +158,7 @@ namespace Microsoft {
                         fprintf(stderr, "Starting from checkpoint. Load Decoder Network From File %ws.\n", modelFileName.c_str());
 
                     ComputationNetwork<ElemType>& decoderNet =
-                        startEpoch<0 ? decoderNetBuilder->BuildNetworkFromDescription() : decoderNetBuilder->LoadNetworkFromFile(modelFileName);
+                        startEpoch<0 ? decoderNetBuilder->BuildNetworkFromDescription(&encoderNet) : decoderNetBuilder->LoadNetworkFromFile(modelFileName, true, false, &encoderNet);
 
                     startEpoch = max(startEpoch, 0);
 
@@ -380,6 +380,264 @@ namespace Microsoft {
                             vector<wstring> cvEncoderSetTrainAndEvalNodes;
                             cvEncoderSetTrainAndEvalNodes.push_back(encoderEvaluationNodes[0]->NodeName());
 
+                            vector<wstring> cvDecoderSetTrainAndEvalNodes;
+                            cvDecoderSetTrainAndEvalNodes.push_back(decoderCriterionNodes[0]->NodeName());
+                            cvDecoderSetTrainAndEvalNodes.push_back(decoderEvaluationNodes[0]->NodeName());
+
+                            vector<ElemType> vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
+                                encoderNet, decoderNet,
+                                *encoderValidationSetDataReader,
+                                *decoderValidationSetDataReader, cvEncoderSetTrainAndEvalNodes,
+                                cvDecoderSetTrainAndEvalNodes, m_mbSize[i]);
+                            fprintf(stderr, "Finished Epoch[%lu]: [Validation Set] Train Loss Per Sample = %.8g  EvalErr Per Sample = %.8g\n",
+                                i + 1, vScore[0], vScore[1]);
+
+                            epochCriterion[0] = vScore[0]; //the first one is the decoder training criterion.
+                        }
+
+                        bool loadedPrevModel = false;
+                        size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
+                        if (avgCriterion == std::numeric_limits<ElemType>::infinity())
+                            avgCriterion = epochCriterion[0];
+                        else
+                            avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion)* avgCriterion + epochCriterion[0]) / (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
+
+                        if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                        {
+                            if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                            {
+                                if (m_loadBestModel)
+                                {
+                                    encoderNet.LoadPersistableParametersFromFile(GetEncoderModelNameForEpoch(i - 1),
+                                        false);
+                                    decoderNet.LoadPersistableParametersFromFile(GetDecoderModelNameForEpoch(i - 1),
+                                        m_validateAfterModelReloading);
+                                    encoderNet.ResetEvalTimeStamp();
+                                    decoderNet.ResetEvalTimeStamp();
+                                    LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                                    fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
+                                    loadedPrevModel = true;
+                                }
+                            }
+
+                            if (m_continueReduce)
+                            {
+                                if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                                {
+                                    if (learnRateReduced == false)
+                                    {
+                                        learnRateReduced = true;
+                                    }
+                                    else
+                                    {
+                                        decoderNet.SaveToFile(GetDecoderModelNameForEpoch(i, true));
+                                        encoderNet.SaveToFile(GetEncoderModelNameForEpoch(i, true));
+                                        fprintf(stderr, "Finished training and saved final model\n\n");
+                                        break;
+                                    }
+                                }
+                                if (learnRateReduced)
+                                {
+                                    learnRatePerSample *= m_learnRateDecreaseFactor;
+                                    fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                                }
+                            }
+                            else
+                            {
+                                if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                                {
+
+                                    learnRatePerSample *= m_learnRateDecreaseFactor;
+                                    fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                                }
+                                else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                                {
+                                    learnRatePerSample *= m_learnRateIncreaseFactor;
+                                    fprintf(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
+                                }
+                            }
+                        }
+
+                        if (!loadedPrevModel && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)  //not loading previous values then set them
+                        {
+                            prevCriterion = avgCriterion;
+                            epochsNotCountedInAvgCriterion = 0;
+                        }
+
+                        //persist model and check-point info
+                        decoderNet.SaveToFile(GetDecoderModelNameForEpoch(i));
+                        encoderNet.SaveToFile(GetEncoderModelNameForEpoch(i));
+                        SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        if (!m_keepCheckPointFiles)
+                            _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
+
+                        if (learnRatePerSample < 1e-12)
+                            fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n", learnRatePerSample);
+                    }
+                }
+
+                void sfbTrainEncoderDecoderModel(int startEpoch, ComputationNetwork<ElemType>& encoderNet,
+                    ComputationNetwork<ElemType>& decoderNet,
+                    IDataReader<ElemType>* encoderTrainSetDataReader,
+                    IDataReader<ElemType>* decoderTrainSetDataReader,
+                    IDataReader<ElemType>* encoderValidationSetDataReader,
+                    IDataReader<ElemType>* decoderValidationSetDataReader)
+                {
+                    std::vector<ComputationNodePtr> & encoderFeatureNodes = encoderNet.FeatureNodes();
+                    std::vector<ComputationNodePtr> & encoderEvaluationNodes = encoderNet.OutputNodes();
+
+                    std::vector<ComputationNodePtr> & decoderFeatureNodes = decoderNet.FeatureNodes();
+                    std::vector<ComputationNodePtr> & decoderLabelNodes = decoderNet.LabelNodes();
+                    std::vector<ComputationNodePtr> decoderCriterionNodes = GetTrainCriterionNodes(decoderNet);
+                    std::vector<ComputationNodePtr> decoderEvaluationNodes = GetEvalCriterionNodes(decoderNet);
+
+                    std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices, decoderInputMatrices;
+                    for (size_t i = 0; i<encoderFeatureNodes.size(); i++)
+                    {
+                        encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] =
+                            &encoderFeatureNodes[i]->FunctionValues();
+                    }
+                    for (size_t i = 0; i<decoderFeatureNodes.size(); i++)
+                    {
+                        decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] =
+                            &decoderFeatureNodes[i]->FunctionValues();
+                    }
+                    for (size_t i = 0; i<decoderLabelNodes.size(); i++)
+                    {
+                        decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &decoderLabelNodes[i]->FunctionValues();
+                    }
+
+                    //initializing weights and gradient holder
+                    std::list<ComputationNodePtr>& encoderLearnableNodes = encoderNet.LearnableNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
+                    std::list<ComputationNodePtr>& decoderLearnableNodes = decoderNet.LearnableNodes(decoderCriterionNodes[0]);
+                    std::list<ComputationNodePtr> learnableNodes;
+                    for (auto nodeIter = encoderLearnableNodes.begin(); nodeIter != encoderLearnableNodes.end(); nodeIter++)
+                    {
+                        ComputationNodePtr node = (*nodeIter);
+                        learnableNodes.push_back(node);
+                    }
+                    for (auto nodeIter = decoderLearnableNodes.begin(); nodeIter != decoderLearnableNodes.end(); nodeIter++)
+                    {
+                        ComputationNodePtr node = (*nodeIter);
+                        learnableNodes.push_back(node);
+                    }
+
+                    std::list<Matrix<ElemType>> smoothedGradients;
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    {
+                        ComputationNodePtr node = (*nodeIter);
+                        smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
+                    }
+
+                    vector<ElemType> epochCriterion;
+                    ElemType avgCriterion, prevCriterion;
+                    for (size_t i = 0; i < 2; i++)
+                        epochCriterion.push_back(std::numeric_limits<ElemType>::infinity());
+                    avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
+
+                    size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
+
+                    std::vector<ElemType> epochEvalErrors(decoderEvaluationNodes.size(), std::numeric_limits<ElemType>::infinity());
+
+                    std::vector<wstring> evalNodeNames;
+                    for (size_t i = 0; i<decoderEvaluationNodes.size(); i++)
+                        evalNodeNames.push_back(decoderEvaluationNodes[i]->NodeName());
+
+                    size_t totalSamplesSeen = 0;
+                    ElemType learnRatePerSample = 0.5f / m_mbSize[startEpoch];
+
+                    int m_numPrevLearnRates = 5; //used to control the upper learnining rate in LR search to reduce computation
+                    vector<ElemType> prevLearnRates;
+                    prevLearnRates.resize(m_numPrevLearnRates);
+                    for (int i = 0; i<m_numPrevLearnRates; i++)
+                        prevLearnRates[i] = std::numeric_limits<ElemType>::infinity();
+
+                    //precompute mean and invStdDev nodes and save initial model
+                    if (/// to-do doesn't support pre-compute such as MVN here 
+                        /// PreCompute(net, encoderTrainSetDataReader, encoderFeatureNodes, encoderlabelNodes, encoderInputMatrices) || 
+                        startEpoch == 0)
+                    {
+                        encoderNet.SaveToFile(GetEncoderModelNameForEpoch(int(startEpoch) - 1));
+                        decoderNet.SaveToFile(GetDecoderModelNameForEpoch(int(startEpoch) - 1));
+                    }
+
+                    bool learnRateInitialized = false;
+                    if (startEpoch > 0)
+                    {
+                        learnRateInitialized = LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size() - 1]);
+                    }
+
+                    if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
+                        throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
+
+                    ULONG dropOutSeed = 1;
+                    ElemType prevDropoutRate = 0;
+
+                    bool learnRateReduced = false;
+
+                    for (int i = int(startEpoch); i<int(m_maxEpochs); i++)
+                    {
+                        auto t_start_epoch = clock();
+
+                        //set dropout rate
+                        SetDropoutRate(encoderNet, encoderEvaluationNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+                        SetDropoutRate(decoderNet, decoderCriterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+
+                        //learning rate adjustment
+                        if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
+                        {
+                            learnRatePerSample = m_learningRatesPerSample[i];
+                            setMomentum(m_momentumInputPerMB[i]);
+                        }
+                        else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
+                        {
+                            NOT_IMPLEMENTED;
+                        }
+
+                        learnRateInitialized = true;
+
+                        if (learnRatePerSample < m_minLearnRate)
+                        {
+                            fprintf(stderr, "Learn Rate Per Sample for Epoch[%lu] = %.8g is less than minLearnRate %.8g. Training stops.\n", i + 1, learnRatePerSample, m_minLearnRate);
+                            break;
+                        }
+
+                        TrainOneEpochEncoderDecoderWithHiddenStates(encoderNet, decoderNet, i, m_epochSize, encoderTrainSetDataReader,
+                            decoderTrainSetDataReader, learnRatePerSample,
+                            encoderFeatureNodes, encoderEvaluationNodes, encoderInputMatrices,
+                            decoderFeatureNodes, decoderLabelNodes, decoderCriterionNodes, decoderEvaluationNodes,
+                            decoderInputMatrices, learnableNodes, smoothedGradients,
+                            epochCriterion, epochEvalErrors, totalSamplesSeen);
+
+
+                        auto t_end_epoch = clock();
+                        ElemType epochTime = ElemType(1.0)*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
+
+                        //                    fprintf(stderr, "Finished Epoch[%lu]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
+                        fprintf(stderr, "Finished Epoch[%lu]: [Training Set] Decoder Train Loss Per Sample = %.8g    ", i + 1, epochCriterion[0]);
+                        if (epochEvalErrors.size() == 1)
+                        {
+                            fprintf(stderr, "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", epochEvalErrors[0], learnRatePerSample, epochTime);
+                        }
+                        else
+                        {
+                            fprintf(stderr, "EvalErr Per Sample ");
+                            for (size_t j = 0; j<epochEvalErrors.size(); j++)
+                                fprintf(stderr, "[%lu]=%.8g ", j, epochEvalErrors[j]);
+                            fprintf(stderr, "Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", learnRatePerSample, epochTime);
+                            fprintf(stderr, "Finished Epoch[%lu]: Criterion Node [%ls] Per Sample = %.8g\n", i + 1, decoderCriterionNodes[0]->NodeName().c_str(), epochCriterion[i + 1]);
+                            for (size_t j = 0; j<epochEvalErrors.size(); j++)
+                                fprintf(stderr, "Finished Epoch[%lu]: Evaluation Node [%ws] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                        }
+
+                        if (decoderValidationSetDataReader != decoderTrainSetDataReader && decoderValidationSetDataReader != nullptr &&
+                            encoderValidationSetDataReader != encoderTrainSetDataReader && encoderValidationSetDataReader != nullptr)
+                        {
+                            SimpleEvaluator<ElemType> evalforvalidation(decoderNet);
+                            vector<wstring> cvEncoderSetTrainAndEvalNodes;
+                            cvEncoderSetTrainAndEvalNodes.push_back(encoderEvaluationNodes[0]->NodeName());
+
                             evalforvalidation.SetEncoderDecoderNodePairs(m_lst_pair_encoder_decoder_nodes);
 
                             vector<wstring> cvDecoderSetTrainAndEvalNodes;
@@ -518,6 +776,197 @@ namespace Microsoft {
 
                     int numMBsRun = 0;
 
+                    size_t numEvalNodes = epochEvalErrors.size();
+
+                    // NOTE: the following two local matrices are not used in PTask path
+                    Matrix<ElemType> localEpochCriterion(1, 2, decoderNet.GetDeviceID()); //assume only one training criterion node for each epoch
+                    Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, decoderNet.GetDeviceID());
+
+                    localEpochCriterion.SetValue(0);
+                    localEpochEvalErrors.SetValue(0);
+
+                    encoderTrainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
+                    decoderTrainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
+
+                    startReadMBTime = clock();
+                    Matrix<ElemType> mEncoderOutput(encoderEvaluationNodes[0]->FunctionValues().GetDeviceId());
+                    Matrix<ElemType> mDecoderInput(decoderEvaluationNodes[0]->FunctionValues().GetDeviceId());
+
+                    unsigned uSeedForDataReader = epochNumber;
+
+                    bool bContinueDecoding = true;
+                    while (bContinueDecoding)
+                    {
+                        try{
+                            encoderTrainSetDataReader->SetRandomSeed(uSeedForDataReader);
+                            encoderTrainSetDataReader->GetMinibatch(encoderInputMatrices);
+
+                            /// now gradients on decoder network
+                            decoderTrainSetDataReader->SetRandomSeed(uSeedForDataReader);
+                            if (decoderTrainSetDataReader->GetMinibatch(decoderInputMatrices) == false)
+                                break;
+                        }
+                        catch (...)
+                        {
+                            RuntimeError("Errors in reading features ");
+                        }
+
+                        size_t actualMBSize = decoderNet.GetActualMBSize();
+                        if (actualMBSize == 0)
+                            LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
+
+                        UpdateEvalTimeStamps(encoderFeatureNodes);
+                        UpdateEvalTimeStamps(decoderFeatureNodes);
+                        UpdateEvalTimeStamps(decoderLabelNodes);
+
+                        endReadMBTime = clock();
+                        startComputeMBTime = clock();
+
+                        /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                        //                    decoderTrainSetDataReader->SetSentenceBegin(false);
+                        //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceSeg);
+                        //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceBegin);
+
+                        if (m_doGradientCheck)
+                        {
+                            if (EncoderDecoderGradientCheck(encoderNet,
+                                decoderNet, encoderTrainSetDataReader,
+                                decoderTrainSetDataReader, encoderEvaluationNodes,
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors) == false)
+                            {
+                                throw runtime_error("SGD::TrainOneEpochEncoderDecoderWithHiddenStates gradient check not passed!");
+                            }
+                            localEpochCriterion.SetValue(0);
+                            localEpochEvalErrors.SetValue(0);
+                        }
+
+                        EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
+                                decoderNet, encoderTrainSetDataReader,
+                                decoderTrainSetDataReader, encoderEvaluationNodes,
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
+
+                        EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
+                                decoderNet, encoderEvaluationNodes,
+                                decoderCriterionNodes);
+
+                        //update model parameters
+                        if (learnRatePerSample > m_minLearnRate * 0.01)
+                        {
+                            auto smoothedGradientIter = smoothedGradients.begin();
+                            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
+                            {
+                                ComputationNodePtr node = (*nodeIter);
+                                Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
+
+                                UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber], m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                            }
+                        }
+
+
+                        endComputeMBTime = clock();
+                        numMBsRun++;
+                        if (m_traceLevel > 0)
+                        {
+                            ElemType MBReadTime = (ElemType)(endReadMBTime - startReadMBTime) / (CLOCKS_PER_SEC);
+                            ElemType MBComputeTime = (ElemType)(endComputeMBTime - startComputeMBTime) / CLOCKS_PER_SEC;
+
+                            readTimeInMBs += MBReadTime;
+                            ComputeTimeInMBs += MBComputeTime;
+                            numSamplesLastMBs += int(actualMBSize);
+
+                            if (numMBsRun % m_numMBsToShowResult == 0)
+                            {
+
+                                epochCriterion[0] = localEpochCriterion.Get00Element();
+                                for (size_t i = 0; i< numEvalNodes; i++)
+                                    epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
+
+                                ElemType llk = (epochCriterion[0] - epochCriterionLastMBs[0]) / numSamplesLastMBs;
+                                ElemType ppl = exp(llk);
+                                fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d   Decoder Train Loss Per Sample = %.8g PPL = %.4e ", epochNumber + 1, numMBsRun - m_numMBsToShowResult + 1, numMBsRun, numSamplesLastMBs,
+                                    llk, ppl);
+                                for (size_t i = 0; i<numEvalNodes; i++){
+                                    fprintf(stderr, "EvalErr[%lu] Per Sample = %.8g    ", i, (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs);
+                                }
+                                fprintf(stderr, "ReadData Time = %.8g Computing Time=%.8g Total Time Per Sample=%.8g\n", readTimeInMBs, ComputeTimeInMBs, (readTimeInMBs + ComputeTimeInMBs) / numSamplesLastMBs);
+
+                                //reset statistics
+                                readTimeInMBs = ComputeTimeInMBs = 0;
+                                numSamplesLastMBs = 0;
+
+                                epochCriterionLastMBs = epochCriterion;
+                                for (size_t i = 0; i< numEvalNodes; i++)
+                                    epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
+                            }
+                        }
+                        startReadMBTime = clock();
+                        totalEpochSamples += actualMBSize;
+                        totalSamplesSeen += actualMBSize;
+
+                        if (totalEpochSamples >= epochSize)
+                            break;
+
+                        /// call DataEnd function 
+                        /// DataEnd does reader specific process if sentence ending is reached
+                        //                    encoderTrainSetDataReader->SetSentenceEnd(true);
+                        //                    decoderTrainSetDataReader->SetSentenceEnd(true);
+                        encoderTrainSetDataReader->DataEnd(endDataSentence);
+                        decoderTrainSetDataReader->DataEnd(endDataSentence);
+
+                        uSeedForDataReader++;
+                    }
+
+                    localEpochCriterion /= float(totalEpochSamples);
+                    localEpochEvalErrors /= float(totalEpochSamples);
+
+                    epochCriterion[0] = localEpochCriterion.Get00Element();
+                    for (size_t i = 0; i < numEvalNodes; i++)
+                    {
+                        epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
+                    }
+                    fprintf(stderr, "total samples in epoch[%d] = %d\n", epochNumber, totalEpochSamples);
+                }
+
+                /// use hidden states between encoder and decoder to communicate between two networks
+                void sfbTrainOneEpochEncoderDecoderWithHiddenStates(
+                    ComputationNetwork<ElemType>& encoderNet,  /// encoder network
+                    ComputationNetwork<ElemType>& decoderNet,
+                    const int epochNumber, const size_t epochSize,
+                    IDataReader<ElemType>* encoderTrainSetDataReader,
+                    IDataReader<ElemType>* decoderTrainSetDataReader,
+                    const ElemType learnRatePerSample,
+                    const std::vector<ComputationNodePtr>& encoderFeatureNodes,
+                    const std::vector<ComputationNodePtr>& encoderEvaluationNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>& encoderInputMatrices,
+                    const std::vector<ComputationNodePtr>& decoderFeatureNodes,
+                    const std::vector<ComputationNodePtr>& decoderLabelNodes,
+                    const std::vector<ComputationNodePtr>& decoderCriterionNodes,
+                    const std::vector<ComputationNodePtr>& decoderEvaluationNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>& decoderInputMatrices,
+                    const std::list<ComputationNodePtr>& learnableNodes,
+                    std::list<Matrix<ElemType>>& smoothedGradients,
+                    vector<ElemType>& epochCriterion, std::vector<ElemType>& epochEvalErrors, size_t& totalSamplesSeen)
+                {
+                    assert(encoderEvaluationNodes.size() == 1);
+
+                    Matrix<ElemType> historyMat(encoderNet.GetDeviceID());
+
+                    ElemType readTimeInMBs = 0, ComputeTimeInMBs = 0;
+                    vector<ElemType> epochCriterionLastMBs;
+                    for (size_t i = 0; i < epochCriterion.size(); i++)
+                        epochCriterionLastMBs.push_back(0);
+
+                    int numSamplesLastMBs = 0;
+                    std::vector<ElemType> epochEvalErrorsLastMBs(epochEvalErrors.size(), 0);
+
+                    clock_t startReadMBTime = 0, startComputeMBTime = 0;
+                    clock_t endReadMBTime = 0, endComputeMBTime = 0;
+
+                    //initialize statistics
+                    size_t totalEpochSamples = 0;
+
+                    int numMBsRun = 0;
+
                     /// get the pair of encode and decoder nodes
                     if (m_lst_pair_encoder_decoder_nodes.size() == 0 && m_lst_pair_encoder_decode_node_names.size() > 0)
                     {
@@ -600,14 +1049,13 @@ namespace Microsoft {
                         }
 
                         EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                                decoderNet, encoderTrainSetDataReader,
-                                decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
+                            decoderNet, encoderTrainSetDataReader,
+                            decoderTrainSetDataReader, encoderEvaluationNodes,
+                            decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
 
                         EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
-                                decoderNet, encoderEvaluationNodes,
-                                decoderCriterionNodes,
-                                historyMat, m_lst_pair_encoder_decoder_nodes);
+                            decoderNet, encoderEvaluationNodes,
+                            decoderCriterionNodes);
 
                         //update model parameters
                         if (learnRatePerSample > m_minLearnRate * 0.01)
@@ -696,16 +1144,109 @@ namespace Microsoft {
                     const std::vector<ComputationNodePtr>& decoderFeatureNodes,
                     const std::vector<ComputationNodePtr>& decoderCriterionNodes,
                     const std::vector<ComputationNodePtr>& decoderEvaluationNodes,
-                    Matrix<ElemType>& historyMat,
                     Matrix<ElemType>& localEpochCriterion,
                     Matrix<ElemType>& localEpochEvalErrors
                     )
                 {
                     vector<string> verror_msgs;
+                    DEVICEID_TYPE deviceId;
 
                     /// check decoder learnable parameters
-                    std::list<ComputationNodePtr>& learnableNodes = encoderNet.LearnableNodes(encoderEvaluationNodes[0]);
-                    DEVICEID_TYPE deviceId;
+                    std::list<ComputationNodePtr>& learnableNodes = decoderNet.LearnableNodes(decoderEvaluationNodes[0]);
+
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    {
+                        ComputationNodePtr node = (*nodeIter);
+
+                        for (size_t itry = 0; itry < min((size_t)10, node->FunctionValues().GetNumElements()); itry++)
+                        {
+
+                            int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
+                            int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                            irow = max(0, irow);
+                            icol = max(0, icol);
+
+                            fprintf(stderr, "\n###### d%ws######\n", node->NodeName().c_str());
+                            deviceId = node->FunctionValues().GetDeviceId();  // original device id
+
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                            ElemType eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
+                            if (node->FunctionValues().GetDeviceId() != deviceId)
+                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+
+                            /// perturb parameter
+                            ElemType ePos = eOrg + (ElemType)EPSILON;
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                            node->FunctionValues().SetValue(irow, icol, ePos);
+                            if (node->FunctionValues().GetDeviceId() != deviceId)
+                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+
+                            node->UpdateEvalTimeStamp();
+                            localEpochCriterion.SetValue(0);
+                            localEpochEvalErrors.SetValue(0);
+
+                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
+                                decoderNet, encoderTrainSetDataReader,
+                                decoderTrainSetDataReader, encoderEvaluationNodes,
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
+
+                            ElemType score1 = localEpochCriterion.Get00Element();
+
+                            ElemType eNeg = eOrg - (ElemType)EPSILON;
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                            node->FunctionValues().SetValue(irow, icol, eNeg);
+                            if (node->FunctionValues().GetDeviceId() != deviceId)
+                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+                            node->UpdateEvalTimeStamp();
+                            localEpochCriterion.SetValue(0);
+                            localEpochEvalErrors.SetValue(0);
+
+                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
+                                decoderNet, encoderTrainSetDataReader,
+                                decoderTrainSetDataReader, encoderEvaluationNodes,
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
+
+                            ElemType score1r = localEpochCriterion.Get00Element();
+
+                            ElemType grdNum = (score1r - score1) / (eNeg - ePos);
+
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                            node->FunctionValues().SetValue(irow, icol, eOrg);
+                            if (node->FunctionValues().GetDeviceId() != deviceId)
+                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+                            node->UpdateEvalTimeStamp();
+                            localEpochCriterion.SetValue(0);
+                            localEpochEvalErrors.SetValue(0);
+
+                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
+                                decoderNet, encoderTrainSetDataReader,
+                                decoderTrainSetDataReader, encoderEvaluationNodes,
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
+
+                            EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
+                                decoderNet, encoderEvaluationNodes,
+                                decoderCriterionNodes);
+
+                            node->GradientValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                            ElemType grdErr = node->GradientValues()(irow, icol);
+                            if (node->GradientValues().GetDeviceId() != deviceId)
+                                node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(), deviceId, true);
+
+                            // check if they are consistent
+                            ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
+                            ElemType diff = (ElemType)fabs(grdErr - grdNum);
+                            bool wrong = (std::isnan(diff) || diff > threshold);
+                            if (wrong)
+                            {
+                                char serr[2048];
+                                sprintf_s((char*)serr, 2048, "Decoder %ws Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), grdNum, grdErr);
+                                fprintf(stdout, "%s\n", serr);
+                                verror_msgs.push_back(serr);
+                            }
+                        }
+                    }
+
+                    learnableNodes = encoderNet.LearnableNodes(encoderEvaluationNodes[0]);
 
                     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                     {
@@ -741,7 +1282,7 @@ namespace Microsoft {
                             EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
                                 decoderNet, encoderTrainSetDataReader,
                                 decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
 
                             ElemType score1 = localEpochCriterion.Get00Element();
 
@@ -759,7 +1300,7 @@ namespace Microsoft {
                             EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
                                 decoderNet, encoderTrainSetDataReader,
                                 decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
 
                             ElemType score2 = localEpochCriterion.Get00Element();
 
@@ -776,12 +1317,11 @@ namespace Microsoft {
                             EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
                                 decoderNet, encoderTrainSetDataReader,
                                 decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
+                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
 
                             EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
                                 decoderNet, encoderEvaluationNodes,
-                                decoderCriterionNodes,
-                                historyMat, m_lst_pair_encoder_decoder_nodes);
+                                decoderCriterionNodes);
 
                             ElemType grdErr = node->GradientValues()(irow, icol);
 
@@ -800,98 +1340,6 @@ namespace Microsoft {
                     }
 
 
-                    learnableNodes = decoderNet.LearnableNodes(decoderEvaluationNodes[0]);
-
-                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
-                    {
-                        ComputationNodePtr node = (*nodeIter);
-
-                        for (size_t itry = 0; itry < min((size_t)10, node->FunctionValues().GetNumElements()); itry++)
-                        {
-
-                            int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
-                            int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
-                            irow = max(0, irow);
-                            icol = max(0, icol);
-
-                            fprintf(stderr, "\n###### d%ws######\n", node->NodeName().c_str());
-                            deviceId = node->FunctionValues().GetDeviceId();  // original device id
-
-                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                            ElemType eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
-                            if (node->FunctionValues().GetDeviceId() != deviceId)
-                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
-
-                            /// perturb parameter
-                            ElemType ePos = eOrg + (ElemType)EPSILON;
-                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                            node->FunctionValues().SetValue(irow, icol, ePos);
-                            if (node->FunctionValues().GetDeviceId() != deviceId)
-                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
-
-                            node->UpdateEvalTimeStamp();
-                            localEpochCriterion.SetValue(0);
-                            localEpochEvalErrors.SetValue(0);
-
-                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                                decoderNet, encoderTrainSetDataReader,
-                                decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
-
-                            ElemType score1 = localEpochCriterion.Get00Element();
-
-                            ElemType eNeg = eOrg - (ElemType)EPSILON;
-                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                            node->FunctionValues().SetValue(irow, icol, eNeg);
-                            if (node->FunctionValues().GetDeviceId() != deviceId)
-                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
-                            node->UpdateEvalTimeStamp();
-                            localEpochCriterion.SetValue(0);
-                            localEpochEvalErrors.SetValue(0);
-
-                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                                decoderNet, encoderTrainSetDataReader,
-                                decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
-
-                            ElemType score1r = localEpochCriterion.Get00Element();
-
-                            ElemType grdNum = (score1r - score1) / (eNeg - ePos);
-
-                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                            node->FunctionValues().SetValue(irow, icol, eOrg);
-                            if (node->FunctionValues().GetDeviceId() != deviceId)
-                                node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
-                            node->UpdateEvalTimeStamp();
-                            localEpochCriterion.SetValue(0);
-                            localEpochEvalErrors.SetValue(0);
-
-                            EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                                decoderNet, encoderTrainSetDataReader,
-                                decoderTrainSetDataReader, encoderEvaluationNodes,
-                                decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, historyMat, localEpochCriterion, localEpochEvalErrors);
-
-                            EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
-                                decoderNet, encoderEvaluationNodes,
-                                decoderCriterionNodes,
-                                historyMat, m_lst_pair_encoder_decoder_nodes);
-
-                            ElemType grdErr = node->GradientValues()(irow, icol);
-
-                            // check if they are consistent
-                            ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
-                            ElemType diff = (ElemType)fabs(grdErr - grdNum);
-                            bool wrong = (std::isnan(diff) || diff > threshold);
-                            if (wrong)
-                            {
-                                char serr[2048];
-                                sprintf_s((char*)serr, 2048, "Decoder %ws Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), grdNum, grdErr);
-                                fprintf(stdout, "%s\n", serr);
-                                verror_msgs.push_back(serr);
-                            }
-                        }
-                    }
-
                     if (verror_msgs.size() > 0)
                         return false;
                     return true;
@@ -906,7 +1354,6 @@ namespace Microsoft {
                     const std::vector<ComputationNodePtr>& decoderFeatureNodes,
                     const std::vector<ComputationNodePtr>& decoderCriterionNodes,
                     const std::vector<ComputationNodePtr>& decoderEvaluationNodes,
-                    Matrix<ElemType>& historyMat,
                     Matrix<ElemType>& localEpochCriterion,
                     Matrix<ElemType>& localEpochEvalErrors
                     )
@@ -916,7 +1363,7 @@ namespace Microsoft {
 
                         encoderNet.SetActualMiniBatchSize(actualMBSize);
                         encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-                        encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.m_sentenceSeg, encoderNet.m_sentenceExistsBeginOrNoLabels);
+                        encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
 
                         encoderNet.Evaluate(encoderEvaluationNodes[0]);
 
@@ -926,22 +1373,7 @@ namespace Microsoft {
                         decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
                         /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                        decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.m_sentenceSeg, decoderNet.m_sentenceExistsBeginOrNoLabels);
-
-                        /// get the pair of encode and decoder nodes
-                        for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
-                        {
-                            /// past hidden layer activity from encoder network to decoder network
-                            ComputationNodePtr encoderNode = iter->first;
-                            ComputationNodePtr decoderNode = iter->second;
-
-                            encoderNode->GetHistory(historyMat, true); /// get the last state activity
-                            decoderNode->SetHistory(historyMat);
-#ifdef DEBUG_DECODER
-                            fprintf(stderr, "LSTM past output norm = %.8e\n", historyMat.ColumnSlice(0, nstreams).FrobeniusNorm());
-                            fprintf(stderr, "LSTM past state norm = %.8e\n", historyMat.ColumnSlice(nstreams, nstreams).FrobeniusNorm());
-#endif
-                        }
+                        decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
 
                         UpdateEvalTimeStamps(decoderFeatureNodes);
                         decoderNet.Evaluate(decoderCriterionNodes[0]);
@@ -969,6 +1401,20 @@ namespace Microsoft {
                     ComputationNetwork<ElemType>& encoderNet,  /// encoder network
                     ComputationNetwork<ElemType>& decoderNet,
                     const std::vector<ComputationNodePtr>& encoderEvaluationNodes,
+                    const std::vector<ComputationNodePtr>& decoderCriterionNodes)
+                {
+                    /// don't reevalute, need to call forward pass before call this function
+                    //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
+
+                    decoderNet.ComputeGradient(decoderCriterionNodes[0]);
+
+                    encoderNet.ComputeGradient(encoderEvaluationNodes[0], false);
+                }
+
+                void sfbEncoderDecoderWithHiddenStatesErrorProp(
+                    ComputationNetwork<ElemType>& encoderNet,  /// encoder network
+                    ComputationNetwork<ElemType>& decoderNet,
+                    const std::vector<ComputationNodePtr>& encoderEvaluationNodes,
                     const std::vector<ComputationNodePtr>& decoderCriterionNodes,
                     Matrix<ElemType>& historyMat,
                     list<pair<ComputationNodePtr, ComputationNodePtr>> lst_pair_encoder_decoder_nodes
@@ -984,7 +1430,7 @@ namespace Microsoft {
                         {
                             RuntimeError("Error in evaluating gradients for decoder network");
                         }
-                        
+
                         try{
                             /// get the pair of encode and decoder nodes
                             for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)
@@ -1028,7 +1474,6 @@ namespace Microsoft {
                         RuntimeError("Errors in backpropagation");
                     }
                 }
-
             };
 
         }

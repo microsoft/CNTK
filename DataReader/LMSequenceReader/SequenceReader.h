@@ -103,6 +103,7 @@ public:
 	using LabelType = typename IDataReader<ElemType>::LabelType;
 	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
 
+
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
@@ -110,13 +111,13 @@ public:
     int nwords, dims, nsamps, nglen, nmefeats;
     Matrix<ElemType>* m_id2classLocal; // CPU version
     Matrix<ElemType>* m_classInfoLocal; // CPU version
-
+    
     Matrix<ElemType>* m_id2Prob; // CPU version
     int class_size;
     map<int, vector<int>> class_words;
 
     int noise_sample_size;
-    noiseSampler<long> m;
+    noiseSampler<long> m_noiseSampler;
 
     ReaderMode readerMode;
     int eos_idx, unk_idx;
@@ -218,8 +219,16 @@ protected:
 
 public:
     virtual void Init(const ConfigParameters& config);
-    void ReadClassInfo(const wstring & vocfile, bool flatten) ;
-    void ReadWord(char *wrod, FILE *fin);
+    static void ReadClassInfo(const wstring & vocfile, int& class_size,
+        map<string, int>& word4idx,
+        map<int, string>& idx4word,
+        map<int, int>& idx4class,
+        map<int, size_t> & idx4cnt, 
+        int nwords,
+        string mUnk,
+        noiseSampler<long>& m_noiseSampler,
+        bool flatten);
+    static void ReadWord(char *wrod, FILE *fin);
 
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                        size_t m_mbStartSample, size_t actualmbsize);
@@ -246,14 +255,15 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
     void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
     
     virtual bool DataEnd(EndDataType endDataType);
-    void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
+
+    int GetSentenceEndIdFromOutputLabel(){ return -1; };
+
 };
 
 template<class ElemType>
@@ -316,14 +326,18 @@ public:
 	using SequenceReader<ElemType>::m_sequence;
 	using SequenceReader<ElemType>::idx4class;
 	using SequenceReader<ElemType>::m_indexer;
-	using SequenceReader<ElemType>::m;
+	using SequenceReader<ElemType>::m_noiseSampler;
 	using SequenceReader<ElemType>::readerMode;
 	using SequenceReader<ElemType>::GetIdFromLabel;
 	using SequenceReader<ElemType>::GetInputToClass;
 	using SequenceReader<ElemType>::GetClassInfo;
+    using IDataReader<ElemType>::mBlgSize;
+    using IDataReader<ElemType>::mDoRandomize;
+
+
 private:
     size_t mLastProcssedSentenceId ; 
-    size_t mBlgSize; 
+
     size_t mPosInSentence;
     vector<size_t> mToProcess;
     size_t mLastPosInSentence; 
@@ -347,6 +361,7 @@ public:
         mLastPosInSentence = 0;
         mNumRead = 0;
         mSentenceEnd = false; 
+        mDoRandomize = false; 
     }
     ~BatchSequenceReader() {
         if (m_labelTemp.size() > 0)
@@ -374,11 +389,12 @@ public:
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool EnsureDataAvailable(size_t mbStartSample);
     size_t NumberSlicesInEachRecurrentIter();
-    void SetNbrSlicesEachRecurrentIter(const size_t mz);
+
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
     void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
 
-    void SetRandomSeed(int);
+    int GetSentenceEndIdFromOutputLabel();
+
 };
 
 }}}

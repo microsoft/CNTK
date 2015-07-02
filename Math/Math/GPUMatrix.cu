@@ -678,6 +678,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        if (sliceNumCols == 0)
+            LogicError("AssignRowStackValuesOf: sliceNumCols should > 0.");
+
+        size_t totalRows = 0;
+        size_t* startRowIndeces = new size_t[inputMatrices.size()+1];
+        ElemType ** bufferPointersInInputMatrices = new ElemType*[inputMatrices.size()];
+
+        startRowIndeces[0] = 0;       
+
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const GPUMatrix<ElemType>& a = *inputMatrices[i];
+            if (a.IsEmpty())
+                LogicError("AssignRowStackValuesOf: input matrix (%d) is empty.", i);
+
+            if (a.GetNumCols() < sliceStartCol + sliceNumCols)
+                LogicError("AssignRowStackValuesOf: input matrix (%d) GetNumCols() < sliceStartCol + sliceNumCols.", i);
+
+            totalRows += a.GetNumRows();
+            startRowIndeces[i + 1] = startRowIndeces[i] + a.GetNumRows();
+
+            bufferPointersInInputMatrices[i] = a.m_pArray + a.LocateColumn(sliceStartCol);
+        }
+
+        Resize(totalRows, sliceNumCols);
+
+        PrepareDevice();
+
+        ElemType** bufferPointersInGPU = NULL;
+        CUDA_CALL(cudaMalloc((void***)&bufferPointersInGPU, inputMatrices.size()*sizeof(ElemType*)));
+        CUDA_CALL(cudaMemcpy(bufferPointersInGPU, bufferPointersInInputMatrices, inputMatrices.size()*sizeof(ElemType*), cudaMemcpyHostToDevice));
+        delete[] bufferPointersInInputMatrices;
+
+        size_t* startRowIndecesInGPU = NULL;
+        CUDA_CALL(cudaMalloc((void**)&startRowIndecesInGPU, (1+inputMatrices.size())*sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(startRowIndecesInGPU, startRowIndeces, (1+inputMatrices.size())*sizeof(size_t), cudaMemcpyHostToDevice));
+        delete[] startRowIndeces;
+
+        LONG64 N = (LONG64)GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignRowStackValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, bufferPointersInGPU, startRowIndecesInGPU, (long) inputMatrices.size(), N, (long)GetNumRows(), (long)GetNumCols());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        CUDA_CALL(cudaFree(bufferPointersInGPU));
+        CUDA_CALL(cudaFree(startRowIndecesInGPU));
+
+        return *this;
+    }
+
     /// c = c - 1.0 for a specific position
     template<class ElemType>
     void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t position)
@@ -855,15 +912,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             throw std::logic_error("SetValue: Matrix is empty.");
 
-        LONG64 N=(LONG64)GetNumElements();
-        int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);
-        PrepareDevice();
-        cudaEvent_t done = nullptr;
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _setValue<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(m_pArray,v,N);
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done)); 
-        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        LONG64 N = (LONG64) GetNumElements();
+
+        // Check if value is zero, which can be set using cudaMemset
+        bool isZero = true;
+        const char * valArray = reinterpret_cast<const char *>(&v);
+
+        for (int i = 0; i < sizeof(ElemType); i++)
+        {
+            if (valArray[i] != 0)
+            {
+                isZero = false;
+                break;
+            }
+        }
+
+        if (isZero)
+        {
+            CUDA_CALL(cudaMemset(m_pArray, 0, N * sizeof(ElemType)));
+        }
+        else
+        {
+            int blocksPerGrid = (int) ceil(1.0 * N / threadsPerBlock);
+            PrepareDevice();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _setValue<ElemType> <<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(m_pArray, v, N);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
     }
 
     template<class ElemType>
@@ -2729,7 +2807,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             maxIndexes.Resize(1, n);
 
             int blocksPerGrid = n; //we'll have 1 block processing 1 column
-            _vectorMaxMinReduce<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,true);
+            _vectorMaxMinReduce<ElemType, true><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n);
 
             /*int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
             _vectorMax<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,isColWise);*/
@@ -2766,7 +2844,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             minIndexes.Resize(1, n);
 
             int blocksPerGrid = n; //we'll have 1 block processing 1 column
-            _vectorMaxMinReduce<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,minIndexes.m_pArray,minValues.m_pArray,m,n,false);
+            _vectorMaxMinReduce<ElemType, false><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,minIndexes.m_pArray,minValues.m_pArray,m,n);
 
             /*
             int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  

@@ -391,29 +391,43 @@ public:
             {
             std::vector<void*> inputs = EvaluateParameters(node, baseName, nodeParamStart, nodeParamCount, pass);
 
-            switch (inputs.size())
+            if (cnNodeType == RowStackNode<ElemType>::TypeName()) //support variable length inputs
             {
-            case 1:
-                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]));
-                break;
-            case 2:
-                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]));
-                break;
-            case 3:
-                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]));
-                break;
-            case 4:
-                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]));
-                break;
-            case 5:
-                nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]), ComputationNodePtr(inputs[4]));
-                break;
-            default:
-                if (nodeParamCount > 0)
-                    RuntimeError("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());
-                break;
-            }
+                std::vector<ComputationNodePtr> inputNodes;
+                inputNodes.resize(inputs.size());
+                for (int i = 0; i < inputs.size(); i++)
+                    inputNodes[i] = ComputationNodePtr(inputs[i]);
 
+                nodePtr->AttachInputs(inputNodes);
+            }
+            else
+            {
+                switch (inputs.size())
+                {
+                case 1:
+                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]));
+                    break;
+                case 2:
+                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]));
+                    break;
+                case 3:
+                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]));
+                    break;
+                case 4:
+                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]));
+                    break;
+                case 5:
+                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]), ComputationNodePtr(inputs[4]));
+                    break;
+                case 6:
+                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]), ComputationNodePtr(inputs[4]), ComputationNodePtr(inputs[5]));
+                    break;
+                default:
+                    if (nodeParamCount > 0)
+                        RuntimeError("Invalid number of parameters name = '%s' call = '%s'\n", node->GetName().c_str(), node->GetValue().c_str());
+                    break;
+                }
+            }
             // process common optional parameters (like "tag");
             ProcessOptionalParameters(node);
             break;
@@ -677,6 +691,10 @@ public:
             else if (!_stricmp(value.c_str(), "criteria"))
             {
                 SetOutputNode(m_net.FinalCriterionNodes(), compNode);
+            }
+            else if (!_stricmp(value.c_str(), "multiseq"))
+            {
+                SetOutputNode(m_net.NodesReqMultiSeqHandling(), compNode);
             }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {

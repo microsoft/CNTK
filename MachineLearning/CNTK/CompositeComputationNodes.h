@@ -1205,6 +1205,10 @@ protected:  \
 
             return true;
         }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     };
 
     template class TimeReverseNode<float>;

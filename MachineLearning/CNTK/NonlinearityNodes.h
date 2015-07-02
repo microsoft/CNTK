@@ -911,8 +911,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(m_gradientDotValue, m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues, 
-            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)  
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues,
+            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradientDotValue.AssignInnerProductOf(gradientValues, functionValues, true);
             diff.AssignDifferenceOf(gradientValues, gradientDotValue);
@@ -920,14 +920,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        virtual void EvaluateThisNode()  
+        virtual void EvaluateThisNode()
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)
         {
+            size_t r = Inputs(0)->FunctionValues().GetNumRows(), c = Inputs(0)->FunctionValues().GetNumCols();
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (m_functionValues.GetNumCols() != c ||
+                m_functionValues.GetNumRows() != r)
+                m_functionValues.Resize(r, c);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
@@ -989,7 +993,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         SoftmaxNode(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId) 
+            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
@@ -1000,6 +1004,128 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
             ComputationNodePtr node = new SoftmaxNode<ElemType>(this, name, flags);
             return node;
+        }
+
+        bool UnitTest()
+        {
+            try{
+                size_t T = 2;
+                size_t k = 2;
+                size_t e = 3;
+
+                /// backup 
+                Matrix<ElemType> f0(m_deviceId);
+                Matrix<ElemType> boundary(m_deviceId);
+                boundary.Resize(k, T);
+                boundary.SetValue(SENTENCE_MIDDLE);
+                boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+                Matrix<ElemType> existsSentenceBegin(m_deviceId);
+                existsSentenceBegin.Resize(1, T);
+                existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                existsSentenceBegin.ColumnSlice(0, 1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                ResetBound(&boundary, &existsSentenceBegin);
+
+                m_samplesInRecurrentStep = k;
+                f0 = Inputs(0)->FunctionValues();
+
+                Inputs(0)->FunctionValues().Resize(e, k);
+                Inputs(0)->FunctionValues().SetValue(0);
+                Inputs(0)->FunctionValues()(0, 0) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(1, 1) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(2, 0) = (ElemType) 1.0;
+                Inputs(0)->FunctionValues()(2, 1) = (ElemType) 1.0;
+
+                FunctionValues().Resize(e, k);
+
+                EvaluateThisNode();
+
+                /// check with expected values
+                if (!ISCLOSE(FunctionValues()(0, 0), 0.42232, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(0, 1), 0.15536, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(1, 0), 0.15536, EPSILON) ||
+                    !ISCLOSE(FunctionValues()(1, 1), 0.42232, EPSILON))
+                    throw("softmax node forward computation error");
+
+                if (FunctionValues().GetDeviceId() != m_deviceId)
+                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                /// perturb parameters
+                size_t i = 0;
+                {
+                    for (size_t itry = 0; itry < min((size_t)10, Inputs(i)->FunctionValues().GetNumElements()); itry++)
+                    {
+                        Matrix<ElemType> postFun(m_deviceId);
+                        Matrix<ElemType> negFun(m_deviceId);
+
+                        int irow = (int)fmod(rand(), Inputs(i)->FunctionValues().GetNumRows() - 1);
+                        int icol = (int)fmod(rand(), Inputs(i)->FunctionValues().GetNumCols() - 1);
+                        irow = max(0, irow);
+                        icol = max(0, icol);
+
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        ElemType eOrg = Inputs(i)->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+
+                        /// perturb parameter
+                        ElemType ePos = eOrg + (ElemType)EPSILON;
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, ePos);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        postFun = FunctionValues();
+
+                        ElemType eNeg = eOrg - (ElemType)EPSILON;
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, eNeg);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        negFun = FunctionValues();
+
+                        Matrix<ElemType> grdNum = postFun - negFun;
+
+                        Inputs(i)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
+                        Inputs(i)->FunctionValues().SetValue(irow, icol, eOrg);
+                        if (Inputs(i)->FunctionValues().GetDeviceId() != m_deviceId)
+                            Inputs(i)->FunctionValues().TransferFromDeviceToDevice(Inputs(i)->FunctionValues().GetDeviceId(), m_deviceId, true);
+                        EvaluateThisNode();
+
+                        /// do backpropagation
+                        GradientValues() = grdNum;
+
+                        Inputs(0)->GradientValues().Resize(e, k);
+                        Inputs(0)->GradientValues().SetValue(0);
+
+                        for (int t = k / m_samplesInRecurrentStep - 1; t >= 0; t--)
+                        {
+                            ComputeInputPartial(i, t);
+                        }
+                        ElemType grdErr = Inputs(i)->GradientValues()(irow, icol);
+
+                        // check if they are consistent
+                        ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(EPSILON))))) - (int)6);
+                        ElemType diff = (ElemType)fabs(grdErr - EPSILON);
+                        bool wrong = (std::isnan(diff) || diff > threshold);
+                        if (wrong)
+                            throw("DelayNode gradient error on input gates");
+                    }
+                }
+
+                if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                    Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+            }
+            catch (...)
+            {
+                fprintf(stderr, "softmax node unit test is not passed!");
+                return false;
+            }
+
+            fprintf(stderr, "softmax node unit test passed!\n");
+            return true;
         }
 
     private:
@@ -1617,5 +1743,213 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
+
+    template<class ElemType>
+    class DropoutNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+
+        DropoutNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                m_dropoutRate = 0;
+                m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
+                InitRecurrentNode();
+            }
+
+        DropoutNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
+                m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
+
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Dropout operation only takes one input.");
+            ComputeInputPartialS(m_dropoutRate, Inputs(0)->GradientValues(), m_maskOfDropout, GradientValues());
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Dropout operation only takes one input.");
+
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
+            if (m_dropoutRate > 0)
+            {
+                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            }
+
+            ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
+        }
+
+        static void WINAPI ComputeInputPartialS(const ElemType dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        {
+            if (dropoutRate > 0)
+            {
+                inputGradientValues.AddElementProductOf(gradientValues, maskOfDropout);
+            }
+            else
+            {
+                inputGradientValues += gradientValues;
+            }
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, FunctionValues(), m_maskOfDropout, Inputs(0)->FunctionValues());
+        }
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
+
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
+            if (m_dropoutRate > 0)
+            {
+                FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+                m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            }
+
+            sliceOutputValue = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
+        }
+
+        static void WINAPI EvaluateThisNodeS(const ElemType dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
+        {
+            if (dropoutRate > 0)
+            {
+                maskOfDropout.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
+
+                maskOfDropout.SetUniformRandomMask(dropoutRate, ElemType(1.0) / (ElemType(1) - dropoutRate), randomSeed);
+                randomSeed += 1073807359;  //1073807359 is a very large prime number to avoid collision with other dropout nodes
+
+                functionValues.AssignElementProductOf(maskOfDropout, inputFunctionValues);
+#if NANCHECK
+                functionValues.HasNan("DropOut");
+#endif
+            }
+            else
+            {
+                //remove this line since we can get same effect by overwritting the FunctionValues functions without copying the values
+                //functionValues = inputFunctionValues;
+            }
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            if (m_dropoutRate > 0)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual Matrix<ElemType>& FunctionValues()
+        {
+            if (m_dropoutRate > 0)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("Dropout operation should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("Dropout operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr inputNode)
+        {
+            m_children.resize(1);
+            m_children[0] = inputNode;
+        }
+
+        void SetDropoutRate(const ElemType val)
+        {
+            if (val < 0 || val >= 1)
+                throw std::logic_error("DropoutRate must be >= 0 and < 1.");
+            m_dropoutRate = val;
+        }
+
+        void SetRandomSeed(const unsigned long val)
+        {
+            m_randomSeed = (unsigned long)val;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_maskOfDropout.GetDeviceId() != deviceId)
+                    m_maskOfDropout.TransferFromDeviceToDevice(m_maskOfDropout.GetDeviceId(), deviceId, true);
+            }
+        }
+
+        static const std::wstring TypeName() { return L"Dropout"; }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            DropoutNode<ElemType>* node = (DropoutNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_dropoutRate = m_dropoutRate;
+                node->m_randomSeed = m_randomSeed;
+                node->m_maskOfDropout = m_maskOfDropout;
+            }
+        }
+
+        // copy constructor
+        DropoutNode(const DropoutNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_maskOfDropout(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new DropoutNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    private:
+        ElemType m_dropoutRate;
+        unsigned long m_randomSeed;
+
+        Matrix<ElemType> m_maskOfDropout;
+    };
+
+    template class DropoutNode<float>;
+    template class DropoutNode<double>;
 
 }}}
