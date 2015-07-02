@@ -1132,6 +1132,10 @@ public:
         {
             newNode = new TimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
+        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
+        {
+            newNode = new TransposeTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1411,6 +1415,10 @@ public:
         else if (nodeType == TimesNode<ElemType>::TypeName())
         {
             newNode = new TimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
+        {
+            newNode = new TransposeTimesNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
@@ -1819,6 +1827,16 @@ public:
                              const std::wstring nodeName = L"")
     {
         ComputationNodePtr newNode(new TimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr TransposeTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new TransposeTimesNode<ElemType>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
