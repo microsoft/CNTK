@@ -195,7 +195,10 @@ void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>
 template<class ElemType>
 int DataReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
-    NOT_IMPLEMENTED;
+    int iRet = -1;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        iRet = m_dataReader[m_ioNames[i]]->GetSentenceEndIdFromOutputLabel();
+    return iRet;
 }
 
 template<class ElemType>
