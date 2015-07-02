@@ -51,3 +51,6 @@ D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\s
 # test 
 # PPL Perplexity = 36.1999
 \\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments.2layers test=[modelPath=$ExpFolder$\modelRnnCNTK] command=test
+
+# use 3 layers of LSTM 52.85
+\\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.nce.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmlm.comments.3layers train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:200:200:200:$VOCABSIZE$]] test=[modelPath=$ExpFolder$\modelRnnCNTK] DEVICE=0
