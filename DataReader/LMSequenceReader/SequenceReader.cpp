@@ -2049,7 +2049,6 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     else // GPU
     {
         RuntimeError("GetLabelOutput::should use CPU for labels ");
-
     }
     if (curDevId != CPUDEVICE)
     {
