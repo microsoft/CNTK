@@ -314,65 +314,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class InputValue<float>; 
     template class InputValue<double>;
 
-    //template<class ElemType>
-    //class SparseInputValue : public InputValue<ElemType>
-    //{
-    //    UsingComputationNodeMembers;
-    //public:
-    //    SparseInputValue (size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(rows, cols, deviceId, name, true) 
-    //    {
-    //        ConvertToSparseMatrix();
-    //        m_functionValues.Resize(rows, cols);
-    //    }
-    //    
-    //    SparseInputValue (size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
-    //        : InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, deviceId, name, true)
-    //    {
-    //            ConvertToSparseMatrix();
-    //    }
-
-    //    SparseInputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(fstream, modelVersion, deviceId, name, true)
-    //    {
-    //        ConvertToSparseMatrix();
-    //    }
-
-    //    virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-    //    {
-    //        InputValue<ElemType>::LoadFromFile(fstream, modelVersion, deviceId, true);
-    //        ConvertToSparseMatrix();
-    //    }
-
-    //    virtual const std::wstring OperationName() const {return TypeName();}
-    //    static const std::wstring TypeName() {return L"SparseInputValue";} 
-
-    //    // copy constructor
-    //    SparseInputValue (const SparseInputValue <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : InputValue<ElemType>(node, newName, flags)
-    //    {
-    //    }
-
-    //    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-    //    {
-    //        const std::wstring& name = (newName == L"")?NodeName():newName;
-    //            
-    //        ComputationNodePtr node = new SparseInputValue<ElemType>(this, name, flags);
-    //        return node;
-    //    }
-
-    //private:
-    //    void ConvertToSparseMatrix()
-    //    {
-    //        size_t rows = m_functionValues.GetNumRows();
-    //        size_t cols = m_functionValues.GetNumCols();
-    //        m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
-    //        m_functionValues.Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
-    //    }
-
-    //};
-
-
-    //template class SparseInputValue<float>; 
-    //template class SparseInputValue<double>;
-
     //originally designed to extract word embedding representation from bag-of-word. 
     //takes two inputs, input0 is weight matrix and input1 is the bag-of-word representation of the inputs
     template<class ElemType>
