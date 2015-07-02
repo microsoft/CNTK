@@ -889,7 +889,7 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     encoderNet.ResetEvalTimeStamp();
 
     ComputationNetwork<ElemType> decoderNet(deviceId);
-    decoderNet.LoadFromFile(decoderModelPath);
+    decoderNet.LoadFromFile(decoderModelPath, FileOptions::fileOptionsBinary, false, & encoderNet);
     decoderNet.ResetEvalTimeStamp();
 
     ConfigArray evalNodeNames = config("evalNodeNames");
