@@ -418,6 +418,20 @@ __global__ void _assignRepeatOf(ElemType * dest, ElemType * src, const LONG64 N,
 }
 
 template<class ElemType>
+__global__ void _addToRowRepeatValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long srcRows, const long srcCols, const long destRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / srcRows;
+    long row = (id - (col * srcRows)) % destRows;
+
+    //dest[col*destRows + row + startIndex] += src[id];
+    dest[IDX2C(row, col, destRows)] += src[id];
+}
+
+template<class ElemType>
 __global__ void _assignPositiveAndShiftedNegSample(ElemType * dest, const ElemType * src, const LONG64 N, const long srcRows, const long srcCols, const long destRows, const long posNumber, const long shiftNumber)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -2886,15 +2900,15 @@ __global__ void _computeNceOutput(
 
     for (int i = start; i < end; i++)
     {
-        int colIndex = (int)col[2 * i];
-        int rowIndex = i / sampleCount;
+        int wid = (int)col[2 * i];
+        int batchid = i / sampleCount;
 
         int loadPerThread = (numCols_a + blockDim.x - 1) / blockDim.x;
         int tstart = loadPerThread * threadIdx.x;
         int tend = min(numCols_a, loadPerThread * (threadIdx.x + 1));
 
         for (int j = tstart; j < tend; j++)
-            partials[threadIdx.x] = a[IDX2C(rowIndex, j, numRows)] * b[IDX2C(j, colIndex, numCols_a)];
+            partials[threadIdx.x] = a[IDX2C(j, batchid, numCols_a)] * b[IDX2C(j, wid, numCols_a)];
 
         __syncthreads();
 
@@ -3312,18 +3326,22 @@ __global__ void _assignNceDerivative(
             for (int j = tstart; j < tend; j++)
             {
                 ElemType val = er * b[IDX2C(j, colIndex, width)];
-                atomicAdd(c + IDX2C(rowIndex, j, numRows), val);
+                atomicAdd(c + IDX2C(j, rowIndex, width), val);
                 //c[IDX2C(rowIndex, j, numRows)] += val;
             }
         }
-        else // weight
+        else if (inputIndex == 2) // weight
         {
             for (int j = tstart; j < tend; j++)
             {
-                ElemType val = er * a[IDX2C(rowIndex, j, numRows)];
+                ElemType val = er * a[IDX2C(j, rowIndex, width)];
                 atomicAdd(c + IDX2C(j, colIndex, width), val);
                 //c[IDX2C(j, colIndex, width)] += val;
             }
+        }
+        else //bias vector
+        {
+            c[colIndex] += er;
         }
     }
 }

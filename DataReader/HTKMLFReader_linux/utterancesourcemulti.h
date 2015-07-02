@@ -117,7 +117,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
-        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource) const
+        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource, int verbosity=0) const
         {
 
             if (numutterances() == 0)
@@ -148,7 +148,8 @@ class minibatchutterancesourcemulti : public minibatchsource
                         latticesource.getlattices (utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
                 //fprintf (stderr, "\n");
-                fprintf (stderr, "requiredata: %zu utterances read\n", utteranceset.size());
+                if (verbosity)
+                    fprintf (stderr, "requiredata: %zu utterances read\n", utteranceset.size());
             }
             catch (...)
             {
@@ -403,15 +404,14 @@ public:
                 // TODO: we can store labels more efficiently now since we don't do frame-wise random access anymore.
     
                 // OK, utterance has all we need --remember it
-                utteranceset.push_back (std::move (utterance));
 
                 if (m==0)
                 {
-                    _totalframes += uttframes;
-                    framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
                     if (!labels.empty() && !lacksmlf)
                     //if (!labels.empty() && labelsiter != labels[0].end())
                     {
+                        // first verify that all the label files have the proper duration
+                        bool durationmatch = true;
                         foreach_index (j, labels)
                         {
                             const auto & labseq = labels[j].find(key)->second;
@@ -421,31 +421,43 @@ public:
                             {
                                 fprintf (stderr, " [duration mismatch (%zu in label vs. %zu in feat file), skipping %S]", labframes, uttframes, key.c_str());
                                 nomlf++;
-                                continue;   // skip this utterance at all
+                                durationmatch = false;
+                                break; // continue;   // skip this utterance at all
                             }
-                            // expand classid sequence into flat array
-                            foreach_index (i, labseq)
+                        }
+                        if (durationmatch){
+                            utteranceset.push_back(std::move(utterance));
+                            _totalframes += uttframes;
+                            framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
+                            // then parse each mlf if the durations are consistent
+                            foreach_index(j, labels)
                             {
-                                const auto & e = labseq[i];
-                                if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                                    throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
-                                if (e.classid >= udim[j])
+                                const auto & labseq = labels[j].find(key)->second;
+                        
+                                // expand classid sequence into flat array
+                                foreach_index (i, labseq)
                                 {
-                                    throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: class id exceeds model output dimension"));
+                                    const auto & e = labseq[i];
+                                    if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
+                                        throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                    if (e.classid >= udim[j])
+                                    {
+                                        throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: class id exceeds model output dimension"));
+                                    }
+                                    if (e.classid != (CLASSIDTYPE) e.classid)
+                                        throw std::runtime_error ("CLASSIDTYPE has too few bits");
+                                    for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
+                                        classids[j]->push_back ((CLASSIDTYPE) e.classid);
+                                    numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
+                                    counts[j].resize (numclasses[j], 0);
+                                    counts[j][e.classid] += e.numframes;
                                 }
-                                if (e.classid != (CLASSIDTYPE) e.classid)
-                                    throw std::runtime_error ("CLASSIDTYPE has too few bits");
-                                for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
-                                    classids[j]->push_back ((CLASSIDTYPE) e.classid);
-                                numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
-                                counts[j].resize (numclasses[j], 0);
-                                counts[j][e.classid] += e.numframes;
+                                classids[j]->push_back ((CLASSIDTYPE) -1);  // append a boundary marker marker for checking
+    
+                                if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
+                                    throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
                             }
-                            classids[j]->push_back ((CLASSIDTYPE) -1);  // append a boundary marker marker for checking
-
-                            if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
-                                throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
-                            assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
                         }
                     }
                     else{
@@ -474,7 +486,7 @@ public:
             }
             if (nomlf + nolat > 0)
             {
-                fprintf (stderr, "minibatchutterancesource: out of %zu files, %zu files not found in label set and %zu have no lattice\n", infiles.size(), nomlf, nolat);
+                fprintf (stderr, "minibatchutterancesource: out of %zu files, %zu files not found in label set and %zu have no lattice\n", infiles[0].size(), nomlf, nolat);
                 if (nomlf + nolat > infiles[m].size() / 2)
                     throw std::runtime_error ("minibatchutterancesource: too many files not found in label set--assuming broken configuration\n");
             }
@@ -600,7 +612,8 @@ private:
             return sweep;
 
         currentsweep = sweep;
-        fprintf (stderr, "lazyrandomization: re-randomizing for sweep %zu in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
+        if (verbosity>0)
+            fprintf (stderr, "lazyrandomization: re-randomizing for sweep %zu in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
 
         const size_t sweepts = sweep * _totalframes;     // first global frame index for this sweep
 
@@ -912,8 +925,9 @@ private:
             auto & chunkdata = randomizedchunks[m][k].getchunkdata();
             if (chunkdata.isinram())
             {
-                fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
-                     k, randomizedchunks[m][k].globalts, randomizedchunks[m][k].globalte()-1, chunksinram-1);
+                if (verbosity)
+                    fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
+                         k, randomizedchunks[m][k].globalts, randomizedchunks[m][k].globalte()-1, chunksinram-1);
                 chunkdata.releasedata();
                 numreleased++;
             }
@@ -957,10 +971,11 @@ private:
             {
                 auto & chunk = randomizedchunks[m][chunkindex];
                 auto & chunkdata = chunk.getchunkdata();
-                fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
+                if (verbosity)
+                    fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
-                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices);
+                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices, verbosity);
                 });
             }
             chunksinram++;
@@ -1069,7 +1084,8 @@ public:
                 }
             }
             // return these utterances
-            fprintf (stderr, "getbatch: getting utterances %zu..%zu (%zu frames out of %zu requested) in sweep %zu\n", spos, epos -1, mbframes, framesrequested, sweep);
+            if (verbosity > 0)
+                fprintf (stderr, "getbatch: getting utterances %zu..%zu (%zu frames out of %zu requested) in sweep %zu\n", spos, epos -1, mbframes, framesrequested, sweep);
             size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
@@ -1147,7 +1163,8 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[0][firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[0][lastchunk].windowend;
-            fprintf (stderr, "getbatch: getting randomized frames [%zu..%zu] (%zu frames out of %zu requested) in sweep %zu; chunks [%zu..%zu] -> chunk window [%zu..%zu)\n",
+            if (verbosity > 0)
+                fprintf (stderr, "getbatch: getting randomized frames [%zu..%zu] (%zu frames out of %zu requested) in sweep %zu; chunks [%zu..%zu] -> chunk window [%zu..%zu)\n",
                      globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
             // release all data outside, and page in all data inside
             for (size_t k = 0; k < windowbegin; k++)

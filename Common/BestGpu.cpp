@@ -43,8 +43,8 @@
 #ifdef MPI_SUPPORT
 #include "mpi.h"
 #endif
-extern int myRank;
-extern int numProcs;
+extern int mpiRank;
+extern int mpiNumProcesses;
 
 // ---------------------------------------------------------------------------
 // BestGpu class
@@ -155,10 +155,10 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
         // make sure deviceId is unique among processes on the same machine
         g_bestGpu->AllowAll();
         std::string MyName(getenv("COMPUTERNAME"));
-        for (int i = 0; i < numProcs; i++)
+        for (int i = 0; i < mpiNumProcesses; i++)
         {
             DEVICEID_TYPE yourDeviceId = deviceId;
-            if (myRank == i)
+            if (mpiRank == i)
             {
                 std::vector<int> devices = g_bestGpu->GetDevices(1);
                 deviceId = yourDeviceId = (DEVICEID_TYPE)devices[0];
@@ -168,10 +168,10 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
                 INT32 YourSize = (INT32)MyName.length();
                 MPI_Bcast(&YourSize,1,MPI_INT,i,MPI_COMM_WORLD);
                 vector<char> YourName(YourSize+1);
-                if (myRank == i)
+                if (mpiRank == i)
                     copy(MyName.begin(), MyName.end(), YourName.begin());
                 MPI_Bcast(YourName.data(), YourSize + 1, MPI_CHAR, i, MPI_COMM_WORLD);
-                if (myRank != i)
+                if (mpiRank != i)
                 {
                     if (!_strcmpi(MyName.data(), YourName.data()))
                     {
