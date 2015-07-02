@@ -83,7 +83,7 @@ public:
                     nodePtr = m_net.CreateInputNode(name, rows, cols);
             }
         }
-        else if (SparseInputValue<ElemType>::TypeName() == cnNodeType)
+        else if (InputValue<ElemType>::SparseTypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
                 RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
