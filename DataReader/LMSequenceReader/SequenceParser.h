@@ -6,6 +6,8 @@
 // </copyright>
 //
 
+#pragma once
+
 #include <string>
 #include <vector>
 #include <assert.h>
@@ -543,7 +545,7 @@ public:
         if (mFile) fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
-            RuntimeError("cannot open file %s", fileName);
+            Warning("cannot open file %s", fileName);
     }
 
     void ParseReset()
