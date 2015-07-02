@@ -179,6 +179,8 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 #define ASSERT assert
 #endif
 
+#define UNUSED(x) (void)(x)
+
 // ----------------------------------------------------------------------------
 // basic data types
 // ----------------------------------------------------------------------------
@@ -252,7 +254,13 @@ template<class _T> class fixed_vector
 {
     _T * p;                 // pointer array
     size_t n;               // number of elements
-    void check (int index) const { index/*avoid compiler warning*/;ASSERT (index >= 0 && (size_t) index < n); }
+    void check (int index) const 
+    { 
+        ASSERT (index >= 0 && (size_t) index < n);
+#ifdef NDEBUG
+        UNUSED(index);
+#endif
+    }
     void check (size_t index) const { ASSERT (index < n); }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
     //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
@@ -1010,90 +1018,6 @@ template<class S> static inline void ZeroStruct (S & s) { memset (&s, 0, sizeof 
 using namespace msra::basetypes;    // for compatibility
 
 #pragma warning (pop)
-
-// RuntimeError - throw a std::runtime_error with a formatted error string
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
-static inline void RuntimeError(const char * format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start (args, format);
-    vsprintf (buffer, format, args);
-    throw std::runtime_error(buffer);
-};
-
-// LogicError - throw a std::logic_error with a formatted error string
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
-static inline void LogicError(const char * format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-    throw std::logic_error(buffer);
-};
-
-// ----------------------------------------------------------------------------
-// dynamic loading of modules
-// ----------------------------------------------------------------------------
-
-#ifdef _WIN32
-class Plugin
-{
-    HMODULE m_hModule;      // module handle for the writer DLL
-    std::wstring m_dllName; // name of the writer DLL
-public:
-    Plugin() { m_hModule = NULL; }
-    template<class STRING>  // accepts char (UTF-8) and wide string 
-    FARPROC Load(const STRING & plugin, const std::string & proc)
-    {
-        m_dllName = msra::strfun::utf16(plugin);
-        m_dllName += L".dll";
-        m_hModule = LoadLibrary(m_dllName.c_str());
-        if (m_hModule == NULL)
-            RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
-
-        // create a variable of each type just to call the proper templated version
-        return GetProcAddress(m_hModule, proc.c_str());
-    }
-    ~Plugin(){} 
-    // removed because this causes the exception messages to be lost  (exception vftables are unloaded when DLL is unloaded) 
-    // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
-};
-#else
-class Plugin
-{
-private:
-	void *handle;
-public:
-	Plugin() 
-	{ 
-		handle = NULL; 
-	}
-
-    template<class STRING>  // accepts char (UTF-8) and wide string 
-    void * Load(const STRING & plugin, const std::string & proc)
-    {
-		string soName = msra::strfun::utf8(plugin);
-		soName = soName + ".so";
-		void *handle = dlopen(soName.c_str(), RTLD_LAZY);
-		if (handle == NULL)
-            RuntimeError("Plugin not found: %s", soName.c_str());
-		return dlsym(handle, proc.c_str());
-    }
-
-	~Plugin() {
-		if (handle != NULL)
-			dlclose(handle);
-	}
-};
-#endif
 
 #if 0   // construction site
 // ----------------------------------------------------------------------------

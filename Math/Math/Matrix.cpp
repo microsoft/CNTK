@@ -680,7 +680,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
         {
-            NOT_IMPLEMENTED;
+            // TODO: Implement optimized ColumnSlice functions for sparse matrices. For now use the ColumnSliceToDense instead.
+            if (devId == CPUDEVICE)
+            {
+                if (slice.m_CPUMatrix != nullptr)
+                    slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                else
+                    slice.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                slice.SetDataLocation(CPU, DENSE);
+            }
+            else
+            {
+                if (slice.m_GPUMatrix != nullptr)
+                    slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                else
+                    slice.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                slice.SetDataLocation(GPU, DENSE);
+            }
         }
         else 
         {
@@ -1595,6 +1611,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             this->m_CPUMatrix->AssignRepeatOf(*a.m_CPUMatrix, numRowRepeats, numColRepeats),
             this->m_GPUMatrix->AssignRepeatOf(*a.m_GPUMatrix, numRowRepeats, numColRepeats),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>&  Matrix<ElemType>::AddToRowRepeatValuesOf(const Matrix<ElemType>& a, const size_t numRepeats)
+    {
+        DecideAndMoveToRightDevice(*this, a);
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AddToRowRepeatValuesOf(*a.m_CPUMatrix, numRepeats),
+            this->m_GPUMatrix->AddToRowRepeatValuesOf(*a.m_GPUMatrix, numRepeats),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -3652,9 +3688,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
             NOT_IMPLEMENTED;
-
-        //if (a.GetMatrixType() == MatrixType::DENSE)
-        //    NOT_IMPLEMENTED;
 
         this->Resize(1, 1);
 

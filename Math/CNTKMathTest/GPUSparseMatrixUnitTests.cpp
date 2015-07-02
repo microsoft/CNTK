@@ -1,5 +1,5 @@
 //
-// <copyright file="GPUMatrixUnitTests.cpp" company="Microsoft">
+// <copyright file="GPUSparseMatrixUnitTests.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -398,6 +398,27 @@ namespace CNTKMathTest
             float x = GPUSparseMatrix<float>::InnerProductOfMatrices(A,B);
             float y = GPUMatrix<float>::InnerProductOfMatrices(A.CopyToDenseMatrix(),B);
             Assert::IsTrue(fabsf(x-y)<0.00001);            
+        }
+
+        TEST_METHOD(GPUSSparseMatrixColumnSlice)
+        {
+            float *fArray = new float[6];
+            fArray[0] = 1; fArray[1] = 4; fArray[2] = 2;
+            fArray[3] = 5; fArray[4] = 3; fArray[5] = 6;
+            GPUMatrix<float> M0(2, 3, fArray, matrixFlagNormal);
+            GPUSparseMatrix<float> SM0(MatrixFormat::matrixFormatSparseCSC);
+            SM0.SetValue(M0);
+
+            GPUMatrix<float> M1 = M0.ColumnSlice(0, 2);
+            GPUMatrix<float> SM1 = SM0.ColumnSlice(0, 2);
+            Assert::IsTrue(M1.IsEqualTo(SM1, 0.0001f));
+
+            GPUMatrix<float> M2 = M0.ColumnSlice(1, 2);
+            GPUMatrix<float> SM2 = SM0.ColumnSlice(1, 2);
+            Assert::IsTrue(M2.IsEqualTo(SM2, 0.0001f));
+
+            Assert::IsFalse(M1.IsEqualTo(SM2, 0.0001f));
+            Assert::IsFalse(M2.IsEqualTo(SM1, 0.0001f));
         }
     };
 }

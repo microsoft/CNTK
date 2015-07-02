@@ -954,8 +954,8 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
 0 : no such case
 1 : case exists
 */
-	    			m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
-		    		m_minibatchPackingFlag.resize(m_mbSize);
+                    m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
+                    m_minibatchPackingFlag.resize(m_mbSize);
 
                     //mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
@@ -985,7 +985,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                             {
                                 m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
-	    						m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                                m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
                                 m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
                             }
                             actualmbsize[i] = m_mbSize;
@@ -1139,7 +1139,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                             m_switchFrame[i] = actualmbsize[i];
                             if (actualmbsize[i] < m_mbSize)
                             {
-	    						m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
+                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
                                 m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]] | MinibatchPackingFlag::UtteranceStart;
                             }
 
@@ -1289,11 +1289,11 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                         if (first)
                         {
-	    					m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-		    				m_minibatchPackingFlag.resize((size_t)feat.cols());
+                            m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
+                            m_minibatchPackingFlag.resize((size_t)feat.cols());
 
-			    			m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-				    		m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+                            m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+                            m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
 
                             std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                             m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;                           
@@ -1418,7 +1418,10 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                     m_toProcess[i] = actualmbsizeOri;
                     first = false;
                 } 
-                else
+                else[merge]
+    tool = kdiff3
+[mergetool "kdiff3"]
+    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
                 {
                     if (m_toProcess[i] != actualmbsizeOri)
                     {
@@ -1472,7 +1475,10 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                 {
                     // loop through the columns and set one value to 1
                     // in the future we want to use a sparse matrix here
-                    for (int k=0; k < actualmbsizeOri; k++)
+                    for (int k=0; k < actualmbsizeOri; k++)[merge]
+    tool = kdiff3
+[mergetool "kdiff3"]
+    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
                     {
                         assert(uids[k] < dim);
                         //labels(uids[i], i) = (ElemType)1;
@@ -1602,7 +1608,10 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                     break;
             }
             return ret;
-        }
+        }[merge]
+    tool = kdiff3
+[mergetool "kdiff3"]
+    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
 
     template<class ElemType>
         void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
@@ -1617,7 +1626,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
     template<class ElemType>
     void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
-		sentenceBegin.SetValue(m_sentenceBegin);
+        sentenceBegin.SetValue(m_sentenceBegin);
         minibatchPackingFlag = m_minibatchPackingFlag;
     }
 
@@ -1645,6 +1654,9 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
             }
         }
 
-    template class HTKMLFReader<float>;
+    template class HTKMLFReader<float>;[merge]
+    tool = kdiff3
+[mergetool "kdiff3"]
+    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
     template class HTKMLFReader<double>;
 }}}

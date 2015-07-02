@@ -70,8 +70,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LMSequenceReader", "DataRea
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DSSMReader", "DataReader\DSSMReader\DSSMReader.vcxproj", "{014DA766-B37B-4581-BC26-963EA5507931}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibSVMBinaryReader", "DataReader\LibSVMBinaryReader\LibSVMBinaryReader.vcxproj", "{D667AF32-028A-4A5D-BE19-F46776F0F6B2}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Linux build files", "Linux build files", "{3ED0465D-23E7-4855-9694-F788717B6533}"
 	ProjectSection(SolutionItems) = preProject

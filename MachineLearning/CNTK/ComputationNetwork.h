@@ -1265,6 +1265,14 @@ public:
         {
             newNode = new DropoutNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
+        else if (nodeType == ReshapeNode<ElemType>::TypeName())
+        {
+            newNode = new ReshapeNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
+        else if (nodeType == RowRepeatNode<ElemType>::TypeName())
+        {
+            newNode = new RowRepeatNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == MeanNode<ElemType>::TypeName())
         {
             newNode = new MeanNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1548,6 +1556,14 @@ public:
         else if (nodeType == DropoutNode<ElemType>::TypeName())
         {
             newNode = new DropoutNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == ReshapeNode<ElemType>::TypeName())
+        {
+            newNode = new ReshapeNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == RowRepeatNode<ElemType>::TypeName())
+        {
+            newNode = new RowRepeatNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == MeanNode<ElemType>::TypeName())
         {
@@ -2000,6 +2016,26 @@ public:
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
         ComputationNodePtr newNode(new DropoutNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr Reshape(const ComputationNodePtr a,
+                               const size_t num_rows,
+                               const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new ReshapeNode<ElemType>(m_deviceId, num_rows, nodeName));
+        newNode->AttachInputs(a);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr RowRepeat(const ComputationNodePtr a,
+                                 const size_t num_repeat,
+                                 const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new RowRepeatNode<ElemType>(m_deviceId, num_repeat, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2818,7 +2854,7 @@ public:
         }
 
     // Validate - Validate the network
-        void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false)
+    void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false)
     {
         // currently only validates nodes, we should validate everything we can
         if (FeatureNodes().size() == 0 && !allowFragment)
