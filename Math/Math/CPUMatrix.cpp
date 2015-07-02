@@ -3921,16 +3921,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // a:   hidden
         // b:   embedding
         // tmp:  softmax
-        //  c: loglikelihood
+        // c: loglikelihood
     {
-        /*z
-        for (int i = 0; i < (*this).GetNumRows(); i++)
-        {
-            for (int j = 0; j < (*this).GetNumCols(); j++)
-                std::cerr << (*this)(i, j) << " ";
-            std::cerr << endl;
-        }
-        */
         double log_likelihood = 0.0;
         size_t sample_size = this->GetNumRows() / 2;
         size_t batch_size = this->GetNumCols();
