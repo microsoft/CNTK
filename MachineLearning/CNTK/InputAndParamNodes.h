@@ -179,7 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        InputValue(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        InputValue(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId) 
         {
             if (rows * cols == 0) 
                 throw std::logic_error("This InputValue dimension is 0.");
@@ -191,12 +191,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
+
+            if (isSparse)
+            {
+                ConvertToSparseMatrix();
+            }
+
             m_functionValues.Resize(rows, cols);
             m_needGradient = false;
             InitRecurrentNode();
         }
         
-        InputValue(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId) 
+        InputValue(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId)
         {
             size_t rows = imageWidth * imageHeight * imageChannels;
             size_t cols = numImages;
@@ -211,15 +217,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
+
+            if (isSparse)
+            {
+                ConvertToSparseMatrix();
+            }
+
             m_functionValues.Resize(rows, cols);
             m_needGradient = false;
             InitRecurrentNode();
         }        
 
-        InputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        InputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
+            LoadFromFile(fstream, modelVersion, deviceId, isSparse);
         }
 
         virtual void SaveToFile(File& fstream) const
@@ -230,7 +242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, bool isSparse = false)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -239,7 +251,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0) 
                 throw std::logic_error("This InputValue dimension is 0.");
 
-            fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
+            fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels;
+
+            if (isSparse)
+            {
+                ConvertToSparseMatrix();
+            }
 
             m_functionValues.Resize(rows, cols);
             m_needGradient = false;
@@ -247,6 +264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"InputValue";} 
+        static const std::wstring SparseTypeName() {return L"SparseInputValue";} 
 
         virtual void EvaluateThisNode()  {} 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
@@ -283,54 +301,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
-    };
-
-    template class InputValue<float>; 
-    template class InputValue<double>;
-
-    template<class ElemType>
-    class SparseInputValue : public InputValue<ElemType>
-    {
-        UsingComputationNodeMembers;
-    public:
-        SparseInputValue (size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(rows, cols, deviceId, name) 
-        {
-            ConvertToSparseMatrix();
-        }
-        
-        SparseInputValue (size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, deviceId, name)
-        {
-                ConvertToSparseMatrix();
-        }
-
-        SparseInputValue (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(fstream, modelVersion, deviceId, name)
-        {
-            ConvertToSparseMatrix();
-        }
-
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-        {
-            InputValue<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-            ConvertToSparseMatrix();
-        }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"SparseInputValue";} 
-
-        // copy constructor
-        SparseInputValue (const SparseInputValue <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : InputValue<ElemType>(node, newName, flags)
-        {
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new SparseInputValue<ElemType>(this, name, flags);
-            return node;
-        }
-
     private:
         void ConvertToSparseMatrix()
         {
@@ -339,12 +309,69 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
             m_functionValues.Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
         }
-
     };
 
+    template class InputValue<float>; 
+    template class InputValue<double>;
 
-    template class SparseInputValue<float>; 
-    template class SparseInputValue<double>;
+    //template<class ElemType>
+    //class SparseInputValue : public InputValue<ElemType>
+    //{
+    //    UsingComputationNodeMembers;
+    //public:
+    //    SparseInputValue (size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(rows, cols, deviceId, name, true) 
+    //    {
+    //        ConvertToSparseMatrix();
+    //        m_functionValues.Resize(rows, cols);
+    //    }
+    //    
+    //    SparseInputValue (size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
+    //        : InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, deviceId, name, true)
+    //    {
+    //            ConvertToSparseMatrix();
+    //    }
+
+    //    SparseInputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : InputValue<ElemType>(fstream, modelVersion, deviceId, name, true)
+    //    {
+    //        ConvertToSparseMatrix();
+    //    }
+
+    //    virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+    //    {
+    //        InputValue<ElemType>::LoadFromFile(fstream, modelVersion, deviceId, true);
+    //        ConvertToSparseMatrix();
+    //    }
+
+    //    virtual const std::wstring OperationName() const {return TypeName();}
+    //    static const std::wstring TypeName() {return L"SparseInputValue";} 
+
+    //    // copy constructor
+    //    SparseInputValue (const SparseInputValue <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : InputValue<ElemType>(node, newName, flags)
+    //    {
+    //    }
+
+    //    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+    //    {
+    //        const std::wstring& name = (newName == L"")?NodeName():newName;
+    //            
+    //        ComputationNodePtr node = new SparseInputValue<ElemType>(this, name, flags);
+    //        return node;
+    //    }
+
+    //private:
+    //    void ConvertToSparseMatrix()
+    //    {
+    //        size_t rows = m_functionValues.GetNumRows();
+    //        size_t cols = m_functionValues.GetNumCols();
+    //        m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
+    //        m_functionValues.Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
+    //    }
+
+    //};
+
+
+    //template class SparseInputValue<float>; 
+    //template class SparseInputValue<double>;
 
     //originally designed to extract word embedding representation from bag-of-word. 
     //takes two inputs, input0 is weight matrix and input1 is the bag-of-word representation of the inputs

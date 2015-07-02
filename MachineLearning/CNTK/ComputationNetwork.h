@@ -1068,9 +1068,9 @@ public:
         {
             newNode = new SparseLearnableParameter<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
-        else if (nodeType == SparseInputValue<ElemType>::TypeName())
+        else if (nodeType == InputValue<ElemType>::SparseTypeName())
         {
-            newNode = new SparseInputValue<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = new InputValue<ElemType>(fstream, modelVersion, m_deviceId, nodeName, true);
         }
         else if (nodeType == ConvolutionNode<ElemType>::TypeName())
         {
@@ -1291,7 +1291,7 @@ public:
     ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
     {
         ComputationNodePtr newNode(
-                new SparseInputValue<ElemType>(rows, cols, m_deviceId, inputName));
+                new InputValue<ElemType>(rows, cols, m_deviceId, inputName, true));
         AddNodeToNet(newNode);
         return newNode;
     }
@@ -1313,7 +1313,7 @@ public:
                                              const size_t imageChannels,
                                              const size_t numImages)
     {
-        ComputationNodePtr newNode(new SparseInputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName));
+        ComputationNodePtr newNode(new InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName, true));
         AddNodeToNet(newNode);
         return newNode;
     }
@@ -3206,7 +3206,7 @@ protected:
             {
                 ComputationNodePtr node = (*nodeIter);
                 if (node->OperationName() == InputValue<ElemType>::TypeName() /*L"InputValue"*/ ||
-                    node->OperationName() == SparseInputValue<ElemType>::TypeName())
+                    node->OperationName() == InputValue<ElemType>::SparseTypeName())
                 {
                     inputs.push_back(node);
                 }
