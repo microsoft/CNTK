@@ -121,7 +121,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifndef _MSC_VER
 static inline int _wsystem(const wchar_t *command) { return system(msra::strfun::utf8(command).c_str()); }
-static inline int _wpopen(const wchar_t * command, const wchar_t mode) { return open(msra::strfun::utf8(command).c_str(), msra::strfun::utf8(mode).c_str()); }
+static inline FILE * _wpopen(const wchar_t * command, const wchar_t *mode) { return popen(msra::strfun::utf8(command).c_str(), msra::strfun::utf8(std::wstring(mode)).c_str()); }
+static inline int _pclose(FILE *stream) { return pclose(stream); }
 #endif
 
 #endif // _BASICS_H_
