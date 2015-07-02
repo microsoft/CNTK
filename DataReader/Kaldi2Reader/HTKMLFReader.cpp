@@ -1170,12 +1170,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     // Pulls frames from next sentence.
-                    if (!m_framemode && !m_noMix && m_truncated && reNewSucc)
+                    if (!m_framemode && !m_noMix && m_truncated )
                     {
                         startFrame = m_switchFrame[i];
                         endFrame = currentMBSize;
                         bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, endFrame - startFrame, currentMBSize, startFrame);
-                        m_processedFrame[i] += endFrame - startFrame;
+                        if (reNewSucc) m_processedFrame[i] += endFrame - startFrame;
                     }
                 }
             }
