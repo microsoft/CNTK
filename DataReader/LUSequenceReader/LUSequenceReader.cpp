@@ -898,6 +898,15 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
                     /// this can support bag of words, since words are placed in the same slot
                     size_t idx = m_featureWordContext[j][jj][ii];
 
+                    if (idx >= featInfo.dim)
+                    {
+                        if (mtSentenceBegin(utt_id, utt_t) != NO_LABELS) /// for those obs that are for no observations
+                        {
+                            LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here. ");
+                        }
+                        continue;
+                    }
+
                     assert(idx < featInfo.dim);
                     if (utt_t > mSentenceEndAt[utt_id]) 
                         locObs.SetValue(idx + jj * featInfo.dim, j, (ElemType)0);

@@ -1239,11 +1239,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
-            m_CPUMatrix->Resize(numRows,numCols,growOnly), 
-            m_GPUMatrix->Resize(numRows,numCols,growOnly), 
+            m_CPUMatrix->Resize(numRows, numCols, growOnly),
+            m_GPUMatrix->Resize(numRows, numCols, growOnly),
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
+    }
+
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::RepMat(const Matrix<ElemType>& frmMat, const size_t rowRatio, const size_t colRatio)
+    {
+        size_t nCols = frmMat.GetNumCols(); 
+        size_t nRows = frmMat.GetNumRows();
+
+        if (rowRatio > 1)
+            RuntimeError("RepMat not yet supporting raw ratio larger than 1");
+        size_t newCols = colRatio * nCols;
+
+        Matrix<ElemType> c(nRows, newCols, frmMat.GetDeviceId());
+        for (size_t i = 0; i < colRatio; i++)
+        {
+            c.ColumnSlice(i * nCols, nCols) = frmMat;
+        }
+
+        return c;
     }
 
     template<class ElemType>
@@ -1500,6 +1519,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
         return *this;
     }
+
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const Matrix<ElemType>& a = *inputMatrices[i];
+            DecideAndMoveToRightDevice(*this, a);
+
+            //WARNING: a and this must have same type
+            if (!(GetMatrixType() == a.GetMatrixType()))
+                NOT_IMPLEMENTED;
+        }
+
+        CurrentDataLocation curLocation = GetCurrentMatrixLocation();
+        if (curLocation == CurrentDataLocation::GPU || curLocation == CurrentDataLocation::BOTH)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //GPUDense;
+                std::vector<const GPUMatrix<ElemType>*> gpuInputMatrices;
+                gpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    gpuInputMatrices[i] = inputMatrices[i]->m_GPUMatrix;
+
+                m_GPUMatrix->AssignRowStackValuesOf(gpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else if (curLocation == CurrentDataLocation::CPU)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //CPUDense;
+                std::vector<const CPUMatrix<ElemType>*> cpuInputMatrices;
+                cpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    cpuInputMatrices[i] = inputMatrices[i]->m_CPUMatrix;
+
+                m_CPUMatrix->AssignRowStackValuesOf(cpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Matrices do not exist in either CPU or GPU.");
+        }
+
+        return *this;
+    } 
+
 
     template<class ElemType>
     Matrix<ElemType>&  Matrix<ElemType>::AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
@@ -3581,7 +3662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t sampleCount = a.m_CPUMatrix->GetNumElements() / a.m_CPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
-            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, sampleCount, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
+            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
         }
         else
         {

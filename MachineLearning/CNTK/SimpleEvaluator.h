@@ -18,6 +18,8 @@
 #include "ComputationNetwork.h"
 #include "ComputationNetworkHelper.h"
 
+//#define DEBUG
+
 using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -134,7 +136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
                 m_net.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
-                dataReader.SetSentenceSegBatch(m_net.m_sentenceSeg, m_net.m_sentenceExistsBeginOrNoLabels); 
+                dataReader.SetSentenceSegBatch(m_net.mSentenceBoundary, m_net.mExistsBeginOrNoLabels);
 
                 for (int i=0; i<evalNodes.size(); i++)
                 {
@@ -431,6 +433,206 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
+            //initialize eval results
+            std::vector<ElemType> evalResults;
+            for (int i = 0; i < decoderEvalNodes.size(); i++)
+            {
+                evalResults.push_back((ElemType)0);
+            }
+
+            //prepare features and labels
+            std::vector<ComputationNodePtr> & encoderFeatureNodes = encoderNet.FeatureNodes();
+
+            std::vector<ComputationNodePtr> & decoderFeatureNodes = decoderNet.FeatureNodes();
+            std::vector<ComputationNodePtr> & decoderLabelNodes = decoderNet.LabelNodes();
+
+            std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices;
+            for (size_t i = 0; i < encoderFeatureNodes.size(); i++)
+            {
+                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &encoderFeatureNodes[i]->FunctionValues();
+            }
+
+            std::map<std::wstring, Matrix<ElemType>*> decoderInputMatrices;
+            for (size_t i = 0; i < decoderFeatureNodes.size(); i++)
+            {
+                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &decoderFeatureNodes[i]->FunctionValues();
+            }
+            for (size_t i = 0; i < decoderLabelNodes.size(); i++)
+            {
+                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &decoderLabelNodes[i]->FunctionValues();
+            }
+
+            //evaluate through minibatches
+            size_t totalEpochSamples = 0;
+            size_t numMBsRun = 0;
+            size_t actualMBSize = 0;
+            size_t numSamplesLastMBs = 0;
+            size_t lastMBsRun = 0; //MBs run before this display
+
+            std::vector<ElemType> evalResultsLastMBs;
+            for (int i = 0; i < evalResults.size(); i++)
+                evalResultsLastMBs.push_back((ElemType)0);
+
+            encoderDataReader.StartMinibatchLoop(mbSize, 0, testSize);
+            decoderDataReader.StartMinibatchLoop(mbSize, 0, testSize);
+
+            Matrix<ElemType> mEncoderOutput(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
+            Matrix<ElemType> historyMat(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
+
+            bool bContinueDecoding = true;
+            while (bContinueDecoding){
+                /// first evaluate encoder network
+                if (encoderDataReader.GetMinibatch(encoderInputMatrices) == false)
+                    break;
+                if (decoderDataReader.GetMinibatch(decoderInputMatrices) == false)
+                    break;
+                UpdateEvalTimeStamps(encoderFeatureNodes);
+                UpdateEvalTimeStamps(decoderFeatureNodes);
+
+                actualMBSize = encoderNet.GetActualMBSize();
+                if (actualMBSize == 0)
+                    LogicError("decoderTrainSetDataReader read data but encoderNet reports no data read");
+
+                encoderNet.SetActualMiniBatchSize(actualMBSize);
+                encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
+                encoderDataReader.SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
+
+                assert(encoderEvalNodes.size() == 1);
+                for (int i = 0; i < encoderEvalNodes.size(); i++)
+                {
+                    encoderNet.Evaluate(encoderEvalNodes[i]);
+                }
+
+
+                /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                actualMBSize = decoderNet.GetActualMBSize();
+                decoderNet.SetActualMiniBatchSize(actualMBSize);
+                if (actualMBSize == 0)
+                    LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
+                decoderNet.SetActualNbrSlicesInEachRecIter(decoderDataReader.NumberSlicesInEachRecurrentIter());
+                decoderDataReader.SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
+
+                for (int i = 0; i<decoderEvalNodes.size(); i++)
+                {
+                    decoderNet.Evaluate(decoderEvalNodes[i]);
+                    evalResults[i] += decoderEvalNodes[i]->FunctionValues().Get00Element(); //criterionNode should be a scalar
+                }
+
+                totalEpochSamples += actualMBSize;
+                numMBsRun++;
+
+                if (m_traceLevel > 0)
+                {
+                    numSamplesLastMBs += actualMBSize;
+
+                    if (numMBsRun % m_numMBsToShowResult == 0)
+                    {
+                        DisplayEvalStatistics(lastMBsRun + 1, numMBsRun, numSamplesLastMBs, decoderEvalNodes, evalResults, evalResultsLastMBs);
+
+                        for (int i = 0; i < evalResults.size(); i++)
+                        {
+                            evalResultsLastMBs[i] = evalResults[i];
+                        }
+                        numSamplesLastMBs = 0;
+                        lastMBsRun = numMBsRun;
+                    }
+                }
+
+                /// call DataEnd to check if end of sentence is reached
+                /// datareader will do its necessary/specific process for sentence ending 
+                encoderDataReader.DataEnd(endDataSentence);
+                decoderDataReader.DataEnd(endDataSentence);
+            }
+
+            // show last batch of results
+            if (m_traceLevel > 0 && numSamplesLastMBs > 0)
+            {
+                DisplayEvalStatistics(lastMBsRun + 1, numMBsRun, numSamplesLastMBs, decoderEvalNodes, evalResults, evalResultsLastMBs);
+            }
+
+            //final statistics
+            for (int i = 0; i < evalResultsLastMBs.size(); i++)
+            {
+                evalResultsLastMBs[i] = 0;
+            }
+
+            fprintf(stderr, "Final Results: ");
+            DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, decoderEvalNodes, evalResults, evalResultsLastMBs);
+
+            for (int i = 0; i < evalResults.size(); i++)
+            {
+                evalResults[i] /= totalEpochSamples;
+            }
+
+            return evalResults;
+        }
+
+        /// this evaluates encoder network and decoder network
+        vector<ElemType> sfbEvaluateEncoderDecoderWithHiddenStates(
+            ComputationNetwork<ElemType>& encoderNet,
+            ComputationNetwork<ElemType>& decoderNet,
+            IDataReader<ElemType>& encoderDataReader,
+            IDataReader<ElemType>& decoderDataReader,
+            const vector<wstring>& encoderEvalNodeNames,
+            const vector<wstring>& decoderEvalNodeNames,
+            const size_t mbSize,
+            const size_t testSize = requestDataSize)
+        {
+            //specify evaluation nodes
+            std::vector<ComputationNodePtr> encoderEvalNodes;
+            std::vector<ComputationNodePtr> decoderEvalNodes;
+
+            if (encoderEvalNodeNames.size() == 0)
+            {
+                fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
+                if (encoderNet.EvaluationNodes().size() == 0)
+                    throw std::logic_error("There is no default evalnodes criterion node specified in the network.");
+
+                for (int i = 0; i < encoderNet.EvaluationNodes().size(); i++)
+                    encoderEvalNodes.push_back(encoderNet.EvaluationNodes()[i]);
+            }
+            else
+            {
+                for (int i = 0; i < encoderEvalNodeNames.size(); i++)
+                {
+                    ComputationNodePtr node = encoderNet.GetNodeFromName(encoderEvalNodeNames[i]);
+                    encoderNet.BuildAndValidateNetwork(node);
+                    if (!node->FunctionValues().GetNumElements() == 1)
+                    {
+                        throw std::logic_error("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
+                    }
+                    encoderEvalNodes.push_back(node);
+                }
+            }
+
+            if (decoderEvalNodeNames.size() == 0)
+            {
+                fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
+                if (decoderNet.EvaluationNodes().size() == 0)
+                    throw std::logic_error("There is no default evalnodes criterion node specified in the network.");
+                if (decoderNet.FinalCriterionNodes().size() == 0)
+                    throw std::logic_error("There is no default criterion criterion node specified in the network.");
+
+                for (int i = 0; i < decoderNet.EvaluationNodes().size(); i++)
+                    decoderEvalNodes.push_back(encoderNet.EvaluationNodes()[i]);
+
+                for (int i = 0; i < decoderNet.FinalCriterionNodes().size(); i++)
+                    decoderEvalNodes.push_back(decoderNet.FinalCriterionNodes()[i]);
+            }
+            else
+            {
+                for (int i = 0; i < decoderEvalNodeNames.size(); i++)
+                {
+                    ComputationNodePtr node = decoderNet.GetNodeFromName(decoderEvalNodeNames[i]);
+                    decoderNet.BuildAndValidateNetwork(node);
+                    if (!node->FunctionValues().GetNumElements() == 1)
+                    {
+                        throw std::logic_error("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
+                    }
+                    decoderEvalNodes.push_back(node);
+                }
+            }
+
             if (m_lst_pair_encoder_decoder_nodes.size() == 0)
                 throw runtime_error("TrainOneEpochEncoderDecoderWithHiddenStates: no encoder and decoder node pairs");
 
@@ -496,7 +698,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 encoderNet.SetActualMiniBatchSize(actualMBSize);
                 encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
-                encoderDataReader.SetSentenceSegBatch(encoderNet.m_sentenceSeg, encoderNet.m_sentenceExistsBeginOrNoLabels);
+                encoderDataReader.SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
 
                 assert(encoderEvalNodes.size() == 1);
                 for (int i = 0; i < encoderEvalNodes.size(); i++)
@@ -507,7 +709,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 decoderNet.SetActualNbrSlicesInEachRecIter(decoderDataReader.NumberSlicesInEachRecurrentIter());
-                decoderDataReader.SetSentenceSegBatch(decoderNet.m_sentenceSeg, decoderNet.m_sentenceExistsBeginOrNoLabels);
+                decoderDataReader.SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
 
                 /// get the pair of encode and decoder nodes
                 for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = m_lst_pair_encoder_decoder_nodes.begin(); iter != m_lst_pair_encoder_decoder_nodes.end(); iter++)
@@ -657,6 +859,102 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &decoderLabelNodes[i]->FunctionValues();
             }
 
+            //evaluate through minibatches
+            size_t totalEpochSamples = 0;
+            size_t actualMBSize = 0;
+
+            encoderDataReader.StartMinibatchLoop(mbSize, 0, testSize);
+            encoderDataReader.SetNbrSlicesEachRecurrentIter(1);
+            decoderDataReader.StartMinibatchLoop(mbSize, 0, testSize);
+            decoderDataReader.SetNbrSlicesEachRecurrentIter(1);
+
+            Matrix<ElemType> mEncoderOutput(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
+            Matrix<ElemType> historyMat(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
+
+            bool bDecoding = true; 
+            while (bDecoding){
+                if (encoderDataReader.GetMinibatch(encoderInputMatrices) == false)
+                    break;
+
+                UpdateEvalTimeStamps(encoderFeatureNodes);
+
+                actualMBSize = encoderNet.GetActualMBSize();
+
+                encoderNet.SetActualMiniBatchSize(actualMBSize);
+                encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
+                encoderDataReader.SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
+
+                assert(encoderEvalNodes.size() == 1);
+                for (int i = 0; i<encoderEvalNodes.size(); i++)
+                {
+                    encoderNet.Evaluate(encoderEvalNodes[i]);
+                }
+
+                size_t mNutt = encoderDataReader.NumberSlicesInEachRecurrentIter();
+
+                vector<size_t> best_path;
+
+                /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                decoderNet.SetActualMiniBatchSize(actualMBSize);
+                decoderNet.SetActualNbrSlicesInEachRecIter(mNutt);
+                encoderDataReader.SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
+
+                FindBestPathWithVariableLength(decoderNet, actualMBSize, decoderDataReader, dataWriter, outputNodes, writeNodes, decoderFeatureNodes, beam, decoderInputMatrices, best_path);
+
+                totalEpochSamples += actualMBSize;
+
+                /// call DataEnd to check if end of sentence is reached
+                /// datareader will do its necessary/specific process for sentence ending 
+                encoderDataReader.DataEnd(endDataSentence);
+                decoderDataReader.DataEnd(endDataSentence);
+            }
+        }
+
+        void sfbEncodingEvaluateDecodingBeamSearch(
+            ComputationNetwork<ElemType>& encoderNet,
+            ComputationNetwork<ElemType>& decoderNet,
+            IDataReader<ElemType>& encoderDataReader,
+            IDataReader<ElemType>& decoderDataReader,
+            IDataWriter<ElemType>& dataWriter,
+            const vector<wstring>& outputNodeNames, const vector<wstring>& writeNodeNames,
+            const size_t mbSize, const ElemType beam, const size_t testSize)
+        {
+            std::vector<ComputationNodePtr> encoderEvalNodes;
+            for (int i = 0; i< encoderNet.OutputNodes().size(); i++)
+                encoderEvalNodes.push_back(encoderNet.OutputNodes()[i]);
+            assert(encoderEvalNodes.size() == 1);
+
+            //specify output nodes and files
+            std::vector<ComputationNodePtr> outputNodes;
+            for (int i = 0; i<outputNodeNames.size(); i++)
+                outputNodes.push_back(decoderNet.GetNodeFromName(outputNodeNames[i]));
+
+            //specify nodes to write to file
+            std::vector<ComputationNodePtr> writeNodes;
+            for (int i = 0; i<writeNodeNames.size(); i++)
+                writeNodes.push_back(m_net.GetNodeFromName(writeNodeNames[i]));
+
+            //prepare features and labels
+            std::vector<ComputationNodePtr> & encoderFeatureNodes = encoderNet.FeatureNodes();
+            std::vector<ComputationNodePtr> & decoderFeatureNodes = decoderNet.FeatureNodes();
+            std::vector<ComputationNodePtr> & decoderLabelNodes = decoderNet.LabelNodes();
+
+            std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices;
+            for (size_t i = 0; i<encoderFeatureNodes.size(); i++)
+            {
+                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &encoderFeatureNodes[i]->FunctionValues();
+            }
+
+            std::map<std::wstring, Matrix<ElemType>*> decoderInputMatrices;
+            for (size_t i = 0; i<decoderFeatureNodes.size(); i++)
+            {
+                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &decoderFeatureNodes[i]->FunctionValues();
+            }
+            for (size_t i = 0; i<decoderLabelNodes.size(); i++)
+            {
+                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &decoderLabelNodes[i]->FunctionValues();
+            }
+
             /// get the pair of encode and decoder nodes
             if (m_lst_pair_encoder_decoder_nodes.size() == 0 && m_lst_pair_encoder_decode_node_names.size() > 0)
             {
@@ -686,7 +984,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> mEncoderOutput(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
             Matrix<ElemType> historyMat(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
 
-            bool bDecoding = true; 
+            bool bDecoding = true;
             while (bDecoding){
                 if (encoderDataReader.GetMinibatch(encoderInputMatrices) == false)
                     break;
@@ -697,7 +995,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 encoderNet.SetActualMiniBatchSize(actualMBSize);
                 encoderNet.SetActualNbrSlicesInEachRecIter(encoderDataReader.NumberSlicesInEachRecurrentIter());
-                encoderDataReader.SetSentenceSegBatch(encoderNet.m_sentenceSeg, encoderNet.m_sentenceExistsBeginOrNoLabels);
+                encoderDataReader.SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
 
                 assert(encoderEvalNodes.size() == 1);
                 for (int i = 0; i<encoderEvalNodes.size(); i++)
@@ -728,8 +1026,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 decoderDataReader.SetNbrSlicesEachRecurrentIter(mNutt);
                 decoderNet.SetActualNbrSlicesInEachRecIter(decoderDataReader.NumberSlicesInEachRecurrentIter());
 
-                decoderNet.m_sentenceSeg.Resize(decoderDataReader.NumberSlicesInEachRecurrentIter(), 1);
-                decoderNet.m_sentenceSeg.SetValue(SENTENCE_MIDDLE);
+                decoderNet.mSentenceBoundary.Resize(decoderDataReader.NumberSlicesInEachRecurrentIter(), 1);
+                decoderNet.mSentenceBoundary.SetValue(SENTENCE_MIDDLE);
 
                 FindBestPathWithVariableLength(decoderNet, actualMBSize, decoderDataReader, dataWriter, outputNodes, writeNodes, decoderFeatureNodes, beam, decoderInputMatrices, best_path);
 
@@ -746,8 +1044,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const ElemType& best_score_so_far,
             vector<pair<int, ElemType>>& rCandidate)
         {
-            Matrix<ElemType> ptrScore(CPUDEVICE);
+            Matrix<ElemType> ptrScore(score.GetDeviceId());
             ptrScore = score;
+            ptrScore.TransferFromDeviceToDevice(ptrScore.GetDeviceId(), CPUDEVICE, true);
 
             ElemType *pPointer = ptrScore.BufferPointer();
             vector<pair<int, ElemType>> tPairs;
@@ -961,7 +1260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// is the begining of sentence
             evalnet.SetActualMiniBatchSize(mbSize);
             evalnet.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
-            dataReader.SetSentenceSegBatch(evalnet.m_sentenceSeg, evalnet.m_sentenceExistsBeginOrNoLabels);
+            dataReader.SetSentenceSegBatch(evalnet.mSentenceBoundary, evalnet.mExistsBeginOrNoLabels);
 
             clock_t start, now;
             start = clock();
@@ -981,9 +1280,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             evalnet.SetActualMiniBatchSize(1);
-            dataReader.SetSentenceSegBatch(evalnet.m_sentenceSeg, evalnet.m_sentenceExistsBeginOrNoLabels);
+            dataReader.SetSentenceSegBatch(evalnet.mSentenceBoundary, evalnet.mExistsBeginOrNoLabels);
             /// need to set the sentence begining segmentation info
-            evalnet.m_sentenceSeg.SetValue(SENTENCE_BEGIN);
+            evalnet.mSentenceBoundary.SetValue(SENTENCE_BEGIN);
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
@@ -993,7 +1292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet.m_sentenceSeg.SetValue(SENTENCE_MIDDLE); 
+                    evalnet.mSentenceBoundary.SetValue(SENTENCE_MIDDLE);
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -1112,7 +1411,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t mbSize = inputLength;
             size_t maxMbSize = 3 * mbSize;
-
+#ifdef DEBUG
+            maxMbSize = 2;
+#endif
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             evalnet.SetActualMiniBatchSize(mbSize);
@@ -1141,10 +1442,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ElemType best_score = -numeric_limits<ElemType>::infinity();
             ElemType best_score_so_far = -numeric_limits<ElemType>::infinity();
+
+            evalnet.mSentenceBoundary.SetValue(SENTENCE_BEGIN);
+
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
-                best_score = -numeric_limits<ElemType>::infinity();
+                ElemType best_score = -numeric_limits<ElemType>::infinity();
                 vector<size_t> best_output_label;
+
+                if (itdx > 0)
+                {
+                    /// state need to be carried over from past time instance
+                    evalnet.mSentenceBoundary.SetValue(SENTENCE_MIDDLE);
+                }
 
                 PreComputeActivityAtTime(itdx);
 

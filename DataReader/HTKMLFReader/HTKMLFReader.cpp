@@ -778,6 +778,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return false;
 
             // now, access all features and and labels by iterating over map of "matrices"
+			bool first = true;
             std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
             for (iter = matrices.begin();iter!=matrices.end(); iter++)
             {
@@ -792,6 +793,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     dim = m_featureNameToDimMap[iter->first];
                     const msra::dbn::matrixstripe feat = m_mbiter->frames(id);
                     const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
+					if (first)
+					{
+						mtSentenceBegin.Resize((size_t)1, (size_t)1);
+						mtExistsSentenceBeginOrNoLabels.Resize((size_t)1, (size_t)feat.cols());
+
+						mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+						mtSentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
+
+						mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+						mtExistsSentenceBeginOrNoLabels.SetValue(0, 0 ,(ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+						first = false;
+					}
+
                     assert (actualmbsize == m_mbiter->currentmbframes());
                     skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
 
@@ -932,6 +946,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 size_t numOfFea = m_featuresBufferMultiIO.size();
                 size_t numOfLabel = m_labelsBufferMultiIO.size();
+
+				mtSentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
+				mtExistsSentenceBeginOrNoLabels.Resize(1, m_mbSize);
+
+				mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+				mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+
                 vector<size_t> actualmbsize;
                 actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
                 for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
@@ -949,6 +970,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             m_switchFrame[i] = 0;
                             m_sentenceEnd[i] = true;
+							mtSentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+							mtExistsSentenceBeginOrNoLabels.SetValue(0, 0, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
                         }
                         actualmbsize[i] = m_mbSize;
                         endFr = startFr + actualmbsize[i];
@@ -957,8 +980,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             // dereference matrix that corresponds to key (input/output name) and 
                             // populate based on whether its a feature or a label
-                            //Matrix<ElemType>& data =
-                                                        *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                             if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                             {
@@ -1035,8 +1057,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             // dereference matrix that corresponds to key (input/output name) and 
                             // populate based on whether its a feature or a label
-                            //Matrix<ElemType>& data =
-                                                        *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data =*matrices[iter->first]; // can be features or labels
 
                             if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                             {
@@ -1099,6 +1120,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                         m_processedFrame[i] += (endFr-startFr);
                         m_switchFrame[i] = actualmbsize[i];
+						if (actualmbsize[i] < m_mbSize)
+						{
+							mtSentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
+							mtExistsSentenceBeginOrNoLabels.SetValue(0, actualmbsize[i], (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+						}
                         startFr = m_switchFrame[i];
                         endFr = m_mbSize;
                         bool reNewSucc = ReNewBufferForMultiIO(i);
@@ -1106,8 +1132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             // dereference matrix that corresponds to key (input/output name) and 
                             // populate based on whether its a feature or a label
-                            //Matrix<ElemType>& data =
-                                                        *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                             if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                             {
@@ -1228,7 +1253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_fileEvalSource->CreateEvalMinibatch();
 
             // populate input matrices
-
+			bool first = true;
             std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
             for (iter = matrices.begin();iter!=matrices.end(); iter++)
             {
@@ -1242,6 +1267,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t dim = m_featureNameToDimMap[iter->first];
 
                     const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
+					if (first)
+					{
+						mtSentenceBegin.Resize((size_t)1, (size_t)1);
+						mtExistsSentenceBeginOrNoLabels.Resize((size_t)1, (size_t)feat.cols());
+
+						mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+						mtSentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+
+						mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+						mtExistsSentenceBeginOrNoLabels.SetValue(0, 0, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+						first = false;
+					}
 
                     // copy the features over to our array type
                     assert(feat.rows()==dim); dim; // check feature dimension matches what's expected
@@ -1545,13 +1582,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void HTKMLFReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
+    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
     {
-        sentenceEnd.resize(m_switchFrame.size());
-        for (size_t i = 0; i < m_switchFrame.size(); i++)
-        {
-            sentenceEnd[i] = m_switchFrame[i];
-        }
+		sentenceBegin.SetValue(mtSentenceBegin);
+		sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
     }
 
     template<class ElemType>

@@ -222,6 +222,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, RowSliceNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, RowStackNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, LookupTableNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, GMMLogLikelihoodNode<ElemType>::TypeName(), L"GMMLL"))
@@ -235,6 +237,10 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, ParallelNode<ElemType>::TypeName(), L"Parallel"))
         ret = true;
     else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), L"LSTM"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, AlignmentNode<ElemType>::TypeName(), L"Alignment"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, AlignmentNode<ElemType>::TypeName(), L"PairNetwork"))
         ret = true;
 
     // return the actual node name in the parameter if we found something

@@ -32,11 +32,11 @@ DEVICE = gpu
 BUILDTYPE = debug
 #BUILDTYPE = release
 # comment following and uncomment the next one to enable MKL library
-#MATHLIB = acml
-MATHLIB = mkl
+MATHLIB = acml
+#MATHLIB = mkl
 # modify relevant path below for your system
 MKL_PATH = /usr/users/chiaying/intel/composer_xe_2013.2.146
-ACML_PATH = /usr/local/acml5.3.0/gfortran64
+ACML_PATH = /usr/local/acml5.3.1/ifort64
 #######
 
 BUILDFOR = $(ARCH).$(DEVICE).$(BUILDTYPE).$(MATHLIB)
@@ -48,8 +48,8 @@ ifeq ($(BUILDTYPE),debug)
 	BUILDTYPE_OPT = -g
 	GPU_BUILDTYPE_OPT = -G
 else
-	BUILDTYPE_OPT = -O4
-	GPU_BUILDTYPE_OPT =
+	BUILDTYPE_OPT = -O3 -flto
+	GPU_BUILDTYPE_OPT = -O3
 endif
 
 ifeq ($(MATHLIB),mkl)
@@ -73,6 +73,8 @@ INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(CUDA_INCL
 CFLAGS = -msse3 -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K $(MATHLIB_DEFINE) -fopenmp -fpermissive
 
 NVCCFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -arch=compute_20
+
+LDFLAGS=-Wl,-rpath,'$$ORIGIN'
 
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
              Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp Common/TimerUtility.cpp
@@ -105,7 +107,6 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 SEPARATOR = "=-----------------------------------------------------------="
 
 all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so
-	ln -sf $(CURDIR)/$(BINDIR)/* bin
 
 $(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
 	@echo $(SEPARATOR)
@@ -134,7 +135,7 @@ $(BINDIR)/cntk: $(CORE_OBJ)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CC) $(BUILDTYPE_OPT) -o $@ $^ $(CUDA_LIB) $(MATHLIB_LIB) -fopenmp -ldl -fPIC 
+	$(CC) $(BUILDTYPE_OPT) $(LDFLAGS) -o $@ $^ $(CUDA_LIB) $(MATHLIB_LIB) -fopenmp -ldl -fPIC 
 
 -include ${DEP}
 
@@ -142,7 +143,7 @@ $(OBJDIR)/%.o : %.cu Makefile
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
-	$(NVCC) -c $< -o $@ $(BUILDTYPE_OPT) $(GPU_BUILDTYPE_OPT) $(NVCCFLAGS) $(INCFLAGS) -Xcompiler -fPIC
+	$(NVCC) -c $< -o $@ $(GPU_BUILDTYPE_OPT) $(NVCCFLAGS) $(INCFLAGS) -Xcompiler -fPIC
 
 $(OBJDIR)/%.o : %.cpp Makefile
 	@echo $(SEPARATOR)

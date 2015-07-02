@@ -586,4 +586,157 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LookupTableNode<float>;
     template class LookupTableNode<double>;
 
+    /**
+    pair this node to a node in another network
+    */
+    template<class ElemType>
+    class PairNetworkNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        PairNetworkNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            m_reqMultiSeqHandling = true;
+            m_functionValues.Resize(1, 1);
+            InitRecurrentNode();
+        }
+
+        PairNetworkNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+
+            m_functionValues.Resize(1, 1);
+            m_reqMultiSeqHandling = true;
+
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        PairNetworkNode(const DEVICEID_TYPE deviceId, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            m_reqMultiSeqHandling = true;
+
+            m_functionValues.Resize(row_size, col_size);
+
+            m_gradientValues.Resize(row_size, col_size);
+            m_gradientValues.SetValue(0.0f);
+
+            InitRecurrentNode();
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+
+        /// to-do: need to change to the new way of resetting state
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("PairNetwork operation only takes one input.");
+
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Inputs(inputIndex)->GradientValues());
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Delay operation only takes one input.");
+            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
+            assert(m_sentenceSeg != nullptr);
+            assert(m_existsSentenceBeginOrNoLabels != nullptr);
+
+            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep), 
+                mTmp);
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            m_functionValues.SetValue(Inputs(0)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> mTmp = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            mTmp.SetValue(Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation(true);
+
+            if (m_children.size() != 1)
+                throw std::logic_error("PairNetwork operation should have one input.");
+
+            if (!(Inputs(0) == nullptr))
+            {
+                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+
+                if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
+            }
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr inputNode)
+        {
+            m_children.resize(1);
+            m_children[0] = inputNode;
+        }
+
+        void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
+            std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
+        {
+            if (visited.find(this) == visited.end())  //not visited
+            {
+                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+
+                //children first for function evaluation
+                if (!IsLeaf())
+                {
+                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
+                        m_needGradient = true;
+                    else
+                        m_needGradient = false;
+                }
+
+                result.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                this->m_visitedOrder = result.size();
+            }
+            else
+            {
+                if (!IsLeaf() && bFromDelayNode)
+                    sourceRecurrentNodePtr.push_back(this);
+            }
+        }
+
+        static const std::wstring TypeName() { return L"PairNetwork"; }
+
+        // copy constructor
+        PairNetworkNode(const PairNetworkNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new PairNetworkNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
+    };
+
+    template class PairNetworkNode<float>;
+    template class PairNetworkNode<double>;
+
 }}}
