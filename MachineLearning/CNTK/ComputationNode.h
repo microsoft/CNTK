@@ -779,7 +779,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_children[i] == nullptr)
                         continue;
-                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, this->OperationName() == L"Delay");
+                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, this->OperationName() == DelayNode<ElemType>::TypeName());
                 }
                 
                 //children first for function evaluation
