@@ -964,7 +964,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int j = 0; j < Inputs(3)->FunctionValues().GetNumRows(); j++)
                     m_logSoftmax(i, j) += Inputs(3)->FunctionValues()(j, 0);
                 */
-                m_logSoftmax += Inputs(3)->FunctionValues().Transpose();
+                m_logSoftmax += Inputs(3)->FunctionValues();
                 m_logSoftmax.InplaceLogSoftmax(false);
                 FunctionValues().Resize(1, 1);
                 FunctionValues().SetValue(0);
