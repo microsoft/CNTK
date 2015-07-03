@@ -50,7 +50,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
 #pragma region base computation class
-
     template<class ElemType>
     class ComputationNode //Abstract Class that cannot be instantiated
     {
