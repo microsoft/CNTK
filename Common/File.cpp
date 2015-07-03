@@ -98,7 +98,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
     if (m_filename == L"-")                                 // stdin/stdout
     {
         if (writing && reading)
-            RuntimeError("File: path '-' fileOptionsRead and fileOptionsWrite at once");
+            RuntimeError("File: cannot specify fileOptionsRead and fileOptionsWrite at once with path '-'");
         m_file = writing ? stdout : stdin;
     }
     else if (outputPipe || inputPipe)                       // pipe syntax
