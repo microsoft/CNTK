@@ -1888,7 +1888,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
      
         p = 512;
         while (p / 2 > this->GetNumElements() / 2) p = p / 2;
-      
         // summing up objective must be done in one block
         _assignNoiseContrastiveEstimation<ElemType> << <1, p >> >(
             this->GetArray(),
@@ -1899,6 +1898,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             my_b.GetArray(),
             tmp.GetArray(),
             c.GetArray());
+      
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
@@ -1915,8 +1915,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int p = 512;
         int width = a.GetNumRows();
         while (p / 2 > width) p = p / 2;
-
-        _assignNceDerivative<ElemType> << <m_nz, p >> >(
+        _assignNceDerivative<ElemType> << <this->GetNumElements() / 2, p >> >(
             GetArray(),
             tmp.GetNumCols(),
             m_numRows / 2,
@@ -1926,7 +1925,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             tmp.GetArray(),
             c.GetArray(),
             inputIndex);
-
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));

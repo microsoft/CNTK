@@ -2984,7 +2984,8 @@ __global__ void _assignNceDerivative(
             for (int j = tstart; j < tend; j++)
             {
                 ElemType val = -er * b[IDX2C(j, wid, width)];
-                atomicAdd(c + IDX2C(j, batchId, width), val);
+                atomicAdd(&c[IDX2C(j, batchId, width)], val);
+                //c[IDX2C(j, batchId, width)] += val;
                 //c[IDX2C(batchId, j, numRows)] += val;
             }
         }
@@ -2993,7 +2994,7 @@ __global__ void _assignNceDerivative(
             for (int j = tstart; j < tend; j++)
             {
                 ElemType val = -er * a[IDX2C(j, batchId, width)];
-                atomicAdd(c + IDX2C(j, wid, width), val);
+                atomicAdd(&c[IDX2C(j, wid, width)], val);
                 //c[IDX2C(j, wid, width)] += val;
             }
         }
