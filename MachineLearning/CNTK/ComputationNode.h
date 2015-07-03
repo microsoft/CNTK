@@ -50,7 +50,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
 #pragma region base computation class
-
     template<class ElemType>
     class ComputationNode //Abstract Class that cannot be instantiated
     {
@@ -779,7 +778,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_children[i] == nullptr)
                         continue;
-                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, this->OperationName() == DelayNode<ElemType>::TypeName());
+                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, this->OperationName() == L"Delay");
                 }
                 
                 //children first for function evaluation
