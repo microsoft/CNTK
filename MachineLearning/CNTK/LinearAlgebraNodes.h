@@ -3012,6 +3012,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CopyImageSizeFromInputs();
         }
 
+        bool UnitTest()
+        {
+            size_t T = 2;
+            m_samplesInRecurrentStep = 1;
+            size_t k = m_samplesInRecurrentStep;
+            size_t d = 2;
+            size_t nT = T * k;
+
+            /// backup 
+            Matrix<ElemType> f0(m_deviceId), f1(m_deviceId), f2(m_deviceId);
+            Matrix<ElemType> boundary(m_deviceId);
+            boundary.Resize(k, T);
+            boundary.SetValue(SENTENCE_MIDDLE);
+            boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+            Matrix<ElemType> existsSentenceBegin(m_deviceId);
+            existsSentenceBegin.Resize(1, T);
+            existsSentenceBegin.SetValue(NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+            existsSentenceBegin.ColumnSlice(0, 1).SetValue(EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+            ResetBound(&boundary, &existsSentenceBegin);
+
+            f0 = Inputs(0)->FunctionValues();
+            f1 = Inputs(1)->FunctionValues();
+            f2 = Inputs(2)->FunctionValues();
+            Inputs(2)->FunctionValues().SetValue(1);
+
+            Inputs(0)->FunctionValues().Resize(d, nT);
+            Inputs(0)->FunctionValues().ColumnSlice(0, 1).SetValue((ElemType)0.5);
+            Inputs(0)->FunctionValues()(0, 1) = (ElemType) 1.0;
+            Inputs(0)->FunctionValues()(1, 1) = (ElemType) 0.5;
+            Inputs(1)->FunctionValues().Resize(nT, k);
+            Inputs(1)->FunctionValues().SetValue(3);
+            Inputs(0)->FunctionValues()(0, 0) = (ElemType) 1.0;
+
+            FunctionValues().Resize(d, k);
+
+            EvaluateThisNode();
+
+            /// the stridetimes node is an extension of times node
+            /// so its function values should be the same as that from times node when there is no stride
+            Matrix<ElemType> tmpMat(FunctionValues().GetDeviceId());
+            TimesNode<ElemType>::EvaluateThisNodeS(tmpMat, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+
+            if (tmpMat.GetNumElements() != FunctionValues().GetNumElements() ||
+                !ISCLOSE(FunctionValues()(0, 0), tmpMat(0, 0), EPSILON) ||
+                !ISCLOSE(FunctionValues()(1, 0), tmpMat(1, 0), EPSILON))
+                return false;
+            if (FunctionValues().GetDeviceId() != m_deviceId)
+                FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+            Inputs(2)->FunctionValues().SetValue(0);
+            EvaluateThisNode();
+
+            if (tmpMat.GetNumElements() != FunctionValues().GetNumElements() ||
+                !ISCLOSE(FunctionValues()(0, 0), tmpMat(0, 0), EPSILON) ||
+                !ISCLOSE(FunctionValues()(1, 0), tmpMat(1, 0), EPSILON))
+                return false;
+            if (FunctionValues().GetDeviceId() != m_deviceId)
+                FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+
+            return true;
+        }
+
         virtual void CopyImageSizeFromInputs()
         {
             CopyImageSizeFromInput(1, false); //the second one is the input since it's column wize
