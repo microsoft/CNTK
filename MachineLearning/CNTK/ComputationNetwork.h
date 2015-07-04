@@ -976,6 +976,8 @@ public:
 
             if (nodeType == LearnableParameter<ElemType>::TypeName())
                 newNode = new LearnableParameter<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == ConstParameter<ElemType>::TypeName())
+                newNode = new ConstParameter<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == InputValue<ElemType>::TypeName())
                 newNode = new InputValue<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == SparseLearnableParameter<ElemType>::TypeName())
@@ -1014,6 +1016,8 @@ public:
                 newNode = new TransposeNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == TimesNode<ElemType>::TypeName())
                 newNode = new TimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+                newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ElementTimesNode<ElemType>::TypeName())
                 newNode = new ElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == DiagTimesNode<ElemType>::TypeName())
@@ -1084,6 +1088,13 @@ public:
                 throw std::invalid_argument("Invalid node type.");
             }
             
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr CreateConstParameter(const std::wstring paramName, const size_t rows, const size_t cols)
+        {
+            ComputationNodePtr newNode(new ConstParameter<ElemType>(rows, cols, m_deviceId, paramName));
             AddNodeToNet(newNode);
             return newNode;
         }
@@ -1210,6 +1221,8 @@ public:
                 newNode = new TransposeNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == TimesNode<ElemType>::TypeName())
                 newNode = new TimesNode<ElemType>(m_deviceId, nodeName);
+            else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+                newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == ElementTimesNode<ElemType>::TypeName())
                 newNode = new ElementTimesNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == DiagTimesNode<ElemType>::TypeName())
@@ -1560,7 +1573,15 @@ public:
             return newNode;
         }
 
-        ComputationNodePtr ElementTimes (const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+        ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
+        {
+            ComputationNodePtr newNode(new StrideTimesNode<ElemType>(m_deviceId, nodeName));
+            newNode->AttachInputs(a, b, c);
+            AddNodeToNet(newNode);
+            return newNode;
+        }
+
+        ComputationNodePtr ElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new ElementTimesNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(a, b);
