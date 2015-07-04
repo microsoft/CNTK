@@ -1339,7 +1339,6 @@ namespace Microsoft {
                         }
                     }
 
-
                     if (verror_msgs.size() > 0)
                         return false;
                     return true;
