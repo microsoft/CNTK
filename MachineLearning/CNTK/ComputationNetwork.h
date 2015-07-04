@@ -1971,7 +1971,8 @@ public:
 
         virtual void ComputeGradient(const ComputationNodePtr rootNode, 
             bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
-            const Matrix<ElemType>* rootGradientInitValue = nullptr
+            const Matrix<ElemType>* rootGradientInitValue = nullptr,
+            bool bClearGradient = true
             )
         {
             if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
@@ -1980,7 +1981,8 @@ public:
             //run forward pass first
             Evaluate(rootNode);
 
-            ClearGradientForAllNodes(rootNode);
+            if (bClearGradient)
+                ClearGradientForAllNodes(rootNode);
 
             //run backward pass
             std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
