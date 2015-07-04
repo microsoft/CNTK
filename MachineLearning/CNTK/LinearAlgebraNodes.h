@@ -2741,7 +2741,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         for (size_t t = 0; t < T1; t++)
                         {
-                            Inputs(0)->GradientValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1) = mTmp1.ColumnSlice(t, 1);
+                            Inputs(0)->GradientValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1).SetValue(mTmp1.ColumnSlice(t, 1));
                         }
                     }
                 }
@@ -2758,7 +2758,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         mTmp1.Resize(r, T1);
                         for (size_t t = 0; t < T1; t++)
                         {
-                            mTmp1.ColumnSlice(t, 1) = Inputs(0)->FunctionValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1);
+                            mTmp1.ColumnSlice(t, 1).SetValue(Inputs(0)->FunctionValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1));
                         }
                         Matrix<ElemType> mTmp2(sliceOutputGrad.GetDeviceId());
                         mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
@@ -2929,7 +2929,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     mTmp1.Resize(d, T1);
                     for (size_t j = 0; j < T1; j++)
                     {
-                        mTmp1.ColumnSlice(j, 1) = input0.ColumnSlice(j * stride + k, 1);
+                        mTmp1.ColumnSlice(j, 1).SetValue(input0.ColumnSlice(j * stride + k, 1));
                     }
 
                     mTmp2 = input1.ColumnSlice(k, 1);
