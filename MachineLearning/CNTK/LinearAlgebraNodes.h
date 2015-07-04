@@ -3071,6 +3071,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (FunctionValues().GetDeviceId() != m_deviceId)
                 FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
 
+            /// since no stride, gradient values from using stridedim = 0 and stridedim = 1 should be the same
+            Matrix<ElemType> tmpMat2(FunctionValues().GetDeviceId());
+            size_t r = FunctionValues().GetNumRows();
+            size_t c = FunctionValues().GetNumCols();
+            GradientValues().Resize(r, c);
+            GradientValues().SetValue(1.0);
+
+            size_t r0 = Inputs(0)->FunctionValues().GetNumRows(), c0 = Inputs(0)->FunctionValues().GetNumCols();
+            size_t r1 = Inputs(1)->FunctionValues().GetNumRows(), c1 = Inputs(1)->FunctionValues().GetNumCols();
+            Inputs(0)->GradientValues().Resize(r0, c0); Inputs(0)->GradientValues().SetValue(0);
+            Inputs(1)->GradientValues().Resize(r1, c1); Inputs(1)->GradientValues().SetValue(0);
+            tmpMat2.Resize(r1, c1);
+            tmpMat2.SetValue(0);
+            mStrideDim = 0;
+            ComputeInputPartial(0, 0);
+            tmpMat.SetValue(Inputs(0)->GradientValues());
+            ComputeInputPartial(1, 0);
+            tmpMat2.SetValue(Inputs(1)->GradientValues());
+
+            Inputs(0)->GradientValues().Resize(r0, c0); Inputs(0)->GradientValues().SetValue(0);
+            Inputs(1)->GradientValues().Resize(r1, c1); Inputs(1)->GradientValues().SetValue(0);
+            mStrideDim = 1;
+            ComputeInputPartial(0, 0);
+            if (tmpMat.GetNumElements() != Inputs(0)->GradientValues().GetNumElements() ||
+                !ISCLOSE(Inputs(0)->GradientValues()(0, 0), tmpMat(0, 0), EPSILON) ||
+                !ISCLOSE(Inputs(0)->GradientValues()(1, 0), tmpMat(1, 0), EPSILON))
+                return false;
+            ComputeInputPartial(1, 0);
+            if (tmpMat2.GetNumElements() != Inputs(1)->GradientValues().GetNumElements() ||
+                !ISCLOSE(Inputs(1)->GradientValues()(0, 0), tmpMat2(0, 0), EPSILON) ||
+                !ISCLOSE(Inputs(1)->GradientValues()(1, 0), tmpMat2(1, 0), EPSILON))
+                return false;
+            if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
+                Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
+            if (Inputs(1)->GradientValues().GetDeviceId() != m_deviceId)
+                Inputs(1)->GradientValues().TransferFromDeviceToDevice(Inputs(1)->GradientValues().GetDeviceId(), m_deviceId, true);
             return true;
         }
 
