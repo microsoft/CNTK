@@ -238,9 +238,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), L"LSTM"))
         ret = true;
-    else if (EqualInsensitive(nodeType, AlignmentNode<ElemType>::TypeName(), L"Alignment"))
-        ret = true;
-    else if (EqualInsensitive(nodeType, AlignmentNode<ElemType>::TypeName(), L"PairNetwork"))
+    else if (EqualInsensitive(nodeType, PairNetworkNode<ElemType>::TypeName(), L"PairNetwork"))
         ret = true;
     else if (EqualInsensitive(nodeType, StrideTimesNode<ElemType>::TypeName(), L"StrideTimes"))
         ret = true;

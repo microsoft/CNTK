@@ -1078,8 +1078,6 @@ public:
                 newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == ParallelNode<ElemType>::TypeName())
                 newNode = new ParallelNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-            else if (nodeType == AlignmentNode<ElemType>::TypeName())
-                newNode = new AlignmentNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else if (nodeType == PairNetworkNode<ElemType>::TypeName())
                 newNode = new PairNetworkNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
             else
@@ -1279,8 +1277,6 @@ public:
                 newNode = new ParallelNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == RowStackNode<ElemType>::TypeName())
                 newNode = new RowStackNode<ElemType>(m_deviceId, nodeName);
-            else if (nodeType == AlignmentNode<ElemType>::TypeName())
-                newNode = new AlignmentNode<ElemType>(m_deviceId, nodeName);
             else if (nodeType == PairNetworkNode<ElemType>::TypeName())
                 newNode = new PairNetworkNode<ElemType>(m_deviceId, nodeName);
             else
@@ -1693,14 +1689,6 @@ public:
         {
             ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
             newNode->AttachInputs(dictionary, input);
-            AddNodeToNet(newNode);
-            return newNode;
-        }
-
-        ComputationNodePtr Alignment(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
-        {
-            ComputationNodePtr newNode(new AlignmentNode<ElemType>(m_deviceId, nodeName));
-            newNode->AttachInputs(a, b, c);
             AddNodeToNet(newNode);
             return newNode;
         }
