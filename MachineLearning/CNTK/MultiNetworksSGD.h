@@ -1405,9 +1405,11 @@ namespace Microsoft {
                     /// don't reevalute, need to call forward pass before call this function
                     //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
 
+                    encoderNet.ClearGradientForAllNodes(encoderEvaluationNodes[0]);
+
                     decoderNet.ComputeGradient(decoderCriterionNodes[0]);
 
-                    encoderNet.ComputeGradient(encoderEvaluationNodes[0], false);
+                    encoderNet.ComputeGradient(encoderEvaluationNodes[0], false, nullptr, false);
                 }
 
                 void sfbEncoderDecoderWithHiddenStatesErrorProp(
