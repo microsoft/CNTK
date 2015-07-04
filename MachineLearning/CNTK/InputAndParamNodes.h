@@ -174,6 +174,110 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SparseLearnableParameter<float>; 
     template class SparseLearnableParameter<double>;
 
+    //used to represent weight Matrix<ElemType> and biases
+    template<class ElemType>
+    class ConstParameter : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        ConstParameter(size_t rows, size_t cols, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            //intentionally comment out so that we may support automatic dimention inference
+            //if (rows * cols == 0) 
+            //    throw std::logic_error("This ConstParameter dimension is 0.");
+
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_needGradient = false;
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            m_functionValues.Resize(rows, cols);
+
+            m_outputWidth = 1;
+            m_outputHeight = rows;
+            m_outputChannels = 1;
+
+            InitRecurrentNode();
+        }
+
+        ConstParameter(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << NeedGradient();
+            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols();
+            fstream << FunctionValues();
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+
+            size_t rows, cols;
+            fstream >> m_needGradient;
+            fstream >> rows >> cols;
+
+            //intentionally comment out to support automatic dimention inference
+            //if (rows * cols == 0) 
+            //    throw std::logic_error("This ConstParameter dimension is 0.");
+
+            m_functionValues.Resize(rows, cols);
+            fstream >> m_functionValues;
+
+            m_outputWidth = 1;
+            m_outputHeight = rows;
+            m_outputChannels = 1;
+        }
+
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
+        virtual void EvaluateThisNode()  {}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+        }
+
+        static const std::wstring TypeName() { return L"ConstParameter"; }
+
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        {
+            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+
+            char str[4096];
+            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            fstream << string(str);
+            sprintf(str, "NeedGradient=%s", NeedGradient() ? "true" : "false");
+            fstream << string(str);
+
+            PrintNodeValuesToFile(printValues, fstream);
+        }
+
+        // copy constructor
+        ConstParameter(const ConstParameter<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new ConstParameter<ElemType>(this, name, flags);
+            return node;
+        }
+    };
+
+    template class ConstParameter<float>;
+    template class ConstParameter<double>;
+
     template<class ElemType>
     class InputValue : public ComputationNode<ElemType>
     {
