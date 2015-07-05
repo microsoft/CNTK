@@ -429,11 +429,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 rowStride = m_net->CreateConstParameter(L"rowStride", 1, 1);
                 rowStride->FunctionValues().SetValue(0);
                 alignoutput = m_net->StrideTimes(encoderOutput, m_net->Softmax(m_net->StrideTimes(m_net->Times(m_net->Transpose(encoderOutput), e), delay, rowStride)), columnStride);
-//                alignoutput = m_net->StrideTimes(encoderOutput, m_net->Softmax(m_net->Times(m_net->Times(m_net->Transpose(encoderOutput), e), delay)), columnStride);
-//                alignoutput = m_net->Times(encoderOutput, m_net->Softmax(m_net->StrideTimes(m_net->Times(m_net->Transpose(encoderOutput), e), delay, rowStride)));
-//                alignoutput = m_net->Times(encoderOutput, m_net->Softmax(m_net->Times(m_net->Times(m_net->Transpose(encoderOutput), e), delay)));
-                //                alignoutput = (ComputationNodePtr)m_net->Alignment(delay, encoderOutput, e, L"alignment");
 
+                //                alignoutput = m_net->Times(encoderOutput, m_net->Softmax(m_net->Times(m_net->Times(m_net->Transpose(encoderOutput), e), delay)));
+                
                 output = ApplyNonlinearFunction(
                     m_net->Plus(
                     m_net->Times(u, input), m_net->Times(w, alignoutput)), 0);
