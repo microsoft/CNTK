@@ -1122,6 +1122,8 @@ public:
         ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
         {
             ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
+            if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
+                LogicError("PairNetwork : asked to pair a node with name %s in another network. However, this network has already a node with the same name. Should avoid this case.\n", a->NodeName());
             newNode->AttachInputs(a);
             AddNodeToNet(newNode);
             return newNode;
@@ -1699,15 +1701,19 @@ public:
             return (iter != m_nameToNodeMap.end());
         }
 
-        ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr)  const
+        ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr,
+            bool bPanic = true)  const
         {
             auto iter = m_nameToNodeMap.find(name);
             if (iter != m_nameToNodeMap.end()) //found
                 return iter->second;
             if (anotherNetwork != nullptr)
                 return anotherNetwork->GetNodeFromName(name);
-            
-            RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
+
+            if (bPanic)
+                RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
+            else
+                return nullptr;
         }
 
         // GetNodesFromName - Get all the nodes from a name that may match a wildcard '*' pattern
@@ -1982,7 +1988,7 @@ public:
             Evaluate(rootNode);
 
             if (bClearGradient)
-                ClearGradientForAllNodes(rootNode);
+            ClearGradientForAllNodes(rootNode);
 
             //run backward pass
             std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
