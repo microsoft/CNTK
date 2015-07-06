@@ -25,8 +25,6 @@
 #include "minibatchiterator.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
-#include "commandArgUtil.h"
-
 #include "HTKMLFReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection

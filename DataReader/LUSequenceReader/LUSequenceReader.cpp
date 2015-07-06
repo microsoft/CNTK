@@ -736,7 +736,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
                     {
                         mtSentenceBegin.SetValue(k, j, (ElemType)SENTENCE_BEGIN);
-                        m_minibatchPackingFlag[j] = m_minibatchPackingFlag[j] | MinibatchPackingFlag::UtteranceStart;
+                        m_minibatchPackingFlag[j] |= MinibatchPackingFlag::UtteranceStart;
                     }
                 }
 
@@ -799,7 +799,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
                     mtSentenceBegin.SetValue(k, j, (ElemType) NO_LABELS);
-                    m_minibatchPackingFlag[j] = m_minibatchPackingFlag[j] | MinibatchPackingFlag::NoLabel;
+                    m_minibatchPackingFlag[j] |= MinibatchPackingFlag::NoLabel;
                 }
 
             }

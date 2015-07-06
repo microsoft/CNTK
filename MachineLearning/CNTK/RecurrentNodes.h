@@ -158,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int i = 0; i < minibatchPackingFlag->size(); i++)
                 {
-                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceStart)
+                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceStartOrNoLabel)
                     {
                         //we set delay-1 elements following it to be UtteranceStart until met NoLabel
                         for (int j = 0; j < numRows; j++)
@@ -187,7 +187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (valueChanged)
                     {
-                        m_shiftedMinibatchPackingFlag[i] = m_shiftedMinibatchPackingFlag[i] | MinibatchPackingFlag::UtteranceStart;
+                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::UtteranceStart;
                     }
                 }
 

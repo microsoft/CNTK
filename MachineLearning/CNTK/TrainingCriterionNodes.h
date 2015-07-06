@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-                
+
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"SquareError";} 
 
@@ -213,7 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-                
+
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"CrossEntropyWithSoftmax";} 
 
