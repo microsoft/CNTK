@@ -162,13 +162,13 @@ namespace Microsoft {
 
                     startEpoch = max(startEpoch, 0);
 
-                    if (m_doUnitTest)
+                    /*  if (m_doUnitTest)
                     {
                         if (decoderNet.UnitTest() == false)
                             LogicError("unit test on decoder network not passed");
 
                         return;
-                    }
+                    }*/
 
                     fprintf(stderr, "start training ...\n");
                     TrainEncoderDecoderModel(startEpoch, encoderNet, decoderNet, encoderTrainSetDataReader,

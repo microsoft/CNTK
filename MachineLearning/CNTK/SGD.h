@@ -571,13 +571,13 @@ public:
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
 
-        if (m_doUnitTest)
+        /*  if (m_doUnitTest)
         {
             if (net.UnitTest() == false)
                 LogicError("unit test on decoder network not passed");
 
             return;
-        }
+        }*/
 
         startEpoch = max(startEpoch, 0);
         m_needRegularization = false;

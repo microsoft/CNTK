@@ -48,8 +48,8 @@ DEVICE = gpu
 #BUILDTYPE = debug
 BUILDTYPE = release
 # comment following and uncomment the next one to enable MKL library
-MATHLIB = acml
-#MATHLIB = mkl
+#MATHLIB = acml
+MATHLIB = mkl
 # modify relevant path below for your system
 MKL_PATH = /usr/users/yzhang87/tools/composer_xe_2015.2.164
 ACML_PATH = /usr/users/yzhang87/code/acml/gfortran64
