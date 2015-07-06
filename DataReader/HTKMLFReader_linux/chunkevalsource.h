@@ -341,8 +341,20 @@ namespace msra { namespace dbn {
                 const size_t framesInBlock = framesMulti[i].size();
                 feat[i].resize(vdims[i], framesInBlock);   // input features for whole utt (col vectors)
                 // augment the features
+                size_t leftextent, rightextent;
+                // page in the needed range of frames
+                if (leftcontext[i] == 0 && rightcontext[i] == 0)
+                {
+                    leftextent = rightextent = augmentationextent(framesMulti[i][0].size(), vdims[i]);
+                }
+                else
+                {
+                    leftextent = leftcontext[i];
+                    rightextent = rightcontext[i];
+                }
+
                 //msra::dbn::augmentneighbors(framesMulti[i], boundaryFlags, 0, leftcontext[i], rightcontext[i],)
-                msra::dbn::augmentneighbors (framesMulti[i], boundaryFlags, leftcontext[i], rightcontext[i], 0, framesInBlock, feat[i]);
+                msra::dbn::augmentneighbors (framesMulti[i], boundaryFlags, leftextent, rightextent, 0, framesInBlock, feat[i]);
             }
             minibatchReady=true;
         }

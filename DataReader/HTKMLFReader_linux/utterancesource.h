@@ -749,7 +749,8 @@ private:
         if (!chunkdata.isinram())
             return;       // already out
 
-        fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
+        if (verbosity)
+            fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
                  k, randomizedchunks[k].globalts, randomizedchunks[k].globalte()-1, chunksinram-1);
         chunkdata.releasedata();
         chunksinram--;
@@ -768,7 +769,8 @@ private:
         if (chunkdata.isinram())
             return false;
 
-        fprintf (stderr, "requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
+        if (verbosity)
+            fprintf (stderr, "requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
         msra::util::attempt (5, [&]()   // (reading from network)
         {
             chunkdata.requiredata (featkind, featdim, sampperiod, this->lattices);
@@ -858,7 +860,8 @@ public:
             transcripts.clear();
 
             // return these utterances
-            fprintf (stderr, "getbatch: getting utterances %zu..%zu (%zu frames out of %zu requested) in sweep %zu\n", spos, epos -1, mbframes, framesrequested, sweep);
+            if (verbosity > 0)
+                fprintf (stderr, "getbatch: getting utterances %zu..%zu (%zu frames out of %zu requested) in sweep %zu\n", spos, epos -1, mbframes, framesrequested, sweep);
             size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
@@ -922,7 +925,8 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[lastchunk].windowend;
-            fprintf (stderr, "getbatch: getting randomized frames [%zu..%zu] (%zu frames out of %zu requested) in sweep %zu; chunks [%zu..%zu] -> chunk window [%zu..%zu)\n",
+            if (verbosity > 0)
+                fprintf (stderr, "getbatch: getting randomized frames [%zu..%zu] (%zu frames out of %zu requested) in sweep %zu; chunks [%zu..%zu] -> chunk window [%zu..%zu)\n",
                      globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
             // release all data outside, and page in all data inside
             for (size_t k = 0; k < windowbegin; k++)

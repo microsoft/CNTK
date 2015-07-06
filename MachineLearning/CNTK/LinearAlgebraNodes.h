@@ -888,6 +888,193 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TimesNode<double>;
 
     template<class ElemType>
+    class TransposeTimesNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        TransposeTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        TransposeTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        TransposeTimesNode(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new TransposeTimesNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"TransposeTimes"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 1)
+                throw std::invalid_argument("TransposeTimesNode operation only takes two inputs.");
+
+            if (inputIndex == 0)  //left derivative
+            {
+                ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
+            }
+            else  //right derivative
+            {
+                ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 1)
+                throw std::invalid_argument("TransposeTimesNode operation only takes two inputs.");
+
+            if (inputIndex == 0)  //left derivative
+            {
+                Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+                ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+            }
+            else  //right derivative
+            {
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+                ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+            }
+        }
+
+        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+#if DUMPOUTPUT
+            gradientValues.Print("Gradient-in");
+            inputGradientValues.Print("child Gradient-in/out");
+            inputFunctionValues.Print("child Function values");
+#endif
+            //currently we only support one combination when the input is sparse.
+            if (inputFunctionValues.GetMatrixType() == SPARSE && inputGradientValues.GetMatrixType() == DENSE && gradientValues.GetMatrixType() == DENSE)
+                inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+
+            Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, true, inputGradientValues);
+
+
+#if DUMPOUTPUT
+            inputGradientValues.Print("child Gradient-out");
+#endif
+        }
+
+        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+#if DUMPOUTPUT
+            gradientValues.Print("Gradient-in");
+            inputGradientValues.Print("child Gradient-in/out");
+            inputFunctionValues.Print("child Function values");
+#endif
+            Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, false, inputGradientValues);
+
+#if DUMPOUTPUT
+            inputGradientValues.Print("child Gradient-out");
+#endif
+        }
+
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        {
+#if DUMPOUTPUT
+            input0.Print("TransposeTimesNode - Input0");
+#endif
+            functionValues.AssignProductOf(input0, true, input1, false);
+#if NANCHECK
+            functionValues.HasNan("TransposeTimes");
+#endif
+#if DUMPOUTPUT
+            functionValues.Print("TransposeTimes");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 2)
+                throw std::logic_error("TransposeTimes operation requires two inputs.");
+
+            //support automatic dimention inference for learnable parameters
+            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+
+            if ((rows0 == 0 || cols1 == 0) && this->LoopId() < 0)
+                throw logic_error("TransposeTimes operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
+
+            if ((Inputs(0)->OperationName() == LearnableParameter<ElemType>::TypeName() && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
+                Inputs(0)->FunctionValues().Resize(rows0, rows1);
+
+            if (Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName() && cols0 != 0 && rows1 == 0)
+                Inputs(1)->FunctionValues().Resize(cols0, cols1);
+
+            if ((Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0) && this->LoopId() < 0)
+                throw std::logic_error("TransposeTimes operation: One of the operants has 0 elements.");
+
+            //cols0 and rows1 may have been changed so don't use them in the following check
+            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows()) && this->LoopId() < 0)
+            {
+                throw std::logic_error("The Matrix dimension in the TransposeTimes operation does not match.");
+            }
+            FunctionValues().Resize(cols0, cols1);
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(1, false); //the second one is the input since it's column wize
+
+            //after multiplication the structure is lost
+            m_outputWidth = 1;
+            m_outputHeight = Inputs(0)->FunctionValues().GetNumRows();
+            m_outputChannels = 1;
+        }
+
+
+        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        {
+            m_children.resize(2);
+            m_children[0] = leftNode;
+            m_children[1] = rightNode;
+        }
+    };
+
+    template class TransposeTimesNode<float>;
+    template class TransposeTimesNode<double>;
+
+    template<class ElemType>
     class ElementTimesNode : public ComputationNode<ElemType>
     {
         UsingComputationNodeMembers;

@@ -25,8 +25,8 @@
 #include "minibatchiterator.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
-#include "commandArgUtil.h"
 
+#include "commandArgUtil.h"
 #include "HTKMLFReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
@@ -48,36 +48,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //DATAREADER_API IDataReader* DataReaderFactory(void)
 
     template<class ElemType>
-        void HTKMLFReader<ElemType>::Init(const ConfigParameters& readerConfig)
+    void HTKMLFReader<ElemType>::Init(const ConfigParameters& readerConfig)
+    {
+        m_mbiter = NULL;
+        m_frameSource = NULL;
+        //m_readAheadSource = NULL;
+        m_lattices = NULL;
+
+        m_truncated = readerConfig("Truncated", "false");
+        m_convertLabelsToTargets = false;
+
+        m_numberOfuttsPerMinibatch = readerConfig("nbruttsineachrecurrentiter", "1");
+
+        if (m_numberOfuttsPerMinibatch < 1)
         {
-            m_mbiter = NULL;
-            m_frameSource = NULL;
-            //m_readAheadSource = NULL;
-            m_lattices = NULL;
-            m_truncated = readerConfig("Truncated", "false");
-            m_convertLabelsToTargets = false;
+            LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
+        }
 
-            m_numberOfuttsPerMinibatch = readerConfig("nbruttsineachrecurrentiter", "1");
+        if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
+        {
+            LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.");
+        }
 
-            if (m_numberOfuttsPerMinibatch < 1)
-            {
-                LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
-            }
+        m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
+        m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
+        m_processedFrame.assign(m_numberOfuttsPerMinibatch, 0);
+        m_toProcess.assign(m_numberOfuttsPerMinibatch,0);
+        m_switchFrame.assign(m_numberOfuttsPerMinibatch,0);
+        m_noData = false;
 
-            if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
-            {
-                LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.");
-            }
-
-            m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
-            m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
-            m_processedFrame.assign(m_numberOfuttsPerMinibatch, 0);
-            m_toProcess.assign(m_numberOfuttsPerMinibatch,0);
-            m_switchFrame.assign(m_numberOfuttsPerMinibatch,0);
-            m_noData = false;
-
-
-            string command(readerConfig("action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
+        string command(readerConfig("action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
 
             if (readerConfig.Exists("legacyMode"))
                 RuntimeError("legacy mode has been deprecated\n");
