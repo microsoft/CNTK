@@ -1114,6 +1114,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         m_sentenceEnd[i] = false;
                         m_switchFrame[i] = currentMBSize + 1;
+                        if (m_processedFrame[i] == 1)
+                        {
+                            m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_END);
+                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceEnd;
+                        }
                     }
                     else
                     {
@@ -1157,6 +1162,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_sentenceBegin.SetValue(i, m_switchFrame[i], (ElemType)SENTENCE_BEGIN);
                         m_minibatchPackingFlag[m_switchFrame[i]] = m_minibatchPackingFlag[m_switchFrame[i]] | MinibatchPackingFlag::UtteranceStart;
                     }
+                    if (m_switchFrame[i] == m_minibatchPackingFlag.size())
+                    {
+                        m_sentenceBegin.SetValue(i, m_switchFrame[i]-1, (ElemType)SENTENCE_END);
+                        m_minibatchPackingFlag[m_switchFrame[i]-1] = m_minibatchPackingFlag[m_switchFrame[i]-1]| MinibatchPackingFlag::UtteranceEnd;
+                    }
+
                     bool reNewSucc = ReNewBufferForMultiIO(i);
 
                     // If we are not truncating the utterances, we should always
@@ -1166,7 +1177,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         assert(startFrame == 0);
                         m_switchFrame[i] = 0;
                         m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                        m_sentenceBegin.SetValue(0, m_sentenceBegin.GetNumCols()-1, (ElemType) SENTENCE_END);
+
                         m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                        m_minibatchPackingFlag[m_sentenceBegin.GetNumCols()-1] = MinibatchPackingFlag::UtteranceEnd;
                     }
 
                     // Pulls frames from next sentence.
@@ -1272,13 +1286,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (first)
                     {
                         m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                        m_minibatchPackingFlag.resize((size_t)feat.cols());
-
-                        m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-                        m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
-
+                        m_minibatchPackingFlag.resize(feat.cols());
+                        m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+                        m_sentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
+                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SENTENCE_END);
+                                
                         std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                         m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::UtteranceEnd;
                         first = false;
                     }
 
