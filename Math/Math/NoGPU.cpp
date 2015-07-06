@@ -232,6 +232,12 @@ namespace Microsoft {
 
             template<class ElemType> void GPUSparseMatrix<ElemType>::InplaceTranspose() { }
 
+            template<class ElemType>
+            GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+            {
+                return ElemType(0);
+            }
+
             template<class ElemType> ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
             {
                 return ElemType(0);
@@ -1050,7 +1056,7 @@ namespace Microsoft {
 
             template<class ElemType>
             void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
-                const GPUMatrix<ElemType>& b, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
+        const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
             {
             }
 
