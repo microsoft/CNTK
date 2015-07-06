@@ -3918,7 +3918,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int instance_id = 0; instance_id < batch_size; instance_id++)
             for (int sample_id = 0; sample_id < sample_size; sample_id++)
             {
-                int sample =(int) (*this)(2 * sample_id, instance_id);
+                int sample = (int)(*this)(2 * sample_id, instance_id);
                 for (int dim = 0; dim < b.GetNumRows(); dim++)
                     c(dim, instance_id) -= b(dim, sample)* tmp(sample_id, instance_id);
             }
@@ -3961,16 +3961,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // a:   hidden
         // b:   embedding
         // tmp:  softmax
-        //  c: loglikelihood
+        // c: loglikelihood
     {
-        /*z
-        for (int i = 0; i < (*this).GetNumRows(); i++)
-        {
-            for (int j = 0; j < (*this).GetNumCols(); j++)
-                std::cerr << (*this)(i, j) << " ";
-            std::cerr << endl;
-        }
-        */
         double log_likelihood = 0.0;
         size_t sample_size = this->GetNumRows() / 2;
         size_t batch_size = this->GetNumCols();
@@ -3980,7 +3972,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (int instance_id = 0; instance_id < batch_size; instance_id++)
         for (int sample_id = 0; sample_id < sample_size; sample_id++)
         {
-            int sample =(int) (*this)(2 * sample_id, instance_id);
+            int sample = (int)(*this)(2 * sample_id, instance_id);
             double score = bias(0, sample);
             for (int dim = 0; dim < b.GetNumRows(); dim++)
                 score += a(dim, instance_id)* b(dim, sample);
@@ -3994,9 +3986,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             tmp(sample_id, instance_id) = (ElemType)-std::exp(logprob);
             if (sample_id == 0)
                 tmp(sample_id, instance_id) += 1;
-            log_likelihood += sample_id == 0 ? logprob : logprob_noise; 
+            log_likelihood += sample_id == 0 ? logprob : logprob_noise;
         }
-
         c(0, 0) = (ElemType)-log_likelihood;
     }
 
