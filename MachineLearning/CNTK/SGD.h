@@ -639,7 +639,7 @@ protected:
         size_t totalSamplesSeen = 0;
         ElemType learnRatePerSample = 0.5f / m_mbSize[startEpoch];
 
-        float learningRateAdjustmentFactor = 1.0f;
+        ElemType learningRateAdjustmentFactor = 1.0f;
         vector<ElemType> prevLearnRates;
         prevLearnRates.resize(m_numPrevLearnRates);
         for (int i = 0; i < m_numPrevLearnRates; i++)
@@ -1282,7 +1282,7 @@ protected:
                                    const ComputationNodePtr refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
-                                   const IDataReader<ElemType>* trainSetDataReader,
+                                   IDataReader<ElemType>* trainSetDataReader,
                                    const ElemType learnRatePerSample,
                                    const size_t initialMinibatchSize,
                                    const std::vector<ComputationNodePtr>& FeatureNodes,
@@ -1292,7 +1292,7 @@ protected:
                                    std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
                                    const std::list<ComputationNodePtr>& learnableNodes,
                                    std::list<Matrix<ElemType>>& smoothedGradients,
-                                   const float learningRateAdjustmentFactor)
+                                   const ElemType learningRateAdjustmentFactor)
     {
         size_t minMinibatchSize = initialMinibatchSize;
         size_t chosenMinibatchSize = initialMinibatchSize;
@@ -1300,7 +1300,7 @@ protected:
         // do some pre-adjustment based on LR
         // Basically we assume that the LR for epoch 1 is safe for mbsize.
         // If LR control led to a smaller LR, then we can safely increase the lower bound of the MB size.
-        float learningRateChangeSoFar = m_learningRatesPerSample[epochNumber] / m_learningRatesPerSample[0];
+        ElemType learningRateChangeSoFar = m_learningRatesPerSample[epochNumber] / m_learningRatesPerSample[0];
         learningRateChangeSoFar *= learningRateAdjustmentFactor;
 
         // increasing by the full factor is found to be too aggressive; sqrt() seems more robust
@@ -1373,6 +1373,11 @@ protected:
         return 64 * (size_t) ((val + 32) / 64);
     }
 
+    size_t RoundToMultipleOf64(size_t val)
+    {
+        return 64 * ((val + 32) / 64);
+    }
+
     // uses a small percentage of training data of minibatch to
     // speculatively train with various MB sizes; then picks the best
     size_t SearchForBestMinibatchSize(ComputationNetwork<ElemType>& net,
@@ -1399,12 +1404,12 @@ protected:
 
         size_t trialMinibatchSize = 0;
         bool isFirstIteration = true;
-        ElemType baseCriterion;
+        ElemType baseCriterion = 0;
 
         // increase the minibatch size by a factor of sqrt(2) in each step.
         const float minibatchSizeTuningFactor = sqrtf(2.0f);
 
-        size_t lastTriedtrialMinibatchSize = -1;
+        size_t lastTriedtrialMinibatchSize = 0;
         for (float trialMinibatchSizeFloat = (float) minMinibatchSize;
              trialMinibatchSizeFloat <= maxMinibatchSize;
              trialMinibatchSizeFloat *= minibatchSizeTuningFactor)
