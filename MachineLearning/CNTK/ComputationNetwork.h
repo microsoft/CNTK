@@ -2943,70 +2943,8 @@ public:
         }
     }
 
-    /** 
-    call unit test of each node
-    this adds a verification of the correctness of node operations. 
-    */
-    bool UnitTest(bool allowFragment = false)
-    {
-        // currently only validates nodes, we should validate everything we can
-        if (FeatureNodes().size() == 0 && !allowFragment)
-        {
-            throw std::runtime_error("No Feature nodes specified");
-        }
-        // first give criteria nodes as root node
-        if (FinalCriterionNodes().size() > 0)
-        {
-            for (auto node : FinalCriterionNodes())
-            {
-                if (!allowFragment) FormRecurentLoops(node);
-                size_t actualMBSize = this->GetActualMBSize();
-                this->SetActualMiniBatchSize(actualMBSize);
-                if (UnitTest(node) == false)
-                    return false;
-            }
-    }
-        else if (!allowFragment)
-        {
-            throw std::runtime_error("No Criterion nodes specified");
-        }
-        // now output nodes
-        if (OutputNodes().size() > 0)
-        {
-            for (auto node : OutputNodes())
-                if (UnitTest(node) == false)
-                    return false;
-        }
-        else if (!allowFragment)
-        {
-            throw std::runtime_error("No Output nodes specified");
-        }
-        // now evaluation nodes
-        if (EvaluationNodes().size() > 0)
-        {
-            for (auto node : EvaluationNodes())
-                if (UnitTest(node) == false)
-                    return false;
-        }
-        return true;
-    }
 
-    bool UnitTest(const ComputationNodePtr rootNode)
-    {
-        fprintf(stderr, "\n\n Unit test node %ws \n", rootNode->NodeName().c_str());
 
-        std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
-
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        {
-            if ((*nodeIter)->UnitTest() == false)
-                return false;
-        }
-
-        fprintf(stderr, "\n\n");
-
-        return true;
-    }
 
     //========================================
     // This function performs SVD decomposition for different groups of learnable  parameters

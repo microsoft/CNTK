@@ -23,21 +23,21 @@
 #include "HTKMLFReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-	template<class ElemType>
-	void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
-	{
-		//    *preader = new SequenceReader<ElemType>();
-		*preader = new HTKMLFReader<ElemType>();
-	}
 
-	extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)
-	{
-		GetReader(preader);
-	}
-	extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
-	{
-		GetReader(preader);
-	}
+template<class ElemType>
+void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
+{
+    *preader = new HTKMLFReader<ElemType>();
+}
+
+extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)
+{
+    GetReader(preader);
+}
+extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
+{
+    GetReader(preader);
+}
 // Utility function, in ConfigFile.cpp, but HTKMLFReader doesn't need that code...
 
 // Trim - trim white space off the start and end of the string

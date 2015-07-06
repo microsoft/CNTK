@@ -1418,10 +1418,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                     m_toProcess[i] = actualmbsizeOri;
                     first = false;
                 } 
-                else[merge]
-    tool = kdiff3
-[mergetool "kdiff3"]
-    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
+                else
                 {
                     if (m_toProcess[i] != actualmbsizeOri)
                     {
@@ -1475,10 +1472,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                 {
                     // loop through the columns and set one value to 1
                     // in the future we want to use a sparse matrix here
-                    for (int k=0; k < actualmbsizeOri; k++)[merge]
-    tool = kdiff3
-[mergetool "kdiff3"]
-    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
+                    for (int k=0; k < actualmbsizeOri; k++)
                     {
                         assert(uids[k] < dim);
                         //labels(uids[i], i) = (ElemType)1;
@@ -1608,10 +1602,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                     break;
             }
             return ret;
-        }[merge]
-    tool = kdiff3
-[mergetool "kdiff3"]
-    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
+        }
 
     template<class ElemType>
         void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
@@ -1654,9 +1645,6 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
             }
         }
 
-    template class HTKMLFReader<float>;[merge]
-    tool = kdiff3
-[mergetool "kdiff3"]
-    cmd = \"C:\\\\Program Files (x86)\\\\KDiff3\\\\kdiff3\" $BASE $LOCAL $REMOTE -o $MERGED
+    template class HTKMLFReader<float>;
     template class HTKMLFReader<double>;
 }}}

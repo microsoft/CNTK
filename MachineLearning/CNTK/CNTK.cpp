@@ -35,6 +35,7 @@
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "SGD.h"
+#include "commandArgUtil.h"
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
@@ -431,20 +432,20 @@ void DoCreateLabelMap(const ConfigParameters& config)
 
 //////////////////////////////////////////////////////////////////////////
 //  for action SVD
-//		An action "SVD" performs the following process to transform an existing model: 
-//			1.	For a Learnable Parameter A whose name matches with the user specified regex, 
-//			    A is approximated by two matrice multiplication B*C ; 
-//			2.	In order to keep the low-rank structure in training, 
-//				the original A node will be replaced by A' whose opertions is Times
-//				with its left children being B and right chilren being 
+//      An action "SVD" performs the following process to transform an existing model: 
+//          1.  For a Learnable Parameter A whose name matches with the user specified regex, 
+//              A is approximated by two matrice multiplication B*C ; 
+//          2.  In order to keep the low-rank structure in training, 
+//              the original A node will be replaced by A' whose opertions is Times
+//              with its left children being B and right chilren being 
 //
-//		To use this command,
-//			user need to specify: 
-//					1)	modelPath			-- path to the existing model 
-//					2)  outputmodelPath		-- where to write the transformed model 
-//					3)  KeepRatio			-- how many percentage of energy we want to keep
-//					4)  ParameterName		-- name (regex) of the parameter node we want to perform a SVD decomposition 
-//				
+//      To use this command,
+//          user need to specify: 
+//                  1)  modelPath           -- path to the existing model 
+//                  2)  outputmodelPath     -- where to write the transformed model 
+//                  3)  KeepRatio           -- how many percentage of energy we want to keep
+//                  4)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
+//              
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //  helper function for DoParameterSVD 
@@ -524,9 +525,9 @@ void  DoParameterSVD(const ConfigParameters& config)
 ///
 /// the outputs are the vocabulary, word2class and class2idx file with the information below
 ///     vocabulary format is as follows
-///       0	     42068	</s>	0
-///       1	     50770	the	0
-///       2	     45020	<unk>	1
+///       0      42068  </s>    0
+///       1      50770  the 0
+///       2      45020  <unk>   1
 ///       the first column is word index
 ///       the last column is class index of the word
 ///       the second column and the third column are for information purpose and 
@@ -559,7 +560,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (!fp)
         RuntimeError("inputFile cannot be read");
     if (nbrCls > 0)
-    cls2idx.Resize(nbrCls, 1);
+        cls2idx.Resize(nbrCls, 1);
     std::unordered_map<string, double> v_count;
 
     /// get line
@@ -596,7 +597,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble> >
         q(compare_second<stringdouble>(), std::vector<stringdouble>(v_count.begin(), v_count.end()));
 
-    int wordCountLessCutoff = v_count.size();
+    size_t wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
         for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
             if (iter->second <= cutoff)
@@ -646,10 +647,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     double dd = 0;
     if (nbrCls > 0)
     {
-    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        total += iter->second;
-    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        dd += sqrt(iter->second / total);
+        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+            total += iter->second;
+        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+            dd += sqrt(iter->second / total);
     }
 
     double df = 0;
@@ -662,11 +663,11 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         double freq = p.top().second;
         if (nbrCls > 0)
         {
-        df += sqrt(freq / total) / dd;
-        if (df > 1)
-            df = 1;
-        if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
-            class_id++;
+            df += sqrt(freq / total) / dd;
+            if (df > 1)
+                df = 1;
+            if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
+                class_id++;
         }
 
         size_t wid = m_words.size();
@@ -676,7 +677,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
         m_count[wid] = freq;
         if (nbrCls > 0)
-        m_class[wid] = class_id;
+            m_class[wid] = class_id;
         p.pop();
     }
 
@@ -685,7 +686,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     for (size_t i = 0; i < m_index.size(); i++)
     {
         if (nbrCls > 0)
-        wrd2cls(i, 0) = (ElemType)m_class[i];
+            wrd2cls(i, 0) = (ElemType)m_class[i];
         long long clsIdx = nbrCls > 0 ? m_class[i] : 0;
         if (nbrCls > 0 && clsIdx != prevClsIdx)
         {
@@ -1059,49 +1060,49 @@ void DoConvertFromDbn(const ConfigParameters& config)
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
-	wstring modelPath = config("modelPath");
-	wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
-	wstring outRending = config("outputFile");      // filename for the rendered topology plot
-	// this can be empty, in that case no rendering will be done
-	// or if this is set, renderCmd must be set, so CNTK will call re       
-	wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
-	// e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
-	//              where <IN> and <OUT> are two special placeholders
+    wstring modelPath = config("modelPath");
+    wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outRending = config("outputFile");      // filename for the rendered topology plot
+    // this can be empty, in that case no rendering will be done
+    // or if this is set, renderCmd must be set, so CNTK will call re       
+    wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
+    //              where <IN> and <OUT> are two special placeholders
 
-	//========================================
-	// Sec. 1 option check
-	//========================================
-	if (outdot.empty())
-	{
-		outdot = modelPath +L".dot";
-	}
+    //========================================
+    // Sec. 1 option check
+    //========================================
+    if (outdot.empty())
+    {
+        outdot = modelPath +L".dot";
+    }
 
-	wstring rescmd;
-	if (!outRending.empty())        // we need to render the plot
-	{
-		std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
-		std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
+    wstring rescmd;
+    if (!outRending.empty())        // we need to render the plot
+    {
+        std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
+        std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
 
-		rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1"+outdot+L"$3");
-		rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1"+outRending+L"$3");
-	}
+        rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1"+outdot+L"$3");
+        rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1"+outRending+L"$3");
+    }
 
 
-	ComputationNetwork<ElemType> net(-1);
-	net.LoadFromFile(modelPath);
-	net.PlotNetworkTopology(outdot);
+    ComputationNetwork<ElemType> net(-1);
+    net.LoadFromFile(modelPath);
+    net.PlotNetworkTopology(outdot);
     fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 
-	if (!outRending.empty())
-	{
+    if (!outRending.empty())
+    {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
 #ifdef __unix__
         system(msra::strfun::utf8(rescmd).c_str());
 #else
-		_wsystem(rescmd.c_str());
+        _wsystem(rescmd.c_str());
 #endif
         fprintf(stderr, "Done\n");
-	}
+    }
 }
 
 
@@ -1152,7 +1153,7 @@ void DoCommand(const ConfigParameters& config)
             else if (action[j] == "createLabelMap")
                 DoCreateLabelMap<ElemType>(commandParams);
             else if (action[j] == "writeWordAndClass")
-	            DoWriteWordAndClassInfo<ElemType>(commandParams);
+                DoWriteWordAndClassInfo<ElemType>(commandParams);
             else if (action[j] == "plot")
                 DoTopologyPlot<ElemType>(commandParams);
             else if (action[j] == "SVD")
