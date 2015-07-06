@@ -3727,7 +3727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaMemcpy(res,d_res,sizeof(long)*1,cudaMemcpyDeviceToHost));
         CUDA_CALL(cudaFree(d_res));
         if (res[0]!=0)
-            return bResult = true;
+            bResult = true;
         delete [] res;
         return bResult;
     }

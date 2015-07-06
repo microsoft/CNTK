@@ -143,21 +143,21 @@ public:
     vector<stSentenceInfo> mSentenceIndex2SentenceInfo;
 
 public:
-	using LUSequenceParser<NumType, LabelType>::m_dimFeatures;
-	using LUSequenceParser<NumType, LabelType>::m_dimLabelsIn;
-	using LUSequenceParser<NumType, LabelType>::m_beginSequenceIn;
-	using LUSequenceParser<NumType, LabelType>::m_endSequenceIn;
-	using LUSequenceParser<NumType, LabelType>::m_dimLabelsOut;
-	using LUSequenceParser<NumType, LabelType>::m_beginSequenceOut;
-	using LUSequenceParser<NumType, LabelType>::m_endSequenceOut;
-	using LUSequenceParser<NumType, LabelType>::m_traceLevel;
-	using LUSequenceParser<NumType, LabelType>::m_beginTag;
-	using LUSequenceParser<NumType, LabelType>::m_endTag;
-	using LUSequenceParser<NumType, LabelType>::m_fileBuffer;
-	using LUSequenceParser<NumType, LabelType>::m_inputs;
-	using LUSequenceParser<NumType, LabelType>::m_labels;
-	using LUSequenceParser<NumType, LabelType>::m_beginSequence;
-	using LUSequenceParser<NumType, LabelType>::m_endSequence;
+    using LUSequenceParser<NumType, LabelType>::m_dimFeatures;
+    using LUSequenceParser<NumType, LabelType>::m_dimLabelsIn;
+    using LUSequenceParser<NumType, LabelType>::m_beginSequenceIn;
+    using LUSequenceParser<NumType, LabelType>::m_endSequenceIn;
+    using LUSequenceParser<NumType, LabelType>::m_dimLabelsOut;
+    using LUSequenceParser<NumType, LabelType>::m_beginSequenceOut;
+    using LUSequenceParser<NumType, LabelType>::m_endSequenceOut;
+    using LUSequenceParser<NumType, LabelType>::m_traceLevel;
+    using LUSequenceParser<NumType, LabelType>::m_beginTag;
+    using LUSequenceParser<NumType, LabelType>::m_endTag;
+    using LUSequenceParser<NumType, LabelType>::m_fileBuffer;
+    using LUSequenceParser<NumType, LabelType>::m_inputs;
+    using LUSequenceParser<NumType, LabelType>::m_labels;
+    using LUSequenceParser<NumType, LabelType>::m_beginSequence;
+    using LUSequenceParser<NumType, LabelType>::m_endSequence;
     LUBatchLUSequenceParser() {
     };
     ~LUBatchLUSequenceParser() {

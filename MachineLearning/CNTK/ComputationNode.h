@@ -58,10 +58,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef ComputationNode<ElemType>* ComputationNodePtr;
-		typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
+        typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
 
     public:
-        ComputationNode(DEVICEID_TYPE deviceId) : m_functionValues(deviceId), m_gradientValues(deviceId)
+        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -367,15 +367,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_indexInLoop;
         }
 
-		std::wstring GetName() const
-		{
-			return m_nodeName;
-		}
+        std::wstring GetName() const
+        {
+            return m_nodeName;
+        }
 
-		std::vector<ComputationNodePtr>	GetChildren() const
-		{
-			return m_children;
-		}
+        std::vector<ComputationNodePtr>	GetChildren() const
+        {
+            return m_children;
+        }
 
         bool isVisisted()
         {
@@ -687,39 +687,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-		//  [1/13/2015 erw] add to enumerate all the edges 
-		void EnumerateArcs(std::unordered_set<ComputationNodePtr>& vistied, std::list<ComputationArc>& arcs )
-			//  enumerate arcs that can be reached starting from the current node's children
-			//  [in/out] visited record already visited nodes 
-		{
-			std::list<ComputationNodePtr>	tovisit; 
+        //  [1/13/2015 erw] add to enumerate all the edges 
+        void EnumerateArcs(std::unordered_set<ComputationNodePtr>& vistied, std::list<ComputationArc>& arcs)
+            //  enumerate arcs that can be reached starting from the current node's children
+            //  [in/out] visited record already visited nodes 
+        {
+            std::list<ComputationNodePtr>	tovisit;
 
-			if (vistied.find(this) == vistied.end()) // only do when this node has not been visited before
-			{
-				tovisit.push_back(this);
+            if (vistied.find(this) == vistied.end()) // only do when this node has not been visited before
+            {
+                tovisit.push_back(this);
 
-				while (!tovisit.empty())
-				{
-					ComputationNodePtr curNode = tovisit.front();
-					tovisit.pop_front();
+                while (!tovisit.empty())
+                {
+                    ComputationNodePtr curNode = tovisit.front();
+                    tovisit.pop_front();
 
-					if (vistied.find(curNode) == vistied.end())
-					{
-						for (size_t i = 0; i < curNode->m_children.size(); i++)
-						{
-							arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));	
+                    if (vistied.find(curNode) == vistied.end())
+                    {
+                        for (size_t i = 0; i < curNode->m_children.size(); i++)
+                        {
+                            arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));
 
-							if (vistied.find(curNode->m_children[i]) == vistied.end()) // this children has not been visited before 
-							{
-								tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
-							}
-						}
-						vistied.insert(curNode);
-					}
-				}
-			}
-		}
-		
+                            if (vistied.find(curNode->m_children[i]) == vistied.end()) // this children has not been visited before 
+                            {
+                                tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
+                            }
+                        }
+                        vistied.insert(curNode);
+                    }
+                }
+            }
+        }
 
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
         // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
@@ -825,8 +824,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             return nodes;
         }
-
-
 
         std::wstring CreateUniqNodeName() const
         {

@@ -102,12 +102,12 @@ private:
 
 
 public:
-	Matrix<ElemType> m_sentenceBegin;
-	vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    Matrix<ElemType> m_sentenceBegin;
+    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
-	bool mIgnoreSentenceBeginTag;
-	HTKMLFReader() : m_sentenceBegin(CPUDEVICE) {
-	}
+    bool mIgnoreSentenceBeginTag;
+    HTKMLFReader() : m_sentenceBegin(CPUDEVICE) {
+    }
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
     virtual ~HTKMLFReader();
@@ -118,7 +118,7 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-	void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int);
 };

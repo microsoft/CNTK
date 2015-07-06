@@ -2521,8 +2521,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_temp;
     };
 
-	template class CosDistanceWithNegativeSamplesNode<float>;
-	template class CosDistanceWithNegativeSamplesNode<double>;
+    template class CosDistanceWithNegativeSamplesNode<float>;
+    template class CosDistanceWithNegativeSamplesNode<double>;
 
     template<class ElemType>
     class TransposeNode : public ComputationNode<ElemType>

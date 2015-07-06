@@ -17,8 +17,8 @@
 
 static inline size_t RoundUp(size_t m, size_t n)
 {
-	if (m % n == 0) return m / n;
-	else return m / n + 1;
+    if (m % n == 0) return m / n;
+    else return m / n + 1;
 }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -35,8 +35,8 @@ template<class ElemType>
 class UCIFastReader : public IDataReader<ElemType>
 {
 public:
-	using LabelType = typename IDataReader<ElemType>::LabelType;
-	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+    using LabelType = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
     using IDataReader<ElemType>::mBlgSize;
     //typedef std::string LabelType;
     //typedef unsigned LabelIdType;
