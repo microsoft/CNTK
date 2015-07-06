@@ -107,7 +107,7 @@ public:
             size_t index = m_currentRecord*rows;
             size_t numberToCopy = rows*numRecords;
             data->resize(index+numberToCopy);
-            void* dataPtr = (void*)data->data();
+            void* dataPtr = (void*)((ElemType*)data->data() + index);
             size_t dataSize = numberToCopy*sizeof(ElemType);
             void* mat = &(*matrix)(0,0);
             size_t matSize = matrix->GetNumElements()*sizeof(ElemType);

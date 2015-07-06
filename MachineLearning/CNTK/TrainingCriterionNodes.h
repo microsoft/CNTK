@@ -306,8 +306,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2) 
                 throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
 
-            if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
-                throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
+            // This breaks re-shaping of the label matrix
+            /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+            throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
@@ -981,10 +982,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // evaluation uses softmax
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
-#pragma omp parallel for
-                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
-                for (int j = 0; j < Inputs(3)->FunctionValues().GetNumRows(); j++)
-                    m_logSoftmax(i, j) += Inputs(3)->FunctionValues()(j, 0);
+                m_logSoftmax += Inputs(3)->FunctionValues();
                 m_logSoftmax.InplaceLogSoftmax(false);
                 FunctionValues().Resize(1, 1);
                 FunctionValues().SetValue(0);

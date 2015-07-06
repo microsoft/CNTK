@@ -49,8 +49,8 @@
 #include "mpi.h"
 #pragma comment(lib, "msmpi.lib")
 #endif
-int numProcs;
-int myRank;
+int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
+int mpiRank;            // and this is who we are amonghst these processes
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -68,11 +68,11 @@ struct compare_second
 void RedirectStdErr(wstring logpath)
 {
     fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
-    msra::files::make_intermediate_dirs(logpath);
-    auto_file_ptr f(logpath.c_str(), "wb");
-    if (dup2(fileno(f), 2) == -1)
+    auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
+    if (dup2(fileno(*f), 2) == -1)
         RuntimeError("unexpected failure to redirect stderr to log file");
     setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
+    static auto fKept = f;                  // keep it around (until it gets changed)
 }
 
 std::string WCharToString(const wchar_t* wst)
@@ -1213,7 +1213,6 @@ void PrintUsageInfo()
 
 int wmain(int argc, wchar_t* argv[])
 {
-
     try
     {
 #ifdef MPI_SUPPORT
@@ -1225,14 +1224,14 @@ int wmain(int argc, wchar_t* argv[])
                 MPI_Abort(MPI_COMM_WORLD, rc);
                 RuntimeError("Failure in MPI_Init: %d", rc);
             }
-            MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
-            MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-            fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), myRank, numProcs);
+            MPI_Comm_size(MPI_COMM_WORLD, &mpiNumProcesses);
+            MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+            fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), mpiRank, mpiNumProcesses);
             fflush(stderr);
         }
 #else
-        numProcs = 1;
-        myRank = 0;
+        mpiNumProcesses = 1;
+        mpiRank = 0;
 #endif
 
         ConfigParameters config;
@@ -1252,10 +1251,10 @@ int wmain(int argc, wchar_t* argv[])
                 logpath += (wstring)command[i];
             }
             logpath += L".log";
-            if (numProcs > 1)
+            if (mpiNumProcesses > 1)
             {
                 std::wostringstream oss;
-                oss << myRank;
+                oss << mpiRank;
                 logpath += L"rank" + oss.str();
             }
             RedirectStdErr(logpath);
@@ -1266,7 +1265,7 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        if (myRank == 0) // main process
+        if (mpiRank == 0) // main process
         {
             //dump config info
             fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
@@ -1304,7 +1303,7 @@ int wmain(int argc, wchar_t* argv[])
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
             type = config("type", "float");
-        if (myRank == 0)
+        if (mpiRank == 0)
             fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
             DoCommand<float>(config);
