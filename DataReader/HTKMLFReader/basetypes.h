@@ -145,17 +145,21 @@ extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp)
 /**
 These macros are used for sentence segmentation information.
 */
-#define SENTENCE_BEGIN 0 
-#define SENTENCE_MIDDLE 1
-#define NO_LABELS -1
+#define SENTENCE_BEGIN ((int) MinibatchPackingFlag::UtteranceStart)
+#define SENTENCE_MIDDLE ((int) MinibatchPackingFlag::None)
+#define SENTENCE_END ((int) MinibatchPackingFlag::UtteranceEnd)
+#define NO_LABELS ((int) MinibatchPackingFlag::NoLabel)
 
 enum class MinibatchPackingFlag : unsigned char
 {
     None = 0,
     UtteranceStart = 1 << 0,   //binary 0001
-    NoLabel = 1 << 1,      //binary 0010
+    UtteranceEnd = 1 << 1,   //binary 0010
+    NoLabel = 1 << 2,      //binary 0100
 
-    UtteranceStartOrNoLabel = UtteranceStart | NoLabel
+    UtteranceStartOrNoLabel = UtteranceStart | NoLabel,
+    UtteranceEndOrNoLabel = UtteranceEnd | NoLabel,
+    UtteranceStartOrEndOrNoLabel = UtteranceStart | UtteranceEnd | NoLabel,
 };
 
 inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
@@ -163,9 +167,15 @@ inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingF
     return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
 }
 
+inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+{
+    a = a | b;
+    return a;
+}
+
 inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
 {
-    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
+    return (static_cast<unsigned char>(a)& static_cast<unsigned char>(b)) != 0;
 }
 
 // ----------------------------------------------------------------------------

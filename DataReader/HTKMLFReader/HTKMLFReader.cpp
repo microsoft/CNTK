@@ -959,6 +959,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
+
                     vector<size_t> actualmbsize;
                     actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
@@ -986,8 +987,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data =
-                                *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                 {
@@ -1064,8 +1064,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data =
-                                *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data =*matrices[iter->first]; // can be features or labels
 
                                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                 {
@@ -1131,7 +1130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (actualmbsize[i] < m_mbSize)
                             {
                                 m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
-                                m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]] | MinibatchPackingFlag::UtteranceStart;
+                                m_minibatchPackingFlag[actualmbsize[i]] |= MinibatchPackingFlag::UtteranceStart;
                             }
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
@@ -1140,8 +1139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data =
-                                *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                 {
