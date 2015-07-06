@@ -38,7 +38,7 @@ namespace CNTKMathTest
             }
 
             DenseMatrix DM1 = DM0.ColumnSlice(start, numCols);
-            DenseMatrix DM2 = SM0.ColumnSlice(start, numCols);
+            DenseMatrix DM2 = SM0.ColumnSliceToDense(start, numCols);
 
             Assert::IsTrue(DM1.IsEqualTo(DM2, 0.0001));
         }

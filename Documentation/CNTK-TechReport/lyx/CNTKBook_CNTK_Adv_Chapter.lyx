@@ -2291,6 +2291,50 @@ m1, m2 - input matrices.
 \end_layout
 
 \begin_layout Subsubsection
+TransposeTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+TransposeTimes
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Calculate the product 
+\begin_inset Formula $m1^{T}m2$
+\end_inset
+
+.
+ The resulting matrix has a size of m1.cols by m2.cols.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Times(m1, m2)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ The m1.rows must equal m2.rows.
+\end_layout
+
+\begin_layout Subsubsection
 DiagTimes
 \begin_inset Index idx
 status open

@@ -235,7 +235,7 @@ public:
         std::vector<ComputationNodePtr> DelayNodes;
         for (auto n : allnodes)
         {
-            if (n->OperationName() == L"Delay")
+            if (n->OperationName() == DelayNode<ElemType>::TypeName())
             {
                 DelayNodes.push_back(n);
             }
@@ -245,7 +245,7 @@ public:
         std::vector<ComputationNodePtr> learnableParameters;
         for (auto n : allnodes)
         {
-            if (n->OperationName() == L"LearnableParameter")
+            if (n->OperationName() == LearnableParameter<ElemType>::TypeName())
             {
                 learnableParameters.push_back(n);
             }
@@ -348,7 +348,7 @@ public:
             std::wstring srcname = src->GetName();
             std::wstring desname = des->GetName();
 
-            if (des->OperationName() == L"Delay")
+            if (des->OperationName() == DelayNode<ElemType>::TypeName())
             {
                 // special treament for arc with Delay node as the children
                 // create a dummy node
@@ -1181,6 +1181,10 @@ public:
         {
             newNode = new TimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
+        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
+        {
+            newNode = new TransposeTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1480,6 +1484,10 @@ public:
         else if (nodeType == TimesNode<ElemType>::TypeName())
         {
             newNode = new TimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
+        {
+            newNode = new TransposeTimesNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
@@ -1953,6 +1961,16 @@ public:
         return newNode;
     }
 
+    ComputationNodePtr TransposeTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new TransposeTimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
     ComputationNodePtr ElementTimes(const ComputationNodePtr a,
                                     const ComputationNodePtr b,
                                     const std::wstring nodeName = L"")
@@ -2217,7 +2235,7 @@ public:
     {
         for (auto ptr = recurrentNodes.begin(); ptr != recurrentNodes.end(); ptr++)
         {
-            if ((*ptr)->IsFuncValueOlderThanInputs() && (*ptr)->OperationName() != L"Delay") {
+            if ((*ptr)->IsFuncValueOlderThanInputs() && (*ptr)->OperationName() != DelayNode<ElemType>::TypeName()) {
                 return true;
             }
         }
@@ -3359,7 +3377,7 @@ protected:
             visited.insert(cur);
             recStack.insert(cur);
 
-            if (cur->OperationName() != L"Delay")
+            if (cur->OperationName() != DelayNode<ElemType>::TypeName())
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
                 {
@@ -3442,7 +3460,7 @@ protected:
                     ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[j];
                     for (size_t i = 0; i < nodeRecIter->ChildrenSize(); i++)
                     {
-                        if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != L"Delay"))
+                        if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != DelayNode<ElemType>::TypeName()))
                         {
                             nodeRecIter->Inputs(i)->SetIndexInLoop(nodeRecIter->Inputs(i)->GetIndexInLoop() + 1);
                         }
