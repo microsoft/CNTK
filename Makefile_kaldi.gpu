@@ -85,7 +85,8 @@ MATH_SRC = Math/Math/Matrix.cpp Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKe
 		   Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp #Math/Math/InstantiateTemplates.cu
 CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CNTK/CNTK.cpp MachineLearning/CNTK/ComputationNode.cpp \
           MachineLearning/CNTK/ModelEditLanguage.cpp \
-          MachineLearning/CNTK/SimpleNetworkBuilder.cpp MachineLearning/CNTK/tests.cpp  MachineLearning/CNTK/Profiler.cpp MachineLearning/CNTKEval/CNTKEval.cpp
+          MachineLearning/CNTK/SimpleNetworkBuilder.cpp  \
+		  MachineLearning/CNTK/Profiler.cpp MachineLearning/CNTK/tests.cpp  MachineLearning/CNTK/Profiler.cpp MachineLearning/CNTKEval/CNTKEval.cpp
 BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
 KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp
