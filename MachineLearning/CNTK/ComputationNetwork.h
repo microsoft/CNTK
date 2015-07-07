@@ -2682,8 +2682,6 @@ public:
 
     void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodePtr newNode)
     {
-        ComputationNodePtr oldNode = GetNodeFromName(oldNodeName);
-
         // Checks if the node is a criterion node.
         int index = -1;
         for (int i = 0; i < m_finalCriteria.size(); ++i)

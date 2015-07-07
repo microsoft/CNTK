@@ -1999,7 +1999,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;        
         }
 
-        virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, ComputationNodePtr prediction) 
+        virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction) 
         {
             m_children.resize(3);
             m_children[0] = objectives;
@@ -2010,7 +2010,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            DummyCriterionNode<ElemType>* node = (DummyCriterionNode<ElemType>*) nodeP;
         }
 
         // copy constructor

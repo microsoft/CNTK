@@ -120,7 +120,7 @@ public:
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
     void SetSentenceEnd(int /*actualMbSize*/){};
-    void SetRandomSeed(int);
+	void SetRandomSeed(int){ NOT_IMPLEMENTED };
 };
 
 }}}
