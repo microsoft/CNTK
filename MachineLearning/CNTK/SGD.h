@@ -1862,7 +1862,7 @@ protected:
 
         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize"))
         {
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
+            //fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
             fstream >> minibatchSize;
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
         }
