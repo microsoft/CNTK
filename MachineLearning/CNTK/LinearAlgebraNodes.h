@@ -2720,35 +2720,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 1)
                 throw std::invalid_argument("StrideTimes operation only takes two inputs.");
 
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
             if (mStrideDim == 1) /// column stride
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+
+//                    TimesNode<ElemType>::ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+
+                    Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
+                    size_t r = Inputs(0)->FunctionValues().GetNumRows();
+                    size_t T1 = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+                    mTmp1.Resize(r, T1);
+                    Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
+                    Matrix<ElemType> mTmp3(sliceInput1Value.GetDeviceId());
 
                     for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
                     {
-                        Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
-                        size_t r = Inputs(0)->FunctionValues().GetNumRows();
-                        size_t T1 = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
-                        mTmp1.Resize(r, T1);
-                        Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
+                        mTmp1.SetValue(0);
                         mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
-                        Matrix<ElemType> mTmp3(sliceInput1Value.GetDeviceId());
                         mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
+
                         TimesNode<ElemType>::ComputeInputPartialLeft(mTmp2, mTmp1, mTmp3);
 
                         for (size_t t = 0; t < T1; t++)
                         {
-                            Inputs(0)->GradientValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1).SetValue(mTmp1.ColumnSlice(t, 1));
+                            Inputs(0)->GradientValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1) += mTmp1.ColumnSlice(t, 1);
                         }
                     }
                 }
                 else  //right derivative
                 {
                     Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+                    //                    TimesNode<ElemType>::ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
 
                     for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
                     {
@@ -2773,7 +2781,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
                     for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
@@ -2800,7 +2807,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else  //right derivative
                 {
                     Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
                     for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
                     {
