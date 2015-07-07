@@ -3842,9 +3842,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return CPUMatrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 1.0, c);
     }
     template<class ElemType>
-    void CPUMatrix<ElemType>::AssignSoftmaxSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& softmax)
+    void CPUMatrix<ElemType>::AssignSoftmaxSum(const CPUMatrix<ElemType>& softmax, CPUMatrix<ElemType>& c)
     {
-
+        ElemType log_likelihood = 0.0;
+        size_t batch_size = this->GetNumCols();
+#pragma omp parallel for reduction(+:log_likelihood)
+        for (int instance_id = 0; instance_id < batch_size; instance_id++)
+        {
+            int sample = (int)(*this)(0, instance_id);
+            log_likelihood += softmax(instance_id, sample);
+        }
+        c(0, 0) = -log_likelihood;
     }
 
     template<class ElemType>

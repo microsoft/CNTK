@@ -948,10 +948,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->FunctionValues().GetNumRows() == 1)
             {
                 for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
-                if (Inputs(0)->FunctionValues()(0, i) > 0)
-                    positive++;
-                else if (Inputs(0)->FunctionValues()(0, i) < 0)
-                    negative++;
+                {
+                    if (Inputs(0)->FunctionValues()(0, i) > 0)
+                        positive++;
+                    else if (Inputs(0)->FunctionValues()(0, i) < 0)
+                        negative++;
+                }
                 assert(positive * negative == 0);
             }
             if (m_evalMode == NCEEvalMode::Softmax || (Inputs(0)->FunctionValues().GetNumRows() == 1 && positive > 0))
@@ -960,10 +962,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
                 m_logSoftmax += Inputs(3)->FunctionValues();
                 m_logSoftmax.InplaceLogSoftmax(false);
-                FunctionValues().Resize(1, 1);
-                FunctionValues().SetValue(0);
-                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
-                    FunctionValues()(0, 0) -= m_logSoftmax(i, (size_t)Inputs(0)->FunctionValues()(0, i));
+                FunctionValues().AssignSoftmaxSum(Inputs(0)->FunctionValues(), m_logSoftmax);
             }
             else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->FunctionValues().GetNumRows() == 1 && negative > 0))
             {
