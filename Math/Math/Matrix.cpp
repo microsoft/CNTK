@@ -3623,6 +3623,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax)
+    {
+        this->Resize(1, 1);
+        if (this->GetDeviceId() < 0)
+            a.m_CPUMatrix->AssignSoftmaxSum(*softmax.m_CPUMatrix, *this->m_CPUMatrix);
+        else
+            a.m_GPUMatrix->AssignSoftmaxSum(*softmax.m_GPUMatrix, *this->m_GPUMatrix);
+        return *this;
+    }
+
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias)
     {

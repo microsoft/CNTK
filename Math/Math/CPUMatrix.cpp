@@ -3841,6 +3841,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return CPUMatrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 1.0, c);
     }
+    template<class ElemType>
+    void CPUMatrix<ElemType>::AssignSoftmaxSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& softmax)
+    {
+
+    }
 
     template<class ElemType>
     void CPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
