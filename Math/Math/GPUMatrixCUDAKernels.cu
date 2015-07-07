@@ -2868,6 +2868,59 @@ __global__ void _computeNceOutput(
     }
 }
 
+
+template<class ElemType>
+__global__ void _assignSoftmaxSum(
+    const ElemType* softmax,    
+    int sampleCount,
+    const ElemType* a, 
+    ElemType* c) // run on 512 threads per block
+{
+    // val and col are in CSR format
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // tmp is the buffer that stores NCE output calculated from _computeNceOutput
+    // c is the matrix to store objective
+
+    __shared__ ElemType partials[512];
+    partials[threadIdx.x] = 0;
+
+    int total = sampleCount;
+    int loadPerThread = (total + blockDim.x - 1) / blockDim.x;
+
+    // find out the items this thread is responsible for
+    int start = loadPerThread * threadIdx.x;
+    int end = min(total, loadPerThread * (threadIdx.x + 1));    
+    for (int i = start; i < end; i++)
+    {
+        int wid = (int)a[i];
+        partials[threadIdx.x] += softmax[IDX2C(i, wid, sampleCount)];
+    }
+
+    __syncthreads();
+
+    // now sum up the objective function
+    int nTotalThreads = blockDim.x;
+
+    while (nTotalThreads >1)
+    {
+        int halfPoint = (nTotalThreads >> 1);
+
+        if (threadIdx.x < halfPoint)
+            partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
+
+        __syncthreads();
+
+        nTotalThreads = (nTotalThreads >> 1);
+    }
+
+    if (threadIdx.x == 0)
+        c[0] = -partials[0];
+}
+
 template<class ElemType>
 __global__ void _assignNoiseContrastiveEstimation(
     const ElemType* val,

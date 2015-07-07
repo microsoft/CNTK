@@ -2052,7 +2052,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     }
     if (curDevId != CPUDEVICE)
     {
-        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
+        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
     }
 }
 
