@@ -1048,7 +1048,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
             {
                 if (m_nameToTypeMap.find(iter->first) == m_nameToTypeMap.end())
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n", iter->first.c_str()));
+                {
+                    //throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n", iter->first.c_str()));
+                }
 
             }
             m_checkDictionaryKeys=false;
@@ -1160,12 +1162,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_switchFrame[i] = endFrame - startFrame;
                     if (m_switchFrame[i] < m_minibatchPackingFlag.size()) {
                         m_sentenceBegin.SetValue(i, m_switchFrame[i], (ElemType)SENTENCE_BEGIN);
-                        m_minibatchPackingFlag[m_switchFrame[i]] = m_minibatchPackingFlag[m_switchFrame[i]] | MinibatchPackingFlag::UtteranceStart;
+                        m_minibatchPackingFlag[m_switchFrame[i]] |= MinibatchPackingFlag::UtteranceStart;
                     }
                     if (m_switchFrame[i] == m_minibatchPackingFlag.size())
                     {
                         m_sentenceBegin.SetValue(i, m_switchFrame[i]-1, (ElemType)SENTENCE_END);
-                        m_minibatchPackingFlag[m_switchFrame[i]-1] = m_minibatchPackingFlag[m_switchFrame[i]-1]| MinibatchPackingFlag::UtteranceEnd;
+                        m_minibatchPackingFlag[m_switchFrame[i]-1] |= MinibatchPackingFlag::UtteranceEnd;
                     }
 
                     bool reNewSucc = ReNewBufferForMultiIO(i);
