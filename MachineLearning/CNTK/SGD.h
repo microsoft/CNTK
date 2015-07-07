@@ -669,8 +669,12 @@ protected:
         bool learnRateInitialized = false;
         if (startEpoch > 0)
         {
-            learnRateInitialized = LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen,
-                                                      learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
+            learnRateInitialized = LoadCheckPointInfo(startEpoch - 1,
+                                                      /*out*/ totalSamplesSeen,
+                                                      /*out*/ learnRatePerSample,
+                                                      smoothedGradients,
+                                                      /*out*/ prevCriterion,
+                                                      /*out*/ m_prevChosenMinibatchSize);
             if (learnRateInitialized)
             {
                 prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample;
@@ -908,9 +912,12 @@ protected:
                         net.LoadPersistableParametersFromFile(GetModelNameForEpoch(i - 1),
                                                               m_validateAfterModelReloading);
                         net.ResetEvalTimeStamp();
-                        LoadCheckPointInfo(i - 1, totalSamplesSeen,
-                                           learnRatePerSample,
-                                           smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
+                        LoadCheckPointInfo(i - 1,
+                                           /*out*/ totalSamplesSeen,
+                                           /*out*/ learnRatePerSample,
+                                           smoothedGradients,
+                                           /*out*/ prevCriterion,
+                                           /*out*/ m_prevChosenMinibatchSize);
                         fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                         loadedPrevModel = true;
                     }
@@ -989,12 +996,12 @@ protected:
             }
         }
 
-        //since we linked feature nodes. we need to remove it from the deletion
+        // since we linked feature nodes. we need to remove it from the deletion
         if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
             for (size_t i = 0; i < refFeatureNodes.size(); i++)
             {
-                //note we need to handle deletion carefully
+                // note we need to handle deletion carefully
                 refNet.ChangeNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
             }
         }
@@ -1054,7 +1061,7 @@ protected:
             }
         }
 
-        //mark done
+        // mark done
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             PreComputedNode<ElemType>* node = static_cast<PreComputedNode<ElemType>*>(*nodeIter);
@@ -1111,8 +1118,12 @@ protected:
 
         ElemType learnRate = learnRatePerSample;
         size_t dummyMinibatchSize = 0;
-        LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, learnRate,
-                           smoothedGradients, prevCriterion, dummyMinibatchSize);
+        LoadCheckPointInfo(baseModelEpoch,
+                           /*out*/ totalSamplesSeen,
+                           /*out*/ learnRate,
+                           smoothedGradients,
+                           /*out*/ prevCriterion,
+                           /*out*/ dummyMinibatchSize);
 
         // if model is not changed this is what we will get
         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
@@ -1120,8 +1131,9 @@ protected:
                                         FeatureNodes, labelNodes,
                                         criterionNodes, evaluationNodes,
                                         inputMatrices, learnableNodes,
-                                        smoothedGradients, baseCriterion,
-                                        epochEvalErrors, totalSamplesSeen, "BaseAdaptiveLearnRateSearch:");
+                                        smoothedGradients, /*out*/ baseCriterion,
+                                        /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
+                                        "BaseAdaptiveLearnRateSearch:");
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
         {
@@ -1149,8 +1161,8 @@ protected:
                                             labelNodes, criterionNodes,
                                             evaluationNodes, inputMatrices,
                                             learnableNodes, smoothedGradients,
-                                            epochCriterion, epochEvalErrors,
-                                            totalSamplesSeen, "AdaptiveLearnRateSearch:");
+                                            /*out*/ epochCriterion, /*out*/ epochEvalErrors,
+                                            /*out*/ totalSamplesSeen, "AdaptiveLearnRateSearch:");
 
         }
         while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
@@ -1170,8 +1182,9 @@ protected:
                                             FeatureNodes, labelNodes,
                                             criterionNodes, evaluationNodes,
                                             inputMatrices, learnableNodes,
-                                            smoothedGradients, leftCriterion,
-                                            epochEvalErrors, totalSamplesSeen, "DetailBaseAdaptiveLearnRateSearch:");
+                                            smoothedGradients, /*out*/ leftCriterion,
+                                            /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
+                                            "DetailBaseAdaptiveLearnRateSearch:");
 
             while (rightLearnRatePerSample > leftLearnRatePerSample * 1.2f)
             {
@@ -1189,9 +1202,10 @@ protected:
                                                     inputMatrices,
                                                     learnableNodes,
                                                     smoothedGradients,
-                                                    rightCriterion,
-                                                    epochEvalErrors,
-                                                    totalSamplesSeen, "DetailRightAdaptiveLearnRateSearch:");
+                                                    /*out*/ rightCriterion,
+                                                    /*out*/ epochEvalErrors,
+                                                    /*out*/ totalSamplesSeen,
+                                                    "DetailRightAdaptiveLearnRateSearch:");
                 }
                 else
                 {
@@ -1207,9 +1221,10 @@ protected:
                                                     inputMatrices,
                                                     learnableNodes,
                                                     smoothedGradients,
-                                                    leftCriterion,
-                                                    epochEvalErrors,
-                                                    totalSamplesSeen, "DetailLeftAdaptiveLearnRateSearch:");
+                                                    /*out*/ leftCriterion,
+                                                    /*out*/ epochEvalErrors,
+                                                    /*out*/ totalSamplesSeen,
+                                                    "DetailLeftAdaptiveLearnRateSearch:");
                 }
             }
 
@@ -1235,8 +1250,9 @@ protected:
                                          const std::vector<ComputationNodePtr>& evaluationNodes,
                                          std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
                                          const std::list<ComputationNodePtr>& learnableNodes,
-                                         /*out*/ std::list<Matrix<ElemType>>& smoothedGradients,
-                                         /*out*/ ElemType& epochCriterion, std::vector<ElemType>& epochEvalErrors,
+                                         std::list<Matrix<ElemType>>& smoothedGradients,
+                                         /*out*/ ElemType& epochCriterion,
+                                         /*out*/ std::vector<ElemType>& epochEvalErrors,
                                          /*out*/ size_t& totalSamplesSeen,
                                          std::string prefixMsg = "")
     {
@@ -1273,8 +1289,12 @@ protected:
         ElemType dummyLearnRate;
         ElemType dummtPrevCriterion;
         size_t dummyMinibatchSize = 0;
-        LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, dummyLearnRate,
-                           smoothedGradients, dummtPrevCriterion, dummyMinibatchSize);
+        LoadCheckPointInfo(baseModelEpoch,
+                           /*out*/ totalSamplesSeen,
+                           /*out*/ dummyLearnRate,
+                           smoothedGradients,
+                           /*out*/ dummtPrevCriterion,
+                           /*out*/ dummyMinibatchSize);
     }
 
     size_t AdaptiveMinibatchSizing(ComputationNetwork<ElemType>& net,
@@ -1501,14 +1521,14 @@ protected:
         unsigned long long startReadMBTime = 0, startComputeMBTime = 0;
         unsigned long long endReadMBTime = 0, endComputeMBTime = 0;
 
-        //initialize statistics
+        // initialize statistics
         size_t totalEpochSamples = 0;
 
         int numMBsRun = 0;
 
         size_t numEvalNodes = epochEvalErrors.size();
 
-        //assume only one training criterion node for each epoch
+        // assume only one training criterion node for each epoch
 
         Matrix<ElemType> localEpochCriterion(1, 1, net.GetDeviceID());
         Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, net.GetDeviceID());
@@ -1550,7 +1570,7 @@ protected:
                 throw std::logic_error("cannot pass gradient checker");
             }
 #endif
-            //TODO: currently only support one node regularization
+            // TODO: currently only support one node regularization
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
             {
                 refNet.SetActualMiniBatchSize(actualMBSize);
@@ -1562,15 +1582,15 @@ protected:
                                               labelNodes[0]->FunctionValues());
             }
 
-            //only compute gradient when learning rate is large enough
+            // only compute gradient when learning rate is large enough
             if (learnRatePerSample > m_minLearnRate * 0.01)
             {
-                //use only the first criterion. Is there any possibility to use more?
+                // use only the first criterion. Is there any possibility to use more?
                 net.ComputeGradient(criterionNodes[0]);
             }
             else
             {
-                //use only the first criterion. Is there any possibility to use more?
+                // use only the first criterion. Is there any possibility to use more?
                 net.Evaluate(criterionNodes[0]);
             }
 
@@ -1656,8 +1676,8 @@ protected:
                 break;
             }
 
-            /// call DataEnd function
-            /// DataEnd does reader specific process if sentence ending is reached
+            // call DataEnd function
+            // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(endDataSentence);
 
             profiler.NextSample();
@@ -1715,7 +1735,7 @@ public:
         // L2 regularizer
         if (L2RegWeight > 0)
         {
-            //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
+            // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             Matrix<ElemType>::ScaleAndAdd(L2RegWeight * actualMBSize, functionValues, gradientValues);
         }
 
@@ -1723,7 +1743,7 @@ public:
         {
             ElemType momentum = sgd->MomentumPerMB();
 
-            //we use simple linear (instead of log linear) scaling here
+            // we use simple linear (instead of log linear) scaling here
             if (actualMBSize < expectedMBSize && momentum > 0.0000001f)
             {
                 momentum = (ElemType) exp(log(momentum) / expectedMBSize * actualMBSize);
@@ -1755,7 +1775,7 @@ public:
         // L1 regularizer with proximal gradient descent method
         if (L1RegWeight > 0)
         {
-            //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
+            // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             functionValues.InplaceSoftThreshold(learnRatePerSample * L1RegWeight * actualMBSize);
         }
 
@@ -1794,7 +1814,7 @@ protected:
             }
             else
             {
-                //norm2 normalized
+                // norm2 normalized
                 ElemType gradientNorm = gradient.FrobeniusNorm();
                 if (gradientNorm > maxGradientPerMB)
                 {
@@ -1829,7 +1849,7 @@ protected:
 
         for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
         {
-            const Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
+            const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
             fstream << smoothedGradient;
         }
 
@@ -1838,11 +1858,12 @@ protected:
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
     }
 
-    bool LoadCheckPointInfo(const size_t epochNumber, size_t& totalSamplesSeen,
-                            ElemType& learnRatePerSample,
+    bool LoadCheckPointInfo(const size_t epochNumber,
+                            /*out*/ size_t& totalSamplesSeen,
+                            /*out*/ ElemType& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
-                            ElemType& prevCriterion,
-                            size_t& minibatchSize)
+                            /*out*/ ElemType& prevCriterion,
+                            /*out*/ size_t& minibatchSize)
     {
         wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
         if (!fexists(checkPointFileName.c_str()))
@@ -1862,20 +1883,19 @@ protected:
 
         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize"))
         {
-            //fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
             fstream >> minibatchSize;
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
         }
         else
         {
-            minibatchSize =m_mbSize[epochNumber];
+            minibatchSize = m_mbSize[epochNumber];
         }
 
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
         for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
         {
-            Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
+            Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
             fstream >> smoothedGradient;
         }
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -1905,12 +1925,12 @@ protected:
 
     }
 
-    //return -1 if nothing exists
+    // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode)
     {
         if (!makeMode)
         {
-            //always start from scratch
+            // always start from scratch
             return -1;
         }
 
@@ -2048,7 +2068,7 @@ public:
 
                 node->UpdateEvalTimeStamp();
 
-                //use only the first criterion. Is
+                // use only the first criterion. Is
                 net.ComputeGradient(criterionNodes[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
@@ -2092,7 +2112,7 @@ public:
                 node->UpdateEvalTimeStamp();
                 net.Evaluate(criterionNodes[npos]);
 
-                //criterionNode should be a scalar
+                // criterionNode should be a scalar
                 ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element();
 
                 // back to its orginal parameter value
@@ -2168,7 +2188,7 @@ protected:
     ElemType m_reduceLearnRateIfImproveLessThan;
     bool m_continueReduce;
 
-    //determine after how many epochs the learning rate should be auto adjusted.
+    // determine after how many epochs the learning rate should be auto adjusted.
     size_t m_learnRateAdjustInterval;
 
     ElemType m_increaseLearnRateIfImproveMoreThan;
