@@ -217,6 +217,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias,
             CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c);
+        
+        void AssignSoftmaxSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& softmax);
 
         void AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
             const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& c);

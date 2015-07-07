@@ -1252,6 +1252,8 @@ protected:
         trainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
 
         startReadMBTime = Timer::MilliSecondElapsed();
+        int a = 0;
+        if (a)
         while (trainSetDataReader->GetMinibatch(inputMatrices))
         {
 #ifdef MPI_SUPPORT

@@ -1929,7 +1929,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
     }
-    
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& softmax)
+    {
+
+    }
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
     {
