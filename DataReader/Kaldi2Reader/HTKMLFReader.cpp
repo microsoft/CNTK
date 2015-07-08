@@ -262,8 +262,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_labelsBufferAllocatedMultiUtt.assign(m_numberOfuttsPerMinibatch, 0);
 
         // Gets a list of features and labels. Note that we assume feature
-        // section names have prefix "features" and label section names have
-        // prefix "labels".
+        // section has sub-field "scpFile" and label section has sub-field
+        // "mlfFile".
         std::vector<std::wstring> featureNames;
         std::vector<std::wstring> labelNames;
         GetDataNamesFromConfig(readerConfig, featureNames, labelNames);
@@ -1049,7 +1049,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_nameToTypeMap.find(iter->first) == m_nameToTypeMap.end())
                 {
-                    //throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n", iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n", iter->first.c_str()));
                 }
 
             }
@@ -1748,19 +1748,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // For Kaldi2Reader, we now make the following assumptions
-    // 1. feature sections will always have prefix "features"
-    // 2. label sections will always have prefix "labels"
+    // 1. feature sections will always have a sub-field "scpFile"
+    // 2. label sections will always have a sub-field "mlfFile"
     template<class ElemType>
     void HTKMLFReader<ElemType>::GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels)
     {
         for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
         {
-            string key = iter->first;
-            if (!_strnicmp(key.c_str(), "features", 8))
+            auto pair = *iter;
+            ConfigParameters temp = iter->second;
+            // see if we have a config parameters that contains a "file" element, it's a sub key, use it
+            if (temp.ExistsCurrent("scpFile"))
             {
                 features.push_back(msra::strfun::utf16(iter->first));
             }
-            else if (!_strnicmp(key.c_str(), "labels", 6))
+            else if (temp.ExistsCurrent("mlfFile"))
             {
                 labels.push_back(msra::strfun::utf16(iter->first));
             }
