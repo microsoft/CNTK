@@ -1070,6 +1070,10 @@ namespace Microsoft {
 
             }
 
+            template<class ElemType>
+            void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
+            {
+            }
 
             template<class ElemType>
             void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
