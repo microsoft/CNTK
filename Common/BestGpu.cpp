@@ -43,6 +43,7 @@
 #ifdef MPI_SUPPORT
 #include "mpi.h"
 #endif
+#include <memory>
 
 #include "CrossProcessMutex.h"
 
