@@ -25,19 +25,22 @@ public:
     {
     }
 
+    // Acquires the mutex. If 'wait' is true and mutex is acquired by someone else then
+    // function waits until mutex is releasd
+    // Returns true if successfull
     bool Acquire(bool wait)
     {
-        assert (m_fd == -1);
+        assert(m_fd == -1);
         for (;;) {
             // opening a lock file
-            int fd = open (m_fileName.c_str(), O_WRONLY|O_CREAT, 0666);
+            int fd = open(m_fileName.c_str(), O_WRONLY|O_CREAT, 0666);
             if (fd < 0) {
                 return false;
             }
             // locking it with the fcntl API
-            memset (&m_lock, 0, sizeof(m_lock));
+            memset(&m_lock, 0, sizeof(m_lock));
             m_lock.l_type = F_WRLCK;
-            int r = fcntl (fd, wait ? F_SETLKW : F_SETLK, &m_lock);
+            int r = fcntl(fd, wait ? F_SETLKW : F_SETLK, &m_lock);
             if (r != 0) {
                 // acquire failed
                 close(fd);
@@ -63,9 +66,10 @@ public:
         }
     }
     
+    // Releases the mutex
     void Release()
     {
-        assert (m_fd != -1);
+        assert(m_fd != -1);
         // removing file
         unlink(m_fileName.c_str());
         // Note: file is intentionally removed *before* releasing the lock
@@ -73,8 +77,8 @@ public:
         m_lock.l_type = F_UNLCK;
         // Now removing the lock and closing the file descriptor
         // waiting processes will be notified
-        fcntl (m_fd, F_SETLKW, &m_lock);
-        close (m_fd);
+        fcntl(m_fd, F_SETLKW, &m_lock);
+        close(m_fd);
         m_fd = -1;
     }
     

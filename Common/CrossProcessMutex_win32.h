@@ -15,6 +15,9 @@ public:
     {
     }
 
+    // Acquires the mutex. If 'wait' is true and mutex is acquired by someone else then
+    // function waits until mutex is releasd
+    // Returns true if successfull
     bool Acquire(bool wait)
     {
         assert (m_handle == NULL);
@@ -34,6 +37,7 @@ public:
         return true;
     }
     
+    // Releases the mutex
     void Release()
     {
         assert (m_handle != NULL);
