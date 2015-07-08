@@ -24,6 +24,10 @@ Add description of time-reverse node, simple network builder and NDL builder for
     email: yzhang87@csail.mit.edu
     email: leoliu_cu@sbcglobal.net
 
+    Guoguo Chen
+    CLSP, Johns Hopkins University
+    email: guoguo@jhu.edu
+
 == Preeliminaries ==
 To build the cpu version, you have to install intel MKL blas library or ACML library first. Note that ACML is free, where MKL may not be.
 
@@ -36,6 +40,15 @@ for ACML:
 1. Download from http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/
 2. Modify ACML_PATH in the makefile.cpu and makefile.gpu to provide your ACML library path.
 You need to add ${ACML_PATH}/lib to your ${LD_LIBRARY_PATH}.
+
+for Kaldi:
+1. In kaldi-trunk/tools/Makefile, uncomment # OPENFST_VERSION = 1.4.1, and
+   re-install OpenFst using the makefile.
+2. In kaldi-trunk/src/, do ./configure --shared; make depend -j 8; make -j 8;
+   and re-compile Kaldi (the -j option is for parallelization).
+3. Set KALDI_PATH in kaldi_vars.mk
+4. When running the binaries, make sure you add $KALDI_PATH/tools/openfst/lib
+   and $KALDI_PATH/src/lib/ to your $LD_LIBRARY_PATH 
 
 To build the gpu version, you have to install NIVIDIA CUDA first
 You can modify the path CUDA_PATH in makefile.cpu to change your cuda path
