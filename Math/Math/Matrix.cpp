@@ -747,9 +747,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
         m_numTimesMatrixTypeChanged++;
+     
         if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
-            fprintf(stderr, "WARNING: The same matrix with dim [%d, %d] has been transferred between different devices for %d times.\n", GetNumRows(), GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
-
+        {            
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);         
+        }      
         if (GetDeviceId()<0) //CPU
         {
             if (newMatrixType==MatrixType::SPARSE)
@@ -1241,14 +1243,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (numRows != GetNumRows() || numCols != GetNumCols())
         {
-        DISPATCH_MATRIX_ON_FLAG(this,
-            this,
-                m_CPUMatrix->Reshape(numRows, numCols),
-                m_GPUMatrix->Reshape(numRows, numCols),
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED
-            );
-    }
+            DISPATCH_MATRIX_ON_FLAG(this,
+                this,
+                    m_CPUMatrix->Reshape(numRows, numCols),
+                    m_GPUMatrix->Reshape(numRows, numCols),
+                NOT_IMPLEMENTED, 
+                NOT_IMPLEMENTED
+                );
+        }
     }
 
     template<class ElemType>
@@ -3667,6 +3669,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax)
+    {
+        this->Resize(1, 1);
+        if (this->GetDeviceId() < 0)
+            a.m_CPUMatrix->AssignSoftmaxSum(*softmax.m_CPUMatrix, *this->m_CPUMatrix);
+        else
+            a.m_GPUMatrix->AssignSoftmaxSum(*softmax.m_GPUMatrix, *this->m_GPUMatrix);
+        return *this;
+    }
+
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias)
     {
@@ -4454,7 +4468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    //		Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, size_t shift)
+    //Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, size_t shift)
     //[this]= (a right shift by n), padded with zeros
     // shift left, shift needs to be negative value
     // shift right, shift needs to be positive value

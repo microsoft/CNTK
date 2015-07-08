@@ -67,6 +67,7 @@ namespace Microsoft {
                 using SGD::m_traceLevel;
                 using SGD::m_numMBsToShowResult;
                 using SGD::m_gradientCheckSigDigit;
+                using SGD::m_prevChosenMinibatchSize;
                 
                 typedef ComputationNode<ElemType>* ComputationNodePtr;
 
@@ -306,7 +307,7 @@ namespace Microsoft {
                     bool learnRateInitialized = false;
                     if (startEpoch > 0)
                     {
-                        learnRateInitialized = LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        learnRateInitialized = this->LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
                         setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size() - 1]);
                     }
 
@@ -416,7 +417,7 @@ namespace Microsoft {
                                         m_validateAfterModelReloading);
                                     encoderNet.ResetEvalTimeStamp();
                                     decoderNet.ResetEvalTimeStamp();
-                                    LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                                    this->LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
                                     fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                                     loadedPrevModel = true;
                                 }
@@ -469,7 +470,7 @@ namespace Microsoft {
                         //persist model and check-point info
                         decoderNet.SaveToFile(GetDecoderModelNameForEpoch(i));
                         encoderNet.SaveToFile(GetEncoderModelNameForEpoch(i));
-                        SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        this->SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
                         if (!m_keepCheckPointFiles)
                             _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
 

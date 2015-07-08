@@ -29,9 +29,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-const size_t randomizeAuto = ((size_t)-1)>>2; // randomize range set automatically, parameter value for Init()
-const size_t randomizeNone = 0;  // don't randomize, parameter value for Init()
-const size_t requestDataSize = randomizeAuto;   // StartMinibatchLoop default parameter, sets number of requested frames equal to the number of frames in the dataset
+// randomize range set automatically, parameter value for Init()
+const size_t randomizeAuto = ((size_t) -1) >> 2;
+
+// don't randomize, parameter value for Init()
+const size_t randomizeNone = 0;
+
+// StartMinibatchLoop default parameter, sets number of requested
+// frames equal to the constant 3fffffffffffffff computed by ((size_t) -1) >> 2 above.
+// We use this constant as a stand in for the total number of frames in the dataset.
+const size_t requestDataSize = randomizeAuto;
 
 enum EndDataType
 {
@@ -48,7 +55,7 @@ class DATAREADER_API IDataReader
 {
 public:
     typedef std::string LabelType;
-    typedef unsigned LabelIdType;
+    typedef unsigned int LabelIdType;
     unsigned m_seed;
     size_t   mBlgSize;  /// number of utterances per minibatch
     bool     mDoRandomize; 
