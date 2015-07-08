@@ -172,7 +172,7 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    void SetSentenceSegBatch(Matrix<ElemType> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
     {
     }
 
