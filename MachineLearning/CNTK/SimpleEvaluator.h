@@ -1103,7 +1103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::priority_queue<Token<ElemType>> n_bests;  /// save n-bests
 
             /**
-            loop over all the candidates for the featureDelayTarget,
+            loop over all the candidates for the featuredelayTarget,
             evaluate their scores, save their histories
             */
             std::priority_queue<Token<ElemType>> from_queue, to_queue;

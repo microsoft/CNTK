@@ -32,7 +32,7 @@
 #include <cuda.h>
 #ifdef __WINDOWS__
 #include <windows.h>
-#include <delayimp.h>
+#include <Delayimp.h>
 #include <Shlobj.h>
 #define PATH_DELIMITER '\\'
 #elif defined(__UNIX__)
@@ -724,12 +724,12 @@ bool BestGpu::LockDevice(int deviceID, bool trial)
 #ifdef _WIN32
 
 // ---------------------------------------------------------------------------
-// some interfacing with the Windows DLL system to ensure clean shutdown vs. delay loading of CUDA DLLs
+// some interfacing with the Windows DLL system to ensure clean shutdown vs. Delay loading of CUDA DLLs
 // ---------------------------------------------------------------------------
 
 // The "notify hook" gets called for every call to the
-// delay load helper.  This allows a user to hook every call and
-// skip the delay load helper entirely.
+// Delay load helper.  This allows a user to hook every call and
+// skip the Delay load helper entirely.
 //
 // dliNotify == { dliStartProcessing | dliNotePreLoadLibrary  | dliNotePreGetProc | dliNoteEndProcessing } on this call.
 
