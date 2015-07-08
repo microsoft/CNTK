@@ -60,31 +60,18 @@ public:
     size_t   mBlgSize;  /// number of utterances per minibatch
     bool     mDoRandomize; 
 
-    virtual void Init(const ConfigParameters& /*config*/)
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual void Destroy() 
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual void StartMinibatchLoop(size_t /*mbSize*/, size_t /*epoch*/, size_t = requestDataSize)
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/)
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual size_t NumberSlicesInEachRecurrentIter() { NOT_IMPLEMENTED; }
+    virtual void Init(const ConfigParameters& /*config*/) = 0;
+    virtual void Destroy() = 0;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
+    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
+    virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
     virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
-
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void SetSentenceSegBatch(Matrix<ElemType>&, vector<MinibatchPackingFlag>&) { NOT_IMPLEMENTED; };
+    virtual void SetSentenceSegBatch(Matrix<ElemType>&, vector<MinibatchPackingFlag>&) = 0;
     virtual void SetRandomSeed(int) { NOT_IMPLEMENTED; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
