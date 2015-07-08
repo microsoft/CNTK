@@ -181,7 +181,7 @@ private:
         wstring m_labelsStyle;
         wstring m_normalNodeStyle;
         wstring m_PrecomputingNodeStyle;
-        wstring m_DelayNodeStyle;
+        wstring m_pastValueNodeStyle;
 
         DotGraphConfigure()
         {
@@ -192,7 +192,7 @@ private:
             m_normalNodeStyle = L"node [ shape = ellipse, color = blue, fillcolor = white, style = solid ]; ";
             m_PrecomputingNodeStyle = L"node [ shape = box    , color = black, style = \"dashed, filled\",  fillcolor= limegreen ] ;";
             m_labelsStyle = L"node [ shape = diamond, color = brown, style = bold ] ;  ";
-            m_DelayNodeStyle = L"node [ shape = box3d  , color = lightgray, style = \"filled\" , fillcolor = white ] ";
+            m_pastValueNodeStyle = L"node [ shape = box3d  , color = lightgray, style = \"filled\" , fillcolor = white ] ";
         }
     };
     wstring FormSpecialNodes(wstring style, std::vector<ComputationNodePtr>& specialNodes)
@@ -231,13 +231,14 @@ public:
             }
         }
 
-        // get delay node
-        std::vector<ComputationNodePtr> DelayNodes;
+        // get PastValue node
+        std::vector<ComputationNodePtr> pastValueNodes;
         for (auto n : allnodes)
         {
-            if (n->OperationName() == DelayNode<ElemType>::TypeName())
+            if (n->OperationName() == PastValueNode<ElemType>::TypeName() || 
+                n->OperationName() == L"Delay")
             {
-                DelayNodes.push_back(n);
+                pastValueNodes.push_back(n);
             }
         }
 
@@ -277,8 +278,8 @@ public:
         // pre-compute nodes
         fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle,
                                     PreComputedNodes);
-        // delay nodes
-        fstream << FormSpecialNodes(dotcfg.m_DelayNodeStyle, DelayNodes);
+        // PastValue nodes
+        fstream << FormSpecialNodes(dotcfg.m_pastValueNodeStyle, pastValueNodes);
 
         // normal nodes
         fstream << dotcfg.m_normalNodeStyle << L"\n";
@@ -348,14 +349,14 @@ public:
             std::wstring srcname = src->GetName();
             std::wstring desname = des->GetName();
 
-            if (des->OperationName() == DelayNode<ElemType>::TypeName())
+            if (des->OperationName() == PastValueNode<ElemType>::TypeName() || des->OperationName() == L"Delay")
             {
-                // special treament for arc with Delay node as the children
+                // special treament for arc with PastValue node as the children
                 // create a dummy node
-                ComputationNodePtr delayedNode = des;
+                ComputationNodePtr pastValueNode = des;
                 wstring dummyName = des->GetName() + L".dummy";
                 wstring out = msra::strfun::wstrprintf(L"node [ shape = box3d  , color = lightgray, style = \"filled\" , label = \"%ls\" ] ; \"%ls\"\n",
-                                                       (delayedNode->GetName() + L"\\n(delayed)").c_str(),
+                                                       (pastValueNode->GetName() + L"\\n(PastValue)").c_str(),
                                                        dummyName.c_str());
                 line = out;
                 line += msra::strfun::wstrprintf(L"\"%ls\" -> \"%ls\" ; \n", dummyName.c_str(), srcname.c_str());
@@ -1285,9 +1286,9 @@ public:
         {
             newNode = new InvStdDevNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
-        else if (nodeType == DelayNode<ElemType>::TypeName())
+        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")
         {
-            newNode = new DelayNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = new PastValueNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == LookupTableNode<ElemType>::TypeName())
         {
@@ -1581,9 +1582,9 @@ public:
         {
             newNode = new InvStdDevNode<ElemType>(m_deviceId, nodeName);
         }
-        else if (nodeType == DelayNode<ElemType>::TypeName())
+        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")
         {
-            newNode = new DelayNode<ElemType>(m_deviceId, nodeName);
+            newNode = new PastValueNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == LookupTableNode<ElemType>::TypeName())
         {
@@ -2059,12 +2060,12 @@ public:
         return newNode;
     }
 
-    ComputationNodePtr Delay(const ComputationNodePtr a,
+    ComputationNodePtr PastValue(const ComputationNodePtr a,
                              const float initHiddenActivity,
                              const size_t row_size, const size_t col_size,
                              const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DelayNode<ElemType>(m_deviceId, initHiddenActivity,
+        ComputationNodePtr newNode(new PastValueNode<ElemType>(m_deviceId, initHiddenActivity,
                                                            row_size, col_size, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
@@ -2235,7 +2236,7 @@ public:
     {
         for (auto ptr = recurrentNodes.begin(); ptr != recurrentNodes.end(); ptr++)
         {
-            if ((*ptr)->IsFuncValueOlderThanInputs() && (*ptr)->OperationName() != DelayNode<ElemType>::TypeName()) {
+            if ((*ptr)->IsFuncValueOlderThanInputs() && (*ptr)->OperationName() != PastValueNode<ElemType>::TypeName()) {
                 return true;
             }
         }
@@ -3375,7 +3376,7 @@ protected:
             visited.insert(cur);
             recStack.insert(cur);
 
-            if (cur->OperationName() != DelayNode<ElemType>::TypeName())
+            if (cur->OperationName() != PastValueNode<ElemType>::TypeName())
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
                 {
@@ -3458,7 +3459,7 @@ protected:
                     ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[j];
                     for (size_t i = 0; i < nodeRecIter->ChildrenSize(); i++)
                     {
-                        if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != DelayNode<ElemType>::TypeName()))
+                        if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != PastValueNode<ElemType>::TypeName()))
                         {
                             nodeRecIter->Inputs(i)->SetIndexInLoop(nodeRecIter->Inputs(i)->GetIndexInLoop() + 1);
                         }

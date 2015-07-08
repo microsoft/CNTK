@@ -33,7 +33,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numRecurrentLayers = m_recurrentLayers.size();
 
-                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
 
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 m_net->FeatureNodes().push_back(input);
@@ -59,13 +59,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                        pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
                         /// unless there is a good algorithm to detect loops, use this explicit setup
                         output = ApplyNonlinearFunction(
                             m_net->Plus(
-                                m_net->Times(u, input), m_net->Times(w, delay)), 0);
-                        delay->AttachInputs(output);
-                        ((DelayNode<ElemType>*) delay)->SetDelay(1);
+                                m_net->Times(u, input), m_net->Times(w, pastValue)), 0);
+                        pastValue->AttachInputs(output);
+                        ((PastValueNode<ElemType>*) pastValue)->SetTimeStep(1);
                         recur_idx ++;
                     }
                     else
@@ -90,12 +90,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                            delay = m_net->Delay(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
+                            pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
                             /// unless there is a good algorithm to detect loops, use this explicit setup
                             output = ApplyNonlinearFunction(
                                 m_net->Plus(
-                                    m_net->Times(u, input), m_net->Times(w, delay)), 0);
-                            delay->AttachInputs(output);
+                                    m_net->Times(u, input), m_net->Times(w, pastValue)), 0);
+                            pastValue->AttachInputs(output);
                             recur_idx++;
                         }
                         else
@@ -144,7 +144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
                 ComputationNodePtr wrd2cls = nullptr, cls2idx = nullptr, clslogpostprob = nullptr, clsweight = nullptr;
 
                 if (m_vocabSize != m_layerSizes[numHiddenLayers + 1])
@@ -173,12 +173,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                        pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
                         /// unless there is a good algorithm to detect loops, use this explicit setup
                         output = ApplyNonlinearFunction(
                             m_net->Plus(
-                                m_net->Times(u, input), m_net->Times(w, delay)), 0);
-                        delay->AttachInputs(output);
+                                m_net->Times(u, input), m_net->Times(w, pastValue)), 0);
+                        pastValue->AttachInputs(output);
                         recur_idx ++;
                     }
                     else
@@ -202,12 +202,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                            delay = m_net->Delay(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
+                            pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
                             /// unless there is a good algorithm to detect loops, use this explicit setup
                             output = ApplyNonlinearFunction(
                                 m_net->Plus(
-                                    m_net->Times(u, input), m_net->Times(w, delay)), 0);
-                            delay->AttachInputs(output);
+                                    m_net->Times(u, input), m_net->Times(w, pastValue)), 0);
+                            pastValue->AttachInputs(output);
                             recur_idx++;
                         }
                         else
@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
             ComputationNodePtr gt = nullptr;
             ComputationNodePtr clslogpostprob = nullptr;
             ComputationNodePtr clsweight = nullptr;
@@ -366,12 +366,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numRecurrentLayers = m_recurrentLayers.size();
 
-                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr, featin = nullptr, e = nullptr;
+                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr, featin = nullptr, e = nullptr;
                 ComputationNodePtr bi=nullptr;
                 ComputationNodePtr Wxi1=nullptr, Wxi=nullptr;
                 ComputationNodePtr Wxi2=nullptr, Wxi3=nullptr, Wxi4=nullptr;
                 ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, gt=nullptr, ct=nullptr, ht=nullptr;
-                ComputationNodePtr delayXI = nullptr, delayXII = nullptr, delayXIII = nullptr, delayXIV = nullptr;
+                ComputationNodePtr pastValueXI = nullptr, pastValueXII = nullptr, pastValueXIII = nullptr, pastValueXIV = nullptr;
 
 //                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
@@ -406,17 +406,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 output = input;
                 while (ik <= m_maOrder)
                 {
-                    delayXI = 
-                        m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 
-                        msra::strfun::wstrprintf(L"DELAY%d", ik)); 
-                    delayXI->NeedGradient() = false; 
-                    delayXI->AttachInputs(input);
-                    ((DelayNode<ElemType>*) delayXI)->SetDelay(ik);
+                    pastValueXI = 
+                        m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 
+                        msra::strfun::wstrprintf(L"pastValue%d", ik)); 
+                    pastValueXI->NeedGradient() = false; 
+                    pastValueXI->AttachInputs(input);
+                    ((PastValueNode<ElemType>*) pastValueXI)->SetTimeStep(ik);
                     //TODO: to figure out sparse matrix size
                     Wxi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
                     m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
-                    it = m_net->Plus(output, m_net->Times(Wxi, delayXI));
+                    it = m_net->Plus(output, m_net->Times(Wxi, pastValueXI));
                     output = it;
 
                     ik++;
@@ -437,10 +437,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"R%d", i+1), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                        delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
-                        output = m_net->Plus(m_net->Times(w, delay), input);
+                        pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                        output = m_net->Plus(m_net->Times(w, pastValue), input);
 
-                        delay->AttachInputs(output);
+                        pastValue->AttachInputs(output);
                         input = output;
                         recur_idx++;
                     }
@@ -486,12 +486,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-                ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+                ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, pastValue = nullptr, output=nullptr, label=nullptr, prior=nullptr;
                 ComputationNodePtr bi=nullptr;
                 ComputationNodePtr Wxi1=nullptr, Wxi=nullptr;
                 ComputationNodePtr Wxi2=nullptr, Wxi3=nullptr, Wxi4=nullptr;
                 ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, gt=nullptr, ct=nullptr, ht=nullptr;
-                ComputationNodePtr delayXI = nullptr, delayXII = nullptr, delayXIII = nullptr, delayXIV = nullptr;
+                ComputationNodePtr pastValueXI = nullptr, pastValueXII = nullptr, pastValueXIII = nullptr, pastValueXIV = nullptr;
 
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 m_net->FeatureNodes().push_back(input);
@@ -510,14 +510,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     bi = m_net->CreateLearnableParameter(L"bi0", m_layerSizes[1], 1);
 
-                    delayXI = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    delayXII = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    delayXIII = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    delayXIV = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    delayXI->AttachInputs(input);
-                    delayXII->AttachInputs(input);
-                    delayXIII->AttachInputs(input);
-                    delayXIV->AttachInputs(input);
+                    pastValueXI = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
+                    pastValueXII = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
+                    pastValueXIII = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
+                    pastValueXIV = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
+                    pastValueXI->AttachInputs(input);
+                    pastValueXII->AttachInputs(input);
+                    pastValueXIII->AttachInputs(input);
+                    pastValueXIV->AttachInputs(input);
 
                     if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
                     {
@@ -541,26 +541,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         it = m_net->Plus(
                                 m_net->Tanh(
                                 m_net->Plus(
-                                m_net->Times(Wxi4, delayXIV),
+                                m_net->Times(Wxi4, pastValueXIV),
                                 m_net->Plus(
-                                m_net->Times(Wxi3, delayXIII),
+                                m_net->Times(Wxi3, pastValueXIII),
                                 m_net->Plus(
-                                    m_net->Times(Wxi2, delayXII),
+                                    m_net->Times(Wxi2, pastValueXII),
                                     m_net->Plus(
-                                        m_net->Times(Wxi1, delayXI),
+                                        m_net->Times(Wxi1, pastValueXI),
                                         m_net->Times(Wxi, input))
                                         )
                                     )
                                 )),
                                 bi);
                         output = it;
-                        ((DelayNode<ElemType>*) delayXII)->SetDelay(2);
-                        ((DelayNode<ElemType>*) delayXIII)->SetDelay(3);
-                        ((DelayNode<ElemType>*) delayXIV)->SetDelay(4);
-                        delayXI->NeedGradient() = false;
-                        delayXII->NeedGradient() = false;
-                        delayXIII->NeedGradient() = false;
-                        delayXIV->NeedGradient() = false;
+                        ((PastValueNode<ElemType>*) pastValueXII)->SetTimeStep(2);
+                        ((PastValueNode<ElemType>*) pastValueXIII)->SetTimeStep(3);
+                        ((PastValueNode<ElemType>*) pastValueXIV)->SetTimeStep(4);
+                        pastValueXI->NeedGradient() = false;
+                        pastValueXII->NeedGradient() = false;
+                        pastValueXIII->NeedGradient() = false;
+                        pastValueXIV->NeedGradient() = false;
                         recur_idx ++;
                     }
                     else
@@ -582,9 +582,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
                             std::list<ComputationNodePtr> recurrent_loop;
-                            delay = m_net->Delay(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
-                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, delay)), i);
-                            delay->AttachInputs(output);
+                            pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, pastValue)), i);
+                            pastValue->AttachInputs(output);
                             recur_idx++;
                         }
                         else
@@ -652,11 +652,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t numHiddenLayers = m_layerSizes.size()-2;
 
-        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
         ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
         ComputationNodePtr Wxf=nullptr, Whf=nullptr, Wcf=nullptr, bf=nullptr, Wxc=nullptr, Whc=nullptr, bc=nullptr;
         ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, ct=nullptr, ht=nullptr;
-        ComputationNodePtr delayHI = nullptr, delayCI = nullptr, delayHO = nullptr, delayHF = nullptr, delayHC=nullptr, delayCF=nullptr, delayCC=nullptr;
+        ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC=nullptr, pastValueCF=nullptr, pastValueCC=nullptr;
         ComputationNodePtr directWIO = nullptr, directInput=nullptr, directOutput=nullptr;
         ComputationNodePtr bit=nullptr, bft=nullptr, bct=nullptr;
 
@@ -702,13 +702,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t layer1 = outputDim;
         
-        delayHI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        delayHF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        delayHO = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        delayHC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        delayCI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        delayCF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        delayCC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueHI = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueHF = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueHO = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueHC = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueCI = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueCF = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueCC = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
         
         if(m_constInputGateValue)
         {
@@ -724,8 +724,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_net->Plus(
                             m_net->Times(Wxi, input), 
                                 bi), 
-                            m_net->Times(Whi, delayHI)),
-                        m_net->DiagTimes(Wci, delayCI)), 0);
+                            m_net->Times(Whi, pastValueHI)),
+                        m_net->DiagTimes(Wci, pastValueCI)), 0);
 
         if(it == nullptr)
         {
@@ -733,7 +733,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_net->Plus(
                                 m_net->Times(Wxc, input),
                                     m_net->Plus(
-                                        m_net->Times(Whc, delayHC),
+                                        m_net->Times(Whc, pastValueHC),
                                         bc
                                     )
                                 )
@@ -746,7 +746,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_net->Plus(
                                 m_net->Times(Wxc, input),
                                     m_net->Plus(
-                                        m_net->Times(Whc, delayHC),
+                                        m_net->Times(Whc, pastValueHC),
                                         bc
                                     )
                                 )
@@ -765,17 +765,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_net->Plus(
                             m_net->Times(Wxf, input), 
                             bf), 
-                        m_net->Times(Whf, delayHF)),
-                    m_net->DiagTimes(Wcf, delayCF)), 0);
+                        m_net->Times(Whf, pastValueHF)),
+                    m_net->DiagTimes(Wcf, pastValueCF)), 0);
 
 
         if(ft == nullptr)
         {
-            bft = delayCC;
+            bft = pastValueCC;
         }
         else
         {
-            bft = m_net->ElementTimes(ft, delayCC);
+            bft = m_net->ElementTimes(ft, pastValueCC);
         }
 
         ct = m_net->Plus(bft,bit);
@@ -792,7 +792,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_net->Plus(
                             m_net->Times(Wxo, input), 
                             bo), 
-                        m_net->Times(Who, delayHO)),
+                        m_net->Times(Who, pastValueHO)),
                     m_net->DiagTimes(Wco, ct)), 0);
 
         if (ot == nullptr)
@@ -804,13 +804,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             output = m_net->ElementTimes(ot, m_net->Tanh(ct));
         }
         
-        delayHO->AttachInputs(output);
-        delayHI->AttachInputs(output);
-        delayHF->AttachInputs(output);
-        delayHC->AttachInputs(output);
-        delayCI->AttachInputs(ct);
-        delayCF->AttachInputs(ct);
-        delayCC->AttachInputs(ct);
+        pastValueHO->AttachInputs(output);
+        pastValueHI->AttachInputs(output);
+        pastValueHF->AttachInputs(output);
+        pastValueHC->AttachInputs(output);
+        pastValueCI->AttachInputs(ct);
+        pastValueCF->AttachInputs(ct);
+        pastValueCC->AttachInputs(ct);
         
         if (m_addDropoutNodes)
             input = m_net->Dropout(output);
@@ -832,11 +832,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
             ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
             ComputationNodePtr Wxf = nullptr, Whf = nullptr, Wcf = nullptr, bf = nullptr, Wxc = nullptr, Whc = nullptr, bc = nullptr;
             ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, ct = nullptr, ht = nullptr;
-            ComputationNodePtr delayHI = nullptr, delayCI = nullptr, delayHO = nullptr, delayHF = nullptr, delayHC = nullptr, delayCF = nullptr, delayCC = nullptr;
+            ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC = nullptr, pastValueCF = nullptr, pastValueCC = nullptr;
             ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
             ComputationNodePtr trans = nullptr;
@@ -933,7 +933,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-            ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, delay = nullptr, output=nullptr, label=nullptr, prior=nullptr;
+            ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, pastValue = nullptr, output=nullptr, label=nullptr, prior=nullptr;
             ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
             ComputationNodePtr clslogpostprob = nullptr;
             ComputationNodePtr clsweight = nullptr;
@@ -1068,11 +1068,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
             ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
             ComputationNodePtr Wxf = nullptr, Whf = nullptr, Wcf = nullptr, bf = nullptr, Wxc = nullptr, Whc = nullptr, bc = nullptr;
             ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, ct = nullptr, ht = nullptr;
-            ComputationNodePtr delayHI = nullptr, delayCI = nullptr, delayHO = nullptr, delayHF = nullptr, delayHC = nullptr, delayCF = nullptr, delayCC = nullptr;
+            ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC = nullptr, pastValueCF = nullptr, pastValueCC = nullptr;
             ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
 
@@ -1204,7 +1204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
 
             if (m_sparse_input)
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
@@ -1298,9 +1298,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             map<wstring, size_t> featDim;
 
             assert(m_streamSizes.size() > 0);
-            inputbackward = m_net->CreateInputNode(L"featureDelayedTarget", m_streamSizes[0], mbSize);
+            inputbackward = m_net->CreateInputNode(L"featurepastValueedTarget", m_streamSizes[0], mbSize);
             m_net->FeatureNodes().push_back(inputbackward);
-            featDim[L"featureDelayedTarget"] = m_streamSizes[0];
+            featDim[L"featurepastValueedTarget"] = m_streamSizes[0];
 
             inputletter = m_net->CreateInputNode(L"ltrForward", m_streamSizes[1], mbSize);
             m_net->FeatureNodes().push_back(inputletter);
@@ -1400,11 +1400,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t numHiddenLayers = m_layerSizes.size() - 2;
 
-        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
         ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
         ComputationNodePtr Wxf = nullptr, Whf = nullptr, Wcf = nullptr, bf = nullptr, Wxc = nullptr, Whc = nullptr, bc = nullptr;
         ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, ct = nullptr, ht = nullptr;
-        ComputationNodePtr delayHI = nullptr, delayCI = nullptr, delayHO = nullptr, delayHF = nullptr, delayHC = nullptr, delayCF = nullptr, delayCC = nullptr;
+        ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC = nullptr, pastValueCF = nullptr, pastValueCC = nullptr;
         ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
         ComputationNodePtr bit = nullptr, bft = nullptr, bct = nullptr;
         ComputationNodePtr streamsxi = nullptr, streamsxo = nullptr, streamsxf = nullptr, streamsxc = nullptr;
@@ -1469,13 +1469,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t layer1 = outputDim;
 
-        delayHI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        delayHF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        delayHO = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        delayHC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        delayCI = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        delayCF = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        delayCC = m_net->Delay(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueHI = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueHF = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueHO = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueHC = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueCI = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueCF = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueCC = m_net->PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
 
         if (m_constInputGateValue)
         {
@@ -1491,8 +1491,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_net->Plus(
             streamsxi,
             bi),
-            m_net->Times(Whi, delayHI)),
-            m_net->DiagTimes(Wci, delayCI)), 0);
+            m_net->Times(Whi, pastValueHI)),
+            m_net->DiagTimes(Wci, pastValueCI)), 0);
 
         if (it == nullptr)
         {
@@ -1500,7 +1500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_net->Plus(
                 streamsxc,
                 m_net->Plus(
-                m_net->Times(Whc, delayHC),
+                m_net->Times(Whc, pastValueHC),
                 bc
                 )
                 )
@@ -1513,7 +1513,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_net->Plus(
                 streamsxc,
                 m_net->Plus(
-                m_net->Times(Whc, delayHC),
+                m_net->Times(Whc, pastValueHC),
                 bc
                 )
                 )
@@ -1532,17 +1532,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_net->Plus(
             streamsxf,
             bf),
-            m_net->Times(Whf, delayHF)),
-            m_net->DiagTimes(Wcf, delayCF)), 0);
+            m_net->Times(Whf, pastValueHF)),
+            m_net->DiagTimes(Wcf, pastValueCF)), 0);
 
 
         if (ft == nullptr)
         {
-            bft = delayCC;
+            bft = pastValueCC;
         }
         else
         {
-            bft = m_net->ElementTimes(ft, delayCC);
+            bft = m_net->ElementTimes(ft, pastValueCC);
         }
 
         ct = m_net->Plus(bft, bit);
@@ -1559,7 +1559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_net->Plus(
             streamsxo,
             bo),
-            m_net->Times(Who, delayHO)),
+            m_net->Times(Who, pastValueHO)),
             m_net->DiagTimes(Wco, ct)), 0);
 
         if (ot == nullptr)
@@ -1571,13 +1571,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             output = m_net->ElementTimes(ot, m_net->Tanh(ct));
         }
 
-        delayHO->AttachInputs(output);
-        delayHI->AttachInputs(output);
-        delayHF->AttachInputs(output);
-        delayHC->AttachInputs(output);
-        delayCI->AttachInputs(ct);
-        delayCF->AttachInputs(ct);
-        delayCC->AttachInputs(ct);
+        pastValueHO->AttachInputs(output);
+        pastValueHI->AttachInputs(output);
+        pastValueHF->AttachInputs(output);
+        pastValueHC->AttachInputs(output);
+        pastValueCI->AttachInputs(ct);
+        pastValueCF->AttachInputs(ct);
+        pastValueCC->AttachInputs(ct);
 
         if (m_addDropoutNodes)
             input = m_net->Dropout(output);
@@ -1609,7 +1609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr, Wxo;
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr, Wxo;
             ComputationNodePtr forwardInput = nullptr, forwardOutput = nullptr, backwardInput = nullptr, backwardOutput = nullptr;
             vector<ComputationNodePtr> streams;
             vector<size_t> streamdims;
@@ -1620,8 +1620,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             map<wstring, size_t> featDim;
 
             size_t ltrSrcIdx = 1;
-            /// create projections to use delay predictions
-            inputprediction = m_net->CreateInputNode(L"featureDelayedTarget", m_streamSizes[0], mbSize);
+            /// create projections to use pastValue predictions
+            inputprediction = m_net->CreateInputNode(L"featurepastValueedTarget", m_streamSizes[0], mbSize);
             m_net->FeatureNodes().push_back(inputprediction);
 
             inputletter = m_net->CreateInputNode(L"ltrForward", m_streamSizes[1], mbSize);
@@ -1752,7 +1752,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numHiddenLayers = m_layerSizes.size() - 2;
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, delay = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
             ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
             ComputationNodePtr clslogpostprob = nullptr;
             ComputationNodePtr bias = nullptr;

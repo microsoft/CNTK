@@ -292,13 +292,12 @@ public:
                 nodePtr->NeedGradient() = needGradient;
             }
         }
-        else if (cnNodeType == DelayNode<ElemType>::TypeName())
+        else if (cnNodeType == PastValueNode<ElemType>::TypeName())
         {
             if (parameter.size() <2 || parameter.size() >3)
-                RuntimeError("Delay should have two to three fixed parameters. Usage: Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1]).");
+                RuntimeError("PastValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
 
             nodeParamCount = 1;
-            // parameters are (rows, [cols], delayNode)
             nodeParamStart = parameter.size() > 2?2:1;
 
             if (pass == ndlPassInitial)
@@ -311,9 +310,9 @@ public:
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
-                nodePtr = m_net.Delay(NULL, defaultHiddenActivity, rows, cols, name);
-                size_t delayTime = node->GetOptionalParameter("delayTime","1");
-                ((DelayNode<ElemType>*)nodePtr)->SetDelay(delayTime);
+                nodePtr = m_net.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
+                size_t timeStep = node->GetOptionalParameter("timeStep","1");
+                ((PastValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
 
                 nodePtr->NeedGradient() = needGradient;
             }

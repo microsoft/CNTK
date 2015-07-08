@@ -224,7 +224,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;   
     else if (EqualInsensitive(nodeType, AveragePoolingNode<ElemType>::TypeName()))
         ret = true;   
-    else if (EqualInsensitive(nodeType, DelayNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, PastValueNode<ElemType>::TypeName(), L"Delay"))
         ret = true;
     else if (EqualInsensitive(nodeType, RowSliceNode<ElemType>::TypeName()))
         ret = true;
