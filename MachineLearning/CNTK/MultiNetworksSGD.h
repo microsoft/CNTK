@@ -1357,43 +1357,38 @@ namespace Microsoft {
                     Matrix<ElemType>& localEpochEvalErrors
                     )
                 {
-                    try{
-                        size_t actualMBSize = encoderNet.GetActualMBSize();
+                    size_t actualMBSize = encoderNet.GetActualMBSize();
 
-                        encoderNet.SetActualMiniBatchSize(actualMBSize);
-                        encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-                        encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
+                    encoderNet.SetActualMiniBatchSize(actualMBSize);
+                    encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+                    encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
 
-                        encoderNet.Evaluate(encoderEvaluationNodes[0]);
+                    encoderNet.Evaluate(encoderEvaluationNodes[0]);
 
-                        actualMBSize = decoderNet.GetActualMBSize();
+                    actualMBSize = decoderNet.GetActualMBSize();
 
-                        decoderNet.SetActualMiniBatchSize(actualMBSize);
-                        decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+                    decoderNet.SetActualMiniBatchSize(actualMBSize);
+                    decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
-                        /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                        decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
+                    /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
 
-                        UpdateEvalTimeStamps(decoderFeatureNodes);
-                        decoderNet.Evaluate(decoderCriterionNodes[0]);
+                    UpdateEvalTimeStamps(decoderFeatureNodes);
+                    decoderNet.Evaluate(decoderCriterionNodes[0]);
 
-                        Matrix<ElemType>::AddElementToElement(decoderCriterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                    Matrix<ElemType>::AddElementToElement(decoderCriterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
 
-                        size_t numEvalNodes = decoderEvaluationNodes.size();
-                        std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
-                        for (size_t i = 0; i < numEvalNodes; i++)
-                        {
-                            decoderNet.Evaluate(decoderEvaluationNodes[i]);
-                            Matrix<ElemType>::AddElementToElement(decoderEvaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
-                        }
-#ifdef DEBUG_DECODER
-                        fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
-#endif
-                    }
-                    catch (...)
+                    size_t numEvalNodes = decoderEvaluationNodes.size();
+                    std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
+                    
+                    for (size_t i = 0; i < numEvalNodes; i++)
                     {
-                        RuntimeError("Errors in forward pass");
+                        decoderNet.Evaluate(decoderEvaluationNodes[i]);
+                        Matrix<ElemType>::AddElementToElement(decoderEvaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
                     }
+#ifdef DEBUG_DECODER
+                    fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
+#endif
                 }
 
                 void EncoderDecoderWithHiddenStatesErrorProp(

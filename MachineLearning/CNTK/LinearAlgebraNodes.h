@@ -2684,18 +2684,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
+            mStride = 1;
             InitRecurrentNode();
         }
 
         StrideTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            mStride = 1;
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         StrideTimesNode(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
+            mStride = 1;
             node->CopyTo(this, newName, flags);
         }
 
@@ -3003,15 +3006,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (rows1 != cols0)
                     LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", mStrideDim, cols0, rows1);
-                size_t T1 = rows0 / cols1;
+                size_t T1 = rows0 / mStride;
                 FunctionValues().Resize(T1, cols1);
             }
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (mStrideDim == 1)
             {
-                if (rows1 * cols1 != cols0)
-                    LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and number of elements %d in B.", mStrideDim, cols0, rows1 * cols1);
+                if (cols0/mStride != rows1)
+                    LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", mStrideDim, cols0, rows1);
                 FunctionValues().Resize(rows0, cols1);
             }
 
