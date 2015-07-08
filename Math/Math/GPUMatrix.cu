@@ -1957,7 +1957,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
     }
-    
+    template<class ElemType>
+    void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
+    {
+        UNCONST(ElemType, a, my_a);
+        cudaEvent_t done = nullptr;
+        if (do_sync) CUDA_CALL(cudaEventCreate(&done));
+        int p = 512;
+        int width = a.GetNumRows();
+        while (p / 2 > width) p = p / 2;
+
+        _assignSoftmaxSum<ElemType> << <1, p >> >(
+            my_a.GetArray(),
+            width,
+            GetArray(),
+            c.GetArray()
+            );
+
+        if (do_sync) CUDA_CALL(cudaEventRecord(done));
+        if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync) CUDA_CALL(cudaEventDestroy(done));
+    }
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
     {

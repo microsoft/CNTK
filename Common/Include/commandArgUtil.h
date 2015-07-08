@@ -612,6 +612,7 @@ public:
                 // pop out of content level
                 contentLevel = false;
             }
+
             if (quoteFound)
             {
                 // skip the closing quote
@@ -660,7 +661,7 @@ public:
     std::string ReadConfigFiles(const std::string& filePaths);
     std::string ReadConfigFiles(const std::wstring& filePaths);
     std::string ResolveIncludeStatements(const std::string& configString, std::vector<std::string>& resolvedConfigFiles);
-    void LoadConfigFile(const std::wstring & filePath);
+    void LoadConfigFile(const std::wstring& filePath);
     void LoadConfigFileAndResolveVariables(const std::wstring& filePath, const ConfigParameters& config);
     void LoadConfigFiles(const std::wstring& filePaths, const std::string* configStringToAppend = nullptr);
 
@@ -873,17 +874,17 @@ public:
     }
 
     // Insert - insert an 'name=value' string into the dictionary
-    void Insert(const std::string &str)
+    void Insert(const std::string& str)
     {
         ParseValue(str, 0, str.length());
     }
 
-    bool Exists(const std::wstring & name) const
+    bool Exists(const std::wstring& name) const
     {
         return Exists(msra::strfun::utf8(name));
     }
 
-    bool Exists(const std::string & name) const
+    bool Exists(const std::string& name) const
     {
         if (find(name) != end())
         {
@@ -899,42 +900,42 @@ public:
     }
 
     // ExistsCurrent - check to see if a key exists in THIS config, don't check parent
-    bool ExistsCurrent(const std::string & name) const
+    bool ExistsCurrent(const std::string& name) const
     {
         return (find(name) != end());
     }
 
     // dict(name, default) for strings
-    ConfigValue operator()(const std::wstring & name,
-                           const wchar_t *defaultvalue) const
+    ConfigValue operator()(const std::wstring& name,
+                           const wchar_t* defaultvalue) const
     {
         return operator()(msra::strfun::utf8(name), defaultvalue);
     }
 
     // dict(name, default) for strings
-    ConfigValue operator()(const std::string & name,
-                           const wchar_t *defaultvalue) const
+    ConfigValue operator()(const std::string& name,
+                           const wchar_t* defaultvalue) const
     {
         return operator()(name, msra::strfun::utf8(defaultvalue).c_str());
     }
 
     // dict(name, default) for strings
-    ConfigValue operator()(const std::wstring & name,
-                           const char *defaultvalue) const
+    ConfigValue operator()(const std::wstring& name,
+                           const char* defaultvalue) const
     {
         return operator()(msra::strfun::utf8(name), defaultvalue);
     }
 
     // dict(name, default) for strings
-    ConfigValue operator()(const std::string & name,
-                           const char *defaultvalue) const
+    ConfigValue operator()(const std::string& name,
+                           const char* defaultvalue) const
     {
         ConfigValue value = Find(name, defaultvalue);
         return value;
     }
 
-    ConfigValue Find(const std::string & name,
-                     const char *defaultvalue = NULL) const
+    ConfigValue Find(const std::string& name,
+                     const char* defaultvalue = NULL) const
     {
         auto iter = find(name);
         ConfigValue result;
@@ -975,10 +976,11 @@ public:
     //     any whitespace characters.  If an opening "$" is found without a closing "$", an exception is thrown.
     // configString - the string that you would like to resolve variables in.
     // returns: A copy of 'configString' with all the variables resolved.
-    std::string ResolveVariablesInSingleLine(const std::string &configLine) const
+    std::string ResolveVariablesInSingleLine(const std::string& configLine) const
     {
         // ensure that this method was called on a single line (eg, no newline characters exist in 'configLine').
-        if (configLine.find_first_of("\n") != std::string::npos) {
+        if (configLine.find_first_of("\n") != std::string::npos)
+        {
             throw std::logic_error(
                 "\"ResolveVariablesInSingleLine\" shouldn't be called with a string containing a newline character");
         }
@@ -1053,7 +1055,7 @@ public:
     //     we shouldn't insert newlines where they didn't already exist.
     // configString - the string that you would like to resolve variables in.
     // returns: A copy of 'configString' with all the variables resolved.
-    std::string ResolveVariables(const std::string &configString) const
+    std::string ResolveVariables(const std::string& configString) const
     {
         std::string newConfigString;
         if (configString.find_first_of("\n") != std::string::npos)
@@ -1347,14 +1349,14 @@ class argvector: public std::vector<T>
             RuntimeError("argvector: invalid arg value");
         }
     }
-    static void parse(const std::wstring & in, std::wstring & val)
+    static void parse(const std::wstring& in, std::wstring& val)
     {
         val = in;
     }
 
 public:
     // constructor --construct empty, then assign a wstring from command-line argument
-    void operator=(const std::wstring & arg)
+    void operator=(const std::wstring& arg)
     {
         clear();
         // separate the arguments
@@ -1387,7 +1389,7 @@ public:
     }
 
     // constructor --use this for setting default values
-    argvector(const std::wstring & arg)
+    argvector(const std::wstring& arg)
     {
         *this = arg;
     }
@@ -1438,7 +1440,7 @@ public:
     }
 
     // we give full read access to the vector, so we can use it bounded as well
-    const std::vector<T> & tovector() const
+    const std::vector<T>& tovector() const
     {
         return *this;
     }

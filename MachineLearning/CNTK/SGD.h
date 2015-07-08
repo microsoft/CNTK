@@ -126,7 +126,7 @@ typedef struct stGradientUpdateInfo
 } GradientUpdateInfo;
 
 template<class ElemType>
-class SGD: ComputationNetworkHelper<ElemType>
+class SGD : ComputationNetworkHelper<ElemType>
 {
 protected:
     typedef ComputationNetworkHelper<ElemType> B;
@@ -157,17 +157,31 @@ public:
         ElemType learnRateDecreaseFactor = configAALR("learnRateDecreaseFactor", "0.618");
         ElemType increaseLearnRateIfImproveMoreThan = configAALR("increaseLearnRateIfImproveMoreThan", "1#INF");
         ElemType learnRateIncreaseFactor = configAALR("learnRateIncreaseFactor", "1.382");
+
+        // AutoAdjust Auto Adjust Minibatch Parameters
+        bool autoAdjustMinibatch = (bool) configAALR("autoAdjustMinibatch", "false");
+        size_t minibatchSizeTuningFrequency = configAALR("minibatchSizeTuningFrequency", "1");
+        size_t minibatchSizeTuningMax = configAALR("minibatchSizeTuningMax", "1048576");
+
+        // the number of minibatches used to search
+        // the learning rate. It’s typically set to 10-20% of
+        // the total minibatches in an epoch.
         ConfigArray minibatch4LRSearch = configAALR("numMiniBatch4LRSearch", "500");
         intargvector numMiniBatch4LRSearch = minibatch4LRSearch;
+
         size_t numPrevLearnRates = configAALR("numPrevLearnRates", "5");
         size_t numBestSearchEpoch = configAALR("numBestSearchEpoch", "1");
         bool loadBestModel = configAALR("loadBestModel", "true");
 
         ConfigArray minibatchSize = configSGD("minibatchSize", "256");
         intargvector mbSize = minibatchSize;
+
+        // the number of samples in each epoch (0 means, use all the samples in each epoch).
         size_t epochSize = configSGD("epochSize", "0");
 
+        // the total number of epochs to run.
         size_t maxEpochs = configSGD("maxEpochs");
+
         ConfigArray momentumPerMBStr = configSGD("momentumPerMB", "");
         floatargvector momentumPerMB = momentumPerMBStr;
 
@@ -245,7 +259,8 @@ public:
              trainCriterionNodeName, evalCriterionNodeName, doGradientCheck,
              gradientCheckSigDigit, validateAfterModelReloading, rpi,
              learnRateAdjustInterval, UsingAllDataForPreComputedNode,
-             needAveMultiplier, L2RegWeight, L1RegWeight);
+             needAveMultiplier, L2RegWeight, L1RegWeight,
+             autoAdjustMinibatch, minibatchSizeTuningFrequency, minibatchSizeTuningMax);
     }
 
     void setMomentum(float momentum)
@@ -292,15 +307,27 @@ public:
               const bool UsingAllDataForPreComputed = true,
               const bool needAveMultiplier = true,
               const ElemType L2RegWeight = 0,
-              const ElemType L1RegWeight = 0)
+              const ElemType L1RegWeight = 0,
+              const bool autoAdjustMinibatch = false,
+              const size_t minibatchSizeTuningFrequency = 1,
+              const size_t minibatchSizeTuningMax = 1048576)
     {
         m_numPrevLearnRates = numPrevLearnRates;
+        m_prevChosenMinibatchSize = 0;
+        m_autoAdjustMinibatch = autoAdjustMinibatch;
+        m_minibatchSizeTuningMax = minibatchSizeTuningMax;
+        m_minibatchSizeTuningFrequency = minibatchSizeTuningFrequency;
+
         m_mbSize = mbSize;
+
+        // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = epochSize;
         if (m_epochSize == 0)
         {
             m_epochSize = requestDataSize;
         }
+
+        // the total number of epochs to run.
         m_maxEpochs = maxEpochs;
 
         m_gradientClippingWithTruncation = gradientClippingWithTruncation;
@@ -351,7 +378,8 @@ public:
             (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
         {
             throw std::invalid_argument(
-                "If autoLearnRateSearchType is false you must specify the learningRatesPerSample or learningRatesPerMB parameter.");
+                "If autoLearnRateSearchType is false you must specify the "
+                "learningRatesPerSample or learningRatesPerMB parameter.");
         }
 
         if (learningRatesPerSample.size() > 0 && learningRatesPerMB.size() > 0)
@@ -373,6 +401,7 @@ public:
             }
             m_needToNormalizeLRByParallUtterance = true;
         }
+
         m_momentumPerMB = 0.9f;
         if (momentumPerMB.size() > 0)
         {
@@ -638,8 +667,8 @@ protected:
                            IDataReader<ElemType>* trainSetDataReader,
                            IDataReader<ElemType>* validationSetDataReader)
     {
-        std::vector<ComputationNodePtr> & FeatureNodes = net.FeatureNodes();
-        std::vector<ComputationNodePtr> & labelNodes = net.LabelNodes();
+        std::vector<ComputationNodePtr>& FeatureNodes = net.FeatureNodes();
+        std::vector<ComputationNodePtr>& labelNodes = net.LabelNodes();
         std::vector<ComputationNodePtr> criterionNodes = GetTrainCriterionNodes(net);
         std::vector<ComputationNodePtr> evaluationNodes = GetEvalCriterionNodes(net);
 
@@ -698,6 +727,7 @@ protected:
         size_t totalSamplesSeen = 0;
         ElemType learnRatePerSample = 0.5f / m_mbSize[startEpoch];
 
+        ElemType learningRateAdjustmentFactor = 1.0f;
         vector<ElemType> prevLearnRates;
         prevLearnRates.resize(m_numPrevLearnRates);
         for (int i = 0; i < m_numPrevLearnRates; i++)
@@ -727,8 +757,12 @@ protected:
         bool learnRateInitialized = false;
         if (startEpoch > 0)
         {
-            learnRateInitialized = LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen,
-                                                      learnRatePerSample, smoothedGradients, prevCriterion);
+            learnRateInitialized = LoadCheckPointInfo(startEpoch - 1,
+                                                      /*out*/ totalSamplesSeen,
+                                                      /*out*/ learnRatePerSample,
+                                                      smoothedGradients,
+                                                      /*out*/ prevCriterion,
+                                                      /*out*/ m_prevChosenMinibatchSize);
             if (learnRateInitialized)
             {
                 prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample;
@@ -741,7 +775,8 @@ protected:
             !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
         {
             throw std::invalid_argument(
-                "When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
+                "When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, "
+                "or an explicit learning rate must be specified in config for the starting epoch.");
         }
 
         unsigned long dropOutSeed = 1;
@@ -755,17 +790,18 @@ protected:
             SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
         }
 
-        for (int i = int(startEpoch); i < int(m_maxEpochs); i++)
+        for (int i = startEpoch; i < (int) m_maxEpochs; i++)
         {
             auto t_start_epoch = Timer::MilliSecondElapsed();
 
-            //set dropout rate
+            // set dropout rate
             SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
             setMomentum(m_momentumInputPerMB[i]);
 
-            //learning rate adjustment
-            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
+            // learning rate adjustment
+            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None ||
+                (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
             {
                 learnRatePerSample = m_learningRatesPerSample[i];
             }
@@ -777,14 +813,16 @@ protected:
                     largestPrevLearnRatePerSample = max(largestPrevLearnRatePerSample, prevLearnRates[j]);
                 }
 
-                //return a reasonable  learning rate based on the initial mbsize
-                learnRatePerSample = SearchLearnRateBeforeEpoch(net, refNet, refNode, i, learnRatePerSample,
-                                                                trainSetDataReader, FeatureNodes, labelNodes,
-                                                                criterionNodes, evaluationNodes, inputMatrices,
-                                                                learnableNodes, smoothedGradients, learnRateInitialized,
-                                                                largestPrevLearnRatePerSample);
+                // return a reasonable learning rate based on the initial minibatchSize
+                ElemType newLearningRatePerSample = SearchForBestLearnRate(net, refNet, refNode, i, learnRatePerSample,
+                                                                           trainSetDataReader, FeatureNodes, labelNodes,
+                                                                           criterionNodes, evaluationNodes, inputMatrices,
+                                                                           learnableNodes, smoothedGradients,
+                                                                           learnRateInitialized, largestPrevLearnRatePerSample);
+                learningRateAdjustmentFactor = newLearningRatePerSample / learnRatePerSample;
+                learnRatePerSample = newLearningRatePerSample;
 
-                //save per sample learn rate to support changeable mbsize
+                // save per sample learn rate to support changeable minibatchSize
                 prevLearnRates[i % m_numPrevLearnRates] = learnRatePerSample;
             }
 
@@ -792,8 +830,7 @@ protected:
 
             if (learnRatePerSample < m_minLearnRate)
             {
-                fprintf(stderr,
-                        "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n",
+                fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n",
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
@@ -806,10 +843,40 @@ protected:
             INT32 mySamples = (INT32)
 #endif
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
-                    i, learnRatePerSample, m_momentumPerMB);
+                    i + 1, learnRatePerSample, m_momentumPerMB);
+
+            size_t chosenMinibatchSize;
+
+            // Through the command line or config file the user can set minibatch sizes on a per epoch
+            // basis for a set number of epochs.  For epochs after that point, m_mbSize.size(), either
+            // we just keep using
+            // the last minibatch size, or we use tuning to try and find a better one.
+            if (m_autoAdjustMinibatch && i >= m_mbSize.size())
+            {
+                size_t numFramesToUseInSearch = m_numMiniBatch4LRSearch[i] * m_mbSize[i];
+                if (m_epochSize != requestDataSize)
+                {
+                    // ensure the numFramesToUseInSearch does not exceed the total number of frames in the epoch
+                    numFramesToUseInSearch = min(numFramesToUseInSearch, m_epochSize);
+                }
+
+                // Use tuning to try and find a better minibatch size
+                chosenMinibatchSize = AdaptiveMinibatchSizing(net, refNet, refNode, i,
+                                                              numFramesToUseInSearch,
+                                                              trainSetDataReader, learnRatePerSample,
+                                                              m_mbSize[i], FeatureNodes, labelNodes,
+                                                              criterionNodes, evaluationNodes,
+                                                              inputMatrices, learnableNodes,
+                                                              smoothedGradients, learningRateAdjustmentFactor);
+            }
+            else
+            {
+                // use the explicitly set minibatch size
+                chosenMinibatchSize = m_mbSize[i];
+            }
 
             TrainOneEpoch(net, refNet, refNode, i, m_epochSize,
-                          trainSetDataReader, learnRatePerSample, FeatureNodes,
+                          trainSetDataReader, learnRatePerSample, chosenMinibatchSize, FeatureNodes,
                           labelNodes, criterionNodes, evaluationNodes,
                           inputMatrices, learnableNodes, smoothedGradients,
                           epochCriterion, epochEvalErrors, totalSamplesSeen);
@@ -818,23 +885,23 @@ protected:
             ElemType epochTime = (t_end_epoch - t_start_epoch) / ElemType(MS_PER_SEC);
 
             fprintf(stderr,
-                    "Finished Epoch[%d]: [Training Set] Train Loss Per Sample = %.8g    ",
+                    "Finished Epoch[%d]: [Training Set] TrainLossPerSample = %.8g; ",
                     i + 1, epochCriterion);
             if (epochEvalErrors.size() == 1)
             {
                 fprintf(stderr,
-                        "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n",
+                        "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.10g; EpochTime=%.8g\n",
                         epochEvalErrors[0], learnRatePerSample, epochTime);
             }
             else
             {
-                fprintf(stderr, "EvalErr Per Sample ");
+                fprintf(stderr, "EvalErrPerSample ");
                 for (size_t j = 0; j < epochEvalErrors.size(); j++)
                 {
-                    fprintf(stderr, "[%lu]=%.8g ", j, epochEvalErrors[j]);
+                    fprintf(stderr, "[%lu]=%.8g; ", j, epochEvalErrors[j]);
                 }
 
-                fprintf(stderr, "Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n",
+                fprintf(stderr, "Ave LearnRatePerSample = %.10g; Epoch Time=%.8g\n",
                         learnRatePerSample, epochTime);
                 fprintf(stderr, "Finished Epoch[%d]: Criterion Node [%ls] Per Sample = %.8g\n",
                         i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
@@ -898,7 +965,7 @@ protected:
                     cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
 
                     vector<ElemType> vScore = evalforvalidation.Evaluate(*validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                    fprintf(stderr, "Finished Epoch[%d]: [Validation Set] Train Loss Per Sample = %.8g  EvalErr Per Sample = %.8g\n",
+                    fprintf(stderr, "Finished Epoch[%d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
                             i + 1, vScore[0], vScore[1]);
 
                     epochCriterion = vScore[0]; //the first one is the training criterion.
@@ -933,9 +1000,12 @@ protected:
                         net.LoadPersistableParametersFromFile(GetModelNameForEpoch(i - 1),
                                                               m_validateAfterModelReloading);
                         net.ResetEvalTimeStamp();
-                        LoadCheckPointInfo(i - 1, totalSamplesSeen,
-                                           learnRatePerSample,
-                                           smoothedGradients, prevCriterion);
+                        LoadCheckPointInfo(i - 1,
+                                           /*out*/ totalSamplesSeen,
+                                           /*out*/ learnRatePerSample,
+                                           smoothedGradients,
+                                           /*out*/ prevCriterion,
+                                           /*out*/ m_prevChosenMinibatchSize);
                         fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                         loadedPrevModel = true;
                     }
@@ -999,7 +1069,7 @@ protected:
             if (mpiRank == 0)
             {
                 net.SaveToFile(GetModelNameForEpoch(i));
-                SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
                 if (!m_keepCheckPointFiles)
                 {
                     //delete previous checkpiont file to save space
@@ -1007,18 +1077,19 @@ protected:
                 }
             }
 
-            if (learnRatePerSample < 1e-12) {
+            if (learnRatePerSample < 1e-12)
+            {
                 fprintf(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n",
                         learnRatePerSample);
             }
         }
 
-        //since we linked feature nodes. we need to remove it from the deletion
+        // since we linked feature nodes. we need to remove it from the deletion
         if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
             for (size_t i = 0; i < refFeatureNodes.size(); i++)
             {
-                //note we need to handle deletion carefully
+                // note we need to handle deletion carefully
                 refNet.ChangeNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
             }
         }
@@ -1026,8 +1097,7 @@ protected:
     }
 
 protected:
-
-    //return true if precomputation is executed.
+    // return true if precomputation is executed.
     bool PreCompute(ComputationNetwork<ElemType>& net,
                     IDataReader<ElemType>* trainSetDataReader,
                     std::vector<ComputationNodePtr>& FeatureNodes,
@@ -1053,7 +1123,8 @@ protected:
         //trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , requestDataSize);
         // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
         // [1/12/2015 erw] to support large dataset, we usually paritition whole dataset into several epoches, so we need to use all the data to do precomputing
-        if (m_useAllDataForPreComputedNode) {
+        if (m_useAllDataForPreComputedNode)
+        {
             // using all the data
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
         }
@@ -1078,7 +1149,7 @@ protected:
             }
         }
 
-        //mark done
+        // mark done
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             PreComputedNode<ElemType>* node = static_cast<PreComputedNode<ElemType>*>(*nodeIter);
@@ -1088,21 +1159,21 @@ protected:
         return true;
     }
 
-    //return a reasonable initial learning rate based on the initial mbsize
-    ElemType SearchLearnRateBeforeEpoch(ComputationNetwork<ElemType>& net,
-                                        ComputationNetwork<ElemType>& refNet,
-                                        const ComputationNodePtr refNode, const int epochNumber,
-                                        const ElemType curLearnRate,
-                                        IDataReader<ElemType>* trainSetDataReader,
-                                        const std::vector<ComputationNodePtr>& FeatureNodes,
-                                        const std::vector<ComputationNodePtr>& labelNodes,
-                                        const std::vector<ComputationNodePtr>& criterionNodes,
-                                        const std::vector<ComputationNodePtr>& evaluationNodes,
-                                        std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
-                                        const std::list<ComputationNodePtr>& learnableNodes,
-                                        std::list<Matrix<ElemType>>& smoothedGradients,
-                                        const bool learnRateInitialized,
-                                        const ElemType largestPrevLearnRatePerSample)
+    // return a reasonable initial learning rate based on the initial mbsize
+    ElemType SearchForBestLearnRate(ComputationNetwork<ElemType>& net,
+                                    ComputationNetwork<ElemType>& refNet,
+                                    const ComputationNodePtr refNode, const int epochNumber,
+                                    const ElemType curLearnRate,
+                                    IDataReader<ElemType>* trainSetDataReader,
+                                    const std::vector<ComputationNodePtr>& FeatureNodes,
+                                    const std::vector<ComputationNodePtr>& labelNodes,
+                                    const std::vector<ComputationNodePtr>& criterionNodes,
+                                    const std::vector<ComputationNodePtr>& evaluationNodes,
+                                    std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
+                                    const std::list<ComputationNodePtr>& learnableNodes,
+                                    std::list<Matrix<ElemType>>& smoothedGradients,
+                                    const bool learnRateInitialized,
+                                    const ElemType largestPrevLearnRatePerSample)
     {
         ElemType epochCriterion = std::numeric_limits<ElemType>::infinity();
         ElemType prevCriterion = std::numeric_limits<ElemType>::infinity();
@@ -1111,10 +1182,11 @@ protected:
         size_t totalSamplesSeen = 0;
         ElemType bestLearnRatePerSample = curLearnRate;
 
-        size_t epochSize = m_numMiniBatch4LRSearch[epochNumber] * m_mbSize[epochNumber];
+        size_t numFramesToUseInSearch = m_numMiniBatch4LRSearch[epochNumber] * m_mbSize[epochNumber];
         if (m_epochSize != requestDataSize)
         {
-            epochSize = min(epochSize, m_epochSize); //use a small number minibatches to make decision
+            // ensure the numFramesToUseInSearch does not exceed the total number of frames in the epoch
+            numFramesToUseInSearch = min(numFramesToUseInSearch, m_epochSize);
         }
 
         ElemType baseCriterion;
@@ -1133,17 +1205,23 @@ protected:
         net.ResetEvalTimeStamp();
 
         ElemType learnRate = learnRatePerSample;
-        LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, learnRate,
-                           smoothedGradients, prevCriterion);
+        size_t dummyMinibatchSize = 0;
+        LoadCheckPointInfo(baseModelEpoch,
+                           /*out*/ totalSamplesSeen,
+                           /*out*/ learnRate,
+                           smoothedGradients,
+                           /*out*/ prevCriterion,
+                           /*out*/ dummyMinibatchSize);
 
-        //if model is not changed this is what we will get
+        // if model is not changed this is what we will get
         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
-                                        epochSize, trainSetDataReader, 0,
+                                        numFramesToUseInSearch, trainSetDataReader, 0, m_mbSize[epochNumber],
                                         FeatureNodes, labelNodes,
                                         criterionNodes, evaluationNodes,
                                         inputMatrices, learnableNodes,
-                                        smoothedGradients, baseCriterion,
-                                        epochEvalErrors, totalSamplesSeen);
+                                        smoothedGradients, /*out*/ baseCriterion,
+                                        /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
+                                        "BaseAdaptiveLearnRateSearch:");
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
         {
@@ -1156,7 +1234,7 @@ protected:
 
             if (m_epochSize != requestDataSize)
             {
-                ratio = pow(((ElemType) epochSize) / m_epochSize, 1.0f / 2);
+                ratio = pow(((ElemType) numFramesToUseInSearch) / m_epochSize, 1.0f / 2);
             }
 
             baseCriterion = max(ratio * prevCriterion + (1 - ratio) * baseCriterion, baseCriterion);
@@ -1166,13 +1244,13 @@ protected:
         {
             learnRatePerSample *= 0.618f;
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
-                                            epochSize, trainSetDataReader,
-                                            learnRatePerSample, FeatureNodes,
+                                            numFramesToUseInSearch, trainSetDataReader,
+                                            learnRatePerSample, m_mbSize[epochNumber], FeatureNodes,
                                             labelNodes, criterionNodes,
                                             evaluationNodes, inputMatrices,
                                             learnableNodes, smoothedGradients,
-                                            epochCriterion, epochEvalErrors,
-                                            totalSamplesSeen);
+                                            /*out*/ epochCriterion, /*out*/ epochEvalErrors,
+                                            /*out*/ totalSamplesSeen, "AdaptiveLearnRateSearch:");
 
         }
         while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
@@ -1187,13 +1265,14 @@ protected:
             ElemType leftCriterion, rightCriterion = epochCriterion;
 
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
-                                            epochSize, trainSetDataReader,
-                                            leftLearnRatePerSample,
+                                            numFramesToUseInSearch, trainSetDataReader,
+                                            leftLearnRatePerSample, m_mbSize[epochNumber],
                                             FeatureNodes, labelNodes,
                                             criterionNodes, evaluationNodes,
                                             inputMatrices, learnableNodes,
-                                            smoothedGradients, leftCriterion,
-                                            epochEvalErrors, totalSamplesSeen);
+                                            smoothedGradients, /*out*/ leftCriterion,
+                                            /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
+                                            "DetailBaseAdaptiveLearnRateSearch:");
 
             while (rightLearnRatePerSample > leftLearnRatePerSample * 1.2f)
             {
@@ -1202,36 +1281,38 @@ protected:
                     rightLearnRatePerSample *= 0.618f;
 
                     TrainOneMiniEpochAndReloadModel(net, refNet, refNode,
-                                                    epochNumber, epochSize,
+                                                    epochNumber, numFramesToUseInSearch,
                                                     trainSetDataReader,
-                                                    rightLearnRatePerSample,
+                                                    rightLearnRatePerSample, m_mbSize[epochNumber],
                                                     FeatureNodes, labelNodes,
                                                     criterionNodes,
                                                     evaluationNodes,
                                                     inputMatrices,
                                                     learnableNodes,
                                                     smoothedGradients,
-                                                    rightCriterion,
-                                                    epochEvalErrors,
-                                                    totalSamplesSeen);
+                                                    /*out*/ rightCriterion,
+                                                    /*out*/ epochEvalErrors,
+                                                    /*out*/ totalSamplesSeen,
+                                                    "DetailRightAdaptiveLearnRateSearch:");
                 }
                 else
                 {
                     leftLearnRatePerSample /= 0.618f;
 
                     TrainOneMiniEpochAndReloadModel(net, refNet, refNode,
-                                                    epochNumber, epochSize,
+                                                    epochNumber, numFramesToUseInSearch,
                                                     trainSetDataReader,
-                                                    leftLearnRatePerSample,
+                                                    leftLearnRatePerSample, m_mbSize[epochNumber],
                                                     FeatureNodes, labelNodes,
                                                     criterionNodes,
                                                     evaluationNodes,
                                                     inputMatrices,
                                                     learnableNodes,
                                                     smoothedGradients,
-                                                    leftCriterion,
-                                                    epochEvalErrors,
-                                                    totalSamplesSeen);
+                                                    /*out*/ leftCriterion,
+                                                    /*out*/ epochEvalErrors,
+                                                    /*out*/ totalSamplesSeen,
+                                                    "DetailLeftAdaptiveLearnRateSearch:");
                 }
             }
 
@@ -1250,6 +1331,7 @@ protected:
                                          const ComputationNodePtr refNode, const int epochNumber,
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const ElemType learnRatePerSample,
+                                         const size_t minibatchSize,
                                          const std::vector<ComputationNodePtr>& FeatureNodes,
                                          const std::vector<ComputationNodePtr>& labelNodes,
                                          const std::vector<ComputationNodePtr>& criterionNodes,
@@ -1257,41 +1339,244 @@ protected:
                                          std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
                                          const std::list<ComputationNodePtr>& learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
-                                         ElemType& epochCriterion, std::vector<ElemType>& epochEvalErrors,
-                                         size_t& totalSamplesSeen)
+                                         /*out*/ ElemType& epochCriterion,
+                                         /*out*/ std::vector<ElemType>& epochEvalErrors,
+                                         /*out*/ size_t& totalSamplesSeen,
+                                         std::string prefixMsg = "")
     {
         TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
-                      trainSetDataReader, learnRatePerSample, FeatureNodes,
+                      trainSetDataReader, learnRatePerSample, minibatchSize, FeatureNodes,
                       labelNodes, criterionNodes, evaluationNodes,
                       inputMatrices, learnableNodes, smoothedGradients,
-                      epochCriterion, epochEvalErrors, totalSamplesSeen);
-        fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: Train Loss Per Sample = %.8g    ",
+                      /*out*/ epochCriterion, /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
+                      prefixMsg);
+
+        fprintf(stderr, "Finished Mini-Epoch For LearnRate Selection: TrainLossPerSample = %.8g;",
                 epochCriterion);
 
         if (epochEvalErrors.size() == 1)
         {
-            fprintf(stderr, "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g\n",
+            fprintf(stderr, "EvalErrPerSample = %.8g; Ave LearnRatePerSample = %.10g\n",
                     epochEvalErrors[0], learnRatePerSample);
         }
         else
         {
-            fprintf(stderr, "EvalErr Per Sample ");
+            fprintf(stderr, "EvalErrPerSample ");
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
             {
-                fprintf(stderr, "[%lu] = %.8g ", i, epochEvalErrors[i]);
+                fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
             }
 
-            fprintf(stderr, "Ave Learn Rate Per Sample = %.10g\n", learnRatePerSample);
+            fprintf(stderr, "Ave LearnRatePerSample = %.10g\n", learnRatePerSample);
         }
 
         int baseModelEpoch = epochNumber - 1;
         net.LoadPersistableParametersFromFile(GetModelNameForEpoch(baseModelEpoch), m_validateAfterModelReloading);
         net.ResetEvalTimeStamp();
 
-        ElemType learnRate;
-        ElemType prevCriterion;
-        LoadCheckPointInfo(baseModelEpoch, totalSamplesSeen, learnRate,
-                           smoothedGradients, prevCriterion);
+        ElemType dummyLearnRate;
+        ElemType dummtPrevCriterion;
+        size_t dummyMinibatchSize = 0;
+        LoadCheckPointInfo(baseModelEpoch,
+                           /*out*/ totalSamplesSeen,
+                           /*out*/ dummyLearnRate,
+                           smoothedGradients,
+                           /*out*/ dummtPrevCriterion,
+                           /*out*/ dummyMinibatchSize);
+    }
+
+    size_t AdaptiveMinibatchSizing(ComputationNetwork<ElemType>& net,
+                                   ComputationNetwork<ElemType>& refNet,
+                                   const ComputationNodePtr refNode,
+                                   const int epochNumber,
+                                   const size_t numFramesToUseInSearch,
+                                   IDataReader<ElemType>* trainSetDataReader,
+                                   const ElemType learnRatePerSample,
+                                   const size_t initialMinibatchSize,
+                                   const std::vector<ComputationNodePtr>& FeatureNodes,
+                                   const std::vector<ComputationNodePtr>& labelNodes,
+                                   const std::vector<ComputationNodePtr>& criterionNodes,
+                                   const std::vector<ComputationNodePtr>& evaluationNodes,
+                                   std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
+                                   const std::list<ComputationNodePtr>& learnableNodes,
+                                   std::list<Matrix<ElemType>>& smoothedGradients,
+                                   const ElemType learningRateAdjustmentFactor)
+    {
+        size_t minMinibatchSize = initialMinibatchSize;
+        size_t chosenMinibatchSize = initialMinibatchSize;
+
+        // do some pre-adjustment based on LR
+        // Basically we assume that the LR for epoch 1 is safe for mbsize.
+        // If LR control led to a smaller LR, then we can safely increase the lower bound of the MB size.
+        ElemType learningRateChangeSoFar = m_learningRatesPerSample[epochNumber] / m_learningRatesPerSample[0];
+        learningRateChangeSoFar *= learningRateAdjustmentFactor;
+
+        // increasing by the full factor is found to be too aggressive; sqrt() seems more robust
+        learningRateChangeSoFar = sqrt(learningRateChangeSoFar);
+
+        // LR was indeed reduced
+        if (learningRateChangeSoFar < 1.0f)
+        {
+            // we can safely increase MB size (note: this may be bigger than our max)
+            minMinibatchSize = (size_t) (minMinibatchSize / learningRateChangeSoFar);
+        }
+
+        if (epochNumber < 2 && m_prevChosenMinibatchSize != 0)
+        {
+            // newly started training: any previous MB size stored in the model is to be ignored
+            fprintf (stderr, "before epoch .2, previous minibatchSize %d is "
+                     "considered invalid -> resetting\n", m_prevChosenMinibatchSize);
+            m_prevChosenMinibatchSize = 0;
+        }
+
+        // check if we need to skip
+        if (m_prevChosenMinibatchSize != 0 &&
+            (epochNumber + 1) > m_minibatchSizeTuningFrequency &&
+            (epochNumber + 1) % m_minibatchSizeTuningFrequency != 0)
+        {
+            fprintf(stderr, "AdaptiveMinibatchSearch: Search for a better minibatchSize "
+                    "in epoch %d skipped, keeping minibatchSize of %d\n",
+                    epochNumber + 1, m_prevChosenMinibatchSize);
+            chosenMinibatchSize = m_prevChosenMinibatchSize;
+        }
+        else
+        {
+            if (m_prevChosenMinibatchSize != 0)
+            {
+                // but we don't go lower than 0.5 * the chosen previous one
+                fprintf(stderr, "AdaptiveMinibatchSearch: Limiting minMinibatchSize to "
+                        "previous minibatchSize = (%d / 2)\n", m_prevChosenMinibatchSize);
+                minMinibatchSize = max(minMinibatchSize, m_prevChosenMinibatchSize / 2);
+            }
+
+            size_t maxMinibatchSize = m_minibatchSizeTuningMax;
+
+            // only grow at most 2 x compared to previous step
+            if (m_prevChosenMinibatchSize != 0.0f)
+            {
+                if (m_prevChosenMinibatchSize < chosenMinibatchSize)
+                {
+                    m_prevChosenMinibatchSize = chosenMinibatchSize;
+                }
+
+                fprintf(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to "
+                        "previous minibatchSize %d*2\n", m_prevChosenMinibatchSize);
+                maxMinibatchSize = min(maxMinibatchSize, m_prevChosenMinibatchSize * 2);
+            }
+
+            chosenMinibatchSize = SearchForBestMinibatchSize(net, refNet, refNode, epochNumber,
+                                                             numFramesToUseInSearch, trainSetDataReader,
+                                                             learnRatePerSample, FeatureNodes,
+                                                             labelNodes, criterionNodes,
+                                                             evaluationNodes, inputMatrices,
+                                                             learnableNodes, smoothedGradients,
+                                                             minMinibatchSize, maxMinibatchSize);
+        }
+
+        return chosenMinibatchSize;
+    }
+
+    size_t RoundToMultipleOf64(float val)
+    {
+        return 64 * (size_t) ((val + 32) / 64);
+    }
+
+    size_t RoundToMultipleOf64(size_t val)
+    {
+        return 64 * ((val + 32) / 64);
+    }
+
+    // uses a small percentage of training data of minibatch to
+    // speculatively train with various MB sizes; then picks the best
+    size_t SearchForBestMinibatchSize(ComputationNetwork<ElemType>& net,
+                                      ComputationNetwork<ElemType>& refNet,
+                                      const ComputationNodePtr refNode,
+                                      const int epochNumber,
+                                      const size_t numFramesToUseInSearch,
+                                      IDataReader<ElemType>* trainSetDataReader,
+                                      const ElemType learnRatePerSample,
+                                      const std::vector<ComputationNodePtr>& FeatureNodes,
+                                      const std::vector<ComputationNodePtr>& labelNodes,
+                                      const std::vector<ComputationNodePtr>& criterionNodes,
+                                      const std::vector<ComputationNodePtr>& evaluationNodes,
+                                      std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
+                                      const std::list<ComputationNodePtr>& learnableNodes,
+                                      std::list<Matrix<ElemType>>& smoothedGradients,
+                                      const size_t minMinibatchSize, const size_t maxMinibatchSize)
+    {
+        // may happen for automatically reduced learning rates
+        if (minMinibatchSize > maxMinibatchSize)
+        {
+            return maxMinibatchSize;
+        }
+
+        size_t trialMinibatchSize = 0;
+        bool isFirstIteration = true;
+        ElemType baseCriterion = 0;
+
+        // increase the minibatch size by a factor of sqrt(2) in each step.
+        const float minibatchSizeTuningFactor = sqrtf(2.0f);
+
+        size_t lastTriedtrialMinibatchSize = 0;
+        for (float trialMinibatchSizeFloat = (float) minMinibatchSize;
+             trialMinibatchSizeFloat <= maxMinibatchSize;
+             trialMinibatchSizeFloat *= minibatchSizeTuningFactor)
+        {
+            // round mbsize to something meaningful
+            trialMinibatchSize = RoundToMultipleOf64(trialMinibatchSizeFloat);
+
+            fprintf(stderr, "\nAdaptiveMinibatchSearch: Evaluating trial minibatchSize=%d out of range %d..%d ...\n\n",
+                    trialMinibatchSize, RoundToMultipleOf64(minMinibatchSize), RoundToMultipleOf64(maxMinibatchSize));
+
+            size_t totalSamplesSeen;
+            std::vector<ElemType> epochEvalErrors(evaluationNodes.size(), std::numeric_limits<ElemType>::infinity());
+            ElemType epochCriterion = std::numeric_limits<ElemType>::infinity();
+
+            // Train on a few minibatches and so we can observe the epochCriterion as we try increasing
+            // minibatches with iteration of this loop.
+            TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
+                                            numFramesToUseInSearch, trainSetDataReader,
+                                            learnRatePerSample, trialMinibatchSize, FeatureNodes,
+                                            labelNodes, criterionNodes,
+                                            evaluationNodes, inputMatrices,
+                                            learnableNodes, smoothedGradients,
+                                            /*out*/ epochCriterion, /*out*/ epochEvalErrors,
+                                            /*out*/ totalSamplesSeen,
+                                            isFirstIteration ? "BaseAdaptiveMinibatchSearch:" :
+                                                               "AdaptiveMinibatchSearch:");
+
+            if (isFirstIteration)
+            {
+                // for the first iteration of the loop only, set baseCriterion
+                // to the result we got from TrainOneMiniEpochAndReloadModel().
+                baseCriterion = epochCriterion;
+                lastTriedtrialMinibatchSize = trialMinibatchSize;
+                isFirstIteration = false;
+
+                fprintf(stderr, "AdaptiveMinibatchSearch: Computed BaseCriterion %.10g\n", baseCriterion);
+            }
+            else if (!std::isnan(epochCriterion) && (epochCriterion > baseCriterion))
+            {
+                fprintf(stderr, "AdaptiveMinibatchSearch: Search successful!!! Choose new minibatchSize of %d.  "
+                        "EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
+                        lastTriedtrialMinibatchSize, epochCriterion, baseCriterion);
+
+                // As soon as we see the Criterion (a measure of error) start to get larger than the
+                // Criterion we started with, we stop.
+                // TODO: if this is too sensitive, we can add a margin on the bases of percentage of
+                // baseCriterion.
+                break;
+            }
+            else
+            {
+                lastTriedtrialMinibatchSize = trialMinibatchSize;
+                fprintf(stderr, "AdaptiveMinibatchSearch: Keep searching... "
+                        "EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
+                        epochCriterion, baseCriterion);
+            }
+        }
+
+        return lastTriedtrialMinibatchSize;
     }
 
     // Tries to compute derivatives for the whole utterances, which will be
@@ -1325,9 +1610,12 @@ protected:
 
     size_t TrainOneEpoch(ComputationNetwork<ElemType>& net,
                          ComputationNetwork<ElemType>& refNet,
-                         const ComputationNodePtr refNode, const int epochNumber,
-                         const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
+                         const ComputationNodePtr refNode,
+                         const int epochNumber,
+                         const size_t epochSize,
+                         IDataReader<ElemType>* trainSetDataReader,
                          const ElemType learnRatePerSample,
+                         size_t tunedMBSize,
                          const std::vector<ComputationNodePtr>& FeatureNodes,
                          const std::vector<ComputationNodePtr>& labelNodes,
                          const std::vector<ComputationNodePtr>& criterionNodes,
@@ -1335,8 +1623,10 @@ protected:
                          std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
                          const std::list<ComputationNodePtr>& learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
-                         ElemType& epochCriterion, std::vector<ElemType>& epochEvalErrors,
-                         size_t& totalSamplesSeen)
+                         /*out*/ ElemType& epochCriterion,
+                         /*out*/ std::vector<ElemType>& epochEvalErrors,
+                         /*out*/ size_t& totalSamplesSeen,
+                         std::string prefixMsg = "")
     {
         ElemType readTimeInMBs = 0;
         ElemType ComputeTimeInMBs = 0;
@@ -1348,14 +1638,15 @@ protected:
         unsigned long long startReadMBTime = 0, startComputeMBTime = 0;
         unsigned long long endReadMBTime = 0, endComputeMBTime = 0;
 
-        //initialize statistics
+        // initialize statistics
         size_t totalEpochSamples = 0;
 
         int numMBsRun = 0;
 
         size_t numEvalNodes = epochEvalErrors.size();
 
-        //assume only one training criterion node for each epoch
+        // assume only one training criterion node for each epoch
+
         Matrix<ElemType> localEpochCriterion(1, 1, net.GetDeviceID());
         Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, net.GetDeviceID());
 
@@ -1366,7 +1657,7 @@ protected:
         // resetting this, so profiling is performed for one epoch only
         m_numMBsToCUDAProfile = 0;
 
-        trainSetDataReader->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
+        trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
 
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
         startReadMBTime = Timer::MilliSecondElapsed();
@@ -1397,7 +1688,7 @@ protected:
                 throw std::logic_error("cannot pass gradient checker");
             }
 #endif
-            //TODO: currently only support one node regularization
+            // TODO: currently only support one node regularization
             if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
             {
                 refNet.SetActualMiniBatchSize(actualMBSize);
@@ -1409,15 +1700,15 @@ protected:
                                               labelNodes[0]->FunctionValues());
             }
 
-            //only compute gradient when learning rate is large enough
+            // only compute gradient when learning rate is large enough
             if (learnRatePerSample > m_minLearnRate * 0.01)
             {
-                //use only the first criterion. Is there any possibility to use more?
+                // use only the first criterion. Is there any possibility to use more?
                 net.ComputeGradient(criterionNodes[0]);
             }
             else
             {
-                //use only the first criterion. Is there any possibility to use more?
+                // use only the first criterion. Is there any possibility to use more?
                 net.Evaluate(criterionNodes[0]);
             }
 
@@ -1471,18 +1762,18 @@ protected:
                         epochEvalErrors[i] = (const ElemType) localEpochEvalErrors(0, i);
                     }
 
-                    fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d    Train Loss Per Sample = %.8g    ",
-                            epochNumber + 1, numMBsRun - m_numMBsToShowResult + 1,
-                            numMBsRun, numSamplesLastMBs,
+                    fprintf(stderr, "%s Epoch[%d of %d]-Minibatch[%d-%d of %d]: SamplesSeen = %d; TrainLossPerSample = %.8g; ",
+                            prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+                            numMBsRun, epochSize / tunedMBSize, numSamplesLastMBs,
                             (epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs);
 
                     for (size_t i = 0; i < numEvalNodes; i++)
                     {
-                        fprintf(stderr, "EvalErr[%lu] Per Sample = %.8g    ",
+                        fprintf(stderr, "EvalErr[%lu]PerSample = %.8g; ",
                                 i, (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs);
                     }
 
-                    fprintf(stderr, "ReadData Time = %.8g Computing Time=%.8g Total Time Per Sample=%.8g\n",
+                    fprintf(stderr, "ReadDataTime = %.8g; ComputeTime=%.8g; TotalTimePerSample=%.8g\n",
                             readTimeInMBs, ComputeTimeInMBs,
                             (readTimeInMBs + ComputeTimeInMBs) / numSamplesLastMBs);
 
@@ -1506,8 +1797,8 @@ protected:
                 break;
             }
 
-            /// call DataEnd function
-            /// DataEnd does reader specific process if sentence ending is reached
+            // call DataEnd function
+            // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(endDataSentence);
 
             profiler.NextSample();
@@ -1565,7 +1856,7 @@ public:
         // L2 regularizer
         if (L2RegWeight > 0)
         {
-            //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
+            // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             Matrix<ElemType>::ScaleAndAdd(L2RegWeight * actualMBSize, functionValues, gradientValues);
         }
 
@@ -1573,7 +1864,7 @@ public:
         {
             ElemType momentum = sgd->MomentumPerMB();
 
-            //we use simple linear (instead of log linear) scaling here
+            // we use simple linear (instead of log linear) scaling here
             if (actualMBSize < expectedMBSize && momentum > 0.0000001f)
             {
                 momentum = (ElemType) exp(log(momentum) / expectedMBSize * actualMBSize);
@@ -1603,8 +1894,9 @@ public:
         }
 
         // L1 regularizer with proximal gradient descent method
-        if (L1RegWeight > 0) {
-            //*actualMBSize so that it's invariant to minibatch size since learning rate is per sample
+        if (L1RegWeight > 0)
+        {
+            // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             functionValues.InplaceSoftThreshold(learnRatePerSample * L1RegWeight * actualMBSize);
         }
 
@@ -1643,7 +1935,7 @@ protected:
             }
             else
             {
-                //norm2 normalized
+                // norm2 normalized
                 ElemType gradientNorm = gradient.FrobeniusNorm();
                 if (gradientNorm > maxGradientPerMB)
                 {
@@ -1657,7 +1949,8 @@ protected:
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                             const ElemType learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
-                            const ElemType prevCriterion)
+                            const ElemType prevCriterion,
+                            const size_t minibatchSize)
     {
         wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
 
@@ -1669,11 +1962,15 @@ protected:
         fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
 
+        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
+        fstream << minibatchSize;
+        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
+
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
         for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
         {
-            const Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
+            const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
             fstream << smoothedGradient;
         }
 
@@ -1682,12 +1979,14 @@ protected:
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
     }
 
-    bool LoadCheckPointInfo(const size_t epoch, size_t& totalSamplesSeen,
-                            ElemType& learnRatePerSample,
+    bool LoadCheckPointInfo(const size_t epochNumber,
+                            /*out*/ size_t& totalSamplesSeen,
+                            /*out*/ ElemType& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
-                            ElemType& prevCriterion)
+                            /*out*/ ElemType& prevCriterion,
+                            /*out*/ size_t& minibatchSize)
     {
-        wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
+        wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
         if (!fexists(checkPointFileName.c_str()))
         {
             fprintf(stderr,
@@ -1703,11 +2002,21 @@ protected:
         fstream >> totalSamplesSeen >> learnRatePerSample >> prevCriterion;
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
 
+        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize"))
+        {
+            fstream >> minibatchSize;
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
+        }
+        else
+        {
+            minibatchSize = m_mbSize[epochNumber];
+        }
+
         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
         for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
         {
-            Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
+            Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
             fstream >> smoothedGradient;
         }
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -1737,12 +2046,12 @@ protected:
 
     }
 
-    //return -1 if nothing exists
+    // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode)
     {
         if (!makeMode)
         {
-            //always start from scratch
+            // always start from scratch
             return -1;
         }
 
@@ -1880,7 +2189,7 @@ public:
 
                 node->UpdateEvalTimeStamp();
 
-                //use only the first criterion. Is
+                // use only the first criterion. Is
                 net.ComputeGradient(criterionNodes[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
@@ -1924,7 +2233,7 @@ public:
                 node->UpdateEvalTimeStamp();
                 net.Evaluate(criterionNodes[npos]);
 
-                //criterionNode should be a scalar
+                // criterionNode should be a scalar
                 ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element();
 
                 // back to its orginal parameter value
@@ -1971,8 +2280,13 @@ protected:
     bool m_needToNormalizeLRByParallUtterance;
 
     intargvector m_mbSize;
+
+    // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
+
+    // the total number of epochs to run.
     size_t m_maxEpochs;
+
     floatargvector m_momentumInputPerMB;
     ElemType m_momentumPerMB;
     bool m_gradientClippingWithTruncation;
@@ -1995,12 +2309,16 @@ protected:
     ElemType m_reduceLearnRateIfImproveLessThan;
     bool m_continueReduce;
 
-    //determine after how many epochs the learning rate should be auto adjusted.
+    // determine after how many epochs the learning rate should be auto adjusted.
     size_t m_learnRateAdjustInterval;
 
     ElemType m_increaseLearnRateIfImproveMoreThan;
     ElemType m_learnRateIncreaseFactor;
     ElemType m_learnRateDecreaseFactor;
+    size_t m_prevChosenMinibatchSize;
+    bool m_autoAdjustMinibatch;
+    size_t m_minibatchSizeTuningFrequency;
+    size_t m_minibatchSizeTuningMax;
 
     floatargvector m_dropoutRates;
     size_t m_maxTempMemSizeInSamplesForCNN;
