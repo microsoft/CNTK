@@ -585,7 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N = (LONG64)a.GetNumElements();
         int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignToRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (long)startIndex, (long)GetNumRows(), (long)a.GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
