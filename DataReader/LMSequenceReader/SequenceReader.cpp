@@ -2004,6 +2004,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+    ElemType epsilon = (ElemType)1e-6; // avoid all zero, although this is almost impossible.
 
     if (labels->GetCurrentMatrixLocation() == CPU)
     for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
@@ -2041,6 +2042,17 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                 labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
                 labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
             }
+        }
+        else if (readerMode == ReaderMode::Softmax)
+        {
+            if (wrd == 0)
+                labels->SetValue(0, j, epsilon + (ElemType)wrd);
+        }
+        else if (readerMode == ReaderMode::Unnormalize)
+        {
+            labels->SetValue(0, j, -(ElemType)wrd);
+            if (wrd == 0)
+                labels->SetValue(0, j, - epsilon - (ElemType)wrd);
         }
     }
     else // GPU
