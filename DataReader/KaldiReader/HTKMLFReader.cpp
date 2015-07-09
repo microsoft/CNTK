@@ -25,8 +25,6 @@
 #include "minibatchiterator.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
-#include "commandArgUtil.h"
-
 #include "HTKMLFReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
@@ -795,18 +793,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
                             if (first)
                             {
-                                mtSentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                                mtExistsSentenceBeginOrNoLabels.Resize((size_t)1, (size_t)feat.cols());
-
-                                mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
-
-                                mtSentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
-
-                                //mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-                                mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-
-                                mtExistsSentenceBeginOrNoLabels.SetValue(0, 0, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                                //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
+                                m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
+                                m_minibatchPackingFlag.resize(feat.cols());
+                                m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+                                m_sentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
+                                m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SENTENCE_END);
+                                
+                                std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                                m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::UtteranceEnd;
                                 first = false;
                             }
 
@@ -959,26 +954,19 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
 0 : no such case
 1 : case exists
 */
-                    mtSentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
-                    mtExistsSentenceBeginOrNoLabels.Resize(1, m_mbSize);
+                    m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
+                    m_minibatchPackingFlag.resize(m_mbSize);
 
                     //mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
                     {
                         for (size_t j = 0; j < m_mbSize; j++)
                         {
-                            mtSentenceBegin.SetValue(i,j,(ElemType) SENTENCE_MIDDLE);
+                            m_sentenceBegin.SetValue(i,j,(ElemType) SENTENCE_MIDDLE);
                         }
                     }
-                    DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
-                    //mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-                    //mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                    //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-                    for (size_t j = 0; j < m_mbSize; j++)
-                    {
-                        mtExistsSentenceBeginOrNoLabels.SetValue(0,j,(ElemType) (ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                    }
- 
+                    std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+
 
                     vector<size_t> actualmbsize;
                     actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
@@ -992,13 +980,18 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                             {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbSize+1;
+                                if (m_processedFrame[i] == 1)
+                                {
+                                    m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_END);
+                                    m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceEnd;
+                                }
                             }
                             else
                             {
                                 m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
-                                mtSentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                                mtExistsSentenceBeginOrNoLabels.SetValue(0, 0, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                                m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
@@ -1149,10 +1142,16 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                             }
                             m_processedFrame[i] += (endFr-startFr);
                             m_switchFrame[i] = actualmbsize[i];
+                            
                             if (actualmbsize[i] < m_mbSize)
                             {
-                                mtSentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
-                                mtExistsSentenceBeginOrNoLabels.SetValue(0, actualmbsize[i], (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
+                                m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]] | MinibatchPackingFlag::UtteranceStart;
+                            } 
+                            if (actualmbsize[i] == m_mbSize)
+                            {
+                                m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SENTENCE_END);
+                                m_minibatchPackingFlag[actualmbsize[i]-1] = m_minibatchPackingFlag[actualmbsize[i]] | MinibatchPackingFlag::UtteranceEnd;
                             }
 
                             startFr = m_switchFrame[i];
@@ -1301,18 +1300,17 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                         if (first)
                         {
-                            mtSentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                            mtExistsSentenceBeginOrNoLabels.Resize((size_t)1, (size_t)feat.cols());
+                            m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
+                            m_minibatchPackingFlag.resize((size_t)feat.cols());
 
-                            mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
-
-                            mtSentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
-
-                            //mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-                            mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-
-                            mtExistsSentenceBeginOrNoLabels.SetValue(0, 0, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
-                            //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
+                            m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+                            m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+                            m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SENTENCE_END);
+                                
+                            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                            m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::UtteranceEnd;
+ 
                             first = false;
                         }
 
@@ -1631,17 +1629,11 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
         }
 
     template<class ElemType>
-        void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
-        {
-            //mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-            sentenceBegin.SetValue(mtSentenceBegin);
-            //mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
-
-            //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, mtExistsSentenceBeginOrNoLabels.GetDeviceId(), true);
-            sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
-            //mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtExistsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
-
-        }
+    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    {
+        sentenceBegin.SetValue(m_sentenceBegin);
+        minibatchPackingFlag = m_minibatchPackingFlag;
+    }
 
 
     // GetFileConfigNames - determine the names of the features and labels sections in the config file

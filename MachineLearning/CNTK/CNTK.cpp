@@ -35,6 +35,7 @@
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "SGD.h"
+#include "commandArgUtil.h"
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
@@ -49,8 +50,8 @@
 #include "mpi.h"
 #pragma comment(lib, "msmpi.lib")
 #endif
-int numProcs;
-int myRank;
+int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
+int mpiRank;            // and this is who we are amonghst these processes
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -68,11 +69,11 @@ struct compare_second
 void RedirectStdErr(wstring logpath)
 {
     fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
-    msra::files::make_intermediate_dirs(logpath);
-    auto_file_ptr f(logpath.c_str(), "wb");
-    if (dup2(fileno(f), 2) == -1)
+    auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
+    if (dup2(fileno(*f), 2) == -1)
         RuntimeError("unexpected failure to redirect stderr to log file");
     setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
+    static auto fKept = f;                  // keep it around (until it gets changed)
 }
 
 std::string WCharToString(const wchar_t* wst)
@@ -431,20 +432,20 @@ void DoCreateLabelMap(const ConfigParameters& config)
 
 //////////////////////////////////////////////////////////////////////////
 //  for action SVD
-//		An action "SVD" performs the following process to transform an existing model: 
-//			1.	For a Learnable Parameter A whose name matches with the user specified regex, 
-//			    A is approximated by two matrice multiplication B*C ; 
-//			2.	In order to keep the low-rank structure in training, 
-//				the original A node will be replaced by A' whose opertions is Times
-//				with its left children being B and right chilren being 
+//      An action "SVD" performs the following process to transform an existing model: 
+//          1.  For a Learnable Parameter A whose name matches with the user specified regex, 
+//              A is approximated by two matrice multiplication B*C ; 
+//          2.  In order to keep the low-rank structure in training, 
+//              the original A node will be replaced by A' whose opertions is Times
+//              with its left children being B and right chilren being 
 //
-//		To use this command,
-//			user need to specify: 
-//					1)	modelPath			-- path to the existing model 
-//					2)  outputmodelPath		-- where to write the transformed model 
-//					3)  KeepRatio			-- how many percentage of energy we want to keep
-//					4)  ParameterName		-- name (regex) of the parameter node we want to perform a SVD decomposition 
-//				
+//      To use this command,
+//          user need to specify: 
+//                  1)  modelPath           -- path to the existing model 
+//                  2)  outputmodelPath     -- where to write the transformed model 
+//                  3)  KeepRatio           -- how many percentage of energy we want to keep
+//                  4)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
+//              
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //  helper function for DoParameterSVD 
@@ -524,9 +525,9 @@ void  DoParameterSVD(const ConfigParameters& config)
 ///
 /// the outputs are the vocabulary, word2class and class2idx file with the information below
 ///     vocabulary format is as follows
-///       0	     42068	</s>	0
-///       1	     50770	the	0
-///       2	     45020	<unk>	1
+///       0      42068  </s>    0
+///       1      50770  the 0
+///       2      45020  <unk>   1
 ///       the first column is word index
 ///       the last column is class index of the word
 ///       the second column and the third column are for information purpose and 
@@ -559,7 +560,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (!fp)
         RuntimeError("inputFile cannot be read");
     if (nbrCls > 0)
-    cls2idx.Resize(nbrCls, 1);
+        cls2idx.Resize(nbrCls, 1);
     std::unordered_map<string, double> v_count;
 
     /// get line
@@ -591,19 +592,19 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
     std::vector<double> m_count;
     std::vector<int> m_class;// class index of each word
-    
+
     typedef std::pair<std::string, double> stringdouble;
     std::priority_queue<stringdouble, std::vector<stringdouble>, compare_second<stringdouble> >
         q(compare_second<stringdouble>(), std::vector<stringdouble>(v_count.begin(), v_count.end()));
-    
-    int wordCountLessCutoff = v_count.size();
+
+    size_t wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
         for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
             if (iter->second <= cutoff)
                 wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
         throw std::runtime_error("no word remained after cutoff");
-    
+
     if (vocabSize > wordCountLessCutoff)
     {
         std::cerr << "warning: actual vocabulary size is less than required." << endl;
@@ -646,10 +647,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     double dd = 0;
     if (nbrCls > 0)
     {
-    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        total += iter->second;
-    for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
-        dd += sqrt(iter->second / total);
+        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+            total += iter->second;
+        for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+            dd += sqrt(iter->second / total);
     }
 
     double df = 0;
@@ -662,11 +663,11 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         double freq = p.top().second;
         if (nbrCls > 0)
         {
-        df += sqrt(freq / total) / dd;
-        if (df > 1)
-            df = 1;
-        if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
-            class_id++;
+            df += sqrt(freq / total) / dd;
+            if (df > 1)
+                df = 1;
+            if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
+                class_id++;
         }
 
         size_t wid = m_words.size();
@@ -676,7 +677,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
         m_count[wid] = freq;
         if (nbrCls > 0)
-        m_class[wid] = class_id;
+            m_class[wid] = class_id;
         p.pop();
     }
 
@@ -685,7 +686,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     for (size_t i = 0; i < m_index.size(); i++)
     {
         if (nbrCls > 0)
-        wrd2cls(i, 0) = (ElemType)m_class[i];
+            wrd2cls(i, 0) = (ElemType)m_class[i];
         long long clsIdx = nbrCls > 0 ? m_class[i] : 0;
         if (nbrCls > 0 && clsIdx != prevClsIdx)
         {
@@ -1051,6 +1052,54 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
 }
 
 template <typename ElemType>
+void DoSequenceTrain(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    ConfigParameters configSGD(config("SGD"));
+    bool makeMode = config("makeMode", "true");
+
+    ConfigParameters readerConfig(config("reader"));
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    IComputationNetBuilder<ElemType>* netBuilder = NULL;
+    if (config.Exists("NDLNetworkBuilder"))
+    {
+        ConfigParameters configNDL(config("NDLNetworkBuilder"));
+        netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
+    }
+    else if (config.Exists("SimpleNetworkBuilder"))
+    {
+        ConfigParameters configSNB(config("SimpleNetworkBuilder"));
+        netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+    {
+        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
+    }
+
+    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
+
+    DataReader<ElemType>* cvDataReader = nullptr;
+    ConfigParameters cvReaderConfig(config("cvReader", L""));
+
+    if (cvReaderConfig.size() != 0)
+    {
+        cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+        cvDataReader = new DataReader<ElemType>(cvReaderConfig);
+    }
+
+    wstring origModelFileName = config("origModelFileName", L"");
+
+    SGD<ElemType> sgd(configSGD);
+
+    sgd.SequenceTrain(netBuilder, origModelFileName, dataReader, cvDataReader, deviceId, makeMode);
+
+    delete dataReader;
+    delete cvDataReader;
+}
+
+template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
     wstring editPath = config("editPath");
@@ -1080,49 +1129,49 @@ void DoConvertFromDbn(const ConfigParameters& config)
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
-	wstring modelPath = config("modelPath");
-	wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
-	wstring outRending = config("outputFile");      // filename for the rendered topology plot
-	// this can be empty, in that case no rendering will be done
-	// or if this is set, renderCmd must be set, so CNTK will call re       
-	wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
-	// e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
-	//              where <IN> and <OUT> are two special placeholders
+    wstring modelPath = config("modelPath");
+    wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outRending = config("outputFile");      // filename for the rendered topology plot
+    // this can be empty, in that case no rendering will be done
+    // or if this is set, renderCmd must be set, so CNTK will call re       
+    wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
+    //              where <IN> and <OUT> are two special placeholders
 
-	//========================================
-	// Sec. 1 option check
-	//========================================
-	if (outdot.empty())
-	{
-		outdot = modelPath +L".dot";
-	}
+    //========================================
+    // Sec. 1 option check
+    //========================================
+    if (outdot.empty())
+    {
+        outdot = modelPath +L".dot";
+    }
 
-	wstring rescmd;
-	if (!outRending.empty())        // we need to render the plot
-	{
-		std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
-		std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
+    wstring rescmd;
+    if (!outRending.empty())        // we need to render the plot
+    {
+        std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
+        std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
 
-		rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1"+outdot+L"$3");
-		rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1"+outRending+L"$3");
-	}
+        rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1"+outdot+L"$3");
+        rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1"+outRending+L"$3");
+    }
 
 
-	ComputationNetwork<ElemType> net(-1);
-	net.LoadFromFile(modelPath);
-	net.PlotNetworkTopology(outdot);
+    ComputationNetwork<ElemType> net(-1);
+    net.LoadFromFile(modelPath);
+    net.PlotNetworkTopology(outdot);
     fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 
-	if (!outRending.empty())
-	{
+    if (!outRending.empty())
+    {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
 #ifdef __unix__
         system(msra::strfun::utf8(rescmd).c_str());
 #else
-		_wsystem(rescmd.c_str());
+        _wsystem(rescmd.c_str());
 #endif
         fprintf(stderr, "Done\n");
-	}
+    }
 }
 
 
@@ -1150,6 +1199,8 @@ void DoCommand(const ConfigParameters& config)
         {
             if (action[j] == "train" || action[j] == "trainRNN")
                 DoTrain<ElemType>(commandParams);
+            else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
+                DoSequenceTrain<ElemType>(commandParams);
             else if (action[j] == "adapt")
                 DoAdapt<ElemType>(commandParams);
             else if (action[j] == "test" || action[j] == "eval")
@@ -1171,7 +1222,7 @@ void DoCommand(const ConfigParameters& config)
             else if (action[j] == "createLabelMap")
                 DoCreateLabelMap<ElemType>(commandParams);
             else if (action[j] == "writeWordAndClass")
-	            DoWriteWordAndClassInfo<ElemType>(commandParams);
+                DoWriteWordAndClassInfo<ElemType>(commandParams);
             else if (action[j] == "plot")
                 DoTopologyPlot<ElemType>(commandParams);
             else if (action[j] == "SVD")
@@ -1284,7 +1335,6 @@ void PrintUsageInfo()
 
 int wmain(int argc, wchar_t* argv[])
 {
-
     try
     {
 #ifdef MPI_SUPPORT
@@ -1296,14 +1346,14 @@ int wmain(int argc, wchar_t* argv[])
                 MPI_Abort(MPI_COMM_WORLD, rc);
                 RuntimeError("Failure in MPI_Init: %d", rc);
             }
-            MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
-            MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-            fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), myRank, numProcs);
+            MPI_Comm_size(MPI_COMM_WORLD, &mpiNumProcesses);
+            MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+            fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), mpiRank, mpiNumProcesses);
             fflush(stderr);
         }
 #else
-        numProcs = 1;
-        myRank = 0;
+        mpiNumProcesses = 1;
+        mpiRank = 0;
 #endif
 
         ConfigParameters config;
@@ -1323,10 +1373,10 @@ int wmain(int argc, wchar_t* argv[])
                 logpath += (wstring)command[i];
             }
             logpath += L".log";
-            if (numProcs > 1)
+            if (mpiNumProcesses > 1)
             {
                 std::wostringstream oss;
-                oss << myRank;
+                oss << mpiRank;
                 logpath += L"rank" + oss.str();
             }
             RedirectStdErr(logpath);
@@ -1337,7 +1387,7 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        if (myRank == 0) // main process
+        if (mpiRank == 0) // main process
         {
             //dump config info
             fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
@@ -1375,7 +1425,7 @@ int wmain(int argc, wchar_t* argv[])
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
             type = config("type", "float");
-        if (myRank == 0)
+        if (mpiRank == 0)
             fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
             DoCommand<float>(config);

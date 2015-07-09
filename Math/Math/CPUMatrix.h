@@ -217,6 +217,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias,
             CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c);
+        
+        void AssignSoftmaxSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& softmax);
 
         void AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
             const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& c);
@@ -249,6 +251,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
         CPUMatrix<ElemType>&  AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+        CPUMatrix<ElemType>&  AddToRowRepeatValuesOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats);
+
         CPUMatrix<ElemType>&  AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         CPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         

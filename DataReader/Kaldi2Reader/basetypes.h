@@ -81,12 +81,13 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <locale>       // std::wstring_convert
 #include <string>
 #include <algorithm>    // for transform()
-#include <unordered_map>
 #ifdef _MSC_VER
 #include <codecvt>      // std::codecvt_utf8
 #endif
 #ifdef _WIN32
 #include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
+#include <unordered_map>
+
 #endif
 #if __unix__
 #include <strings.h>
@@ -96,6 +97,8 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <sys/time.h>
+#include <unordered_map>
+
 typedef unsigned char byte;
 #endif
 
@@ -152,8 +155,10 @@ static inline std::string basename( std::string const& pathname)
 
 static inline std::string removeExtension (std::string const& filename)
 {
-    std::string::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
-    return pivot == filename.rend() ? filename: std::string(filename.begin(), pivot.base()-1);
+    //std::string::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
+    //return pivot == filename.rend() ? filename: std::string(filename.begin(), pivot.base()-1);
+    int lastindex = filename.find_first_of(".");
+    return filename.substr(0,lastindex);
 }
 static inline std::wstring basename( std::wstring const& pathname)
 {
@@ -162,8 +167,11 @@ static inline std::wstring basename( std::wstring const& pathname)
 
 static inline std::wstring removeExtension (std::wstring const& filename)
 {
-    std::wstring::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
-    return pivot == filename.rend() ? filename: std::wstring(filename.begin(), pivot.base()-1);
+    //std::wstring::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
+    //return pivot == filename.rend() ? filename: std::wstring(filename.begin(), pivot.base()-1);
+    int lastindex = filename.find_first_of(".");
+    return filename.substr(0,lastindex);
+
 }
 
 // ----------------------------------------------------------------------------
@@ -1180,14 +1188,51 @@ public:
     }
 };
 #endif
+#define EPSILON 1e-5
+#define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
+
 /**
 These macros are used for sentence segmentation information. 
 */
-#define SENTENCE_BEGIN 0 
-#define SENTENCE_MIDDLE 1
-#define NO_LABELS -1
-#define EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 0
-#define NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 1
+#define SENTENCE_BEGIN ((int) MinibatchPackingFlag::UtteranceStart)
+#define SENTENCE_MIDDLE ((int) MinibatchPackingFlag::None)
+#define SENTENCE_END ((int) MinibatchPackingFlag::UtteranceEnd)
+#define NO_LABELS ((int) MinibatchPackingFlag::NoLabel)
+
+enum class MinibatchPackingFlag : unsigned char
+{
+    None = 0,
+    UtteranceStart = 1 << 0,   //binary 0001
+    UtteranceEnd = 1 << 1,   //binary 0010
+    NoLabel = 1 << 2,      //binary 0100
+
+    UtteranceStartOrNoLabel = UtteranceStart | NoLabel,
+    UtteranceEndOrNoLabel = UtteranceEnd | NoLabel,
+    UtteranceStartOrEndOrNoLabel = UtteranceStart | UtteranceEnd | NoLabel,
+};
+
+inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+}
+
+inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+{
+    a = a | b;
+    return a;
+}
+
+
+inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
+}
+
+template<class F>
+static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
+{
+    return l.second > r.second;
+}
 
 
 #endif    // _BASETYPES_
