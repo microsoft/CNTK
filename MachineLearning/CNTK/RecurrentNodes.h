@@ -39,9 +39,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PastValueNode : public ComputationNode<ElemType>
     {
-        ElemType  m_default_activity; 
-
         UsingComputationNodeMembers;
+
     public:
         PastValueNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId)
@@ -124,6 +123,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //Set sentence boundary information according to a specified time step. 
         void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> * minibatchPackingFlag)
         {
+            if (m_timeStep <= 0)
+                LogicError("timeStep should be 1 or larger");
+
             ComputationNode<ElemType>::ResetBound(seg, minibatchPackingFlag);
             if (m_timeStep > 1)
             {
@@ -175,20 +177,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_sentenceSeg = &m_boundaryInfo;
             }
 
-            if (m_timeStep <= 0)
-                LogicError("timeStep should be 1 or larger");
         }
 
-        /// to-do: need to change to the new way of resetting state
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 0)
                 throw std::invalid_argument("PastValue operation only takes one input.");
 
             size_t nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep; 
-            for (int i = nbrSamples - 1; i >= 0; i--)
+            for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
-                ComputeInputPartialSR(i, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep);
+                Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+
+                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
             }
         }
 
@@ -196,27 +197,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (inputIndex > 0)
                 throw std::invalid_argument("PastValue operation only takes one input.");
-            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
+
+            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); 
+
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
 
-            Matrix<ElemType> colBegin(m_sentenceSeg->GetDeviceId());
-            colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+            Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
 
             ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
-        }
-
-        /// to-do: need to change to the new way of resetting state
-        static void WINAPI ComputeInputPartialSR(int timeIdxInSeq, int timeStep,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr)
-        {
-            assert(timeIdxInSeq >= 0);
-            if ((timeIdxInSeq - timeStep) >= 0 && (timeIdxInSeq - timeStep) * mNbr <= inputGradientValues.GetNumCols())
-            {
-                Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - timeStep)*mNbr, mNbr);
-                Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-                to += frm; 
-            }
         }
 
         static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int timeStep, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin, MinibatchPackingFlag minibatchPackingFlag)
@@ -228,7 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {                   
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (colBegin(i,0) == SENTENCE_MIDDLE)
+                        if (colBegin(i, 0) == SENTENCE_MIDDLE || colBegin(i, 0) == SENTENCE_END)
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - timeStep)*mNbr + i, 1);
                             Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
@@ -254,10 +243,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ASSERT(m_timeStep > 0);
             size_t blogSize = Inputs(0)->FunctionValues().GetNumCols();
 
-            for (size_t i = 0; i < blogSize / m_samplesInRecurrentStep; i++)
-                EvaluateThisNodeSR(i, m_timeStep, true, m_default_activity, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
-            /// reset past activity
-            m_pastActivity = Inputs(0)->FunctionValues();
+            for (size_t timeIdxInSeq = 0; timeIdxInSeq < blogSize / m_samplesInRecurrentStep; timeIdxInSeq++)
+            {
+                Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+            }
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
@@ -272,50 +262,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_pastActivity = Inputs(0)->FunctionValues();
             }
             
-            Matrix<ElemType> colBegin(m_sentenceSeg->GetDeviceId());
-            colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+            Matrix<ElemType>  colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
             EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
 
         }
 
-        /// to-do: need to change to the new way of resetting state
-        static void WINAPI EvaluateThisNodeSR(const size_t timeIdxInSeq, const int timeStep, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr)
-        {
-            ASSERT(timeStep > 0);
-
-            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
-                functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
-                functionValues.Resize(inputFunctionValues.GetNumRows(),
-                    inputFunctionValues.GetNumCols());
-
-            int iPastIndex = (int)(timeIdxInSeq - timeStep) * mNbr;
-            int d = iPastIndex; 
-            if (d < 0)
-                d = (int)functionValues.Mod((float)iPastIndex, (float)pastActivity.GetNumCols());  
-           /// this can point to the past activity of the previous mninibatch
-
-            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
-
-            if (reset)
-                out.SetValue(default_activity);
-            else
-            {
-                if (iPastIndex < 0)
-                    inp = pastActivity.ColumnSlice(d, mNbr);
-                else
-                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
-                out.SetValue(inp);
-            }
-        }
-
-        /**
-        This function returns output from the previous time instance.For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from colBegin.In case of sentence begining, the state activity is set to an initial value.The colBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_LABELS, which are 0, 1, and - 1, respectively.
-            To compute the initial value, we use
-            prevState = colBegin * pastActivity + ~colBegin * initialStateValue
-            and ~sentenceBegin is computed as - 1 * (colBegin - 1), assuming that colBegin is either 0 or 1. For example, when colBegin == 1, ~sentenceBegin == 0.
-        colBegin is truncated to the range of 0 to 1 to satisify the assumption. For NO_LABELS case, it is converted to its absolute value, which is 1, and treated in ~colBegin as SENTENCE_MIDDLE, which results in 0 so that zero is output for NO_LABELS case. 
-        */
         static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int timeStep, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin, const MinibatchPackingFlag minibatchPackingFlag)
         {
             ASSERT(timeStep > 0);
@@ -339,23 +290,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int i = 0; i < mNbr; i ++)
                 {
                     out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i,1);
-                    if (iPastIndex < 0)
-                        inp = pastActivity.ColumnSlice(d+i, 1);
-                    else
-                        inp = inputFunctionValues.ColumnSlice(d+i, 1);
 
                     if (colBegin(i,0) == SENTENCE_BEGIN)
                     {
                         out.SetValue(initStateValue);
-                    }else
+                    }
+                    else
                     {
+                        if (iPastIndex < 0)
+                            inp = pastActivity.ColumnSlice(d + i, 1);
+                        else
+                            inp = inputFunctionValues.ColumnSlice(d + i, 1);
+
                         out.SetValue(inp);
                     }
                 }
-                //colSeg.SetDiagonalValue(colSegPastActivity);
-                //Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
-
-                //SetToInitStateValueForResetSeg(colBegin, mNbr, initStateValue, out);
             }
             else
             {
@@ -393,8 +342,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
                 if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
+                CopyImageSizeFromInputs();
             }
-            CopyImageSizeFromInputs(); 
         }
 
 
@@ -459,6 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     private:
+        ElemType  m_default_activity;
         Matrix<ElemType> m_pastActivity;  /// saves the past activity this PastValue node points to
         int      m_timeStep;    /// steps for PastValue 
         vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
@@ -467,6 +417,399 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class PastValueNode<float>; 
     template class PastValueNode<double>;
+
+    //get value from future (used in the bi-directional models)
+    template<class ElemType>
+    class FutureValueNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+    public:
+        FutureValueNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                m_reqMultiSeqHandling = true;
+                m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
+                m_timeStep = 1;
+                m_functionValues.Resize(1, 1);
+                m_futureActivity.Resize(1, 1);
+                InitRecurrentNode();
+            }
+
+        FutureValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+
+                m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
+                m_timeStep = 1;
+                m_functionValues.Resize(1, 1);
+                m_futureActivity.Resize(1, 1);
+                m_reqMultiSeqHandling = true;
+
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        void SaveToFile(File& fstream) const
+        {
+            fstream << OperationName() << NodeName();
+            fstream << m_timeStep;
+            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols();
+
+            fstream << m_default_activity;
+        }
+
+        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+
+            fstream >> m_timeStep;
+
+            size_t iRow, timeIdxInSeq;
+            fstream >> iRow >> timeIdxInSeq;
+            FunctionValues().Resize(iRow, timeIdxInSeq);
+            m_futureActivity.Resize(iRow, timeIdxInSeq);
+
+            if (modelVersion >= CNTK_MODEL_VERSION_2)
+                fstream >> m_default_activity;
+        }
+
+        FutureValueNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            m_reqMultiSeqHandling = true;
+            m_default_activity = initHiddenActivity;
+            m_timeStep = 1;
+
+            m_functionValues.Resize(row_size, col_size);
+            m_functionValues.SetValue(m_default_activity);
+
+            m_futureActivity.Resize(row_size, col_size);
+            m_futureActivity.SetValue(m_default_activity);
+
+            m_gradientValues.Resize(row_size, col_size);
+            m_gradientValues.SetValue(0.0f);
+
+            InitRecurrentNode();
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"FutureValue"; }
+
+        //Set sentence boundary information according to a specified time step. 
+        void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> * minibatchPackingFlag)
+        {
+            if (m_timeStep <= 0)
+                LogicError("timeStep should be 1 or larger");
+
+            ComputationNode<ElemType>::ResetBound(seg, minibatchPackingFlag);
+            if (m_timeStep > 1)
+            {
+                m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
+                m_boundaryInfo = *seg;
+
+                //each row has a number to indicate how many values should be reset for that utterance
+                int numRows = (int)seg->GetNumRows();
+                vector<int> numResetLeft;
+                numResetLeft.resize(numRows);
+                std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
+
+                for (int i = minibatchPackingFlag->size()-1; i <=0; i--)
+                {
+                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceEndOrNoLabel)
+                    {
+                        //we set timeStep-1 elements following it to be UtteranceStart until met NoLabel
+                        for (int j = 0; j < numRows; j++)
+                        {
+                            if ((*seg)(j, i) == SENTENCE_END)
+                            {
+                                numResetLeft[j] = m_timeStep;
+                            }
+                            else if ((*seg)(j, i) == NO_LABELS)
+                            {
+                                numResetLeft[j] = 0;
+                            }
+                        }
+                    }
+
+                    //now set the UtteranceEnd
+                    bool valueChanged = false;
+                    for (int j = 0; j < numRows; j++)
+                    {
+                        if (numResetLeft[j]-- > 0)
+                        {
+                            m_boundaryInfo(j, i) = SENTENCE_END;
+                            valueChanged = true;
+                        }
+                    }
+
+                    if (valueChanged)
+                    {
+                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::UtteranceEnd;
+                    }
+                }
+
+                m_minibatchPackingFlag = &m_shiftedMinibatchPackingFlag;
+                m_sentenceSeg = &m_boundaryInfo;
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("FutureValue operation only takes one input.");
+
+            size_t nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep;
+            for (int timeIdxInSeq = 0; timeIdxInSeq< nbrSamples; timeIdxInSeq++)
+            {
+                Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+
+                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("FutureValue operation only takes one input.");
+
+            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
+            assert(m_sentenceSeg != nullptr);
+            assert(m_minibatchPackingFlag != nullptr);
+
+            Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+
+            ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+        }
+
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int timeStep, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colFlag, MinibatchPackingFlag minibatchPackingFlag)
+        {
+            assert(timeIdxInSeq >= 0);
+            if ((timeIdxInSeq + timeStep) < gradientValues.GetNumCols())
+            {
+                if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceEndOrNoLabel)
+                {
+                    for (int i = 0; i < mNbr; i++)
+                    {
+                        if (colFlag(i, 0) == SENTENCE_MIDDLE || colFlag(i, 0) == SENTENCE_BEGIN)
+                        {
+                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + timeStep)*mNbr + i, 1);
+                            Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
+
+                            to += frm;
+                        }
+                    }
+
+                }
+                else
+                {
+                    Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
+                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + timeStep)*mNbr, mNbr);
+
+                    to += frm;
+                }
+            }
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            ASSERT(m_timeStep > 0);
+            size_t blogSize = Inputs(0)->FunctionValues().GetNumCols();
+
+            for (size_t timeIdxInSeq = blogSize / m_samplesInRecurrentStep - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
+            {
+                Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_futureActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+            }
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            assert(m_sentenceSeg != nullptr);
+            assert(m_minibatchPackingFlag != nullptr);
+
+            if (timeIdxInSeq == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
+            {
+                m_futureActivity = Inputs(0)->FunctionValues();
+            }
+
+            Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
+            EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_futureActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+        }
+
+        /// to-do: need to change to the new way of resetting state
+        static void WINAPI EvaluateThisNodeSR(const size_t timeIdxInSeq, const int timeStep, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& futureActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr)
+        {
+            ASSERT(timeStep > 0);
+
+            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
+                functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
+                functionValues.Resize(inputFunctionValues.GetNumRows(),
+                inputFunctionValues.GetNumCols());
+
+            int futureIndex = (int)(timeIdxInSeq + timeStep) * mNbr;
+            int d = futureIndex;
+            if (d >= inputFunctionValues.GetNumCols())
+                d = (int)functionValues.Mod((float)futureIndex, (float)futureActivity.GetNumCols());
+            /// this can point to the future activity of the previous mninibatch
+
+            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
+            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
+
+            if (reset)
+            {
+                out.SetValue(default_activity);
+            }
+            else
+            {
+                if (futureIndex >= inputFunctionValues.GetNumCols())
+                    inp = futureActivity.ColumnSlice(d, mNbr);
+                else
+                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
+                out.SetValue(inp);
+            }
+        }
+
+        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int timeStep, Matrix<ElemType>& functionValues, const Matrix<ElemType>& futureActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colFlag, const MinibatchPackingFlag minibatchPackingFlag)
+        {
+            ASSERT(timeStep > 0);
+
+            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
+                functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
+                functionValues.Resize(inputFunctionValues.GetNumRows(),
+                inputFunctionValues.GetNumCols());
+
+            int futureIndex = (int)(timeIdxInSeq + timeStep) * mNbr;
+            int d = futureIndex;
+            if (d >= inputFunctionValues.GetNumCols())
+                d = (int)functionValues.Mod((float)futureIndex, (float)futureActivity.GetNumCols());
+
+            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
+            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
+
+            if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceEndOrNoLabel)
+            {
+                for (int i = 0; i < mNbr; i++)
+                {
+                    out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
+
+                    if (colFlag(i, 0) == SENTENCE_END)
+                    {
+                        out.SetValue(initStateValue);
+                    }
+                    else
+                    {
+                        if (futureIndex >= inputFunctionValues.GetNumCols())
+                            inp = futureActivity.ColumnSlice(d + i, 1);
+                        else
+                            inp = inputFunctionValues.ColumnSlice(d + i, 1);
+
+                        out.SetValue(inp);
+                    }
+                }
+            }
+            else
+            {
+                if (futureIndex >= inputFunctionValues.GetNumCols())
+                    inp = futureActivity.ColumnSlice(d, mNbr);
+                else
+                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
+
+                out.SetValue(inp);
+            }
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation(true/*allowNulls*/);
+
+            if (m_children.size() != 1)
+                throw std::logic_error("FutureValue operation should have one input.");
+
+            if (!(Inputs(0) == nullptr))
+            {
+                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), 
+                       cols0 = Inputs(0)->FunctionValues().GetNumCols();
+
+                if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
+                CopyImageSizeFromInputs();
+            }
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr inputNode)
+        {
+            m_children.resize(1);
+            m_children[0] = inputNode;
+        }
+
+        void SetTimeStep(const int val)
+        {
+            if (val <= 0)
+                throw std::logic_error("timeStep must be > 0.");
+            m_timeStep = val;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_boundaryInfo.GetDeviceId() != deviceId)
+                    m_boundaryInfo.TransferFromDeviceToDevice(m_boundaryInfo.GetDeviceId(), deviceId);
+                if (m_futureActivity.GetDeviceId() != deviceId)
+                    m_futureActivity.TransferFromDeviceToDevice(m_futureActivity.GetDeviceId(), deviceId, true);
+            }
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            FutureValueNode<ElemType>* node = (FutureValueNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_timeStep = m_timeStep;
+                node->m_default_activity = m_default_activity;
+                node->m_futureActivity = m_futureActivity;
+            }
+        }
+
+        // copy constructor
+        FutureValueNode(const FutureValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_futureActivity(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new FutureValueNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
+    private:
+        ElemType  m_default_activity;
+        Matrix<ElemType> m_futureActivity;  /// saves the future activity this FutureValue node points to
+        int      m_timeStep;    /// steps for FutureValue 
+        vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
+        Matrix<ElemType> m_boundaryInfo; /// individual sentence boundary information 
+    };
+
+    template class FutureValueNode<float>;
+    template class FutureValueNode<double>;
 
     /**
     LSTM specific node. This node uses matrix operations to have LSTM functionality. 
