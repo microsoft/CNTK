@@ -1,5 +1,9 @@
 # WORK IN PROGRESS, not currently complete nor usable
 
+# NOTE: We are in the process of consolidating all Makefile's into a single one,
+# with different build options. In the meantime, all active work will go into Makefile.gpu
+# and other Makefile's, like this one, may fall behind.
+
 # makefile for a Linux/GCC build of CNTK
 # This needs ACML_PATH. E.g. in tcsh, say: setenv ACML_PATH C:/AMD/acml5.3.1/ifort64_mp
 
@@ -65,11 +69,14 @@ else
 	KALDI_DEFINE = -DHAVE_ATLAS  -I $(ATLAS_PATH)
 endif
 KALDI_LIB = -LDataReader/KaldiReader/base/kaldi-base
-CUDA_PATH = /usr/local/cuda-7.0
+CUDA_PATH = /scratch/cuda-6.5
 CUDA_INCLUDE = $(CUDA_PATH)/include
 CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
-INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(CUDA_INCLUDE) -I $(MATHLIB_INCLUDE) -I DataReader/KaldiReader  
+NVML_INCLUDE = /scratch/usr/include/nvidia/gdk # install and include it @ https://developer.nvidia.com/gpu-deployment-kit
+
+
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(CUDA_INCLUDE) -I $(MATHLIB_INCLUDE) -I DataReader/KaldiReader -I $(NVML_INCLUDE)
 
 CFLAGS = -msse3 -std=c++0x -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -DHAVE_POSIX_MEMALIGN ${KALDI_DEFINE} $(MATHLIB_DEFINE) -fopenmp -fpermissive
 
@@ -81,7 +88,8 @@ MATH_SRC = Math/Math/Matrix.cpp Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKe
 		   Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp #Math/Math/InstantiateTemplates.cu
 CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CNTK/CNTK.cpp MachineLearning/CNTK/ComputationNode.cpp \
           MachineLearning/CNTK/ModelEditLanguage.cpp \
-          MachineLearning/CNTK/SimpleNetworkBuilder.cpp MachineLearning/CNTK/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
+          MachineLearning/CNTK/SimpleNetworkBuilder.cpp  \
+		  MachineLearning/CNTK/Profiler.cpp MachineLearning/CNTK/tests.cpp  MachineLearning/CNTK/Profiler.cpp MachineLearning/CNTKEval/CNTKEval.cpp
 BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
 KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp

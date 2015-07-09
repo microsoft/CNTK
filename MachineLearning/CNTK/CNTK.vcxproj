@@ -104,7 +104,7 @@
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -151,6 +151,9 @@
     <Text Include="modelEditorFromScratch.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
+    <ClInclude Include="..\..\Common\CrossProcessMutex_linux.h" />
+    <ClInclude Include="..\..\Common\CrossProcessMutex_win32.h" />
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
@@ -168,12 +171,14 @@
     <ClInclude Include="ComputationNetworkHelper.h" />
     <ClInclude Include="ComputationNode.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
+    <ClInclude Include="DecoderNode.h" />
     <ClInclude Include="EvaluationCriterionNodes.h" />
     <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="InputAndParamNodes.h" />
     <ClInclude Include="LinearAlgebraNodes.h" />
     <ClInclude Include="ModelEditLanguage.h" />
+    <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="NDLNetworkBuilder.h" />
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />
@@ -205,6 +210,7 @@
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="NetworkDescriptionLanguage.cpp" />
     <ClCompile Include="SimpleNetworkBuilder.cpp" />
+    <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="tests.cpp" />
   </ItemGroup>

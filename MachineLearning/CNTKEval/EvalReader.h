@@ -149,7 +149,7 @@ public:
             //size_t  = m_currentRecord*rows;
             void* mat = &(*matrix)(0,0);
             size_t matSize = matrix->GetNumElements()*sizeof(ElemType);
-            void* dataPtr = (void*)data->data();
+            void* dataPtr = (void*)((ElemType*)data->data() + m_currentRecord*rows);
             size_t dataSize = rows*recordCount*sizeof(ElemType);
             memcpy_s(mat, matSize, dataPtr, dataSize);
         }
@@ -164,14 +164,18 @@ public:
     size_t NumberSlicesInEachRecurrentIter() {return 1;}
 
     void SetNbrSlicesEachRecurrentIter(const size_t ) {}
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd)
+    void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd)
     {
         sentenceEnd.resize(m_switchFrame.size());
-        for (size_t i = 0; i < m_switchFrame.size() ; i++)
+        for (size_t i = 0; i < m_switchFrame.size(); i++)
         {
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
+    void SetSentenceSegBatch(Matrix<ElemType> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+    {
+    }
+
     void GetSentenceBoundary(std::vector<size_t> boundaryInfo)
     {
         m_switchFrame.resize(boundaryInfo.size());
@@ -180,6 +184,9 @@ public:
             m_switchFrame[i] = boundaryInfo[i];
         }
     }
+
+    void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
+
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
     virtual const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/) 

@@ -326,6 +326,15 @@ void TestConfiguration(const ConfigParameters& configBase)
             }
         }
 
+        if (configRoots.Exists("NodesReqMultiSeqHandling"))
+        {
+            configNode = configRoots("NodesReqMultiSeqHandling");
+            for (size_t i = 0; i<configNode.size(); i++)
+            {
+                std::wstring nodeName = configNode[i];
+            }
+        }
+
         if (configRoots.Exists("EvalNodes"))
         {
             configNode = configRoots("EvalNodes");

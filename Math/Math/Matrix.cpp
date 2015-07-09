@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <math.h>
 #include "GPUWatcher.h"     // bring in this class as well so that it gets exported from this DLL
+#include <iostream>
 
 #ifndef CPUONLY
 #pragma comment (lib, "CNTKMathCUDA.lib")   // built by CNTKMathCUDA project
@@ -183,6 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_preferredDeviceId=_devId;
         m_numTimesDeviceChanged = 0;
         m_numTimesMatrixTypeChanged = 0;
+        m_devicesTransferedTo[1] = m_devicesTransferedTo[0] = CPUDEVICE - 1;
         }
 
     //this function is used to indicate where (CPUDense, CPUSparse, GPUDense, GPUSparse) the most updated results are in
@@ -680,7 +682,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
         {
-            NOT_IMPLEMENTED;
+            // TODO: Implement optimized ColumnSlice functions for sparse matrices. For now use the ColumnSliceToDense instead.
+            if (devId == CPUDEVICE)
+            {
+                if (slice.m_CPUMatrix != nullptr)
+                    slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                else
+                    slice.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                slice.SetDataLocation(CPU, DENSE);
+            }
+            else
+            {
+                if (slice.m_GPUMatrix != nullptr)
+                    slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                else
+                    slice.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                slice.SetDataLocation(GPU, DENSE);
+            }
         }
         else 
         {
@@ -730,9 +748,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
         m_numTimesMatrixTypeChanged++;
+     
         if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
-            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
-
+        {            
+            fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);         
+        }      
         if (GetDeviceId()<0) //CPU
         {
             if (newMatrixType==MatrixType::SPARSE)
@@ -1222,13 +1242,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
     {
-        DISPATCH_MATRIX_ON_FLAG(this,
-            this,
-            m_CPUMatrix->Reshape(numRows,numCols), 
-            m_GPUMatrix->Reshape(numRows,numCols), 
-            NOT_IMPLEMENTED, 
-            NOT_IMPLEMENTED
-            );
+        if (numRows != GetNumRows() || numCols != GetNumCols())
+        {
+            DISPATCH_MATRIX_ON_FLAG(this,
+                this,
+                    m_CPUMatrix->Reshape(numRows, numCols),
+                    m_GPUMatrix->Reshape(numRows, numCols),
+                NOT_IMPLEMENTED, 
+                NOT_IMPLEMENTED
+                );
+        }
     }
 
     template<class ElemType>
@@ -1236,11 +1259,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
-            m_CPUMatrix->Resize(numRows,numCols,growOnly), 
-            m_GPUMatrix->Resize(numRows,numCols,growOnly), 
+            m_CPUMatrix->Resize(numRows, numCols, growOnly),
+            m_GPUMatrix->Resize(numRows, numCols, growOnly),
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
+    }
+
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::RepMat(const Matrix<ElemType>& frmMat, const size_t rowRatio, const size_t colRatio)
+    {
+        size_t nCols = frmMat.GetNumCols(); 
+        size_t nRows = frmMat.GetNumRows();
+
+        if (rowRatio > 1)
+            RuntimeError("RepMat not yet supporting raw ratio larger than 1");
+        size_t newCols = colRatio * nCols;
+
+        Matrix<ElemType> c(nRows, newCols, frmMat.GetDeviceId());
+        for (size_t i = 0; i < colRatio; i++)
+        {
+            c.ColumnSlice(i * nCols, nCols) = frmMat;
+        }
+
+        return c;
     }
 
     template<class ElemType>
@@ -1435,6 +1477,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //for each column of a, we assign all rows of a to this starting from startIndex
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        DecideAndMoveToRightDevice(*this, a);
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AssignToRowSliceValuesOf(*a.m_CPUMatrix, startIndex, numRows),
+            this->m_GPUMatrix->AssignToRowSliceValuesOf(*a.m_GPUMatrix, startIndex, numRows),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
     //for the row slice of this starting from startIndex we add a to it.
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows)
@@ -1477,6 +1540,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const Matrix<ElemType>& a = *inputMatrices[i];
+            DecideAndMoveToRightDevice(*this, a);
+
+            //WARNING: a and this must have same type
+            if (!(GetMatrixType() == a.GetMatrixType()))
+                NOT_IMPLEMENTED;
+        }
+
+        CurrentDataLocation curLocation = GetCurrentMatrixLocation();
+        if (curLocation == CurrentDataLocation::GPU || curLocation == CurrentDataLocation::BOTH)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //GPUDense;
+                std::vector<const GPUMatrix<ElemType>*> gpuInputMatrices;
+                gpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    gpuInputMatrices[i] = inputMatrices[i]->m_GPUMatrix;
+
+                m_GPUMatrix->AssignRowStackValuesOf(gpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::GPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else if (curLocation == CurrentDataLocation::CPU)
+        {
+            if (GetMatrixType() != MatrixType::SPARSE)
+            {
+                //CPUDense;
+                std::vector<const CPUMatrix<ElemType>*> cpuInputMatrices;
+                cpuInputMatrices.resize(inputMatrices.size());
+                for (int i = 0; i < inputMatrices.size(); i++)
+                    cpuInputMatrices[i] = inputMatrices[i]->m_CPUMatrix;
+
+                m_CPUMatrix->AssignRowStackValuesOf(cpuInputMatrices, sliceStartCol, sliceNumCols);
+
+                SetDataLocation(CurrentDataLocation::CPU, MatrixType::DENSE);
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Matrices do not exist in either CPU or GPU.");
+        }
+
+        return *this;
+    } 
+
+
     template<class ElemType>
     Matrix<ElemType>&  Matrix<ElemType>::AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
     {
@@ -1490,6 +1615,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             this->m_CPUMatrix->AssignRepeatOf(*a.m_CPUMatrix, numRowRepeats, numColRepeats),
             this->m_GPUMatrix->AssignRepeatOf(*a.m_GPUMatrix, numRowRepeats, numColRepeats),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
+    template<class ElemType>
+    Matrix<ElemType>&  Matrix<ElemType>::AddToRowRepeatValuesOf(const Matrix<ElemType>& a, const size_t numRepeats)
+    {
+        DecideAndMoveToRightDevice(*this, a);
+
+        //WARNING: a and this must have same type
+        if (!(GetMatrixType() == a.GetMatrixType()))
+            NOT_IMPLEMENTED;
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->AddToRowRepeatValuesOf(*a.m_CPUMatrix, numRepeats),
+            this->m_GPUMatrix->AddToRowRepeatValuesOf(*a.m_GPUMatrix, numRepeats),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
@@ -3219,9 +3364,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
 #define NUM_DEVICE_CHANGED_WARN 20
-        m_numTimesDeviceChanged++;
-        if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN)
+        if (m_numTimesDeviceChanged <= NUM_DEVICE_CHANGED_WARN &&
+            (!emptyTransfer || (from_id >= 0 && to_id >= 0)))
+        {
+            m_numTimesDeviceChanged++;
+            if (m_devicesTransferedTo[0] < CPUDEVICE)  
+            {
+                m_devicesTransferedTo[0] = to_id;
+            }
+            else if (m_devicesTransferedTo[0] != to_id)
+            {
+                m_devicesTransferedTo[1] = to_id;
+            }
+        }
+        if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN && m_devicesTransferedTo[1] >= CPUDEVICE)
+        {
             fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_DEVICE_CHANGED_WARN);
+        }
 
         if (m_matrixType == MatrixType::SPARSE)
         {
@@ -3364,13 +3523,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (IsEmpty())
             throw std::logic_error("Print: Matrix is empty.");
+        DEVICEID_TYPE orgdevice = this->GetDeviceId();
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
             this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd), 
-            _transferToDevice(CPUDEVICE, false, false); this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd), 
+            _transferToDevice(CPUDEVICE, false, false); this->m_CPUMatrix->Print(matrixName, rowStart, rowEnd, colStart, colEnd); _transferToDevice(orgdevice, false, false), 
             this->m_CPUSparseMatrix->Print(matrixName), 
-            _transferToDevice(CPUDEVICE, false, false); this->m_CPUSparseMatrix->Print(matrixName)
+            _transferToDevice(CPUDEVICE, false, false); this->m_CPUSparseMatrix->Print(matrixName); _transferToDevice(orgdevice, false, false)
             );
                 
     }
@@ -3524,6 +3684,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     }
+
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax)
+    {
+        this->Resize(1, 1);
+        if (this->GetDeviceId() < 0)
+            a.m_CPUMatrix->AssignSoftmaxSum(*softmax.m_CPUMatrix, *this->m_CPUMatrix);
+        else
+            a.m_GPUMatrix->AssignSoftmaxSum(*softmax.m_GPUMatrix, *this->m_GPUMatrix);
+        return *this;
+    }
+
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias)
     {
@@ -3545,24 +3717,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
         if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
+        {
+            std::cerr << a.GetDeviceId() << " " << b.GetDeviceId() << " " << c.GetDeviceId() << " " << this->GetDeviceId() << std::endl;
             NOT_IMPLEMENTED;
-
-        //if (a.GetMatrixType() == MatrixType::DENSE)
-        //    NOT_IMPLEMENTED;
-
+        }
+        
         this->Resize(1, 1);
 
         if (this->GetDeviceId() < 0)
         {
             size_t sampleCount = a.m_CPUMatrix->GetNumElements() / a.m_CPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
-            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix, *bias.m_CPUMatrix, sampleCount, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
+            a.m_CPUMatrix->AssignNoiseContrastiveEstimation(*b.m_CPUMatrix, *c.m_CPUMatrix,
+                *bias.m_CPUMatrix, *tmp.m_CPUMatrix, *this->m_CPUMatrix);
         }
         else
         {
-            size_t sampleCount = a.m_GPUSparseMatrix->GetNumNZElements() / a.m_GPUSparseMatrix->GetNumRows();
+            size_t sampleCount = a.m_GPUMatrix->GetNumElements() / a.m_GPUMatrix->GetNumRows();
             tmp.Resize(a.GetNumRows() / 2, sampleCount);
-            a.m_GPUMatrix->AssignNoiseContrastiveEstimation(*b.m_GPUMatrix, *c.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *this->m_GPUMatrix);
+            a.m_GPUMatrix->AssignNoiseContrastiveEstimation(*b.m_GPUMatrix, *c.m_GPUMatrix,
+                *bias.m_GPUMatrix, sampleCount, *tmp.m_GPUMatrix, *this->m_GPUMatrix);
         }
         return *this;
     }
@@ -4061,7 +4235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="alpha">1x1 matrix</param>
     /// <param name="a">Input matrix</param>
     template<class ElemType>
-    void Matrix<ElemType>::Scale(Matrix<ElemType>& alpha, Matrix<ElemType>& a)
+    void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
             throw std::logic_error("Scale:  Input matrix a is empty.");
@@ -4215,6 +4389,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
     }
+        
+    template<class ElemType>
+    bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("HasElement: input matrix is empty.");
+
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            &a,
+            return CPUMatrix<ElemType>::HasElement(*a.m_CPUMatrix, value),
+            NOT_IMPLEMENTED; return false,
+            return GPUMatrix<ElemType>::HasElement(*a.m_GPUMatrix, value),
+            NOT_IMPLEMENTED; return false
+            );
+    }
 
     // diagnostics helper to check if matrix has a NaN
     // This is very slow.
@@ -4292,6 +4481,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             z = exp(diff);
                         return (ElemType) (x + log(1.0 + z));
         }
+    }
+
+    //Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, size_t shift)
+    //[this]= (a right shift by n), padded with zeros
+    // shift left, shift needs to be negative value
+    // shift right, shift needs to be positive value
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("Shift: Matrix is empty.");
+
+        auto& us = *this;
+        if (this != &a)
+        {
+            Resize(a.GetNumRows(), a.GetNumCols());
+        }
+
+        long n = (long)GetNumCols();
+
+        if (shift >= 0 && shift < n)
+            us.ColumnSlice(shift, n - shift).SetValue(a.ColumnSlice(0, n - shift));
+        if (shift < 0 && shift > -n)
+            us.ColumnSlice(0, n + shift).SetValue(a.ColumnSlice(-shift, n + shift));
+        return *this;
     }
 
 	template<class ElemType>

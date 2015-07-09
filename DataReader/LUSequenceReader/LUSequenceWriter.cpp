@@ -161,17 +161,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         int idx = (int)lv[i].first;
                         string sRes = idx2wrd.find(idx)->second; 
-                        fprintf(fp, "%s\t", sRes.c_str());
+                        fprintf(fp, "%s ", sRes.c_str());
                     }
                 }
                 else 
                 {
                     string sRes = idx2wrd.find(imax)->second; 
-                    fprintf(fp, "%s\t", sRes.c_str());
+                    fprintf(fp, "%s ", sRes.c_str());
+                    fprintf(stderr, "%s ", sRes.c_str());
                 }
             }
-            fprintf(fp, "\n");
         }
+        fprintf(fp, "\n");
+        fprintf(stderr, "\n");
     }
 
 

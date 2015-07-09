@@ -79,16 +79,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t MajorIndexCount() const
         {
-            return MajorIndexCount(m_numRows, m_numCols, m_elemSizeAllocated, m_format);
+            return MajorIndexCount(m_numRows, m_numCols, m_nz, m_format);
         }
-        size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZReserved, const MatrixFormat format) const
+        size_t MajorIndexCount(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat format) const
         { 
             if (format == matrixFormatSparseBlockCol)
                 return numCols;
             else if (format == matrixFormatSparseBlockRow)
                 return numRows;
             else
-                return numNZReserved;
+                return numNZ;
         }
         size_t MajorIndexSize() const // actual number of major index bytes in use
         { 
@@ -182,11 +182,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly = true);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true); //matrix format will affect the size to allocate
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
 
         GPUSparseMatrix<ElemType> Transpose() const;
         void InplaceTranspose();
         GPUSparseMatrix<ElemType>& AssignTransposeOf(const GPUSparseMatrix<ElemType>& a);
+
+        GPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
         GPUMatrix<ElemType> CopyToDenseMatrix() const;
         void CopyToDenseMatrix(GPUMatrix<ElemType> &denseMatrix) const;
@@ -267,7 +269,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType MatrixNorm1() const;
         ElemType MatrixNorm0() const { return (ElemType)GetNumNZElements(); };
     public:        
-        //Performs C = alpha ∗ op ( S ) ∗ D + beta ∗ C; Where S is sparse and D and C are dense
+        //Performs C = alpha ? op ( S ) ? D + beta ? C; Where S is sparse and D and C are dense
         static void MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const bool transposeA, const GPUSparseMatrix<ElemType>& b, 
             const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c);
         static void MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& S, const bool transposeS, const GPUMatrix<ElemType>& D, 
