@@ -43,6 +43,17 @@ void CNTKEval<ElemType>::Init(const std::string& config)
         std::wstring path = m_config("modelPath");
         LoadModel(path);
     }
+    if (m_config.Exists("numCPUThreads"))
+    {
+        size_t nTheads = m_config("numCPUThreads");
+        CPUMatrix<ElemType>::SetNumThreads(nTheads);
+    }
+    else
+    {
+        // default is 1 to enable CNTKEval to run on CPU farm
+        CPUMatrix<ElemType>::SetNumThreads(1);
+    }
+        
 }
 
 // Destroy - cleanup and remove this class
