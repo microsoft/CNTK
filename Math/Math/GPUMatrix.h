@@ -270,11 +270,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignSignOf(const GPUMatrix<ElemType>& a);
         GPUMatrix<ElemType>& AddSignOf(const GPUMatrix<ElemType>& a);
 
-        GPUMatrix<ElemType>&  AssignRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
+        GPUMatrix<ElemType>&  AssignToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
+        GPUMatrix<ElemType>&  AssignRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         GPUMatrix<ElemType>&  AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         GPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
+        GPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
         GPUMatrix<ElemType>&  AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+        GPUMatrix<ElemType>&  AddToRowRepeatValuesOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats);
+
         GPUMatrix<ElemType>&  AssignPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         GPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
 
@@ -287,10 +291,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignInnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 
 
 
-        void AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c);
+        void AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, 
+            size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c);
         void AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t inputIndex, GPUMatrix<ElemType>& c);    
         void AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
-
+        void AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& softmax);
 
         void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
         void Print(const char* matrixName = NULL) const; //print whole matrix. can be expensive
@@ -359,6 +364,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static GPUMatrix<ElemType> Eye(const size_t rows);
         static GPUMatrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED);
         static GPUMatrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
+
+        static bool HasElement(const GPUMatrix<ElemType>& a, const ElemType v = 0.0);
 
         static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType> &Gradients, const GPUMatrix<ElemType> &SmoothedGradients);
 

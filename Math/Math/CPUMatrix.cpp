@@ -267,6 +267,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //for each column of a, we add all rows of a to this starting from startIndex
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddToRowSliceValuesOf: input matrix a is empty.");
+
+        if (a.GetNumRows() != numRows)
+            throw std::logic_error("AddToRowSliceValuesOf: a.GetNumRows() != numRows.");
+
+        if (startIndex + numRows > GetNumRows())
+            throw std::logic_error("AddToRowSliceValuesOf: startIndex + numRows exceeds GetNumRows().");
+
+        if (a.GetNumCols() != GetNumCols())
+            throw std::logic_error("AddToRowSliceValuesOf: columns does not match.");
+
+        long n = (long)a.GetNumCols(), m = (long)numRows;
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (size_t i = 0, startRow = startIndex; i<(m & ~3); i += 4, startRow += 4)
+            {
+                us(startRow, j) = a(i, j);
+                us(startRow + 1, j) = a(i + 1, j);
+                us(startRow + 2, j) = a(i + 2, j);
+                us(startRow + 3, j) = a(i + 3, j);
+            }
+            //handle remaining stuffs
+            for (size_t i = m & ~3, startRow = startIndex + (m & ~3); i<m; i++, startRow++)
+            {
+                us(startRow, j) = a(i, j);
+            }
+        }
+
+        return *this;
+    }
 
     //for each column of a, we assign numRows starting from startIndex to this
     template<class ElemType>
@@ -389,6 +429,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+    {
+        if (sliceNumCols == 0)
+            LogicError("AssignRowStackValuesOf: sliceNumCols should > 0.");
+
+        size_t totalRows = 0;
+        size_t* startRowIndeces = new size_t[inputMatrices.size()];
+        startRowIndeces[0] = 0;
+        for (int i = 0; i < inputMatrices.size(); i++)
+        {
+            const CPUMatrix<ElemType>& a = *inputMatrices[i];
+            if (a.IsEmpty())
+                LogicError("AssignRowStackValuesOf: input matrix (%d) is empty.", i);
+
+            if (a.GetNumCols() < sliceStartCol + sliceNumCols)
+                LogicError("AssignRowStackValuesOf: input matrix (%d) GetNumCols() < sliceStartCol + sliceNumCols.", i);
+
+            totalRows += a.GetNumRows();
+            if (i<inputMatrices.size()-1)
+                startRowIndeces[i + 1] = startRowIndeces[i] + a.GetNumRows();
+        }
+
+        Resize(totalRows, sliceNumCols);
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<sliceNumCols; j++)
+        {
+            for (int i = 0; i < inputMatrices.size(); i++)
+            {
+                memcpy(&us(startRowIndeces[i], j), &(*inputMatrices[i])(0, sliceStartCol+j), inputMatrices[i]->GetNumRows() * sizeof(ElemType));
+            }
+        }
+        
+        delete [] startRowIndeces;
+
+        return *this;
+    }  
+
     template<class ElemType>
     void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t position)
     {
@@ -435,6 +517,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         us(rowOffset, colOffset) = a(i, j);
                     }
+                }
+            }
+        }
+
+        return *this;
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowRepeatValuesOf(const CPUMatrix<ElemType>& a, const size_t numRepeats)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("AddToRowRepeatValuesOf: input matrix a is empty.");
+
+        if (a.GetNumRows() != GetNumRows() * numRepeats)
+            throw std::logic_error("AddToRowRepeatValuesOf: a.GetNumRows() != GetNumRows() * numRepeats.");
+
+        long n = (long)a.GetNumCols(), m = (long)GetNumRows();
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (long i = 0; i<(m & ~3); i += 4)
+            {
+                for (long k = 0; k < numRepeats; k++)
+                {
+                    us(i, j) += a(k * m + i, j);
+                    us(i + 1, j) += a(k * m + i + 1, j);
+                    us(i + 2, j) += a(k * m + i + 2, j);
+                    us(i + 3, j) += a(k * m + i + 3, j);
+                }
+            }
+            //handle remaining stuffs
+            for (long i = m & ~3; i<m; i++)
+            {
+                for (long k = 0; k < numRepeats; k++)
+                {
+                    us(i, j) += a(k * m + i, j);
                 }
             }
         }
@@ -632,16 +754,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if it's externally managed, then populate the structure
         if (matrixFlags&matrixFlagDontOwnBuffer)
         {
+            // free previous array allocation if any before overwriting
             if (m_pArray != nullptr)
                 delete [] m_pArray;
 
             m_pArray = pArray;
             m_numRows = numRows;
             m_numCols = numCols;
-            // free previous array allocation if any before overwriting
-            if (m_pArray != nullptr)
-                delete[] m_pArray;
-            m_pArray = pArray;
             m_elemSizeAllocated = GetNumElements();
             m_externalBuffer = true;
         }
@@ -3762,6 +3881,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return CPUMatrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, transposeA, b, transposeB, 1.0, c);
     }
+    template<class ElemType>
+    void CPUMatrix<ElemType>::AssignSoftmaxSum(const CPUMatrix<ElemType>& softmax, CPUMatrix<ElemType>& c)
+    {
+        ElemType log_likelihood = 0.0;
+        size_t batch_size = this->GetNumCols();
+#pragma omp parallel for reduction(+:log_likelihood)
+        for (int instance_id = 0; instance_id < batch_size; instance_id++)
+        {
+            int sample = (int)(*this)(0, instance_id);
+            log_likelihood += softmax(instance_id, sample);
+        }
+        c(0, 0) = -log_likelihood;
+    }
 
     template<class ElemType>
     void CPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a,
@@ -3799,7 +3931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int instance_id = 0; instance_id < batch_size; instance_id++)
             for (int sample_id = 0; sample_id < sample_size; sample_id++)
             {
-                int sample =(int) (*this)(2 * sample_id, instance_id);
+                int sample = (int)(*this)(2 * sample_id, instance_id);
                 for (int dim = 0; dim < b.GetNumRows(); dim++)
                     c(dim, instance_id) -= b(dim, sample)* tmp(sample_id, instance_id);
             }
@@ -3829,7 +3961,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int sample_id = 0; sample_id < sample_size; sample_id++)
             {
                 int sample =(int) (*this)(2 * sample_id, instance_id);
-                c(sample, 0) -= tmp(sample_id, instance_id);
+                c(0, sample) -= tmp(sample_id, instance_id);
             }
         }
         return *this;
@@ -3837,22 +3969,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void CPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const CPUMatrix<ElemType>& a,
-        const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, size_t sampleCount, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c)
+        const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& bias, CPUMatrix<ElemType>& tmp, CPUMatrix<ElemType>& c)
         //this: samples+probs
         // a:   hidden
         // b:   embedding
         // tmp:  softmax
-        //  c: loglikelihood
+        // c: loglikelihood
     {
-        /*z
-        for (int i = 0; i < (*this).GetNumRows(); i++)
-        {
-            for (int j = 0; j < (*this).GetNumCols(); j++)
-                std::cerr << (*this)(i, j) << " ";
-            std::cerr << endl;
-        }
-        */
-        sampleCount *= 1;
         double log_likelihood = 0.0;
         size_t sample_size = this->GetNumRows() / 2;
         size_t batch_size = this->GetNumCols();
@@ -3862,8 +3985,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (int instance_id = 0; instance_id < batch_size; instance_id++)
         for (int sample_id = 0; sample_id < sample_size; sample_id++)
         {
-            int sample =(int) (*this)(2 * sample_id, instance_id);
-            double score = bias(sample, 0);
+            int sample = (int)(*this)(2 * sample_id, instance_id);
+            double score = bias(0, sample);
             for (int dim = 0; dim < b.GetNumRows(); dim++)
                 score += a(dim, instance_id)* b(dim, sample);
             double sample_prob = -(*this)(2 * sample_id + 1, instance_id);
@@ -3876,9 +3999,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             tmp(sample_id, instance_id) = (ElemType)-std::exp(logprob);
             if (sample_id == 0)
                 tmp(sample_id, instance_id) += 1;
-            log_likelihood += sample_id == 0 ? logprob : logprob_noise; 
+            log_likelihood += sample_id == 0 ? logprob : logprob_noise;
         }
-
         c(0, 0) = (ElemType)-log_likelihood;
     }
 
@@ -4478,6 +4600,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType> c(rows, cols); //will initialize to 0
         c.SetGaussianRandomValue(mean, sigma, seed);
         return c;
+    }
+
+    template<class ElemType>
+    bool CPUMatrix<ElemType>::HasElement(const CPUMatrix<ElemType>& mat, const ElemType v)
+    {
+        bool bHas = false;
+
+#pragma omp parallel for     
+        for (long j = 0; j < mat.GetNumElements(); j++)
+        {
+            if (mat.m_pArray[j] == v) 
+                bHas = true;
+        }
+
+        return bHas;
     }
 
     //		CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);

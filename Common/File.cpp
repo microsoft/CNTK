@@ -7,6 +7,7 @@
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #endif
+#define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "Basics.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
@@ -22,7 +23,7 @@
 #include <unistd.h>
 #endif
 
-namespace Microsoft{ namespace MSR { namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
 // File creation
 // filename - the path
@@ -43,16 +44,32 @@ File::File(const wchar_t* filename, int fileOptions)
     Init(filename, fileOptions);
 }
 
+// all constructors call this
 void File::Init(const wchar_t* filename, int fileOptions)
 {
-    msra::files::make_intermediate_dirs(filename);
+    m_filename = filename;
+    m_options = fileOptions;
+    if (m_filename.empty())
+        RuntimeError("File: filename is empty");
+    const auto outputPipe = (m_filename.front() == '|');
+    const auto inputPipe  = (m_filename.back()  == '|');
     // translate the options string into a string for fopen()
-    wstring options = fileOptions&fileOptionsRead?L"r":L"";
-    if (fileOptions&fileOptionsWrite)
+    const auto reading = !!(fileOptions & fileOptionsRead);
+    const auto writing = !!(fileOptions & fileOptionsWrite);
+    if (!reading && !writing)
+        RuntimeError("File: either fileOptionsRead or fileOptionsWrite must be specified");
+    // convert fileOptions to fopen()'s mode string
+    wstring options = reading ? L"r" : L"";
+    if (writing)
     {
         // if we already are reading the file, change to read/write
         options.clear();
-        options.append(L"w+");
+        options.append(L"w");
+        if (!outputPipe && m_filename != L"-")
+        {
+            options.append(L"+");
+            msra::files::make_intermediate_dirs(m_filename.c_str());    // writing to regular file -> also create the intermediate directories as a convenience
+        }
     }
     if (fileOptions&fileOptionsBinary)
     {
@@ -71,13 +88,40 @@ void File::Init(const wchar_t* filename, int fileOptions)
     // add sequential flag to allocate big read buffer
     if (fileOptions & fileOptionsSequential)
         options += L"S";
-
-    attempt([=](){m_file = fopenOrDie(filename, options.c_str());});
-    m_options = fileOptions;
-    m_size = filesize(m_file);
+    // now open the file
+    // Special path syntax understood here:
+    //  - "-" refers to stdin or stdout
+    //  - "|cmd" writes to a pipe
+    //  - "cmd|" reads from a pipe
+    m_pcloseNeeded = false;
+    m_seekable = false;
+    if (m_filename == L"-")                                 // stdin/stdout
+    {
+        if (writing && reading)
+            RuntimeError("File: path '-' fileOptionsRead and fileOptionsWrite at once");
+        m_file = writing ? stdout : stdin;
+    }
+    else if (outputPipe || inputPipe)                       // pipe syntax
+    {
+        if (inputPipe && outputPipe)
+            RuntimeError("File: pipes cannot specify fileOptionsRead and fileOptionsWrite at once");
+        if (inputPipe != reading)
+            RuntimeError("File: pipes must use consistent fileOptionsRead/fileOptionsWrite");
+        const auto command = inputPipe ? m_filename.substr(0, m_filename.size() - 1) : m_filename.substr(1);
+        m_file = _wpopen(command.c_str(), options.c_str());
+        if (!m_file)
+            RuntimeError("File: error exexuting pipe command '%S': %s", command.c_str(), strerror(errno));
+        m_pcloseNeeded = true;
+    }
+    else attempt([=]()                                      // regular file: use a retry loop
+    {
+        m_file = fopenOrDie(filename, options.c_str());
+        m_seekable = true;
+    });
 }
 
-void File::goToDelimiter(int delim)
+// skip to given delimiter character
+void File::SkipToDelimiter(int delim)
 {
     int ch=0;
 
@@ -85,7 +129,7 @@ void File::goToDelimiter(int delim)
         ch=fgetc(m_file);
         if (feof(m_file)) {
             printf("Unexpected end of file\n");
-            throw std::logic_error("Unexpected end of file\n");
+            LogicError("Unexpected end of file\n");
         }
     }
 }
@@ -97,9 +141,18 @@ bool File::IsTextBased()
 
 // File Destructor
 // closes the file
+// Note: this does not check for errors. Use Flush() before closing a file you are writing.
 File::~File(void)
 {
-    attempt([=] {fcloseOrDie(m_file);});
+    if (m_pcloseNeeded)
+        _pclose(m_file);
+    else if (m_file != stdin && m_file != stdout && m_file != stderr)
+        fclose(m_file); // (since destructors may not throw, we ignore the return code here)
+}
+
+void File::Flush()
+{
+    fflushOrDie(m_file);
 }
 
 // GetLine - get a line from the file
@@ -208,7 +261,8 @@ File& File::PutMarker(FileMarker marker, const std::wstring& section)
 // val - value to read from the file
 File& File::operator>>(std::wstring& val)
 {
-    attempt([&]{
+    attempt([&]
+    {
         if (IsTextBased())
             val = fgetwtoken(m_file);
         else
@@ -221,7 +275,8 @@ File& File::operator>>(std::wstring& val)
 // val - value to read from the file
 File& File::operator>>(std::string& val)
 {
-    attempt([&]{
+    attempt([&]
+    {
         if (IsTextBased())
             val = fgettoken(m_file);
         else
@@ -341,7 +396,8 @@ void File::WriteString(const wchar_t* str, int size)
 // size - size of the string string buffer
 void File::ReadString(wchar_t* str, int size)
 {
-    attempt([&]{
+    attempt([&]
+    {
         if (IsTextBased())
             fgettoken(m_file, str, size);
         else
@@ -390,6 +446,8 @@ bool File::IsUnicodeBOM(bool skip)
 // WARNING: calling this will reset the EOF marker, so do so with care
 size_t File::Size()
 {
+    if (!CanSeek())
+        RuntimeError("File: attempted to get Size() on non-seekable stream");
     return filesize(m_file);
 }
 
@@ -469,7 +527,7 @@ File& File::operator>>(FileMarker marker)
         break;
     case fileMarkerEndFile: // end of file marker, should we throw if it's not the end of the file?
         if (!IsEOF())
-            throw std::runtime_error("fileMarkerEndFile not found");
+            RuntimeError("fileMarkerEndFile not found");
         break;
     case fileMarkerBeginList: // Beginning of list marker
         // no marker written unless an list with a count header
@@ -483,7 +541,7 @@ File& File::operator>>(FileMarker marker)
         {
             int found = EndOfLineOrEOF(true);
             if (found != (int)true) // EOF can also be returned
-                throw std::runtime_error("Newline not found");
+                RuntimeError("Newline not found");
         }
         break;
     case fileMarkerBeginSection: // beginning of section
@@ -556,7 +614,7 @@ File& File::GetMarker(FileMarker marker, const std::string& section)
     string str;
     *this >> str;
     if (str != section)
-        throw std::runtime_error(std::string("section name mismatch ") + str + " != " + section);
+        RuntimeError(std::string("section name mismatch ") + str + " != " + section);
     return *this;
 }
 
@@ -569,7 +627,7 @@ File& File::GetMarker(FileMarker marker, const std::wstring& section)
     wstring str;
     *this >> str;
     if (str != section)
-        throw std::runtime_error(std::string("section name mismatch ") + msra::strfun::utf8(str) + " != " + msra::strfun::utf8(section));
+        RuntimeError(std::string("section name mismatch ") + msra::strfun::utf8(str) + " != " + msra::strfun::utf8(section));
     return *this;
 }
 
@@ -620,6 +678,8 @@ bool File::TryGetMarker(FileMarker marker, const std::string& section)
 // GetPosition - Get position in a file
 uint64_t File::GetPosition()
 {
+    if (!CanSeek())
+        RuntimeError("File: attempted to GetPosition() on non-seekable stream");
     return fgetpos(m_file);
 }
 
@@ -627,7 +687,9 @@ uint64_t File::GetPosition()
 // pos - position in the file
 void File::SetPosition(uint64_t pos)
 {
-    fsetpos (m_file, pos);
+    if (!CanSeek())
+        RuntimeError("File: attempted to SetPosition() on non-seekable stream");
+    fsetpos(m_file, pos);
 }
 
 }}}

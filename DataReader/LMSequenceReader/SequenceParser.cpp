@@ -7,11 +7,13 @@
 //
 
 #include "stdafx.h"
-#include "Basics.h"
-#include "SequenceParser.h"
 #include <stdexcept>
 #include <stdint.h>
+#include "Basics.h"
+#include "SequenceParser.h"
 #include "fileutil.h"
+
+using namespace Microsoft::MSR::CNTK;
 
 // SetState for a particular value
 template <typename NumType, typename LabelType>

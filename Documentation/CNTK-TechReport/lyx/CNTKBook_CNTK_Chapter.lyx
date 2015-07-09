@@ -1725,6 +1725,102 @@ numBestSearchEpoch
  
 \end_layout
 
+\begin_layout Standard
+Used in the Adaptive Minibatch Sizing mode.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+numMiniBatch4LRSearch
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+numMiniBatch4LRSearch
+\end_layout
+
+\end_inset
+
+: the number of minibatches used to search the minibatch size when
+in adaptive minibatch size mode.
+ Default value is 500.
+ It's typically set to 10-20% of the total minibatches in an epoch
+this is shared with the search for learning rate in 
+SearchBeforeEpoch mode.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+autoAdjustMinibatch
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+autoAdjustMinibatch
+\end_layout
+
+\end_inset
+
+: enable or disable whether minibatch size is adaptively adjusted.
+ Default value is false.
+Adapative minibatch sizing will begin on 
+epochs starting after user minbatch sizes expcitily
+specified are complete.  For example if the user
+specifed minibatchSize=256:1024, then 256 and 1024
+are used in the first 2 Epochs and adaptive minibatch
+sizing is used aferwards
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+minibatchSizeTuningFrequency
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSizeTuningFrequency
+\end_layout
+
+\end_inset
+
+: The number of epochs to skip, on a periodic basis, before
+dynamically adjusting the minibatch size.
+ Default value is 1.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+minibatchSizeTuningMax
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+minibatchSizeTuningMax
+\end_layout
+
+\end_inset
+
+: The maximum size allowed for an
+adaptively adjusted minibatch size.
+ Default value is 1048576.
+ 
+\end_layout
+
 \end_deeper
 \begin_layout Subsubsection
 Gradient control

@@ -47,8 +47,8 @@ BinaryWriter<ElemType>::~BinaryWriter()
 //  miniBatchMode=Partial
 //  randomize=None
 //  wfile=c:\speech\mnist\mnist_test.bin
-//  #wsize - inital size of the file in MB
-//  # if calculated size would be bigger, that is used instead
+//  #wsize - inital size of the file in MB default to 256
+//  # has to be large enough for your dataset. the file will shrink to the actual size when closed.
 //  #wsize=256
 //  #wrecords - number of records we should allocate space for in the file
 //  # files cannot be expanded, so this should be large enough. If known modify this element in config before creating file
