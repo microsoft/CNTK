@@ -172,10 +172,10 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void SetSentenceSegBatch(Matrix<ElemType>&)
+    void SetSentenceSegBatch(Matrix<ElemType> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
     {
-        NOT_IMPLEMENTED;
     }
+
     void GetSentenceBoundary(std::vector<size_t> boundaryInfo)
     {
         m_switchFrame.resize(boundaryInfo.size());
