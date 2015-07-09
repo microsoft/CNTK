@@ -27,45 +27,45 @@ enum LabelKind
 template<class ElemType>
 class LibSVM_BinaryInput {
 private:
-	HANDLE m_hndl;
-	HANDLE m_filemap;
-	HANDLE m_header;
-	HANDLE m_offsets;
-	HANDLE m_data;
+    HANDLE m_hndl;
+    HANDLE m_filemap;
+    HANDLE m_header;
+    HANDLE m_offsets;
+    HANDLE m_data;
 
-	//void* header_orig; // Don't need this since the header is at the start of the file
-	void* offsets_orig;
-	void* data_orig;
+    //void* header_orig; // Don't need this since the header is at the start of the file
+    void* offsets_orig;
+    void* data_orig;
 
-	void* header_buffer;
-	void* offsets_buffer;
-	void* data_buffer;
+    void* header_buffer;
+    void* offsets_buffer;
+    void* data_buffer;
 
-	size_t m_dim;
-	size_t mbSize;
-	size_t MAX_BUFFER = 400;
-	size_t m_labelDim;
+    size_t m_dim;
+    size_t mbSize;
+    size_t MAX_BUFFER = 400;
+    size_t m_labelDim;
 
-	ElemType* values; // = (ElemType*)malloc(sizeof(ElemType)* 230 * 1024);
-	int64_t* offsets; // = (int*)malloc(sizeof(int)* 230 * 1024);
-	int32_t* colIndices; // = (int*)malloc(sizeof(int) * (batchsize + 1));
-	int32_t* rowIndices; // = (int*)malloc(sizeof(int) * MAX_BUFFER * batchsize);
-	int32_t* classIndex; // = (int*)malloc(sizeof(int) * batchsize);
-	ElemType* classWeight; // = (ElemType*)malloc(sizeof(ElemType) * batchsize);
+    ElemType* values; // = (ElemType*)malloc(sizeof(ElemType)* 230 * 1024);
+    int64_t* offsets; // = (int*)malloc(sizeof(int)* 230 * 1024);
+    int32_t* colIndices; // = (int*)malloc(sizeof(int) * (batchsize + 1));
+    int32_t* rowIndices; // = (int*)malloc(sizeof(int) * MAX_BUFFER * batchsize);
+    int32_t* classIndex; // = (int*)malloc(sizeof(int) * batchsize);
+    ElemType* classWeight; // = (ElemType*)malloc(sizeof(ElemType) * batchsize);
 
     ElemType* m_labelsBuffer;
 public:
-	int64_t numRows;
-	int64_t numBatches;
-	int32_t numCols;
-	int64_t totalNNz;
+    int64_t numRows;
+    int64_t numBatches;
+    int32_t numCols;
+    int64_t totalNNz;
 
-	LibSVM_BinaryInput();
-	~LibSVM_BinaryInput();
-	void Init(std::wstring fileName, size_t dim);
-	bool SetupEpoch( size_t minibatchSize);
-	bool Next_Batch(Matrix<ElemType>& features, Matrix<ElemType>& labels, size_t actualmbsize, int batchIndex);
-	void Dispose();
+    LibSVM_BinaryInput();
+    ~LibSVM_BinaryInput();
+    void Init(std::wstring fileName, size_t dim);
+    bool SetupEpoch( size_t minibatchSize);
+    bool Next_Batch(Matrix<ElemType>& features, Matrix<ElemType>& labels, size_t actualmbsize, int batchIndex);
+    void Dispose();
 };
 
 template<class ElemType>
@@ -75,11 +75,11 @@ class LibSVMBinaryReader : public IDataReader<ElemType>
 //    typedef std::string LabelType;
 //    typedef unsigned LabelIdType;
 private:
-	int* read_order; // array to shuffle to reorder the dataset
-	std::wstring m_featuresName;
-	size_t m_featuresDim;
-	LibSVM_BinaryInput<ElemType> featuresInput;
-	int64_t m_processedMinibatches;
+    int* read_order; // array to shuffle to reorder the dataset
+    std::wstring m_featuresName;
+    size_t m_featuresDim;
+    LibSVM_BinaryInput<ElemType> featuresInput;
+    int64_t m_processedMinibatches;
 
     size_t m_mbSize;    // size of minibatch requested
     LabelIdType m_labelIdMax; // maximum label ID we have encountered so far
@@ -126,7 +126,7 @@ private:
 
     size_t RandomizeSweep(size_t epochSample);
     //bool Randomize() {return m_randomizeRange != randomizeNone;}
-	bool Randomize() { return false; }
+    bool Randomize() { return false; }
     void SetupEpoch();
     void StoreLabel(ElemType& labelStore, const LabelType& labelValue);
     size_t RecordsToRead(size_t mbStartSample, bool tail=false);
@@ -138,15 +138,14 @@ private:
 public:
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy();
-	LibSVMBinaryReader() { m_qfeaturesBuffer = NULL; m_dfeaturesBuffer = NULL;  m_labelsBuffer = NULL; }
+    LibSVMBinaryReader() { m_qfeaturesBuffer = NULL; m_dfeaturesBuffer = NULL;  m_labelsBuffer = NULL; }
     virtual ~LibSVMBinaryReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     size_t NumberSlicesInEachRecurrentIter() { return 1 ;} 
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
-    void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/){};
-    void SetSentenceSegBatch(Matrix<ElemType>&/*sentenceEnd*/) {};
+	void SetSentenceSegBatch(Matrix<ElemType> &, vector<MinibatchPackingFlag>& ){};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);

@@ -179,6 +179,8 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 #define ASSERT assert
 #endif
 
+#define UNUSED(x) (void)(x)
+
 // ----------------------------------------------------------------------------
 // basic data types
 // ----------------------------------------------------------------------------
@@ -252,7 +254,13 @@ template<class _T> class fixed_vector
 {
     _T * p;                 // pointer array
     size_t n;               // number of elements
-    void check (int index) const { index/*avoid compiler warning*/;ASSERT (index >= 0 && (size_t) index < n); }
+    void check (int index) const 
+    { 
+        ASSERT (index >= 0 && (size_t) index < n);
+#ifdef NDEBUG
+        UNUSED(index);
+#endif
+    }
     void check (size_t index) const { ASSERT (index < n); }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
     //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
@@ -1011,103 +1019,6 @@ using namespace msra::basetypes;    // for compatibility
 
 #pragma warning (pop)
 
-// RuntimeError - throw a std::runtime_error with a formatted error string
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
-static inline void RuntimeError(const char * format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start (args, format);
-    vsprintf (buffer, format, args);
-    throw std::runtime_error(buffer);
-};
-
-// LogicError - throw a std::logic_error with a formatted error string
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
-static inline void LogicError(const char * format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-    throw std::logic_error(buffer);
-};
-
-// RuntimeError - throw a std::runtime_error with a formatted error string
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
-static inline void Warning(const char * format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-};
-
-// ----------------------------------------------------------------------------
-// dynamic loading of modules
-// ----------------------------------------------------------------------------
-
-#ifdef _WIN32
-class Plugin
-{
-    HMODULE m_hModule;      // module handle for the writer DLL
-    std::wstring m_dllName; // name of the writer DLL
-public:
-    Plugin() { m_hModule = NULL; }
-    template<class STRING>  // accepts char (UTF-8) and wide string 
-    FARPROC Load(const STRING & plugin, const std::string & proc)
-    {
-        m_dllName = msra::strfun::utf16(plugin);
-        m_dllName += L".dll";
-        m_hModule = LoadLibrary(m_dllName.c_str());
-        if (m_hModule == NULL)
-            RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
-
-        // create a variable of each type just to call the proper templated version
-        return GetProcAddress(m_hModule, proc.c_str());
-    }
-    ~Plugin(){} 
-    // removed because this causes the exception messages to be lost  (exception vftables are unloaded when DLL is unloaded) 
-    // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
-};
-#else
-class Plugin
-{
-private:
-	void *handle;
-public:
-	Plugin() 
-	{ 
-		handle = NULL; 
-	}
-
-    template<class STRING>  // accepts char (UTF-8) and wide string 
-    void * Load(const STRING & plugin, const std::string & proc)
-    {
-		string soName = msra::strfun::utf8(plugin);
-		soName = soName + ".so";
-		void *handle = dlopen(soName.c_str(), RTLD_LAZY);
-		if (handle == NULL)
-            RuntimeError("Plugin not found: %s", soName.c_str());
-		return dlsym(handle, proc.c_str());
-    }
-
-	~Plugin() {
-		if (handle != NULL)
-			dlclose(handle);
-	}
-};
-#endif
-
 #if 0   // construction site
 // ----------------------------------------------------------------------------
 // class RegisterModule
@@ -1147,11 +1058,38 @@ public:
 /**
 These macros are used for sentence segmentation information. 
 */
-#define SENTENCE_BEGIN 0 
-#define SENTENCE_MIDDLE 1
-#define NO_LABELS -1
-#define EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 0
-#define NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS 1
+#define SENTENCE_BEGIN ((int) MinibatchPackingFlag::UtteranceStart)
+#define SENTENCE_MIDDLE ((int) MinibatchPackingFlag::None)
+#define SENTENCE_END ((int) MinibatchPackingFlag::UtteranceEnd)
+#define NO_LABELS ((int) MinibatchPackingFlag::NoLabel)
+
+enum class MinibatchPackingFlag : unsigned char
+{
+    None = 0,
+    UtteranceStart = 1 << 0,   //binary 0001
+    UtteranceEnd = 1 << 1,   //binary 0010
+    NoLabel = 1 << 2,      //binary 0100
+
+    UtteranceStartOrNoLabel = UtteranceStart | NoLabel,
+    UtteranceEndOrNoLabel = UtteranceEnd | NoLabel,
+    UtteranceStartOrEndOrNoLabel = UtteranceStart | UtteranceEnd | NoLabel,
+};
+
+inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+}
+
+inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+{
+    a = a | b;
+    return a;
+}
+
+inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
+}
 
 template<class F>
 static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)

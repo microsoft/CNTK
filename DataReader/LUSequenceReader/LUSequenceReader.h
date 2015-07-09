@@ -200,53 +200,53 @@ public:
     using LabelType = wstring;
     using LabelIdType = long;
     using LUSequenceReader<ElemType>::mWordMappingFn;
-	using LUSequenceReader<ElemType>::m_cachingReader;
-	using LUSequenceReader<ElemType>::mWordMapping;
-	using LUSequenceReader<ElemType>::mUnkStr;
-	using LUSequenceReader<ElemType>::m_cachingWriter;
-	using LUSequenceReader<ElemType>::m_featuresName;
-	using LUSequenceReader<ElemType>::m_labelsName;
-	using LUSequenceReader<ElemType>::labelInfoMin;
-	using LUSequenceReader<ElemType>::labelInfoMax;
-	using LUSequenceReader<ElemType>::m_featureDim;
-	using LUSequenceReader<ElemType>::m_labelInfo;
-//	using LUSequenceReader<ElemType>::m_labelInfoIn;
-	using LUSequenceReader<ElemType>::m_mbStartSample;
-	using LUSequenceReader<ElemType>::m_epoch;
-	using LUSequenceReader<ElemType>::m_totalSamples;
-	using LUSequenceReader<ElemType>::m_epochStartSample;
-	using LUSequenceReader<ElemType>::m_seqIndex;
-	using LUSequenceReader<ElemType>::m_endReached;
-	using LUSequenceReader<ElemType>::m_readNextSampleLine;
-	using LUSequenceReader<ElemType>::m_readNextSample;
-	using LUSequenceReader<ElemType>::m_traceLevel;
-	using LUSequenceReader<ElemType>::m_wordContext;
-	using LUSequenceReader<ElemType>::m_featureCount;
-	using typename LUSequenceReader<ElemType>::LabelInfo;
-	using LUSequenceReader<ElemType>::labelInfoIn;
-	using LUSequenceReader<ElemType>::labelInfoOut;
-//	using LUSequenceReader<ElemType>::arrayLabels;
-	using LUSequenceReader<ElemType>::m_readerConfig;
-	using LUSequenceReader<ElemType>::m_featuresBuffer;
-	using LUSequenceReader<ElemType>::m_labelsBuffer;
-	using LUSequenceReader<ElemType>::m_labelsIdBuffer;
-	using LUSequenceReader<ElemType>::m_mbSize;
-	using LUSequenceReader<ElemType>::m_epochSize;
-	using LUSequenceReader<ElemType>::m_featureData;
-	using LUSequenceReader<ElemType>::m_sequence;
-	using LUSequenceReader<ElemType>::m_labelData;
-	using LUSequenceReader<ElemType>::m_labelIdData;
-	using LUSequenceReader<ElemType>::m_idx2clsRead;
-	using LUSequenceReader<ElemType>::m_clsinfoRead;
-	using LUSequenceReader<ElemType>::m_featureWordContext;
-	using LUSequenceReader<ElemType>::LoadLabelFile;
-	using LUSequenceReader<ElemType>::ReleaseMemory;
-	using LUSequenceReader<ElemType>::LMSetupEpoch;
-	using LUSequenceReader<ElemType>::ChangeMaping;
-	using LUSequenceReader<ElemType>::GetIdFromLabel;
-	using LUSequenceReader<ElemType>::InitCache;
-	using LUSequenceReader<ElemType>::mRandomize;
-	using LUSequenceReader<ElemType>::m_seed;
+    using LUSequenceReader<ElemType>::m_cachingReader;
+    using LUSequenceReader<ElemType>::mWordMapping;
+    using LUSequenceReader<ElemType>::mUnkStr;
+    using LUSequenceReader<ElemType>::m_cachingWriter;
+    using LUSequenceReader<ElemType>::m_featuresName;
+    using LUSequenceReader<ElemType>::m_labelsName;
+    using LUSequenceReader<ElemType>::labelInfoMin;
+    using LUSequenceReader<ElemType>::labelInfoMax;
+    using LUSequenceReader<ElemType>::m_featureDim;
+    using LUSequenceReader<ElemType>::m_labelInfo;
+//  using LUSequenceReader<ElemType>::m_labelInfoIn;
+    using LUSequenceReader<ElemType>::m_mbStartSample;
+    using LUSequenceReader<ElemType>::m_epoch;
+    using LUSequenceReader<ElemType>::m_totalSamples;
+    using LUSequenceReader<ElemType>::m_epochStartSample;
+    using LUSequenceReader<ElemType>::m_seqIndex;
+    using LUSequenceReader<ElemType>::m_endReached;
+    using LUSequenceReader<ElemType>::m_readNextSampleLine;
+    using LUSequenceReader<ElemType>::m_readNextSample;
+    using LUSequenceReader<ElemType>::m_traceLevel;
+    using LUSequenceReader<ElemType>::m_wordContext;
+    using LUSequenceReader<ElemType>::m_featureCount;
+    using typename LUSequenceReader<ElemType>::LabelInfo;
+    using LUSequenceReader<ElemType>::labelInfoIn;
+    using LUSequenceReader<ElemType>::labelInfoOut;
+//  using LUSequenceReader<ElemType>::arrayLabels;
+    using LUSequenceReader<ElemType>::m_readerConfig;
+    using LUSequenceReader<ElemType>::m_featuresBuffer;
+    using LUSequenceReader<ElemType>::m_labelsBuffer;
+    using LUSequenceReader<ElemType>::m_labelsIdBuffer;
+    using LUSequenceReader<ElemType>::m_mbSize;
+    using LUSequenceReader<ElemType>::m_epochSize;
+    using LUSequenceReader<ElemType>::m_featureData;
+    using LUSequenceReader<ElemType>::m_sequence;
+    using LUSequenceReader<ElemType>::m_labelData;
+    using LUSequenceReader<ElemType>::m_labelIdData;
+    using LUSequenceReader<ElemType>::m_idx2clsRead;
+    using LUSequenceReader<ElemType>::m_clsinfoRead;
+    using LUSequenceReader<ElemType>::m_featureWordContext;
+    using LUSequenceReader<ElemType>::LoadLabelFile;
+    using LUSequenceReader<ElemType>::ReleaseMemory;
+    using LUSequenceReader<ElemType>::LMSetupEpoch;
+    using LUSequenceReader<ElemType>::ChangeMaping;
+    using LUSequenceReader<ElemType>::GetIdFromLabel;
+    using LUSequenceReader<ElemType>::InitCache;
+    using LUSequenceReader<ElemType>::mRandomize;
+    using LUSequenceReader<ElemType>::m_seed;
     using LUSequenceReader<ElemType>::mTotalSentenceSofar;
     using LUSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel;
 private:
@@ -266,7 +266,7 @@ private:
 public:
     vector<bool> mProcessed; 
     LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
-    BatchLUSequenceReader() : mtSentenceBegin(CPUDEVICE), mtExistsSentenceBeginOrNoLabels(CPUDEVICE){
+    BatchLUSequenceReader() : mtSentenceBegin(CPUDEVICE){
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
         mLastPosInSentence = 0;
@@ -301,7 +301,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
 
-    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
 public:
     void GetClassInfo(LabelInfo& lblInfo);
@@ -364,7 +364,7 @@ public:
     /// a matrix of 1 x n_length
     /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
     /// 0 denotes such case is not in this frame
-    Matrix<ElemType> mtExistsSentenceBeginOrNoLabels;
+    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
     /// by default it is false
     /// if true, reader will set to SENTENCE_MIDDLE for time positions that are orignally correspond to SENTENCE_BEGIN
@@ -399,7 +399,7 @@ public:
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
-    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     size_t NumberSlicesInEachRecurrentIter();
 

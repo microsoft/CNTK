@@ -29,9 +29,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-const size_t randomizeAuto = ((size_t)-1)>>2; // randomize range set automatically, parameter value for Init()
-const size_t randomizeNone = 0;  // don't randomize, parameter value for Init()
-const size_t requestDataSize = randomizeAuto;   // StartMinibatchLoop default parameter, sets number of requested frames equal to the number of frames in the dataset
+// randomize range set automatically, parameter value for Init()
+const size_t randomizeAuto = ((size_t) -1) >> 2;
+
+// don't randomize, parameter value for Init()
+const size_t randomizeNone = 0;
+
+// StartMinibatchLoop default parameter, sets number of requested
+// frames equal to the constant 3fffffffffffffff computed by ((size_t) -1) >> 2 above.
+// We use this constant as a stand in for the total number of frames in the dataset.
+const size_t requestDataSize = randomizeAuto;
 
 enum EndDataType
 {
@@ -48,36 +55,23 @@ class DATAREADER_API IDataReader
 {
 public:
     typedef std::string LabelType;
-    typedef unsigned LabelIdType;
+    typedef unsigned int LabelIdType;
     unsigned m_seed;
     size_t   mBlgSize;  /// number of utterances per minibatch
     bool     mDoRandomize; 
 
-    virtual void Init(const ConfigParameters& /*config*/)
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual void Destroy() 
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual void StartMinibatchLoop(size_t /*mbSize*/, size_t /*epoch*/, size_t = requestDataSize)
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/)
-    {
-        NOT_IMPLEMENTED;
-    }
-    virtual size_t NumberSlicesInEachRecurrentIter() { NOT_IMPLEMENTED; }
+    virtual void Init(const ConfigParameters& /*config*/) = 0;
+    virtual void Destroy() = 0;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
+    virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
+    virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
     virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
-
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void SetSentenceSegBatch(Matrix<ElemType>&, Matrix<ElemType>&) { NOT_IMPLEMENTED; };
+    virtual void SetSentenceSegBatch(Matrix<ElemType>&, vector<MinibatchPackingFlag>& ) { NOT_IMPLEMENTED; };
     virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
@@ -90,6 +84,15 @@ public:
     }
 
     void SetDoRandomize(bool b){ mDoRandomize = b; }
+
+    // Gets utterance before getting the actual minibatch, which will not affect
+    // getting the minibatches. This can be useful in sequence training.
+    virtual bool GetForkedUtterance(std::wstring& , std::map<std::wstring, Matrix<ElemType>*>& ) { return false; }
+
+    // Computes certain derivatives given outputs from neural networks, which
+    // will later be fed to the neural network as features. This can be useful
+    // in sequence training.
+    virtual bool ComputeDerivativeFeatures(const std::wstring& , const Matrix<ElemType>& ) { return false; }
 };
 
 // GetReader - get a reader type from the DLL
@@ -189,7 +192,17 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
+
+    // Gets utterance before getting the actual minibatch, which will not affect
+    // getting the minibatches. This can be useful in sequence training.
+    virtual bool GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
+    // Computes certain derivatives given outputs from neural networks, which
+    // will later be fed to the neural network as features. This can be useful
+    // in sequence training.
+    virtual bool ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs);
+
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     void SetRandomSeed(int);
 
