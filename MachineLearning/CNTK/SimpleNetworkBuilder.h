@@ -691,6 +691,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
                 (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
+                (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax) ||
                 (m_evalCriterion == EvalCriterion::CRF && m_trainCriterion == TrainingCriterion::CRF)))
             {
                 switch (m_evalCriterion)
@@ -717,6 +718,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 default:
                     throw std::logic_error("Unsupported training criterion.");
                 }
+                output->NeedGradient() = false; 
             }
 
             m_net->EvaluationNodes().push_back(output);
