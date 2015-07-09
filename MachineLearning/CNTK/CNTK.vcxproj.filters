@@ -41,6 +41,7 @@
     <ClCompile Include="..\..\Common\BestGpu.cpp">
       <Filter>GPU Interfacing</Filter>
     </ClCompile>
+    <ClCompile Include="Profiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -156,6 +157,15 @@
     </ClInclude>
     <ClInclude Include="MultiNetworksSGD.h">
       <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\CrossProcessMutex.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\CrossProcessMutex_linux.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\CrossProcessMutex_win32.h">
+      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

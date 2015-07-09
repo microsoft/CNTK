@@ -151,6 +151,9 @@
     <Text Include="modelEditorFromScratch.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
+    <ClInclude Include="..\..\Common\CrossProcessMutex_linux.h" />
+    <ClInclude Include="..\..\Common\CrossProcessMutex_win32.h" />
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
     <ClInclude Include="..\..\Common\Include\BestGpu.h" />
