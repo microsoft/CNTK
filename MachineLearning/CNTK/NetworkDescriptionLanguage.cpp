@@ -156,7 +156,11 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, ScaleNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, TransposeNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, TimesNode<ElemType>::TypeName()))
+        ret = true;
+    else if (EqualInsensitive(nodeType, TransposeTimesNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, ElementTimesNode<ElemType>::TypeName()))
         ret = true;
@@ -237,6 +241,12 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, TimeReverseNode<ElemType>::TypeName(), L"TimeReverse"))
         ret = true;
     else if (EqualInsensitive(nodeType, CRFNode<ElemType>::TypeName(), L"CRF"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, DummyCriterionNode<ElemType>::TypeName(), L"DummyCriterion"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, ParallelNode<ElemType>::TypeName(), L"Parallel"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), L"LSTM"))
         ret = true;
 
     // return the actual node name in the parameter if we found something

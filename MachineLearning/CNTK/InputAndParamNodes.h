@@ -347,14 +347,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 1)
                 throw std::invalid_argument("LookupTable operation only takes two inputs.");
 
+            DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
+            DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
+            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
+
             if (inputIndex == 0)  //left derivative
             {
                 ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
             }
             else  //right derivative
-        {
+            {
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
             }
+            Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -411,6 +416,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode()
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+#ifdef DEBUG_DECODER
+            fprintf(stderr, "LookupTableNode node %ls: Input[0]=%.8e Input[1]=%.8e output = %.8e\n", this->NodeName().c_str(), Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm(), FunctionValues().FrobeniusNorm());
+#endif
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
@@ -424,12 +432,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
         {
-            size_t rows1 =input1.GetNumRows(), cols1 = input1.GetNumCols();
-            int wordsInEachSample = rows1 / input0.GetNumCols();
+            size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
+            size_t cols0 = input0.GetNumCols();
+
+            if (rows1 % cols0 != 0)
+                LogicError("LookupTableNode: rows of input 1 and cols of input 0 are not modular. e.g., rows1 = 0.9 cols and this is not allowed. Check feature reader and network definition. This usually happens when the feature dimension is not specified as that in the network definition of look-up-table dimension size. ");
+
+            int wordsInEachSample = rows1 / cols0;
 
             input1.Reshape(rows1 / wordsInEachSample, cols1 * wordsInEachSample);
 
+            DEVICEID_TYPE input1DeviceId = input1.GetDeviceId();
+            DEVICEID_TYPE input0DeviceId = input0.GetDeviceId();
+            input1.TransferFromDeviceToDevice(input1DeviceId, input0DeviceId);
+
             functionValues.AssignProductOf(input0, false, input1, false);
+
+            input1.TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
 
             input1.Reshape(rows1, cols1);
             size_t rows = functionValues.GetNumRows();

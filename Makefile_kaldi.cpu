@@ -35,8 +35,8 @@ DEVICE = cpu
 #BUILDTYPE = debug
 BUILDTYPE = release
 # comment following and uncomment the next one to enable MKL library
-MATHLIB = acml
-#MATHLIB = mkl
+#MATHLIB = acml
+MATHLIB = mkl
 # modify relevant path below for your system
 MKL_PATH = /usr/users/chiaying/intel/composer_xe_2013.2.146
 ACML_PATH = /usr/users/yzhang87/code/acml/gfortran64
@@ -78,7 +78,8 @@ COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Com
 MATH_SRC = Math/Math/Matrix.cpp Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp Math/Math/NoGPU.cpp
 CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CNTK/CNTK.cpp MachineLearning/CNTK/ComputationNode.cpp \
           MachineLearning/CNTK/ModelEditLanguage.cpp \
-          MachineLearning/CNTK/SimpleNetworkBuilder.cpp MachineLearning/CNTK/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
+          MachineLearning/CNTK/SimpleNetworkBuilder.cpp \
+		  MachineLearning/CNTK/Profiler.cpp MachineLearning/CNTK/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
 BINARYREADER_SRC = DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
 KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp
@@ -115,7 +116,7 @@ SEPARATOR = "=-----------------------------------------------------------="
 #all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/BinaryReader.so
 all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/KaldiReader.so 
 
-	ln -sf $(CURDIR)/$(BINDIR)/* bin
+#	ln -sf $(CURDIR)/$(BINDIR)/* bin
 	
 $(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
 	@echo $(SEPARATOR)

@@ -64,33 +64,50 @@ void BinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
     // load in all the file config info for the root level
     std::vector<std::wstring> fileConfigs;
     ConfigArray files(readerConfig("file"),',');
+    mOneLinePerFile = false;
+    mOneLinePerFile = readerConfig("onelineperfile", "false");
+    m_dim = readerConfig("dim", "20");
     m_totalSamples = 0;
     size_t windowSize = readerConfig("windowSize","0");
     MappingType mapping = windowSize?mappingElementWindow:mappingSection;
-    for (int i=0;i < files.size();++i)
+
+    if (mOneLinePerFile)
     {
-        SectionFile* secFile = new SectionFile(files[i], fileOptionsRead, 0);
-        size_t records = secFile->FileSection()->GetRecordCount();
-
-        // if we haven't set the total records yet, set it
-        SectionFlags flags = secFile->FileSection()->GetFlags();
-        if (m_totalSamples == 0 && !(flags&flagAuxilarySection))
+        for (int i = 0; i < files.size(); ++i)
         {
-            m_totalSamples = records;
+            FILE* secFile = fopen(files[i], "rt");
+            if (secFile != nullptr)
+                m_fStream.push_back(secFile);
+            else
+                LogicError("BinaryReader::init cannot find %s to read", files[i]);
         }
-        else // otherwise we want to check to make sure it's the same
-        {
-            if (records != m_totalSamples && !(flags&flagAuxilarySection))
-                throw runtime_error("multiple files have different record counts, cannot be used together!");
-        }   
-
-        m_secFiles.push_back(secFile);
-
-        // now get all the sections out of the file
-        Section* section = secFile->FileSection();
-        LoadSections(section, mapping, windowSize);
     }
+    else
+    {
+        for (int i = 0; i < files.size(); ++i)
+        {
+            SectionFile* secFile = new SectionFile(files[i], fileOptionsRead, 0);
+            size_t records = secFile->FileSection()->GetRecordCount();
 
+            // if we haven't set the total records yet, set it
+            SectionFlags flags = secFile->FileSection()->GetFlags();
+            if (m_totalSamples == 0 && !(flags&flagAuxilarySection))
+            {
+                m_totalSamples = records;
+            }
+            else // otherwise we want to check to make sure it's the same
+            {
+                if (records != m_totalSamples && !(flags&flagAuxilarySection))
+                    throw runtime_error("multiple files have different record counts, cannot be used together!");
+            }
+
+            m_secFiles.push_back(secFile);
+
+            // now get all the sections out of the file
+            Section* section = secFile->FileSection();
+            LoadSections(section, mapping, windowSize);
+        }
+    }
     // initialize all the variables
     m_mbStartSample = m_epoch = m_epochStartSample = 0;
     m_partialMinibatch = false;
@@ -150,6 +167,11 @@ BinaryReader<ElemType>::~BinaryReader()
         delete secFile;
     }
     m_secFiles.clear();
+
+    for (size_t i = 0; i < m_fStream.size(); i++)
+    {
+        fclose(m_fStream[i]);
+    }
 }
 
 //StartMinibatchLoop - Startup a minibatch loop 

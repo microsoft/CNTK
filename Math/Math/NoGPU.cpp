@@ -232,6 +232,12 @@ namespace Microsoft {
 
             template<class ElemType> void GPUSparseMatrix<ElemType>::InplaceTranspose() { }
 
+            template<class ElemType>
+            GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+            {
+                return ElemType(0);
+            }
+
             template<class ElemType> ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
             {
                 return ElemType(0);
@@ -473,7 +479,9 @@ namespace Microsoft {
 
             //for each column of a, we assign numRows starting from startIndex to this
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
-
+            //for each column of a, we assign all rows of a to this starting from startIndex
+            template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows) { return *this; }
+ 
             //for each column of a, we add all rows of a to this starting from startIndex
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
@@ -971,6 +979,7 @@ namespace Microsoft {
             template<class ElemType> //c = alpha * a
             void GPUMatrix<ElemType>::Scale(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c) { }
 
+            template<class ElemType> bool GPUMatrix<ElemType>::HasElement(const GPUMatrix<ElemType>& a, const ElemType value) { return false; }
 
             template<class ElemType> void GPUMatrix<ElemType>::InnerProduct(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c, const bool isColWise) { }
 
@@ -1050,7 +1059,7 @@ namespace Microsoft {
 
             template<class ElemType>
             void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
-                const GPUMatrix<ElemType>& b, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
+        const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
             {
             }
 
@@ -1061,6 +1070,10 @@ namespace Microsoft {
 
             }
 
+            template<class ElemType>
+            void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
+            {
+            }
 
             template<class ElemType>
             void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
