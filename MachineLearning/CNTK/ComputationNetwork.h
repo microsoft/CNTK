@@ -88,6 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodesReqMultiSeqHandling.clear();
             m_evalNodes.clear();
             m_outputNodes.clear();
+            m_pairNodes.clear();
             m_recurrentInfo.clear();
 
             m_built.clear();
@@ -288,10 +289,14 @@ public:
                 line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
             }
             for (auto x : m_outputNodes)
-			{
-				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-			}
-			for (auto x : m_evalNodes)
+            {
+                line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
+            }
+            for (auto x : m_pairNodes)
+            {
+                line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
+            }
+            for (auto x : m_evalNodes)
 			{
 				line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 			}
@@ -352,10 +357,14 @@ public:
                 m_nodesReqMultiSeqHandling[i]->EnumerateArcs(visited, arcs);
             }
             for (size_t i = 0; i < m_outputNodes.size(); i++)
-			{
-				m_outputNodes[i]->EnumerateArcs(visited, arcs); 
-			}
-			for (size_t i = 0; i < m_evalNodes.size(); i++)
+            {
+                m_outputNodes[i]->EnumerateArcs(visited, arcs);
+            }
+            for (size_t i = 0; i < m_pairNodes.size(); i++)
+            {
+                m_pairNodes[i]->EnumerateArcs(visited, arcs);
+            }
+            for (size_t i = 0; i < m_evalNodes.size(); i++)
 			{
 				m_evalNodes[i]->EnumerateArcs(visited, arcs);
 			}
@@ -468,6 +477,14 @@ public:
                 fstream << m_outputNodes[i]->NodeName();
             }
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
+            fstream << m_pairNodes.size();
+            for (size_t i = 0; i<m_pairNodes.size(); i++)
+            {
+                fstream << m_pairNodes[i]->NodeName();
+            }
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
@@ -669,6 +686,15 @@ public:
                 }
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
+                fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
+                fstream >> num;
+                for (size_t i = 0; i<num; i++)
+                {
+                    fstream >> nodeName;
+                    m_pairNodes.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+
             }
 
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
@@ -852,7 +878,14 @@ public:
 				m_outputNodes.erase(search);
 			}
 
-			// ? how to deal with m_recurrentInfo, when we delete a node.
+            search = std::find(m_pairNodes.begin(), m_pairNodes.end(), nodeToDelete);
+            if (search != m_pairNodes.end())
+            {
+                m_pairNodes.erase(search);
+            }
+            
+            
+            // ? how to deal with m_recurrentInfo, when we delete a node.
 
             //delete the node itself
             m_nameToNodeMap.erase(nodeName);
@@ -2086,7 +2119,9 @@ public:
 
         inline std::vector<ComputationNodePtr>& EvaluationNodes() { return m_evalNodes; }
 
-        inline std::vector<ComputationNodePtr>& OutputNodes() {return m_outputNodes;}
+        inline std::vector<ComputationNodePtr>& OutputNodes() { return m_outputNodes; }
+
+        inline std::vector<ComputationNodePtr>& PairNodes() { return m_pairNodes; }
 
         inline std::vector<RecurrentInfo>& RecurrentNodes() {return m_recurrentInfo;}
 
@@ -2150,11 +2185,16 @@ public:
                 if (m_evalNodes[i] == oldNode)
                     m_evalNodes[i] = newNode;
             } 
-            for (int i=0; i<m_outputNodes.size(); i++)
+            for (int i = 0; i<m_outputNodes.size(); i++)
             {
                 if (m_outputNodes[i] == oldNode)
                     m_outputNodes[i] = newNode;
-            } 
+            }
+            for (int i = 0; i<m_pairNodes.size(); i++)
+            {
+                if (m_pairNodes[i] == oldNode)
+                    m_pairNodes[i] = newNode;
+            }
         }
     
         // replace the old node with the current node, assuming the old node is a leaf node 
@@ -3135,6 +3175,7 @@ protected:
         std::vector<ComputationNodePtr> m_finalCriteria;
         std::vector<ComputationNodePtr> m_evalNodes;
         std::vector<ComputationNodePtr> m_outputNodes;
+        std::vector<ComputationNodePtr> m_pairNodes; /// nodes for the children network to pair
         std::vector<ComputationNodePtr> m_nodesReqMultiSeqHandling;
         std::vector<RecurrentInfo>      m_recurrentInfo;
 

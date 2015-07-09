@@ -399,11 +399,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int offset = m_lookupTableOrder > 0 ? 1 : 0;
 
             /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
+            std::vector<ComputationNodePtr> & encoderPairNodes = encoderNet->PairNodes();
+            if (encoderPairNodes.size() != 1)
+                LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one pairoutput node as source node for the decoder network: ");
+
+            encoderOutput = m_net->PairNetwork(encoderPairNodes[0], L"pairNetwork");
+
+            /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
             std::vector<ComputationNodePtr> & encoderEvaluationNodes = encoderNet->OutputNodes();
             if (encoderEvaluationNodes.size() != 1)
                 LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one output node as source node for the decoder network: ");
-
-            encoderOutput = m_net->PairNetwork(encoderEvaluationNodes[0], L"pairNetwork");
 
             if (numHiddenLayers > 0)
             {
@@ -469,6 +474,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 clslogpostprob);
 
             output = m_net->Times(m_net->Transpose(w), input, L"outputs");
+
+            m_net->PairNodes().push_back(input);
 
             m_net->OutputNodes().push_back(output);
 
@@ -1388,6 +1395,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_net->OutputNodes().push_back(output);
+            m_net->PairNodes().push_back(output);
 
         }
 

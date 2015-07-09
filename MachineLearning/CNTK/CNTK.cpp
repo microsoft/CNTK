@@ -853,6 +853,75 @@ void DoEncoderDecoder(const ConfigParameters& config)
 }
 
 /**
+DoBidirecionEncoderDecoder
+*/
+template <typename ElemType>
+void DoBidirecionEncoderDecoder(const ConfigParameters& config)
+{
+
+    ConfigParameters configSGD = config("SGD");
+    bool makeMode = config("makeMode", "true");
+    IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* forwardDecoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* backwardDecoderNetBuilder = NULL;
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
+
+    ConfigParameters backwardDecoderReaderConfig = config("backwardDecoderReader");
+    DataReader<ElemType>* backwardDecoderDataReader = new DataReader<ElemType>(backwardDecoderReaderConfig);
+
+    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
+
+    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
+
+    ConfigParameters cvBackwardDecoderReaderConfig = config("BackwardDecoderCVReader");
+    DataReader<ElemType>* cvBackwardDecoderDataReader = new DataReader<ElemType>(cvBackwardDecoderReaderConfig);
+
+    if (config.Exists("EncoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need encoder network");
+
+    if (config.Exists("DecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    if (config.Exists("BackwardDecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("BackwardDecoderNetworkBuilder");
+        backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    MultiNetworksSGD<ElemType> sgd(configSGD);
+
+    sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
+
+    sgd.BidirectionalEncoderDecoder(encoderNetBuilder, forwardDecoderNetBuilder, backwardDecoderNetBuilder, encoderDataReader, decoderDataReader, backwardDecoderDataReader, cvEncoderDataReader, cvDecoderDataReader, cvBackwardDecoderDataReader, makeMode);
+
+    delete encoderDataReader;
+    delete decoderDataReader;
+    delete cvEncoderDataReader;
+    delete cvDecoderDataReader;
+}
+
+/**
 this is for testing models trained using the sequence to sequence translation method below
 http://arxiv.org/pdf/1409.3215.pdf
 */
@@ -1111,6 +1180,8 @@ void DoCommand(const ConfigParameters& config)
                 DoEncoderDecoder<ElemType>(commandParams);
             else if (action[j] == "testEncoderDecoder")
                 DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
+            else if (action[j] == "trainBidirectionEncoderDecoder")
+                DoBidirecionEncoderDecoder<ElemType>(commandParams);
             else if (action[j] == "beamSearch")
                 DoBeamSearchDecoding<ElemType>(commandParams);
             else
