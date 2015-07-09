@@ -149,7 +149,7 @@ public:
             //size_t  = m_currentRecord*rows;
             void* mat = &(*matrix)(0,0);
             size_t matSize = matrix->GetNumElements()*sizeof(ElemType);
-            void* dataPtr = (void*)data->data();
+            void* dataPtr = (void*)((ElemType*)data->data() + m_currentRecord*rows);
             size_t dataSize = rows*recordCount*sizeof(ElemType);
             memcpy_s(mat, matSize, dataPtr, dataSize);
         }
@@ -172,10 +172,10 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void SetSentenceSegBatch(Matrix<ElemType>&)
+    void SetSentenceSegBatch(Matrix<ElemType> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
     {
-        NOT_IMPLEMENTED;
     }
+
     void GetSentenceBoundary(std::vector<size_t> boundaryInfo)
     {
         m_switchFrame.resize(boundaryInfo.size());

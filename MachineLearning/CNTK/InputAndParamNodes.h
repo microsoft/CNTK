@@ -752,7 +752,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
             assert(m_sentenceSeg != nullptr);
-            assert(m_existsSentenceBeginOrNoLabels != nullptr);
 
             Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep), 

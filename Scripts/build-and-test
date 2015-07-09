@@ -83,7 +83,7 @@ elif [[ $OSTYPE == "linux-gnu" ]]; then
     RELEASE_DIR=x86_64.gpu.release.acml
     PREFIX_DIR=bin
     BIN_NAME=cntk
-    MAKEFILE=Makefile.gpu
+    MAKEFILE=Makefile
     BUILD_OS="linux"
 else
     echo "============ ERROR: Unsupported OS ============"

@@ -67,6 +67,7 @@ namespace Microsoft {
                 using SGD::m_traceLevel;
                 using SGD::m_numMBsToShowResult;
                 using SGD::m_gradientCheckSigDigit;
+                using SGD::m_prevChosenMinibatchSize;
                 
                 typedef ComputationNode<ElemType>* ComputationNodePtr;
 
@@ -376,7 +377,7 @@ namespace Microsoft {
                     bool learnRateInitialized = false;
                     if (startEpoch > 0)
                     {
-                        learnRateInitialized = LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        learnRateInitialized = this->LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
                         setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size() - 1]);
                     }
 
@@ -484,7 +485,14 @@ namespace Microsoft {
                                         m_validateAfterModelReloading);
                                     encoderNet.ResetEvalTimeStamp();
                                     decoderNet.ResetEvalTimeStamp();
-                                    LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+
+                                    size_t dummyMinibatchSize = 0;
+                                    this->LoadCheckPointInfo(i - 1,
+                                        /*out*/ totalSamplesSeen,
+                                        /*out*/ learnRatePerSample,
+                                        smoothedGradients,
+                                        /*out*/ prevCriterion,
+                                        /*out*/ dummyMinibatchSize);
                                     fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                                     loadedPrevModel = true;
                                 }
@@ -537,7 +545,15 @@ namespace Microsoft {
                         //persist model and check-point info
                         decoderNet.SaveToFile(GetDecoderModelNameForEpoch(i));
                         encoderNet.SaveToFile(GetEncoderModelNameForEpoch(i));
-                        SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+
+                        size_t dummyMinibatchSize = 0;
+                        this->LoadCheckPointInfo(i,
+                            /*out*/ totalSamplesSeen,
+                            /*out*/ learnRatePerSample,
+                            smoothedGradients,
+                            /*out*/ prevCriterion,
+                            /*out*/ dummyMinibatchSize);
+
                         if (!m_keepCheckPointFiles)
                             _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
 
@@ -668,7 +684,13 @@ namespace Microsoft {
                     bool learnRateInitialized = false;
                     if (startEpoch > 0)
                     {
-                        learnRateInitialized = LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        size_t dummyMinibatchSize = 0;
+                        this->LoadCheckPointInfo(startEpoch - 1,
+                            /*out*/ totalSamplesSeen,
+                            /*out*/ learnRatePerSample,
+                            smoothedGradients,
+                            /*out*/ prevCriterion,
+                            /*out*/ dummyMinibatchSize);
                         setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size() - 1]);
                     }
 
@@ -782,7 +804,8 @@ namespace Microsoft {
                                     encoderNet.ResetEvalTimeStamp();
                                     decoderNet.ResetEvalTimeStamp();
                                     backwardDecoderNet.ResetEvalTimeStamp();
-                                    LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                                    size_t dummyLr = 0; 
+                                    this->LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, dummyLr);
                                     fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                                     loadedPrevModel = true;
                                 }
@@ -837,7 +860,7 @@ namespace Microsoft {
                         decoderNet.SaveToFile(GetDecoderModelNameForEpoch(i));
                         backwardDecoderNet.SaveToFile(GetBackwardDecoderModelNameForEpoch(i));
                         encoderNet.SaveToFile(GetEncoderModelNameForEpoch(i));
-                        SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        this->SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, 0);
                         if (!m_keepCheckPointFiles)
                             _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
 
@@ -1044,7 +1067,7 @@ namespace Microsoft {
                                         m_validateAfterModelReloading);
                                     encoderNet.ResetEvalTimeStamp();
                                     decoderNet.ResetEvalTimeStamp();
-                                    LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                                    this->LoadCheckPointInfo(i - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
                                     fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                                     loadedPrevModel = true;
                                 }
@@ -1097,7 +1120,7 @@ namespace Microsoft {
                         //persist model and check-point info
                         decoderNet.SaveToFile(GetDecoderModelNameForEpoch(i));
                         encoderNet.SaveToFile(GetEncoderModelNameForEpoch(i));
-                        SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion);
+                        this->SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
                         if (!m_keepCheckPointFiles)
                             _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());  //delete previous checkpiont file to save space
 
@@ -1633,12 +1656,12 @@ namespace Microsoft {
                         }
 
                         EncoderDecoderWithHiddenStatesForwardPass(encoderNet,
-                            decoderNet, encoderTrainSetDataReader,
-                            decoderTrainSetDataReader, encoderEvaluationNodes,
+                                decoderNet, encoderTrainSetDataReader,
+                                decoderTrainSetDataReader, encoderEvaluationNodes,
                             decoderFeatureNodes, decoderCriterionNodes, decoderEvaluationNodes, localEpochCriterion, localEpochEvalErrors);
 
                         EncoderDecoderWithHiddenStatesErrorProp(encoderNet,
-                            decoderNet, encoderEvaluationNodes,
+                                decoderNet, encoderEvaluationNodes,
                             decoderCriterionNodes);
 
                         //update model parameters
@@ -1760,7 +1783,7 @@ namespace Microsoft {
 
                             /// perturb parameter
                             ElemType ePos = eOrg + (ElemType)EPSILON;
-                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false); 
                             node->FunctionValues().SetValue(irow, icol, ePos);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -1854,7 +1877,7 @@ namespace Microsoft {
 
                             /// perturb parameter
                             ElemType ePos = eOrg + (ElemType)EPSILON;
-                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false); 
+                            node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                             node->FunctionValues().SetValue(irow, icol, ePos);
                             if (node->FunctionValues().GetDeviceId() != deviceId)
                                 node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
@@ -1941,46 +1964,46 @@ namespace Microsoft {
                     Matrix<ElemType>& localEpochEvalErrors
                     )
                 {
-                    size_t actualMBSize = encoderNet.GetActualMBSize();
+                        size_t actualMBSize = encoderNet.GetActualMBSize();
 
-                    encoderNet.SetActualMiniBatchSize(actualMBSize);
-                    encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-                    encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.mSentenceBoundary, encoderNet.mExistsBeginOrNoLabels);
+                        encoderNet.SetActualMiniBatchSize(actualMBSize);
+                        encoderNet.SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet.SentenceBoundary(), encoderNet.MinibatchPackingFlags());
 
-                    encoderNet.Evaluate(encoderEvaluationNodes[0]);
+                        encoderNet.Evaluate(encoderEvaluationNodes[0]);
 
-                    actualMBSize = decoderNet.GetActualMBSize();
+                        actualMBSize = decoderNet.GetActualMBSize();
 
-                    decoderNet.SetActualMiniBatchSize(actualMBSize);
-                    decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        decoderNet.SetActualMiniBatchSize(actualMBSize);
+                        decoderNet.SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
-                    /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.mSentenceBoundary, decoderNet.mExistsBeginOrNoLabels);
+                        /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                        decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet.SentenceBoundary(), decoderNet.MinibatchPackingFlags());
 
-                    UpdateEvalTimeStamps(decoderFeatureNodes);
-                    decoderNet.Evaluate(decoderCriterionNodes[0]);
+                        UpdateEvalTimeStamps(decoderFeatureNodes);
+                        decoderNet.Evaluate(decoderCriterionNodes[0]);
 
-                    Matrix<ElemType>::AddElementToElement(decoderCriterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                        Matrix<ElemType>::AddElementToElement(decoderCriterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
 
-                    size_t numEvalNodes = decoderEvaluationNodes.size();
-                    std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
+                        size_t numEvalNodes = decoderEvaluationNodes.size();
+                        std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
                     
-                    for (size_t i = 0; i < numEvalNodes; i++)
-                    {
-                        decoderNet.Evaluate(decoderEvaluationNodes[i]);
-                        Matrix<ElemType>::AddElementToElement(decoderEvaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
-                    }
+                        for (size_t i = 0; i < numEvalNodes; i++)
+                        {
+                            decoderNet.Evaluate(decoderEvaluationNodes[i]);
+                            Matrix<ElemType>::AddElementToElement(decoderEvaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                        }
 #ifdef DEBUG_DECODER
-                    fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
+                        fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
 #endif
-                }
+                    }
 
                 void EncoderDecoderWithHiddenStatesErrorProp(
                     ComputationNetwork<ElemType>& encoderNet,  /// encoder network
                     ComputationNetwork<ElemType>& decoderNet,
                     const std::vector<ComputationNodePtr>& encoderEvaluationNodes,
                     const std::vector<ComputationNodePtr>& decoderCriterionNodes)
-                {
+                    {
                     /// don't reevalute, need to call forward pass before call this function
                     //                decoderNet.m_sentenceBegin.assign(decoderNet.m_sentenceBegin.size(), -1);
 
@@ -2010,7 +2033,7 @@ namespace Microsoft {
                         {
                             RuntimeError("Error in evaluating gradients for decoder network");
                         }
-
+                        
                         try{
                             /// get the pair of encode and decoder nodes
                             for (typename list<pair<ComputationNodePtr, ComputationNodePtr>>::iterator iter = lst_pair_encoder_decoder_nodes.begin(); iter != lst_pair_encoder_decoder_nodes.end(); iter++)

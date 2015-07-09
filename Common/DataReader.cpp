@@ -211,10 +211,10 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, sentenceExistsBeginOrNoLabels);
+        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, minibatchPackingFlag);
 }
 
 template<class ElemType>
@@ -222,6 +222,24 @@ void DataReader<ElemType>::SetRandomSeed(int seed)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
         m_dataReader[m_ioNames[i]]->SetRandomSeed(seed);
+}
+
+template<class ElemType>
+bool DataReader<ElemType>::GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices)
+{
+    bool ans = false;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        ans = (m_dataReader[m_ioNames[i]]->GetForkedUtterance(uttID, matrices) || ans);
+    return ans;
+}
+
+template<class ElemType>
+bool DataReader<ElemType>::ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs)
+{
+    bool ans = false;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        ans = (m_dataReader[m_ioNames[i]]->ComputeDerivativeFeatures(uttID, outputs) || ans);
+    return ans;
 }
 
 // GetLabelMapping - Gets the label mapping from integer index to label type 

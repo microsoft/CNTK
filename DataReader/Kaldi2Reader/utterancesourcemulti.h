@@ -995,7 +995,10 @@ public:
     // We specify the utterance by its global start time (in a space of a infinitely repeated training set).
     // This is efficient since getbatch() is called with sequential 'globalts' except at epoch start.
     // Note that the start of an epoch does not necessarily fall onto an utterance boundary. The caller must use firstvalidglobalts() to find the first valid globalts at or after a given time.
-    /*implement*/ bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+    //
+    //
+    /*implement*/ bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat,
+                                 std::vector<std::vector<size_t>> & uids, std::vector<std::pair<wstring, size_t>> & utteranceinfo,
                                  std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
                                  std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
     {
@@ -1003,6 +1006,9 @@ public:
 
         auto_timer timergetbatch;
         assert (_totalframes > 0);
+
+        // Clears <utteranceinfo> vector.
+        utteranceinfo.clear();
 
         // update randomization if a new sweep is entered  --this is a complex operation that updates many of the data members used below
         const size_t sweep = lazyrandomization (globalts);
@@ -1041,12 +1047,12 @@ public:
 
             // resize feat and uids
             feat.resize(vdim.size());
-            uids.resize(classids.size());            
+            uids.resize(classids.size());
             assert(feat.size()==vdim.size());
             assert(feat.size()==randomizedchunks.size());
             foreach_index(i, feat)
             {
-                feat[i].resize (vdim[i], mbframes);
+                feat[i].resize(vdim[i], mbframes);
 
                 if (i==0)
                 {
@@ -1099,6 +1105,9 @@ public:
                     // copy the frames and class labels
                     if (i==0)
                     {
+                        // Sets utterance ID information.
+                        utteranceinfo.push_back(std::make_pair(chunkdata.utteranceset[uttref.utteranceindex].key(), uttref.numframes));
+
                         auto uttclassids = getclassids (uttref);
                         foreach_index(j, uttclassids)
                         {
@@ -1152,12 +1161,12 @@ public:
 
             // resize feat and uids
             feat.resize(vdim.size());
-            uids.resize(classids.size());            
+            uids.resize(classids.size());
             assert(feat.size()==vdim.size());
             assert(feat.size()==randomizedchunks.size());
             foreach_index(i, feat)
             {
-                feat[i].resize (vdim[i], mbframes);
+                feat[i].resize(vdim[i], mbframes);
 
                 if (i==0)
                 {
@@ -1224,8 +1233,8 @@ public:
     double gettimegetbatch() { return timegetbatch;}
 
     // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
-    /*implement*/ bool getbatch (const size_t /*globalts*/,
-                           const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
+    /*implement*/ bool getbatch (const size_t /*globalts*/, const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/,
+                           std::vector<size_t> & /*uids*/, std::vector<std::pair<wstring, size_t>> & /*utterances*/,
                            std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
                            std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {

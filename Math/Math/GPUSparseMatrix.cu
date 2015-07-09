@@ -1965,6 +1965,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    {
+        int m = (int)GetNumRows();
+        int n = (int)GetNumCols();
+
+        if (numCols == 0)
+            throw std::logic_error("The slice cannot have 0 columns.");
+
+        if (startColumn + numCols > n)
+            throw std::logic_error("The slice is out of range of the source matrix.");
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        GPUMatrix<ElemType> slice(m, numCols, GetComputeDeviceId());
+
+        PrepareDevice();
+        cusparseHandle_t cusparseHandle = 0;
+        CUSPARSECALL(cusparseCreate(&cusparseHandle));
+        cusparseMatDescr_t descr = 0;
+        CUSPARSECALL(cusparseCreateMatDescr(&descr));
+        cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
+        cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
+
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        CUSPARSECALL(cusparseSetStream(cusparseHandle, t_stream));
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            CUSPARSECALL(cusparseScsc2dense(cusparseHandle, m, numCols, descr, (float*)NzValues(), RowLocation(), ColLocation() + startColumn, (float*)slice.BufferPointer(), m));
+        }
+        else
+        {
+            CUSPARSECALL(cusparseDcsc2dense(cusparseHandle, m, numCols, descr, (double*)NzValues(), RowLocation(), ColLocation() + startColumn, (double*)slice.BufferPointer(), m));
+        }
+
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+        CUSPARSECALL(cusparseDestroy(cusparseHandle));
+
+        slice.SetMatrixName(m_matrixName);
+
+        return slice;
+    }
+
+    template<class ElemType>
     ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
     {
         if (IsEmpty())

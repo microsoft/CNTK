@@ -274,7 +274,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			fprintf(stderr, "%d:%.f ", unCompressedIndex[i], dataBuffer[i]);
 		}
 		fprintf(stderr, "\n");
-	}
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    {
+        if (numCols == 0)
+            throw std::logic_error("The slice cannot have 0 columns.");
+
+        if (startColumn + numCols > m_numCols)
+            throw std::logic_error("The slice is out of range of the source matrix.");
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        CPUMatrix<ElemType> slice(m_numRows, numCols);
+
+#pragma omp parallel for
+        for (long j = 0; j < numCols; j++)
+        {
+            long start = (long)m_compIndex[startColumn + j];
+            long end = (long)m_compIndex[startColumn + j + 1];
+
+            for (long p = start; p < end; p++)
+            {
+                size_t i = m_unCompIndex[p];
+                ElemType value = m_pArray[(size_t)p];
+                slice(i, (size_t)j) = value;
+            }
+        }
+
+        return slice;
+    }
 
     template<class ElemType>
     void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,

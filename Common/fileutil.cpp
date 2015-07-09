@@ -53,6 +53,7 @@
 #include <errno.h>
 
 using namespace std;
+using namespace Microsoft::MSR::CNTK;
 
 // ----------------------------------------------------------------------------
 // some mappings for non-Windows builds
