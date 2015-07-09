@@ -150,6 +150,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;   
     else if (EqualInsensitive(nodeType, L"ImageInput", L"Image"))
         ret = true;   
+    else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage"))
+        ret = true;   
     else if (EqualInsensitive(nodeType, SumElementsNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, ScaleNode<ElemType>::TypeName()))

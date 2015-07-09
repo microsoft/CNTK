@@ -1894,9 +1894,12 @@ public:
 
     ComputationNodePtr Reshape(const ComputationNodePtr a,
                                const size_t num_rows,
+                               const size_t img_width,
+                               const size_t img_height,
+                               const size_t img_channels,
                                const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ReshapeNode<ElemType>(m_deviceId, num_rows, nodeName));
+        ComputationNodePtr newNode(new ReshapeNode<ElemType>(m_deviceId, num_rows, img_width, img_height, img_channels, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;

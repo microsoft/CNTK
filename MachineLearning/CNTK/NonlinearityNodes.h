@@ -1621,38 +1621,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        ReshapeNode(const DEVICEID_TYPE deviceId, size_t numRows, const std::wstring name = L"")
+        ReshapeNode(const DEVICEID_TYPE deviceId, size_t numRows, size_t imageWidth, size_t imageHeight, size_t imageChannels, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                m_deviceId = deviceId;
-                m_numRows = numRows;
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            m_numRows = numRows;
+            m_imageWidth = imageWidth;
+            m_imageHeight = imageHeight;
+            m_imageChannels = imageChannels;
 
-                MoveMatricesToDevice(deviceId);
-                InitRecurrentNode();
-            }
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
 
         ReshapeNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_numRows(0)
+            : ComputationNode<ElemType>(deviceId), m_numRows(0), m_imageWidth(0), m_imageHeight(0), m_imageChannels(0)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                m_deviceId = deviceId;
-                MoveMatricesToDevice(deviceId);
-                InitRecurrentNode();
-            }
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
 
         ReshapeNode(const ReshapeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId)
         {
-                node->CopyTo(this, newName, flags);
-            }
+            node->CopyTo(this, newName, flags);
+        }
 
         ReshapeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                LoadFromFile(fstream, modelVersion, deviceId);
-            }
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1669,6 +1672,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 node->m_numRows = m_numRows;
+                node->m_imageWidth = m_imageWidth;
+                node->m_imageHeight = m_imageHeight;
+                node->m_imageChannels = m_imageChannels;
             }
         }
 
@@ -1676,14 +1682,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
 
-            fstream << m_numRows;
+            fstream << m_numRows << m_imageWidth << m_imageHeight << m_imageChannels;
         }
 
         virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
-            fstream >> m_numRows;
+            fstream >> m_numRows >> m_imageWidth >> m_imageHeight >> m_imageChannels;
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1698,14 +1704,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyImageSizeFromInputs()
         {
             CopyImageSizeFromInput(0, true);
+            InferImageDimensions();
 
-            //WARNING: this node will destroy the image size information from the child
-            m_outputWidth = 1;
-            m_outputChannels = 1;
-            m_outputHeight = m_numRows;
+            if (m_imageWidth == 0 || m_imageHeight == 0 || m_imageChannels == 0)
+            {
+                m_outputWidth = 1;
+                m_outputChannels = 1;
+                m_outputHeight = m_numRows;
 
-            if (m_inputWidth * m_inputChannels != 1)
-                fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
+                if (m_inputWidth * m_inputChannels != 1)
+                    fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
+            }
+            else
+            {
+                m_outputWidth = m_imageWidth;
+                m_outputChannels = m_imageChannels;
+                m_outputHeight = m_imageHeight;
+            }
         }
 
         virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
@@ -1734,7 +1749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
                 }
 
-                fprintf(stderr, ", NumOfRows=%lu)", m_numRows);
+                fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numRows, m_imageWidth, m_imageHeight, m_imageChannels);
             }
         }
 
@@ -1847,6 +1862,80 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         size_t m_numRows;
+        size_t m_imageWidth;
+        size_t m_imageHeight;
+        size_t m_imageChannels;
+
+        void InferImageDimensions()
+        {
+            if (m_imageWidth > 0)
+            {
+                if (m_imageHeight > 0)
+                {
+                    if (m_imageChannels > 0)
+                    {
+                        if (m_imageWidth * m_imageHeight * m_imageChannels != m_numRows)
+                        {
+                            throw runtime_error("Image dimensions do not match row size.");
+                        }
+                    }
+                    else
+                    {
+                        if (m_numRows % (m_imageWidth * m_imageHeight) > 0)
+                        {
+                            throw runtime_error("Image row size is not a multiple of specified image dimensions.");
+                        }
+                        else
+                        {
+                            m_imageChannels = m_numRows / (m_imageWidth * m_imageHeight);
+                        }
+                    }
+                }
+                else
+                {
+                    if (m_imageChannels > 0)
+                    {
+                        if (m_numRows % (m_imageWidth * m_imageChannels) > 0)
+                        {
+                            throw runtime_error("Image row size is not a multiple of specified image dimensions.");
+                        }
+                        else
+                        {
+                            m_imageHeight = m_numRows / (m_imageWidth * m_imageChannels);
+                        }
+                    }
+                    else
+                    {
+                        throw runtime_error("At least two image dimensions must be specified.");
+                    }
+                }
+            }
+            else
+            {
+                if (m_imageHeight > 0)
+                {
+                    if (m_imageChannels > 0)
+                    {
+                        if (m_numRows % (m_imageHeight * m_imageChannels) > 0)
+                        {
+                            throw runtime_error("Image row size is not a multiple of specified image dimensions.");
+                        }
+                        else
+                        {
+                            m_imageWidth = m_numRows / (m_imageHeight * m_imageChannels);
+                        }
+                    }
+                    else
+                    {
+                        throw runtime_error("At least two image dimensions must be specified.");
+                    }
+                }
+                else if (m_imageChannels > 0)
+                {
+                    throw runtime_error("At least two image dimensions must be specified.");
+                }
+            }
+        }
     };
 
     template class ReshapeNode<float>;

@@ -192,6 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
 
+            m_isSparse = isSparse;
             if (isSparse)
             {
                 ConvertToSparseMatrix();
@@ -218,6 +219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
 
+            m_isSparse = isSparse;
             if (isSparse)
             {
                 ConvertToSparseMatrix();
@@ -230,8 +232,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         InputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId, isSparse);
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_isSparse = isSparse;
+            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual void SaveToFile(File& fstream) const
@@ -242,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, bool isSparse = false)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
 
@@ -253,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels;
 
-            if (isSparse)
+            if (m_isSparse)
             {
                 ConvertToSparseMatrix();
             }
@@ -262,10 +265,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needGradient = false;
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"InputValue";} 
-        static const std::wstring SparseTypeName() {return L"SparseInputValue";} 
-
+        virtual const std::wstring OperationName() const {return m_isSparse ? SparseTypeName() : TypeName();}
+        static const std::wstring TypeName() {return L"InputValue";}
+        static const std::wstring SparseTypeName() {return L"SparseInputValue";}
+        
         virtual void EvaluateThisNode()  {} 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
         
@@ -302,6 +305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
+        bool m_isSparse = false;
         void ConvertToSparseMatrix()
         {
             size_t rows = m_functionValues.GetNumRows();
