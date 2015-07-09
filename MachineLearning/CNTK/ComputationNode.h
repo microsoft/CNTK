@@ -866,7 +866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
-            std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromPastValueNode) 
+            std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode) 
         {
             if (visited.find(this) == visited.end())  //not visited
             {   
@@ -876,7 +876,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_children[i] == nullptr)
                         continue;
-                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, this->OperationName() == L"PastValue");
+                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, 
+                        this->OperationName() == L"PastValue" || this->OperationName() == L"FutureValue");
                 }
                 
                 //children first for function evaluation
@@ -893,7 +894,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (!IsLeaf() && bFromPastValueNode)
+                if (!IsLeaf() && isFromPastOrFutureValueNode)
                     sourceRecurrentNodePtr.push_back(this) ;
             }
         }

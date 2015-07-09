@@ -50,9 +50,11 @@ protected:
         std::vector<ComputationNodePtr> m_recurrentNodes;
         std::vector<ComputationNodePtr> m_recurrentNodesForForward;
         ComputationNodePtr m_sourceNode;
-        int m_loopId;bool m_completedGradient;
+        int m_loopId;
+        bool m_completedGradient;
         bool m_completedEvaluate;
         bool m_loopClosed;
+        bool m_isForwardLoop; 
 
         void Reset()
         {
@@ -182,6 +184,7 @@ private:
         wstring m_normalNodeStyle;
         wstring m_PrecomputingNodeStyle;
         wstring m_pastValueNodeStyle;
+        wstring m_futureValueNodeStyle;
 
         DotGraphConfigure()
         {
@@ -193,6 +196,7 @@ private:
             m_PrecomputingNodeStyle = L"node [ shape = box    , color = black, style = \"dashed, filled\",  fillcolor= limegreen ] ;";
             m_labelsStyle = L"node [ shape = diamond, color = brown, style = bold ] ;  ";
             m_pastValueNodeStyle = L"node [ shape = box3d  , color = lightgray, style = \"filled\" , fillcolor = white ] ";
+            m_futureValueNodeStyle = L"node [ shape = box3d  , color = red, style = \"filled\" , fillcolor = white ] ";
         }
     };
     wstring FormSpecialNodes(wstring style, std::vector<ComputationNodePtr>& specialNodes)
@@ -242,6 +246,15 @@ public:
             }
         }
 
+        // get FuturetValue node
+        std::vector<ComputationNodePtr> futureValueNodes;
+        for (auto n : allnodes)
+        {
+            if (n->OperationName() == FutureValueNode<ElemType>::TypeName())
+            {
+                futureValueNodes.push_back(n);
+            }
+        }
         // get learnableParameters
         std::vector<ComputationNodePtr> learnableParameters;
         for (auto n : allnodes)
@@ -280,6 +293,9 @@ public:
                                     PreComputedNodes);
         // PastValue nodes
         fstream << FormSpecialNodes(dotcfg.m_pastValueNodeStyle, pastValueNodes);
+
+        // FutureValue nodes
+        fstream << FormSpecialNodes(dotcfg.m_futureValueNodeStyle, futureValueNodes);
 
         // normal nodes
         fstream << dotcfg.m_normalNodeStyle << L"\n";
@@ -358,6 +374,18 @@ public:
                 wstring out = msra::strfun::wstrprintf(L"node [ shape = box3d  , color = lightgray, style = \"filled\" , label = \"%ls\" ] ; \"%ls\"\n",
                                                        (pastValueNode->GetName() + L"\\n(PastValue)").c_str(),
                                                        dummyName.c_str());
+                line = out;
+                line += msra::strfun::wstrprintf(L"\"%ls\" -> \"%ls\" ; \n", dummyName.c_str(), srcname.c_str());
+            }
+            else if (des->OperationName() == FutureValueNode<ElemType>::TypeName())
+            {
+                // special treament for arc with FutureValue node as the children
+                // create a dummy node
+                ComputationNodePtr futureValueNode = des;
+                wstring dummyName = des->GetName() + L".dummy";
+                wstring out = msra::strfun::wstrprintf(L"node [ shape = box3d  , color = red, style = \"filled\" , label = \"%ls\" ] ; \"%ls\"\n",
+                    (futureValueNode->GetName() + L"\\n(FutureValue)").c_str(),
+                    dummyName.c_str());
                 line = out;
                 line += msra::strfun::wstrprintf(L"\"%ls\" -> \"%ls\" ; \n", dummyName.c_str(), srcname.c_str());
             }
@@ -1290,6 +1318,10 @@ public:
         {
             newNode = new PastValueNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
+        else if (nodeType == FutureValueNode<ElemType>::TypeName())
+        {
+            newNode = new FutureValueNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == LookupTableNode<ElemType>::TypeName())
         {
             newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1585,6 +1617,10 @@ public:
         else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")
         {
             newNode = new PastValueNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == FutureValueNode<ElemType>::TypeName())
+        {
+            newNode = new FutureValueNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == LookupTableNode<ElemType>::TypeName())
         {
@@ -2073,7 +2109,20 @@ public:
         return newNode;
     }
 
-    ComputationNodePtr Parallel(const ComputationNodePtr a, 
+    ComputationNodePtr FutureValue(const ComputationNodePtr a,
+        const float initHiddenActivity,
+        const size_t row_size, const size_t col_size,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new FutureValueNode<ElemType>(m_deviceId, initHiddenActivity,
+            row_size, col_size, nodeName));
+        newNode->AttachInputs(a);
+        AddNodeToNet(newNode);
+
+        return newNode;
+    }
+
+    ComputationNodePtr Parallel(const ComputationNodePtr a,
                                 const ComputationNodePtr b, 
                                 const std::wstring nodeName = L"")
     {
@@ -2236,7 +2285,10 @@ public:
     {
         for (auto ptr = recurrentNodes.begin(); ptr != recurrentNodes.end(); ptr++)
         {
-            if ((*ptr)->IsFuncValueOlderThanInputs() && (*ptr)->OperationName() != PastValueNode<ElemType>::TypeName()) {
+            if ((*ptr)->IsFuncValueOlderThanInputs() && 
+                (*ptr)->OperationName() != PastValueNode<ElemType>::TypeName() &&
+                (*ptr)->OperationName() != FutureValueNode<ElemType>::TypeName())
+            {
                 return true;
             }
         }
@@ -2245,32 +2297,42 @@ public:
 
     void EvaluateLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
     {
-        bool bLoopCompleted = true;
         std::vector<ComputationNodePtr> recurrentNodes;
         int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes, true);
-        if (iLoopId != -1&& IsFuncValueOlderThanInputs(recurrentNodes) && m_recurrentInfo[iLoopId].m_completedEvaluate == false)
+        if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && 
+            m_recurrentInfo[iLoopId].m_completedEvaluate == false)
         {
-
             for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
             {
                 (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
             }
 
-            size_t iCnt = 0;
             size_t iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
-            do
+
+            if (m_recurrentInfo[iLoopId].m_isForwardLoop)
             {
-                bLoopCompleted = true;
-                for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                for (size_t timeIndex = 0; timeIndex < iMBSize; timeIndex ++)
                 {
-                    (*nodeIter)->EvaluateThisNodeGivenInputs(iCnt);
+                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                    {
+                        (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
 
-                    (*nodeIter)->UpdateEvalTimeStamp();
-                }
-
-                iCnt++;
+                        (*nodeIter)->UpdateEvalTimeStamp();
+                    }
+                } 
             }
-            while (iCnt < iMBSize);
+            else
+            {
+                for (size_t timeIndex = iMBSize-1; timeIndex >= 0; timeIndex--)
+                {
+                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                    {
+                        (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
+
+                        (*nodeIter)->UpdateEvalTimeStamp();
+                    }
+                }
+            }
 
             m_recurrentInfo[iLoopId].m_completedEvaluate = true;
         }
@@ -2406,21 +2468,32 @@ public:
         {
             if (m_recurrentInfo[iLoopId].m_completedGradient == false)
             {
-                int iCol = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration - 1;
-                do
+                int mbSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
+                if (m_recurrentInfo[iLoopId].m_isForwardLoop)
                 {
-                    for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                    for (size_t timeIndex = mbSize - 1; timeIndex >= 0; timeIndex--)
                     {
-                        (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                        (*nodeIter)->ComputeGradientForChildren(iCol);
+                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                        {
+                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                            (*nodeIter)->ComputeGradientForChildren(timeIndex);
+                        }
                     }
-
-                    iCol--;
                 }
-                while (iCol >= 0);
-            }
+                else
+                {
+                    for (size_t timeIndex = 0; timeIndex < mbSize; timeIndex++)
+                    {
+                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                        {
+                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                            (*nodeIter)->ComputeGradientForChildren(timeIndex);
+                        }
+                    }
+                }
 
-            m_recurrentInfo[iLoopId].m_completedGradient = true;
+                m_recurrentInfo[iLoopId].m_completedGradient = true;
+            }
         }
     }
 
@@ -2883,7 +2956,8 @@ public:
         {
             for (ComputationNodePtr node : FinalCriterionNodes())
             {
-                if (!allowFragment) {
+                if (!allowFragment) 
+                {
                     FormRecurentLoops(node);
                 }
                 PrintComputationTree(node, false);
@@ -3376,7 +3450,8 @@ protected:
             visited.insert(cur);
             recStack.insert(cur);
 
-            if (cur->OperationName() != PastValueNode<ElemType>::TypeName())
+            if (cur->OperationName() != PastValueNode<ElemType>::TypeName() && 
+                cur->OperationName() != FutureValueNode<ElemType>::TypeName())
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
                 {
@@ -3459,7 +3534,9 @@ protected:
                     ComputationNodePtr nodeRecIter = (*iter).m_recurrentNodes[j];
                     for (size_t i = 0; i < nodeRecIter->ChildrenSize(); i++)
                     {
-                        if ((nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId()) && (nodeRecIter->OperationName() != PastValueNode<ElemType>::TypeName()))
+                        if (nodeRecIter->Inputs(i)->LoopId() == nodeRecIter->LoopId() && 
+                            nodeRecIter->OperationName() != PastValueNode<ElemType>::TypeName() &&
+                            nodeRecIter->OperationName() != FutureValueNode<ElemType>::TypeName())
                         {
                             nodeRecIter->Inputs(i)->SetIndexInLoop(nodeRecIter->Inputs(i)->GetIndexInLoop() + 1);
                         }
@@ -3508,6 +3585,53 @@ protected:
                 fprintf (stderr, "%ls\n", (*itr)->NodeName().c_str() );
             }
 #endif
+        }
+
+        DetermineLoopTypes();
+    }
+
+    void DetermineLoopTypes()
+    {
+        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+        {
+            bool hasPastValueNode = false;
+            bool hasFutureValueNode = false;
+
+            RecurrentInfo* recurrentInfo = &(*iter);
+
+            if (recurrentInfo->m_recurrentNodes.size() > 0)
+            {
+                for (size_t j = 0; j < recurrentInfo->m_recurrentNodes.size(); j++)
+                {
+                    ComputationNodePtr nodeRecIter = recurrentInfo->m_recurrentNodes[j];
+
+                    if (nodeRecIter->OperationName() == PastValueNode<ElemType>::TypeName())
+                    {
+                        hasPastValueNode = true;
+                    }
+                    else if (nodeRecIter->OperationName() == FutureValueNode<ElemType>::TypeName())
+                    {
+                        hasFutureValueNode = true;
+                    }
+                }
+
+                if (hasPastValueNode && hasFutureValueNode)
+                {
+                    RuntimeError("It is not allowed to have both PastValue and FutureValue nodes in the same loop.");
+                }
+                else if (!hasPastValueNode && !hasFutureValueNode)
+                {
+                    RuntimeError("There is neither PastValue nor FutureValue nodes in the loop.");
+                }
+                else if (hasPastValueNode)
+                {
+                    recurrentInfo->m_isForwardLoop = true;
+                }
+                else
+                {
+                    recurrentInfo->m_isForwardLoop = false;
+                }
+            }
         }
     }
 

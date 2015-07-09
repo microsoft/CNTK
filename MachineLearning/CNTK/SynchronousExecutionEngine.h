@@ -292,10 +292,11 @@ public:
                 nodePtr->NeedGradient() = needGradient;
             }
         }
-        else if (cnNodeType == PastValueNode<ElemType>::TypeName())
+        else if (cnNodeType == PastValueNode<ElemType>::TypeName() || 
+                 cnNodeType == FutureValueNode<ElemType>::TypeName())
         {
             if (parameter.size() <2 || parameter.size() >3)
-                RuntimeError("PastValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
+                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
 
             nodeParamCount = 1;
             nodeParamStart = parameter.size() > 2?2:1;
@@ -310,9 +311,18 @@ public:
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
-                nodePtr = m_net.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
-                size_t timeStep = node->GetOptionalParameter("timeStep","1");
-                ((PastValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
+                size_t timeStep = node->GetOptionalParameter("timeStep", "1");
+
+                if (cnNodeType == PastValueNode<ElemType>::TypeName())
+                {
+                    nodePtr = m_net.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
+                    ((PastValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
+                }
+                else
+                {
+                    nodePtr = m_net.FutureValue(NULL, defaultHiddenActivity, rows, cols, name);
+                    ((FutureValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
+                }
 
                 nodePtr->NeedGradient() = needGradient;
             }
