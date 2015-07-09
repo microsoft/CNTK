@@ -287,7 +287,10 @@ public:
 	using SequenceReader<ElemType>::ReadClassInfo;
 	using SequenceReader<ElemType>::LoadLabelFile;
 	using SequenceReader<ElemType>::word4idx;
-	using SequenceReader<ElemType>::m_mbStartSample;
+    using SequenceReader<ElemType>::idx4word;
+    using SequenceReader<ElemType>::idx4cnt;
+    using SequenceReader<ElemType>::mUnk;
+    using SequenceReader<ElemType>::m_mbStartSample;
 	using SequenceReader<ElemType>::m_epoch;
 	using SequenceReader<ElemType>::m_totalSamples;
 	using SequenceReader<ElemType>::m_epochStartSample;
@@ -333,6 +336,10 @@ public:
 	using SequenceReader<ElemType>::GetClassInfo;
     using IDataReader<ElemType>::mBlgSize;
     using IDataReader<ElemType>::mDoRandomize;
+
+    using LabelType = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+
 
 
 private:
