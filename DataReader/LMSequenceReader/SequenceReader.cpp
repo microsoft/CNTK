@@ -1859,9 +1859,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
         mtSentenceBegin.Resize(mToProcess.size(), nT);
         mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
-        mtExistsSentenceBeginOrNoLabels.Resize(1, nT);
-        mtExistsSentenceBeginOrNoLabels.SetValue((ElemType)NO_EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+        m_minibatchPackingFlag.resize(nT);
+        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
@@ -1891,7 +1890,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
 //        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-//        mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
+//        m_minibatchPackingFlag.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
@@ -1966,7 +1965,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         {
             mSentenceBegin = true;
             mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SENTENCE_BEGIN);
-            mtExistsSentenceBeginOrNoLabels.SetValue(0, timePos, (ElemType)EXISTS_SENTENCE_BEGIN_OR_NO_LABELS);
+            m_minibatchPackingFlag[timePos] = MinibatchPackingFlag::UtteranceStart;
         }
     }
 }
@@ -1999,8 +1998,8 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = !EnsureDataAvailable(m_mbStartSample);
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
-        for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
-           mProcessed[*ptr] = true;
+            for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
+                mProcessed[*ptr] = true;
 
         mSentenceEnd = true;
         ret = mSentenceEnd;
@@ -2041,62 +2040,76 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
     //move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = labels->GetDeviceId();
     labels->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
+    ElemType epsilon = (ElemType)1e-6; // avoid all zero, although this is almost impossible.
 
     if (labels->GetCurrentMatrixLocation() == CPU)
-        for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
+    for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
+    {
+        // pick the right sample with randomization if desired
+        size_t jRand = jSample;
+        int    wrd = m_labelIdData[jRand];
+        labels->SetValue(0, j, (ElemType)wrd);
+        SetSentenceEnd(wrd, j, actualmbsize);
+
+        if (readerMode == ReaderMode::NCE)
         {
-            // pick the right sample with randomization if desired
-            size_t jRand = jSample;
-            int    wrd = m_labelIdData[jRand];
-            labels->SetValue(0, j, (ElemType)wrd);
-            SetSentenceEnd(wrd, j, actualmbsize);
-
-            if (readerMode == ReaderMode::NCE)
-            {
                 labels->SetValue(1, j, (ElemType)m_noiseSampler.logprob(wrd));
-                for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
-                {
-                    int wid = m_noiseSampler.sample();
-                    labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
-                    labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m_noiseSampler.logprob(wid));
-                }
-            }
-            else if (readerMode == ReaderMode::Class)
+            for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
             {
-                int clsidx = idx4class[wrd];
-                if (class_size > 0){
-
-                    labels->SetValue(1, j, (ElemType)clsidx);
-
-                    /// save the [begining ending_indx) of the class 
-                    size_t lft = (size_t)(*m_classInfoLocal)(0, clsidx);
-                    size_t rgt = (size_t)(*m_classInfoLocal)(1, clsidx);
-                    if (wrd < lft || lft > rgt || wrd >= rgt)
-                    {
-                        LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
-                    }
-                    labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
-                    labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
-                }
+                    int wid = m_noiseSampler.sample();
+                labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
+                    labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m_noiseSampler.logprob(wid));
             }
         }
+        else if (readerMode == ReaderMode::Class)
+        {
+            int clsidx = idx4class[wrd];
+            if (class_size > 0){
+
+                labels->SetValue(1, j, (ElemType)clsidx);
+
+                /// save the [begining ending_indx) of the class 
+                    size_t lft = (size_t)(*m_classInfoLocal)(0, clsidx);
+                    size_t rgt = (size_t)(*m_classInfoLocal)(1, clsidx);
+                if (wrd < lft || lft > rgt || wrd >= rgt)
+                {
+                    LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
+                }
+                labels->SetValue(2, j, (*m_classInfoLocal)(0, clsidx)); /// begining index of the class
+                labels->SetValue(3, j, (*m_classInfoLocal)(1, clsidx)); /// end index of the class
+            }
+        }
+        else if (readerMode == ReaderMode::Softmax)
+        {
+            if (wrd == 0)
+                labels->SetValue(0, j, epsilon + (ElemType)wrd);
+    }
+        else if (readerMode == ReaderMode::Unnormalize)
+        {
+            labels->SetValue(0, j, -(ElemType)wrd);
+            if (wrd == 0)
+                labels->SetValue(0, j, - epsilon - (ElemType)wrd);
+        }
+    }
     else // GPU
     {
         RuntimeError("GetLabelOutput::should use CPU for labels ");
     }
+    if (curDevId != CPUDEVICE)
+    {
+        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
+    }
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels)
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
     sentenceBegin.SetValue(mtSentenceBegin);
     mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
 
-    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(device, mtExistsSentenceBeginOrNoLabels.GetDeviceId(), true);
-    sentenceExistsBeginOrNoLabels.SetValue(mtExistsSentenceBeginOrNoLabels);
-    mtExistsSentenceBeginOrNoLabels.TransferFromDeviceToDevice(mtExistsSentenceBeginOrNoLabels.GetDeviceId(), device, true);
+    minibatchPackingFlag = m_minibatchPackingFlag;
 }
 
 template<class ElemType>

@@ -14,6 +14,7 @@
 #include <fstream>
 #include <map>
 #include <stdint.h>
+#include "Basics.h"
 #include "fileutil.h"
 
 using namespace std;
@@ -234,10 +235,10 @@ public:
 
         errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
         if (err)
-            RuntimeError("SequenceParser::ParseInit - error opening file"); 
+            Microsoft::MSR::CNTK::RuntimeError("SequenceParser::ParseInit - error opening file");
         int rc = _fseeki64(m_pFile, 0, SEEK_END);
         if (rc)
-            RuntimeError("SequenceParser::ParseInit - error seeking in file");
+            Microsoft::MSR::CNTK::RuntimeError("SequenceParser::ParseInit - error seeking in file");
 
         m_fileSize = GetFilePosition();
         m_fileBuffer = new BYTE[m_bufferSize];
@@ -545,7 +546,7 @@ public:
         if (mFile) fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
-            Warning("cannot open file %s", fileName);
+            Microsoft::MSR::CNTK::Warning("cannot open file %s", fileName);
     }
 
     void ParseReset()

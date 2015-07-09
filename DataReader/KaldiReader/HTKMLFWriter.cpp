@@ -28,6 +28,8 @@
 #include "DataWriter.h"
 #include "commandArgUtil.h"
 #include "HTKMLFWriter.h"
+
+#include "commandArgUtil.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif

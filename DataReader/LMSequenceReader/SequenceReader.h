@@ -357,12 +357,13 @@ private:
     bool   mSentenceBegin; 
 
     Matrix<ElemType> mtSentenceBegin; 
-    Matrix<ElemType> mtExistsSentenceBeginOrNoLabels;
+    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
 public:
     vector<bool> mProcessed; 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
-    BatchSequenceReader() : mtSentenceBegin(CPUDEVICE), mtExistsSentenceBeginOrNoLabels(CPUDEVICE){
+    BatchSequenceReader() : mtSentenceBegin(CPUDEVICE)
+    {
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
         mLastPosInSentence = 0;
@@ -398,7 +399,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
 
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
-    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, Matrix<ElemType>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     int GetSentenceEndIdFromOutputLabel();
 

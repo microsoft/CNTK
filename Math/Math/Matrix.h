@@ -42,7 +42,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         mutable size_t m_numTimesDeviceChanged;
         mutable size_t m_numTimesMatrixTypeChanged;
-
+        mutable int m_devicesTransferedTo[2];
+            
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
         //Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
@@ -150,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp);
 
         Matrix<ElemType>& AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex);
-
+        Matrix<ElemType>& AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax);
         Matrix<ElemType>& AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias);
 
         Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
@@ -262,6 +263,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
         Matrix<ElemType>&  AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+        Matrix<ElemType>&  AddToRowRepeatValuesOf(const Matrix<ElemType>& a, const size_t numRepeats);
+
         Matrix<ElemType>&  AssignPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         Matrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         
