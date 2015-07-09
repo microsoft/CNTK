@@ -327,6 +327,19 @@ __global__ void _setValue(
 };
 
 template<class ElemType>
+__global__ void _assignToRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    long col = id / srcRows;
+    long row = id - (col * srcRows);
+
+    dest[col*destRows + row + startIndex] = src[id];
+}
+
+template<class ElemType>
 __global__ void _assignRowSliceValuesOf(ElemType * dest, ElemType * src, const LONG64 N, const long startIndex, const long destRows, const long srcRows)
 {
     LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -1003,6 +1016,23 @@ __global__ void _areEqual(
         }
     }
 
+}
+
+template<class ElemType>
+__global__ void _hasElement(
+    const ElemType* a,
+    const LONG64 N,
+    ElemType *d_res  /// [2x1] vector. The first is the value to be compared and the second is the 0/1 to return
+    )
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    if (a[id] == d_res[0])
+    {
+        d_res[1] = 1;
+    }
 }
 
 template<class ElemType>
@@ -2394,6 +2424,40 @@ __global__ void _denseMultSparseCSCAndWeightedAddToDense(
     c[IDX2C(rowInC, colInC, m)] = alpha * s + beta * c[IDX2C(rowInC, colInC, m)];
 }
 
+/// c += alpha * a * b^T
+template<class ElemType>
+__global__ void _denseMultSparseCSCTransposeAndAddToDense(
+    int m, //rowDense
+    int n,   //number of columns in sparse matrix
+    int colInC, /// column index of the sparse matrix
+    ElemType alpha,
+    const ElemType* a,  //dense
+    const ElemType* bnzValues,  //sparse nz values
+    const GPUSPARSE_INDEX_TYPE* rowIndex,
+    const GPUSPARSE_INDEX_TYPE* colCSCIndex,
+    ElemType* c  //dense target
+    )
+{
+    LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m)
+        return;
+
+    int rowInC = id;
+    int start = colCSCIndex[colInC];
+    int end = colCSCIndex[colInC + 1];
+
+    ElemType s = 0;
+    ElemType val = 0;
+    for (int j = start; j<end; j++)  //j points to the value that are in the same row
+    {
+        int i = rowIndex[j];  /// actually the column index because of transpose
+        val = bnzValues[j];   /// the b[][j] value
+        s = a[IDX2C(rowInC, colInC, m)] * val;
+
+        atomicAdd(&c[IDX2C(rowInC, i, m)], alpha * s);
+    }
+}
+
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
 //what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
 //input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
@@ -2864,89 +2928,16 @@ __global__ void _computeNceOutput(
         }
 
         if (threadIdx.x == 0)
-            res[i] = partials[0];
-    }
-}
-
-template<class ElemType>
-__global__ void _computeNceOutput(
-    const ElemType* val,
-    const int* col,
-    int numRows,
-    int sampleCount,
-    const ElemType* a,
-    int numCols_a,
-    const ElemType* b,
-    ElemType* res)
-{
-    // val and col are in CSR format
-    // val is an array contains log_Pn(w). To differentiate positive and negative samples, 
-    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
-    // col is an array contains index of the word samples
-    // a is a matrix in column major format contains output from hidden layer
-    // b is the weight matrix for output layer
-    // res is the buffer to store computed output (sparse)
-
-    // follow the convention, this kernel must be run on 512 threads per block
-    __shared__ ElemType partials[512];
-    partials[threadIdx.x] = 0;
-
-    //threadIdx.x range from[0 ~ 512)
-    //blockIdx.x range from[0 ~ nnz)
-    //blockDim.x equal to 512
-    //gridDim.x equal to nnz
-
-    // determine the elements to be handled by this block
-    int total = numRows * sampleCount;
-    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
-
-    int start = loadPerBlock * blockIdx.x;
-    int end = min(total, loadPerBlock * (blockIdx.x + 1));
-
-    for (int i = start; i < end; i++)
-    {
-        int colIndex = col[i];
-        int rowIndex = i / sampleCount;
-
-        int loadPerThread = (numCols_a + blockDim.x - 1) / blockDim.x;
-        int tstart = loadPerThread * threadIdx.x;
-        int tend = min(numCols_a, loadPerThread * (threadIdx.x + 1));
-
-        for (int j = tstart; j < tend; j++)
-            partials[threadIdx.x] = a[IDX2C(rowIndex, j, numRows)] * b[IDX2C(j, colIndex, numCols_a)];
-
-        __syncthreads();
-
-        // sum up
-        int nTotalThreads = blockDim.x;
-
-        while (nTotalThreads >1)
-        {
-            int halfPoint = (nTotalThreads >> 1);
-
-            if (threadIdx.x < halfPoint)
-                partials[threadIdx.x] += partials[threadIdx.x + halfPoint];
-
-            __syncthreads();
-
-            nTotalThreads = (nTotalThreads >> 1);
-        }
-
-        if (threadIdx.x == 0)
-            res[i] = partials[0];
+            res[i] = partials[0] + bias[wid];
     }
 }
 
 
 template<class ElemType>
-__global__ void _assignNoiseContrastiveEstimation(
-    const ElemType* val,
-    int numRows,
+__global__ void _assignSoftmaxSum(
+    const ElemType* softmax,    
     int sampleCount,
-    const ElemType* a,
-    int width, // number of columns in a
-    const ElemType* b,
-    const ElemType* tmp,
+    const ElemType* a, 
     ElemType* c) // run on 512 threads per block
 {
     // val and col are in CSR format
@@ -2961,33 +2952,16 @@ __global__ void _assignNoiseContrastiveEstimation(
     __shared__ ElemType partials[512];
     partials[threadIdx.x] = 0;
 
-    int total = numRows * sampleCount;
-    int loadPerThread = (total + 511) / 512;
+    int total = sampleCount;
+    int loadPerThread = (total + blockDim.x - 1) / blockDim.x;
 
     // find out the items this thread is responsible for
     int start = loadPerThread * threadIdx.x;
-    int end = min(total, loadPerThread * (threadIdx.x + 1));
-
+    int end = min(total, loadPerThread * (threadIdx.x + 1));    
     for (int i = start; i < end; i++)
     {
-        //int colIndex = col[i];
-        //int rowIndex = i / sampleCount;
-
-        // add to objective
-        ElemType log_pnw = val[2 * i + 1];
-        if (log_pnw < 0) // positive sample: log(pw / (pw + k * pnw))
-        {
-            ElemType den = tmp[i];
-            logadd(den, log((ElemType)(sampleCount - 1)) + log_pnw);
-            partials[threadIdx.x] += (tmp[i] - den);
-        }
-        else // negative sample: log(k * pnw / (pw + k * pnw))
-        {
-            ElemType nom = log((ElemType)(sampleCount - 1)) - log_pnw;
-            ElemType den = nom;
-            logadd(den, tmp[i]);
-            partials[threadIdx.x] += (nom - den);
-        }
+        int wid = (int)a[i];
+        partials[threadIdx.x] += softmax[IDX2C(i, wid, sampleCount)];
     }
 
     __syncthreads();
@@ -3014,13 +2988,12 @@ __global__ void _assignNoiseContrastiveEstimation(
 template<class ElemType>
 __global__ void _assignNoiseContrastiveEstimation(
     const ElemType* val,
-    const int* col,
     int numRows,
     int sampleCount,
     const ElemType* a,
     int width, // number of columns in a
     const ElemType* b,
-    const ElemType* tmp,
+    ElemType* tmp,
     ElemType* c) // run on 512 threads per block
 {
     // val and col are in CSR format
@@ -3036,32 +3009,30 @@ __global__ void _assignNoiseContrastiveEstimation(
     partials[threadIdx.x] = 0;
 
     int total = numRows * sampleCount;
-    int loadPerThread = (total + 511) / 512;
+    int loadPerThread = (total + blockDim.x - 1) / blockDim.x;
 
     // find out the items this thread is responsible for
     int start = loadPerThread * threadIdx.x;
     int end = min(total, loadPerThread * (threadIdx.x + 1));
 
+    ElemType log_num_noise_samples = log((ElemType)(sampleCount - 1));
     for (int i = start; i < end; i++)
     {
-        //int colIndex = col[i];
-        //int rowIndex = i / sampleCount;
-
-        // add to objective
-        ElemType log_pnw = val[i];
-        if (log_pnw < 0) // positive sample: log(pw / (pw + k * pnw))
-        {
-            ElemType den = tmp[i];
-            logadd(den, log((ElemType)(sampleCount - 1)) + log_pnw);
-            partials[threadIdx.x] += (tmp[i] - den);
-        }
-        else // negative sample: log(k * pnw / (pw + k * pnw))
-        {
-            ElemType nom = log((ElemType)(sampleCount - 1)) - log_pnw;
-            ElemType den = nom;
-            logadd(den, tmp[i]);
-            partials[threadIdx.x] += (nom - den);
-        }
+        ElemType prob = -val[2 * i + 1];
+        bool positive = (prob > 0);
+        if (positive)
+            prob = -prob;
+        ElemType score_noise = log_num_noise_samples + prob;
+        ElemType z = logadd(tmp[i], score_noise);
+        ElemType logprob = tmp[i] - z;
+        ElemType logprob_noise = score_noise - z;
+        tmp[i] = -exp(logprob);
+        if (positive)
+            tmp[i] += 1;
+        if (positive)
+            partials[threadIdx.x] += logprob;
+        else
+            partials[threadIdx.x] += logprob_noise;
     }
 
     __syncthreads();
@@ -3083,137 +3054,6 @@ __global__ void _assignNoiseContrastiveEstimation(
 
     if (threadIdx.x == 0)
         c[0] = -partials[0];
-}
-
-template<class ElemType>
-__global__ void _computeNceError(
-    const ElemType* val,
-
-    int numRows,
-    int sampleCount,
-    ElemType* tmp) // run on one block 
-{
-    int total = numRows * sampleCount;
-    int loadPerThread = (total + blockDim.x - 1) / blockDim.x;
-
-    // find out the items this thread is responsible for
-    int start = loadPerThread * threadIdx.x;
-    int end = min(total, loadPerThread * (threadIdx.x + 1));
-
-    for (int i = start; i < end; i++)
-    {
-        ElemType ac = tmp[i]; // precalculated NCE output
-        ElemType log_pnw = val[2 * i + 1];
-
-        ElemType er = 0;
-        if (log_pnw < 0) // positive sample: k * pnw / (pw + k * pnw)
-        {
-            ElemType nom = log((ElemType)(sampleCount - 1)) + log_pnw;
-            logadd(ac, nom);
-            er = -1 * exp(nom - ac);
-
-        }
-        else // negative sample: pw / (pw + k * pnw);
-        {
-            logadd(ac, log((ElemType)(sampleCount - 1)) - log_pnw);
-            er = exp(tmp[i] - ac);
-        }
-
-        tmp[i] = er;
-    }
-}
-
-template<class ElemType>
-__global__ void _computeNceError(
-    const ElemType* val,
-    const int* col,
-    int numRows,
-    int sampleCount,
-    ElemType* tmp) // run on one block 
-{
-    int total = numRows * sampleCount;
-    int loadPerThread = (total + blockDim.x - 1) / blockDim.x;
-
-    // find out the items this thread is responsible for
-    int start = loadPerThread * threadIdx.x;
-    int end = min(total, loadPerThread * (threadIdx.x + 1));
-
-    for (int i = start; i < end; i++)
-    {
-        ElemType ac = tmp[i]; // precalculated NCE output
-        ElemType log_pnw = val[i];
-
-        ElemType er = 0;
-        if (log_pnw < 0) // positive sample: k * pnw / (pw + k * pnw)
-        {
-            ElemType nom = log((ElemType)(sampleCount - 1)) + log_pnw;
-            logadd(ac, nom);
-            er = -1 * exp(nom - ac);
-
-        }
-        else // negative sample: pw / (pw + k * pnw);
-        {
-            logadd(ac, log((ElemType)(sampleCount - 1)) - log_pnw);
-            er = exp(tmp[i] - ac);
-        }
-
-        tmp[i] = er;
-    }
-}
-
-template<class ElemType>
-__global__ void _assignNceDerivativeInJbor(
-    const ElemType* val,
-    const int* col,
-    const int* colndx,
-    int numRows,
-    int sampleCount,
-    const ElemType* a,
-    int width, // number of columns in a
-    const ElemType* b,
-    const ElemType* tmp,
-    unsigned char* c,
-    size_t jborBlockSize)
-{
-    // val and col are CSR format sparse matrix for label
-    // val is an array contains log_Pn(w). To differentiate positive and negative samples
-    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
-    // col is an array contains index of the word samples
-    // a is a matrix in column major format contains output from hidden layer
-    // b is the weight matrix for output layer
-    // tmp is a matrix of precalculated error
-    // c is the output array to store intermediate results
-
-
-    /*
-    int total = numRows * sampleCount;
-    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
-
-    // find out the items this block is responsible for
-    int start = loadPerBlock * blockIdx.x;
-    int end = min(total, loadPerBlock * (blockIdx.x + 1));
-
-    for (int i = start; i < end; i++)
-    {
-    int colIndex = col[i];
-    int rowIndex = i / sampleCount;
-
-    ElemType er = tmp[i]; // precalculated error for this output node
-    ElemType log_pnw = val[i];
-
-    // calculate gradients
-    int loadPerThread = (width + blockDim.x - 1) / blockDim.x;
-    int tstart = loadPerThread * threadIdx.x;
-    int tend = min(width, loadPerThread*(threadIdx.x + 1));
-    for (int j = tstart; j < tend; j++)
-    {
-    ElemType val = er * a[IDX2C(rowIndex, j, numRows)];
-
-    unsigned char* pj = c + (j*jborBlockSize + colndx[i]) * sizeof(JborRecord<ElemType>);
-    atomicExch((int*)pj, colIndex);
-    atomicAdd((ElemType*)(pj + sizeof(int)), val);
-    }
-    }*/
 }
 
 template<class ElemType>
@@ -3246,12 +3086,11 @@ __global__ void _assignNceDerivative(
 
     for (int i = start; i < end; i++)
     {
-        int colIndex = (int)val[2 * i];
-        int rowIndex = i / sampleCount;
+        int wid = (int)val[2 * i];
+        int batchId = i / sampleCount;
 
         ElemType er = tmp[i]; // precalculated error for this output node
-        //ElemType log_pnw = val[2 * i + 1];
-
+      
         // calculate gradients
         int loadPerThread = (width + blockDim.x - 1) / blockDim.x;
         int tstart = loadPerThread * threadIdx.x;
@@ -3261,23 +3100,24 @@ __global__ void _assignNceDerivative(
         {
             for (int j = tstart; j < tend; j++)
             {
-                ElemType val = er * b[IDX2C(j, colIndex, width)];
-                atomicAdd(c + IDX2C(j, rowIndex, width), val);
-                //c[IDX2C(rowIndex, j, numRows)] += val;
+                ElemType val = -er * b[IDX2C(j, wid, width)];
+                atomicAdd(&c[IDX2C(j, batchId, width)], val);
+                //c[IDX2C(j, batchId, width)] += val;
+                //c[IDX2C(batchId, j, numRows)] += val;
             }
         }
         else if (inputIndex == 2) // weight
         {
             for (int j = tstart; j < tend; j++)
             {
-                ElemType val = er * a[IDX2C(j, rowIndex, width)];
-                atomicAdd(c + IDX2C(j, colIndex, width), val);
-                //c[IDX2C(j, colIndex, width)] += val;
+                ElemType val = -er * a[IDX2C(j, batchId, width)];
+                atomicAdd(&c[IDX2C(j, wid, width)], val);
+                //c[IDX2C(j, wid, width)] += val;
             }
         }
         else //bias vector
         {
-            c[colIndex] += er;
+            c[wid] -= er;
         }
     }
 }

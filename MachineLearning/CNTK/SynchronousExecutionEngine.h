@@ -750,6 +750,10 @@ public:
             {
                 SetOutputNode(m_net.FinalCriterionNodes(), compNode);
             }
+            else if (!_stricmp(value.c_str(), "multiseq"))
+            {
+                SetOutputNode(m_net.NodesReqMultiSeqHandling(), compNode);
+            }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {
                 SetOutputNode(m_net.EvaluationNodes(), compNode);

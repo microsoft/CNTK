@@ -36,8 +36,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-                
-        virtual const std::wstring OperationName() const {return TypeName();}
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"SquareError";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -45,7 +45,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 1)
                 throw std::invalid_argument("SquareError criteria only takes two inputs.");
 
-            //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
                 ComputeInputPartialLeft(Inputs(0)->GradientValues(), GradientValues(), m_leftMinusRight);
@@ -73,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight,this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -81,9 +80,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("SquareError node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight)  
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
         {
             leftMinusRight.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftMinusRight);  //we are fine since it will only be called with full minibatch.
             ElemType v = leftMinusRight.FrobeniusNorm();
             functionValues.Resize(1,1);
             functionValues.SetValue(v*v/2);
@@ -182,6 +182,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         Matrix<ElemType> m_leftMinusRight;
     };
@@ -210,8 +213,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-                
-        virtual const std::wstring OperationName() const {return TypeName();}
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"CrossEntropyWithSoftmax";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -227,8 +230,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+                MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
             }
-
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
@@ -271,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -280,11 +283,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight)  
+            Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, ComputationNodePtr curNode)
         {
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -401,6 +405,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
+    protected:
         Matrix<ElemType> m_logSoftmaxOfRight;
         Matrix<ElemType> m_softmaxOfRight;       
     };
@@ -431,7 +438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"CrossEntropy";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -446,7 +453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), this);
             }
         }
 
@@ -463,16 +470,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& leftDivRight, 
             const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftDivRight);
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(right_i))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -481,10 +488,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            Matrix<ElemType>& logOfRight)  
+            Matrix<ElemType>& logOfRight, ComputationNodePtr curNode)
         {
             logOfRight.SetValue(inputFunctionValues1);
             logOfRight.InplaceLog();
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(logOfRight);
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -595,6 +603,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         // matrix value passed from evaluate to computePartial
         Matrix<ElemType> m_logOfRight;
@@ -626,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"MatrixL1Reg";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
@@ -651,6 +662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
+            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -659,9 +671,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL1Reg node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
         {
-            functionValues.Resize(1,1);
+            functionValues.Resize(1, 1);
             functionValues.SetValue(inputFunctionValues.MatrixNorm1());
 #if NANCHECK
             functionValues.HasNan("MatrixL1Reg");
@@ -735,6 +747,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         // temporary
         Matrix<ElemType> m_gradientOfL1Norm;
@@ -764,9 +779,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"MatrixL2Reg";} 
-
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
@@ -781,14 +795,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL2RegNode node should never be in a loop.");
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& /*inputFunctionValues*/, const Matrix<ElemType>& functionValues)  
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
         {
             ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);
-            inputGradientValues.AddWithScaleOf(v, gradientValues);
+            inputGradientValues.AddWithScaleOf(v, inputFunctionValues);
         }
 
         virtual void EvaluateThisNode()  
         {
+            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -797,7 +812,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("MatrixL2RegNode node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.Resize(1,1);
             functionValues.SetValue(inputFunctionValues.FrobeniusNorm());
@@ -863,6 +878,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
         Matrix<ElemType> m_temp;
     };
@@ -884,20 +902,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                m_deviceId = deviceId;
-                MoveMatricesToDevice(deviceId);
-                InitRecurrentNode();
-                m_evalMode = xm_evalMode;
-           
-            }
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+            m_evalMode = xm_evalMode;
+        }
         NCEEvalMode &EvalMode(){ return m_evalMode; }
 
-        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", NCEEvalMode xm_evalMode = NCEEvalMode::None)
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_evalMode;
+        }
+
+        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+            fstream >> m_evalMode;
+        }
+
+        void SetEvalMode(NCEEvalMode& xevMode)
+        {
+            m_evalMode = xevMode;
+        }
+
+        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
         {
-                m_evalMode = xm_evalMode;
                 m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
                 LoadFromFile(fstream, modelVersion, deviceId);
             }
@@ -948,28 +982,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->FunctionValues().GetNumRows() == 1)
             {
                 for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
-                if (Inputs(0)->FunctionValues()(0, i) > 0)
-                    positive++;
-                else if (Inputs(0)->FunctionValues()(0, i) < 0)
-                    negative++;
+                {
+                    if (Inputs(0)->FunctionValues()(0, i) > 0)
+                        positive++;
+                    else if (Inputs(0)->FunctionValues()(0, i) < 0)
+                        negative++;
+                }
                 assert(positive * negative == 0);
             }
             if (m_evalMode == NCEEvalMode::Softmax || (Inputs(0)->FunctionValues().GetNumRows() == 1 && positive > 0))
             {
                 // evaluation uses softmax
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
-                /*
-#pragma omp parallel for
-                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
-                for (int j = 0; j < Inputs(3)->FunctionValues().GetNumRows(); j++)
-                    m_logSoftmax(i, j) += Inputs(3)->FunctionValues()(j, 0);
-                */
-                m_logSoftmax += Inputs(3)->FunctionValues().Transpose();
+                m_logSoftmax += Inputs(3)->FunctionValues();
                 m_logSoftmax.InplaceLogSoftmax(false);
-                FunctionValues().Resize(1, 1);
-                FunctionValues().SetValue(0);
-                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
-                    FunctionValues()(0, 0) -= m_logSoftmax(i, (size_t)Inputs(0)->FunctionValues()(0, i));
+                FunctionValues().AssignSoftmaxSum(Inputs(0)->FunctionValues(), m_logSoftmax);
             }
             else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->FunctionValues().GetNumRows() == 1 && negative > 0))
             {
@@ -1066,7 +1093,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
         {
                 node->CopyTo(this, newName, flags);
-            }
+        }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1075,6 +1102,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr node = new NoiseContrastiveEstimationNode<ElemType>(this, name, flags);
             return node;
         }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     protected:
         Matrix<ElemType> m_logSoftmax;
@@ -1141,11 +1171,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 /// compute prb - 1 and prb
                 Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
-                assert(lbl_t.GetDeviceId() == CPUDEVICE);
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
                 size_t nbr_wrd = rgt_bnd - lft_bnd; // number of words in the class
+                if (nbr_wrd == 0)
+                {
+                    continue;
+                }
 
                 Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
 
@@ -1177,7 +1210,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 sz += nbr_wrd;
             }
-
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
@@ -1219,6 +1251,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);
                     size_t nbr_wrd = rgt_bnd - lft_bnd;// number of words in the class
 
+                    if (nbr_wrd == 0)
+                    {
+                        if (y_t == 0)
+                            /// initialization of labels is usually zero, this case corresponds to no label is assigned at that time
+                            continue; /// skip this time, because there is no label
+                        else
+                            LogicError("ClassbasedCrossEntropyWithSoftmax::ComputeSoftMaxPartial label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
+                    }
+
                     Matrix<ElemType> softMax = m_softMax.ColumnSlice(sz, nbr_wrd);
 
                     ComputeCEPartialToSoftmaxInputs(softMax, GradientValues(), y_t - lft_bnd);
@@ -1234,8 +1275,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
+            if (Inputs(0)->FunctionValues().GetDeviceId() != CPUDEVICE)
+            {
+                LogicError("ClassBasedCrossEntropyWithSoftmax: evaluatethisnode. the label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
+            }
+
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(),
-                Inputs(3)->FunctionValues(), m_logSoftmax, m_softMax, m_clsLogSoftmax, m_clsSoftmax, m_totalNbrWords);
+                Inputs(3)->FunctionValues(), m_logSoftmax, m_softMax, m_clsLogSoftmax, m_clsSoftmax, m_totalNbrWords, this);
             m_needRecomputeGradientToSoftmaxInput = true;
         }
 
@@ -1247,7 +1293,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
             const Matrix<ElemType>& inputs, const Matrix<ElemType>& input_weight, const Matrix<ElemType>& input_cls_log_post_prob,
             Matrix<ElemType>& logSoftmax,
-            Matrix<ElemType>& softMax, Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords)
+            Matrix<ElemType>& softMax, 
+            Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords, ClassBasedCrossEntropyWithSoftmaxNode* curNode)
         {
             totalWords = 0;
             size_t nT = lbls.GetNumCols();
@@ -1284,29 +1331,56 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t rgt_bnd = (size_t)lblInfo(3, 0);
                 size_t nbr_wrd = rgt_bnd - lft_bnd;
 
+                if (nbr_wrd == 0)
+                {
+                    if (y_t == 0)
+                        /// initialization of labels is usually zero, this case corresponds to no label is assigned at that time
+                        /// skip this time
+                        continue;
+                    else
+                        LogicError("ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
+                }
+
                 /// e.g., 200 x 148
                 Matrix<ElemType> weightForClass = input_weight.ColumnSlice(lft_bnd, nbr_wrd);
 
                 /// W x_t 
                 Matrix<ElemType> softMax_t = softMax.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> logSoftMax_t = logSoftmax.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> obs = inputs.ColumnSlice(t, 1);  /// e.g., 200 x 1
-                obs.Reshape(1, nRow);  /// 1 x 200
 
-                logSoftMax_t.AssignProductOf(obs, false, weightForClass, false); /// 1 x 148
+                if (curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftMax_t, t) == false)
+                {
+                    Matrix<ElemType> obs = inputs.ColumnSlice(t, 1);  /// e.g., 200 x 1
+                    obs.Reshape(1, nRow);  /// 1 x 200
 
-                // log softmax(W x_t)
-                logSoftMax_t.InplaceLogSoftmax(false); /// 1 x 148
-                softMax_t.SetValue(logSoftMax_t);
-                // softmax(W x_t)
-                softMax_t.InplaceExp();  /// 1 x 148
+                    logSoftMax_t.AssignProductOf(obs, false, weightForClass, false); /// 1 x 148
 
-                /// add the word log posterior probability
-                size_t idx_in_class = y_t - lft_bnd;
-                Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
+                    // log softmax(W x_t)
+                    logSoftMax_t.InplaceLogSoftmax(false); /// 1 x 148
+                    softMax_t.SetValue(logSoftMax_t);
+                    // softmax(W x_t)
+                    softMax_t.InplaceExp();  /// 1 x 148
+
+                    /// add the word log posterior probability
+                    if (y_t < lft_bnd)
+                        LogicError("ClassBasedCrossEntropyWithSoftmax::EvaluateThisNodeS : the word index is smaller than its left bound of its class. This could happen because of reader issues. ");
+
+                    size_t idx_in_class = y_t - lft_bnd;
+                    Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
+                }
 
                 /// add the class log posterior probability
-                Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
+                if (curNode->MaskToZeroWhenLabelAndFeatureMissing(clsLogSoftmax, t) == false)
+                {
+                    try{
+                        Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
+                    }
+                    catch (...)
+                    {
+                        fprintf(stderr, "EvaluateThisNodeS for ClassBasedCrossEntropyWithSoftmaxNode : number of classes is smaller than the dimension to read. Check network builder such as nbrClass and vocabulary file with class index to see if the number of classes and the maximum class index match. The right number should be number of classes == maximum class index number + 1\n");
+                        throw;
+                    }
+                }
 
                 sz += nbr_wrd;
             }
@@ -1316,6 +1390,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             functionValues.HasNan("ClassBasedCrossEntropyWithSoftmax");
 #endif
+        }
+
+        /**
+        reset to error signals to 0 for any elements without labels
+        */
+        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t t)
+        {
+            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
+
+            if (m_sentenceSeg != nullptr && m_minibatchPackingFlag != nullptr 
+                && !m_sentenceSeg->IsEmpty() && !m_minibatchPackingFlag->size() == 0)
+            {
+                size_t nS = m_sentenceSeg->GetNumRows();
+
+                Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
+
+                size_t j = t / nS;
+                size_t i = t % nS;
+                if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+                {
+                    if ((*m_sentenceSeg)(j, i) == NO_LABELS)
+                    {
+                        matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
+
+                        processedExistsNoLabelorFeatureMissing = true;
+                    }
+                }
+            }
+
+            return processedExistsNoLabelorFeatureMissing;
         }
 
         /**
@@ -1413,6 +1517,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
+    protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
 
@@ -1459,6 +1566,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int mStartLbl;
         int mEndLbl;
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     public:
         CRFNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -1772,6 +1882,164 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     };
+
+    // This training criterion node needs derivatives and objectives to be
+    // computed out of the node. Derivatives and objectives will be fed to the
+    // node as input features. It has 3 inputs:
+    // 1. feature node that feeds objectives
+    // 2. feature node that feeds derivatives
+    // 3. neural network output
+    //
+    // This node is useful in sequence training for speech recognition, so that
+    // we can separate lattice computation (which may rely other softwares, such
+    // as Kaldi) with the neural network training.
+    template<class ElemType>
+    class DummyCriterionNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        DummyCriterionNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L""? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            //- MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        DummyCriterionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L""? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const {return TypeName();}
+        static const std::wstring TypeName() {return L"DummyCriterion";} 
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 2)
+                throw std::invalid_argument("DummyCriterionNode only takes three inputs.");
+
+            if (inputIndex == 0)
+            {
+                throw std::logic_error("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
+            }
+            else if (inputIndex == 1)
+            {
+                throw std::logic_error("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
+            }
+            else
+            {
+                ComputeInputPartialThree(Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
+        {
+            throw std::logic_error("DummyCriterionNode node should never be in a loop.");
+        }
+
+        static void WINAPI ComputeInputPartialThree(const Matrix<ElemType>& inputFunctionValues1,
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        {
+            Matrix<ElemType>::ScaleAndAdd(gradientValues.Get00Element(), inputFunctionValues1, inputGradientValues);
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
+        {
+            throw std::logic_error("DummyCriterionNode should never be in a loop.");
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0)  
+        {
+            if (inputFunctionValues0.GetNumRows() != 1 || inputFunctionValues0.GetNumCols() != 1)
+            {
+                throw std::logic_error("DummyCriterionNode expects first input has dimension (1, 1).\n");
+            }
+            functionValues.Resize(1, 1);
+            functionValues.SetValue(inputFunctionValues0.Get00Element());
+#if NANCHECK
+            functionValues.HasNan("DummyCriterionNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 3) 
+                throw std::logic_error("DummyCriterionNode criterion requires three inputs.");
+
+            if (Inputs(0)->OperationName() != L"InputValue")
+                throw std::logic_error("DummyCriterionNode criterion requires the first input to be computed objectives.");
+
+            if (Inputs(0)->OperationName() != L"InputValue")
+                throw std::logic_error("DummyCriterionNode criterion requires the first input to be computed derivatives.");
+
+            if (Inputs(0)->FunctionValues().GetNumRows() != 1)
+                throw std::logic_error("DummyCriterionNode criterion requires the first input to have dimension 1.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0 || Inputs(2)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("DummyCriterionNode operation: one of the operants has 0 element.");
+
+            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(2)->FunctionValues().GetNumRows())
+                throw std::logic_error("The Matrix dimension in the DummyCriterionNode operation does not match.");
+
+            if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(2)->FunctionValues().GetNumCols())
+                Inputs(1)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(2)->FunctionValues().GetNumCols()); 
+
+            FunctionValues().Resize(1,1);
+            CopyImageSizeFromInputs(); 
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, false);
+
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;        
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction) 
+        {
+            m_children.resize(3);
+            m_children[0] = objectives;
+            m_children[1] = derivatives;
+            m_children[2] = prediction;
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+        }
+
+        // copy constructor
+        DummyCriterionNode(const DummyCriterionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+                
+            ComputationNodePtr node = new DummyCriterionNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    };
+
+    template class DummyCriterionNode<float>; 
+    template class DummyCriterionNode<double>;
 
 
 }}}

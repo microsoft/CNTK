@@ -43,6 +43,10 @@
 #ifdef MPI_SUPPORT
 #include "mpi.h"
 #endif
+#include <memory>
+
+#include "CrossProcessMutex.h"
+
 extern int mpiRank;
 extern int mpiNumProcesses;
 
@@ -78,9 +82,7 @@ enum BestGpuFlags
 
 class BestGpu
 {
-#ifdef WIN32
-    std::map<int, HANDLE> m_GPUMutex;
-#endif
+    std::map<int, std::unique_ptr<CrossProcessMutex>> m_GPUMutex;
 private:
     bool m_initialized; // initialized
     bool m_nvmlData; // nvml Data is valid
@@ -329,12 +331,6 @@ BestGpu::~BestGpu()
     {
         nvmlShutdown();
     }
-#ifdef WIN32
-    for (auto it : m_GPUMutex)
-    {
-        ::CloseHandle(it.second);
-    }
-#endif
 }
 
 // GetNvmlData - Get data from the Nvidia Management Library
@@ -497,16 +493,11 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
             break;
     }
 
-#ifdef WIN32
     // this code allows only one process to run concurrently on a machine
-    wchar_t buffer[80];
-    wsprintf(buffer, L"Global\\DBN.exe GPGPU querying lock");
-    HANDLE h = ::CreateMutex(NULL, FALSE, buffer);
-    if (h == NULL)  // failure  --this should not really happen
+    CrossProcessMutex deviceAllocationLock("DBN.exe GPGPU querying lock");
+    
+    if (!deviceAllocationLock.Acquire((bestFlags & bestGpuExclusiveLock) != 0))  // failure  --this should not really happen
         throw std::runtime_error("DeviceFromConfig: unexpected failure");
-    if (bestFlags & bestGpuExclusiveLock) // only wait if we will be locking devices
-        ::WaitForSingleObject(h, INFINITE);
-#endif
     
     {
 	// even if user do not want to lock the GPU, we still need to check whether a particular GPU is locked or not, 
@@ -542,12 +533,6 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     {
         LockDevice(best[z], false);
     }
-
-#ifdef WIN32
-    // we have our device - let other processors play now
-    ::ReleaseMutex(h);
-    ::CloseHandle(h);
-#endif
 
     return best; // return the array of the best GPUs
 }
@@ -664,62 +649,25 @@ bool BestGpu::LockDevice(int deviceID, bool trial)
     {
         return true;
     }    
-#ifdef WIN32 
-	// copied from dbn.exe, not perfect but it works in practice 
-	wchar_t buffer[80];
-	wsprintf (buffer, L"Global\\DBN.exe GPGPU exclusive lock for device %d", deviceID);
-	// we actually use a Windows-wide named mutex
-	HANDLE h = ::CreateMutex(NULL/*security attr*/, TRUE/*bInitialOwner*/, buffer);
-	DWORD res = ::GetLastError();
-	if (h == NULL)  // failure  --this should not really happen
-	{
-		if (res == ERROR_ACCESS_DENIED)    // no access: already locked by another process
-		{
-			fprintf(stderr, "LockDevice: mutex access denied, assuming already locked '%S'\n", buffer);
-			return false;
-		}
-		// fprintf(stderr, "LockDevice: failed to create '%S': %d\n", buffer, res);
-		// throw std::runtime_error("LockDevice: unexpected failure");
-		// don't need throw here, assuming lock fails (i.e., not available ) 
-		return false;
-	}
-	// got a handle
-	if (res == 0)   // no error
-	{
-		//fprintf(stderr, "lockdevicebymutex: created and acquired mutex '%S'\n", buffer);
-		fprintf(stderr, "LockDevice: device %d is available\n", deviceID);
-		if (trial) {
-			::CloseHandle(h);
-		}
-		else
-		{
-			fprintf(stderr, "LockDevice: Capture device %d and lock it for exclusive use\n", deviceID);
-		}
-        m_GPUMutex[deviceID] = h;
-		return true;
-	}
-	::CloseHandle(h);
-	if (res == ERROR_ALREADY_EXISTS)    // already locked by another process
-	{
-		fprintf(stderr, "LockDevice: device %d is not available \n", deviceID);
-		return false;
-	}
-	else if (res != 0)
-	{
-		fprintf(stderr, "LockDevice: unexpected error from CreateMutex() when attempting to create and acquire mutex '%S': %d\n", buffer, res);
-		// throw std::logic_error("lockdevicebymutex: unexpected failure");
-		return false;
-	}
-	return false;
-
-#else
-	// TODO: to implement a linux lock for GPU 
-	// a possible solution is to use nvmlDeviceSetComputeMode to set the compute mode to exclusive (but it requires admin permission)
-	return true;
-#endif 
+    // ported from dbn.exe, not perfect but it works in practice 
+    char buffer[80];
+    sprintf (buffer, "DBN.exe GPGPU exclusive lock for device %d", deviceID);
+    std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
+    if (!mutex->Acquire(false))  // failure  --this should not really happen
+    {
+        fprintf(stderr, "LockDevice: can't lock the device %d\n", deviceID);
+        return false;
+    }
+    else
+    {
+        fprintf(stderr, "LockDevice: Capture device %d and lock it for exclusive use\n", deviceID);
+        if (!trial)
+        {
+            m_GPUMutex[deviceID] = std::move(mutex);
+        }
+    }
+    return true;
 }
-
-}}}
 
 #ifdef _WIN32
 
@@ -780,3 +728,4 @@ PfnDliHook   __pfnDliFailureHook2 = (PfnDliHook)DelayLoadNofify;
 #endif  // _WIN32
 
 #endif  // CPUONLY
+}}}
