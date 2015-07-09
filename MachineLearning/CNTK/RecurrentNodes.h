@@ -217,7 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {                   
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (colBegin(i, 0) == SENTENCE_MIDDLE || colBegin(i, 0) == SENTENCE_END)
+                        if (colBegin(i, 0) != SENTENCE_BEGIN && colBegin(i, 0) != NO_LABELS)
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - timeStep)*mNbr + i, 1);
                             Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
@@ -248,6 +248,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
                 EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
             }
+
+            //set the past activity to be used by next minibatch
+            m_pastActivity = Inputs(0)->FunctionValues();
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
@@ -598,7 +601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (colFlag(i, 0) == SENTENCE_MIDDLE || colFlag(i, 0) == SENTENCE_BEGIN)
+                        if (colFlag(i, 0) != SENTENCE_END && colFlag(i, 0) != NO_LABELS)
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + timeStep)*mNbr + i, 1);
                             Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
@@ -628,6 +631,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
                 EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_futureActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
             }
+
+            //set the future activity to be used by next minibatch
+            m_futureActivity = Inputs(0)->FunctionValues();
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)
