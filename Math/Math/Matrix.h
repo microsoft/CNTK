@@ -42,7 +42,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         mutable size_t m_numTimesDeviceChanged;
         mutable size_t m_numTimesMatrixTypeChanged;
-
+        mutable int m_devicesTransferedTo[2];
+            
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
         //Moves matrix from current device to device with id_to. This method doesn't change preferred device Id

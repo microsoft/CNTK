@@ -993,7 +993,7 @@ protected:
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
                 m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
             {
-                if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                if (std::isnan(avgCriterion) || (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<ElemType>::infinity()))
                 {
                     if (m_loadBestModel)
                     {
@@ -1056,6 +1056,11 @@ protected:
                         fprintf(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
                     }
                 }
+            }
+            else
+            {
+                if (std::isnan(avgCriterion))
+                    RuntimeError("The training criterion is not a number (NAN). Stop\n");
             }
 
             //not loading previous values then set them

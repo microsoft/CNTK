@@ -184,6 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_preferredDeviceId=_devId;
         m_numTimesDeviceChanged = 0;
         m_numTimesMatrixTypeChanged = 0;
+        m_devicesTransferedTo[1] = m_devicesTransferedTo[0] = CPUDEVICE - 1;
         }
 
     //this function is used to indicate where (CPUDense, CPUSparse, GPUDense, GPUSparse) the most updated results are in
@@ -3363,9 +3364,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
 #define NUM_DEVICE_CHANGED_WARN 20
-        m_numTimesDeviceChanged++;
-        if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN)
+        if (m_numTimesDeviceChanged <= NUM_DEVICE_CHANGED_WARN &&
+            (!emptyTransfer || (from_id >= 0 && to_id >= 0)))
+        {
+            m_numTimesDeviceChanged++;
+            if (m_devicesTransferedTo[0] < CPUDEVICE)  
+            {
+                m_devicesTransferedTo[0] = to_id;
+            }
+            else if (m_devicesTransferedTo[0] != to_id)
+            {
+                m_devicesTransferedTo[1] = to_id;
+            }
+        }
+        if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN && m_devicesTransferedTo[1] >= CPUDEVICE)
+        {
             fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols(), NUM_DEVICE_CHANGED_WARN);
+        }
 
         if (m_matrixType == MatrixType::SPARSE)
         {
