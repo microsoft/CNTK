@@ -83,7 +83,7 @@ public:
                     nodePtr = m_net.CreateInputNode(name, rows, cols);
             }
         }
-        else if (SparseInputValue<ElemType>::TypeName() == cnNodeType)
+        else if (InputValue<ElemType>::SparseTypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
                 RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
@@ -117,6 +117,23 @@ public:
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
 
                 nodePtr = m_net.CreateInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
+            }
+        }
+        else if (cnNodeType == L"SparseImageInput")
+        {
+            if (parameter.size() < 3 || parameter.size() > 4)
+                RuntimeError("%ls should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType.c_str());
+
+            if (pass == ndlPassInitial)
+            {
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
+                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+
+                nodePtr = m_net.CreateSparseInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
             }
         }
         else if (LearnableParameter<ElemType>::TypeName() == cnNodeType)
@@ -275,8 +292,8 @@ public:
         }
         else if (cnNodeType == ReshapeNode<ElemType>::TypeName())
         {
-            if (parameter.size() != 2)
-                RuntimeError("Reshape should have two parameters. Usage: Reshape(origNodeName, numRows.");
+            if (parameter.size() < 2 || parameter.size() > 5)
+                RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
 
             nodeParamCount = 1;
             nodeParamStart = 0;
@@ -286,9 +303,12 @@ public:
                 // evaluate only scalar parameters
                 vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
                 size_t num_rows = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                size_t img_width = node->GetOptionalParameter("imageWidth", "0");
+                size_t img_height = node->GetOptionalParameter("imageHeight", "0");
+                size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = m_net.Reshape(NULL, num_rows, name);
+                nodePtr = m_net.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
                 nodePtr->NeedGradient() = needGradient;
             }
         }
