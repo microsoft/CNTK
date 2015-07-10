@@ -65,9 +65,9 @@ else
 	MATHLIB_DEFINE = -DUSE_ACML
 	KALDI_DEFINE = -DHAVE_ATLAS  -I $(ATLAS_PATH)
 endif
-KALDI_LIB = -LDataReader/KaldiReader/base/kaldi-base
+KALDI_LIB = -LDataReader/HTKReaderKaldiWriter/base/kaldi-base
 
-INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(MATHLIB_INCLUDE)  -I DataReader/KaldiReader  
+INCFLAGS = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(MATHLIB_INCLUDE)  -I DataReader/HTKReaderKaldiWriter  
 
 
 CFLAGS = -msse3 -std=c++0x -std=c++11 -DCPUONLY -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -DHAVE_POSIX_MEMALIGN ${KALDI_DEFINE} $(MATHLIB_DEFINE) -fopenmp -fpermissive -fPIC
@@ -82,18 +82,18 @@ CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CN
 		  MachineLearning/CNTK/Profiler.cpp MachineLearning/CNTK/tests.cpp MachineLearning/CNTKEval/CNTKEval.cpp
 BINARYREADER_SRC = DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
-KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp
-KALDI_HEADER=DataReader/KaldiReader
-KALDI_SRC = DataReader/KaldiReader/base/kaldi-math.cc DataReader/KaldiReader/base/kaldi-error.cc DataReader/KaldiReader/base/io-funcs.cc DataReader/KaldiReader/base/kaldi-utils.cc \
-			DataReader/KaldiReader/matrix/kaldi-matrix.cc DataReader/KaldiReader/matrix/kaldi-vector.cc DataReader/KaldiReader/matrix/packed-matrix.cc DataReader/KaldiReader/matrix/sp-matrix.cc DataReader/KaldiReader/matrix/tp-matrix.cc \
-           DataReader/KaldiReader/matrix/matrix-functions.cc DataReader/KaldiReader/matrix/qr.cc DataReader/KaldiReader/matrix/srfft.cc DataReader/KaldiReader/matrix/kaldi-gpsr.cc DataReader/KaldiReader/matrix/compressed-matrix.cc \
-           DataReader/KaldiReader/matrix/optimization.cc \
-			DataReader/KaldiReader/util/text-utils.cc DataReader/KaldiReader/util/kaldi-io.cc \
-         DataReader/KaldiReader/util/kaldi-table.cc DataReader/KaldiReader/util/parse-options.cc DataReader/KaldiReader/util/simple-options.cc DataReader/KaldiReader/util/simple-io-funcs.cc 
+HTKReaderKaldiWriter_SRC = DataReader/HTKReaderKaldiWriter/HTKMLFWriter.cpp DataReader/HTKReaderKaldiWriter/DataWriter.cpp DataReader/HTKReaderKaldiWriter/DataReader.cpp DataReader/HTKReaderKaldiWriter/HTKMLFReader.cpp
+KALDI_HEADER=DataReader/HTKReaderKaldiWriter
+KALDI_SRC = DataReader/HTKReaderKaldiWriter/base/kaldi-math.cc DataReader/HTKReaderKaldiWriter/base/kaldi-error.cc DataReader/HTKReaderKaldiWriter/base/io-funcs.cc DataReader/HTKReaderKaldiWriter/base/kaldi-utils.cc \
+			DataReader/HTKReaderKaldiWriter/matrix/kaldi-matrix.cc DataReader/HTKReaderKaldiWriter/matrix/kaldi-vector.cc DataReader/HTKReaderKaldiWriter/matrix/packed-matrix.cc DataReader/HTKReaderKaldiWriter/matrix/sp-matrix.cc DataReader/HTKReaderKaldiWriter/matrix/tp-matrix.cc \
+           DataReader/HTKReaderKaldiWriter/matrix/matrix-functions.cc DataReader/HTKReaderKaldiWriter/matrix/qr.cc DataReader/HTKReaderKaldiWriter/matrix/srfft.cc DataReader/HTKReaderKaldiWriter/matrix/kaldi-gpsr.cc DataReader/HTKReaderKaldiWriter/matrix/compressed-matrix.cc \
+           DataReader/HTKReaderKaldiWriter/matrix/optimization.cc \
+			DataReader/HTKReaderKaldiWriter/util/text-utils.cc DataReader/HTKReaderKaldiWriter/util/kaldi-io.cc \
+         DataReader/HTKReaderKaldiWriter/util/kaldi-table.cc DataReader/HTKReaderKaldiWriter/util/parse-options.cc DataReader/HTKReaderKaldiWriter/util/simple-options.cc DataReader/HTKReaderKaldiWriter/util/simple-io-funcs.cc 
 SEQUENCEREADER_SRC = DataReader/LMSequenceReader/SequenceReader.cpp DataReader/LMSequenceReader/SequenceParser.cpp DataReader/LMSequenceReader/Exports.cpp
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
 UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
-READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC) $(KALDIREADER_SRC) 
+READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC) $(HTKReaderKaldiWriter_SRC) 
 CORE_SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
 SRC =  $(READER_SRC) $(CORE_SRC)
 
@@ -106,7 +106,7 @@ LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC)
 HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 BINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARYREADER_SRC))
 SEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SEQUENCEREADER_SRC))
-KALDIREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDIREADER_SRC))
+HTKReaderKaldiWriter_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKReaderKaldiWriter_SRC))
 KALDI_OBJ := $(patsubst %.cc, $(OBJDIR)/%.o, $(KALDI_SRC))
 
 DEP := $(patsubst %.o, %.d, $(OBJ))
@@ -114,7 +114,7 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 SEPARATOR = "=-----------------------------------------------------------="
 
 #all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/SequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/BinaryReader.so
-all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/KaldiReader.so 
+all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(BINDIR)/LUSequenceReader.so $(BINDIR)/HTKMLFReader.so $(BINDIR)/HTKReaderKaldiWriter.so 
 
 #	ln -sf $(CURDIR)/$(BINDIR)/* bin
 	
@@ -138,7 +138,7 @@ $(BINDIR)/BinaryReader.so: $(BINARYREADER_OBJ) $(CORE_OBJ)
 	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
-$(BINDIR)/KaldiReader.so: $(KALDIREADER_OBJ) $(CORE_OBJ) $(KALDI_OBJ)
+$(BINDIR)/HTKReaderKaldiWriter.so: $(HTKReaderKaldiWriter_OBJ) $(CORE_OBJ) $(KALDI_OBJ)
 	@echo $(SEPARATOR)
 	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
 
