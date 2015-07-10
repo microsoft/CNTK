@@ -311,7 +311,13 @@ public:
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
+
+                //for backward compatibility we check timeStep first
                 size_t timeStep = node->GetOptionalParameter("timeStep", "1");
+                if (timeStep == 1)
+                {
+                    timeStep = node->GetOptionalParameter("delayTime", "1");
+                }
 
                 if (cnNodeType == PastValueNode<ElemType>::TypeName())
                 {
