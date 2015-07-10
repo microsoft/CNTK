@@ -3117,11 +3117,90 @@ __global__ void _assignNceDerivative(
         }
         else //bias vector
         {
-            c[wid] -= er;
+            //ElemType val = -er;
+            atomicAdd(&c[wid], -er);
+            //c[wid] -= er;
         }
     }
 }
+template<class ElemType>
+__global__ void _assignNceDerivativeNew(
+    const ElemType* val,
+    int numRows,
+    int sampleCount,
+    const ElemType* a,
+    int width, // number of columns in a
+    const ElemType* b,
+    const ElemType* tmp,
+    ElemType* c,
+    size_t inputIndex)
+{
+    // val and col are CSR format sparse matrix for label
+    // val is an array contains log_Pn(w). To differentiate positive and negative samples
+    // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
+    // col is an array contains index of the word samples
+    // a is a matrix in column major format contains output from hidden layer
+    // b is the weight matrix for output layer
+    // tmp is a matrix of precalculated error
+    // c is the output matrix to store calculated gradients
 
+    // assume a 1 dimensional thread array
+    int tx = threadIdx.x; // thread index in thread-block (0-indexed)
+    int bx = blockIdx.x;  // block index (0-indexed)
+    int bdim = blockDim.x; // number of threads in thread block
+
+    // logical single index for this thread
+    int n = tx + bdim*bx;
+
+    int batchId = n / sampleCount;
+    int total = numRows * sampleCount;
+    // is thread in range for the addition
+    if (n < total)
+    {
+        int wid = (int)val[2 * n];
+        ElemType er = tmp[n];
+        //c[n] = a[n] + b[n]; // this thread does one addition
+        if (inputIndex == 1)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                ElemType val = -er * b[IDX2C(j, wid, width)];
+                atomicAdd(&c[IDX2C(j, batchId, width)], val);
+            }
+        }
+        else if (inputIndex == 2)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                ElemType val = -er * a[IDX2C(j, batchId, width)];
+                atomicAdd(&c[IDX2C(j, wid, width)], val);
+            }
+        }
+        else
+            atomicAdd(&c[wid], -er);
+    }
+    /*
+    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
+
+    // find out the items this block is responsible for
+    int start = loadPerBlock * blockIdx.x;
+    int end = min(total, loadPerBlock * (blockIdx.x + 1));
+    // find out the items this block is responsible for
+  
+    for (int i = start; i < end; i++)
+    {
+        int wid = (int)val[2 * i];
+
+        ElemType er = tmp[i]; // precalculated error for this output node
+        if (inputIndex == 3) //bias vector
+        {
+            //ElemType val = -er;
+            atomicAdd(&c[wid], -er);
+            //c[wid] -= er;
+        }
+    }
+    */
+}
 // compute gradients of weights in cross entropy node
 template<class ElemType>
 __global__ void _computeGradientOfWeight(
