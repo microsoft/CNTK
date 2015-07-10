@@ -3123,6 +3123,7 @@ __global__ void _assignNceDerivative(
         }
     }
 }
+
 template<class ElemType>
 __global__ void _assignNceDerivativeNew(
     const ElemType* val,
@@ -3144,13 +3145,8 @@ __global__ void _assignNceDerivativeNew(
     // tmp is a matrix of precalculated error
     // c is the output matrix to store calculated gradients
 
-    // assume a 1 dimensional thread array
-    int tx = threadIdx.x; // thread index in thread-block (0-indexed)
-    int bx = blockIdx.x;  // block index (0-indexed)
-    int bdim = blockDim.x; // number of threads in thread block
-
     // logical single index for this thread
-    int n = tx + bdim*bx;
+    int n = threadIdx.x + blockDim.x* blockIdx.x;
 
     int batchId = n / sampleCount;
     int total = numRows * sampleCount;
@@ -3159,19 +3155,20 @@ __global__ void _assignNceDerivativeNew(
     {
         int wid = (int)val[2 * n];
         ElemType er = tmp[n];
-        //c[n] = a[n] + b[n]; // this thread does one addition
         if (inputIndex == 1)
         {
-            for (int j = 0; j < width; j++)
+            for (int i = 0; i < width; i++)
             {
+                int j = (i + n) % width; //introduce randomization to avoid conflicts
                 ElemType val = -er * b[IDX2C(j, wid, width)];
                 atomicAdd(&c[IDX2C(j, batchId, width)], val);
             }
         }
         else if (inputIndex == 2)
         {
-            for (int j = 0; j < width; j++)
+            for (int i = 0; i < width; i++)
             {
+                int j = (i + n) % width; //introduce randomization to avoid conflicts
                 ElemType val = -er * a[IDX2C(j, batchId, width)];
                 atomicAdd(&c[IDX2C(j, wid, width)], val);
             }
@@ -3179,27 +3176,6 @@ __global__ void _assignNceDerivativeNew(
         else
             atomicAdd(&c[wid], -er);
     }
-    /*
-    int loadPerBlock = (total + gridDim.x - 1) / gridDim.x;
-
-    // find out the items this block is responsible for
-    int start = loadPerBlock * blockIdx.x;
-    int end = min(total, loadPerBlock * (blockIdx.x + 1));
-    // find out the items this block is responsible for
-  
-    for (int i = start; i < end; i++)
-    {
-        int wid = (int)val[2 * i];
-
-        ElemType er = tmp[i]; // precalculated error for this output node
-        if (inputIndex == 3) //bias vector
-        {
-            //ElemType val = -er;
-            atomicAdd(&c[wid], -er);
-            //c[wid] -= er;
-        }
-    }
-    */
 }
 // compute gradients of weights in cross entropy node
 template<class ElemType>
