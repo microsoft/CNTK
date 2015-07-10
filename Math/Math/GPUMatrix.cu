@@ -585,7 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LONG64 N = (LONG64)a.GetNumElements();
         int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
         PrepareDevice();
-        cudaEvent_t done;
+        cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignToRowSliceValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, N, (long)startIndex, (long)GetNumRows(), (long)a.GetNumRows());
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
@@ -1926,7 +1926,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             my_b.GetArray(),
             tmp.GetArray(),
             c.GetArray());
-      
+        
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
@@ -1943,7 +1943,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int p = 512;
         int width = a.GetNumRows();
         while (p / 2 > width) p = p / 2;
-        _assignNceDerivative<ElemType> << <this->GetNumElements() / 2, p >> >(
+
+        _assignNceDerivativeNew<ElemType> << < (tmp.GetNumElements() + p - 1) / p, p >> >(
             GetArray(),
             tmp.GetNumCols(),
             m_numRows / 2,
@@ -1953,10 +1954,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             tmp.GetArray(),
             c.GetArray(),
             inputIndex);
+
         if (do_sync) CUDA_CALL(cudaEventRecord(done));
         if (do_sync) CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync) CUDA_CALL(cudaEventDestroy(done));
     }
+
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
     {
