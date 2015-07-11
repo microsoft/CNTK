@@ -1474,6 +1474,31 @@ momentumPerMB
 \begin_layout Itemize
 
 \emph on
+momentumPerSample
+\emph default
+
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+momentumPerSample
+\end_layout
+
+\end_inset
+
+: momentum per sample.
+ Useful when you want to keep the momentum per sample constant, i.e.,
+ automatically scales effective momentum for the minibatch when
+ the minibatch size is changed.
+ Can use syntax such as 0.9996*10:0.998 which means using the per sample
+ momentum 0.9996 for 10 epochs and then 0.998 for the rest.
+ momentumPerSample may be missing, for example, when momentumPerMB
+ is provided.
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
 autoAdjust
 \emph default
 
