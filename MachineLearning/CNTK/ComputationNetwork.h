@@ -2345,7 +2345,8 @@ public:
             nodePtr->OperationName() == CrossEntropyNode<ElemType>::TypeName() ||
             nodePtr->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
             nodePtr->OperationName() == ErrorPredictionNode<ElemType>::TypeName() ||               
-            nodePtr->OperationName() == CRFNode<ElemType>::TypeName())
+            nodePtr->OperationName() == CRFNode<ElemType>::TypeName() ||
+            nodePtr->OperationName() == DummyCriterionNode<ElemType>::TypeName())
             return true;
 
         return false;
