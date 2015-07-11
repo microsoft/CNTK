@@ -2307,11 +2307,11 @@ public:
                 (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
             }
 
-            size_t iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
+            int iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
 
             if (m_recurrentInfo[iLoopId].m_isForwardLoop)
             {
-                for (size_t timeIndex = 0; timeIndex < iMBSize; timeIndex ++)
+                for (int timeIndex = 0; timeIndex < iMBSize; timeIndex ++)
                 {
                     for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                     {
@@ -2323,7 +2323,7 @@ public:
             }
             else
             {
-                for (size_t timeIndex = iMBSize-1; timeIndex >= 0; timeIndex--)
+                for (int timeIndex = iMBSize-1; timeIndex >= 0; timeIndex--)
                 {
                     for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                     {
@@ -2471,7 +2471,7 @@ public:
                 int mbSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
                 if (m_recurrentInfo[iLoopId].m_isForwardLoop)
                 {
-                    for (size_t timeIndex = mbSize - 1; timeIndex >= 0; timeIndex--)
+                    for (int timeIndex = mbSize - 1; timeIndex >= 0; timeIndex--)
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
@@ -2482,7 +2482,7 @@ public:
                 }
                 else
                 {
-                    for (size_t timeIndex = 0; timeIndex < mbSize; timeIndex++)
+                    for (int timeIndex = 0; timeIndex < mbSize; timeIndex++)
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
