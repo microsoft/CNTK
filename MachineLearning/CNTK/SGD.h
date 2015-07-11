@@ -185,6 +185,9 @@ public:
         ConfigArray momentumPerMBStr = configSGD("momentumPerMB", "");
         floatargvector momentumPerMB = momentumPerMBStr;
 
+        ConfigArray momentumPerSampleStr = configSGD("momentumPerSample", "");
+        floatargvector momentumPerSample = momentumPerSampleStr;
+
         wstring modelPath = configSGD("modelPath");
         wstring trainCriterionNodeName = configSGD("trainCriterionNodeName", "");
         wstring evalCriterionNodeName = configSGD("evalCriterionNodeName", "");
@@ -247,7 +250,7 @@ public:
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
 
         Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize,
-             maxEpochs, modelPath, momentumPerMB,
+             maxEpochs, modelPath, momentumPerMB, momentumPerSample,
              gradientClippingWithTruncation, clippingThresholdPerSample,
              autoAdjustLRType, increaseLearnRateIfImproveMoreThan,
              learnRateIncreaseFactor, reduceLearnRateIfImproveLessThan,
@@ -263,11 +266,6 @@ public:
              autoAdjustMinibatch, minibatchSizeTuningFrequency, minibatchSizeTuningMax);
     }
 
-    void setMomentum(float momentum)
-    {
-        m_momentumPerMB = (ElemType) momentum;
-    }
-
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
     void Init(const floatargvector& learningRatesPerMB,
               const floatargvector& learningRatesPerSample,
@@ -276,6 +274,7 @@ public:
               const size_t maxEpochs,
               const wstring& modelPath,
               const floatargvector& momentumPerMB,
+              const floatargvector& momentumPerSample,
               const bool gradientClippingWithTruncation = true,
               const ElemType clippingThresholdPerSample = std::numeric_limits<ElemType>::infinity(),
               const LearningRateSearchAlgorithm autoLearnRateSearchType = LearningRateSearchAlgorithm::None,
@@ -402,13 +401,44 @@ public:
             m_needToNormalizeLRByParallUtterance = true;
         }
 
-        m_momentumPerMB = 0.9f;
-        if (momentumPerMB.size() > 0)
+        if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
         {
-            m_momentumInputPerMB = momentumPerMB;
-            if (m_momentumInputPerMB[0] >= 1 || m_momentumInputPerMB[0] < 0)
+            throw std::invalid_argument(
+                "You specified both momentumPerSample and momentumPerMB. Please comment out one of them.");
+        }
+        else if (momentumPerSample.size() > 0)
+        {
+            m_momentumPerSample = momentumPerSample;
+            int momentumVectorSize = m_momentumPerSample.size();
+            for (int i = 0; i < momentumVectorSize; i++)
             {
-                throw std::invalid_argument("momentumPerMB must be in [0, 1).");
+                if ((m_momentumPerSample[i] >= 1) || (m_momentumPerSample[i] < 0))
+                {
+                    throw std::invalid_argument("momentumPerSample must be in [0, 1).");
+                }
+            }
+        }
+        else if (momentumPerMB.size() > 0)
+        {
+            int momentumVectorSize = (int)max(momentumPerMB.size(), m_mbSize.size());
+            m_momentumPerSample.resize(momentumVectorSize);
+            for (int i = 0; i < momentumVectorSize; i++)
+            {
+                if ((momentumPerMB[i] >= 1) || (momentumPerMB[i] < 0))
+                {
+                    throw std::invalid_argument("momentumPerMB must be in [0, 1).");
+                }
+
+                m_momentumPerSample[i] = exp(log(momentumPerMB[i]) / m_mbSize[i]);
+            }
+        }
+        else
+        {
+            int momentumVectorSize = m_mbSize.size();
+            m_momentumPerSample.resize(momentumVectorSize);
+            for (int i = 0; i < momentumVectorSize; i++)
+            {
+                m_momentumPerSample[i] = exp(log(0.9f) / m_mbSize[i]);
             }
         }
 
@@ -767,8 +797,6 @@ protected:
             {
                 prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample;
             }
-
-            setMomentum(m_momentumInputPerMB[startEpoch]);
         }
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
@@ -796,8 +824,6 @@ protected:
 
             // set dropout rate
             SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
-
-            setMomentum(m_momentumInputPerMB[i]);
 
             // learning rate adjustment
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None ||
@@ -842,9 +868,6 @@ protected:
 #ifdef MPI_SUPPORT
             INT32 mySamples = (INT32)
 #endif
-            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
-                    i + 1, learnRatePerSample, m_momentumPerMB);
-
             size_t chosenMinibatchSize;
 
             // Through the command line or config file the user can set minibatch sizes on a per epoch
@@ -874,6 +897,9 @@ protected:
                 // use the explicitly set minibatch size
                 chosenMinibatchSize = m_mbSize[i];
             }
+
+            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
+                i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], chosenMinibatchSize));
 
             TrainOneEpoch(net, refNet, refNode, i, m_epochSize,
                           trainSetDataReader, learnRatePerSample, chosenMinibatchSize, FeatureNodes,
@@ -1738,7 +1764,7 @@ protected:
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
 
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  actualMBSize, m_mbSize[epochNumber],
+                                  m_momentumPerSample[epochNumber], actualMBSize,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier);
                 }
@@ -1826,16 +1852,19 @@ public:
                                Matrix<ElemType>& gradientValues,
                                Matrix<ElemType>& smoothedGradient,
                                const ElemType learnRatePerSample,
-                               size_t actualMBSize, const size_t expectedMBSize,
+                               const ElemType momentumPerSample,
+                               size_t actualMBSize,
                                const ElemType L2RegWeight,
                                const ElemType L1RegWeight,
                                const bool needAveMultiplier)
     {
+        // we use simple linear (instead of log linear) scaling here
+        const ElemType momentum = MomentumPerMB(momentumPerSample, actualMBSize);
 #if DUMPOUTPUT
-        fprintf(stderr, "learnRatePerSample=%0.8f, actualMBSize=%ld, expectedMBSize=%ld\n",
-                learnRatePerSample, actualMBSize, expectedMBSize);
-        fprintf(stderr, "sgd->GradUpdateType()=%d, sgd->GradientUpdateNoiseStd()=%0.8f, sgd->MomentumPerMB()=%0.8f\n",
-                sgd->GradUpdateType(), sgd->GradientUpdateNoiseStd(), sgd->MomentumPerMB());
+        fprintf(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
+            learnRatePerSample, momentum, actualMBSize);
+        fprintf(stderr, "sgd->GradUpdateType()=%d, sgd->GradientUpdateNoiseStd()=%0.8f\n",
+                sgd->GradUpdateType(), sgd->GradientUpdateNoiseStd());
         gradientValues.Print("Gradient Input");
         smoothedGradient.Print("Smoothed Gradient Input");
 #endif
@@ -1867,13 +1896,6 @@ public:
 
         if (adpType == GradientsUpdateType::None)
         {
-            ElemType momentum = sgd->MomentumPerMB();
-
-            // we use simple linear (instead of log linear) scaling here
-            if (actualMBSize < expectedMBSize && momentum > 0.0000001f)
-            {
-                momentum = (ElemType) exp(log(momentum) / expectedMBSize * actualMBSize);
-            }
             smoothedGradient.NormalGrad(gradientValues, functionValues,
                                         learnRatePerSample, momentum);
         }
@@ -1915,7 +1937,8 @@ protected:
     void UpdateWeights(const ComputationNodePtr node,
                        Matrix<ElemType>& smoothedGradient,
                        const ElemType learnRatePerSample,
-                       const size_t actualMBSize, const size_t expectedMBSize,
+                       const ElemType momentumPerSample,
+                       const size_t actualMBSize,
                        const ElemType L2RegWeight, const ElemType L1RegWeight,
                        const bool needAveMultiplier) const
     {
@@ -1923,8 +1946,8 @@ protected:
         fprintf(stderr, "Update_%ls\n",node->NodeName().c_str());
 #endif
         UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(),
-                       smoothedGradient, learnRatePerSample, actualMBSize,
-                       expectedMBSize, L2RegWeight, L1RegWeight,
+                       smoothedGradient, learnRatePerSample, momentumPerSample,
+                       actualMBSize, L2RegWeight, L1RegWeight,
                        needAveMultiplier);
         node->UpdateEvalTimeStamp();
     }
@@ -2155,9 +2178,9 @@ protected:
         return m_gradType.mGaussianNoiseInjectStd;
     }
 
-    ElemType MomentumPerMB() const
+    static ElemType MomentumPerMB(ElemType momentumPerSample, size_t minibatchSize)
     {
-        return m_momentumPerMB;
+        return exp(log(momentumPerSample) * minibatchSize);
     }
 
 public:
@@ -2292,8 +2315,7 @@ protected:
     // the total number of epochs to run.
     size_t m_maxEpochs;
 
-    floatargvector m_momentumInputPerMB;
-    ElemType m_momentumPerMB;
+    floatargvector m_momentumPerSample;
     bool m_gradientClippingWithTruncation;
     ElemType m_clippingThresholdPerSample;
 
