@@ -2036,6 +2036,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return node;
         }
 
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     };
 
     template class DummyCriterionNode<float>; 

@@ -1015,10 +1015,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     wstring uttID = m_uttInfo[uttIndex][0].first; 
                     Matrix<ElemType>& data = *matrices[iter->first];
                     if (m_sequenceTrainingIO->HasDerivatives(uttID))
-                        m_sequenceTrainingIO->GetDerivatives(startFrame, endFrame, uttID, data);
+                        m_sequenceTrainingIO->GetDerivatives(startFrame, endFrame, mbSize, uttID, data);
                     else
                     {
-                        data.Resize(data.GetNumRows(), endFrame - startFrame);
+                        data.Resize(data.GetNumRows(), mbSize);
                         data.SetValue(0);
                     }
                 }
@@ -1150,12 +1150,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     // Populates the partial minibatch.
-                    if (m_noMix || m_framemode)
-                    {   // If we are not going to append the partial minibatch
-                        // with frames from next sentence, we will only reserve
-                        // space for the frames that we are going to read.
-                        currentMBSize = m_toProcess[i] - startFrame;
-                    }
+                    //-if (m_noMix || m_framemode)
+                    //-{   // If we are not going to append the partial minibatch
+                    //-    // with frames from next sentence, we will only reserve
+                    //-    // space for the frames that we are going to read.
+                    //-    currentMBSize = m_toProcess[i] - startFrame;
+                    //-}
                     endFrame = m_toProcess[i];
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
                     m_processedFrame[i] += (endFrame - startFrame);
@@ -1192,6 +1192,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         endFrame = currentMBSize;
                         bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, endFrame - startFrame, currentMBSize, startFrame);
                         if (reNewSucc) m_processedFrame[i] += endFrame - startFrame;
+                    }
+                    else
+                    {
+                        startFrame = m_switchFrame[i];
+                        endFrame = currentMBSize;
+                        for (size_t k = startFrame; k < endFrame; k++)
+                        {
+                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_LABELS);
+                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoLabel;
+                        }
                     }
                 }
             }
@@ -1587,6 +1597,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 return false;
             }
+
+            // Sets sentence boundary.
+            m_sentenceBegin.Resize(1, currentMBSize);
+            m_minibatchPackingFlag.resize(currentMBSize);
+            for (size_t i = 0; i < currentMBSize; i++)
+            {
+                m_sentenceBegin.SetValue(0, i, (ElemType) SENTENCE_MIDDLE);
+            }
+            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+            m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+            m_sentenceBegin.SetValue(0, m_sentenceBegin.GetNumCols() - 1, (ElemType) SENTENCE_END);
+            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+            m_minibatchPackingFlag[m_sentenceBegin.GetNumCols() - 1] = MinibatchPackingFlag::UtteranceEnd;
+
             typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
             for (iter = matrices.begin(); iter != matrices.end(); iter++)
             {
