@@ -184,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 throw std::invalid_argument("PastValue operation only takes one input.");
 
-            size_t nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep; 
+            int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep; 
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
@@ -241,9 +241,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode()  
         {
             ASSERT(m_timeStep > 0);
-            size_t blogSize = Inputs(0)->FunctionValues().GetNumCols();
+            int blogSize = Inputs(0)->FunctionValues().GetNumCols();
 
-            for (size_t timeIdxInSeq = 0; timeIdxInSeq < blogSize / m_samplesInRecurrentStep; timeIdxInSeq++)
+            for (int timeIdxInSeq = 0; timeIdxInSeq < blogSize / m_samplesInRecurrentStep; timeIdxInSeq++)
             {
                 Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
                 EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
@@ -569,7 +569,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 throw std::invalid_argument("FutureValue operation only takes one input.");
 
-            size_t nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep;
+            int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep;
             for (int timeIdxInSeq = 0; timeIdxInSeq< nbrSamples; timeIdxInSeq++)
             {
                 Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
@@ -624,9 +624,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode()
         {
             ASSERT(m_timeStep > 0);
-            size_t blogSize = Inputs(0)->FunctionValues().GetNumCols();
+            int blogSize = Inputs(0)->FunctionValues().GetNumCols();
 
-            for (size_t timeIdxInSeq = blogSize / m_samplesInRecurrentStep - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
+            for (int timeIdxInSeq = blogSize / m_samplesInRecurrentStep - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
                 EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_futureActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
