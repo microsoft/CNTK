@@ -749,14 +749,14 @@ public:
     // SetOutputNode - Set the output node, checks to see if it already exists first
     // nodeGroup - group vector to add to
     // compNode - computation node to add
-    void SetOutputNode(std::vector<ComputationNode<ElemType>*>& nodeGroup, ComputationNode<ElemType>* compNode)
+    void SetOutputNode(std::vector<ComputationNode<ElemType>*>* nodeGroup, ComputationNode<ElemType>* compNode)
     {
-        for (ComputationNodePtr node : nodeGroup)
+        for (ComputationNodePtr node : *nodeGroup)
         {
             if (node == compNode)
                 return;
         }
-        nodeGroup.push_back(compNode);
+        nodeGroup->push_back(compNode);
     }
 
     // FindSymbol - Search the nodes for a fully quantified symbol
