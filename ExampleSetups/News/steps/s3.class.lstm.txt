@@ -2,21 +2,13 @@
 # Train LSTM LM using class-based criterion
 # -----------------------------
 # in local
-D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.classlm.config ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.comments command=train
-# on server
-\\speechstore5\userdata\kaishengy\bin\binmay27\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.comments command=train DEVICE=0
+C:\dev\cntk5\x64\Release\CNTK.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.classlm.config ExpDir=d:\exp\news\s1.lstmclslm.comments
 
-# test PPL : Perplexity = 119 with 1 layer of 200 hidden dimension LSTM 
-\\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.comments test=[modelPath=$ExpFolder$\modelRnnCNTK] command=test
+# ------------ use LSTM components --------------
+# use LSTM components
+# 1-layer Perplexity = 29.668369
+\\speechstore5\userdata\kaishengy\bin\binmay28a\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.clstmcls100lm  CLASSSIZE=100 train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:100:200:$VOCABSIZE$]] DEVICE=0
 
-# ---- 2 layers of LSTM --------
-# in local wit 2 layers of LSTM
-\\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.2layer.comments command=train train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:100:200:200:$VOCABSIZE$]] DEVICE=1
-# test Perplexity = 198.
-\\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmclslm.2layer.comments test=[modelPath=$ExpFolder$\modelRnnCNTK] command=test
-
-# increase class number to 100
-\\speechstore5\userdata\kaishengy\bin\binmay28\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmcls100lm  DEVICE=0 CLASSSIZE=100
-
-# increase class number to 100 with 2 layers of LSTM
-\\speechstore5\userdata\kaishengy\bin\binmay28a\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.lstmcls100lm.2layer  CLASSSIZE=100 train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:100:200:200:$VOCABSIZE$]] DEVICE=1
+# 2-layers PPL 
+\\speechstore5\userdata\kaishengy\bin\binmay28a\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.clstmcls100lm.2layer  CLASSSIZE=100 train=[SimpleNetworkBuilder=[layerSizes=$VOCABSIZE$:100:200:200:$VOCABSIZE$]] DEVICE=1
+\\speechstore5\userdata\kaishengy\bin\binmay28a\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\news\setups\global.config+\\speechstore5\userdata\kaishengy\exp\news\setups\lstmlm.gpu.classlm.config.txt ExpDir=\\speechstore5\transient\kaishengy\exp\news\s1.clstmcls100lm.2layer test=[modelPath=$ExpFolder$\modelRnnCNTK] command=test
