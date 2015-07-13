@@ -71,10 +71,10 @@ public:
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void SetSentenceSegBatch(Matrix<ElemType>&, vector<MinibatchPackingFlag>&) = 0;
-    virtual void SetRandomSeed(int) { NOT_IMPLEMENTED; };
-    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&) { return false; }
-    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>&) { }
+    virtual void SetSentenceSegBatch(Matrix<ElemType>&, vector<MinibatchPackingFlag>& ) { NOT_IMPLEMENTED; };
+    virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
+    virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&) { return false; }
+    virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*) { }
     virtual bool CanReadFor(wstring /* nodeName */) {
         return false;
     }
@@ -206,8 +206,8 @@ public:
 
     void SetRandomSeed(int);
 
-    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>&, const size_t, vector<size_t>&);
-    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
+    void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
 
 };
 

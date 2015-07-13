@@ -6,6 +6,8 @@
 // </copyright>
 //
 
+#pragma once
+
 #include <string>
 #include <vector>
 #include <assert.h>
@@ -544,7 +546,7 @@ public:
         if (mFile) fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
-            Microsoft::MSR::CNTK::RuntimeError("cannot open file %s", fileName);
+            Microsoft::MSR::CNTK::Warning("cannot open file %s", fileName);
     }
 
     void ParseReset()

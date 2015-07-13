@@ -1,0 +1,8 @@
+# -----------------------------
+# Train LSTM LM using class-based criterion
+# -----------------------------
+# in local
+D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=d:\dev\cntkcodeplex\examplesetups\news\setups\global.config+d:\dev\cntkcodeplex\examplesetups\news\setups\lstmlm.gpu.classlm.2stream.config ExpDir=d:\exp\news\s4.lstmclslm.dbg command=train train=[SGD=[gradientcheck=true]] DEVICE=-1
+
+# debug with not using multi-streams to make sure it is backward compatible
+D:\dev\cntkcodeplex\x64\Release\cntk.exe configFile=..\setups\global.config+..\setups\lstmlm.gpu.classlm.config ExpDir=d:\exp\news\s4.lstmclslm.dbg command=writeWordAndClassInfo:train

@@ -28,7 +28,9 @@ extern int mpiNumProcesses;
 
 using namespace std;
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft {
+    namespace MSR {
+        namespace CNTK {
 
 template<class ElemType>
 void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb)
@@ -152,14 +154,14 @@ public:
         ConfigParameters configAALR(configSGD("AutoAdjust", ""));
         LearningRateSearchAlgorithm autoAdjustLRType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
         ElemType reduceLearnRateIfImproveLessThan = configAALR("reduceLearnRateIfImproveLessThan", "0");
-        bool continueReduce = (bool) configAALR("continueReduce", "false");
-        size_t learnRateAdjustInterval = (size_t) configAALR("learnRateAdjustInterval", "1");
+                    bool continueReduce = (bool)configAALR("continueReduce", "false");
+                    size_t learnRateAdjustInterval = (size_t)configAALR("learnRateAdjustInterval", "1");
         ElemType learnRateDecreaseFactor = configAALR("learnRateDecreaseFactor", "0.618");
         ElemType increaseLearnRateIfImproveMoreThan = configAALR("increaseLearnRateIfImproveMoreThan", "1#INF");
         ElemType learnRateIncreaseFactor = configAALR("learnRateIncreaseFactor", "1.382");
 
         // AutoAdjust Auto Adjust Minibatch Parameters
-        bool autoAdjustMinibatch = (bool) configAALR("autoAdjustMinibatch", "false");
+                    bool autoAdjustMinibatch = (bool)configAALR("autoAdjustMinibatch", "false");
         size_t minibatchSizeTuningFrequency = configAALR("minibatchSizeTuningFrequency", "1");
         size_t minibatchSizeTuningMax = configAALR("minibatchSizeTuningMax", "1048576");
 
@@ -210,19 +212,19 @@ public:
         GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", "None"));
         ElemType gaussianNoiseInjecStd = configSGD("gaussianNoiseInjectStd", "0");
         gUpdateInfo.mType = gradUpdateType;
-        gUpdateInfo.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
+                    gUpdateInfo.mGaussianNoiseInjectStd = (float)gaussianNoiseInjecStd;
 
         // extract RMSProp parameters from config, if they exist. Default to reasonable values.
         RMSPropInfo rpi;
-        rpi.dec = (double) configSGD("rms_wgt_dec", "0.75");
-        rpi.inc = (double) configSGD("rms_wgt_inc", "1.2");
-        rpi.min = (double) configSGD("rms_wgt_min", "0.1");
-        rpi.max = (double) configSGD("rms_wgt_max", "10.0");
-        rpi.gamma = (double) configSGD("rms_gamma", "0.99");
+                    rpi.dec = (double)configSGD("rms_wgt_dec", "0.75");
+                    rpi.inc = (double)configSGD("rms_wgt_inc", "1.2");
+                    rpi.min = (double)configSGD("rms_wgt_min", "0.1");
+                    rpi.max = (double)configSGD("rms_wgt_max", "10.0");
+                    rpi.gamma = (double)configSGD("rms_gamma", "0.99");
 
-        bool needAveMultiplier = (bool) configSGD("normWithAveMultiplier", "true");
-        ElemType L2RegWeight = (ElemType) configSGD("L2RegWeight", "0");
-        ElemType L1RegWeight = (ElemType) configSGD("L1RegWeight", "0");
+                    bool needAveMultiplier = (bool)configSGD("normWithAveMultiplier", "true");
+                    ElemType L2RegWeight = (ElemType)configSGD("L2RegWeight", "0");
+                    ElemType L1RegWeight = (ElemType)configSGD("L1RegWeight", "0");
 
         /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of
         /// useAdagrad=true
@@ -340,7 +342,7 @@ public:
         m_continueReduce = continueReduce;
 
         //minimum interval is 1 epoch
-        m_learnRateAdjustInterval = max((size_t) 1, learnRateAdjustInterval);
+                    m_learnRateAdjustInterval = max((size_t)1, learnRateAdjustInterval);
 
         m_learnRateDecreaseFactor = learnRateDecreaseFactor;
         m_clippingThresholdPerSample = abs(clippingThresholdPerSample);
@@ -392,7 +394,7 @@ public:
         }
         else if (learningRatesPerMB.size() > 0)
         {
-            int LRSize = (int) max(learningRatesPerMB.size(), m_mbSize.size());
+                        int LRSize = (int)max(learningRatesPerMB.size(), m_mbSize.size());
             m_learningRatesPerSample.resize(LRSize);
             for (int i = 0; i < LRSize; i++)
             {
@@ -423,11 +425,11 @@ public:
             int momentumVectorSize = (int)max(momentumPerMB.size(), m_mbSize.size());
             m_momentumPerSample.resize(momentumVectorSize);
             for (int i = 0; i < momentumVectorSize; i++)
-            {
+        {
                 if ((momentumPerMB[i] >= 1) || (momentumPerMB[i] < 0))
-                {
-                    throw std::invalid_argument("momentumPerMB must be in [0, 1).");
-                }
+            {
+                throw std::invalid_argument("momentumPerMB must be in [0, 1).");
+            }
 
                 m_momentumPerSample[i] = exp(log(momentumPerMB[i]) / m_mbSize[i]);
             }
@@ -543,8 +545,8 @@ public:
 
         // Initializes the model from original model.
         ComputationNetwork<ElemType> origNet(deviceID);
-        ComputationNetwork<ElemType>& sequenceNet = 
-            (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : origNet;
+                    ComputationNetwork<ElemType>* sequenceNet =
+                        (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : &origNet;
         std::vector<ComputationNodePtr> addedFeatureNodes;
         std::vector<ComputationNodePtr> replacedCriterionNodes;
         if (startEpoch < 0)
@@ -553,25 +555,25 @@ public:
             origNet.LoadFromFile(origModelFileName);
 
             // Processes feature nodes.
-            std::vector<ComputationNodePtr> sequenceFeatureNodes = sequenceNet.FeatureNodes();
-            for (size_t i = 0; i < sequenceFeatureNodes.size(); ++i)
+                        std::vector<ComputationNodePtr> *sequenceFeatureNodes = sequenceNet->FeatureNodes();
+                        for (size_t i = 0; i < sequenceFeatureNodes->size(); ++i)
             {
-                if (!origNet.NodeNameExist(sequenceFeatureNodes[i]->NodeName()))
+                            if (!origNet.NodeNameExist((*sequenceFeatureNodes)[i]->NodeName()))
                 {
-                    addedFeatureNodes.push_back(sequenceFeatureNodes[i]);
-                    origNet.AddFeatureNode(sequenceFeatureNodes[i]);
+                                addedFeatureNodes.push_back((*sequenceFeatureNodes)[i]);
+                                origNet.AddFeatureNode((*sequenceFeatureNodes)[i]);
                 }
             }
 
             // Processes criterion nodes.
-            std::vector<ComputationNodePtr> origCriterionNodes = GetTrainCriterionNodes(origNet);
-            std::vector<ComputationNodePtr> sequenceCriterionNodes = GetTrainCriterionNodes(sequenceNet);
-            if (origCriterionNodes.size() == 0 || sequenceCriterionNodes.size() == 0)
+                        std::vector<ComputationNodePtr> *origCriterionNodes = GetTrainCriterionNodes(origNet);
+                        std::vector<ComputationNodePtr> *sequenceCriterionNodes = GetTrainCriterionNodes(*sequenceNet);
+                        if (origCriterionNodes->size() == 0 || sequenceCriterionNodes->size() == 0)
             {
                 throw std::runtime_error("Training criterion node does not exist.");
             }
-            replacedCriterionNodes.push_back(origCriterionNodes[0]);
-            origNet.ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);
+                        replacedCriterionNodes.push_back((*origCriterionNodes)[0]);
+                        origNet.ReplaceFinalCriterionNode((*origCriterionNodes)[0]->NodeName(), (*sequenceCriterionNodes)[0]);
             origNet.ResetEvalTimeStamp();
         }
 
@@ -584,12 +586,12 @@ public:
         {
             fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
         }
-        ComputationNetwork<ElemType>& net =
-            (startEpoch < 0) ? origNet : netBuilder->LoadNetworkFromFile(modelFileName);
+                    ComputationNetwork<ElemType>* net =
+                        (startEpoch < 0) ? &origNet : netBuilder->LoadNetworkFromFile(modelFileName);
 
         startEpoch = max(startEpoch, 0);
 
-        TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
+                    TrainOrAdaptModel(startEpoch, *net, *net, nullptr, trainSetDataReader, validationSetDataReader);
 
         // Handles deletions carefully here.
         if (startEpoch < 0)
@@ -598,8 +600,8 @@ public:
             {
                 origNet.RemoveFeatureNode(addedFeatureNodes[i]);
             }
-            std::vector<ComputationNodePtr> origCriterionNodes = GetTrainCriterionNodes(origNet);
-            origNet.ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), replacedCriterionNodes[0]);
+                        std::vector<ComputationNodePtr> *origCriterionNodes = GetTrainCriterionNodes(origNet);
+                        origNet.ReplaceFinalCriterionNode((*origCriterionNodes)[0]->NodeName(), replacedCriterionNodes[0]);
         }
     }
 
@@ -625,7 +627,7 @@ public:
             fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
         }
 
-        ComputationNetwork<ElemType>& net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
+                    ComputationNetwork<ElemType>* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
                                                              netBuilder->LoadNetworkFromFile(modelFileName);
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
@@ -641,50 +643,30 @@ public:
         startEpoch = max(startEpoch, 0);
         m_needRegularization = false;
 
-        TrainOrAdaptModel(startEpoch, net, net, nullptr, trainSetDataReader, validationSetDataReader);
+                    TrainOrAdaptModel(startEpoch, *net, *net, nullptr, trainSetDataReader, validationSetDataReader);
     }
 
 protected:
-    std::vector<ComputationNodePtr> GetTrainCriterionNodes(ComputationNetwork<ElemType>& net)
+                std::vector<ComputationNodePtr>* GetTrainCriterionNodes(ComputationNetwork<ElemType>& net)
     {
         fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
         if (!m_trainCriterionNodeName.empty())
         {
-            std::vector<ComputationNodePtr> nodes;
-            ComputationNodePtr node = net.GetNodeFromName(m_trainCriterionNodeName);
-            net.ValidateNetwork(node);
-            if (node->FunctionValues().GetNumElements() != 1)
-            {
-                throw invalid_argument(
-                    "the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
+                        return net.TrainCriterionNodesFrom(m_trainCriterionNodeName);
             }
-
-            nodes.push_back(node);
-            return nodes;
-        }
         else
         {
             return net.FinalCriterionNodes();
         }
     }
 
-    std::vector<ComputationNodePtr> GetEvalCriterionNodes(ComputationNetwork<ElemType>& net)
+                std::vector<ComputationNodePtr>* GetEvalCriterionNodes(ComputationNetwork<ElemType>& net)
     {
         fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
         if (!m_evalCriterionNodeName.empty())
         {
-            std::vector<ComputationNodePtr> nodes;
-            ComputationNodePtr node = net.GetNodeFromName(m_evalCriterionNodeName);
-            net.ValidateNetwork(node);
-            if (node->FunctionValues().GetNumElements() != 1)
-            {
-                throw invalid_argument(
-                    "the evalCriterionNodeName specified in the config file is not a valid evaluation criterion node.");
+                        return net.EvalCriterionNodesFrom(m_evalCriterionNodeName);
             }
-
-            nodes.push_back(node);
-            return nodes;
-        }
         else
         {
             return net.EvaluationNodes();
@@ -697,20 +679,20 @@ protected:
                            IDataReader<ElemType>* trainSetDataReader,
                            IDataReader<ElemType>* validationSetDataReader)
     {
-        std::vector<ComputationNodePtr>& FeatureNodes = net.FeatureNodes();
-        std::vector<ComputationNodePtr>& labelNodes = net.LabelNodes();
-        std::vector<ComputationNodePtr> criterionNodes = GetTrainCriterionNodes(net);
-        std::vector<ComputationNodePtr> evaluationNodes = GetEvalCriterionNodes(net);
+                    std::vector<ComputationNodePtr> *FeatureNodes = net.FeatureNodes();
+                    std::vector<ComputationNodePtr> *labelNodes = net.LabelNodes();
+                    std::vector<ComputationNodePtr> *criterionNodes = GetTrainCriterionNodes(net);
+                    std::vector<ComputationNodePtr> *evaluationNodes = GetEvalCriterionNodes(net);
 
-        std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-        for (size_t i = 0; i < FeatureNodes.size(); i++)
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
+                    for (size_t i = 0; i < (*FeatureNodes).size(); i++)
         {
-            inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+                        (*inputMatrices)[(*FeatureNodes)[i]->NodeName()] = &(*FeatureNodes)[i]->FunctionValues();
         }
 
-        for (size_t i = 0; i < labelNodes.size(); i++)
+                    for (size_t i = 0; i < labelNodes->size(); i++)
         {
-            inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();
+                        (*inputMatrices)[(*labelNodes)[i]->NodeName()] = &(*labelNodes)[i]->FunctionValues();
         }
 
         // used for KLD regularized adaptation. For all other adaptation techniques
@@ -718,12 +700,12 @@ protected:
         std::vector<ComputationNodePtr> refFeatureNodes;
         if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
-            refFeatureNodes.resize(FeatureNodes.size());
-            for (size_t i = 0; i < FeatureNodes.size(); i++)
+                        refFeatureNodes.resize((*FeatureNodes).size());
+                        for (size_t i = 0; i < (*FeatureNodes).size(); i++)
             {
                 //we need to keep this info to handle deletion
-                refFeatureNodes[i] = refNet.GetNodeFromName(FeatureNodes[i]->NodeName());
-                refNet.ChangeNode(FeatureNodes[i]->NodeName(), FeatureNodes[i]);
+                            refFeatureNodes[i] = refNet.GetNodeFromName((*FeatureNodes)[i]->NodeName());
+                            refNet.ChangeNode((*FeatureNodes)[i]->NodeName(), (*FeatureNodes)[i]);
             }
 
             refNet.RebuildNetwork(refNode);
@@ -731,10 +713,10 @@ protected:
 
         //initializing weights and gradient holder
         //only one criterion so far TODO: support multiple ones?
-        std::list<ComputationNodePtr>& learnableNodes = net.LearnableNodes(criterionNodes[0]);
+                    std::list<ComputationNodePtr>* learnableNodes = net.LearnableNodes((*criterionNodes)[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
-        for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++)
         {
             ComputationNodePtr node = (*nodeIter);
             smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(),
@@ -746,12 +728,12 @@ protected:
         epochCriterion = avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
         size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
-        std::vector<ElemType> epochEvalErrors(evaluationNodes.size(), std::numeric_limits<ElemType>::infinity());
+                    std::vector<ElemType> epochEvalErrors((*evaluationNodes).size(), std::numeric_limits<ElemType>::infinity());
 
         std::vector<wstring> evalNodeNames;
-        for (size_t i = 0; i < evaluationNodes.size(); i++)
+                    for (size_t i = 0; i < evaluationNodes->size(); i++)
         {
-            evalNodeNames.push_back(evaluationNodes[i]->NodeName());
+                        evalNodeNames.push_back((*evaluationNodes)[i]->NodeName());
         }
 
         size_t totalSamplesSeen = 0;
@@ -812,18 +794,18 @@ protected:
 
         bool learnRateReduced = false;
 
-        SetMaxTempMemSizeForCNN(net, criterionNodes[0], m_maxTempMemSizeInSamplesForCNN);
+                    SetMaxTempMemSizeForCNN(net, (*criterionNodes)[0], m_maxTempMemSizeInSamplesForCNN);
         if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
             SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
         }
 
-        for (int i = startEpoch; i < (int) m_maxEpochs; i++)
+                    for (int i = startEpoch; i < (int)m_maxEpochs; i++)
         {
             auto t_start_epoch = Timer::MilliSecondElapsed();
 
             // set dropout rate
-            SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+                        SetDropoutRate(net, (*criterionNodes)[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
             // learning rate adjustment
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None ||
@@ -901,10 +883,20 @@ protected:
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                 i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], chosenMinibatchSize));
 
-            TrainOneEpoch(net, refNet, refNode, i, m_epochSize,
-                          trainSetDataReader, learnRatePerSample, chosenMinibatchSize, FeatureNodes,
-                          labelNodes, criterionNodes, evaluationNodes,
-                          inputMatrices, learnableNodes, smoothedGradients,
+            TrainOneEpoch(net,
+                            refNet, 
+                            refNode, 
+                            i, 
+                            m_epochSize,
+                            trainSetDataReader, 
+                            learnRatePerSample, 
+                            chosenMinibatchSize, 
+                            FeatureNodes,
+                            labelNodes, 
+                            criterionNodes, 
+                            evaluationNodes,
+                            inputMatrices, 
+                            learnableNodes, smoothedGradients,
                           epochCriterion, epochEvalErrors, totalSamplesSeen);
 
             auto t_end_epoch = Timer::MilliSecondElapsed();
@@ -930,7 +922,7 @@ protected:
                 fprintf(stderr, "Ave LearnRatePerSample = %.10g; Epoch Time=%.8g\n",
                         learnRatePerSample, epochTime);
                 fprintf(stderr, "Finished Epoch[%d]: Criterion Node [%ls] Per Sample = %.8g\n",
-                        i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
+                                i + 1, (*criterionNodes)[0]->NodeName().c_str(), epochCriterion);
 
                 for (size_t j = 0; j < epochEvalErrors.size(); j++)
                 {
@@ -953,10 +945,10 @@ protected:
                         allSamples = 1;
                     }
 
-                    factor = (ElemType) mySamples / (ElemType) allSamples;
+                                factor = (ElemType)mySamples / (ElemType)allSamples;
                 }
 
-                for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                            for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++)
                 {
                     ComputationNodePtr node = (*nodeIter);
                     Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
@@ -987,10 +979,10 @@ protected:
                 {
                     SimpleEvaluator<ElemType> evalforvalidation(net);
                     vector<wstring> cvSetTrainAndEvalNodes;
-                    cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
-                    cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
+                                cvSetTrainAndEvalNodes.push_back((*criterionNodes)[0]->NodeName());
+                                cvSetTrainAndEvalNodes.push_back((*evaluationNodes)[0]->NodeName());
 
-                    vector<ElemType> vScore = evalforvalidation.Evaluate(*validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
+                                vector<ElemType> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
                     fprintf(stderr, "Finished Epoch[%d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
                             i + 1, vScore[0], vScore[1]);
 
@@ -1125,15 +1117,16 @@ protected:
             }
         }
 
+                    delete inputMatrices;
     }
 
 protected:
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetwork<ElemType>& net,
                     IDataReader<ElemType>* trainSetDataReader,
-                    std::vector<ComputationNodePtr>& FeatureNodes,
-                    std::vector<ComputationNodePtr>& labelNodes,
-                    std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
+                    std::vector<ComputationNodePtr>* FeatureNodes,
+                    std::vector<ComputationNodePtr>* labelNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
         std::list<ComputationNodePtr> nodes = net.GetNodesRequirePreComputation();
 
@@ -1164,7 +1157,7 @@ protected:
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
         }
 
-        while (trainSetDataReader->GetMinibatch(inputMatrices))
+                    while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
             UpdateEvalTimeStamps(FeatureNodes);
             UpdateEvalTimeStamps(labelNodes);
@@ -1196,19 +1189,19 @@ protected:
                                     const ComputationNodePtr refNode, const int epochNumber,
                                     const ElemType curLearnRate,
                                     IDataReader<ElemType>* trainSetDataReader,
-                                    const std::vector<ComputationNodePtr>& FeatureNodes,
-                                    const std::vector<ComputationNodePtr>& labelNodes,
-                                    const std::vector<ComputationNodePtr>& criterionNodes,
-                                    const std::vector<ComputationNodePtr>& evaluationNodes,
-                                    std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
-                                    const std::list<ComputationNodePtr>& learnableNodes,
+                    const std::vector<ComputationNodePtr>* FeatureNodes,
+                    const std::vector<ComputationNodePtr>* labelNodes,
+                    const std::vector<ComputationNodePtr>* criterionNodes,
+                    const std::vector<ComputationNodePtr>* evaluationNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                    const std::list<ComputationNodePtr>* learnableNodes,
                                     std::list<Matrix<ElemType>>& smoothedGradients,
                                     const bool learnRateInitialized,
                                     const ElemType largestPrevLearnRatePerSample)
     {
         ElemType epochCriterion = std::numeric_limits<ElemType>::infinity();
         ElemType prevCriterion = std::numeric_limits<ElemType>::infinity();
-        vector<ElemType> epochEvalErrors(evaluationNodes.size(), std::numeric_limits<ElemType>::infinity());
+                    vector<ElemType> epochEvalErrors(evaluationNodes->size(), std::numeric_limits<ElemType>::infinity());
 
         size_t totalSamplesSeen = 0;
         ElemType bestLearnRatePerSample = curLearnRate;
@@ -1223,7 +1216,7 @@ protected:
         ElemType baseCriterion;
 
         ElemType minLearnRate = m_minLearnRate * 0.3f;
-        ElemType learnRatePerSample = 1.0f / 8.0f / 0.618f / sqrt((ElemType) m_mbSize[epochNumber]);
+                    ElemType learnRatePerSample = 1.0f / 8.0f / 0.618f / sqrt((ElemType)m_mbSize[epochNumber]);
 
         if (learnRateInitialized && largestPrevLearnRatePerSample > 0)
         {
@@ -1265,7 +1258,7 @@ protected:
 
             if (m_epochSize != requestDataSize)
             {
-                ratio = pow(((ElemType) numFramesToUseInSearch) / m_epochSize, 1.0f / 2);
+                            ratio = pow(((ElemType)numFramesToUseInSearch) / m_epochSize, 1.0f / 2);
             }
 
             baseCriterion = max(ratio * prevCriterion + (1 - ratio) * baseCriterion, baseCriterion);
@@ -1283,8 +1276,7 @@ protected:
                                             /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                             /*out*/ totalSamplesSeen, "AdaptiveLearnRateSearch:");
 
-        }
-        while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
+                    } while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
 
         bestLearnRatePerSample = learnRatePerSample;
 
@@ -1363,12 +1355,12 @@ protected:
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const ElemType learnRatePerSample,
                                          const size_t minibatchSize,
-                                         const std::vector<ComputationNodePtr>& FeatureNodes,
-                                         const std::vector<ComputationNodePtr>& labelNodes,
-                                         const std::vector<ComputationNodePtr>& criterionNodes,
-                                         const std::vector<ComputationNodePtr>& evaluationNodes,
-                                         std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
-                                         const std::list<ComputationNodePtr>& learnableNodes,
+                    const std::vector<ComputationNodePtr>* FeatureNodes,
+                    const std::vector<ComputationNodePtr>* labelNodes,
+                    const std::vector<ComputationNodePtr>* criterionNodes,
+                    const std::vector<ComputationNodePtr>* evaluationNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                    const std::list<ComputationNodePtr>* learnableNodes,
                                          std::list<Matrix<ElemType>>& smoothedGradients,
                                          /*out*/ ElemType& epochCriterion,
                                          /*out*/ std::vector<ElemType>& epochEvalErrors,
@@ -1424,12 +1416,12 @@ protected:
                                    IDataReader<ElemType>* trainSetDataReader,
                                    const ElemType learnRatePerSample,
                                    const size_t initialMinibatchSize,
-                                   const std::vector<ComputationNodePtr>& FeatureNodes,
-                                   const std::vector<ComputationNodePtr>& labelNodes,
-                                   const std::vector<ComputationNodePtr>& criterionNodes,
-                                   const std::vector<ComputationNodePtr>& evaluationNodes,
-                                   std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
-                                   const std::list<ComputationNodePtr>& learnableNodes,
+                    const std::vector<ComputationNodePtr>* FeatureNodes,
+                    const std::vector<ComputationNodePtr>* labelNodes,
+                    const std::vector<ComputationNodePtr>* criterionNodes,
+                    const std::vector<ComputationNodePtr>* evaluationNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                    const std::list<ComputationNodePtr>* learnableNodes,
                                    std::list<Matrix<ElemType>>& smoothedGradients,
                                    const ElemType learningRateAdjustmentFactor)
     {
@@ -1449,13 +1441,13 @@ protected:
         if (learningRateChangeSoFar < 1.0f)
         {
             // we can safely increase MB size (note: this may be bigger than our max)
-            minMinibatchSize = (size_t) (minMinibatchSize / learningRateChangeSoFar);
+                        minMinibatchSize = (size_t)(minMinibatchSize / learningRateChangeSoFar);
         }
 
         if (epochNumber < 2 && m_prevChosenMinibatchSize != 0)
         {
             // newly started training: any previous MB size stored in the model is to be ignored
-            fprintf (stderr, "before epoch .2, previous minibatchSize %d is "
+                        fprintf(stderr, "before epoch .2, previous minibatchSize %d is "
                      "considered invalid -> resetting\n", m_prevChosenMinibatchSize);
             m_prevChosenMinibatchSize = 0;
         }
@@ -1509,7 +1501,7 @@ protected:
 
     size_t RoundToMultipleOf64(float val)
     {
-        return 64 * (size_t) ((val + 32) / 64);
+                    return 64 * (size_t)((val + 32) / 64);
     }
 
     size_t RoundToMultipleOf64(size_t val)
@@ -1526,12 +1518,12 @@ protected:
                                       const size_t numFramesToUseInSearch,
                                       IDataReader<ElemType>* trainSetDataReader,
                                       const ElemType learnRatePerSample,
-                                      const std::vector<ComputationNodePtr>& FeatureNodes,
-                                      const std::vector<ComputationNodePtr>& labelNodes,
-                                      const std::vector<ComputationNodePtr>& criterionNodes,
-                                      const std::vector<ComputationNodePtr>& evaluationNodes,
-                                      std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
-                                      const std::list<ComputationNodePtr>& learnableNodes,
+                    const std::vector<ComputationNodePtr>* FeatureNodes,
+                    const std::vector<ComputationNodePtr>* labelNodes,
+                    const std::vector<ComputationNodePtr>* criterionNodes,
+                    const std::vector<ComputationNodePtr>* evaluationNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                    const std::list<ComputationNodePtr>* learnableNodes,
                                       std::list<Matrix<ElemType>>& smoothedGradients,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize)
     {
@@ -1549,7 +1541,7 @@ protected:
         const float minibatchSizeTuningFactor = sqrtf(2.0f);
 
         size_t lastTriedtrialMinibatchSize = 0;
-        for (float trialMinibatchSizeFloat = (float) minMinibatchSize;
+                    for (float trialMinibatchSizeFloat = (float)minMinibatchSize;
              trialMinibatchSizeFloat <= maxMinibatchSize;
              trialMinibatchSizeFloat *= minibatchSizeTuningFactor)
         {
@@ -1560,7 +1552,7 @@ protected:
                     trialMinibatchSize, RoundToMultipleOf64(minMinibatchSize), RoundToMultipleOf64(maxMinibatchSize));
 
             size_t totalSamplesSeen;
-            std::vector<ElemType> epochEvalErrors(evaluationNodes.size(), std::numeric_limits<ElemType>::infinity());
+                        std::vector<ElemType> epochEvalErrors(evaluationNodes->size(), std::numeric_limits<ElemType>::infinity());
             ElemType epochCriterion = std::numeric_limits<ElemType>::infinity();
 
             // Train on a few minibatches and so we can observe the epochCriterion as we try increasing
@@ -1614,19 +1606,19 @@ protected:
     // fed to the neural network as features.
     void AttemptUtteranceDerivativeFeatures(ComputationNetwork<ElemType>& net,
                                             IDataReader<ElemType>* trainSetDataReader,
-                                            const std::vector<ComputationNodePtr>& FeatureNodes,
-                                            std::map<std::wstring, Matrix<ElemType>*>& inputMatrices)
+                    const std::vector<ComputationNodePtr>* FeatureNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
         // Tries to read an utterance and run forward computation on the
         // whole utterance.
         assert(trainSetDataReader != NULL);
         std::wstring uttID;
-        if (trainSetDataReader->GetForkedUtterance(uttID, inputMatrices))
+                    if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
         {
             UpdateEvalTimeStamps(FeatureNodes);
 
-            std::vector<ComputationNodePtr>& outputNodes = net.OutputNodes();
-            if (outputNodes.size() < 1)
+                        std::vector<ComputationNodePtr>* outputNodes = net.OutputNodes();
+                        if (outputNodes->size() < 1)
             {
                 throw std::logic_error("no output node was found.");
             }
@@ -1634,8 +1626,8 @@ protected:
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
-            net.Evaluate(outputNodes[0]);   // Only evaluate the first output
-            trainSetDataReader->ComputeDerivativeFeatures(uttID, outputNodes[0]->FunctionValues());
+                        net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
+                        trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
         }
     }
 
@@ -1647,12 +1639,12 @@ protected:
                          IDataReader<ElemType>* trainSetDataReader,
                          const ElemType learnRatePerSample,
                          size_t tunedMBSize,
-                         const std::vector<ComputationNodePtr>& FeatureNodes,
-                         const std::vector<ComputationNodePtr>& labelNodes,
-                         const std::vector<ComputationNodePtr>& criterionNodes,
-                         const std::vector<ComputationNodePtr>& evaluationNodes,
-                         std::map<std::wstring, Matrix<ElemType>*>& inputMatrices,
-                         const std::list<ComputationNodePtr>& learnableNodes,
+                    const std::vector<ComputationNodePtr>* FeatureNodes,
+                    const std::vector<ComputationNodePtr>* labelNodes,
+                    const std::vector<ComputationNodePtr>* criterionNodes,
+                    const std::vector<ComputationNodePtr>* evaluationNodes,
+                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                    const std::list<ComputationNodePtr>* learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
                          /*out*/ ElemType& epochCriterion,
                          /*out*/ std::vector<ElemType>& epochEvalErrors,
@@ -1692,7 +1684,7 @@ protected:
 
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
         startReadMBTime = Timer::MilliSecondElapsed();
-        while (trainSetDataReader->GetMinibatch(inputMatrices))
+                    while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
 #ifdef MPI_SUPPORT
             DecimateMinibatch(inputMatrices);
@@ -1728,29 +1720,29 @@ protected:
                 Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
                                               refNode->FunctionValues(),
                                               1 - m_adaptationRegWeight,
-                                              labelNodes[0]->FunctionValues());
+                                (*labelNodes)[0]->FunctionValues());
             }
 
             // only compute gradient when learning rate is large enough
             if (learnRatePerSample > m_minLearnRate * 0.01)
             {
                 // use only the first criterion. Is there any possibility to use more?
-                net.ComputeGradient(criterionNodes[0]);
+                            net.ComputeGradient((*criterionNodes)[0]);
             }
             else
             {
                 // use only the first criterion. Is there any possibility to use more?
-                net.Evaluate(criterionNodes[0]);
+                            net.Evaluate((*criterionNodes)[0]);
             }
 
-            Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(),
+                        Matrix<ElemType>::AddElementToElement((*criterionNodes)[0]->FunctionValues(),
                                                   0, 0, localEpochCriterion, 0, 0);
 
             std::vector<ElemType> mbEvalErrors(numEvalNodes, 0);
             for (size_t i = 0; i < numEvalNodes; i++)
             {
-                net.Evaluate(evaluationNodes[i]);
-                Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(),
+                            net.Evaluate((*evaluationNodes)[i]);
+                            Matrix<ElemType>::AddElementToElement((*evaluationNodes)[i]->FunctionValues(),
                                                       0, 0, localEpochEvalErrors, 0, i);
             }
 
@@ -1758,7 +1750,7 @@ protected:
             if (learnRatePerSample > m_minLearnRate * 0.01)
             {
                 auto smoothedGradientIter = smoothedGradients.begin();
-                for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
+                            for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++, smoothedGradientIter++)
                 {
                     ComputationNodePtr node = *nodeIter;
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
@@ -1777,8 +1769,8 @@ protected:
             numMBsRun++;
             if (m_traceLevel > 0)
             {
-                ElemType MBReadTime = (ElemType) (endReadMBTime - startReadMBTime) / (MS_PER_SEC);
-                ElemType MBComputeTime = (ElemType) (endComputeMBTime - startComputeMBTime) / MS_PER_SEC;
+                            ElemType MBReadTime = (ElemType)(endReadMBTime - startReadMBTime) / (MS_PER_SEC);
+                            ElemType MBComputeTime = (ElemType)(endComputeMBTime - startComputeMBTime) / MS_PER_SEC;
 
                 readTimeInMBs += MBReadTime;
                 ComputeTimeInMBs += MBComputeTime;
@@ -1790,7 +1782,7 @@ protected:
                     epochCriterion = localEpochCriterion.Get00Element();
                     for (size_t i = 0; i < numEvalNodes; i++)
                     {
-                        epochEvalErrors[i] = (const ElemType) localEpochEvalErrors(0, i);
+                                    epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
                     }
 
                     fprintf(stderr, "%s Epoch[%d of %d]-Minibatch[%d-%d of %d]: SamplesSeen = %d; TrainLossPerSample = %.8g; ",
@@ -1841,7 +1833,7 @@ protected:
         epochCriterion = localEpochCriterion.Get00Element();
         for (size_t i = 0; i < numEvalNodes; i++)
         {
-            epochEvalErrors[i] = (const ElemType) localEpochEvalErrors(0, i);
+                        epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
         }
 
         return totalEpochSamples;
@@ -1877,7 +1869,7 @@ public:
 
         GradientsUpdateType adpType = sgd->GradUpdateType();
         ElemType noiseStd = sgd->GradientUpdateNoiseStd();
-        Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE) functionValues.GetDeviceId());
+                    Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE)functionValues.GetDeviceId());
         if (noiseStd > 0)
         {
             // get the gradient structure since gradient is sparse
@@ -1909,9 +1901,9 @@ public:
         }
         else if (adpType == GradientsUpdateType::RmsProp)
         {
-            ElemType aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType) sgd->m_rpi.gamma,
-                                                              (ElemType) sgd->m_rpi.inc, (ElemType) sgd->m_rpi.max,
-                                                              (ElemType) sgd->m_rpi.dec, (ElemType) sgd->m_rpi.min, needAveMultiplier);
+                        ElemType aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma,
+                            (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
+                            (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
         }
 
@@ -1943,7 +1935,7 @@ protected:
                        const bool needAveMultiplier) const
     {
 #if DUMPOUTPUT
-        fprintf(stderr, "Update_%ls\n",node->NodeName().c_str());
+                    fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
 #endif
         UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
@@ -2068,7 +2060,7 @@ protected:
         }
         else
         {
-            wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
+                        wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int)epoch1Base);
             return w;
         }
 
@@ -2186,23 +2178,23 @@ protected:
 public:
 
     bool GradientCheck(ComputationNetwork<ElemType>& net,
-                       const std::vector<ComputationNodePtr>& criterionNodes,
-                       const std::list<ComputationNodePtr>& learnableNodes,
+                    const std::vector<ComputationNodePtr>* criterionNodes,
+                    const std::list<ComputationNodePtr>* learnableNodes,
                        int npos)
     {
         vector<string> errMsgs;
 
         // gradient checking
-        for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++)
         {
             ComputationNodePtr node = (*nodeIter);
             char wstrtmp[2048];
 
-            for (size_t itry = 0; itry < min((size_t) 50, node->FunctionValues().GetNumElements()); itry++)
+                        for (size_t itry = 0; itry < min((size_t)50, node->FunctionValues().GetNumElements()); itry++)
             {
                 /// no support to sparse matrix yet
-                int irow = (int) fmod(rand(), node->FunctionValues().GetNumRows() - 1);
-                int icol = (int) fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                            int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
+                            int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
                 irow = max(0, irow);
                 icol = max(0, icol);
 
@@ -2218,7 +2210,7 @@ public:
                 node->UpdateEvalTimeStamp();
 
                 // use only the first criterion. Is
-                net.ComputeGradient(criterionNodes[npos]);
+                            net.ComputeGradient((*criterionNodes)[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
                 {
@@ -2227,7 +2219,7 @@ public:
 
                 //ElemType mbEvalCri =
                 //criterionNode should be a scalar
-                criterionNodes[npos]->FunctionValues().Get00Element();
+                            (*criterionNodes)[npos]->FunctionValues().Get00Element();
                 ElemType eGradErr = node->GradientValues()(irow, icol);
                 if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
                 {
@@ -2246,10 +2238,10 @@ public:
                 }
 
                 node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]);
+                            net.Evaluate((*criterionNodes)[npos]);
                 //criterionNode should be a scalar
 
-                ElemType mbEvalCriPos = criterionNodes[npos]->FunctionValues().Get00Element();
+                            ElemType mbEvalCriPos = (*criterionNodes)[npos]->FunctionValues().Get00Element();
 
                 node->FunctionValues()(irow, icol) = eNeg;
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
@@ -2259,10 +2251,10 @@ public:
                 }
 
                 node->UpdateEvalTimeStamp();
-                net.Evaluate(criterionNodes[npos]);
+                            net.Evaluate((*criterionNodes)[npos]);
 
                 // criterionNode should be a scalar
-                ElemType mbEvalCriNeg = criterionNodes[npos]->FunctionValues().Get00Element();
+                            ElemType mbEvalCriNeg = (*criterionNodes)[npos]->FunctionValues().Get00Element();
 
                 // back to its orginal parameter value
                 node->FunctionValues()(irow, icol) = eOrg;
@@ -2273,12 +2265,12 @@ public:
                 }
 
                 // check if they are consistent
-                ElemType eGradNum = (ElemType) ((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
-                ElemType threshold = (ElemType) pow((ElemType) 10.0,
+                            ElemType eGradNum = (ElemType)((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
+                            ElemType threshold = (ElemType)pow((ElemType) 10.0,
                                                     max((ElemType) 0.0,
                                                         ceil(log10(min(fabs(eGradErr),
-                                                                       fabs(eGradNum))))) - (int) m_gradientCheckSigDigit);
-                ElemType diff = (ElemType) fabs(eGradErr - eGradNum);
+                                fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                            ElemType diff = (ElemType)fabs(eGradErr - eGradNum);
                 bool wrong = (std::isnan(diff) || diff > threshold);
                 if (wrong)
                 {

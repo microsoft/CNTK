@@ -256,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues, 
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
@@ -1410,7 +1410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t i = t % nS;
                 if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
                 {
-                    if ((*m_sentenceSeg)(j, i) == NO_LABELS)
+                    if ((*m_sentenceSeg)(i,j) == NO_LABELS)
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
 

@@ -111,13 +111,13 @@ public:
     int nwords, dims, nsamps, nglen, nmefeats;
     Matrix<ElemType>* m_id2classLocal; // CPU version
     Matrix<ElemType>* m_classInfoLocal; // CPU version
-
+    
     Matrix<ElemType>* m_id2Prob; // CPU version
     int class_size;
     map<int, vector<int>> class_words;
 
     int noise_sample_size;
-    noiseSampler<long> m;
+    noiseSampler<long> m_noiseSampler;
 
     ReaderMode readerMode;
     int eos_idx, unk_idx;
@@ -219,8 +219,16 @@ protected:
 
 public:
     virtual void Init(const ConfigParameters& config);
-    void ReadClassInfo(const wstring & vocfile, bool flatten) ;
-    void ReadWord(char *wrod, FILE *fin);
+    static void ReadClassInfo(const wstring & vocfile, int& class_size,
+        map<string, int>& word4idx,
+        map<int, string>& idx4word,
+        map<int, int>& idx4class,
+        map<int, size_t> & idx4cnt, 
+        int nwords,
+        string mUnk,
+        noiseSampler<long>& m_noiseSampler,
+        bool flatten);
+    static void ReadWord(char *wrod, FILE *fin);
 
     void GetLabelOutput(std::map<std::wstring, Matrix<ElemType>*>& matrices, 
                        size_t m_mbStartSample, size_t actualmbsize);
@@ -253,7 +261,9 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
     
     virtual bool DataEnd(EndDataType endDataType);
-    void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
+
+    int GetSentenceEndIdFromOutputLabel(){ return -1; };
+
 };
 
 template<class ElemType>
@@ -277,7 +287,10 @@ public:
 	using SequenceReader<ElemType>::ReadClassInfo;
 	using SequenceReader<ElemType>::LoadLabelFile;
 	using SequenceReader<ElemType>::word4idx;
-	using SequenceReader<ElemType>::m_mbStartSample;
+    using SequenceReader<ElemType>::idx4word;
+    using SequenceReader<ElemType>::idx4cnt;
+    using SequenceReader<ElemType>::mUnk;
+    using SequenceReader<ElemType>::m_mbStartSample;
 	using SequenceReader<ElemType>::m_epoch;
 	using SequenceReader<ElemType>::m_totalSamples;
 	using SequenceReader<ElemType>::m_epochStartSample;
@@ -316,13 +329,17 @@ public:
 	using SequenceReader<ElemType>::m_sequence;
 	using SequenceReader<ElemType>::idx4class;
 	using SequenceReader<ElemType>::m_indexer;
-	using SequenceReader<ElemType>::m;
+	using SequenceReader<ElemType>::m_noiseSampler;
 	using SequenceReader<ElemType>::readerMode;
 	using SequenceReader<ElemType>::GetIdFromLabel;
 	using SequenceReader<ElemType>::GetInputToClass;
 	using SequenceReader<ElemType>::GetClassInfo;
     using IDataReader<ElemType>::mBlgSize;
     using IDataReader<ElemType>::mDoRandomize;
+
+    using LabelType = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+
 
 
 private:
@@ -383,6 +400,8 @@ public:
 
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
     void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+
+    int GetSentenceEndIdFromOutputLabel();
 
 };
 
