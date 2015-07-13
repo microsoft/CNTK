@@ -429,7 +429,7 @@ public:
                     throw std::invalid_argument("momentumPerMB must be in [0, 1).");
                 }
 
-                m_momentumPerSample[i] = exp(log(momentumPerMB[i]) / m_mbSize[i]);
+                m_momentumPerSample[i] =(float) pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
             }
         }
         else
