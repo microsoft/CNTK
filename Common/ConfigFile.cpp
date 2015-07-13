@@ -193,16 +193,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         File file(filePath, fileOptionsRead);
 
-        // initialize with file name
-        std::string path = msra::strfun::utf8(filePath);
-        auto location = path.find_last_of("/\\");
+        // initialize configName with file name
+        std::string configName = msra::strfun::utf8(filePath);
+        auto location = configName.find_last_of("/\\");
         if (location != npos)
-            path = path.substr(location+1);
-        m_configName = move(path);
+            configName = configName.substr(location+1);
+        m_configName = move(configName);
 
         // read the entire file into a string
-        // CONSIDER: should the File API support this, instead of line by line?
-        size_t fileLength = file.Size();
+        // CONSIDER: should the File API support this, instead of us having to call it line by line?
+        size_t fileLength = file.CanSeek() ? file.Size() : 0;
         string str;
         string configFile;
         configFile.reserve(fileLength);

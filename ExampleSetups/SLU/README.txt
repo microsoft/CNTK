@@ -16,7 +16,7 @@ Run the command line with both globals.config and the desired config, separated 
 
 * note that full paths to config files need to be provided if you are not inside the config directory
 * for example 
-* C:\dev\cntk5\CNTKSolution\x64\Release\cntk configFile=C:\dev\cntk5\ExampleSetups\SLU\globals.config+C:\dev\cntk5\ExampleSetups\SLU\rnnlu.config
+*  C:\dev\cntk5\x64\release\CNTK.exe configFile=C:\dev\cntk5\ExampleSetups\SLU\globals.config+C:\dev\cntk5\ExampleSetups\SLU\rnnlu.config
 
 Scoring
 * ./score.sh 
@@ -27,6 +27,15 @@ Path Definitions:
 =================
 * globals.config [defines paths to feature and label files and experiments]
 
+Check training loss
+==========================
+$ grep Finish log_LSTM_LSTMTest.log
+Finished Epoch[1]: [Training Set] Train Loss Per Sample = 0.62975813    EvalErr Per Sample = 0.62975813   Ave Learn Rate Per Sample = 0.1000000015  Epoch Time=5250.689
+Finished Epoch[1]: [Validation Set] Train Loss Per Sample = 0.2035009  EvalErr Per Sample = 0.2035009
+
+------ code changed and the following need to be verified ----
+------ May 29 2015
+--------------------------------------------------------------
 Network Training Examples:
 ==========================
 * rnnlu.config 

@@ -914,6 +914,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (do_sync)    CUDACALL(cudaEventSynchronize(done));
                 if (do_sync)    CUDACALL(cudaEventDestroy(done));
             }
+            else if (!transposeA && transposeB)
+            {
+                if (beta != 1.0)
+                {
+                    RuntimeError("Only support c += alpha * a operation");
+                }
+                int blocksPerGrid = (int)ceil(1.0*m / threadsPerBlock);
+                cudaEvent_t done = nullptr;
+                if (do_sync)    CUDACALL(cudaEventCreate(&done));
+                for (int colInc = 0; colInc < l; colInc++)
+                {
+                    _denseMultSparseCSCTransposeAndAddToDense<ElemType> << < blocksPerGrid, threadsPerBlock >> > (
+                        m, //rowDense
+                        n,   //colSparse
+                        colInc,
+                        alpha,
+                        reinterpret_cast<const ElemType*>(lhs.BufferPointer()), //dense
+                        reinterpret_cast<const ElemType*>(rhs.NzValues()),  //sparse nz values
+                        rhs.RowLocation(),
+                        rhs.ColLocation(),
+                        reinterpret_cast<ElemType*> (c.BufferPointer())  //dense target
+                        );
+                }
+
+                if (do_sync)    CUDACALL(cudaEventRecord(done));
+                if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+                if (do_sync)    CUDACALL(cudaEventDestroy(done));
+            }
             else
             {
                 NOT_IMPLEMENTED;
@@ -1934,6 +1962,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         // transfer converted block over to this pointer
         *this = std::move(Transpose());
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    {
+        int m = (int)GetNumRows();
+        int n = (int)GetNumCols();
+
+        if (numCols == 0)
+            throw std::logic_error("The slice cannot have 0 columns.");
+
+        if (startColumn + numCols > n)
+            throw std::logic_error("The slice is out of range of the source matrix.");
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        GPUMatrix<ElemType> slice(m, numCols, GetComputeDeviceId());
+
+        PrepareDevice();
+        cusparseHandle_t cusparseHandle = 0;
+        CUSPARSECALL(cusparseCreate(&cusparseHandle));
+        cusparseMatDescr_t descr = 0;
+        CUSPARSECALL(cusparseCreateMatDescr(&descr));
+        cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL);
+        cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO);
+
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDACALL(cudaEventCreate(&done));
+        CUSPARSECALL(cusparseSetStream(cusparseHandle, t_stream));
+        if (sizeof(ElemType) == sizeof(float))
+        {
+            CUSPARSECALL(cusparseScsc2dense(cusparseHandle, m, numCols, descr, (float*)NzValues(), RowLocation(), ColLocation() + startColumn, (float*)slice.BufferPointer(), m));
+        }
+        else
+        {
+            CUSPARSECALL(cusparseDcsc2dense(cusparseHandle, m, numCols, descr, (double*)NzValues(), RowLocation(), ColLocation() + startColumn, (double*)slice.BufferPointer(), m));
+        }
+
+        if (do_sync)    CUDACALL(cudaEventRecord(done));
+        if (do_sync)    CUDACALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDACALL(cudaEventDestroy(done));
+        CUSPARSECALL(cusparseDestroy(cusparseHandle));
+
+        slice.SetMatrixName(m_matrixName);
+
+        return slice;
     }
 
     template<class ElemType>

@@ -37,6 +37,7 @@ CUDA_PATH = /usr/local/cuda-7.0
 
 # This is a suggested/default location for NVML
 NVML_INCLUDE = /usr/include/nvidia/gdk
+NVML_LIB = /usr/src/gdk/nvml/lib
 #######
 
 BUILDFOR = $(ARCH).$(DEVICE).$(BUILDTYPE).$(MATHLIB)
@@ -50,7 +51,7 @@ ifeq ($(BUILDTYPE),debug)
 	GPU_BUILDTYPE_OPT = -O0 -G -lineinfo
 else
 	BUILDTYPE_OPT = -O3 -flto
-	GPU_BUILDTYPE_OPT = -O3 -use_fast_math
+	GPU_BUILDTYPE_OPT = -O3 -use_fast_math -lineinfo
 endif
 
 # Set up math library defines and libraries
@@ -66,7 +67,7 @@ endif
 
 # Set up CUDA includes and libraries
 CUDA_INCLUDE = $(CUDA_PATH)/include
-CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
+CUDA_LIB = -L$(CUDA_PATH)/lib64 -L$(NVML_LIB) -lcublas -lcudart -lcurand -lcusparse -lnvidia-ml
 
 # Set up final list of libs to use
 ifeq ($(DEVICE),gpu)

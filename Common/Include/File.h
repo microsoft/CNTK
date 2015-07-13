@@ -18,6 +18,8 @@
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
+using namespace std;
+
 // file options, Type of textfile to use
 enum FileOptions
 {
@@ -86,9 +88,11 @@ template<typename FUNCTION> static void attempt (const FUNCTION & body)
 class File
 {
 private:
-    FILE* m_file;
-    size_t m_size;
-    int m_options; // FileOptions ored togther
+    std::wstring m_filename;
+    FILE* m_file;           // file handle
+    bool m_pcloseNeeded;    // was opened with popen(), use pclose() when destructing
+    bool m_seekable;        // this stream is seekable
+    int m_options;          // FileOptions ored togther
     void Init(const wchar_t* filename, int fileOptions);
 
 public:
@@ -97,13 +101,16 @@ public:
     File(const wchar_t* filename, int fileOptions);
     ~File(void);
 
+    void Flush();
+
+    bool CanSeek() const { return m_seekable; }
+    size_t Size();
     uint64_t GetPosition();
     void SetPosition(uint64_t pos);
-    void goToDelimiter(int delim);
+    void SkipToDelimiter(int delim);
 
     bool IsTextBased();
 
-    size_t Size();
     bool IsUnicodeBOM(bool skip=false);
     bool IsEOF();
     bool IsWhiteSpace(bool skip=false);
@@ -230,6 +237,8 @@ public:
         }
         return *this;
     }
+
+    operator FILE*() const { return m_file; }
 };
 
 }}}

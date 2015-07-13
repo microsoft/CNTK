@@ -21,6 +21,10 @@
 
 using namespace std;
 
+/// this is for sparse input, useful when input dimension is very large and sparse such as language modeling
+/// to-do: need to use it guided by argument
+#define SPARSE_INPUT
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define MAX_DEPTH 20
@@ -28,7 +32,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef enum tpRNNType { SIMPLENET=0, /// no recurrent connections
             SIMPLERNN = 1, LSTM=2, DEEPRNN=4, CLASSLM = 8, 
             LBLM=16,
-            NPLM = 32, CLASSLSTM = 64, NCELSTM = 128, TENSORIOLSTM = 256} RNNTYPE;
+			LSTMENCODER = 18,
+            NPLM = 32, CLASSLSTM = 64, NCELSTM = 128, 
+			CLSTM = 256, RCRF = 512, 
+            UNIDIRECTIONALLSTM=19,
+            BIDIRECTIONALLSTM= 20} RNNTYPE;
 
 
     enum class TrainingCriterion : int
@@ -37,7 +45,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CrossEntropy,
         SquareError,
         ClassCrossEntropyWithSoftmax,
-        NCECrossEntropyWithSoftmax
+        NCECrossEntropyWithSoftmax,
+		CRF
     };
 
     enum class EvalCriterion : int
@@ -48,7 +57,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ErrorPrediction,
         ClassCrossEntropyWithSoftmax,
 
-        NCECrossEntropyWithSoftmax
+        NCECrossEntropyWithSoftmax,
+        CRF
     };
 
     extern TrainingCriterion ParseTrainingCriterionString(wstring s);
@@ -106,6 +116,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
+        void InitAttentionNetworkConfig(const ConfigParameters& config)
+        {
+            m_auxFeatDim= config("auxfeatdim", "20");
+        }
+        
         virtual void InitRecurrentConfig(const ConfigParameters& config)
         {
             ConfigArray rLayerSizes = config("recurrentLayer", "");
@@ -116,6 +131,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_maOrder = config("maOrder", "0");
             m_lookupTableOrder = config("lookupTableOrder","0");
+
+            ConfigArray sSizes = config("streamSizes", "");
+            m_streamSizes = sSizes;
+            sSizes = config("lookupTableOrderSizes", "");  /// this allows having a multiple streams of inputs with
+            /// different lookuptable order sizes. the older one lookupTableOrder is still kept to have backward
+            /// support.
+            m_lookupTabelOrderSizes = sSizes;
+
             m_labelEmbeddingSize = config("labelEmbeddingSize","10");
             m_constForgetGateValue = config("constForgetGateValue","false");
             m_constInputGateValue = config("constInputGateValue","false");
@@ -124,6 +147,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_forgetGateInitVal = config("forgetGateInitVal", "-1");
             m_inputGateInitVal = config("inputGateInitVal", "-1");
             m_outputGateInitVal = config("outputGateInitVal", "-1");
+
+            m_sparse_input = config("sparseinput", "false");
 
             stringargvector strType = str_rnnType; 
             if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end())
@@ -142,8 +167,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_rnnType= CLASSLSTM;
             if (std::find(strType.begin(), strType.end(), L"NCELSTM") != strType.end())
                 m_rnnType = NCELSTM;
-            if (std::find(strType.begin(), strType.end(), L"TENSORIOLSTM") != strType.end())
-                m_rnnType= TENSORIOLSTM;
+            if (std::find(strType.begin(), strType.end(), L"CLSTM") != strType.end())
+                m_rnnType= CLSTM;
+			if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
+				m_rnnType = RCRF;
+            if (std::find(strType.begin(), strType.end(), L"LSTMENCODER") != strType.end())
+                m_rnnType = LSTMENCODER;
+            if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
+                std::find(strType.begin(), strType.end(), L"UNIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
+                m_rnnType = UNIDIRECTIONALLSTM;
+            if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
+                std::find(strType.begin(), strType.end(), L"BIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
+                m_rnnType = BIDIRECTIONALLSTM;
         }
 
         // Init - Builder Initialize for multiple data sets
@@ -189,6 +224,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 uniformInit, initValueScale, applyMeanVarNorm, needPrior, deviceId);   
 
             InitRecurrentConfig(config);
+
+            InitAttentionNetworkConfig(config);
+
         }
 
         virtual ~SimpleNetworkBuilder()
@@ -196,7 +234,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete m_net;
         }
 
-        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true) 
+        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
+            bool bAllowNoCriterion = false) 
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {
@@ -213,7 +252,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    m_net->LoadFromFile(modelFileName);
+                    m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterion);
                 }
             }
 
@@ -239,9 +278,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return BuildLogBilinearNetworkFromDescription(mbSize);
             if (m_rnnType == NPLM)
                 return BuildNeuralProbNetworkFromDescription(mbSize);
-            if (m_rnnType == TENSORIOLSTM)
-                return BuildLSTMInputOutputTensorNetworkFromDescription(mbSize);
-
+            if (m_rnnType == CLSTM)
+                return BuildConditionalLSTMNetworkFromDescription(mbSize);
+			if (m_rnnType == RCRF)
+				return BuildSeqTrnLSTMNetworkFromDescription(mbSize);
+            if (m_rnnType == LSTMENCODER)
+                return BuildLSTMEncoderNetworkFromDescription(mbSize);
+            if (m_rnnType == UNIDIRECTIONALLSTM)
+                return BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
+            if (m_rnnType == BIDIRECTIONALLSTM)
+                return BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
 
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
@@ -349,6 +395,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
 
+        ComputationNodePtr BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input);
+
+        ComputationNodePtr BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse = false);
+
         ComputationNode<ElemType>* BuildDirectConnect(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode);
 
         ComputationNetwork<ElemType>& BuildLogBilinearNetworkFromDescription(size_t mbSize = 1);
@@ -357,10 +407,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>& BuildLSTMNetworkFromDescription(size_t mbSize = 1);
 
-        ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
+		ComputationNetwork<ElemType>& BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize = 1);
+
+        ComputationNetwork<ElemType>& BuildLSTMEncoderNetworkFromDescription(size_t mbSize = 1);
         
+        ComputationNetwork<ElemType>& BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+
+        ComputationNetwork<ElemType>& BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize = 1);
+
+        ComputationNetwork<ElemType>& BuildCLASSLSTMNetworkFromDescription(size_t mbSize = 1);
+
+        ComputationNetwork<ElemType>& BuildConditionalLSTMNetworkFromDescription(size_t mbSize = 1);
+
         ComputationNetwork<ElemType>& BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
-        ComputationNetwork<ElemType>& BuildLSTMInputOutputTensorNetworkFromDescription(size_t mbSize = 1);        
+ 
         
         ComputationNetwork<ElemType>& BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName)
         {
@@ -588,7 +648,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return output;
         }
 
-        ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr)
+        ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr)
         {
             m_net->LabelNodes().push_back(label);
 
@@ -607,11 +667,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             case TrainingCriterion::SquareError:
                 output = m_net->SquareError(label, tinput, (trainNodeName == L"")?L"SquareError":trainNodeName);
                 break;
+                case TrainingCriterion::CRF:
+                    assert(trans != nullptr);
+                    output = m_net->CRF(label, input, trans, (trainNodeName == L"") ? L"CRF" : trainNodeName);
+                    break;
             case TrainingCriterion::ClassCrossEntropyWithSoftmax:
                 output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"")?L"ClassCrossEntropyWithSoftmax":trainNodeName);
                 break;
             case TrainingCriterion::NCECrossEntropyWithSoftmax:
                 output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
+                //output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
                 break;
          default:
                 throw std::logic_error("Unsupported training criterion.");
@@ -620,25 +685,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
                 (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
+                (m_evalCriterion == EvalCriterion::CRF && m_trainCriterion == TrainingCriterion::CRF) ||
                 (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax) ||
                 (m_evalCriterion == EvalCriterion::NCECrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::NCECrossEntropyWithSoftmax)))
             {
                 switch (m_evalCriterion)
                 {
                 case EvalCriterion::CrossEntropyWithSoftmax:
-                    output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"CrossEntropyWithSoftmax":evalNodeName);
+                    //output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
+                    output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
                     break;
                 case EvalCriterion::ClassCrossEntropyWithSoftmax:
+                    //output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"EvalClassCrossEntropyWithSoftmax" : evalNodeName);
                     output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);
                     break;  
                 case EvalCriterion::NCECrossEntropyWithSoftmax:
                     output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"NoiseContrastiveEstimationNode" : evalNodeName);
                     break;
                 case EvalCriterion::SquareError:
-                    output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"SquareError":evalNodeName);
+                    //output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
+                    output = m_net->SquareError(label, tinput, (evalNodeName == L"") ? L"SquareError" : evalNodeName);
                     break;
                 case EvalCriterion::ErrorPrediction:
-                    output = m_net->ErrorPrediction(label, tinput, (evalNodeName == L"")?L"ErrorPrediction":evalNodeName);
+					output = m_net->ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
+					break;
+				case EvalCriterion::CRF:
+					assert(trans != nullptr);
+					output = m_net->CRF(label, tinput, trans, (evalNodeName == L"") ? L"EvalCRF" : evalNodeName);
                     break;
                 default:
                     throw std::logic_error("Unsupported training criterion.");
@@ -741,6 +814,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType m_inputGateInitVal;
         ElemType m_outputGateInitVal;
   
+        intargvector m_streamSizes;  /// for multiple stream data
+        intargvector m_lookupTabelOrderSizes; /// each stream has its own projection, so need to provide with the lookup table order size for each stream
+
         int m_lookupTableOrder;
         int m_labelEmbeddingSize;
 
@@ -752,6 +828,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_vocabSize; /// vocabulary size
         int nce_noises;
 
+        bool m_sparse_input; 
+
+        /**
+        for attention network development
+        */
+        size_t m_auxFeatDim;
     };
 
 }}}

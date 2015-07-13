@@ -20,8 +20,6 @@ Profiler::Profiler(int numSamples)
    :m_numSamples(numSamples),
     m_isProfilingActive(false)
 {
-    if (m_numSamples > 0)
-        Start();
 }
 
 Profiler::~Profiler()
@@ -44,6 +42,11 @@ void Profiler::NextSample()
     {
         if (--m_numSamples == 0)
             Stop();
+    }
+    else
+    {
+        if (m_numSamples > 0)
+            Start();
     }
 }
 

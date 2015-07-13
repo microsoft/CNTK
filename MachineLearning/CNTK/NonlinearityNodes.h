@@ -307,6 +307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SigmoidNode<float>; 
     template class SigmoidNode<double>;
 
+
     template<class ElemType>
     class TanhNode : public ComputationNode<ElemType>
     {
@@ -446,6 +447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TanhNode<float>; 
     template class TanhNode<double>;
 
+
     template<class ElemType>
     class LogNode : public ComputationNode<ElemType>
     {
@@ -583,6 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LogNode<float>;
     template class LogNode<double>;
+
 
 
     template<class ElemType>
@@ -1149,6 +1152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LogSoftmaxNode<float>;
     template class LogSoftmaxNode<double>;
 
+
     //calculates: the log likelihood of a feature given GMM parameters
     template<class ElemType>
     class GMMLogLikelihoodNode : public ComputationNode<ElemType>
@@ -1613,5 +1617,651 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
+
+    template<class ElemType>
+    class DropoutNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+
+        DropoutNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                m_dropoutRate = 0;
+                m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
+                InitRecurrentNode();
+            }
+
+        DropoutNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_maskOfDropout(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_dropoutRate = 0;  //dropout is consisered as a training parameter and thus not reinitialized if loadfromfile
+                m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
+
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Dropout operation only takes one input.");
+            ComputeInputPartialS(m_dropoutRate, Inputs(0)->GradientValues(), m_maskOfDropout, GradientValues());
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Dropout operation only takes one input.");
+
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
+            if (m_dropoutRate > 0)
+            {
+                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            }
+
+            ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
+        }
+
+        static void WINAPI ComputeInputPartialS(const ElemType dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        {
+            if (dropoutRate > 0)
+            {
+                inputGradientValues.AddElementProductOf(gradientValues, maskOfDropout);
+            }
+            else
+            {
+                inputGradientValues += gradientValues;
+            }
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, FunctionValues(), m_maskOfDropout, Inputs(0)->FunctionValues());
+        }
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
+
+            Matrix<ElemType> sliceMask = Matrix<ElemType>();
+            if (m_dropoutRate > 0)
+            {
+                FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+                m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+                sliceMask = m_maskOfDropout.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            }
+
+            sliceOutputValue = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
+        }
+
+        static void WINAPI EvaluateThisNodeS(const ElemType dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
+        {
+            if (dropoutRate > 0)
+            {
+                maskOfDropout.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
+
+                maskOfDropout.SetUniformRandomMask(dropoutRate, ElemType(1.0) / (ElemType(1) - dropoutRate), randomSeed);
+                randomSeed += 1073807359;  //1073807359 is a very large prime number to avoid collision with other dropout nodes
+
+                functionValues.AssignElementProductOf(maskOfDropout, inputFunctionValues);
+#if NANCHECK
+                functionValues.HasNan("DropOut");
+#endif
+            }
+            else
+            {
+                //remove this line since we can get same effect by overwritting the FunctionValues functions without copying the values
+                //functionValues = inputFunctionValues;
+            }
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            if (m_dropoutRate > 0)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual Matrix<ElemType>& FunctionValues()
+        {
+            if (m_dropoutRate > 0)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("Dropout operation should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("Dropout operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr inputNode)
+        {
+            m_children.resize(1);
+            m_children[0] = inputNode;
+        }
+
+        void SetDropoutRate(const ElemType val)
+        {
+            if (val < 0 || val >= 1)
+                throw std::logic_error("DropoutRate must be >= 0 and < 1.");
+            m_dropoutRate = val;
+        }
+
+        void SetRandomSeed(const unsigned long val)
+        {
+            m_randomSeed = (unsigned long)val;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_maskOfDropout.GetDeviceId() != deviceId)
+                    m_maskOfDropout.TransferFromDeviceToDevice(m_maskOfDropout.GetDeviceId(), deviceId, true);
+            }
+        }
+
+        static const std::wstring TypeName() { return L"Dropout"; }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            DropoutNode<ElemType>* node = (DropoutNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_dropoutRate = m_dropoutRate;
+                node->m_randomSeed = m_randomSeed;
+                node->m_maskOfDropout = m_maskOfDropout;
+            }
+        }
+
+        // copy constructor
+        DropoutNode(const DropoutNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_maskOfDropout(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new DropoutNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    private:
+        ElemType m_dropoutRate;
+        unsigned long m_randomSeed;
+
+        Matrix<ElemType> m_maskOfDropout;
+    };
+
+    template class DropoutNode<float>;
+    template class DropoutNode<double>;
+
+    template<class ElemType>
+    class ReshapeNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+    public:
+
+        ReshapeNode(const DEVICEID_TYPE deviceId, size_t numRows, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                m_numRows = numRows;
+
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        ReshapeNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_numRows(0)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        ReshapeNode(const ReshapeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        ReshapeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            ComputationNodePtr node = new ReshapeNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            ReshapeNode<ElemType>* node = (ReshapeNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_numRows = m_numRows;
+            }
+        }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_numRows;
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+
+            fstream >> m_numRows;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"Reshape"; }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, true);
+
+            //WARNING: this node will destroy the image size information from the child
+            m_outputWidth = 1;
+            m_outputChannels = 1;
+            m_outputHeight = m_numRows;
+
+            if (m_inputWidth * m_inputChannels != 1)
+                fprintf(stderr, "WARNING: Reshape operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i < ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        throw runtime_error("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                }
+
+                fprintf(stderr, ", NumOfRows=%lu)", m_numRows);
+            }
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("Reshape operation: Should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("Reshape operation: The input node has 0 element.");
+
+            size_t cols = Inputs(0)->FunctionValues().GetNumElements() / m_numRows;
+
+            // We can not do a proper pre-validation check for the reshaping node. There are cases when 
+            // reshaping only makes sense if we consider the whole minibatch but not based on a single
+            // sample. This is a hack to prevent the validation step from throwing an unnecessary error
+            // for cases where at runtime the operation would be valid
+            if (cols == 0)
+                cols = 1;
+            FunctionValues().Resize(m_numRows, cols);
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_numRows);
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            size_t rows = Inputs(0)->FunctionValues().GetNumRows();
+            if ((rows * m_samplesInRecurrentStep) % m_numRows > 0)
+            {
+                throw std::logic_error("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
+            }
+
+            size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRows);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRows)
+        {
+            functionValues.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
+            functionValues.AssignRowSliceValuesOf(inputFunctionValues, 0, inputFunctionValues.GetNumRows());
+
+            if (functionValues.GetNumRows() != numRows)
+            {
+                if (functionValues.GetNumElements() % numRows > 0)
+                    throw std::logic_error("Reshape operation: Number of elements in the input is not a multiple of the specified number of rows.");
+
+                functionValues.Reshape(numRows, functionValues.GetNumElements() / numRows);
+            }
+#if NANCHECK
+            functionValues.HasNan("Reshape");
+#endif
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Reshape operation only takes one input.");
+
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRows);
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Reshape operation only takes one input.");
+
+            size_t rows = Inputs(0)->GradientValues().GetNumRows();
+            if ((rows * m_samplesInRecurrentStep) % m_numRows > 0)
+            {
+                throw std::logic_error("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
+            }
+
+            size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
+
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
+
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRows);
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t /*numRows*/)
+        {
+            size_t numRows = inputGradientValues.GetNumRows();
+            inputGradientValues.Reshape(gradientValues.GetNumRows(), gradientValues.GetNumCols());
+            inputGradientValues += gradientValues;
+            inputGradientValues.Reshape(numRows, inputGradientValues.GetNumElements() / numRows);
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            if (Inputs(0)->FunctionValues().GetNumRows() != m_numRows)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+        }
+
+    private:
+        size_t m_numRows;
+    };
+
+    template class ReshapeNode<float>;
+    template class ReshapeNode<double>;
+
+    template<class ElemType>
+    class RowRepeatNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+    public:
+
+        RowRepeatNode(const DEVICEID_TYPE deviceId, size_t numRepeats, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                m_numRepeat = numRepeats;
+
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        RowRepeatNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_numRepeat(1)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        RowRepeatNode(const RowRepeatNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        RowRepeatNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            ComputationNodePtr node = new RowRepeatNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            RowRepeatNode<ElemType>* node = (RowRepeatNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_numRepeat = m_numRepeat;
+            }
+        }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+
+            fstream << m_numRepeat;
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+
+            fstream >> m_numRepeat;
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"RowRepeat"; }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void CopyImageSizeFromInputs()
+        {
+            CopyImageSizeFromInput(0, true);
+            m_outputHeight = m_inputHeight * m_numRepeat;
+
+            //WARNING: this node will destroy the image size information from the child
+            if (m_inputWidth * m_inputChannels != 1)
+                fprintf(stderr, "WARNING: RowRepeat operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i<ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        throw runtime_error("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                }
+
+                fprintf(stderr, ", numRepeats=%lu)", m_numRepeat);
+            }
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("RowRepeat operation should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("RowRepeat  operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * m_numRepeat, Inputs(0)->FunctionValues().GetNumCols());
+            CopyImageSizeFromInputs();
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), m_numRepeat);
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)
+        {
+            functionValues.AssignRepeatOf(inputFunctionValues, numRepeats, 1);
+#if NANCHECK
+            functionValues.HasNan("RowRepeat");
+#endif
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("RowRepeat only has one input.");
+
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRepeat);
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex != 0)
+                throw std::invalid_argument("RowRepeat only has one input.");
+
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRepeat);
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t numRepeats)
+        {
+            inputGradientValues.AddToRowRepeatValuesOf(gradientValues, numRepeats);
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            if (m_numRepeat == 1)
+                return m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+        }
+
+    private:
+        size_t m_numRepeat;
+    };
+
+    template class RowRepeatNode<float>;
+    template class RowRepeatNode<double>;
 
 }}}

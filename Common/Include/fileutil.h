@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>     // for strerror()
+#include <stdexcept>    // for exception
 
 using namespace std;
 
@@ -384,7 +385,7 @@ template <>   const wchar_t* GetFormatString(const wchar_t*);
 
 // GetScanFormatString - get the format string for a particular type
 template <typename T>
-const wchar_t* GetScanFormatString(T t)
+const wchar_t* GetScanFormatString(T)
 {
     assert(false);  // need a specialization
     return NULL;
@@ -603,9 +604,17 @@ static inline std::string &ltrim(std::string &s) {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
     return s;
 }
+static inline std::wstring &wltrim(std::wstring &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    return s;
+}
 
 // trim from end
 static inline std::string &rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    return s;
+}
+static inline std::wstring &wrtrim(std::wstring &s) {
     s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
     return s;
 }
@@ -614,7 +623,15 @@ static inline std::string &rtrim(std::string &s) {
 static inline std::string &trim(std::string &s) {
     return ltrim(rtrim(s));
 }
+static inline std::wstring &wtrim(std::wstring &s) {
+    return wltrim(wrtrim(s));
+}
 
 vector<string> sep_string(const string & str, const string & sep);
+vector<wstring> wsep_string(const wstring & str, const wstring & sep);
+
+wstring s2ws(const string& str);
+
+string ws2s(const wstring& wstr);
 
 #endif    // _FILEUTIL_

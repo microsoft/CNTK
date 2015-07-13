@@ -26,6 +26,7 @@
 
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
+#include "commandArgUtil.h"
 #include "HTKMLFWriter.h"
 #include "commandArgUtil.h"
 #ifdef LEAKDETECT
@@ -241,7 +242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         msra::files::make_intermediate_dirs (outputFile);
         msra::util::attempt (5, [&]()
         {
-            msra::asr::htkfeatwriter::write (outputFile, "USER", sampPeriod, output);
+            msra::asr::htkfeatwriter::write (outputFile, "USER", this->sampPeriod, output);
         });
                         
         fprintf (stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());
@@ -272,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         msra::files::make_intermediate_dirs (outputFile);
         msra::util::attempt (5, [&]()
         {
-            msra::asr::htkfeatwriter::writeKaldi (outputFile, "USER", sampPeriod, output, sizeof(ElemType));
+            msra::asr::htkfeatwriter::writeKaldi (outputFile, "USER", this->sampPeriod, output, sizeof(ElemType));
         });
                         
         fprintf (stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());

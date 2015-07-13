@@ -42,7 +42,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         mutable size_t m_numTimesDeviceChanged;
         mutable size_t m_numTimesMatrixTypeChanged;
-
+        mutable int m_devicesTransferedTo[2];
+            
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
         //Moves matrix from current device to device with id_to. This method doesn't change preferred device Id
@@ -73,6 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
         static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
         static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
+
         void Clear();
         ~Matrix();
 
@@ -118,7 +120,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
         void Reshape(const size_t numRows, const size_t numCols);
-        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 0, bool growOnly = true);  //by default we only reallocate if need to grow        
+        void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
+        /// similarly to the repmat operation in matlab or octave
+        static Matrix<ElemType> RepMat(const Matrix<ElemType>& frmMat, const size_t rows, const size_t cols);
         size_t GetAllocatedSize() const;
         void Reset(); //reset for sparse matrix
 
@@ -147,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp);
 
         Matrix<ElemType>& AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex);
-
+        Matrix<ElemType>& AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax);
         Matrix<ElemType>& AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias);
 
         Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
@@ -252,12 +256,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType LogAddSumOfElements() const;
 
+        Matrix<ElemType>&  AssignToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         Matrix<ElemType>&  AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         Matrix<ElemType>&  AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         Matrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
         Matrix<ElemType>&  AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
+        Matrix<ElemType>&  AddToRowRepeatValuesOf(const Matrix<ElemType>& a, const size_t numRepeats);
+
         Matrix<ElemType>&  AssignPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         Matrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const Matrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         
@@ -361,13 +368,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void MinusOneAt(Matrix<ElemType>& c, const size_t position);
 
         static void Scale(ElemType alpha, Matrix<ElemType>& a);
-        static void Scale(Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
+        static void Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a); //In this case Matrix alpha must be 1x1
         static void Scale(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void InnerProduct (const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise);
         static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
         static void ElementWisePower (ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
 
-        static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);       
+        static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
+        static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
     public:
         friend File& operator>>(File& stream, Matrix<ElemType>& M)
@@ -440,6 +448,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
 		public:
+            Matrix<ElemType>& Shift(const Matrix<ElemType>& a, int shift);
+
 			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
 			Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
 			static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);

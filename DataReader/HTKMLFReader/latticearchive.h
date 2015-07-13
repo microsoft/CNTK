@@ -934,16 +934,17 @@ public:
                     if (!isendworkaround.empty() && isendworkaround[k])       // secondary criterion to detect ends in broken lattices
                     {
                         k--;    // don't advance, since nothing to advance over
-                        goto skipscores;
                     }
-                    // this is a regular token: update it in-place
-                    auto & ai = uniquededgedatatokens[k];
-                    if (ai.unit >= idmap.size())
-                        throw std::runtime_error ("fread: broken-file heuristics failed");
-                    ai.updateunit (idmap);      // updates itself
-                    if (!ai.last)
-                        continue;
-                skipscores:
+                    else
+                    {
+                        // this is a regular token: update it in-place
+                        auto & ai = uniquededgedatatokens[k];
+                        if (ai.unit >= idmap.size())
+                            throw std::runtime_error ("fread: broken-file heuristics failed");
+                        ai.updateunit (idmap);      // updates itself
+                        if (!ai.last)
+                            continue;
+                    }
                     // if last then skip over the lm and ac scores
                     k += skipscoretokens;
                     uniquealignments++;

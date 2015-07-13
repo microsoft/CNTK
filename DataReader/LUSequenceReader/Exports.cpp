@@ -17,7 +17,8 @@ template<class ElemType>
 void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
 {
 //    *preader = new LUSequenceReader<ElemType>();
-    *preader = new BatchLUSequenceReader<ElemType>();
+//    *preader = new BatchLUSequenceReader<ElemType>();
+    *preader = new MultiIOBatchLUSequenceReader<ElemType>();
 }
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)

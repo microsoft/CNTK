@@ -41,12 +41,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using B::GetNumCols; using B::GetNumRows;
 
         void SetValue(const size_t row, const size_t col, ElemType val); 
-        void SetValue(const CPUSparseMatrix& /*val*/) { NOT_IMPLEMENTED; }
+        void SetValue(const CPUSparseMatrix& /*val*/);
 
         void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
 
         size_t BufferSize() const {return m_elemSizeAllocated*sizeof(ElemType);}
         ElemType* BufferPointer() const;
+
+        CPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
         void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/) { NOT_IMPLEMENTED; }
         
@@ -73,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
+        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
         void Reset();
 
         const ElemType operator() (const size_t row, const size_t col) const

@@ -13,15 +13,6 @@
 //#ifndef __unix__
 #include "ssematrix.h"
 //#endif
-//#include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
-//#include "simplesenonehmm.h"            // for MMI scoring
-//#include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
-
-//#include "rollingwindowsource.h"        // minibatch sources
-//#include "utterancesource.h"
-//#include "readaheadsource.h"
-//#include "chunkevalsource.h"
-//#include "minibatchiterator.h"
 
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
@@ -173,7 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         msra::files::make_intermediate_dirs (outputFile);
         msra::util::attempt (5, [&]()
         {
-            msra::asr::htkfeatwriter::write (outputFile, "USER", sampPeriod, output);
+            msra::asr::htkfeatwriter::write (outputFile, "USER", this->sampPeriod, output);
         });
                         
         fprintf (stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());

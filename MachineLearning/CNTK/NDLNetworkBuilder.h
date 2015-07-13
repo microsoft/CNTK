@@ -152,10 +152,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             delete m_executionEngine;
         }
-        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true) 
+        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
+            bool bAllowNoCriterionNode = false) 
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
-                m_net->LoadFromFile(modelFileName);
+                m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode);
 
             m_net->ResetEvalTimeStamp();
             return *m_net;

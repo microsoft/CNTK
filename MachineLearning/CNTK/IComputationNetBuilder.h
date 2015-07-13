@@ -14,7 +14,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class IComputationNetBuilder //Abstract Class that cannot be instantiated
     {
     public:
-        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const std::wstring& modelFileName, bool forceLoad = true) = 0;
+        virtual ComputationNetwork<ElemType>& LoadNetworkFromFile(const std::wstring& modelFileName, bool forceLoad = true, 
+            bool bAllowNoCriterion = false) = 0;
         virtual ComputationNetwork<ElemType>& BuildNetworkFromDescription() = 0;
         virtual ~IComputationNetBuilder() {};
     };

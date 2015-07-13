@@ -1,0 +1,186 @@
+load=ndlMacroDefine
+run=ndlBiLSTMCreateNetwork
+
+ndlMacroDefine=[
+    # Macro definitions
+    DelayNode(x)
+    {
+        D=Delay(x, delayInput=Dout, delayTime=1)
+    }
+
+    Lookup(x, indim, outdim)
+    [
+        E = Parameter(outdim, indim)
+        Lookup=Times(E, x)
+    ]
+
+    MeanVarNorm(x)
+    {   
+	xMean = Mean(x)
+    	xStdDev = InvStdDev(x)
+    	xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    }
+
+    LogPrior(labels)
+    {
+	Prior=Mean(labels)
+	LogPrior=Log(Prior)
+    }   
+
+    LSTMComponent(inputDim, outputDim, inputVal)
+    {
+        Wxo = Parameter(outputDim, inputDim)
+        Wxi = Parameter(outputDim, inputDim)
+        Wxf = Parameter(outputDim, inputDim)
+        Wxc = Parameter(outputDim, inputDim)
+
+        bo = Parameter(outputDim, init=fixedvalue, value=-1.0)
+        bc = Parameter(outputDim, init=fixedvalue, value=0.0)
+        bi = Parameter(outputDim, init=fixedvalue, value=-1.0)
+        bf = Parameter(outputDim, init=fixedvalue, value=-1.0)
+
+        Whi = Parameter(outputDim, outputDim)
+        Wci = Parameter(outputDim)
+        Whf = Parameter(outputDim, outputDim)
+        Wcf = Parameter(outputDim)
+        Who = Parameter(outputDim, outputDim)
+        Wco = Parameter(outputDim)
+        Whc = Parameter(outputDim, outputDim)
+
+        delayHI = Delay(outputDim, output, delayTime=1)
+        delayHF = Delay(outputDim, output, delayTime=1)
+        delayHO = Delay(outputDim, output, delayTime=1)
+        delayHC = Delay(outputDim, output, delayTime=1)
+        delayCI = Delay(outputDim, ct, delayTime=1)
+        delayCF = Delay(outputDim, ct, delayTime=1)
+        delayCC = Delay(outputDim, ct, delayTime=1)
+
+        WxiInput = Times(Wxi, inputVal)
+        WhidelayHI = Times(Whi, delayHI)
+        WcidelayCI = DiagTimes(Wci, delayCI)
+
+        it = Sigmoid (Plus ( Plus (Plus (WxiInput, bi), WhidelayHI), WcidelayCI))
+
+        WxcInput = Times(Wxc, inputVal)
+        WhcdelayHC = Times(Whc, delayHC)
+        bit = ElementTimes(it, Tanh( Plus(WxcInput, Plus(WhcdelayHC, bc))))
+        
+        Wxfinput = Times(Wxf, inputVal)
+        WhfdelayHF = Times(Whf, delayHF)
+        WcfdelayCF = DiagTimes(Wcf, delayCF)
+
+        ft = Sigmoid( Plus (Plus (Plus(Wxfinput, bf), WhfdelayHF), WcfdelayCF))
+
+        bft = ElementTimes(ft, delayCC)
+
+        ct = Plus(bft, bit)
+
+        Wxoinput = Times(Wxo, inputVal)
+        WhodelayHO = Times(Who, delayHO)
+        Wcoct = DiagTimes(Wco, ct)
+
+        ot = Sigmoid( Plus( Plus( Plus(Wxoinput, bo), WhodelayHO), Wcoct))
+
+        output = ElementTimes(ot, Tanh(ct))
+    }
+
+    LSTMNodeComponent(outputDim, colDim1, colDim2, inputVal)
+    {
+        inputGate = Parameter(outputDim, colDim1)
+        forgetGate = Parameter(outputDim, colDim1)
+        outputGate = Parameter(outputDim, colDim1)
+        memoryCell = Parameter(outputDim, colDim2)
+
+        LSTMNodeComponent = LSTM(inputVal, inputGate, forgetGate, outputGate, memoryCell)
+    }
+
+]
+
+
+ndlCreateNetwork=[
+
+	#define basic i/o
+	featDim=72
+	labelDim=183
+	hiddenDim=1024
+	features=Input(featDim, tag=feature)
+	labels=Input(labelDim, tag=label)
+
+	# define network
+	featNorm = MeanVarNorm(features)
+    
+    LSTMoutput = LSTMComponent(featDim, hiddenDim, featNorm)
+    W1 = Parameter(labelDim, hiddenDim)
+
+    LSTMoutputW1 = Times(W1, LSTMoutput)
+
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag=Criteria)
+    Err = ErrorPrediction(labels,LSTMoutputW1,tag=Eval)
+    
+    logPrior = LogPrior(labels)	 
+    ScaledLogLikelihood=Minus(LSTMoutputW1,logPrior,tag=Output)
+
+]
+
+ndlBiLSTMCreateNetwork=[
+
+	#define basic i/o
+	ltrDim=29
+	labelDim=108
+	embDim=50
+	hiddenDim=300
+
+	ltrForward=Input(ltrDim, tag=feature)
+	featureDelayedTarget=Input(labelDim, tag=feature)
+
+	labels=Input(labelDim, tag=label)
+
+	# projection
+    Wxo = Parameter(embDim, ltrDim)
+    Wxi = Parameter(embDim, labelDim)
+	ltrEmb = Times(Wxo, ltrForward)
+	prnEmb = Times(Wxi, featureDelayedTarget)
+
+	# first layer of LSTM
+	# 50 + 300 + 2
+	lstmCol1L1=352
+	# 50 + 300 + 1
+	lstmCol2L1=351
+	ltrLSTM = LSTMNodeComponent(hiddenDim, lstmCol1L1, lstmCol2L1, ltrEmb)
+	prnLSTM = LSTMNodeComponent(hiddenDim, lstmCol1L1, lstmCol2L1, prnEmb)
+
+	#backward direction
+	ltrBackward = TimeReverse(ltrLSTM)
+
+	# depth 2
+	forwardParallelLayer2 = Parallel(ltrLSTM, prnLSTM)
+	# 600 + 300 + 2
+	lstmCol3L2=902
+	# 600 + 300 + 1
+	lstmCol4L2=901
+	forwardLayer2 = LSTMNodeComponent(hiddenDim, lstmCol3L2, lstmCol4L2, forwardParallelLayer2)
+	# 300 + 300 + 2
+	lstmCol1L2=602
+	# 300 + 300 + 1
+	lstmCol2L2=601
+	backwardLayer2 = LSTMNodeComponent(hiddenDim, lstmCol1L2, lstmCol2L2, ltrBackward)
+
+	# depth 3
+    backwardLayer3 = TimeReverse(backwardLayer2)
+    depth3activity = Parallel(forwardLayer2, backwardLayer3)
+	# 600 + 300 + 2
+	lstmCol3L3=902
+	# 600 + 300 + 1
+	lstmCol4L3=901
+    LSTMoutput = LSTMNodeComponent(hiddenDim, lstmCol3L3, lstmCol4L3, depth3activity)
+
+    W1 = Parameter(labelDim, hiddenDim)
+
+    LSTMoutputW1 = Times(W1, LSTMoutput)
+
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag=Criteria)
+    Err = CrossEntropyWithSoftmax(labels, LSTMoutputW1,tag=Eval)
+
+	outputs = Softmax(LSTMoutputW1, tag=Output)
+
+]
