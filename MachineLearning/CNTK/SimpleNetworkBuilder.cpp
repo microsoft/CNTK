@@ -1398,7 +1398,7 @@ namespace Microsoft {
                     }
 
                     m_net->OutputNodes()->push_back(output);
-                    m_net->PairNodes()->push_back(output);
+                    m_net->PairNodes()->push_back(output);  /// need to provide pairnodes so that the next layer of network can connect to this network
 
                 }
 
