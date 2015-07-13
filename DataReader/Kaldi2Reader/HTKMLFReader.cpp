@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
         {
-            LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.\n");
+            //LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.\n");
         }
 
         // Initializes variables related to multi-utterance.
@@ -1177,7 +1177,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (!m_truncated)
                     {
                         assert(startFrame == 0);
-                        m_switchFrame[i] = 0;
                         m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
                         m_sentenceBegin.SetValue(0, m_sentenceBegin.GetNumCols()-1, (ElemType) SENTENCE_END);
 
