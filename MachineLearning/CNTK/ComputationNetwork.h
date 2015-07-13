@@ -2776,10 +2776,13 @@ namespace Microsoft {
                         {
                             m_outputNodes[i] = newNode;
                         }
-                        for (int i = 0; i<m_pairNodes.size(); i++)
+                    }
+                    
+                    for (int i = 0; i<m_pairNodes.size(); i++)
+                    {
+                        if (m_pairNodes[i] == oldNode)
                         {
-                            if (m_pairNodes[i] == oldNode)
-                                m_pairNodes[i] = newNode;
+                            m_pairNodes[i] = newNode;
                         }
                     }
                 }

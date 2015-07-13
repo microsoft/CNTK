@@ -599,7 +599,7 @@ namespace Microsoft {
                                 &((*featPtr)[j]->FunctionValues());
                         }
                         
-                        for (size_t j = 0; i<lablPtr->size(); j++)
+                        for (size_t j = 0; j<lablPtr->size(); j++)
                         {
                             (*matrices)[(*lablPtr)[j]->NodeName()] = 
                                 &((*lablPtr)[j]->FunctionValues());

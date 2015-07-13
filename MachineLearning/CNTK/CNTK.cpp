@@ -933,6 +933,8 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
     delete decoderDataReader;
     delete cvEncoderDataReader;
     delete cvDecoderDataReader;
+    delete backwardDecoderDataReader;
+    delete cvBackwardDecoderDataReader;
 }
 
 /**
