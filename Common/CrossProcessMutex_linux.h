@@ -8,6 +8,7 @@
 #include <string.h>
 #include <string>
 #include <cassert>
+#include <signal.h>
 
 class CrossProcessMutex
 {
@@ -18,6 +19,22 @@ class CrossProcessMutex
     int m_fd; // file descriptor
     std::string m_fileName; // lock file name
     struct flock m_lock; // fnctl lock structure
+
+    static void noOpAlarmHandler(int /*signum*/)
+    {
+      // this handler is intentionally NO-OP
+      // the side effect of execution this handler
+      // will be a termination of fcntl call below with EINTR
+    }
+
+    static void setupTimeout(int seconds)
+    {
+        struct sigaction action = {};
+        action.sa_handler = &CrossProcessMutex::noOpAlarmHandler;
+        sigaction(SIGALRM, &action, NULL);
+        alarm(seconds);
+    }
+
 public:
     CrossProcessMutex(const std::string& name)
         :m_fd(-1),
@@ -40,7 +57,14 @@ public:
             // locking it with the fcntl API
             memset(&m_lock, 0, sizeof(m_lock));
             m_lock.l_type = F_WRLCK;
+            // BUG: fcntl call with F_SETLKW doesn't always reliably detect when lock is released
+            // As a workaround, using alarm() for interupting fcntl if it waits more than 1 second
+            setupTimeout(1);
             int r = fcntl(fd, wait ? F_SETLKW : F_SETLK, &m_lock);
+            if (errno == EINTR) {
+                // retrying in the case of signal or timeout
+                continue;
+            }
             if (r != 0) {
                 // acquire failed
                 close(fd);

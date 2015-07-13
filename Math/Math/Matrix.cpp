@@ -11,8 +11,6 @@
 #include <assert.h>
 #include <math.h>
 #include "GPUWatcher.h"     // bring in this class as well so that it gets exported from this DLL
-#include <iostream>
-
 #ifndef CPUONLY
 #pragma comment (lib, "CNTKMathCUDA.lib")   // built by CNTKMathCUDA project
 #endif
@@ -3716,11 +3714,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
             throw std::logic_error("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
-        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
-        {
-            std::cerr << a.GetDeviceId() << " " << b.GetDeviceId() << " " << c.GetDeviceId() << " " << this->GetDeviceId() << std::endl;
+        if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())        
             NOT_IMPLEMENTED;
-        }
         
         this->Resize(1, 1);
 

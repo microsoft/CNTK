@@ -46,7 +46,7 @@ namespace Microsoft {
                 using SGD::m_doUnitTest;
                 using SGD::m_learnRateAdjustInterval;
                 using SGD::m_mbSize;
-                using SGD::m_momentumInputPerMB;
+                using SGD::m_momentumPerSample;
                 using SGD::m_learningRatesPerSample;
                 using SGD::m_dropoutRates;
                 using SGD::m_autoLearnRateSearchType;
@@ -308,7 +308,6 @@ namespace Microsoft {
                     if (startEpoch > 0)
                     {
                         learnRateInitialized = this->LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
-                        setMomentum(m_momentumInputPerMB[m_momentumInputPerMB.size() - 1]);
                     }
 
                     if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
@@ -331,7 +330,6 @@ namespace Microsoft {
                         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
                         {
                             learnRatePerSample = m_learningRatesPerSample[i];
-                            setMomentum(m_momentumInputPerMB[i]);
                         }
                         else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
                         {
@@ -619,7 +617,7 @@ namespace Microsoft {
                                 ComputationNodePtr node = (*nodeIter);
                                 Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                                UpdateWeights(node, smoothedGradient, learnRatePerSample, actualMBSize, m_mbSize[epochNumber], m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                                UpdateWeights(node, smoothedGradient, learnRatePerSample, m_momentumPerSample[epochNumber], actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
                             }
                         }
 
