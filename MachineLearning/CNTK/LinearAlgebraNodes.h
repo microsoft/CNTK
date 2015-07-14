@@ -300,7 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
-            inputGradientValues += gradientValues; //here the assumption is that gradientValues are a row vector
+            inputGradientValues += gradientValues; //here the assumption is that gradientValues is a row vector
         }
 
         virtual void EvaluateThisNode()
@@ -1312,12 +1312,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (cols0 == 1)
                 {
                     functionValues.SetValue(input1);
-					functionValues.ColumnElementMultiplyWith(input0);
+                    functionValues.ColumnElementMultiplyWith(input0);
                 }
                 else if (cols1 == 1)
                 {
                     functionValues.SetValue(input0);
-					functionValues.ColumnElementMultiplyWith(input1);
+                    functionValues.ColumnElementMultiplyWith(input1);
                 }
             }
             else
