@@ -196,12 +196,12 @@ namespace Microsoft {
                         throw std::logic_error("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
                     }
 
-                    CopyImageSizeFromInputs();
+                    InferImageDimsFromInputs();
                 }
 
-                virtual void CopyImageSizeFromInputs()
+                virtual void InferImageDimsFromInputs()
                 {
-                    CopyImageSizeFromInput(0, false);
+                    InferImageDimsFromInput(0, false);
 
                     m_outputChannels = 1;
                     m_outputWidth = 1;

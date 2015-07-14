@@ -278,7 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Validate() 
         {
             PrintSelfBeforeValidation();
-            //CopyImageSizeFromInputs(); //not necessary since InputValue are leafs. put it here for consistent
+            //InferImageDimsFromInputs(); //not necessary since InputValue are leafs. put it here for consistent
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
@@ -466,7 +466,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
           
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * wordsInEachSample, Inputs(1)->FunctionValues().GetNumCols());
 
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 

@@ -724,8 +724,7 @@ PfnDliHook __pfnDliNotifyHook2 = (PfnDliHook)DelayLoadNofify;
 // This is the failure hook, dliNotify = {dliFailLoadLib|dliFailGetProc}
 ExternC
 PfnDliHook   __pfnDliFailureHook2 = (PfnDliHook)DelayLoadNofify;
-
 #endif  // _WIN32
+}}}
 
 #endif  // CPUONLY
-}}}
