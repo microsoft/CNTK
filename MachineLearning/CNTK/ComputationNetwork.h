@@ -3815,7 +3815,6 @@ namespace Microsoft {
                 }
 
             public:
-                // public so PTask can use eval/gradient order, and pre-compute matrix sizes
                 void ClearGradientForAllNodes(const ComputationNodePtr rootNode)
                 {
                     std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(
@@ -3826,6 +3825,19 @@ namespace Microsoft {
                         (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
                     }
 
+                    for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+                    {
+                        (*nodeIter).m_completedGradient = false;
+                    }
+
+                    for (int i = 0; i < m_recurrentInfo.size(); i++)
+                    {
+                        m_recurrentInfo[i].m_completedGradient = false;
+                    }
+                }
+
+                void NeedToRecomputeRecurrentLoops()
+                {
                     for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
                     {
                         (*nodeIter).m_completedGradient = false;

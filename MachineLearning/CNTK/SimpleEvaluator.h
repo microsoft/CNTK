@@ -325,10 +325,23 @@ namespace Microsoft {
                 }
 
             protected:
-                void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodePtr>& evalNodes,
-                    const vector<ElemType> & evalResults, const vector<ElemType> & evalResultsLastMBs, bool displayConvertedValue = false)
+                void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, 
+                    const vector<ComputationNodePtr>& evalNodes,
+                    const ElemType evalResults, const ElemType evalResultsLastMBs, bool displayConvertedValue = false)
                 {
-                    fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
+                    vector<ElemType> evaR;
+                    evaR.push_back(evalResults);
+                    vector<ElemType> evaLast;
+                    evaLast.push_back(evalResultsLastMBs);
+
+                    DisplayEvalStatistics(startMBNum, endMBNum, numSamplesLastMBs, evalNodes, evaR, evaLast, displayConvertedValue);
+
+                }
+
+                void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodePtr>& evalNodes,
+                        const vector<ElemType> & evalResults, const vector<ElemType> & evalResultsLastMBs, bool displayConvertedValue = false)
+                {
+                        fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
                     for (size_t i = 0; i<evalResults.size(); i++)
                     {
@@ -564,6 +577,170 @@ namespace Microsoft {
                     for (int i = 0; i < evalResults.size(); i++)
                     {
                         evalResults[i] /= totalEpochSamples;
+                    }
+
+                    return evalResults;
+                }
+
+                /**
+                this evaluates encoder network and decoder framework
+                only beam search decoding is applied to the last network
+                */
+                ElemType EvaluateEncoderDecoderWithHiddenStates(
+                    vector<ComputationNetwork<ElemType>*> nets,
+                    vector<IDataReader<ElemType>*> dataReaders,
+                    const size_t mbSize,
+                    const size_t testSize = requestDataSize)
+                {
+                    size_t iNumNets = nets.size();
+
+                    ComputationNetwork<ElemType>* decoderNet = nullptr;
+                    IDataReader<ElemType>* decoderDataReader = dataReaders[iNumNets - 1];
+                    decoderNet = nets[iNumNets - 1];
+
+                    vector<ComputationNodePtr>* decoderEvaluationNodes = decoderNet->EvaluationNodes();
+
+                    ElemType evalResults = 0;
+
+                    vector<std::map<std::wstring, Matrix<ElemType>*>*> inputMatrices;
+                    for (auto ptr = nets.begin(); ptr != nets.end(); ptr++)
+                    {
+                        vector<ComputationNodePtr>* featNodes = (*ptr)->FeatureNodes();
+                        vector<ComputationNodePtr>* lablPtr = (*ptr)->LabelNodes();
+                        map<wstring, Matrix<ElemType>*>* pMap = new map<wstring, Matrix<ElemType>*>();
+                        for (auto pf = featNodes->begin(); pf != featNodes->end(); pf++)
+                        {
+                            (*pMap)[(*pf)->NodeName()] = &(*pf)->FunctionValues();
+                        }
+                        for (auto pl = lablPtr->begin(); pl != lablPtr->end(); pl++)
+                        {
+                            (*pMap)[(*pl)->NodeName()] =
+                                &((*pl)->FunctionValues());
+                        }
+                        inputMatrices.push_back(pMap);
+                    }
+
+                    //evaluate through minibatches
+                    size_t totalEpochSamples = 0;
+                    size_t numMBsRun = 0;
+                    size_t actualMBSize = 0;
+                    size_t numSamplesLastMBs = 0;
+                    size_t lastMBsRun = 0; //MBs run before this display
+
+                    ElemType evalResultsLastMBs = (ElemType)0;
+
+                    for (auto ptr = dataReaders.begin(); ptr != dataReaders.end(); ptr++)
+                    {
+                        (*ptr)->StartMinibatchLoop(mbSize, 0, testSize);
+                    }
+
+                    bool bContinueDecoding = true;
+                    while (bContinueDecoding)
+                    {
+
+                        /// load data
+                        auto pmat = inputMatrices.begin();
+                        bool bNoMoreData = false; 
+                        for (auto ptr = dataReaders.begin(); ptr != dataReaders.end(); ptr++, pmat++)
+                        {
+                            if ((*ptr)->GetMinibatch(*(*pmat)) == false)
+                            {
+                                bNoMoreData = true;
+                                break;
+                            }
+                        }
+                        if (bNoMoreData)
+                            break; 
+
+                        for (auto ptr = nets.begin(); ptr != nets.end(); ptr++)
+                        {
+                            vector<ComputationNodePtr>* featNodes = (*ptr)->FeatureNodes();
+                            UpdateEvalTimeStamps(featNodes); 
+                        }
+
+                        auto preader = dataReaders.begin();
+                        for (auto ptr = nets.begin(); ptr != nets.end(); ptr++, preader++)
+                        {
+                            actualMBSize = (*ptr)->GetActualMBSize();
+                            if (actualMBSize == 0)
+                                LogicError("decoderTrainSetDataReader read data but encoderNet reports no data read");
+
+                            (*ptr)->SetActualMiniBatchSize(actualMBSize);
+                            (*ptr)->SetActualNbrSlicesInEachRecIter((*preader)->NumberSlicesInEachRecurrentIter());
+                            (*preader)->SetSentenceSegBatch((*ptr)->SentenceBoundary(), (*ptr)->MinibatchPackingFlags());
+
+                            vector<ComputationNodePtr>* pairs = (*ptr)->PairNodes();
+                            for (auto ptr2 = pairs->begin(); ptr2 != pairs->end(); ptr2++)
+                            {
+                                (*ptr)->Evaluate(*ptr2);
+                            }
+                        }
+
+                        decoderNet = nets[iNumNets - 1];
+                        /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+                        actualMBSize = decoderNet->GetActualMBSize();
+                        decoderNet->SetActualMiniBatchSize(actualMBSize);
+                        if (actualMBSize == 0)
+                            LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
+                        decoderNet->SetActualNbrSlicesInEachRecIter(decoderDataReader->NumberSlicesInEachRecurrentIter());
+                        decoderDataReader->SetSentenceSegBatch(decoderNet->SentenceBoundary(), decoderNet->MinibatchPackingFlags());
+
+                        size_t i = 0; 
+                        assert(decoderEvaluationNodes->size() == 1);
+                        if (decoderEvaluationNodes->size() != 1)
+                        {
+                            LogicError("Decoder should have only one evaluation node");
+                        }
+
+                        for (auto ptr = decoderEvaluationNodes->begin(); ptr != decoderEvaluationNodes->end(); ptr++, i++)
+                        {
+                            decoderNet->Evaluate(*ptr);
+                            evalResults += (*ptr)->FunctionValues().Get00Element(); 
+                        }
+
+                        totalEpochSamples += actualMBSize;
+                        numMBsRun++;
+
+                        if (m_traceLevel > 0)
+                        {
+                            numSamplesLastMBs += actualMBSize;
+
+                            if (numMBsRun % m_numMBsToShowResult == 0)
+                            {
+                                DisplayEvalStatistics(lastMBsRun + 1, numMBsRun, numSamplesLastMBs, *decoderEvaluationNodes, evalResults, evalResultsLastMBs);
+
+                                evalResultsLastMBs = evalResults;
+
+                                numSamplesLastMBs = 0;
+                                lastMBsRun = numMBsRun;
+                            }
+                        }
+
+                        /// call DataEnd to check if end of sentence is reached
+                        /// datareader will do its necessary/specific process for sentence ending 
+                        for (auto ptr = dataReaders.begin(); ptr != dataReaders.end(); ptr++)
+                        {
+                            (*ptr)->DataEnd(endDataSentence);
+                        }
+                    }
+
+                    // show last batch of results
+                    if (m_traceLevel > 0 && numSamplesLastMBs > 0)
+                    {
+                        DisplayEvalStatistics(lastMBsRun + 1, numMBsRun, numSamplesLastMBs, *decoderEvaluationNodes, evalResults, evalResultsLastMBs);
+                    }
+
+                    //final statistics
+                    evalResultsLastMBs = 0;
+
+                    fprintf(stderr, "Final Results: ");
+                    DisplayEvalStatistics(1, numMBsRun, totalEpochSamples, *decoderEvaluationNodes, evalResults, evalResultsLastMBs);
+
+                    evalResults /= totalEpochSamples;
+
+                    for (auto ptr = inputMatrices.begin(); ptr != inputMatrices.end(); ptr++)
+                    {
+                        delete *ptr; 
                     }
 
                     return evalResults;
