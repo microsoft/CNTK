@@ -1169,6 +1169,10 @@ public:
         {
             newNode = new SumElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
+        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
+        {
+            newNode = new SumColumnElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ScaleNode<ElemType>::TypeName())
         {
             newNode = new ScaleNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1472,6 +1476,10 @@ public:
         else if (nodeType == SumElementsNode<ElemType>::TypeName())
         {
             newNode = new SumElementsNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
+        {
+            newNode = new SumColumnElementsNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == ScaleNode<ElemType>::TypeName())
         {
