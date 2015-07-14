@@ -115,7 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(1,1);
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
 
             // resize the temporaries to their proper size
             size_t cols = Inputs(0)->FunctionValues().GetNumCols();
@@ -124,9 +124,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxValues.Resize(1,cols);
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
