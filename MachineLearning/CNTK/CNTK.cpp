@@ -804,6 +804,9 @@ http://arxiv.org/pdf/1409.3215.pdf
 template <typename ElemType>
 void DoEncoderDecoder(const ConfigParameters& config)
 {
+    vector<IComputationNetBuilder<ElemType>*> netBuilders;
+    vector<IDataReader<ElemType>*> trainDataReader;
+    vector<IDataReader<ElemType>*> validationDataReader;
 
     ConfigParameters configSGD = config("SGD");
     bool makeMode = config("makeMode", "true");
@@ -844,8 +847,14 @@ void DoEncoderDecoder(const ConfigParameters& config)
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
-    sgd.EncoderDecoder(encoderNetBuilder, decoderNetBuilder, encoderDataReader, decoderDataReader,
-        cvEncoderDataReader, cvDecoderDataReader, makeMode);
+    netBuilders.push_back(encoderNetBuilder);
+    netBuilders.push_back(decoderNetBuilder);
+    trainDataReader.push_back(encoderDataReader);
+    trainDataReader.push_back(decoderDataReader);
+    validationDataReader.push_back(cvEncoderDataReader);
+    validationDataReader.push_back(cvDecoderDataReader);
+
+    sgd.EncoderDecoder(netBuilders, trainDataReader, validationDataReader, makeMode);
 
     delete encoderDataReader;
     delete decoderDataReader;
