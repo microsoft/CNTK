@@ -428,7 +428,7 @@ public:
                 {
                     throw std::invalid_argument("momentumPerMB must be in [0, 1).");
                 }
-                m_momentumPerSample[i] =(float) pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
+                m_momentumPerSample[i] = (float)pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
             }
         }
         else
@@ -437,7 +437,7 @@ public:
             m_momentumPerSample.resize(momentumVectorSize);
             for (int i = 0; i < momentumVectorSize; i++)
             {
-                m_momentumPerSample[i] = exp(log(0.9f) / m_mbSize[i]);
+                m_momentumPerSample[i] = (float)pow(0.9f, 1.0 / m_mbSize[i]);
             }
         }
 
@@ -2179,7 +2179,7 @@ protected:
 
     static ElemType MomentumPerMB(ElemType momentumPerSample, size_t minibatchSize)
     {
-        return exp(log(momentumPerSample) * minibatchSize);
+        return (ElemType)pow(momentumPerSample, minibatchSize);
     }
 
 public:
