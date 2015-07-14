@@ -2533,7 +2533,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _vectorSum<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(a.m_pArray, c.m_pArray, n, m, isColWise);
+        _vectorSum<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(c.m_pArray, a.m_pArray, n, m, isColWise);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
