@@ -475,10 +475,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return NULL;
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
             if (!IsLeaf())
-                CopyImageSizeFromInput(0); //copy from child 0 by default.
+                InferImageDimsFromInput(0); //copy from child 0 by default.
         }
 
         bool IsChildAnImage(const size_t index) const
@@ -740,10 +740,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-        void CopyImageSizeFromInput(const size_t index, const bool outputSameAsInput = true)
+        void InferImageDimsFromInput(const size_t index, const bool outputSameAsInput = true)
         {
             if (index >= ChildrenSize())
-                throw invalid_argument("CopyImageSizeFromInput: output index");
+                throw invalid_argument("InferImageDimsFromInput: output index");
         
             ComputationNodePtr child = m_children[index];
             if (child != nullptr)
@@ -1054,8 +1054,8 @@ protected:  \
         typedef ComputationNode<ElemType>* ComputationNodePtr;  \
 public: \
         using B::AttachInputs; using B::ChildrenNeedGradient; using B::ChildrenSize; using B::ClearGradientForChildren; \
-        using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::CopyImageSizeFromInput; \
-        using B::CopyImageSizeFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DetachInputs; \
+        using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::InferImageDimsFromInput; \
+        using B::InferImageDimsFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DetachInputs; \
         using B::DumpNodeInfo; using B::Duplicate; using B::EnumerateNodes; using B::EnumerateNodesForEval; \
         using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
         using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \

@@ -115,7 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -219,12 +219,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("SumElements operation: the input node has 0 element.");
 
             FunctionValues().Resize(1, 1);
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputWidth = 1;
             m_outputHeight = 1;        
@@ -373,12 +373,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
             FunctionValues().Resize(m_numRows, Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, true);
+            InferImageDimsFromInput(0, true);
             m_outputHeight = m_numRows;        
 
             //WARNING: this node will destroy the image size information from the child
@@ -531,12 +531,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             FunctionValues().Resize(totalRows, numCols);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, true);
+            InferImageDimsFromInput(0, true);
             m_outputHeight = FunctionValues().GetNumRows();
 
             //WARNING: this node will destroy the image size information from the child
@@ -680,12 +680,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             //left Node must be a scalar
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(1); 
+            InferImageDimsFromInput(1); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
@@ -863,12 +863,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("The Matrix dimension in the Times operation does not match.");
             }
             FunctionValues().Resize(rows0, cols1);
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()  
+        virtual void InferImageDimsFromInputs()  
         {
-            CopyImageSizeFromInput(1, false); //the second one is the input since it's column wize
+            InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
@@ -1049,12 +1049,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("The Matrix dimension in the TransposeTimes operation does not match.");
             }
             FunctionValues().Resize(cols0, cols1);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(1, false); //the second one is the input since it's column wize
+            InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
@@ -1196,15 +1196,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("The Matrix<ElemType> dimension in the ElementTimes operation does not match.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
             if (IsChildAnImage(0))  //when conflict, give priority to child 0
-                CopyImageSizeFromInput(0);
+                InferImageDimsFromInput(0);
             else
-                CopyImageSizeFromInput(1);
+                InferImageDimsFromInput(1);
         }
 
         virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
@@ -1456,24 +1456,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs() //based on the matrix with larger size
+        virtual void InferImageDimsFromInputs() //based on the matrix with larger size
         {
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
             if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
-                CopyImageSizeFromInput(0);
+                InferImageDimsFromInput(0);
             else if (rows0 < rows1 || cols0 < cols1) //child 1 is larger
-                CopyImageSizeFromInput(1);
+                InferImageDimsFromInput(1);
             else //same size
             {
                 if (IsChildAnImage(0))  //when conflict, give priority to child 0
-                    CopyImageSizeFromInput(0);
+                    InferImageDimsFromInput(0);
                 else
-                    CopyImageSizeFromInput(1);
+                    InferImageDimsFromInput(1);
             }
         }
 
@@ -1761,24 +1761,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs() //based on the matrix with larger size
+        virtual void InferImageDimsFromInputs() //based on the matrix with larger size
         {
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
             if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
-                CopyImageSizeFromInput(0);
+                InferImageDimsFromInput(0);
             else if (rows0 < rows1 || cols0 < cols1) //child 1 is larger
-                CopyImageSizeFromInput(1);
+                InferImageDimsFromInput(1);
             else //same size
             {
                 if (IsChildAnImage(0))  //when conflict, give priority to child 0
-                    CopyImageSizeFromInput(0);
+                    InferImageDimsFromInput(0);
                 else
-                    CopyImageSizeFromInput(1);
+                    InferImageDimsFromInput(1);
             }
         }
 
@@ -1917,12 +1917,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_innerproduct.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             m_rightGradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
 
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs() //this is element wise scaling, so based on child 1
+        virtual void InferImageDimsFromInputs() //this is element wise scaling, so based on child 1
         {
-            CopyImageSizeFromInput(1);
+            InferImageDimsFromInput(1);
         }
 
         virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
@@ -2154,12 +2154,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(1, Inputs(1)->FunctionValues().GetNumCols());
 
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs() 
+        virtual void InferImageDimsFromInputs() 
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -2372,14 +2372,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             FunctionValues().Resize(rows0 * rows1, Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()  
+        virtual void InferImageDimsFromInputs()  
         {
             //since it's symmetrical any one of the input may be the true input. 
             //since we dont' use the input image size info in the operation, the input part doesn't matter.
-            CopyImageSizeFromInput(1, false); 
+            InferImageDimsFromInput(1, false); 
 
             //after KhatriRaoProduct the structure is lost
             m_outputWidth = 1;
@@ -2624,12 +2624,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(negNumber + 1, Inputs(1)->FunctionValues().GetNumCols());
 
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -2806,12 +2806,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(cols0, rows0);
             mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false); //the second one is the input since it's column wize
+            InferImageDimsFromInput(0, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
             m_outputWidth = 1;

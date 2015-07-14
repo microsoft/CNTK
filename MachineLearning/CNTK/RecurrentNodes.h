@@ -345,8 +345,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
                 if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
-                CopyImageSizeFromInputs();
             }
+            InferImageDimsFromInputs(); 
         }
 
 
@@ -745,7 +745,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                        cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
                 if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
-                CopyImageSizeFromInputs();
             }
         }
 
@@ -1661,7 +1660,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 5)
                 throw std::logic_error("LSTMNode requires four inputs.");
 
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
 
             if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
@@ -1823,9 +1822,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(1, false);
+            InferImageDimsFromInput(1, false);
         }
 
         /// input(0) : child with dimension [inputdim x T]

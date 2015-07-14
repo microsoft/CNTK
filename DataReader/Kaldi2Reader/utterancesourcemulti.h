@@ -351,7 +351,8 @@ public:
                     throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
             if (m==0)
                 classidsbegin.clear();
-
+            
+            size_t uttRealNum = 0;
             foreach_index (i, infiles[m])
             {
                 if (i % (infiles[m].size() / 100 + 1) == 0) { fprintf (stderr, "."); fflush (stderr); }
@@ -397,15 +398,14 @@ public:
                 // TODO: we can store labels more efficiently now since we don't do frame-wise random access anymore.
     
                 // OK, utterance has all we need --remember it
-                utteranceset.push_back (std::move (utterance));
 
                 if (m==0)
                 {
-                    _totalframes += uttframes;
-                    framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
                     if (!labels.empty() && !lacksmlf)
                     //if (!labels.empty() && labelsiter != labels[0].end())
                     {
+                         // first verify that all the label files have the proper duration
+                        bool durationmatch = true;
                         foreach_index (j, labels)
                         {
                             const auto & labseq = labels[j].find(key)->second;
@@ -415,31 +415,43 @@ public:
                             {
                                 fprintf (stderr, " [duration mismatch (%zu in label vs. %zu in feat file), skipping %S]", labframes, uttframes, key.c_str());
                                 nomlf++;
-                                continue;   // skip this utterance at all
+                                durationmatch = false;
+                                break; // continue;   // skip this utterance at all
                             }
-                            // expand classid sequence into flat array
-                            foreach_index (i, labseq)
+                        }
+                        if (durationmatch){
+                            utteranceset.push_back(std::move(utterance));
+                            _totalframes += uttframes;
+                            framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
+                            // then parse each mlf if the durations are consistent
+                            foreach_index(j, labels)
                             {
-                                const auto & e = labseq[i];
-                                if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                                    throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
-                                if (e.classid >= udim[j])
+                                const auto & labseq = labels[j].find(key)->second;
+                        
+                                // expand classid sequence into flat array
+                                foreach_index (i, labseq)
                                 {
-                                    throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: class id exceeds model output dimension"));
+                                    const auto & e = labseq[i];
+                                    if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
+                                        throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                    if (e.classid >= udim[j])
+                                    {
+                                        throw std::runtime_error (msra::strfun::strprintf ("minibatchutterancesource: class id exceeds model output dimension"));
+                                    }
+                                    if (e.classid != (CLASSIDTYPE) e.classid)
+                                        throw std::runtime_error ("CLASSIDTYPE has too few bits");
+                                    for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
+                                        classids[j]->push_back ((CLASSIDTYPE) e.classid);
+                                    numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
+                                    counts[j].resize (numclasses[j], 0);
+                                    counts[j][e.classid] += e.numframes;
                                 }
-                                if (e.classid != (CLASSIDTYPE) e.classid)
-                                    throw std::runtime_error ("CLASSIDTYPE has too few bits");
-                                for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
-                                    classids[j]->push_back ((CLASSIDTYPE) e.classid);
-                                numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
-                                counts[j].resize (numclasses[j], 0);
-                                counts[j][e.classid] += e.numframes;
+                                classids[j]->push_back ((CLASSIDTYPE) -1);  // append a boundary marker marker for checking
+    
+                                if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
+                                    throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
                             }
-                            classids[j]->push_back ((CLASSIDTYPE) -1);  // append a boundary marker marker for checking
-
-                            if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
-                                throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
-                            assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
                         }
                     }
                     else{
@@ -448,7 +460,9 @@ public:
                 }
                 else
                 {
-                    assert(uttframes==framesaccum[i]); //ensure that number of frames is consistent in each input feature "stream"
+                    assert(uttframes==framesaccum[uttRealNum]); //ensure that number of frames is consistent in each input feature "stream"
+                    uttRealNum++;
+ 
                 }
             }
             fprintf (stderr, "feature set %d: %zu frames in %zu out of %zu utterances\n", m, _totalframes, utteranceset.size(),infiles[m].size());
