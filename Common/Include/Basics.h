@@ -55,11 +55,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
     static inline void LogicError(const string & message) { RuntimeError("%s", message.c_str()); }
 
-    // RuntimeError - throw a std::runtime_error with a formatted error string
-#ifdef _MSC_VER
-    __declspec(noreturn)
-#endif
-        static inline void Warning(const char * format, ...)
+    // Warning - warn with a formatted error string
+    static inline void Warning(const char * format, ...)
     {
         va_list args;
         char buffer[1024];
