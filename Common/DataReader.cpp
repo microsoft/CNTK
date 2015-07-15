@@ -186,7 +186,7 @@ size_t DataReader<ElemType>::NumberSlicesInEachRecurrentIter()
 }
 
 template<class ElemType>
-void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
         m_dataReader[m_ioNames[i]]->InitProposals(matrices);
@@ -195,11 +195,14 @@ void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>
 template<class ElemType>
 int DataReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 {
-    NOT_IMPLEMENTED;
+    int iRet = -1;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        iRet = m_dataReader[m_ioNames[i]]->GetSentenceEndIdFromOutputLabel();
+    return iRet;
 }
 
 template<class ElemType>
-bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>& matrices, const size_t tidx, vector<size_t>& history)
+bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>* matrices, const size_t tidx, vector<size_t>& history)
 {
     bool bRet = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)

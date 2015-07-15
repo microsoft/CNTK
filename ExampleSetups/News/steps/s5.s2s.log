@@ -1,0 +1,10 @@
+# this uses smaller learning rate
+
+d:\exp\bin\cntk\cntk.exe configFile=..\setups\global.s2s.config+..\setups\s2s.class.alignment.config DeviceNumber=Auto LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=d:\exp\news\s2sryrun LSTM=[SGD=[learningRatesPerSample=0.00001]] LSTM=[SGD=[gradientcheck=TRUE]] 
+
+# with 1 layer of LSTM, embeding 50, lstm dimension 100
+d:\bin\cntkjuly7\cntk.exe configFile=..\setups\global.s2s.config+..\setups\s2s.class.alignment.config DeviceNumber=1 LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=d:\exp\news\attention_dryrun LSTM=[SGD=[learningRatesPerSample=0.001]] 
+
+# test
+\\speechstore5\transient\kaishengy\bin\binjuly2\cntk.exe configFile=\\speechstore5\userdata\kaishengy\exp\smt\setups\global.cs-en.config+\\speechstore5\userdata\kaishengy\exp\smt\setups\s2s.class.alignment.config LSTM=[SGD=[numMBsToShowResult=1000]] ExpDir=\\speechstore5\transient\kaishengy\exp\smt\c2elr1e3cs200emb50lstm100 MdlDir=//speechstore5/transient/kaishengy/exp/smt/c2elr1e3cs200emb50lstm100 LSTMTest=[encoderModelPath=$MdlDir$\smt.lstm.encoder.27] LSTMTest=[decoderModelPath=$MdlDir$\smt.lstm.decoder.27] NBRUTT=1 command=LSTMTest DeviceNumber=-1 LSTMTest=[beamWidth=0.05]
+

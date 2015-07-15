@@ -172,6 +172,8 @@
     <ClInclude Include="ComputationNode.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DecoderNode.h" />
+    <ClInclude Include="MinibatchFetcher.h" />
+    <ClInclude Include="MinibatchPrefetcher.h" />
     <ClInclude Include="EvaluationCriterionNodes.h" />
     <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IExecutionEngine.h" />

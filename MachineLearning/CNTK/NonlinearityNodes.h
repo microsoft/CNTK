@@ -115,7 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradientOfRectifiedLinear.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -254,7 +254,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradientOfSigmoid.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -394,7 +394,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradientOfTanh.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -533,7 +533,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradientOfLog.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput)
@@ -673,7 +673,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradientOfExp.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput)
@@ -811,7 +811,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradientOfCosine.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -911,8 +911,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(m_gradientDotValue, m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues, 
-            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)  
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues,
+            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradientDotValue.AssignInnerProductOf(gradientValues, functionValues, true);
             diff.AssignDifferenceOf(gradientValues, gradientDotValue);
@@ -920,14 +920,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        virtual void EvaluateThisNode()  
+        virtual void EvaluateThisNode()
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)
         {
+            size_t r = Inputs(0)->FunctionValues().GetNumRows(), c = Inputs(0)->FunctionValues().GetNumCols();
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (m_functionValues.GetNumCols() != c ||
+                m_functionValues.GetNumRows() != r)
+                m_functionValues.Resize(r, c);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
@@ -953,7 +957,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("SoftmaxNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -989,7 +993,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         SoftmaxNode(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId) 
+            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }
@@ -1095,7 +1099,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("LogSoftmaxNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
         virtual void AttachInputs(const ComputationNodePtr singleInput)
@@ -1540,12 +1544,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
 
             FunctionValues().Resize(1, cols[3]);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(3, false);
+            InferImageDimsFromInput(3, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -1754,7 +1758,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
         virtual void AttachInputs(const ComputationNodePtr inputNode)
@@ -1913,9 +1917,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, true);
+            InferImageDimsFromInput(0, true);
             InferImageDimensions();
 
             if (m_imageWidth == 0 || m_imageHeight == 0 || m_imageChannels == 0)
@@ -1984,7 +1988,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (cols == 0)
                 cols = 1;
             FunctionValues().Resize(m_numRows, cols);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
         virtual void EvaluateThisNode()
@@ -2153,6 +2157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
+
     template<class ElemType>
     class RowRepeatNode : public ComputationNode<ElemType>
     {
@@ -2234,9 +2239,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, true);
+            InferImageDimsFromInput(0, true);
             m_outputHeight = m_inputHeight * m_numRepeat;
 
             //WARNING: this node will destroy the image size information from the child
@@ -2285,7 +2290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("RowRepeat  operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * m_numRepeat, Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
         virtual void EvaluateThisNode()

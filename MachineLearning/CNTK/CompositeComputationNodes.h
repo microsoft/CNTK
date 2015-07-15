@@ -136,7 +136,7 @@ public:
         size_t cols = cols0;
         FunctionValues().Resize(rows, cols);
 
-        CopyImageSizeFromInput(0);
+        InferImageDimsFromInput(0);
     }
 
     virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
@@ -388,7 +388,7 @@ public:
         }
 
         FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
-        CopyImageSizeFromInputs();
+        InferImageDimsFromInputs();
     }
 
     virtual void AttachInputs(const ComputationNodePtr singleInput)
@@ -580,7 +580,7 @@ public:
         m_var.Resize(inputDim, 1);
 
         FunctionValues().Resize(inputDim, 1);
-        CopyImageSizeFromInputs();
+        InferImageDimsFromInputs();
     }
 
     virtual void AttachInputs(const ComputationNodePtr singleInput)
@@ -819,7 +819,7 @@ public:
         Inputs(1)->NeedGradient() = false;
         Inputs(2)->NeedGradient() = false;  //prevent learning
         FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-        CopyImageSizeFromInputs();
+        InferImageDimsFromInputs();
     }
 
     //leftNode should be the empirical
@@ -1009,7 +1009,7 @@ public:
         Inputs(2)->NeedGradient() = false;
 
         FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-        CopyImageSizeFromInputs();
+        InferImageDimsFromInputs();
     }
 
     //leftNode should be the empirical
@@ -1291,7 +1291,7 @@ public:
         cols = Inputs(0)->FunctionValues().GetNumCols();
 
         FunctionValues().Resize(rows, cols);
-        CopyImageSizeFromInput(0);
+        InferImageDimsFromInput(0);
     }
 
     virtual void AttachInputs(const ComputationNodePtr cNode)
