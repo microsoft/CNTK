@@ -2863,13 +2863,54 @@ dim
 
 :
 \emph default
- an integer that specifies the full feature vector dimension with the desired
- context window.
+ an integer that specifies the feature vector dimension.
+ There are two operating modes for this parameter.
+ If the 
+\emph on
+contextWindow
+\emph default
+ parameter is specified, the dim value represents the size of the original
+ (single frame) feature vector.
+ If 
+\emph on
+contextWindow
+\emph default
+ is not specified, then a symmetric context window can be created by specifying
+ the desired final feature vector dimension.
  For example, if you had 72-dimensional features (24-dimensional filterbank
- features plus delta and delta-delta coefficients) and the network is designed
- to process a context window of 11 frames, the specified dimension should
- be 792.
- Note that only symmetric context windows are supported.
+ features plus delta and delta-delta coefficients) and the contextWindow
+ was not specified, setting dim=792 would create a context window of 11
+ frames (72*11), with 5 frames on either side of the current frame.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\emph on
+contextWindow
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+contextWindow
+\end_layout
+
+\end_inset
+
+:
+\emph default
+ specify the context window of input frames.
+ This parameter takes a single value for symmetric context windows and two
+ colon-separated values for assymetric context windows.
+ For example, contextWindow=5 will create an input context window of 11
+ frames, using 5 frames to the left and right of the current frame.
+ Setting contextWindow=5:2 will create a context window of 8 frames, with
+ a left context of 5 frames and a right context of 2 frames.
+ Note that when contextWindow is used, the 
+\emph on
+dim 
+\emph default
+should reflect the dimension of the original feature vector.
  
 \end_layout
 

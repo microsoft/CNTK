@@ -301,8 +301,12 @@ public:
         std::vector<size_t> numclasses;                  // number of output classes as found in the label file (diagnostics)
         _totalframes = 0;
         wstring key;
-        std::vector<size_t>framesaccum;
         size_t numutts=0;
+        
+        std::vector<bool>uttisvalid; // boolean flag to check that utterance is valid. valid means number of 
+                                     //frames is consistent across all feature and label streams
+        std::vector<size_t>uttduration; // track utterance durations to determine utterance validity
+
         std::vector<size_t> classidsbegin;
         if (!lattices.empty())
         {
@@ -320,12 +324,66 @@ public:
             //lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
     
         }
-        foreach_index(i, infiles){
+
+        // m is index for feature stream
+        // i is index for files within a stream (items in SCP file)
+        foreach_index(m, infiles){
             allchunks.push_back(std::vector<utterancechunkdata>());
             featdim.push_back(0); // initialize
             sampperiod.push_back(0);
             featkind.push_back("");
         }
+
+        // first check consistency across feature streams
+        // We'll go through the SCP files for each stream to make sure the duration is consistent
+        // If not, we'll plan to ignore the utterance, and inform the user
+        foreach_index(m, infiles){
+            if (m == 0){
+                numutts = infiles[m].size();
+                uttisvalid = std::vector<bool>(numutts, true);
+                uttduration = std::vector<size_t>(numutts, 0);
+            }
+            else if (infiles[m].size()!=numutts)
+                throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
+
+            foreach_index(i, infiles[m]){
+                utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
+                const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
+                // we need at least 2 frames for boundary markers to work
+                if (uttframes < 2)
+                    throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
+                if (uttframes > frameref::maxframesperutterance)
+                {
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                    uttduration[i] = 0;
+                    uttisvalid[i] = false;
+                }
+                else{
+                    if (m == 0){
+                        uttduration[i] = uttframes;
+                        uttisvalid[i] = true;
+                    }
+                    else if (uttduration[i] != uttframes){
+                        fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)", i, uttduration[i], uttframes);
+                        uttduration[i] = 0;
+                        uttisvalid[i] = false;
+                    }
+                }
+            }
+        }
+        size_t invalidutts=0;
+        foreach_index(i, uttisvalid){
+            if (!uttisvalid[i])
+                invalidutts++;
+        }
+        if (invalidutts > uttisvalid.size() / 2)
+            throw std::runtime_error("minibatchutterancesource: too many files not found in with inconsistent durations, assuming broken configuration\n");
+        else if (invalidutts>0)
+            fprintf(stderr, "Found inconsistent durations across feature streams in %d out of %d files.", invalidutts, uttisvalid.size());
+
+
+        // now process the features and labels
+        size_t utterancesetsize = 0;
         foreach_index (m, infiles)
         {
             utteranceset.clear();
@@ -337,114 +395,129 @@ public:
             if (m==0)
                 classidsbegin.clear();
 
-            foreach_index (i, infiles[m])
+            foreach_index(i, infiles[m])
             {
-                if (i % (infiles[m].size() / 100 + 1) == 0) { fprintf (stderr, "."); fflush (stderr); }
+                if (i % (infiles[m].size() / 100 + 1) == 0) { fprintf(stderr, "."); fflush(stderr); }
                 // build utterance descriptor
                 if (m == 0 && !labels.empty())
                     classidsbegin.push_back(classids[0]->size());
-                    
-                utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels.empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
-                const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
-                // we need at least 2 frames for boundary markers to work
-                if (uttframes < 2)
-                    throw std::runtime_error ("minibatchutterancesource: utterances < 2 frames not supported");
-                if (uttframes > frameref::maxframesperutterance)
-                {
-                    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
-                    continue;
-                }
 
-                // check whether we have the ref transcript
-                //auto labelsiter = labels[0].end();
-                bool lacksmlf = true;
-                if (!labels.empty())    // empty means unsupervised mode (don't load any)
-                {
-                    key = utterance.key();
-                    // check if labels are available (if not, it normally means that no path was found in realignment)
-                    auto labelsiter = labels[0].find (key);
-                    //const bool lacksmlf = (labelsiter == labels[0].end());
-                    lacksmlf = (labelsiter == labels[0].end());
-                    if (lacksmlf)
-                        if (nomlf++ < 5)
-                            fprintf (stderr, " [no labels for  %S]", key.c_str());
-                    // check if lattice is available (when in lattice mode)
-                    // TODO: also check the #frames here; requires a design change of the TOC format & a rerun
-                    const bool lackslat = !lattices.empty() && !lattices.haslattice (key); // ('true' if we have no lattices)
-                    if (lackslat)
-                        if (nolat++ < 5)
-                            fprintf (stderr, " [no lattice for %S]", key.c_str());
-                    // skip if either one is missing
-                    if (lacksmlf || lackslat)
-                        continue;   // skip this utterance at all
-                }
-                // push the label sequence into classids[], since we already looked it up
-                // TODO: we can store labels more efficiently now since we don't do frame-wise random access anymore.
-    
-                // OK, utterance has all we need --remember it
+                if (uttisvalid[i]){
+                    utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), labels.empty() ? 0 : classidsbegin[i]);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
+                    const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
+                    assert(uttframes == uttduration[i]); // ensure nothing funky happened
 
-                if (m==0)
-                {
-                    if (!labels.empty() && !lacksmlf)
-                    //if (!labels.empty() && labelsiter != labels[0].end())
+                    // already performed these checks above
+                    // we need at least 2 frames for boundary markers to work
+                    //if (uttframes < 2)
+                    //    throw std::runtime_error ("minibatchutterancesource: utterances < 2 frames not supported");
+                    //if (uttframes > frameref::maxframesperutterance)
+                    //{
+                    //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                    //    continue;
+                    //}
+
+                    // check whether we have the ref transcript
+                    //auto labelsiter = labels[0].end();
+                    bool lacksmlf = true;
+                    if (!labels.empty())    // empty means unsupervised mode (don't load any)
                     {
-                        // first verify that all the label files have the proper duration
-                        bool durationmatch = true;
-                        foreach_index(j, labels)
-                        {
-                            const auto & labseq = labels[j].find(key)->second;
-                            // check if durations match; skip if not
-                            size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size() - 1].firstframe + labseq[labseq.size() - 1].numframes);
-                            if (labframes != uttframes)
-                            {
-                                fprintf(stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", labframes, uttframes, key.c_str());
-                                nomlf++;
-                                durationmatch = false;
-                                break; // continue;   // skip this utterance at all
-                            }
+                        key = utterance.key();
+                        // check if labels are available (if not, it normally means that no path was found in realignment)
+                        auto labelsiter = labels[0].find(key);
+                        //const bool lacksmlf = (labelsiter == labels[0].end());
+                        lacksmlf = (labelsiter == labels[0].end());
+                        if (lacksmlf)
+                        if (nomlf++ < 5)
+                            fprintf(stderr, " [no labels for  %S]", key.c_str());
+                        // check if lattice is available (when in lattice mode)
+                        // TODO: also check the #frames here; requires a design change of the TOC format & a rerun
+                        const bool lackslat = !lattices.empty() && !lattices.haslattice(key); // ('true' if we have no lattices)
+                        if (lackslat)
+                        if (nolat++ < 5)
+                            fprintf(stderr, " [no lattice for %S]", key.c_str());
+                        // skip if either one is missing
+                        if (lacksmlf || lackslat){
+                            uttisvalid[i] = false;
+                            continue;   // skip this utterance at all
                         }
-                        if (durationmatch){
-                            utteranceset.push_back(std::move(utterance));
-                            _totalframes += uttframes;
-                            framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
-                            // then parse each mlf if the durations are consistent
+                    }
+                    // push the label sequence into classids[], since we already looked it up
+                    // TODO: we can store labels more efficiently now since we don't do frame-wise random access anymore.
+
+                    // OK, utterance has all we need --remember it
+
+                    if (m == 0)
+                    {
+                        if (!labels.empty() && !lacksmlf)
+                        //if (!labels.empty() && labelsiter != labels[0].end())
+                        {
+                            // first verify that all the label files have the proper duration
                             foreach_index(j, labels)
                             {
                                 const auto & labseq = labels[j].find(key)->second;
-                                // expand classid sequence into flat array
-                                foreach_index(i, labseq)
+                                // check if durations match; skip if not
+                                size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size() - 1].firstframe + labseq[labseq.size() - 1].numframes);
+                                if (labframes != uttframes)
                                 {
-                                    const auto & e = labseq[i];
-                                    if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                                        throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
-                                    if (e.classid >= udim[j])
-                                        throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim, key.c_str()));
-                                    if (e.classid != (CLASSIDTYPE)e.classid)
-                                        throw std::runtime_error("CLASSIDTYPE has too few bits");
-                                    for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
-                                        classids[j]->push_back((CLASSIDTYPE)e.classid);
-                                    numclasses[j] = max(numclasses[j], 1u + e.classid);
-                                    counts[j].resize(numclasses[j], 0);
-                                    counts[j][e.classid] += e.numframes;
+                                    fprintf(stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", labframes, uttframes, key.c_str());
+                                    nomlf++;
+                                    uttisvalid[i] = false;
+                                    //continue;   // skip this utterance at all
+                                    break;
+                                    
                                 }
+                            }
+                            if (uttisvalid[i])
+                            {
+                                utteranceset.push_back(std::move(utterance));
+                                _totalframes += uttframes;
+                                // then parse each mlf if the durations are consistent
+                                foreach_index(j, labels)
+                                {
+                                    const auto & labseq = labels[j].find(key)->second;
+                                    // expand classid sequence into flat array
+                                    foreach_index(i, labseq)
+                                    {
+                                        const auto & e = labseq[i];
+                                        if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
+                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                        if (e.classid >= udim[j])
+                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim, key.c_str()));
+                                        if (e.classid != (CLASSIDTYPE)e.classid)
+                                            throw std::runtime_error("CLASSIDTYPE has too few bits");
+                                        for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
+                                            classids[j]->push_back((CLASSIDTYPE)e.classid);
+                                        numclasses[j] = max(numclasses[j], 1u + e.classid);
+                                        counts[j].resize(numclasses[j], 0);
+                                        counts[j][e.classid] += e.numframes;
+                                    }
 
-                                classids[j]->push_back((CLASSIDTYPE)-1);  // append a boundary marker marker for checking
+                                    classids[j]->push_back((CLASSIDTYPE)-1);  // append a boundary marker marker for checking
 
-                                if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
-                                    throw std::logic_error(msra::strfun::strprintf("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
-                                assert(labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
+                                    if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
+                                        throw std::logic_error(msra::strfun::strprintf("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                    assert(labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
+                                }
                             }
                         }
+                        else{  
+                            assert(classids.empty() && labels.empty());
+                            utteranceset.push_back(std::move(utterance));
+                            _totalframes += uttframes;
+                        }
                     }
-                    else{
-                        assert(classids.empty());
+                    else if (uttisvalid[i])
+                    {
+                        utteranceset.push_back(std::move(utterance));
                     }
-                }
-                else
-                {
-                    assert(uttframes==framesaccum[i]); //ensure that number of frames is consistent in each input feature "stream"
                 }
             }
+            if (m == 0) 
+                utterancesetsize = utteranceset.size();
+            else 
+                assert(utteranceset.size() == utterancesetsize);
+            
             fprintf (stderr, "feature set %d: %d frames in %d out of %d utterances\n", m, _totalframes, utteranceset.size(),infiles[m].size());
 
             if (!labels.empty()){
