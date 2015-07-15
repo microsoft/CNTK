@@ -1135,10 +1135,6 @@ public:
         {
             newNode = new LearnableParameter<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
-                    else if (nodeType == ConstParameter<ElemType>::TypeName())
-                    {
-                        newNode = new ConstParameter<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-                    }
         else if (nodeType == InputValue<ElemType>::TypeName())
         {
             newNode = new InputValue<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1378,15 +1374,8 @@ public:
         return newNode;
     }
 
-                ComputationNodePtr CreateConstParameter(const std::wstring paramName, const size_t rows, const size_t cols)
+    ComputationNodePtr CreateLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols)
     {
-                    ComputationNodePtr newNode(new ConstParameter<ElemType>(rows, cols, m_deviceId, paramName));
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
-
-                ComputationNodePtr CreateLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols)
-                {
         ComputationNodePtr newNode(new LearnableParameter<ElemType>(rows, cols, m_deviceId, paramName));
         AddNodeToNet(newNode);
         return newNode;

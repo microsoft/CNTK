@@ -254,8 +254,6 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, StrideTimesNode<ElemType>::TypeName(), L"StrideTimes"))
         ret = true;
-    else if (EqualInsensitive(nodeType, ConstParameter<ElemType>::TypeName(), L"ConstParameter"))
-        ret = true;
 
     // return the actual node name in the parameter if we found something
     if (ret)
