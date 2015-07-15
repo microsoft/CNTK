@@ -576,6 +576,9 @@ public:
         SequencePosition sequencePositionLast(0,0,seqFlagNull);
         /// get line
         char ch2[MAXSTRING]; 
+        if (mFile == nullptr)
+            Microsoft::MSR::CNTK::RuntimeError("File L%s to read can not be load\n", mFileName.c_str());
+
         while (recordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
         {
             
