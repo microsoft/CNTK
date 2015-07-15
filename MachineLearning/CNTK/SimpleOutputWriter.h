@@ -134,7 +134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_net.OutputNodes()->size() == 0)
                     throw std::logic_error("There is no default output node specified in the network.");
 
-                outputNodes = m_net->OutputNodes();
+                outputNodes = *m_net.OutputNodes();
             }
             else
             {
