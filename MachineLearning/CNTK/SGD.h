@@ -1724,12 +1724,12 @@ protected:
             if (learnRatePerSample > m_minLearnRate * 0.01)
             {
                 // use only the first criterion. Is there any possibility to use more?
-                            net.ComputeGradient((*criterionNodes)[0]);
+                net.ComputeGradient((*criterionNodes)[0]);
             }
             else
             {
                 // use only the first criterion. Is there any possibility to use more?
-                            net.Evaluate((*criterionNodes)[0]);
+                net.Evaluate((*criterionNodes)[0]);
             }
 
             Matrix<ElemType>::AddElementToElement((*criterionNodes)[0]->FunctionValues(),
@@ -1779,7 +1779,7 @@ protected:
                     epochCriterion = localEpochCriterion.Get00Element();
                     for (size_t i = 0; i < numEvalNodes; i++)
                     {
-                                    epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
+                        epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
                     }
 
                     fprintf(stderr, "%s Epoch[%d of %d]-Minibatch[%d-%d of %d]: SamplesSeen = %d; TrainLossPerSample = %.8g; ",
@@ -2207,7 +2207,7 @@ public:
                 node->UpdateEvalTimeStamp();
 
                 // use only the first criterion. Is
-                            net.ComputeGradient((*criterionNodes)[npos]);
+                net.ComputeGradient((*criterionNodes)[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
                 {

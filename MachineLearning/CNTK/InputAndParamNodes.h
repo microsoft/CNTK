@@ -560,6 +560,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /**
     pair this node to a node in another network
+    this node provide an interface from this network. The next layer network then can use this interface to know which node to connect to.
     */
     template<class ElemType>
     class PairNetworkNode : public ComputationNode<ElemType>
