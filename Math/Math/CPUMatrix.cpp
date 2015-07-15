@@ -253,7 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (numCols == 0)
             throw std::logic_error("The slice cannot have 0 columns.");
 
-        if (startColumn + numCols > m_numCols)
+        if (startColumn + numCols > fromMatrix.m_numCols)
             throw std::logic_error("The slice is out of range of the source matrix.");
         
         Clear();
