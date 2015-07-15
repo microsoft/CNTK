@@ -27,7 +27,7 @@ to-dos:
 delay_node : has another input that points to additional observations. 
 memory_node: M x N node, with a argument telling whether to save the last observation, or save a window size of observations, or save all observations
 pair_node : copy function values and gradient values from one node in source network to target network
-
+sequential_alignment_node: compute similarity of the previous time or any matrix, versus a block of input, and output a weighted average from the input
 decoder delay_node -> memory_node -> pair(source, target) pair(source, target) -> memory_node -> encoder output node
 
 
@@ -54,6 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_delay = 1;
             m_functionValues.Resize(1,1);
             m_pastActivity.Resize(1,1);
+            m_historyAlreadySet = false;
             InitRecurrentNode();
         }
                 
@@ -67,6 +68,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.Resize(1,1);
             m_pastActivity.Resize(1,1);
             m_reqMultiSeqHandling = true;
+
+            m_historyAlreadySet = false; 
 
             LoadFromFile(fstream, modelVersion, deviceId);
         }
@@ -114,6 +117,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
+
+            m_historyAlreadySet = false;
 
             InitRecurrentNode();
         }
@@ -245,7 +250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if ((timeIdxInSeq - delay) >= 0)
             {
                 if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceStartOrNoLabel)
-                {                   
+                {
                     for (int i = 0; i < mNbr; i++)
                     {
                         if (colBegin(i,0) == SENTENCE_MIDDLE)
@@ -287,7 +292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
 
-            if (timeIdxInSeq == 0)
+            if (timeIdxInSeq == 0 && m_historyAlreadySet == false)
             {
                 m_pastActivity = Inputs(0)->FunctionValues();
             }
@@ -389,8 +394,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-
-
         virtual const Matrix<ElemType>& FunctionValues() const 
         {
             return m_functionValues;
@@ -414,10 +417,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
             }
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
+        bool GetHistory(Matrix<ElemType>& hist, bool)
+        {
+            DEVICEID_TYPE device = hist.GetDeviceId();
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
 
+            hist.SetValue(Inputs(0)->FunctionValues());
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
+            return true;
+        }
+
+        void SetHistory(const Matrix<ElemType>& hist)
+        {
+            DEVICEID_TYPE device = hist.GetDeviceId();
+            hist.TransferFromDeviceToDevice(device, m_deviceId, true);
+
+            m_pastActivity.SetValue(hist);
+            m_historyAlreadySet = true;
+
+            hist.TransferFromDeviceToDevice(m_deviceId, device, true);
+        }
 
         virtual void AttachInputs(const ComputationNodePtr inputNode)
         {
@@ -483,6 +506,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int      m_delay;    /// steps for delay 
         vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
         Matrix<ElemType> m_boundaryInfo; /// individual sentence boundary information 
+        bool m_historyAlreadySet;
     };
 
     template class DelayNode<float>; 
@@ -495,7 +519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     Developed by Kaisheng Yao
     Used in the following works:
-    K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", submitted to Interspeech 2015
+    K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", in Interspeech 2015
     */
     template<class ElemType>
     class LSTMNode : public ComputationNode<ElemType>
@@ -685,8 +709,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
 
-                    try{
-                        ComputeInputGradientWrtGates(
+                    ComputeInputGradientWrtGates(
                             error,
                             sliceObs,
                             grdToObsSlice,
@@ -711,12 +734,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             grdToPrevState,
                             m_tempMatrix
                             );
-                    }
-                    catch (...)
-                    {
-                        fprintf(stderr, "Error in computing gradient in function ComputeInputPartial for LSTMnode at position %ld, length %ld", timeIdxInSeq, nT);
-                        throw;
-                    }
                     grdToObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
                     PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
@@ -1012,7 +1029,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
             size_t outputDim = Inputs(1)->FunctionValues().GetNumRows();
 
-            try{
+            {
                 FunctionValues().Resize(outputDim, nT);
                 FunctionValues().SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_State.Resize(outputDim, nT);
@@ -1062,15 +1079,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
 
-                    try{
-                        EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
+                    EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
-                    }
-                    catch (...)
-                    {
-                        fprintf(stderr, "Error in evaluating LSTMnode at position %ld out of %ld", timeIdxInSeq, nT);
-                        throw;
-                    }
                 }
 
                 /// save the hidden activities and output for the next minibatch
@@ -1094,11 +1104,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                 m_GradientComputed = false;
-            }
-            catch (...)
-            {
-                fprintf(stderr, "Error in evaluation of LSTMNode with %ld observations", nT);
-                throw;
             }
         }
 
@@ -1164,7 +1169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::Multiply(state.ColumnSlice(timeIdxInSeq - nsamples, nsamples), false, colSeg, false, newPrevState);
             }
 
-            SetToInitStateValueForResetSeg(sentenceBegin->ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);
+            ComputationNode<ElemType>::SetToInitStateValueForResetSeg(sentenceBegin->ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);
 
             slicePrevOutput.ColumnSlice(0, nsamples).SetValue(newPrevOutput);
             slicePrevState.ColumnSlice(0, nsamples).SetValue(newPrevState);
@@ -1332,7 +1337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 5)
                 throw std::logic_error("LSTMNode requires four inputs.");
 
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
 
             if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
@@ -1383,7 +1388,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool UnitTest()
         {
-            try{
+            {
                 size_t nT = 3;
                 size_t nInput = 2;
                 size_t nHidden = 3;
@@ -1403,7 +1408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 minibatchPackingFlag.resize(nT);
                 std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                 minibatchPackingFlag[1] = MinibatchPackingFlag::UtteranceStart;
-                ResetBound(&boundary, &minibatchPackingFlag);
+                ComputationNode<ElemType>::ResetBound(&boundary, &minibatchPackingFlag);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();
@@ -1484,19 +1489,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 m_DefaultState = initStateValue;
             }
-            catch (...)
-            {
-                fprintf(stderr, "LSTMNode unit test is not passed!");
-                return false;
-            }
 
             fprintf(stderr, "LSTMNode unit test passed!\n");
             return true;
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(1, false);
+            InferImageDimsFromInput(1, false);
         }
 
         /// input(0) : child with dimension [inputdim x T]
@@ -1708,4 +1708,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LSTMNode<float>;
     template class LSTMNode<double>;
+
 }}}

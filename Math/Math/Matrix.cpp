@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <math.h>
 #include "GPUWatcher.h"     // bring in this class as well so that it gets exported from this DLL
-
 #ifndef CPUONLY
 #pragma comment (lib, "CNTKMathCUDA.lib")   // built by CNTKMathCUDA project
 #endif
@@ -4440,6 +4439,56 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DEVICEID_TYPE Matrix<ElemType>::GetBestGPUDeviceId()
     { 
         return (DEVICEID_TYPE)GPUMatrix<ElemType>::GetBestGPUDeviceId();
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::RecordComputeSyncPoint(DEVICEID_TYPE devId)
+    {
+        // This function is necessary and has any effect only on GPU
+        if (devId >= 0)
+        {
+            GPUMatrix<ElemType>::RecordComputeSyncPoint();
+        }
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::SyncComputeBeforeRead(DEVICEID_TYPE devId)
+    {
+        // This function is necessary and has any effect only on GPU
+        if (devId >= 0)
+        {
+            GPUMatrix<ElemType>::SyncComputeBeforeRead();
+        }
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::SyncPendingRead(DEVICEID_TYPE devId)
+    {
+        // This function is necessary and has any effect only on GPU
+        if (devId >= 0)
+        {
+            GPUMatrix<ElemType>::SyncPendingRead();
+        }
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::SyncPendingCompute(DEVICEID_TYPE devId)
+    {
+        // This function is necessary and has any effect only on GPU
+        if (devId >= 0)
+        {
+            GPUMatrix<ElemType>::SyncPendingCompute();
+        }
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::EnableConcurrentRead(DEVICEID_TYPE devId)
+    {
+        // This function is necessary and has any effect only on GPU
+        if (devId >= 0)
+        {
+            GPUMatrix<ElemType>::EnableConcurrentRead(devId);
+        }
     }
 
     template<class ElemType>

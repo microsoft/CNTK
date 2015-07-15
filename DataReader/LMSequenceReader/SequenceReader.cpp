@@ -479,7 +479,14 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             std::wstring wClassFile = readerConfig("wordclass", "");
             nwords = labelConfig[index]("labelDim");
             if (wClassFile != L""){
-                ReadClassInfo(wClassFile  , false);
+                ReadClassInfo(wClassFile, class_size,
+                    word4idx,
+                    idx4word,
+                    idx4class,
+                    idx4cnt, 
+                    nwords,
+                    mUnk, m_noiseSampler,
+                    false);
             }
 
             std::vector<string> arrayLabels;
@@ -499,7 +506,13 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             else
             {
                 if (wClassFile != L""){
-                    ReadClassInfo(wClassFile  , false);
+                    ReadClassInfo(wClassFile, class_size,
+                        word4idx,
+                        idx4word,
+                        idx4class,
+                        idx4cnt, 
+                        nwords, mUnk, m_noiseSampler,
+                        false);
                     int iMax = -1, i; 
                     for (auto ptr = word4idx.begin(); ptr != word4idx.end(); ptr++)
                     {
@@ -543,8 +556,8 @@ void SequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
     {
-        //fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
-        std::wcerr << "reading sequence file" << m_file.c_str() << endl;
+        fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
+        //std::wcerr << "reading sequence file" << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -591,7 +604,15 @@ void SequenceReader<ElemType>::ReadWord(char *word, FILE *fin)
 }
 
 template<class ElemType>
-void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*flatten*/)
+void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& class_size, 
+    map<string, int>& word4idx, 
+    map<int, string>& idx4word,
+    map<int, int>& idx4class,
+    map<int, size_t> & idx4cnt,
+    int nwords,
+    string mUnk,
+    noiseSampler<long>& m_noiseSampler,
+    bool /*flatten*/)
 {
     string tmp_vocfile(vocfile.begin(), vocfile.end()); // convert from wstring to string
     string strtmp;
@@ -636,7 +657,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, bool /*fla
     std::vector<double> counts(idx4cnt.size());
     for (auto p : idx4cnt)
         counts[p.first] = (double)p.second;
-    m = noiseSampler<long>(counts);
+    m_noiseSampler = noiseSampler<long>(counts);
 
     /// check if unk is the same used in vocabulary file
     if (word4idx.find(mUnk.c_str()) == word4idx.end())
@@ -996,12 +1017,12 @@ void SequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring, Matrix<Elem
 
         if (readerMode == ReaderMode::NCE)
         {
-            labels->SetValue(1, j, (ElemType)m.logprob(wrd));
+            labels->SetValue(1, j, (ElemType)m_noiseSampler.logprob(wrd));
             for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
             {
-                int wid = m.sample();
+                int wid = m_noiseSampler.sample();
                 labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
-                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m.logprob(wid));
+                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m_noiseSampler.logprob(wid));
             }
         }
         else if (readerMode == ReaderMode::Class)
@@ -1032,7 +1053,7 @@ void SequenceReader<ElemType>::GetInputProb(std::map<std::wstring, Matrix<ElemTy
     int curDevId = m_id2Prob->GetDeviceId();
     m_id2Prob->TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
     for (size_t j = 0; j < nwords; j++)
-        (*m_id2Prob)((int)j, 0) = (float)m.prob((int)j);
+        (*m_id2Prob)((int)j, 0) = (float)m_noiseSampler.prob((int)j);
     m_id2Prob->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
     int oldDeviceId = idx2prob->GetDeviceId();
@@ -1415,7 +1436,14 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             std::wstring wClassFile = readerConfig("wordclass", "");
             nwords = labelConfig[index]("labelDim");
             if (wClassFile != L""){
-                ReadClassInfo(wClassFile  , false);
+                ReadClassInfo(wClassFile, class_size,
+                    word4idx,
+                    idx4word,
+                    idx4class,
+                    idx4cnt,
+                    nwords,
+                    mUnk, m_noiseSampler,
+                    false);
             }
 
             std::vector<string> arrayLabels;
@@ -1435,7 +1463,14 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
             else
             {
                 if (wClassFile != L""){
-                    ReadClassInfo(wClassFile  , false);
+                    ReadClassInfo(wClassFile, class_size,
+                        word4idx,
+                        idx4word,
+                        idx4class,
+                        idx4cnt,
+                        nwords,
+                        mUnk, m_noiseSampler,
+                        false);
                     if (word4idx.size() != nwords)
                     {
                         LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file L%s is not consistent", nwords, word4idx.size(), wClassFile.c_str());
@@ -1500,11 +1535,11 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 //    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
     m_featureCount = 1; 
 
-    std::wstring m_file = readerConfig("file");
+    std::wstring m_file = readerConfig("file", "");
     if (m_traceLevel > 0)
     {
-        //fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
-        std::wcerr << "reading sequence file " << m_file.c_str() << endl;
+        fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
+        //std::wcerr << "reading sequence file " << m_file.c_str() << endl;
     }
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
@@ -1780,6 +1815,8 @@ template<class ElemType>
 size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
     size_t sz = mToProcess.size();
+    if (sz == 0)
+        return mBlgSize;
     return sz; 
 }
 
@@ -1961,11 +1998,10 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = !EnsureDataAvailable(m_mbStartSample);
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
-        if (mSentenceEnd)
-        {
             for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
                 mProcessed[*ptr] = true;
-        }
+
+        mSentenceEnd = true;
         ret = mSentenceEnd;
         break;
     }
@@ -1985,8 +2021,8 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 /// notice that indices are defined as follows [begining ending_indx) of the class 
 /// i.e., the ending_index is 1 plus of the true ending index
 template<class ElemType>
-void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
-    Matrix<ElemType>*>& matrices,
+void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
+    Matrix<ElemType>* > & matrices,
     size_t m_mbStartSample, size_t actualmbsize)
 {
     size_t j = 0;
@@ -2017,12 +2053,12 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 
         if (readerMode == ReaderMode::NCE)
         {
-            labels->SetValue(1, j, (ElemType)m.logprob(wrd));
+                labels->SetValue(1, j, (ElemType)m_noiseSampler.logprob(wrd));
             for (size_t noiseid = 0; noiseid < this->noise_sample_size; noiseid++)
             {
-                int wid = m.sample();
+                    int wid = m_noiseSampler.sample();
                 labels->SetValue(2 * (noiseid + 1), j, (ElemType)wid);
-                labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m.logprob(wid));
+                    labels->SetValue(2 * (noiseid + 1) + 1, j, -(ElemType)m_noiseSampler.logprob(wid));
             }
         }
         else if (readerMode == ReaderMode::Class)
@@ -2033,8 +2069,8 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
                 labels->SetValue(1, j, (ElemType)clsidx);
 
                 /// save the [begining ending_indx) of the class 
-                size_t lft = (size_t) (*m_classInfoLocal)(0, clsidx);
-                size_t rgt = (size_t) (*m_classInfoLocal)(1, clsidx);
+                    size_t lft = (size_t)(*m_classInfoLocal)(0, clsidx);
+                    size_t rgt = (size_t)(*m_classInfoLocal)(1, clsidx);
                 if (wrd < lft || lft > rgt || wrd >= rgt)
                 {
                     LogicError("LMSequenceReader::GetLabelOutput word %d should be at least equal to or larger than its class's left index %d; right index %d of its class should be larger or equal to left index %d of its class; word index %d should be smaller than its class's right index %d.\n", wrd, lft, rgt, lft, wrd, rgt);
@@ -2047,7 +2083,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
         {
             if (wrd == 0)
                 labels->SetValue(0, j, epsilon + (ElemType)wrd);
-        }
+    }
         else if (readerMode == ReaderMode::Unnormalize)
         {
             labels->SetValue(0, j, -(ElemType)wrd);
@@ -2058,10 +2094,6 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
     else // GPU
     {
         RuntimeError("GetLabelOutput::should use CPU for labels ");
-    }
-    if (curDevId != CPUDEVICE)
-    {
-        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
     }
 }
 
@@ -2076,6 +2108,21 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& senten
     minibatchPackingFlag = m_minibatchPackingFlag;
 }
 
+template<class ElemType>
+int BatchSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
+{
+
+    // now get the labels
+    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
+    auto found = word4idx.find(labelIn.endSequence);
+
+    // not yet found, add to the map
+    if (found != word4idx.end())
+    {
+        return (int)found->second;
+    }
+    else return -1;
+}
 
 template class BatchSequenceReader<double>; 
 template class BatchSequenceReader<float>;

@@ -16,7 +16,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template<class ElemType>
 void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
 {
-//    *preader = new SequenceReader<ElemType>();
     *preader = new BatchSequenceReader<ElemType>();
 }
 

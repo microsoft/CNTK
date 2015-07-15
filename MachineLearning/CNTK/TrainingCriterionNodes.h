@@ -126,12 +126,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(1,1);
             m_leftMinusRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -230,7 +230,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
+                ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
             }
         }
 
@@ -256,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues, 
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
@@ -337,15 +337,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(1,1);
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
 
             m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -539,12 +539,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().Resize(1,1);
             m_logOfRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             m_leftDivRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -662,7 +662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -692,12 +692,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(1,1);
             m_gradientOfL1Norm.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -803,7 +803,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -832,12 +832,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("MatrixL2Reg operation: the input node has 0 element.");
 
             FunctionValues().Resize(1,1);
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -1053,12 +1053,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //   throw std::logic_error("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
             // }
             FunctionValues().Resize(1, 1);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
             m_outputChannels = 1;
             m_outputWidth = 1;
             m_outputHeight = 1;
@@ -1410,7 +1410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t i = t % nS;
                 if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
                 {
-                    if ((*m_sentenceSeg)(j, i) == NO_LABELS)
+                    if ((*m_sentenceSeg)(i,j) == NO_LABELS)
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
 
@@ -1458,14 +1458,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             FunctionValues().Resize(1, 1);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
 
             m_nbrCls = Inputs(3)->FunctionValues().GetNumRows();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -1817,12 +1817,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             FunctionValues().Resize(1, 1);
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -1996,12 +1996,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(2)->FunctionValues().GetNumCols()); 
 
             FunctionValues().Resize(1,1);
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;

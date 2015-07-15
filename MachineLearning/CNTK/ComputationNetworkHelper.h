@@ -27,11 +27,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType>* ComputationNodePtr;
 
     protected:
-        void UpdateEvalTimeStamps(const std::vector<ComputationNodePtr> & nodes)
+        void UpdateEvalTimeStamps(const std::vector<ComputationNodePtr> * nodes)
         {
-            for (size_t i=0; i<nodes.size(); i++)
+            for (size_t i=0; i<nodes->size(); i++)
             {
-                nodes[i]->UpdateEvalTimeStamp();
+                (*nodes)[i]->UpdateEvalTimeStamp();
             }
         }
 

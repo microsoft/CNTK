@@ -126,7 +126,7 @@ void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
     net.ResetEvalTimeStamp();
 
     SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
-    eval.Evaluate(reader, evalNodeNamesVector, mbSize[0], epochSize);
+    eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
 template <typename ElemType>
@@ -167,7 +167,7 @@ void DoEvalUnroll(const ConfigParameters& config)
 
     SimpleEvaluator<ElemType> eval(net);
     ElemType evalEntropy;
-    eval.EvaluateUnroll(testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
+    eval.EvaluateUnroll(&testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
 }
 
 template <typename ElemType>
@@ -233,7 +233,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
         fprintf(stderr, "model %ls --> \n", cvModelPath.c_str());
         std::vector<ElemType> evalErrors;
-        evalErrors = eval.Evaluate(cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
+        evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
         cvErrorResults.push_back(evalErrors);
 
         ::Sleep(1000 * sleepSecondsBetweenRuns);
@@ -455,8 +455,8 @@ bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
     msra::files::textreader reader(fn);
     for (; reader;)
     {
-        wstring line = reader.wgetline(); 
-        vector<wstring> tokens=msra::strfun::split(line, L"\t ");
+        wstring line = reader.wgetline();
+        vector<wstring> tokens = msra::strfun::split(line, L"\t ");
         if (tokens.size() != 2)
             return false;
         config[tokens[0]] = (float)msra::strfun::todouble(tokens[1]);
@@ -466,22 +466,22 @@ bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
 // a brief on the SVD config file usage 
 void SVDConfigFileUsage()
 {
-    fprintf(stderr, "usage of SVDConfigFile\n"); 
-    fprintf(stderr, "A SVDConfigFile is referred in main config by \"SVDConfig\"\n"); 
+    fprintf(stderr, "usage of SVDConfigFile\n");
+    fprintf(stderr, "A SVDConfigFile is referred in main config by \"SVDConfig\"\n");
     fprintf(stderr, "Each line in this file specifies a group of Learnable Parameter nodes using regex and the KeepRatio associated with that group\n");
-    fprintf(stderr, "An example: \n"); 
-    fprintf(stderr, "W0         1.0\n"); 
-    fprintf(stderr, "W[1-5]     0.4\n"); 
-    
+    fprintf(stderr, "An example: \n");
+    fprintf(stderr, "W0         1.0\n");
+    fprintf(stderr, "W[1-5]     0.4\n");
+
 
 }
-template<typename ElemType> 
+template<typename ElemType>
 void  DoParameterSVD(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 
     wstring modelPath = config("modelPath");
     wstring outputmodelPath = config("outputmodelPath");
-    map<wstring, float>     svdconfig; 
+    map<wstring, float>     svdconfig;
 
     float keepratio = config("KeepRatio", "0.4");
     wstring svdnodeRegex = config("NodeNameRegex", L"");
@@ -496,7 +496,7 @@ void  DoParameterSVD(const ConfigParameters& config)
         if (!ParseSVDConfigFile(svdnodeConfigFile, svdconfig))
         {
             SVDConfigFileUsage();
-            return; 
+            return;
         }
     }
 
@@ -507,8 +507,8 @@ void  DoParameterSVD(const ConfigParameters& config)
         return;
     }
 
-    
-    ComputationNetwork<ElemType> net(deviceID); 
+
+    ComputationNetwork<ElemType> net(deviceID);
     net.LoadFromFile(modelPath);
 
     net.PerformSVDecomposition(svdconfig);
@@ -804,6 +804,9 @@ http://arxiv.org/pdf/1409.3215.pdf
 template <typename ElemType>
 void DoEncoderDecoder(const ConfigParameters& config)
 {
+    vector<IComputationNetBuilder<ElemType>*> netBuilders;
+    vector<IDataReader<ElemType>*> trainDataReader;
+    vector<IDataReader<ElemType>*> validationDataReader;
 
     ConfigParameters configSGD = config("SGD");
     bool makeMode = config("makeMode", "true");
@@ -844,8 +847,14 @@ void DoEncoderDecoder(const ConfigParameters& config)
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
-    sgd.EncoderDecoder(encoderNetBuilder, decoderNetBuilder, encoderDataReader, decoderDataReader,
-        cvEncoderDataReader, cvDecoderDataReader, makeMode);
+    netBuilders.push_back(encoderNetBuilder);
+    netBuilders.push_back(decoderNetBuilder);
+    trainDataReader.push_back(encoderDataReader);
+    trainDataReader.push_back(decoderDataReader);
+    validationDataReader.push_back(cvEncoderDataReader);
+    validationDataReader.push_back(cvDecoderDataReader);
+
+    sgd.EncoderDecoder(netBuilders, trainDataReader, validationDataReader, makeMode);
 
     delete encoderDataReader;
     delete decoderDataReader;
@@ -854,14 +863,100 @@ void DoEncoderDecoder(const ConfigParameters& config)
 }
 
 /**
-this is for testing models trained using the sequence to sequence translation method below
+DoBidirecionEncoderDecoder
+*/
+template <typename ElemType>
+void DoBidirecionEncoderDecoder(const ConfigParameters& config)
+{
+
+    ConfigParameters configSGD = config("SGD");
+    bool makeMode = config("makeMode", "true");
+    IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* forwardDecoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* backwardDecoderNetBuilder = NULL;
+    vector<IComputationNetBuilder<ElemType>*> netBuilders;
+    vector<IDataReader<ElemType>*> trainDataReader;
+    vector<IDataReader<ElemType>*> validationDataReader;
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
+
+    ConfigParameters backwardDecoderReaderConfig = config("backwardDecoderReader");
+    DataReader<ElemType>* backwardDecoderDataReader = new DataReader<ElemType>(backwardDecoderReaderConfig);
+
+    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
+
+    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
+
+    ConfigParameters cvBackwardDecoderReaderConfig = config("BackwardDecoderCVReader");
+    DataReader<ElemType>* cvBackwardDecoderDataReader = new DataReader<ElemType>(cvBackwardDecoderReaderConfig);
+
+    if (config.Exists("EncoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need encoder network");
+
+    if (config.Exists("DecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    if (config.Exists("BackwardDecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("BackwardDecoderNetworkBuilder");
+        backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    MultiNetworksSGD<ElemType> sgd(configSGD);
+
+    sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
+
+    netBuilders.push_back(encoderNetBuilder);
+    netBuilders.push_back(forwardDecoderNetBuilder);
+    netBuilders.push_back(backwardDecoderNetBuilder);
+    trainDataReader.push_back(encoderDataReader);
+    trainDataReader.push_back(decoderDataReader);
+    trainDataReader.push_back(backwardDecoderDataReader);
+    validationDataReader.push_back(cvEncoderDataReader);
+    validationDataReader.push_back(cvDecoderDataReader);
+    validationDataReader.push_back(cvBackwardDecoderDataReader);
+
+    sgd.EncoderDecoder(netBuilders, trainDataReader, validationDataReader, makeMode);
+
+    delete encoderDataReader;
+    delete decoderDataReader;
+    delete cvEncoderDataReader;
+    delete cvDecoderDataReader;
+    delete backwardDecoderDataReader;
+    delete cvBackwardDecoderDataReader;
+}
+
+/**
+Oiginally, this is for testing models trained using the sequence to sequence translation method below
 http://arxiv.org/pdf/1409.3215.pdf
+Later on, it is extended to be more general to include a sequence of network operations. 
 */
 template <typename ElemType>
 void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
+    vector<IDataReader<ElemType>*> readers;
     ConfigParameters readerConfig = config("encoderReader");
     readerConfig.Insert("traceLevel", config("traceLevel", "0"));
 
@@ -872,27 +967,35 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
 
     DataReader<ElemType> decoderReader(decoderReaderConfig);
 
+    readers.push_back(&encoderReader);
+    readers.push_back(&decoderReader);
+
     ConfigArray minibatchSize = config("minibatchSize", "40960");
     size_t epochSize = config("epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
+
     wstring encoderModelPath = config("encoderModelPath");
     wstring decoderModelPath = config("decoderModelPath");
+
     intargvector mbSize = minibatchSize;
 
     int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
+    vector<ComputationNetwork<ElemType>*> nets;
     ComputationNetwork<ElemType> encoderNet(deviceId);
     encoderNet.LoadFromFile(encoderModelPath, FileOptions::fileOptionsBinary, true);
     encoderNet.ResetEvalTimeStamp();
 
     ComputationNetwork<ElemType> decoderNet(deviceId);
-    decoderNet.LoadFromFile(decoderModelPath);
+    decoderNet.LoadFromFile(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
     decoderNet.ResetEvalTimeStamp();
 
+    nets.push_back(&encoderNet);
+    nets.push_back(&decoderNet);
     ConfigArray evalNodeNames = config("evalNodeNames");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
@@ -915,17 +1018,19 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     SimpleEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
     eval.InitTrainEncoderDecoderWithHiddenStates(config);
 
-    eval.EncodingEvaluateDecodingBeamSearch(encoderNet, decoderNet, encoderReader, decoderReader,
-        testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
+    eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
+        testDataWriter, evalNodeNamesVector,
+        outputNodeNamesVector,
+        mbSize[0], beamWidth, epochSize);
 }
 
 /**
-  This is beam search decoder. 
+This is beam search decoder.
 
-  Developed by Kaisheng Yao. 
+Developed by Kaisheng Yao.
 
-  It is used in the following work:
-  K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" submitted to Interspeech 2015
+It is used in the following work:
+K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" in Interspeech 2015
 */
 template <typename ElemType>
 void DoBeamSearchDecoding(const ConfigParameters& config)
@@ -979,7 +1084,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     DataWriter<ElemType> testDataWriter(writerConfig);
 
     SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
-    eval.BeamSearch(reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
+    eval.BeamSearch(&reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
 }
 
 template <typename ElemType>
@@ -1051,8 +1156,8 @@ void DoConvertFromDbn(const ConfigParameters& config)
     wstring dbnModelPath = config("dbnModelPath");
 
     IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
-    ComputationNetwork<ElemType>& net = netBuilder->LoadNetworkFromFile(dbnModelPath);
-    net.SaveToFile(modelPath);
+    ComputationNetwork<ElemType>* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
+    net->SaveToFile(modelPath);
     delete (netBuilder);
 }
 
@@ -1074,7 +1179,7 @@ void DoTopologyPlot(const ConfigParameters& config)
     //========================================
     if (outdot.empty())
     {
-        outdot = modelPath +L".dot";
+        outdot = modelPath + L".dot";
     }
 
     wstring rescmd;
@@ -1083,8 +1188,8 @@ void DoTopologyPlot(const ConfigParameters& config)
         std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
         std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
 
-        rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1"+outdot+L"$3");
-        rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1"+outRending+L"$3");
+        rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1" + outdot + L"$3");
+        rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1" + outRending + L"$3");
     }
 
 
@@ -1162,6 +1267,8 @@ void DoCommand(const ConfigParameters& config)
                 DoEncoderDecoder<ElemType>(commandParams);
             else if (action[j] == "testEncoderDecoder")
                 DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
+            else if (action[j] == "trainBidirectionEncoderDecoder")
+                DoBidirecionEncoderDecoder<ElemType>(commandParams);
             else if (action[j] == "beamSearch")
                 DoBeamSearchDecoding<ElemType>(commandParams);
             else
@@ -1258,7 +1365,7 @@ void PrintUsageInfo()
     fprintf(stderr, "-------------------------------------------------------------------\n");
     fprintf(stderr, "Usage: cntk configFile=yourConfigFile\n");
     fprintf(stderr, "For detailed information please consult the CNTK book\n");
-    fprintf(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");    
+    fprintf(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");
     fprintf(stderr, "-------------------------------------------------------------------\n");
 }
 

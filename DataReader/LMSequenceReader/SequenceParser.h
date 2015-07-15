@@ -6,6 +6,8 @@
 // </copyright>
 //
 
+#pragma once
+
 #include <string>
 #include <vector>
 #include <assert.h>
@@ -544,7 +546,7 @@ public:
         if (mFile) fclose(mFile);
 
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)
-            Microsoft::MSR::CNTK::RuntimeError("cannot open file %s", fileName);
+            Microsoft::MSR::CNTK::Warning("cannot open file %s", fileName);
     }
 
     void ParseReset()
@@ -574,6 +576,9 @@ public:
         SequencePosition sequencePositionLast(0,0,seqFlagNull);
         /// get line
         char ch2[MAXSTRING]; 
+        if (mFile == nullptr)
+            Microsoft::MSR::CNTK::RuntimeError("File L%s to read can not be load\n", mFileName.c_str());
+
         while (recordCount < recordsRequested && fgets(ch2, MAXSTRING, mFile) != nullptr)
         {
             

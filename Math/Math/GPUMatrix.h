@@ -105,6 +105,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ~GPUMatrix(void);       
 
         static int GetBestGPUDeviceId();  
+        static void RecordComputeSyncPoint();
+        static void SyncComputeBeforeRead();
+        static void SyncPendingRead();
+        static void SyncPendingCompute();
+        static void EnableConcurrentRead(DEVICEID_TYPE devId);
         int GetComputeDeviceId() const;
         DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
