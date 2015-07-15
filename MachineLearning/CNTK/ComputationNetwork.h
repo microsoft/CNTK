@@ -1415,7 +1415,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
                     if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
-                        LogicError("PairNetwork : asked to pair a node with name %s in another network. However, this network has already a node with the same name. Should avoid this case.\n", a->NodeName());
+                    {
+                        fprintf(stderr, "PairNetwork : asked to pair a node with name l%s in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+                        throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
+                    }
                     newNode->AttachInputs(a);
                     AddNodeToNet(newNode);
                     return newNode;
