@@ -432,10 +432,12 @@ namespace Microsoft {
                         e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"MatForSimilarity%d", i), m_layerSizes[i], m_layerSizes[i]);
                         m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        columnStride = m_net->CreateConstParameter(L"columnStride", 1, 1);
+                        columnStride = m_net->CreateLearnableParameter(L"columnStride", 1, 1);
                         columnStride->FunctionValues().SetValue(1);
-                        rowStride = m_net->CreateConstParameter(L"rowStride", 1, 1);
+                        columnStride->NeedGradient() = false; 
+                        rowStride = m_net->CreateLearnableParameter(L"rowStride", 1, 1);
                         rowStride->FunctionValues().SetValue(0);
+                        rowStride->NeedGradient() = false; 
                         alignoutput = m_net->StrideTimes(encoderOutput, m_net->Softmax(m_net->StrideTimes(m_net->Times(m_net->Transpose(encoderOutput), e), delay, rowStride)), columnStride);
 
                         //                alignoutput = m_net->Times(encoderOutput, m_net->Softmax(m_net->Times(m_net->Times(m_net->Transpose(encoderOutput), e), delay)));
