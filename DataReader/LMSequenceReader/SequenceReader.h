@@ -337,9 +337,6 @@ public:
     using IDataReader<ElemType>::mBlgSize;
     using IDataReader<ElemType>::mDoRandomize;
 
-    using LabelType = typename IDataReader<ElemType>::LabelType;
-    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
-
 
 
 private:
