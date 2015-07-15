@@ -257,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
                 throw std::invalid_argument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
 
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
 
@@ -293,9 +293,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().Resize(outputDim, m_children[1]->FunctionValues().GetNumCols());
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(1, false);
+            InferImageDimsFromInput(1, false);
 
             if (m_inputWidth < m_kernelWidth || m_inputHeight < m_kernelHeight)
                 throw std::invalid_argument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
@@ -642,7 +642,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
                 throw std::invalid_argument("MaxPoolingNode: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
 
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
 
             m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
             m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
@@ -665,9 +665,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             if (m_inputWidth < m_windowWidth || m_inputHeight < m_windowHeight)
                 throw std::invalid_argument("MaxPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
@@ -877,7 +877,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
                 throw std::invalid_argument("AveragePoolingNode: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
 
-            CopyImageSizeFromInputs();
+            InferImageDimsFromInputs();
 
             m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
             m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
@@ -900,9 +900,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             if (m_inputWidth < m_windowWidth || m_inputHeight < m_windowHeight)
                 throw std::invalid_argument("AveragePoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");

@@ -1203,6 +1203,10 @@ public:
         {
             newNode = new SumElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
+        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
+        {
+            newNode = new SumColumnElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ScaleNode<ElemType>::TypeName())
         {
             newNode = new ScaleNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1536,6 +1540,10 @@ public:
         else if (nodeType == SumElementsNode<ElemType>::TypeName())
         {
             newNode = new SumElementsNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
+        {
+            newNode = new SumColumnElementsNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == ScaleNode<ElemType>::TypeName())
         {
@@ -3015,7 +3023,7 @@ public:
                         for (ComputationNodePtr node : *FinalCriterionNodes())
             {
                 if (!allowFragment) {
-                    FormRecurentLoops(node);
+                    FormRecurentLoops(node, true);
                 }
                 PrintComputationTree(node, false);
                 size_t actualMBSize = this->GetActualMBSize();
@@ -3498,7 +3506,7 @@ protected:
     }
 
     // get the strong connected component from the graph
-    void getStrongSCC(const ComputationNodePtr rootNode)
+    void getStrongSCC(const ComputationNodePtr rootNode, bool isCriterion)
     {
         std::unordered_set<ComputationNodePtr> visited;
         std::list<ComputationNodePtr> sccStack;
@@ -3506,13 +3514,13 @@ protected:
         size_t loopId = 0;
         if (rootNode->isVisisted() == false)
         {
-            strongSCC(rootNode, sccStack, index, loopId);
+            strongSCC(rootNode, sccStack, index, loopId, isCriterion);
         }
     }
 
     void strongSCC(ComputationNodePtr cur,
                    std::list<ComputationNodePtr>& sccStack,
-                   size_t& index, size_t& loopId)
+                   size_t& index, size_t& loopId, bool isCriterion)
     {
         cur->SetIndex(index);
         cur->Setlowlink(index);
@@ -3526,7 +3534,7 @@ protected:
         {
             if (cur->Inputs(i)->isVisisted() == false)
             {
-                strongSCC(cur->Inputs(i), sccStack, index, loopId);
+                strongSCC(cur->Inputs(i), sccStack, index, loopId, isCriterion);
                 cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
             }
             else if (cur->Inputs(i)->isInStack())
@@ -3554,7 +3562,7 @@ protected:
                 }
             }
             rInfo.Reset();
-            if (sccSize > 1)
+            if (sccSize > 1 && isCriterion)
             {
                 loopId++;
                 m_recurrentInfo.push_back(rInfo);
@@ -3595,11 +3603,11 @@ protected:
         }
     }
     //must be called before ValidateNetwork
-    void FormRecurentLoops(const ComputationNodePtr rootNode)
+    void FormRecurentLoops(const ComputationNodePtr rootNode, bool isCriterion = false)
     {
         std::vector<ComputationNodePtr> sourceLoopNodes;
 
-        getStrongSCC(rootNode);
+        getStrongSCC(rootNode, isCriterion);
         std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
         std::list<ComputationNodePtr> nodesForGrad;
 
@@ -3704,6 +3712,11 @@ protected:
                             fprintf(stderr, "%ls\n", (*itr)->NodeName().c_str());
             }
 #endif
+        }
+
+        for (auto iter = nodes.begin(); iter != nodes.end(); iter++)
+        {
+            (*iter)->clearCache();
         }
     }
 
