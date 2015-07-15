@@ -301,7 +301,6 @@ public:
         std::vector<size_t> numclasses;                  // number of output classes as found in the label file (diagnostics)
         _totalframes = 0;
         wstring key;
-        std::vector<size_t>framesaccum;
         size_t numutts=0;
         
         std::vector<bool>uttisvalid; // boolean flag to check that utterance is valid. valid means number of 
@@ -348,7 +347,7 @@ public:
                 throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
 
             foreach_index(i, infiles[m]){
-                utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), labels.empty() ? 0 : classidsbegin[i]);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
+                utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
                 const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
                 // we need at least 2 frames for boundary markers to work
                 if (uttframes < 2)
@@ -384,6 +383,7 @@ public:
 
 
         // now process the features and labels
+        size_t utterancesetsize = 0;
         foreach_index (m, infiles)
         {
             utteranceset.clear();
@@ -450,7 +450,7 @@ public:
                     if (m == 0)
                     {
                         if (!labels.empty() && !lacksmlf)
-                            //if (!labels.empty() && labelsiter != labels[0].end())
+                        //if (!labels.empty() && labelsiter != labels[0].end())
                         {
                             // first verify that all the label files have the proper duration
                             foreach_index(j, labels)
@@ -463,13 +463,15 @@ public:
                                     fprintf(stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", labframes, uttframes, key.c_str());
                                     nomlf++;
                                     uttisvalid[i] = false;
-                                    break; // continue;   // skip this utterance at all
+                                    //continue;   // skip this utterance at all
+                                    break;
+                                    
                                 }
                             }
-                            if (uttisvalid[i]){
+                            if (uttisvalid[i])
+                            {
                                 utteranceset.push_back(std::move(utterance));
                                 _totalframes += uttframes;
-                                framesaccum.push_back(uttframes); //track number of frames in each utterance - first feature is the reference
                                 // then parse each mlf if the durations are consistent
                                 foreach_index(j, labels)
                                 {
@@ -500,15 +502,22 @@ public:
                             }
                         }
                         else{  
-                            assert(classids.empty());
+                            assert(classids.empty() && labels.empty());
+                            utteranceset.push_back(std::move(utterance));
+                            _totalframes += uttframes;
                         }
                     }
-                    else
+                    else if (uttisvalid[i])
                     {
-                        assert(uttframes == uttduration[i]); //ensure that number of frames is consistent in each input feature "stream"
+                        utteranceset.push_back(std::move(utterance));
                     }
                 }
             }
+            if (m == 0) 
+                utterancesetsize = utteranceset.size();
+            else 
+                assert(utteranceset.size() == utterancesetsize);
+            
             fprintf (stderr, "feature set %d: %d frames in %d out of %d utterances\n", m, _totalframes, utteranceset.size(),infiles[m].size());
 
             if (!labels.empty()){
