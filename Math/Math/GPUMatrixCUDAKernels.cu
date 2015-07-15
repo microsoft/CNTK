@@ -101,10 +101,20 @@ __global__ void _inplaceSigmoidOnCuda(
     }
 };
 
+__device__ __forceinline__ float _exp(float f)
+{
+    return expf(f);
+}
+
+__device__ __forceinline__ double _exp(double f)
+{
+    return exp(f);
+}
+
 template<class ElemType>
-__global__ void _assignSigmoidOf(    
+__global__ void _assignSigmoidOf(
     const ElemType* a,
-    ElemType* res,    
+    ElemType* res,
     const CUDA_LONG N)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -114,31 +124,12 @@ __global__ void _assignSigmoidOf(
         return;
     }
 
-    // TODO: Many of these kernels are the same for float and double except for
-    // the underlying math function called, which can be handled through overloads.
+    // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
+    // and e^x / (1 + e^x) if x is positive.
+    ElemType negElem = -a[id];
+    ElemType e = _exp(negElem);
 
-    // This function computes e^|x| / (1 + e^|x|) if x is positive, and
-    // 1 / (1 + e^|x|) if x is negative. The kernel computes common
-    // math computation for as long as possible: 1 / (1 + e^|x|) and
-    // uses conditional assignment at the end to avoid thread divergence.
-    if (sizeof(ElemType) == sizeof(double))
-    {
-        double elem = a[id];
-        double negElem = -fabs(elem);
-        double e = exp(negElem);
-        double ep1Recip = 1 / (e + 1);
-
-        res[id] = (elem == negElem) ? e * ep1Recip : ep1Recip;
-    }
-    else
-    {
-        float elem = a[id];
-        float negElem = -fabsf(elem);
-        float e = expf(negElem);
-        float ep1Recip = 1 / (e + 1);
-
-        res[id] = (elem == negElem) ? e * ep1Recip : ep1Recip;
-    }
+    res[id] = 1 / (e + 1);
 };
 
 template<class ElemType>
