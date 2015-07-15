@@ -947,14 +947,16 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
 }
 
 /**
-this is for testing models trained using the sequence to sequence translation method below
+Oiginally, this is for testing models trained using the sequence to sequence translation method below
 http://arxiv.org/pdf/1409.3215.pdf
+Later on, it is extended to be more general to include a sequence of network operations. 
 */
 template <typename ElemType>
 void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
+    vector<IDataReader<ElemType>*> readers;
     ConfigParameters readerConfig = config("encoderReader");
     readerConfig.Insert("traceLevel", config("traceLevel", "0"));
 
@@ -965,19 +967,25 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
 
     DataReader<ElemType> decoderReader(decoderReaderConfig);
 
+    readers.push_back(&encoderReader);
+    readers.push_back(&decoderReader);
+
     ConfigArray minibatchSize = config("minibatchSize", "40960");
     size_t epochSize = config("epochSize", "0");
     if (epochSize == 0)
     {
         epochSize = requestDataSize;
     }
+
     wstring encoderModelPath = config("encoderModelPath");
     wstring decoderModelPath = config("decoderModelPath");
+
     intargvector mbSize = minibatchSize;
 
     int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
+    vector<ComputationNetwork<ElemType>*> nets;
     ComputationNetwork<ElemType> encoderNet(deviceId);
     encoderNet.LoadFromFile(encoderModelPath, FileOptions::fileOptionsBinary, true);
     encoderNet.ResetEvalTimeStamp();
@@ -986,6 +994,8 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     decoderNet.LoadFromFile(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
     decoderNet.ResetEvalTimeStamp();
 
+    nets.push_back(&encoderNet);
+    nets.push_back(&decoderNet);
     ConfigArray evalNodeNames = config("evalNodeNames");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
@@ -1008,8 +1018,10 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     SimpleEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
     eval.InitTrainEncoderDecoderWithHiddenStates(config);
 
-    eval.EncodingEvaluateDecodingBeamSearch(&encoderNet, &decoderNet, &encoderReader, &decoderReader,
-        testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
+    eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
+        testDataWriter, evalNodeNamesVector,
+        outputNodeNamesVector,
+        mbSize[0], beamWidth, epochSize);
 }
 
 /**
@@ -1018,7 +1030,7 @@ This is beam search decoder.
 Developed by Kaisheng Yao.
 
 It is used in the following work:
-K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" submitted to Interspeech 2015
+K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" in Interspeech 2015
 */
 template <typename ElemType>
 void DoBeamSearchDecoding(const ConfigParameters& config)

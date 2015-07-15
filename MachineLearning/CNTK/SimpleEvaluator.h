@@ -784,23 +784,30 @@ namespace Microsoft {
                 }
 
                 void EncodingEvaluateDecodingBeamSearch(
-                    ComputationNetwork<ElemType>* encoderNet,
-                    ComputationNetwork<ElemType>* decoderNet,
-                    IDataReader<ElemType>* encoderDataReader,
-                    IDataReader<ElemType>* decoderDataReader,
+                    vector<ComputationNetwork<ElemType>*> nets,
+                    vector<IDataReader<ElemType>*> readers,
                     IDataWriter<ElemType>& dataWriter,
-                    const vector<wstring>& outputNodeNames, const vector<wstring>& writeNodeNames,
+                    const vector<wstring>& evalNodeNames,
+                    const vector<wstring>& writeNodeNames,
                     const size_t mbSize, const ElemType beam, const size_t testSize)
                 {
-                    std::vector<ComputationNodePtr> encoderEvalNodes;
-                    for (int i = 0; i< encoderNet->OutputNodes()->size(); i++)
-                        encoderEvalNodes.push_back((*encoderNet->OutputNodes())[i]);
-                    assert(encoderEvalNodes.size() == 1);
+                    size_t iNumNets = nets.size();
+                    if (iNumNets < 2)
+                    {
+                        LogicError("Has to have at least two networks");
+                    }
+
+                    ComputationNetwork<ElemType>* decoderNet = nets[iNumNets - 1];
+                    IDataReader<ElemType>* encoderDataReader = readers[iNumNets - 2];
+                    IDataReader<ElemType>* decoderDataReader = readers[iNumNets - 1];
+                    vector<ComputationNodePtr>* decoderFeatureNodes = decoderNet->FeatureNodes();
 
                     //specify output nodes and files
                     std::vector<ComputationNodePtr> outputNodes;
-                    for (int i = 0; i<outputNodeNames.size(); i++)
-                        outputNodes.push_back(decoderNet->GetNodeFromName(outputNodeNames[i]));
+                    for (auto ptr = evalNodeNames.begin(); ptr != evalNodeNames.end(); ptr++)
+                    {
+                        outputNodes.push_back(decoderNet->GetNodeFromName(*ptr));
+                    }
 
                     //specify nodes to write to file
                     std::vector<ComputationNodePtr> writeNodes;
@@ -808,58 +815,93 @@ namespace Microsoft {
                         writeNodes.push_back(m_net.GetNodeFromName(writeNodeNames[i]));
 
                     //prepare features and labels
-                    std::vector<ComputationNodePtr> * encoderFeatureNodes = encoderNet->FeatureNodes();
-                    std::vector<ComputationNodePtr> * decoderFeatureNodes = decoderNet->FeatureNodes();
-                    std::vector<ComputationNodePtr> * decoderLabelNodes = decoderNet->LabelNodes();
-
-                    std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices;
-                    for (size_t i = 0; i<encoderFeatureNodes->size(); i++)
-                    {
-                        encoderInputMatrices[(*encoderFeatureNodes)[i]->NodeName()] = &(*encoderFeatureNodes)[i]->FunctionValues();
-                    }
-
+                    std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
                     std::map<std::wstring, Matrix<ElemType>*> decoderInputMatrices;
-                    for (size_t i = 0; i<decoderFeatureNodes->size(); i++)
+                    for (auto ptr = nets.begin(); ptr != nets.end()- 1; ptr++)
                     {
-                        decoderInputMatrices[(*decoderFeatureNodes)[i]->NodeName()] = &(*decoderFeatureNodes)[i]->FunctionValues();
+                        vector<ComputationNodePtr>* featNodes = (*ptr)->FeatureNodes();
+                        for (auto ptr2 = featNodes->begin(); ptr2 != featNodes->end(); ptr2++)
+                        {
+                            inputMatrices[(*ptr2)->NodeName()] = &(*ptr2)->FunctionValues();
+                        }
+
+                        vector<ComputationNodePtr>* lablNodes = (*ptr)->LabelNodes();
+                        for (auto ptr2 = lablNodes->begin(); ptr2 != lablNodes->end(); ptr2++)
+                        {
+                            inputMatrices[(*ptr2)->NodeName()] = &(*ptr2)->FunctionValues();
+                        }
                     }
-                    for (size_t i = 0; i<decoderLabelNodes->size(); i++)
+
+                    /// for the last network
+                    auto ptr = nets.end() - 1;
+                    vector<ComputationNodePtr>* featNodes = (*ptr)->FeatureNodes();
+                    for (auto ptr2 = featNodes->begin(); ptr2 != featNodes->end(); ptr2++)
                     {
-                        decoderInputMatrices[(*decoderLabelNodes)[i]->NodeName()] = &(*decoderLabelNodes)[i]->FunctionValues();
+                        decoderInputMatrices[(*ptr2)->NodeName()] = &(*ptr2)->FunctionValues();
+                    }
+
+                    vector<ComputationNodePtr>* lablNodes = (*ptr)->LabelNodes();
+                    for (auto ptr2 = lablNodes->begin(); ptr2 != lablNodes->end(); ptr2++)
+                    {
+                        decoderInputMatrices[(*ptr2)->NodeName()] = &(*ptr2)->FunctionValues();
                     }
 
                     //evaluate through minibatches
                     size_t totalEpochSamples = 0;
                     size_t actualMBSize = 0;
 
-                    encoderDataReader->StartMinibatchLoop(mbSize, 0, testSize);
-                    encoderDataReader->SetNbrSlicesEachRecurrentIter(1);
-                    decoderDataReader->StartMinibatchLoop(mbSize, 0, testSize);
-                    decoderDataReader->SetNbrSlicesEachRecurrentIter(1);
+                    for (auto ptr = readers.begin(); ptr != readers.end(); ptr++)
+                    {
+                        (*ptr)->StartMinibatchLoop(mbSize, 0, testSize);
+                        (*ptr)->SetNbrSlicesEachRecurrentIter(1);
+                    }
 
-                    Matrix<ElemType> mEncoderOutput(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
-                    Matrix<ElemType> historyMat(encoderEvalNodes[0]->FunctionValues().GetDeviceId());
+                    Matrix<ElemType> historyMat(m_net.GetDeviceID()); 
 
                     bool bDecoding = true;
                     while (bDecoding){
-                        if (encoderDataReader->GetMinibatch(encoderInputMatrices) == false)
-                            break;
-
-                        UpdateEvalTimeStamps(encoderFeatureNodes);
-
-                        actualMBSize = encoderNet->GetActualMBSize();
-
-                        encoderNet->SetActualMiniBatchSize(actualMBSize);
-                        encoderNet->SetActualNbrSlicesInEachRecIter(encoderDataReader->NumberSlicesInEachRecurrentIter());
-                        encoderDataReader->SetSentenceSegBatch(encoderNet->SentenceBoundary(), encoderNet->MinibatchPackingFlags());
-
-                        assert(encoderEvalNodes.size() == 1);
-                        for (int i = 0; i<encoderEvalNodes.size(); i++)
+                        bool noMoreData = false; 
+                        /// only get minibatch on the encoder parts of networks
+                        size_t k = 0; 
+                        for (auto ptr = readers.begin(); ptr != readers.end()-1; ptr++, k++)
                         {
-                            encoderNet->Evaluate(encoderEvalNodes[i]);
+                            if ((*ptr)->GetMinibatch(inputMatrices) == false)
+                            {
+                                noMoreData = true;
+                                break;
+                            }
+                        }
+                        if (noMoreData)
+                        {
+                            break;
                         }
 
-                        size_t mNutt = encoderDataReader->NumberSlicesInEachRecurrentIter();
+                        for (auto ptr = nets.begin(); ptr != nets.end() - 1; ptr++)
+                        {
+                            /// only on the encoder part of the networks
+                            vector<ComputationNodePtr> * featNodes = (*ptr)->FeatureNodes();
+                            UpdateEvalTimeStamps(featNodes);
+                        }
+
+
+                        auto ptrreader = readers.begin();
+                        size_t mNutt = 0; 
+                        for (auto ptr = nets.begin(); ptr != nets.end() - 1; ptr++, ptrreader++)
+                        {
+                            /// evaluate on the encoder networks
+                            actualMBSize = (*ptr)->GetActualMBSize();
+
+                            (*ptr)->SetActualMiniBatchSize(actualMBSize);
+                            mNutt = (*ptrreader)->NumberSlicesInEachRecurrentIter();
+                            (*ptr)->SetActualNbrSlicesInEachRecIter(mNutt);
+                            (*ptrreader)->SetSentenceSegBatch((*ptr)->SentenceBoundary(), (*ptr)->MinibatchPackingFlags());
+
+                            vector<ComputationNodePtr>* pairs = (*ptr)->PairNodes();
+                            for (auto ptr2 = pairs->begin(); ptr2 != pairs->end(); ptr2++)
+                            {
+                                (*ptr)->Evaluate(*ptr2);
+                            }
+                        }
 
                         vector<size_t> best_path;
 
@@ -874,8 +916,10 @@ namespace Microsoft {
 
                         /// call DataEnd to check if end of sentence is reached
                         /// datareader will do its necessary/specific process for sentence ending 
-                        encoderDataReader->DataEnd(endDataSentence);
-                        decoderDataReader->DataEnd(endDataSentence);
+                        for (auto ptr = readers.begin(); ptr != readers.end(); ptr++)
+                        {
+                            (*ptr)->DataEnd(endDataSentence);
+                        }
                     }
                 }
 
@@ -1228,7 +1272,8 @@ namespace Microsoft {
                 */
                 ElemType FindBestPathWithVariableLength(ComputationNetwork<ElemType>* evalnet,
                     size_t inputLength,
-                    IDataReader<ElemType>* dataReader, IDataWriter<ElemType>& dataWriter,
+                    IDataReader<ElemType>* dataReader,
+                    IDataWriter<ElemType>& dataWriter,
                     std::vector<ComputationNodePtr>* evalNodes,
                     std::vector<ComputationNodePtr>* outputNodes,
                     std::vector<ComputationNodePtr> * FeatureNodes,
