@@ -154,14 +154,14 @@ public:
         ConfigParameters configAALR(configSGD("AutoAdjust", ""));
         LearningRateSearchAlgorithm autoAdjustLRType = ParseLearningRateSearchType(configAALR("autoAdjustLR", "None"));
         ElemType reduceLearnRateIfImproveLessThan = configAALR("reduceLearnRateIfImproveLessThan", "0");
-                    bool continueReduce = (bool)configAALR("continueReduce", "false");
-                    size_t learnRateAdjustInterval = (size_t)configAALR("learnRateAdjustInterval", "1");
+        bool continueReduce = (bool) configAALR("continueReduce", "false");
+        size_t learnRateAdjustInterval = (size_t) configAALR("learnRateAdjustInterval", "1");
         ElemType learnRateDecreaseFactor = configAALR("learnRateDecreaseFactor", "0.618");
         ElemType increaseLearnRateIfImproveMoreThan = configAALR("increaseLearnRateIfImproveMoreThan", "1#INF");
         ElemType learnRateIncreaseFactor = configAALR("learnRateIncreaseFactor", "1.382");
 
         // AutoAdjust Auto Adjust Minibatch Parameters
-                    bool autoAdjustMinibatch = (bool)configAALR("autoAdjustMinibatch", "false");
+        bool autoAdjustMinibatch = (bool) configAALR("autoAdjustMinibatch", "false");
         size_t minibatchSizeTuningFrequency = configAALR("minibatchSizeTuningFrequency", "1");
         size_t minibatchSizeTuningMax = configAALR("minibatchSizeTuningMax", "1048576");
 
@@ -212,19 +212,19 @@ public:
         GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD("gradUpdateType", "None"));
         ElemType gaussianNoiseInjecStd = configSGD("gaussianNoiseInjectStd", "0");
         gUpdateInfo.mType = gradUpdateType;
-                    gUpdateInfo.mGaussianNoiseInjectStd = (float)gaussianNoiseInjecStd;
+        gUpdateInfo.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
 
         // extract RMSProp parameters from config, if they exist. Default to reasonable values.
         RMSPropInfo rpi;
-                    rpi.dec = (double)configSGD("rms_wgt_dec", "0.75");
-                    rpi.inc = (double)configSGD("rms_wgt_inc", "1.2");
-                    rpi.min = (double)configSGD("rms_wgt_min", "0.1");
-                    rpi.max = (double)configSGD("rms_wgt_max", "10.0");
-                    rpi.gamma = (double)configSGD("rms_gamma", "0.99");
+        rpi.dec = (double) configSGD("rms_wgt_dec", "0.75");
+        rpi.inc = (double) configSGD("rms_wgt_inc", "1.2");
+        rpi.min = (double) configSGD("rms_wgt_min", "0.1");
+        rpi.max = (double) configSGD("rms_wgt_max", "10.0");
+        rpi.gamma = (double) configSGD("rms_gamma", "0.99");
 
-                    bool needAveMultiplier = (bool)configSGD("normWithAveMultiplier", "true");
-                    ElemType L2RegWeight = (ElemType)configSGD("L2RegWeight", "0");
-                    ElemType L1RegWeight = (ElemType)configSGD("L1RegWeight", "0");
+        bool needAveMultiplier = (bool) configSGD("normWithAveMultiplier", "true");
+        ElemType L2RegWeight = (ElemType) configSGD("L2RegWeight", "0");
+        ElemType L1RegWeight = (ElemType) configSGD("L1RegWeight", "0");
 
         /// for backward support. future setup should use gradUpdateType=AdaGrad, instead of
         /// useAdagrad=true
@@ -342,7 +342,7 @@ public:
         m_continueReduce = continueReduce;
 
         //minimum interval is 1 epoch
-                    m_learnRateAdjustInterval = max((size_t)1, learnRateAdjustInterval);
+        m_learnRateAdjustInterval = max((size_t) 1, learnRateAdjustInterval);
 
         m_learnRateDecreaseFactor = learnRateDecreaseFactor;
         m_clippingThresholdPerSample = abs(clippingThresholdPerSample);
@@ -394,7 +394,7 @@ public:
         }
         else if (learningRatesPerMB.size() > 0)
         {
-                        int LRSize = (int)max(learningRatesPerMB.size(), m_mbSize.size());
+            int LRSize = (int) max(learningRatesPerMB.size(), m_mbSize.size());
             m_learningRatesPerSample.resize(LRSize);
             for (int i = 0; i < LRSize; i++)
             {
@@ -425,13 +425,12 @@ public:
             int momentumVectorSize = (int)max(momentumPerMB.size(), m_mbSize.size());
             m_momentumPerSample.resize(momentumVectorSize);
             for (int i = 0; i < momentumVectorSize; i++)
-        {
-                if ((momentumPerMB[i] >= 1) || (momentumPerMB[i] < 0))
             {
-                throw std::invalid_argument("momentumPerMB must be in [0, 1).");
-            }
-
-                m_momentumPerSample[i] =(float) pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
+                if ((momentumPerMB[i] >= 1) || (momentumPerMB[i] < 0))
+                {
+                    throw std::invalid_argument("momentumPerMB must be in [0, 1).");
+                }
+                m_momentumPerSample[i] = (float)pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
             }
         }
         else
@@ -440,7 +439,7 @@ public:
             m_momentumPerSample.resize(momentumVectorSize);
             for (int i = 0; i < momentumVectorSize; i++)
             {
-                m_momentumPerSample[i] = exp(log(0.9f) / m_mbSize[i]);
+                m_momentumPerSample[i] = (float)pow(0.9f, 1.0 / m_mbSize[i]);
             }
         }
 
@@ -545,8 +544,8 @@ public:
 
         // Initializes the model from original model.
         ComputationNetwork<ElemType> origNet(deviceID);
-                    ComputationNetwork<ElemType>* sequenceNet =
-                        (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : &origNet;
+        ComputationNetwork<ElemType>* sequenceNet = 
+            (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : &origNet;
         std::vector<ComputationNodePtr> addedFeatureNodes;
         std::vector<ComputationNodePtr> replacedCriterionNodes;
         if (startEpoch < 0)
@@ -555,25 +554,25 @@ public:
             origNet.LoadFromFile(origModelFileName);
 
             // Processes feature nodes.
-                        std::vector<ComputationNodePtr> *sequenceFeatureNodes = sequenceNet->FeatureNodes();
-                        for (size_t i = 0; i < sequenceFeatureNodes->size(); ++i)
+            std::vector<ComputationNodePtr> *sequenceFeatureNodes = sequenceNet->FeatureNodes();
+            for (size_t i = 0; i < sequenceFeatureNodes->size(); ++i)
             {
-                            if (!origNet.NodeNameExist((*sequenceFeatureNodes)[i]->NodeName()))
+                if (!origNet.NodeNameExist((*sequenceFeatureNodes)[i]->NodeName()))
                 {
-                                addedFeatureNodes.push_back((*sequenceFeatureNodes)[i]);
-                                origNet.AddFeatureNode((*sequenceFeatureNodes)[i]);
+                    addedFeatureNodes.push_back((*sequenceFeatureNodes)[i]);
+                    origNet.AddFeatureNode((*sequenceFeatureNodes)[i]);
                 }
             }
 
             // Processes criterion nodes.
-                        std::vector<ComputationNodePtr> *origCriterionNodes = GetTrainCriterionNodes(origNet);
-                        std::vector<ComputationNodePtr> *sequenceCriterionNodes = GetTrainCriterionNodes(*sequenceNet);
-                        if (origCriterionNodes->size() == 0 || sequenceCriterionNodes->size() == 0)
+            std::vector<ComputationNodePtr> * origCriterionNodes = GetTrainCriterionNodes(origNet);
+            std::vector<ComputationNodePtr> * sequenceCriterionNodes = GetTrainCriterionNodes(*sequenceNet);
+            if (origCriterionNodes->size() == 0 || sequenceCriterionNodes->size() == 0)
             {
                 throw std::runtime_error("Training criterion node does not exist.");
             }
-                        replacedCriterionNodes.push_back((*origCriterionNodes)[0]);
-                        origNet.ReplaceFinalCriterionNode((*origCriterionNodes)[0]->NodeName(), (*sequenceCriterionNodes)[0]);
+            replacedCriterionNodes.push_back((*origCriterionNodes)[0]);
+            origNet.ReplaceFinalCriterionNode((*origCriterionNodes)[0]->NodeName(), (*sequenceCriterionNodes)[0]);
             origNet.ResetEvalTimeStamp();
         }
 
@@ -586,12 +585,12 @@ public:
         {
             fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
         }
-                    ComputationNetwork<ElemType>* net =
-                        (startEpoch < 0) ? &origNet : netBuilder->LoadNetworkFromFile(modelFileName);
+        ComputationNetwork<ElemType> *net =
+            (startEpoch < 0) ? &origNet : netBuilder->LoadNetworkFromFile(modelFileName);
 
         startEpoch = max(startEpoch, 0);
 
-                    TrainOrAdaptModel(startEpoch, *net, *net, nullptr, trainSetDataReader, validationSetDataReader);
+        TrainOrAdaptModel(startEpoch, *net, *net, nullptr, trainSetDataReader, validationSetDataReader);
 
         // Handles deletions carefully here.
         if (startEpoch < 0)
@@ -600,8 +599,8 @@ public:
             {
                 origNet.RemoveFeatureNode(addedFeatureNodes[i]);
             }
-                        std::vector<ComputationNodePtr> *origCriterionNodes = GetTrainCriterionNodes(origNet);
-                        origNet.ReplaceFinalCriterionNode((*origCriterionNodes)[0]->NodeName(), replacedCriterionNodes[0]);
+            std::vector<ComputationNodePtr> * origCriterionNodes = GetTrainCriterionNodes(origNet);
+            origNet.ReplaceFinalCriterionNode((*origCriterionNodes)[0]->NodeName(), replacedCriterionNodes[0]);
         }
     }
 
@@ -627,7 +626,7 @@ public:
             fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
         }
 
-                    ComputationNetwork<ElemType>* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
+        ComputationNetwork<ElemType>* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
                                                              netBuilder->LoadNetworkFromFile(modelFileName);
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
@@ -643,11 +642,11 @@ public:
         startEpoch = max(startEpoch, 0);
         m_needRegularization = false;
 
-                    TrainOrAdaptModel(startEpoch, *net, *net, nullptr, trainSetDataReader, validationSetDataReader);
+        TrainOrAdaptModel(startEpoch, *net, *net, nullptr, trainSetDataReader, validationSetDataReader);
     }
 
 protected:
-                std::vector<ComputationNodePtr>* GetTrainCriterionNodes(ComputationNetwork<ElemType>& net)
+    std::vector<ComputationNodePtr>* GetTrainCriterionNodes(ComputationNetwork<ElemType>& net)
     {
         fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
         if (!m_trainCriterionNodeName.empty())
@@ -660,7 +659,7 @@ protected:
         }
     }
 
-                std::vector<ComputationNodePtr>* GetEvalCriterionNodes(ComputationNetwork<ElemType>& net)
+    std::vector<ComputationNodePtr>* GetEvalCriterionNodes(ComputationNetwork<ElemType>& net)
     {
         fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
         if (!m_evalCriterionNodeName.empty())
@@ -679,20 +678,20 @@ protected:
                            IDataReader<ElemType>* trainSetDataReader,
                            IDataReader<ElemType>* validationSetDataReader)
     {
-                    std::vector<ComputationNodePtr> *FeatureNodes = net.FeatureNodes();
-                    std::vector<ComputationNodePtr> *labelNodes = net.LabelNodes();
-                    std::vector<ComputationNodePtr> *criterionNodes = GetTrainCriterionNodes(net);
-                    std::vector<ComputationNodePtr> *evaluationNodes = GetEvalCriterionNodes(net);
+        std::vector<ComputationNodePtr> *FeatureNodes = net.FeatureNodes();
+        std::vector<ComputationNodePtr> *labelNodes = net.LabelNodes();
+        std::vector<ComputationNodePtr> *criterionNodes = GetTrainCriterionNodes(net);
+        std::vector<ComputationNodePtr> *evaluationNodes = GetEvalCriterionNodes(net);
 
-                    std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
-                    for (size_t i = 0; i < (*FeatureNodes).size(); i++)
+        std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
+        for (size_t i = 0; i < (*FeatureNodes).size(); i++)
         {
-                        (*inputMatrices)[(*FeatureNodes)[i]->NodeName()] = &(*FeatureNodes)[i]->FunctionValues();
+            (*inputMatrices)[(*FeatureNodes)[i]->NodeName()] = &(*FeatureNodes)[i]->FunctionValues();
         }
 
-                    for (size_t i = 0; i < labelNodes->size(); i++)
+        for (size_t i = 0; i < labelNodes->size(); i++)
         {
-                        (*inputMatrices)[(*labelNodes)[i]->NodeName()] = &(*labelNodes)[i]->FunctionValues();
+            (*inputMatrices)[(*labelNodes)[i]->NodeName()] = &(*labelNodes)[i]->FunctionValues();
         }
 
         // used for KLD regularized adaptation. For all other adaptation techniques
@@ -700,12 +699,12 @@ protected:
         std::vector<ComputationNodePtr> refFeatureNodes;
         if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
-                        refFeatureNodes.resize((*FeatureNodes).size());
-                        for (size_t i = 0; i < (*FeatureNodes).size(); i++)
+            refFeatureNodes.resize((*FeatureNodes).size());
+            for (size_t i = 0; i < (*FeatureNodes).size(); i++)
             {
                 //we need to keep this info to handle deletion
-                            refFeatureNodes[i] = refNet.GetNodeFromName((*FeatureNodes)[i]->NodeName());
-                            refNet.ChangeNode((*FeatureNodes)[i]->NodeName(), (*FeatureNodes)[i]);
+                refFeatureNodes[i] = refNet.GetNodeFromName((*FeatureNodes)[i]->NodeName());
+                refNet.ChangeNode((*FeatureNodes)[i]->NodeName(), (*FeatureNodes)[i]);
             }
 
             refNet.RebuildNetwork(refNode);
@@ -713,10 +712,10 @@ protected:
 
         //initializing weights and gradient holder
         //only one criterion so far TODO: support multiple ones?
-                    std::list<ComputationNodePtr>* learnableNodes = net.LearnableNodes((*criterionNodes)[0]);
+        std::list<ComputationNodePtr>* learnableNodes = net.LearnableNodes((*criterionNodes)[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
-                    for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++)
+        for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++)
         {
             ComputationNodePtr node = (*nodeIter);
             smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(),
@@ -728,12 +727,12 @@ protected:
         epochCriterion = avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
         size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
-                    std::vector<ElemType> epochEvalErrors((*evaluationNodes).size(), std::numeric_limits<ElemType>::infinity());
+        std::vector<ElemType> epochEvalErrors((*evaluationNodes).size(), std::numeric_limits<ElemType>::infinity());
 
         std::vector<wstring> evalNodeNames;
-                    for (size_t i = 0; i < evaluationNodes->size(); i++)
+        for (size_t i = 0; i < evaluationNodes->size(); i++)
         {
-                        evalNodeNames.push_back((*evaluationNodes)[i]->NodeName());
+            evalNodeNames.push_back((*evaluationNodes)[i]->NodeName());
         }
 
         size_t totalSamplesSeen = 0;
@@ -794,13 +793,13 @@ protected:
 
         bool learnRateReduced = false;
 
-                    SetMaxTempMemSizeForCNN(net, (*criterionNodes)[0], m_maxTempMemSizeInSamplesForCNN);
+        SetMaxTempMemSizeForCNN(net, (*criterionNodes)[0], m_maxTempMemSizeInSamplesForCNN);
         if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
             SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
         }
 
-                    for (int i = startEpoch; i < (int)m_maxEpochs; i++)
+        for (int i = startEpoch; i < (int)m_maxEpochs; i++)
         {
             auto t_start_epoch = Timer::MilliSecondElapsed();
 
@@ -2172,7 +2171,7 @@ protected:
 
     static ElemType MomentumPerMB(ElemType momentumPerSample, size_t minibatchSize)
     {
-        return exp(log(momentumPerSample) * minibatchSize);
+        return (ElemType)pow(momentumPerSample, minibatchSize);
     }
 
 public:

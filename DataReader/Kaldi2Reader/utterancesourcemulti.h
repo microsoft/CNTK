@@ -460,7 +460,7 @@ public:
                 }
                 else
                 {
-                    assert(uttframes==framesaccum[i]); //ensure that number of frames is consistent in each input feature "stream"
+                    assert(uttframes==framesaccum[uttRealNum]); //ensure that number of frames is consistent in each input feature "stream"
                     uttRealNum++;
  
                 }
