@@ -76,6 +76,11 @@ else
 	LINK_LIBS = $(MATHLIB_LIB)
 endif
 
+# Compile CNTK math into its own shared library to ensure that any change to its
+# global variables, like CUDA streams is made in one place and has global effect.
+# Otherwise, different clients of CNTK math would observe different states.
+CNTKMATH_LINK_LIB = -L$(BINDIR) -lcntkmath
+CNTKMATH_LIB = $(BINDIR)/libcntkmath.so
 
 # Set up gcc includes and libraries
 INCFLAGS_COMMON = -I Common/Include -I Math/Math -I MachineLearning/CNTK -I $(MATHLIB_INCLUDE)
@@ -125,8 +130,8 @@ LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataRead
 UCIFASTREADER_SRC = DataReader/UCIFastReader/UCIParser.cpp DataReader/UCIFastReader/UCIFastReader.cpp DataReader/UCIFastReader/Exports.cpp 
 
 READER_SRC = $(UCIFASTREADER_SRC) $(LUSEQUENCEREADER_SRC) $(HTKMLFREADER_SRC) $(SEQUENCEREADER_SRC) $(BINARYREADER_SRC)
-CORE_SRC = $(CN_SRC) $(MATH_SRC) $(COMMON_SRC)
-SRC =  $(READER_SRC) $(CORE_SRC)
+CORE_SRC = $(CN_SRC) $(COMMON_SRC)
+SRC =  $(READER_SRC) $(CORE_SRC) $(MATH_SRC)
 
 VPATH := $(sort  $(dir $(SRC)))
 
@@ -145,6 +150,15 @@ else
 	CORE_OBJ := $(CORE_OBJ_TMP)
 endif
 
+COMMON_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(COMMON_SRC))
+
+MATH_OBJ_TMP := $(patsubst %.cpp, $(OBJDIR)/%.o, $(MATH_SRC))
+ifeq ($(DEVICE),gpu)
+	MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(MATH_OBJ_TMP))
+else
+	MATH_OBJ := $(MATH_OBJ_TMP)
+endif
+
 UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
 LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
 SEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SEQUENCEREADER_SRC))
@@ -161,31 +175,37 @@ all: $(BINDIR)/cntk $(BINDIR)/UCIFastReader.so $(BINDIR)/LMSequenceReader.so $(B
 	@echo $(SEPARATOR)
 	@echo finished building for $(ARCH) with build type $(BUILDTYPE)
 
-$(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) $(CORE_OBJ)
+$(BINDIR)/UCIFastReader.so: $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^  
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(CNTKMATH_LINK_LIB)
 
-$(BINDIR)/LMSequenceReader.so: $(SEQUENCEREADER_OBJ) $(CORE_OBJ) 
+$(BINDIR)/LMSequenceReader.so: $(SEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(CNTKMATH_LINK_LIB)
 
-$(BINDIR)/LUSequenceReader.so: $(LUSEQUENCEREADER_OBJ) $(CORE_OBJ)
+$(BINDIR)/LUSequenceReader.so: $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(CNTKMATH_LINK_LIB)
 
-$(BINDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) $(CORE_OBJ)
+$(BINDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(CNTKMATH_LINK_LIB)
 
-$(BINDIR)/BinaryReader.so: $(BINARYREADER_OBJ) $(CORE_OBJ)
+$(BINDIR)/BinaryReader.so: $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(CNTKMATH_LINK_LIB)
 
-$(BINDIR)/cntk: $(CORE_OBJ)
+$(BINDIR)/cntk: $(CORE_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CC) $(BUILDTYPE_OPT) $(LDFLAGS) -o $@ $^ $(LINK_LIBS) -fopenmp -ldl -fPIC 
+	$(CC) $(BUILDTYPE_OPT) $(LDFLAGS) -o $@ $^ $(LINK_LIBS) $(CNTKMATH_LINK_LIB) -fopenmp -ldl -fPIC 
+
+$(CNTKMATH_LIB): $(MATH_OBJ) $(COMMON_OBJ)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
+	@mkdir -p $(dir $@)
+	$(CC) $(BUILDTYPE_OPT) -fPIC -shared -o $@ $^ $(LINK_LIBS) -fopenmp
 
 # Include all C++ dependencies, like header files, to ensure that a change in those
 # will result in the rebuild.

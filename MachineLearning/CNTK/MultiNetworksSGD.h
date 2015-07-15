@@ -1076,7 +1076,7 @@ namespace Microsoft {
                     localEpochCriterion.SetValue(0);
                     localEpochEvalErrors.SetValue(0);
 
-                    for (vector<IDataReader<ElemType>*>::iterator ptr = dataReader.begin(); ptr != dataReader.end(); ptr++)
+                    for (auto ptr = dataReader.begin(); ptr != dataReader.end(); ptr++)
                     {
                         (*ptr)->StartMinibatchLoop(m_mbSize[epochNumber], epochNumber, m_epochSize);
                     }

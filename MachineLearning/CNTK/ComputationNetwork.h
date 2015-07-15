@@ -36,6 +36,12 @@
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
 
+/**
+temp macro to disable USE_PAIR_NODES
+should use it when using encoder decoder
+*/
+//#define USE_PAIR_NODES
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
             template<class ElemType>
@@ -330,10 +336,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
                     }
+
                     for (auto x : m_pairNodes)
                     {
                         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
                     }
+
                     for (auto x : m_evalNodes)
                     {
                         line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
@@ -398,10 +406,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         m_outputNodes[i]->EnumerateArcs(visited, arcs);
                     }
+
                     for (size_t i = 0; i < m_pairNodes.size(); i++)
                     {
                         m_pairNodes[i]->EnumerateArcs(visited, arcs);
                     }
+
                     for (size_t i = 0; i < m_evalNodes.size(); i++)
                     {
                         m_evalNodes[i]->EnumerateArcs(visited, arcs);
@@ -530,6 +540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
+#ifdef USE_PAIR_NODES
                     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
                     fstream << m_pairNodes.size();
                     for (size_t i = 0; i<m_pairNodes.size(); i++)
@@ -537,6 +548,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         fstream << m_pairNodes[i]->NodeName();
                     }
                     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+#endif
 
                     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
@@ -755,6 +767,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
+#ifdef USE_PAIR_NODES
                         fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
                         fstream >> num;
                         for (size_t i = 0; i<num; i++)
@@ -763,6 +776,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_pairNodes.push_back(GetNodeFromName(nodeName));
                         }
                         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+#endif
 
                     }
 
@@ -1401,7 +1415,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
                     if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
-                        LogicError("PairNetwork : asked to pair a node with name %s in another network. However, this network has already a node with the same name. Should avoid this case.\n", a->NodeName());
+                    {
+                        fprintf(stderr, "PairNetwork : asked to pair a node with name l%s in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+                        throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
+                    }
                     newNode->AttachInputs(a);
                     AddNodeToNet(newNode);
                     return newNode;
