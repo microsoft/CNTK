@@ -73,6 +73,7 @@ void NDRMReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_traceLevel = readerConfig("traceLevel", "0");
     m_maxReadData = readerConfig("maxReadData", "0");
     m_doGradientCheck = readerConfig("gradientCheck", "false");
+    m_returnDense = readerConfig("returnDense", "false");
     m_sparsenessFactor = (m_doGradientCheck ? 1 : SPARSENESS_FACTOR_DEFAULT); // Disable sparseness test if gradient check is enabled
 
     std::vector<std::wstring> featureNames;
@@ -218,6 +219,23 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             m_currOffset += (sizeof(int32_t)*nnz);
 
             currIndex[i] += nnz;
+
+            // Debug code - print first feature row
+            /*if (j == 0)
+            {
+                fprintf(stderr, "Feature Type=%S\n", m_featureNames[i].c_str());
+                fprintf(stderr, "Vals =\t");
+                for (int x = 0; x < nnz; x++)
+                {
+                    fprintf(stderr, "%d\t", (int)m_values[i][x]);
+                }
+                fprintf(stderr, "\nRIdx =\t");
+                for (int x = 0; x < nnz; x++)
+                {
+                    fprintf(stderr, "%d\t", m_rowIndices[i][x]);
+                }
+                fprintf(stderr, "\n");
+            }*/
         }
         
         ElemType label = *(ElemType*)((char*)m_dataBuffer + m_currOffset);
@@ -247,17 +265,10 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         features.SetMatrixFromCSCFormat(m_colIndices[i], m_rowIndices[i], m_values[i], currIndex[i], m_dims[i], j);
     }
 
-    if (m_doGradientCheck)
+    if (m_returnDense || m_doGradientCheck)
     {
-        size_t rows = (*matrices[m_featureNames[0]]).GetNumRows();
-        size_t cols = (*matrices[m_featureNames[0]]).GetNumCols();
         (*matrices[m_featureNames[0]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-        (*matrices[m_featureNames[0]]).Resize(rows, cols);
-
-        rows = (*matrices[m_featureNames[1]]).GetNumRows();
-        cols = (*matrices[m_featureNames[1]]).GetNumCols();
         (*matrices[m_featureNames[1]]).SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-        (*matrices[m_featureNames[1]]).Resize(rows, cols);
     }
 
     if (useLabels)

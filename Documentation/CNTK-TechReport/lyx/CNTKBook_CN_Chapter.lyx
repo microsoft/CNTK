@@ -9172,10 +9172,6 @@ Notice that the gradient to the transition weights need to be summed over
  
 \end_layout
 
-\begin_layout Standard
-
-\end_layout
-
 \begin_layout Subsection
 Computation Node Types for Computing Statistics
 \end_layout
@@ -10976,6 +10972,64 @@ Macro3W1b & = & Plus\left(\mathbf{S}^{\left(1\right)},Times\left(\mathbf{W}^{\le
 
 \end_inset
 
+
+\end_layout
+
+\begin_layout Section
+Multiple Networks
+\end_layout
+
+\begin_layout Standard
+CNTK supports training multiple networks.
+ This allows each network to do its own SGD with its own datareader.
+ Therefore, it improves flexibilty.
+ In one example, you would use recurrent networks as an encoder of speech
+ features, a second network used as encoder of a language model and the
+ third network used as a recurrent language model.
+ It achieves this by introducing the following special nodes.
+ Also, the network computation uses a special node to determine if a network
+ has reached to an end.
+ 
+\end_layout
+
+\begin_layout Subsection
+PairNetworkNode
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Pair network node(PNN)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The pairnetworknode is a socket from one network to the other networks.
+ It has one input as its child.
+ When it does evaluatoin, it copies the function values from the child as
+ its function value.
+ When it does error propagation, it adds the gradient from its parent to
+ its child.
+ It is similar to an input node, but with activity from other networks.
+ 
+\end_layout
+
+\begin_layout Standard
+When the network is built, a function does evaluation ordering.
+ For a typical node, its children will be included into the evaluation order.
+ However, for pairnetwork node, its children are from other networks.
+ Therefore, they cannot be included in the search order.
+ This is achieved by overiding function, EnumerateNodesForEval, which stops
+ further network expansion on its children.
+ Similary, when doing strongly connected components search, the function
+ performs this should ignore the children of pairnetwork nodes.
+ 
+\end_layout
+
+\begin_layout Standard
 
 \end_layout
 

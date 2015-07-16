@@ -327,7 +327,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType)
+    Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat)
     {
         if (deviceId == MANAGEDEXTERN)
             throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
@@ -338,19 +338,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_preferredDeviceId == CPUDEVICE)
             {
-                NOT_IMPLEMENTED;
-                //m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(matrixFormatSparseCSC, numRows, numCols); 
+                m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(matrixFormat, numRows, numCols, 0);
                 SetDataLocation(CPU, SPARSE);
             }
             else
             {
-                NOT_IMPLEMENTED;
-                //m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(matrixFormatSparseCSC, numRows, numCols, m_preferredDeviceId); 
+                m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(numRows, numCols, 0, matrixFormat, m_preferredDeviceId);
                 SetDataLocation(GPU, SPARSE);
             }
         }
         else
         {
+            if (matrixFormat != matrixFormatDense)
+            {
+                NOT_IMPLEMENTED;
+            }
+
             if (m_preferredDeviceId == CPUDEVICE)
             {
                 m_CPUMatrix = new CPUMatrix<ElemType>(numRows, numCols);

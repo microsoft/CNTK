@@ -31,6 +31,7 @@ private:
     size_t m_miniBatchSize;
     int64_t m_maxReadData; // For early exit during debugging
     bool m_doGradientCheck;
+    bool m_returnDense;
     size_t m_sparsenessFactor;
     std::vector<ElemType*> m_values = std::vector<ElemType*>(FEATURE_COUNT);
     std::vector<int32_t*> m_rowIndices = std::vector<int32_t*>(FEATURE_COUNT);
