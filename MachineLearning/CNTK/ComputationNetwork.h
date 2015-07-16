@@ -1213,10 +1213,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         newNode = new SumElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
                     }
-        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
-        {
-            newNode = new SumColumnElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
+                    else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
+                    {
+                        newNode = new SumColumnElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+                    }
                     else if (nodeType == ScaleNode<ElemType>::TypeName())
                     {
                         newNode = new ScaleNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1427,7 +1427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
                 {
                     ComputationNodePtr newNode(
-                new InputValue<ElemType>(rows, cols, m_deviceId, inputName, true));
+                    new InputValue<ElemType>(rows, cols, m_deviceId, inputName, true));
                     AddNodeToNet(newNode);
                     return newNode;
                 }
@@ -1449,7 +1449,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const size_t imageChannels,
                     const size_t numImages)
                 {
-        ComputationNodePtr newNode(new InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName, true));
+                    ComputationNodePtr newNode(new InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName, true));
                     AddNodeToNet(newNode);
                     return newNode;
                 }
@@ -2134,13 +2134,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 ComputationNodePtr Reshape(const ComputationNodePtr a,
-                    const size_t num_rows,
+                               const size_t num_rows,
                                const size_t img_width,
                                const size_t img_height,
                                const size_t img_channels,
                     const std::wstring nodeName = L"")
                 {
-        ComputationNodePtr newNode(new ReshapeNode<ElemType>(m_deviceId, num_rows, img_width, img_height, img_channels, nodeName));
+                    ComputationNodePtr newNode(new ReshapeNode<ElemType>(m_deviceId, num_rows, img_width, img_height, img_channels, nodeName));
                     newNode->AttachInputs(a);
                     AddNodeToNet(newNode);
                     return newNode;
@@ -2369,8 +2369,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
 
                             iCnt++;
-            }
-            while (iCnt < iMBSize);
+                        }
+                        while (iCnt < iMBSize);
 
                         m_recurrentInfo[iLoopId].m_completedEvaluate = true;
                     }
@@ -2525,8 +2525,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 }
 
                                 iCol--;
-                }
-                while (iCol >= 0);
+                            }
+                            while (iCol >= 0);
                         }
 
                         m_recurrentInfo[iLoopId].m_completedGradient = true;
@@ -3032,7 +3032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (ComputationNodePtr node : *FinalCriterionNodes())
                         {
                             if (!allowFragment) {
-                    FormRecurentLoops(node, true);
+                                FormRecurentLoops(node, true);
                             }
                             PrintComputationTree(node, false);
                             size_t actualMBSize = this->GetActualMBSize();
@@ -3093,7 +3093,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr, "\n\n");
                 }
 
-                void BuildAndValidateNetwork(const ComputationNodePtr rootNode)
+                /**
+                for backward support, isCriterion is set to true
+                */
+                void BuildAndValidateNetwork(const ComputationNodePtr rootNode, bool isCriterion = true)
                 {
                     const ComputationNodePtr key = rootNode;
 
@@ -3101,7 +3104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_built.find(key) == m_built.end())
                     {
                         m_built[key] = true;
-                        FormRecurentLoops(rootNode);
+                        FormRecurentLoops(rootNode, isCriterion);
                         ValidateNetwork(rootNode);
                         CollectInputAndLeanableParameters(rootNode);
                         SetNodesReqMultiSeqHandling();
@@ -3515,15 +3518,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 // get the strong connected component from the graph
-    void getStrongSCC(const ComputationNodePtr rootNode, bool isCriterion)
+                void getStrongSCC(const ComputationNodePtr rootNode, bool isCriterion)
                 {
+                    /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
                     std::unordered_set<ComputationNodePtr> visited;
                     std::list<ComputationNodePtr> sccStack;
                     size_t index = 0;
                     size_t loopId = 0;
                     if (rootNode->isVisisted() == false)
                     {
-            strongSCC(rootNode, sccStack, index, loopId, isCriterion);
+                        strongSCC(rootNode, sccStack, index, loopId, isCriterion);
                     }
                 }
 
@@ -3539,16 +3543,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     sccStack.push_back(cur);
                     cur->SetInStack(true);
 
-                    for (int i = 0; i < cur->ChildrenSize(); i++)
+                    if (cur->OperationName() != L"PairNetwork")
                     {
-                        if (cur->Inputs(i)->isVisisted() == false)
+                        /// pairnetwork is the socket from other network, so ignore its children, which are in the other networks
+                        for (int i = 0; i < cur->ChildrenSize(); i++)
                         {
-                strongSCC(cur->Inputs(i), sccStack, index, loopId, isCriterion);
-                            cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
-                        }
-                        else if (cur->Inputs(i)->isInStack())
-                        {
-                            cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
+                            if (cur->Inputs(i)->isVisisted() == false)
+                            {
+                                strongSCC(cur->Inputs(i), sccStack, index, loopId, isCriterion);
+                                cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
+                            }
+                            else if (cur->Inputs(i)->isInStack())
+                            {
+                                cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
+                            }
                         }
                     }
 
@@ -3571,7 +3579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                         }
                         rInfo.Reset();
-            if (sccSize > 1 && isCriterion)
+                        if (sccSize > 1 && isCriterion)
                         {
                             loopId++;
                             m_recurrentInfo.push_back(rInfo);
@@ -3611,12 +3619,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     }
                 }
+            
                 //must be called before ValidateNetwork
-    void FormRecurentLoops(const ComputationNodePtr rootNode, bool isCriterion = false)
+                void FormRecurentLoops(const ComputationNodePtr rootNode, bool isCriterion = true)
                 {
                     std::vector<ComputationNodePtr> sourceLoopNodes;
 
-        getStrongSCC(rootNode, isCriterion);
+                    getStrongSCC(rootNode, isCriterion);
                     std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
                     std::list<ComputationNodePtr> nodesForGrad;
 
@@ -3723,10 +3732,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
                     }
 
-        for (auto iter = nodes.begin(); iter != nodes.end(); iter++)
-        {
-            (*iter)->clearCache();
-        }
+                    for (auto iter = nodes.begin(); iter != nodes.end(); iter++)
+                    {
+                        (*iter)->clearCache();
+                    }
                 }
 
                 void ReorderLoops(std::list<ComputationNodePtr>& nodes,
@@ -3788,7 +3797,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             ComputationNodePtr node = (*nodeIter);
                             if (node->OperationName() == InputValue<ElemType>::TypeName() /*L"InputValue"*/ ||
-                    node->OperationName() == InputValue<ElemType>::SparseTypeName())
+                                node->OperationName() == InputValue<ElemType>::SparseTypeName())
                             {
                                 inputs.push_back(node);
                             }
