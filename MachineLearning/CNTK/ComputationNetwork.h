@@ -40,7 +40,7 @@
 temp macro to disable USE_PAIR_NODES
 should use it when using encoder decoder
 */
-//#define USE_PAIR_NODES
+#define USE_PAIR_NODES
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

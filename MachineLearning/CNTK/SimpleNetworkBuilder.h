@@ -40,8 +40,7 @@ namespace Microsoft {
                 CLSTM = 256, RCRF = 512,
                 UNIDIRECTIONALLSTM = 19,
                 BIDIRECTIONALLSTM = 20,
-                ALIGNMENTSIMILARITYGENERATOR = 21,
-                ALIGNMENTSIMILARITYGFORWARDDECODER =22
+                ALIGNMENTSIMILARITYGENERATOR = 21
             } RNNTYPE;
 
 
@@ -187,8 +186,6 @@ namespace Microsoft {
                         m_rnnType = BIDIRECTIONALLSTM;
                     if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGENERATOR") != strType.end())
                         m_rnnType = ALIGNMENTSIMILARITYGENERATOR;
-                    if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGFORWARDDECODER") != strType.end())
-                        m_rnnType = ALIGNMENTSIMILARITYGFORWARDDECODER;
                 }
 
                 // Init - Builder Initialize for multiple data sets
@@ -300,8 +297,6 @@ namespace Microsoft {
                         return BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
                     if (m_rnnType == ALIGNMENTSIMILARITYGENERATOR)
                         return BuildAlignmentDecoderNetworkFromDescription(encoderNet, mbSize);
-                    if (m_rnnType == ALIGNMENTSIMILARITYGFORWARDDECODER)
-                        return BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, mbSize);
 
                     if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
                     {
@@ -434,8 +429,6 @@ namespace Microsoft {
                 ComputationNetwork<ElemType>* BuildConditionalLSTMNetworkFromDescription(size_t mbSize = 1);
 
                 ComputationNetwork<ElemType>* BuildNCELSTMNetworkFromDescription(size_t mbSize = 1);
-
-                ComputationNetwork<ElemType>* BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet, size_t mbSize = 1);
 
                 ComputationNetwork<ElemType>* BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet, size_t mbSize = 1);
 
