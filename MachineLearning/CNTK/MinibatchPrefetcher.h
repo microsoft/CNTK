@@ -35,7 +35,11 @@ public:
         for (auto iter = this->m_inputMatrices->begin(); iter != this->m_inputMatrices->end(); iter++)
         {
             assert(m_deviceId == iter->second->GetDeviceId());
-            m_prefetchInput[iter->first] = new Matrix<ElemType>(iter->second->GetDeviceId());
+            m_prefetchInput[iter->first] = new Matrix<ElemType>(iter->second->GetNumRows(),
+                                                                iter->second->GetNumCols(),
+                                                                iter->second->GetDeviceId(),
+                                                                iter->second->GetMatrixType(),
+                                                                iter->second->GetFormat());
         }
 
         // Launch a worker thread
