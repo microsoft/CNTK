@@ -219,6 +219,23 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             m_currOffset += (sizeof(int32_t)*nnz);
 
             currIndex[i] += nnz;
+
+            // Debug code - print first feature row
+            /*if (j == 0)
+            {
+                fprintf(stderr, "Feature Type=%S\n", m_featureNames[i].c_str());
+                fprintf(stderr, "Vals =\t");
+                for (int x = 0; x < nnz; x++)
+                {
+                    fprintf(stderr, "%d\t", (int)m_values[i][x]);
+                }
+                fprintf(stderr, "\nRIdx =\t");
+                for (int x = 0; x < nnz; x++)
+                {
+                    fprintf(stderr, "%d\t", m_rowIndices[i][x]);
+                }
+                fprintf(stderr, "\n");
+            }*/
         }
         
         ElemType label = *(ElemType*)((char*)m_dataBuffer + m_currOffset);
@@ -247,7 +264,6 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
         features.SetMatrixFromCSCFormat(m_colIndices[i], m_rowIndices[i], m_values[i], currIndex[i], m_dims[i], j);
     }
-
 
     if (m_returnDense || m_doGradientCheck)
     {
