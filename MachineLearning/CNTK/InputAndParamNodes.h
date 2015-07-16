@@ -660,7 +660,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = inputNode;
         }
 
-        void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
+        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
             std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
         {
             if (visited.find(this) == visited.end())  //not visited
