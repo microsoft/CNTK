@@ -564,7 +564,7 @@ namespace Microsoft {
                         }
 
                         for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                            nets[i]->BuildAndValidateNetwork(*ptr, false);
+                            nets[i]->BuildAndValidateNetwork(*ptr);
                     }
 
 
