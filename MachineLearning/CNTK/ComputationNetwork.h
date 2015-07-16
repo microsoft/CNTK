@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             public:
                 ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-                    : m_deviceId(deviceId)
+                    : m_deviceId(deviceId), m_SentenceBoundary(CPUDEVICE)
                 {
                     m_randomSeedOffset = 0;
                     m_actMiniBSize = 0;
@@ -3907,7 +3907,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 std::vector<ComputationNodePtr> m_tmpEvalulationCriterion; /// array saving tempary query terms
 
                 //used for sentence boundary information passed from reader to reset RNN state 
-                Matrix<ElemType> m_SentenceBoundary;
+                Matrix<ElemType> m_SentenceBoundary; // this matrix is always in CPU memory
                 // specify how the minibatch is packed for each sample
                 vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
