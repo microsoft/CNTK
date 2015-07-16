@@ -62,7 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX); 
         Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType *pArray, DEVICEID_TYPE deviceId); // constructor for setting Matrix from a base matrix (externally managed butter pArray)
         Matrix(FILE* f, const char * matrixName, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE); //matrixName is used to verify that correct matrix is read.
-        Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE);
+        Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
         Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const size_t nnz=0);
         Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);  //copy constructor, deep copy
         Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
