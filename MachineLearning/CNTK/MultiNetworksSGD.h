@@ -150,7 +150,7 @@ namespace Microsoft {
                     ComputationNetwork<ElemType>* eachNet = nullptr;
                     for (size_t k = 0; k < iNumNetworks; k++)
                     {
-                        wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1, false, msra::strfun::wstrprintf(L"%d", k));
+                        wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1, false, msra::strfun::wstrprintf(L".%d", k));
                         fprintf(stderr, "network model FileName=%ls\n", modelFileName.c_str());
                         if (startEpoch >= 0)
                             fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
@@ -190,10 +190,10 @@ namespace Microsoft {
 
                     int firstEpoch = -1;
 
-                    wstring curEpochFile = GetDecoderModelNameForEpoch(int(m_maxEpochs) - 1);
+                    wstring curEpochFile = GetModelNameForEpoch(int(m_maxEpochs) - 1, false, L".0");
                     for (int e = int(m_maxEpochs) - 1; e >= -1; e--)
                     {
-                        const wstring prevEpochFile = GetDecoderModelNameForEpoch(e - 1);
+                        const wstring prevEpochFile = GetModelNameForEpoch(e - 1, false, L".0");
 
                         if (msra::files::fuptodate(curEpochFile, prevEpochFile, false))
                         {
@@ -211,36 +211,9 @@ namespace Microsoft {
                 {
                     int epoch1Base = epoch + 1;
                     if (epoch1Base == m_maxEpochs || bLastModel)
-                        return m_decoderModelPath + ext;
+                        return m_modelPath + ext;
                     else
-                        return msra::strfun::wstrprintf(L"%s%s.%d", m_decoderModelPath.c_str(), ext.c_str(), (int)epoch1Base);
-                }
-
-                wstring GetDecoderModelNameForEpoch(const int epoch, bool bLastModel = false)
-                {
-                    int epoch1Base = epoch + 1;
-                    if (epoch1Base == m_maxEpochs || bLastModel)
-                        return m_decoderModelPath;
-                    else
-                        return msra::strfun::wstrprintf(L"%s.%d", m_decoderModelPath.c_str(), (int)epoch1Base);
-                }
-
-                wstring GetBackwardDecoderModelNameForEpoch(const int epoch, bool bLastModel = false)
-                {
-                    int epoch1Base = epoch + 1;
-                    if (epoch1Base == m_maxEpochs || bLastModel)
-                        return m_backwardDecoderModelPath;
-                    else
-                        return msra::strfun::wstrprintf(L"%s.%d", m_backwardDecoderModelPath.c_str(), (int)epoch1Base);
-                }
-
-                wstring GetEncoderModelNameForEpoch(const int epoch, bool bLastModel = false)
-                {
-                    int epoch1Base = epoch + 1;
-                    if (epoch1Base == m_maxEpochs || bLastModel)
-                        return m_encoderModelPath;
-                    else
-                        return msra::strfun::wstrprintf(L"%s.%d", m_encoderModelPath.c_str(), (int)epoch1Base);
+                        return msra::strfun::wstrprintf(L"%s%s.%d", m_modelPath.c_str(), ext.c_str(), (int)epoch1Base);
                 }
 
                 void TrainEncoderDecoderModel(int startEpoch, ComputationNetwork<ElemType>* encoderNet,
@@ -565,33 +538,33 @@ namespace Microsoft {
                         {
                             for (auto ptr = evaluationNodes[i]->begin(); ptr != evaluationNodes[i]->end(); ptr++)
                             {
-                            ComputationNodePtr pptr = *ptr;
+                                ComputationNodePtr pptr = *ptr;
 
-                            std::list<ComputationNodePtr>* eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
-                            for (auto nodeIter = eachLearnableNodes->begin(); nodeIter != eachLearnableNodes->end(); nodeIter++)
-                            {
-                                ComputationNodePtr node = (*nodeIter);
-                                learnableNodes.push_back(node);
+                                std::list<ComputationNodePtr>* eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
+                                for (auto nodeIter = eachLearnableNodes->begin(); nodeIter != eachLearnableNodes->end(); nodeIter++)
+                                {
+                                    ComputationNodePtr node = (*nodeIter);
+                                    learnableNodes.push_back(node);
+                                }
                             }
-                        }
                         }
                         else
                         {
                             for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
                             {
-                            ComputationNodePtr pptr = *ptr;
+                                ComputationNodePtr pptr = *ptr;
 
-                            std::list<ComputationNodePtr>* eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
-                            for (auto nodeIter = eachLearnableNodes->begin(); nodeIter != eachLearnableNodes->end(); nodeIter++)
-                            {
-                                ComputationNodePtr node = (*nodeIter);
-                                learnableNodes.push_back(node);
+                                std::list<ComputationNodePtr>* eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
+                                for (auto nodeIter = eachLearnableNodes->begin(); nodeIter != eachLearnableNodes->end(); nodeIter++)
+                                {
+                                    ComputationNodePtr node = (*nodeIter);
+                                    learnableNodes.push_back(node);
+                                }
                             }
-                        }
                         }
 
                         for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                            nets[i]->BuildAndValidateNetwork(*ptr);
+                            nets[i]->BuildAndValidateNetwork(*ptr, false);
                     }
 
 
@@ -1636,22 +1609,22 @@ namespace Microsoft {
                     }
                     else
                     {
-                    decoderNet->Evaluate((*decoderCriterionNodes)[0]);
+                        decoderNet->Evaluate((*decoderCriterionNodes)[0]);
 
-                    Matrix<ElemType>::AddElementToElement((*decoderCriterionNodes)[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                        Matrix<ElemType>::AddElementToElement((*decoderCriterionNodes)[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
 
-                    size_t numEvalNodes = decoderEvaluationNodes->size();
-                    std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
+                        size_t numEvalNodes = decoderEvaluationNodes->size();
+                        std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
 
-                    for (size_t i = 0; i < numEvalNodes; i++)
-                    {
-                        decoderNet->Evaluate((*decoderEvaluationNodes)[i]);
-                        Matrix<ElemType>::AddElementToElement((*decoderEvaluationNodes)[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
-                    }
+                        for (size_t i = 0; i < numEvalNodes; i++)
+                        {
+                            decoderNet->Evaluate((*decoderEvaluationNodes)[i]);
+                            Matrix<ElemType>::AddElementToElement((*decoderEvaluationNodes)[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                        }
 #ifdef DEBUG_DECODER
-                    fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
+                        fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
 #endif
-                }
+                    }
                 }
 
                 void EncoderDecoderWithHiddenStatesErrorProp(

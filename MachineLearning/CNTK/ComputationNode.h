@@ -929,7 +929,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result) 
+        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result) 
         {
             if (visited.find(this) == visited.end())  //not visited
             {   
