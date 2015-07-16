@@ -362,7 +362,7 @@ public:
                 throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
 
             foreach_index(i, infiles[m]){
-                utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
+	      utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i],featuresections[m]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
                 const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
                 // we need at least 2 frames for boundary markers to work
                 if (uttframes < 2)
