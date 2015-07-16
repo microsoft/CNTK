@@ -66,6 +66,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_completedEvaluate = false;
                         m_loopClosed = false;
                     }
+
+                    void Copy(const stRecurrentInfo& src)
+                    {
+                        m_recurrentNodes = src.m_recurrentNodes;
+                        m_recurrentNodesForForward = src.m_recurrentNodesForForward;
+                        m_sourceNode = src.m_sourceNode;
+                        m_loopId = src.m_loopId; 
+                        m_completedGradient = src.m_completedGradient;
+                        m_completedEvaluate = src.m_completedEvaluate;
+                        m_loopClosed = src.m_loopClosed;
+                    }
                 } RecurrentInfo;
 
             public:
@@ -3413,16 +3424,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     /// merge loops if they have the same source node
                     std::vector<RecurrentInfo> m_recurrentInfoTmp;
-                    int iLoopId = 0;
+                    if (m_recurrentInfo.size() <= 1)
+                        return; 
+
                     for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
                     {
                         if (m_recurrentInfoTmp.size() == 0)
                         {
                             RecurrentInfo rInfo;
-                            rInfo.m_recurrentNodes = (*iter).m_recurrentNodes;
-                            rInfo.m_sourceNode = (*iter).m_sourceNode;
-                            rInfo.m_loopId = iLoopId++;
-                            rInfo.Reset();
+                            rInfo.Copy(*iter); 
                             m_recurrentInfoTmp.push_back(rInfo);
                         }
                         else
@@ -3440,70 +3450,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (bFound == false)
                             {
                                 RecurrentInfo rInfo;
-                                rInfo.m_recurrentNodes = (*iter).m_recurrentNodes;
-                                rInfo.m_sourceNode = (*iter).m_sourceNode;
-                                rInfo.m_loopId = iLoopId++;
-                                rInfo.Reset();
+                                rInfo.Copy(*iter);
                                 m_recurrentInfoTmp.push_back(rInfo);
                             }
                             else
                             {
-                                for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
-                                {
-                                    if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
-                                    {
-                                        for (auto iter3 = (*iter).m_recurrentNodes.begin(); iter3 != (*iter).m_recurrentNodes.end(); iter3++)
-                                        {
-                                            (*iter2).m_recurrentNodes.push_back(*iter3);
-                                        }
-                                    }
-                                }
+                                continue; 
                             }
                         }
                     }
 
-                    for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
-                    {
-                        // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
-                        if ((*iter).m_recurrentNodes.size() > 1)
-                        {
-                            std::sort((*iter).m_recurrentNodes.begin(),
-                                (*iter).m_recurrentNodes.end(),
-                                (*iter).m_recurrentNodes[0]->IsSmaller);
-                        }
-                    }
-
-                    /// debug purpose 
-                    for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
-                    {
-                        fprintf(stderr, " nodes in the recurrent loops : \n");
-                        for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-                        {
-                            fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
-                        }
-                    }
-
+                    /// no need to sort the vector of recurrent loops, because they are pushed and later used as FIFO
                     m_recurrentInfo.clear();
                     for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
                     {
-                        RecurrentInfo rInfo;
-                        rInfo.m_recurrentNodes.clear();
-                        rInfo.m_sourceNode = (*iter).m_sourceNode;
-                        rInfo.m_loopId = (*iter).m_loopId;
-                        rInfo.Reset();
-
-                        ComputationNodePtr lastOne = nullptr;
-                        for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-                        {
-                            if (lastOne != nullptr && lastOne->NodeName() == (*itr)->NodeName())
-                            {
-                                continue;
-                            }
-                            rInfo.m_recurrentNodes.push_back(*itr);
-                            lastOne = *itr;
-                        }
-
-                        m_recurrentInfo.push_back(rInfo);
+                        m_recurrentInfo.push_back(*iter);
                     }
 
                     /// debug purpose 
@@ -3628,6 +3589,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     getStrongSCC(rootNode, isCriterion);
                     std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
                     std::list<ComputationNodePtr> nodesForGrad;
+
+                    MergeRecurrentLoops(rootNode);
 
                     /// debug purpose 
                     for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
