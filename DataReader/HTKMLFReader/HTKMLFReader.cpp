@@ -252,7 +252,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-			m_framemode = readerConfig("frameMode", "true");
+            m_framemode = readerConfig("frameMode", "true");
 
             int verbosity = readerConfig("verbosity","2");
 
@@ -1582,10 +1582,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
-		if (!m_framemode)
-		{
-			sentenceBegin.SetValue(m_sentenceBegin);
-			minibatchPackingFlag = m_minibatchPackingFlag;
+        if (!m_framemode)
+        {
+            sentenceBegin.SetValue(m_sentenceBegin);
+            minibatchPackingFlag = m_minibatchPackingFlag;
         }
     }
 
