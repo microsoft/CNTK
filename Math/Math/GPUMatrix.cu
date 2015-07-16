@@ -595,7 +595,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (numCols == 0)
             throw std::logic_error("The slice cannot have 0 columns.");
 
-        if (startColumn + numCols > m_numCols)
+        if (startColumn + numCols > fromMatrix.m_numCols)
             throw std::logic_error("The slice is out of range of the source matrix.");
         
         Clear();
@@ -603,6 +603,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_computeDevice=fromMatrix.m_computeDevice;
         m_externalBuffer=true;
         m_numRows = fromMatrix.m_numRows;
+        m_numCols = numCols;
         m_pArray=fromMatrix.m_pArray + startColumn * m_numRows;
 
         m_elemSizeAllocated = GetNumElements();
@@ -610,7 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_format = fromMatrix.m_format;
 
         return *this;
-    }     
+    }
 
     //for each column of a, we assign all rows of a to this starting from startIndex
     template<class ElemType>
