@@ -1,39 +1,62 @@
 #include "TimerUtility.h"
-
+#include <assert.h>
 #ifdef WIN32
 #include <Windows.h>
+static LARGE_INTEGER s_ticksPerSecond;
+static BOOL s_setFreq = QueryPerformanceFrequency(&s_ticksPerSecond);
 #else
 #include <time.h>
 #endif
-namespace Microsoft{
-    namespace MSR {
-        namespace CNTK {
 
-            //Returns the amount of milliseconds elapsed
-            unsigned long long Timer::MilliSecondElapsed()
-            {
+namespace Microsoft { namespace MSR { namespace CNTK {
+    long long Timer::GetStamp()
+    {
 #ifdef WIN32
-                FILETIME ft;
-                LARGE_INTEGER li;
-
-                GetSystemTimeAsFileTime(&ft); //ideally we should use GetSystemTimePreciseAsFileTime. But it's only avaiable with Win8+ and Win Server 2012+
-                li.LowPart = ft.dwLowDateTime;
-                li.HighPart = ft.dwHighDateTime;
-
-                unsigned long long ret = li.QuadPart;
-                ret -= 116444736000000000LL; // Make the values consistent with Linux. 
-                ret /= 10000; // From 100 nano seconds (10^-7) to 1 millisecond (10^-3) 
-
-                return ret;
+        LARGE_INTEGER li;
+        QueryPerformanceCounter(&li);
+        return li.QuadPart;
 #else
-                timespec ts;
-                clock_gettime(CLOCK_REALTIME, &ts); // Works on Linux
+        timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts); // Works on Linux
 
-                unsigned long long ret = ts.tv_sec * 1000 + ts.tv_nsec/1000000;
+        long long ret = ts.tv_sec * NANO_PER_SEC + ts.tv_nsec;
 
-                return ret;
+        return ret;
 #endif
-            }
-        }
     }
-}
+
+    void Timer::Start()
+    {
+        m_start = GetStamp();
+    }
+
+    void Timer::Restart()
+    {
+        m_start = m_end = 0;
+        Start();
+    }
+
+    void Timer::Stop()
+    {
+        m_end = GetStamp();
+    }
+
+    long long Timer::ElapsedMicroseconds()
+    {
+        assert(m_start != 0 && m_end != 0);
+        long long diff = m_end - m_start;
+
+        if (diff < 0)
+        {
+            diff = 0;
+        }
+
+#ifdef WIN32
+        assert(s_setFreq == TRUE);
+        return (diff * MICRO_PER_SEC) / s_ticksPerSecond.QuadPart;
+#else
+        return diff / MICRO_PER_NANO;
+#endif
+    }
+
+}}}

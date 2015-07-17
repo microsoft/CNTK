@@ -911,8 +911,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(m_gradientDotValue, m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues, 
-            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)  
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues,
+            const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             gradientDotValue.AssignInnerProductOf(gradientValues, functionValues, true);
             diff.AssignDifferenceOf(gradientValues, gradientDotValue);
@@ -920,14 +920,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        virtual void EvaluateThisNode()  
+        virtual void EvaluateThisNode()
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)
         {
+            size_t r = Inputs(0)->FunctionValues().GetNumRows(), c = Inputs(0)->FunctionValues().GetNumCols();
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (m_functionValues.GetNumCols() != c ||
+                m_functionValues.GetNumRows() != r)
+                m_functionValues.Resize(r, c);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
@@ -989,7 +993,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         SoftmaxNode(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId) 
+            : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId)
         {
             node->CopyTo(this, newName, flags);
         }

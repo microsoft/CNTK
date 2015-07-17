@@ -1296,8 +1296,6 @@ void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType
     /// run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
-    if (mReader.size() > 1)
-        LogicError("MultiIOBatchLUSequenceReader::SetSentenceSegBatch only supports processing from one BatchLUSequenceReader");
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
         (p->second)->SetSentenceSegBatch(sentenceBegin, minibatchPackingFlag);
