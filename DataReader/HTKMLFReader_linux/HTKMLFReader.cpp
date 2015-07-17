@@ -119,7 +119,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t iFeat, iLabel;
         iFeat = iLabel = 0;
         vector<wstring> statelistpaths;
-        bool framemode = true;
         vector<size_t> numContextLeft;
         vector<size_t> numContextRight;
 
@@ -261,14 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        if (readerConfig.Exists("frameMode"))
-        {
-            const std::string& framemodeString = readerConfig("frameMode");
-            if (framemodeString == "false")
-            {
-                framemode = false;
-            }
-        }
+        m_framemode = readerConfig("frameMode", "true");
 
         int verbosity = readerConfig("verbosity","2");
 
@@ -398,9 +390,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_lattices = new msra::dbn::latticesource(latticetocs, modelsymmap);
 
             // now get the frame source. This has better randomization and doesn't create temp files
-            m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, framemode);
+            m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode);
             m_frameSource->setverbosity(verbosity);
-            //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, framemode);
+            //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, m_framemode);
 
 
         }
@@ -1672,8 +1664,11 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
     template<class ElemType>
     void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
-        sentenceBegin.SetValue(m_sentenceBegin);
-        minibatchPackingFlag = m_minibatchPackingFlag;
+        if (!m_framemode)
+        {
+            sentenceBegin.SetValue(m_sentenceBegin);
+            minibatchPackingFlag = m_minibatchPackingFlag;
+        }
     }
 
 

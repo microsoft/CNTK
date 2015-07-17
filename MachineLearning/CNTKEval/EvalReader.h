@@ -172,8 +172,24 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void SetSentenceSegBatch(Matrix<ElemType> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
+        assert(m_switchFrame.size() == 1);        
+        sentenceBegin.Resize(1, m_mbSize);
+        minibatchPackingFlag.resize(m_mbSize);
+        sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+        std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None); 
+
+        if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
+        {
+            sentenceBegin.SetValue(0, m_switchFrame[0], (ElemType)SENTENCE_BEGIN); 
+            minibatchPackingFlag[m_switchFrame[0]] = MinibatchPackingFlag::UtteranceStart; 
+            if (m_switchFrame[0] > 0)
+            {
+                sentenceBegin.SetValue(0, m_switchFrame[0] - 1, (ElemType)SENTENCE_END); 
+                minibatchPackingFlag[m_switchFrame[0] - 1] = MinibatchPackingFlag::UtteranceEnd;
+            }
+        }
     }
 
     void GetSentenceBoundary(std::vector<size_t> boundaryInfo)
