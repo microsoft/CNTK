@@ -897,12 +897,15 @@ protected:
             {
                 // use the explicitly set minibatch size
                 chosenMinibatchSize = m_mbSize[i];
-                if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeMomentumByParallUtterance)
-                {
-                    actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->NumberSlicesInEachRecurrentIter();
-                }
-
             }
+            
+            actualMinibatchSize = chosenMinibatchSize;
+            if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeMomentumByParallUtterance)
+            {
+                actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->NumberSlicesInEachRecurrentIter();
+            }
+
+
 
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                 i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
