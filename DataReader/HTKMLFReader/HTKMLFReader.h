@@ -28,6 +28,7 @@ private:
     vector<bool> m_sentenceEnd;
     bool m_readAhead;
     bool m_truncated;
+    bool m_framemode;
     vector<size_t> m_processedFrame;
     intargvector m_numberOfuttsPerMinibatchForAllEpochs;
     size_t m_numberOfuttsPerMinibatch;
@@ -120,7 +121,7 @@ public:
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
     void SetSentenceEnd(int /*actualMbSize*/){};
-	void SetRandomSeed(int){ NOT_IMPLEMENTED };
+    void SetRandomSeed(int){ NOT_IMPLEMENTED };
 };
 
 }}}

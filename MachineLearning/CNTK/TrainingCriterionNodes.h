@@ -230,7 +230,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
+                ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
             }
         }
 
@@ -662,7 +662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -803,7 +803,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -1410,7 +1410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t i = t % nS;
                 if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
                 {
-                    if ((*m_sentenceSeg)(j, i) == NO_LABELS)
+                    if ((*m_sentenceSeg)(i,j) == NO_LABELS)
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
 

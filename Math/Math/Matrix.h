@@ -62,7 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX); 
         Matrix(BaseMatrix<ElemType>* baseMatrix, ElemType *pArray, DEVICEID_TYPE deviceId); // constructor for setting Matrix from a base matrix (externally managed butter pArray)
         Matrix(FILE* f, const char * matrixName, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE); //matrixName is used to verify that correct matrix is read.
-        Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const MatrixType matrixType = DENSE);
+        Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
         Matrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const size_t nnz=0);
         Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);  //copy constructor, deep copy
         Matrix<ElemType>& operator=(const Matrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
@@ -343,6 +343,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         static DEVICEID_TYPE GetBestGPUDeviceId(); //{ return GPUMatrix<ElemType>::GetBestGPUDeviceId();}
+
+        // This API records an event, in the case of GPU computation, that happens between two compute iterations
+        // (it's a compute delimiter between two minibatch iterations)
+        static void RecordComputeSyncPoint(DEVICEID_TYPE devId);
+
+        // This API ensures, in the case of GPU computation, that all compute is flushed before read decides to modify
+        // buffers, and potentially invalidate computation.
+        static void SyncComputeBeforeRead(DEVICEID_TYPE devId);
+
+        // This API ensures, in the case of GPU computation, that all async reads are finished before notifying compute
+        // that the read buffers are ready on the device.
+        static void SyncPendingRead(DEVICEID_TYPE devId);
+
+        // This API ensures, in the case of GPU computation, that all compute is flushed before transferring the criterion
+        // back to the host. This is a workaround for contention between two memcpy calls, one host-to-device and one
+        // device-to-host, which are for some reason getting serialized and cause big delays in compute.
+        static void SyncPendingCompute(DEVICEID_TYPE devId);
+
+        // This API ensures, in the case of GPU computation, creates a separate stream for reading data into GPU buffer.
+        static void EnableConcurrentRead(DEVICEID_TYPE devId);
 
         //static BLAS functions
 

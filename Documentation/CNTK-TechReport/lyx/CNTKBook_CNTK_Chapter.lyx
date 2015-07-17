@@ -1487,13 +1487,12 @@ momentumPerSample
 \end_inset
 
 : momentum per sample.
- Useful when you want to keep the momentum per sample constant, i.e.,
- automatically scales effective momentum for the minibatch when
- the minibatch size is changed.
- Can use syntax such as 0.9996*10:0.998 which means using the per sample
- momentum 0.9996 for 10 epochs and then 0.998 for the rest.
- momentumPerSample may be missing, for example, when momentumPerMB
- is provided.
+ Useful when you want to keep the momentum per sample constant, i.e., automaticall
+y scales effective momentum for the minibatch when the minibatch size is
+ changed.
+ Can use syntax such as 0.9996*10:0.998 which means using the per sample momentum
+ 0.9996 for 10 epochs and then 0.998 for the rest.
+ momentumPerSample may be missing, for example, when momentumPerMB is provided.
 \end_layout
 
 \begin_layout Itemize
@@ -1769,12 +1768,11 @@ numMiniBatch4LRSearch
 
 \end_inset
 
-: the number of minibatches used to search the minibatch size when
-in adaptive minibatch size mode.
+: the number of minibatches used to search the minibatch size whenin adaptive
+ minibatch size mode.
  Default value is 500.
- It's typically set to 10-20% of the total minibatches in an epoch
-this is shared with the search for learning rate in 
-SearchBeforeEpoch mode.
+ It's typically set to 10-20% of the total minibatches in an epochthis is
+ shared with the search for learning rate in SearchBeforeEpoch mode.
  
 \end_layout
 
@@ -1794,13 +1792,10 @@ autoAdjustMinibatch
 \end_inset
 
 : enable or disable whether minibatch size is adaptively adjusted.
- Default value is false.
-Adapative minibatch sizing will begin on 
-epochs starting after user minbatch sizes expcitily
-specified are complete.  For example if the user
-specifed minibatchSize=256:1024, then 256 and 1024
-are used in the first 2 Epochs and adaptive minibatch
-sizing is used aferwards
+ Default value is false.Adapative minibatch sizing will begin on epochs starting
+ after user minbatch sizes expcitilyspecified are complete.
+  For example if the userspecifed minibatchSize=256:1024, then 256 and 1024are
+ used in the first 2 Epochs and adaptive minibatchsizing is used aferwards
  
 \end_layout
 
@@ -1819,8 +1814,8 @@ minibatchSizeTuningFrequency
 
 \end_inset
 
-: The number of epochs to skip, on a periodic basis, before
-dynamically adjusting the minibatch size.
+: The number of epochs to skip, on a periodic basis, beforedynamically adjusting
+ the minibatch size.
  Default value is 1.
  
 \end_layout
@@ -1840,8 +1835,7 @@ minibatchSizeTuningMax
 
 \end_inset
 
-: The maximum size allowed for an
-adaptively adjusted minibatch size.
+: The maximum size allowed for anadaptively adjusted minibatch size.
  Default value is 1048576.
  
 \end_layout
@@ -4960,6 +4954,51 @@ minibatchSize
 \end_inset
 
  – the minibatch size to use when creating the label mapping file.
+\end_layout
+
+\begin_layout Subsection
+DoEncoderDecoder Command
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+DoEncoderDecoder Command
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Neural networks can be used to form a chain of networks.
+ The first several networks can work as encoders and the following networks
+ can serve as decoders.
+ A special node, PairNetworkNode, is used in each network to serve a socket
+ to be connected by other networks.
+ The related parameters are 
+\end_layout
+
+\begin_layout Itemize
+section
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+section
+\end_layout
+
+\end_inset
+
+ – the encoderReader and decoderReader are the readers for encoder and decoder.
+ Similary for encoderCVReader and decoderCVReader for validation set.
+ 
+\end_layout
+
+\begin_layout Itemize
+encoderNetworkBuilder and decoderNetworkBuilder: These specify the simple
+ network builder to used.
+ 
 \end_layout
 
 \begin_layout Section
