@@ -32,15 +32,13 @@ private:
     wstring m_seqTrainCriterion;
     KaldiSequenceTrainingIO<ElemType>* m_sequenceTrainingIO;
     std::vector<std::vector<std::pair<wstring, size_t>>> m_uttInfo;
-    //-std::vector<size_t> m_uttInfoCurrentIndex;
-    //-std::vector<size_t> m_uttInfoCurrentLength;
     
     vector<bool> m_sentenceEnd;
     bool m_readAhead;
     bool m_truncated;
     bool m_framemode;
-    bool m_noMix;
     vector<size_t> m_processedFrame;
+    size_t m_maxUtteranceLength;
     size_t m_numberOfuttsPerMinibatch;
     size_t m_actualnumberOfuttsPerMinibatch;
     size_t m_mbSize;
