@@ -402,16 +402,16 @@ namespace Microsoft {
 
                     vector<std::map<std::wstring, Matrix<ElemType>*>*> inputMatrices;
                     for (auto ptr = nets.begin(); ptr != nets.end(); ptr++)
-            {
+                    {
                         vector<ComputationNodePtr>* featNodes = (*ptr)->FeatureNodes();
                         vector<ComputationNodePtr>* lablPtr = (*ptr)->LabelNodes();
                         map<wstring, Matrix<ElemType>*>* pMap = new map<wstring, Matrix<ElemType>*>();
                         for (auto pf = featNodes->begin(); pf != featNodes->end(); pf++)
-            {
+                        {
                             (*pMap)[(*pf)->NodeName()] = &(*pf)->FunctionValues();
-            }
+                        }
                         for (auto pl = lablPtr->begin(); pl != lablPtr->end(); pl++)
-            {
+                        {
                             (*pMap)[(*pl)->NodeName()] =
                                 &((*pl)->FunctionValues());
             }
@@ -619,7 +619,7 @@ namespace Microsoft {
                     std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
                     std::map<std::wstring, Matrix<ElemType>*> decoderInputMatrices;
                     for (auto ptr = nets.begin(); ptr != nets.end()- 1; ptr++)
-            {
+                    {
                         vector<ComputationNodePtr>* featNodes = (*ptr)->FeatureNodes();
                         for (auto ptr2 = featNodes->begin(); ptr2 != featNodes->end(); ptr2++)
                         {

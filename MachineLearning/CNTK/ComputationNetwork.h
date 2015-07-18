@@ -2744,7 +2744,7 @@ public:
                     ComputationNodePtr node = this->GetNodeFromName(criterionNodeName);
                     this->ValidateNetwork(node);
                     if (node->FunctionValues().GetNumElements() != 1)
-    { 
+                    { 
                         throw invalid_argument(
                             "the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
                     }
