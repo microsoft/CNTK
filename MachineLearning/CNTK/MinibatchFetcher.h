@@ -17,10 +17,17 @@ template<class ElemType>
 class MinibatchFetcher
 {
 public:
-    MinibatchFetcher(IDataReader<ElemType>* trainSetDataReader, const std::map<std::wstring, Matrix<ElemType>*>* inputMatrices) :
+    MinibatchFetcher(IDataReader<ElemType>* trainSetDataReader,
+                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                     Matrix<ElemType>* sentenceBegin,
+                     vector<MinibatchPackingFlag>* sentenceExistsBeginOrNoLabels) 
+                     :
         m_reader(trainSetDataReader),
-        m_inputMatrices(inputMatrices)
+        m_inputMatrices(inputMatrices),
+        m_sentenceBegin(sentenceBegin),
+        m_sentenceExistsBeginOrNoLabels(sentenceExistsBeginOrNoLabels)
     {
+        assert((m_sentenceBegin != nullptr) && (m_sentenceExistsBeginOrNoLabels != nullptr));
     }
 
     // This virtual dtor is necessary to allow invocation of derived dtors, which have some required synchronization points
@@ -28,12 +35,17 @@ public:
 
     virtual bool GetMinibatch()
     {
-        return m_reader->GetMinibatch(*const_cast<std::map<std::wstring, Matrix<ElemType>*>*>(m_inputMatrices));
+        bool retVal = m_reader->GetMinibatch(*m_inputMatrices);
+        m_reader->SetSentenceSegBatch(*m_sentenceBegin, *m_sentenceExistsBeginOrNoLabels);
+
+        return retVal;
     }
 
 protected:
     IDataReader<ElemType>* m_reader;
-    const std::map<std::wstring, Matrix<ElemType>*>* m_inputMatrices;
+    std::map<std::wstring, Matrix<ElemType>*>* m_inputMatrices;
+    Matrix<ElemType>* m_sentenceBegin;
+    vector<MinibatchPackingFlag>* m_sentenceExistsBeginOrNoLabels;
 };
 
 }}}
