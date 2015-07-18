@@ -1710,8 +1710,8 @@ protected:
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
         std::unique_ptr<MinibatchFetcher<ElemType>> mbFetcher(
             m_doPrefetchTrainingData ?
-                new MinibatchPrefetcher<ElemType>(trainSetDataReader, inputMatrices) :
-                new MinibatchFetcher<ElemType>(trainSetDataReader, inputMatrices));
+                new MinibatchPrefetcher<ElemType>(trainSetDataReader, inputMatrices, &(net.SentenceBoundary()), &(net.MinibatchPackingFlags())) :
+                new MinibatchFetcher<ElemType>(trainSetDataReader, inputMatrices, &(net.SentenceBoundary()), &(net.MinibatchPackingFlags())));
 
         fprintf(stderr, "\nStarting minibatch loop, prefetching is: %s\n", m_doPrefetchTrainingData ? "ENABLED" : "DISABLED");
 
@@ -1735,7 +1735,6 @@ protected:
 
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
 
 #ifndef EVALDLL
             if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
