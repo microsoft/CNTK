@@ -866,7 +866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
-            std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode) 
+        std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode) 
         {
             if (visited.find(this) == visited.end())  //not visited
             {   
