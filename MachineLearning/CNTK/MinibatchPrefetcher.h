@@ -24,6 +24,9 @@ template<class ElemType>
 class MinibatchPrefetcher : public MinibatchFetcher<ElemType>
 {
 public:
+    using MinibatchFetcher<ElemType>::m_sentenceBegin;
+    using MinibatchFetcher<ElemType>::m_sentenceExistsBeginOrNoLabels;
+
     MinibatchPrefetcher(IDataReader<ElemType>* trainSetDataReader,
                         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
                         Matrix<ElemType>* sentenceBegin,
