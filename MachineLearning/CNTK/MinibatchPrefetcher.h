@@ -24,8 +24,13 @@ template<class ElemType>
 class MinibatchPrefetcher : public MinibatchFetcher<ElemType>
 {
 public:
-    MinibatchPrefetcher(IDataReader<ElemType>* trainSetDataReader, const std::map<std::wstring, Matrix<ElemType>*>* inputMatrices) :
-        MinibatchFetcher<ElemType>(trainSetDataReader, inputMatrices),
+    MinibatchPrefetcher(IDataReader<ElemType>* trainSetDataReader,
+                        std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                        Matrix<ElemType>* sentenceBegin,
+                        vector<MinibatchPackingFlag>* sentenceExistsBeginOrNoLabels) :
+        MinibatchFetcher<ElemType>(trainSetDataReader, inputMatrices, sentenceBegin, sentenceExistsBeginOrNoLabels),
+        m_prefetchSentenceBegin(nullptr),
+        m_prefetchSentenceExistsBeginOrNoLabels(nullptr),
         m_isEpochReadingDone(false),
         m_minibatchReady(false),
         m_isTerminating(false)
@@ -40,6 +45,20 @@ public:
                                                                 iter->second->GetDeviceId(),
                                                                 iter->second->GetMatrixType(),
                                                                 iter->second->GetFormat());
+        }
+
+        if (sentenceBegin != nullptr)
+        {
+            m_prefetchSentenceBegin = new Matrix<ElemType>(sentenceBegin->GetNumRows(),
+                                                           sentenceBegin->GetNumCols(),
+                                                           sentenceBegin->GetDeviceId(),
+                                                           sentenceBegin->GetMatrixType(),
+                                                           sentenceBegin->GetFormat());
+        }
+
+        if (sentenceExistsBeginOrNoLabels != nullptr)
+        {
+            m_prefetchSentenceExistsBeginOrNoLabels = new vector<MinibatchPackingFlag>();
         }
 
         // Launch a worker thread
@@ -66,6 +85,9 @@ public:
         {
             delete iter->second;
         }
+
+        delete m_prefetchSentenceBegin;
+        delete m_prefetchSentenceExistsBeginOrNoLabels;
     }
 
     virtual bool GetMinibatch()
@@ -95,6 +117,17 @@ public:
                 {
                     assert(m_deviceId == iter->second->GetDeviceId());
                     std::swap(*(iter->second), *m_prefetchInput[iter->first]);
+                }
+
+                if (m_sentenceBegin != nullptr)
+                {
+                    assert(m_sentenceBegin->GetDeviceId() == m_prefetchSentenceBegin->GetDeviceId());
+                    std::swap(*m_sentenceBegin, *m_prefetchSentenceBegin);
+                }
+
+                if (m_sentenceExistsBeginOrNoLabels != nullptr)
+                {
+                    std::swap(*m_sentenceExistsBeginOrNoLabels, *m_prefetchSentenceExistsBeginOrNoLabels);
                 }
 
                 hasMoreEpochReading = true;
@@ -160,7 +193,9 @@ private:
         Matrix<ElemType>::SyncComputeBeforeRead(m_deviceId);
 
         // Get the next minibatch and wait for it to be available on the device
-        bool isDone = !this->m_reader->GetMinibatch(const_cast<std::map<std::wstring, Matrix<ElemType>*>&>(m_prefetchInput));
+        bool isDone = !this->m_reader->GetMinibatch(m_prefetchInput);
+        this->m_reader->SetSentenceSegBatch(*m_prefetchSentenceBegin, *m_prefetchSentenceExistsBeginOrNoLabels);
+
         Matrix<ElemType>::SyncPendingRead(m_deviceId);
 
         return isDone;
@@ -168,6 +203,8 @@ private:
 
     // @TODO: We need to add support for a larger number of prefetch buffers, larger than 1
     std::map<std::wstring, Matrix<ElemType>*> m_prefetchInput;
+    Matrix<ElemType>* m_prefetchSentenceBegin;
+    vector<MinibatchPackingFlag>* m_prefetchSentenceExistsBeginOrNoLabels;
     std::thread m_prefetchThread;
     std::mutex m_mutex;
     std::condition_variable m_cv;
