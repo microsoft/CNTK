@@ -969,7 +969,7 @@ namespace Microsoft {
                     evalnet->SetActualMiniBatchSize(1, FeatureNodes);
                     dataReader->SetSentenceSegBatch(evalnet->SentenceBoundary(), evalnet->MinibatchPackingFlags());
             /// need to set the sentence begining segmentation info
-                    evalnet->SentenceBoundary().SetValue(SENTENCE_BEGIN);
+                    evalnet->SentenceBoundary().SetValue(SEQUENCE_START);
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
@@ -979,7 +979,7 @@ namespace Microsoft {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                            evalnet->SentenceBoundary().SetValue(SENTENCE_MIDDLE);
+                            evalnet->SentenceBoundary().SetValue(SEQUENCE_MIDDLE);
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -1131,7 +1131,7 @@ namespace Microsoft {
             ElemType best_score = -numeric_limits<ElemType>::infinity();
             ElemType best_score_so_far = -numeric_limits<ElemType>::infinity();
 
-                    evalnet->SentenceBoundary().SetValue(SENTENCE_BEGIN);
+                    evalnet->SentenceBoundary().SetValue(SEQUENCE_START);
 
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
@@ -1141,7 +1141,7 @@ namespace Microsoft {
                         if (itdx > 0)
                         {
                             /// state need to be carried over from past time instance
-                            evalnet->SentenceBoundary().SetValue(SENTENCE_MIDDLE);
+                            evalnet->SentenceBoundary().SetValue(SEQUENCE_MIDDLE);
                         }
 
                 PreComputeActivityAtTime(itdx);
