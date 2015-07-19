@@ -228,6 +228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> *minibatchPackingFlag)
         {
+            assert(seg->GetNumCols() == minibatchPackingFlag->size());
             m_sentenceSeg = seg;
             m_minibatchPackingFlag = minibatchPackingFlag;
         }
@@ -865,7 +866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
-            std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode) 
+        std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode) 
         {
             if (visited.find(this) == visited.end())  //not visited
             {   
@@ -875,7 +876,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_children[i] == nullptr)
                         continue;
-                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, this->OperationName() == L"Delay");
+                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr, 
+                        this->OperationName() == L"PastValue" || this->OperationName() == L"FutureValue");
                 }
                 
                 //children first for function evaluation
@@ -892,7 +894,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (!IsLeaf() && bFromDelayNode)
+                if (!IsLeaf() && isFromPastOrFutureValueNode)
                     sourceRecurrentNodePtr.push_back(this) ;
             }
         }
@@ -1036,7 +1038,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_indexInLoop;
         Matrix<ElemType> * m_sentenceSeg;
         /// conditionally point to either a pointer to that provided by network, or point to 
-        /// an indiviaul sentence boundary info, which happens if delay > 1 is required for delay node
+        /// an indiviaul sentence boundary info, which happens if timeStep > 1 is required for PastValue node
         vector<MinibatchPackingFlag> * m_minibatchPackingFlag;
 
     private:

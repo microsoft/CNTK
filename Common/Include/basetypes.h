@@ -432,7 +432,7 @@ public:
 };
 
 // represents a thread-local-storage variable
-// Note: __declspec(thread) is broken on pre-Vista for delay loaded DLLs
+// Note: __declspec(thread) is broken on pre-Vista for PastValue loaded DLLs
 // [http://www.nynaeve.net/?p=187]
 // so instead, we need to wrap up the Win32 TLS functions ourselves.
 // Note: tls instances must be allocated as static to work correctly, e.g.:

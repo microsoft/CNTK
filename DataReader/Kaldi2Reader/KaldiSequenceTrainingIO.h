@@ -50,7 +50,7 @@ public:
     bool ComputeDerivatives(const wstring& uttID, const Matrix<ElemType>& outputs);
 
     // Gets the computed derivatives for given utterance.
-    void GetDerivatives(size_t startFrame, size_t endFrame,
+    void GetDerivatives(size_t startFrame, size_t endFrame, size_t mbSize,
                         const std::wstring& uttID, Matrix<ElemType>& derivatives);
 
     // Gets the computed objectives for given utterance.

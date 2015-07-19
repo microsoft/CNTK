@@ -221,6 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void KaldiSequenceTrainingIO<ElemType>::GetDerivatives(size_t startFrame,
                                                            size_t endFrame,
+                                                           size_t mbSize,
                                                            const std::wstring& uttID,
                                                            Matrix<ElemType>& derivativesIn)
     {
@@ -238,7 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(startFrame >= 0);
         assert(endFrame <= m_currentUttLength);
 
-        derivatives.Resize(m_transModel.NumPdfs(), endFrame - startFrame);
+        derivatives.Resize(m_transModel.NumPdfs(), mbSize);
         derivatives.SetValue(0);
         for (size_t t = startFrame; t < endFrame; ++t)
         {
