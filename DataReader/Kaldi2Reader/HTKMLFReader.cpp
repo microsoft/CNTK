@@ -58,6 +58,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("legacy mode has been deprecated\n");
         }
 
+        // If <m_framemode> is false, throw away any utterance that is longer
+        // than the specified <m_maxUtteranceLength>.
+        m_maxUtteranceLength = readerConfig("maxUtteranceLength", "1500");
+
         // m_truncated:
         //     If true, truncate utterances to fit the minibatch size. Otherwise
         //     the actual minibatch size will be the length of the utterance.
@@ -70,10 +74,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.\n");
         }
-        if (!m_truncated && m_numberOfuttsPerMinibatch != 1)
-        {
-            LogicError("nbrUttsInEachRecurrentIter has to be 1 if Truncated is set to false.\n");
-        }
 
         // Initializes variables related to multi-utterance.
         m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
@@ -82,8 +82,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_toProcess.assign(m_numberOfuttsPerMinibatch, 0);
         m_switchFrame.assign(m_numberOfuttsPerMinibatch, 0);
         m_currentBufferFrames.assign(m_numberOfuttsPerMinibatch, 0);
-        //-m_uttInfoCurrentIndex.assign(m_numberOfuttsPerMinibatch, 0);
-        //-m_uttInfoCurrentLength.assign(m_numberOfuttsPerMinibatch, 0);
         m_uttInfo.resize(m_numberOfuttsPerMinibatch);
 
         // Checks if we need to do sequence training.
@@ -95,10 +93,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 && (m_seqTrainCriterion != L"smbr"))
             {
                 LogicError("Current Supported sequence training criterion are: mpfe, smbr.\n");
-            }
-            if (m_numberOfuttsPerMinibatch != 1)
-            {
-                LogicError("nbrUttsInEachRecurrentIter has to be 1 in sequence training.\n");
             }
         }
 
@@ -112,26 +106,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Checks if partial minibatches are allowed.
         std::string minibatchMode(readerConfig("minibatchMode", "Partial"));
         m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
-        if (!m_partialMinibatch && m_doSeqTrain)
-        {
-            LogicError("minibatchMode has to be Partial in sequence training.");
-        }
-
-        // Checks if noMix is set. If <m_noMix> is true, then frames from next
-        // sentence will not be used to fill up the current minibatch. It is
-        // only meaningful when <m_framemode> is false. 
-        m_noMix = readerConfig("noMix", "false");
-        if (m_framemode == false)
-        {
-            if (m_numberOfuttsPerMinibatch != 1 && m_noMix == true)
-            {
-                LogicError("numberOfuttsPerMinibatch has to be 1 when noMix is true.\n");
-            }
-            if (m_doSeqTrain && m_noMix == false && m_truncated)
-            {
-                LogicError("noMix has to be true in if Truncated is true sequence training.\n");
-            }
-        }
 
         // Checks if we are in "write" mode or "train/test" mode.
         string command(readerConfig("action",L""));
@@ -1015,10 +989,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     wstring uttID = m_uttInfo[uttIndex][0].first; 
                     Matrix<ElemType>& data = *matrices[iter->first];
                     if (m_sequenceTrainingIO->HasDerivatives(uttID))
-                        m_sequenceTrainingIO->GetDerivatives(startFrame, endFrame, uttID, data);
+                        m_sequenceTrainingIO->GetDerivatives(startFrame, endFrame, mbSize, uttID, data);
                     else
                     {
-                        data.Resize(data.GetNumRows(), endFrame - startFrame);
+                        data.Resize(data.GetNumRows(), mbSize);
                         data.SetValue(0);
                     }
                 }
@@ -1076,122 +1050,195 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
+            // If <m_truncated> is true, <currentMBSize> is <m_mbSize>
+            // If <m_truncated> is false, <currentMBSize> equals to the longest
+            // utterance in the minibatch.
+            if (!m_truncated)
+            {
+                currentMBSize = 0;
+                for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                {
+                    if (m_currentBufferFrames[i] > currentMBSize)
+                    {
+                        currentMBSize = m_currentBufferFrames[i];
+                    }
+                }
+            }
+
+            // We initialize the sentence boundary information before we process
+            // the utterances.
+            m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, currentMBSize);
+            m_minibatchPackingFlag.resize(currentMBSize);
+            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+            {
+                for (size_t j = 0; j < currentMBSize; j++)
+                {
+                    m_sentenceBegin.SetValue(i, j, (ElemType) SENTENCE_MIDDLE);
+                }
+            }
+            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+
             // Iterates over utterances. m_numberOfuttsPerMinibatch = 1 is a
             // special case.
             for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
             {
-                // If <m_truncated> is false, we will take whatever length we
-                // have in the buffer for the current sentence. Note that if
-                // we have multiple sentences, we make sure that <m_truncated>
-                // is true in the initialization, so the following will only
-                // be true in the single sentence case.
-                if (!m_truncated)
-                {
-                    assert(m_numberOfuttsPerMinibatch = 1);
-                    currentMBSize = m_currentBufferFrames[i];
-                }
-
-                // We set the sentence begin information when we process the
-                // first sentence.
-                if (i == 0) {
-                  m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, currentMBSize);
-                  m_minibatchPackingFlag.resize(currentMBSize);
-
-                  for (size_t k = 0; k < m_numberOfuttsPerMinibatch; k++)
-                  {
-                      for (size_t l = 0; l < currentMBSize; l++)
-                      {
-                          m_sentenceBegin.SetValue(k, l, (ElemType) SENTENCE_MIDDLE);
-                      }
-                  }
-                  std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                }
-
                 size_t startFrame = m_processedFrame[i];
                 size_t endFrame = 0;
 
                 if ((startFrame + currentMBSize) < m_toProcess[i])
-                {   // This case should happen when <m_framemode> is false.
-                    if(m_processedFrame[i] > 0)
+                {
+                    // There is only 1 case:
+                    //     1. <m_framemode> is false, and <m_truncated> is true.
+                    assert(m_framemode == false);
+                    assert(m_truncated == true);
+
+                    // Sets the utterance boundary.
+                    if (startFrame == 0)
                     {
-                        m_sentenceEnd[i] = false;
-                        m_switchFrame[i] = currentMBSize + 1;
-                        if (m_processedFrame[i] == 1)
-                        {
-                            m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_END);
-                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceEnd;
-                        }
-                    }
-                    else
-                    {
-                        m_sentenceEnd[i] = true;
-                        m_switchFrame[i] = 0;
                         m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                        m_minibatchPackingFlag[0] |= MinibatchPackingFlag::UtteranceStart;
                     }
+
                     endFrame = startFrame + currentMBSize;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
                     m_processedFrame[i] += currentMBSize;
                 }
+                else if ((startFrame + currentMBSize) == m_toProcess[i])
+                {
+                    // There are 3 cases:
+                    //     1. <m_framemode> is false, and <m_truncated> is true,
+                    //        and it reaches the end of the utterance.
+                    //     2. <m_framemode> is false, and <m_truncated> is false
+                    //        and it reaches the end of the utterance.
+                    //     3. <m_framemode> is true, then we do not have to set
+                    //        utterance boundary.
+                    
+                    // Sets the utterance boundary.
+                    if (m_framemode == false)
+                    {
+                        // If <m_truncated> is false, then the whole utterance
+                        // will be loaded into the minibatch.
+                        if (m_truncated == false)
+                        {
+                            assert(startFrame == 0);
+                            m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::UtteranceStart;
+                        }
+
+                        // We have to set the utterance end.
+                        m_sentenceBegin.SetValue(i, m_sentenceBegin.GetNumCols() - 1, (ElemType)SENTENCE_END);
+                        m_minibatchPackingFlag[m_sentenceBegin.GetNumCols() - 1] |= MinibatchPackingFlag::UtteranceEnd;
+                    }
+
+                    // Now puts the utterance into the minibatch, and loads the
+                    // next one.
+                    endFrame = startFrame + currentMBSize;
+                    bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
+                    m_processedFrame[i] += currentMBSize;
+                    bool reNewSucc = ReNewBufferForMultiIO(i);
+                }
                 else
                 {
-                    // <m_framemode> is true:
-                    //     If current minibatch is a partial minibatch, and
-                    //     <m_partialMinibatch> is false, then we have to
-                    //     skip it.
-                    //     If <m_partialMinibatch> is true, we populate it
-                    //     anyway.
-                    if (m_framemode && !m_partialMinibatch && (m_toProcess[i] < (startFrame + currentMBSize)))
+                    // There are 3 cases:
+                    //     1. <m_framemode> is true, then it must be a partial
+                    //        minibatch.
+                    //     2. <m_framemode> is false, <m_truncated> is true,
+                    //        then we have to pull frames from next utterance.
+                    //     3. <m_framemode> is false, <m_truncated> is false,
+                    //        then the utterance is too short, we should try to
+                    //        pull next utterance.
+                    
+                    // Checks if we have reached the end of the minibatch.
+                    if (startFrame == m_toProcess[i])
                     {
-                        skip = true;
-                        bool reNewSucc = ReNewBufferForMultiIO(i);
-                        m_switchFrame[i] = 0;
+                        for (size_t k = 0; k < currentMBSize; k++)
+                        {
+                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_LABELS);
+                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoLabel;
+
+                            // Populates <NO_LABELS> with real features, the
+                            // following implementation is not efficient...
+                            assert(m_toProcess[i] > 0);
+                            PopulateUtteranceInMinibatch(matrices, i, 0, 1, currentMBSize, k);
+                        }
                         continue;
                     }
 
-                    // Populates the partial minibatch.
-                    if (m_noMix || m_framemode)
-                    {   // If we are not going to append the partial minibatch
-                        // with frames from next sentence, we will only reserve
-                        // space for the frames that we are going to read.
-                        currentMBSize = m_toProcess[i] - startFrame;
+                    // First, if <m_framemode> is true, then it must be a
+                    // partial minibatch, and if that is not allowed, we have to
+                    // skip this minibatch.
+                    if (m_framemode && !m_partialMinibatch)
+                    {
+                        skip = true;
+                        bool reNewSucc = ReNewBufferForMultiIO(i);  // Should return false?
+                        continue;
+                    }
+
+                    // Second, we set utterance boundary for the partial
+                    // minibatch, and then load it.
+                    if (m_framemode == false)
+                    {
+                        // If <m_truncated> is false, then the whole utterance
+                        // will be loaded into the minibatch.
+                        if (m_truncated == false)
+                        {
+                            assert(startFrame == 0);
+                            m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::UtteranceStart;
+                        }
+
+                        // We have to set the utterance end.
+                        assert(m_toProcess[i] - startFrame - 1 < m_sentenceBegin.GetNumCols());
+                        m_sentenceBegin.SetValue(i, m_toProcess[i] - startFrame - 1, (ElemType)SENTENCE_END);
+                        m_minibatchPackingFlag[m_toProcess[i] - startFrame - 1] |= MinibatchPackingFlag::UtteranceEnd;
                     }
                     endFrame = m_toProcess[i];
+                    size_t currentMBFilled = endFrame - startFrame;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
-                    m_processedFrame[i] += (endFrame - startFrame);
-                    m_switchFrame[i] = endFrame - startFrame;
-                    if (m_switchFrame[i] < m_minibatchPackingFlag.size()) {
-                        m_sentenceBegin.SetValue(i, m_switchFrame[i], (ElemType)SENTENCE_BEGIN);
-                        m_minibatchPackingFlag[m_switchFrame[i]] |= MinibatchPackingFlag::UtteranceStart;
-                    }
-                    if (m_switchFrame[i] == m_minibatchPackingFlag.size())
-                    {
-                        m_sentenceBegin.SetValue(i, m_switchFrame[i]-1, (ElemType)SENTENCE_END);
-                        m_minibatchPackingFlag[m_switchFrame[i]-1] |= MinibatchPackingFlag::UtteranceEnd;
-                    }
-
+                    m_processedFrame[i] += currentMBFilled;
                     bool reNewSucc = ReNewBufferForMultiIO(i);
 
-                    // If we are not truncating the utterances, we should always
-                    // start from 0.
-                    if (!m_truncated)
+                    // Third, if the next utterance can fit into the current
+                    // minibatch, we also pack the next utterance.
+                    while (reNewSucc && (currentMBFilled + m_toProcess[i] <= currentMBSize))
                     {
-                        assert(startFrame == 0);
-                        m_switchFrame[i] = 0;
-                        m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                        m_sentenceBegin.SetValue(0, m_sentenceBegin.GetNumCols()-1, (ElemType) SENTENCE_END);
-
-                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
-                        m_minibatchPackingFlag[m_sentenceBegin.GetNumCols()-1] = MinibatchPackingFlag::UtteranceEnd;
+                        // Sets the utterance boundary.
+                        assert(currentMBFilled + m_toProcess[i] <= m_sentenceBegin.GetNumCols());
+                        m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SENTENCE_BEGIN);
+                        m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::UtteranceStart;
+                        m_sentenceBegin.SetValue(i, currentMBFilled + m_toProcess[i] - 1, (ElemType)SENTENCE_END);
+                        m_minibatchPackingFlag[currentMBFilled + m_toProcess[i] - 1] |= MinibatchPackingFlag::UtteranceEnd;
+                        populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_toProcess[i], currentMBSize, currentMBFilled);
+                        assert(m_processedFrame[i] == 0);
+                        m_processedFrame[i] = m_toProcess[i];
+                        currentMBFilled += m_toProcess[i];
+                        reNewSucc = ReNewBufferForMultiIO(i);
                     }
 
-                    // Pulls frames from next sentence.
-                    if (!m_framemode && !m_noMix && m_truncated )
+                    // Finally, pulls frames from next utterance if the current
+                    // minibatch is not full.
+                    if (reNewSucc && !m_framemode && m_truncated)
                     {
-                        startFrame = m_switchFrame[i];
-                        endFrame = currentMBSize;
-                        bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, endFrame - startFrame, currentMBSize, startFrame);
-                        if (reNewSucc) m_processedFrame[i] += endFrame - startFrame;
+                        populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, currentMBSize - currentMBFilled, currentMBSize, currentMBFilled);
+                        m_processedFrame[i] += currentMBSize - currentMBFilled;
+                        if (currentMBFilled < currentMBSize)
+                        {
+                            m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SENTENCE_BEGIN);
+                            m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::UtteranceStart;
+                        }
+                    }
+                    else
+                    {
+                        for (size_t k = currentMBFilled; k < currentMBSize; k++)
+                        {
+                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_LABELS);
+                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoLabel;
+
+                            // Populates <NO_LABELS> with real features, the
+                            // following implementation is not efficient...
+                            assert(m_toProcess[i] > 0);
+                            PopulateUtteranceInMinibatch(matrices, i, 0, 1, currentMBSize, k);
+                        }
                     }
                 }
             }
@@ -1377,6 +1424,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 fprintf(stderr, "WARNING: Utterance length is smaller than the minibatch size, you may want to remove the utterance or reduce the minibatch size.\n");
             }
+
+            if (!m_truncated && (m_currentBufferFrames[i] > m_maxUtteranceLength))
+            {
+                (*m_mbiter)++;
+                if (!(*m_mbiter))
+                    m_noData = true;
+                fprintf(stderr, "WARNING: Utterance \"%S\" has length longer than the %d, skipping it.\n", m_uttInfo[i][0].first.c_str(), m_maxUtteranceLength);
+                return ReNewBufferForMultiIO(i);
+            }
+
         }
 
         // Sets up feature buffers.
@@ -1513,49 +1570,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;    
     }
 
-    //-// Given the utterance index (in multiple utterance case), and the start and
-    //-// end frame in the buffer, return the corresponding utterance ID and the
-    //-// start and end frame in the utterance.
-    //-template<class ElemType>
-    //-void HTKMLFReader<ElemType>::GetCurrentUtteranceInfo(
-    //-    size_t uttIndex, size_t startFrame, size_t endFrame, 
-    //-    wstring& uttID, size_t& startFrameInUtt, size_t& endFrameInUtt)
-    //-{
-    //-    if (m_framemode)
-    //-    {
-    //-        RuntimeError("HTKMLFReader::GetCurrentUtteranceInfo should only be reached when \"frameMode\" is false.\n");
-    //-    }
-
-    //-    // Figures out what is the index for the current utterance in the
-    //-    // minibatch.
-    //-    assert(startFrame < endFrame);
-    //-    size_t utt = m_uttInfoCurrentIndex[uttIndex];
-    //-    if (m_uttInfoCurrentLength[uttIndex] + m_uttInfo[uttIndex][utt].second < endFrame)
-    //-    {
-    //-        m_uttInfoCurrentLength[uttIndex] += m_uttInfo[uttIndex][utt].second;
-    //-        m_uttInfoCurrentIndex[uttIndex] += 1;
-    //-        utt = m_uttInfoCurrentIndex[uttIndex];
-    //-    }
-
-    //-    // Sanity check.
-    //-    if (utt >= m_uttInfo[uttIndex].size())
-    //-    {
-    //-        RuntimeError("Requested frames go beyond buffer boundary.\n");
-    //-    }
-    //-    if ((startFrame < m_uttInfoCurrentLength[uttIndex])
-    //-        || (endFrame > m_uttInfoCurrentLength[uttIndex] + m_uttInfo[uttIndex][utt].second))
-    //-    {
-    //-        RuntimeError("Requested frames go beyond utterance boundary. Did you set \"noMix\" to false?\n");
-    //-    }
-
-    //-    // Set the values.
-    //-    uttID = m_uttInfo[uttIndex][utt].first;
-    //-    startFrameInUtt = startFrame - m_uttInfoCurrentLength[uttIndex];
-    //-    endFrameInUtt = endFrame - m_uttInfoCurrentLength[uttIndex];
-
-    //-    return true;
-    //-}
-   
     // Gets a copy of the utterance that corresponds to the current minibatches,
     // which will be used to do a neural network forward computation.
     template<class ElemType>
@@ -1587,6 +1601,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 return false;
             }
+
+            // Sets sentence boundary.
+            m_sentenceBegin.Resize(1, currentMBSize);
+            m_minibatchPackingFlag.resize(currentMBSize);
+            for (size_t i = 0; i < currentMBSize; i++)
+            {
+                m_sentenceBegin.SetValue(0, i, (ElemType) SENTENCE_MIDDLE);
+            }
+            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+            m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+            m_sentenceBegin.SetValue(0, m_sentenceBegin.GetNumCols() - 1, (ElemType) SENTENCE_END);
+            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+            m_minibatchPackingFlag[m_sentenceBegin.GetNumCols() - 1] = MinibatchPackingFlag::UtteranceEnd;
+
             typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
             for (iter = matrices.begin(); iter != matrices.end(); iter++)
             {

@@ -100,7 +100,7 @@ public:
         // Wait until minibatch is ready to be consumed
         {
             std::unique_lock<std::mutex> mutexLock(m_mutex);
-            m_cv.wait(mutexLock, [this] { return m_minibatchReady == true; });
+            m_cv.wait(mutexLock, [this] { return this->m_minibatchReady == true; });
 
             // This function now owns the lock
 
@@ -154,7 +154,7 @@ private:
         {
             // Wait until prefetch is requested
             std::unique_lock<std::mutex> mutexLock(m_mutex);
-            m_cv.wait(mutexLock, [this] { return (!m_minibatchReady || m_isTerminating); });
+            m_cv.wait(mutexLock, [this] { return (!this->m_minibatchReady || this->m_isTerminating); });
 
             // We now own the lock
 
