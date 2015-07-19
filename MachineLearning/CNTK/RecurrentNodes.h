@@ -147,36 +147,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int i = 0; i < minibatchPackingFlag->size(); i++)
                 {
-                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceStartOrNoLabel)
+                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::SequenceStartOrNoInput)
                     {
-                        //we set timeStep-1 elements following it to be UtteranceStart until met NoLabel
+                        //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (int j = 0; j < numRows; j++)
                         {
-                            if ((*seg)(j, i) == SENTENCE_BEGIN)
+                            if ((*seg)(j, i) == SEQUENCE_START)
                             {
                                 numResetLeft[j] = m_timeStep;
                             }
-                            else if ((*seg)(j, i) == NO_LABELS)
+                            else if ((*seg)(j, i) == NO_INPUT)
                             {
                                 numResetLeft[j] = 0;
                             }
                         }
                     }
 
-                    //now set the UtteranceStart
+                    //now set the SequenceStart
                     bool valueChanged = false;
                     for (int j = 0; j < numRows; j++)
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_boundaryInfo(j, i) = SENTENCE_BEGIN;
+                            m_boundaryInfo(j, i) = SEQUENCE_START;
                             valueChanged = true;
                         }
                     }
 
                     if (valueChanged)
                     {
-                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::UtteranceStart;
+                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::SequenceStart;
                     }
                 }
 
@@ -220,11 +220,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(timeIdxInSeq >= 0);
             if ((timeIdxInSeq - timeStep) >= 0)
             {
-                if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceStartOrNoLabel)
+                if (minibatchPackingFlag & MinibatchPackingFlag::SequenceStartOrNoInput)
                 {                   
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (colBegin(i, 0) != SENTENCE_BEGIN && colBegin(i, 0) != NO_LABELS)
+                        if (colBegin(i, 0) != SEQUENCE_START && colBegin(i, 0) != NO_INPUT)
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - timeStep)*mNbr + i, 1);
                             Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
@@ -295,13 +295,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceStartOrNoLabel)
+            if (minibatchPackingFlag & MinibatchPackingFlag::SequenceStartOrNoInput)
             {
                 for (int i = 0; i < mNbr; i ++)
                 {
                     out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i,1);
 
-                    if (colBegin(i,0) == SENTENCE_BEGIN)
+                    if (colBegin(i,0) == SEQUENCE_START)
                     {
                         out.SetValue(initStateValue);
                     }
@@ -552,36 +552,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int i = minibatchPackingFlag->size()-1; i <=0; i--)
                 {
-                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceEndOrNoLabel)
+                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::SequenceEndOrNoInput)
                     {
-                        //we set timeStep-1 elements following it to be UtteranceStart until met NoLabel
+                        //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (int j = 0; j < numRows; j++)
                         {
-                            if ((*seg)(j, i) == SENTENCE_END)
+                            if ((*seg)(j, i) == SEQUENCE_END)
                             {
                                 numResetLeft[j] = m_timeStep;
                             }
-                            else if ((*seg)(j, i) == NO_LABELS)
+                            else if ((*seg)(j, i) == NO_INPUT)
                             {
                                 numResetLeft[j] = 0;
                             }
                         }
                     }
 
-                    //now set the UtteranceEnd
+                    //now set the SequenceEnd
                     bool valueChanged = false;
                     for (int j = 0; j < numRows; j++)
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_boundaryInfo(j, i) = SENTENCE_END;
+                            m_boundaryInfo(j, i) = SEQUENCE_END;
                             valueChanged = true;
                         }
                     }
 
                     if (valueChanged)
                     {
-                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::UtteranceEnd;
+                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::SequenceEnd;
                     }
                 }
 
@@ -623,11 +623,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(timeIdxInSeq >= 0);
             if ((timeIdxInSeq + timeStep) < gradientValues.GetNumCols())
             {
-                if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceEndOrNoLabel)
+                if (minibatchPackingFlag & MinibatchPackingFlag::SequenceEndOrNoInput)
                 {
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (colFlag(i, 0) != SENTENCE_END && colFlag(i, 0) != NO_LABELS)
+                        if (colFlag(i, 0) != SEQUENCE_END && colFlag(i, 0) != NO_INPUT)
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + timeStep)*mNbr + i, 1);
                             Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
@@ -726,13 +726,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
 
-            if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceEndOrNoLabel)
+            if (minibatchPackingFlag & MinibatchPackingFlag::SequenceEndOrNoInput)
             {
                 for (int i = 0; i < mNbr; i++)
                 {
                     out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
 
-                    if (colFlag(i, 0) == SENTENCE_END)
+                    if (colFlag(i, 0) == SEQUENCE_END)
                     {
                         out.SetValue(initStateValue);
                     }
@@ -1311,7 +1311,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /**
-        get the segmentation information, SENTENECE_BEGIN, SENTENCE_MIDDLE, NO_LABELS 
+        get the segmentation information, SENTENECE_BEGIN, SEQUENCE_MIDDLE, NO_INPUT 
         for time at t and stream of streamid
         */
         int GetSegInfo(size_t t, size_t streamid)
@@ -1345,7 +1345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
                 {
-                    if (GetSegInfo(t, i) == SENTENCE_MIDDLE)
+                    if (GetSegInfo(t, i) == SEQUENCE_MIDDLE)
                     {
                         mLastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
                         mLastState.ColumnSlice(i, 1).SetValue(m_State.ColumnSlice(t, 1));
@@ -1441,7 +1441,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         Prepare history for LSTMnode
 
-        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_LABELS, which are 0, 1, and -1, respectively. 
+        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SEQUENCE_START, SEQUENCE_MIDDLE and NO_INPUT, which are 0, 1, and -1, respectively. 
         To compute the initial value, we use
         prevState = sentenceBegin * pastActivity + ~sentenceBegin * initialStateValue
         and ~sentenceBegin is computed as -1*(sentenceBegin - 1), assuming that sentenceBegin is either 0 or 1. For example, when sentenceBegin == 1, ~sentenceBegin == 0. 
@@ -1480,8 +1480,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             colSeg.Resize(nStream, nStream);
             /// will reset to 0 if sentence begining at a posiiton is 0
             /// will keep the output if it is not the sentence begining
-            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
-            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE);
+            colBegin.InplaceTruncateBottom(SEQUENCE_START);
+            colBegin.InplaceTruncateTop(SEQUENCE_MIDDLE);
             colSeg.SetDiagonalValue(colBegin);
 
             Matrix<ElemType> newPrevOutput(colBegin.GetDeviceId());
@@ -1529,8 +1529,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t utt_id = 0; utt_id < nsamples; utt_id++)
                 {
                     /// if uses errors from future minibatch
-                    if ((GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && utt_t == total_utt_t - 1) /// last time 
-                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_LABELS) /// future observation is no observation
+                    if ((GetSegInfo(timeIdxInSeq, utt_id) == SEQUENCE_MIDDLE && utt_t == total_utt_t - 1) /// last time 
+                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SEQUENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_INPUT) /// future observation is no observation
                         )
                     {
                         error.ColumnSlice(utt_id, 1) += obs_error_from_future_minibatch.ColumnSlice(utt_id, 1);
@@ -1542,9 +1542,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
-            colBegin.InplaceTruncateBottom(NO_LABELS);
-            colBegin.InplaceTruncateTop(SENTENCE_BEGIN);
-            colBegin += fabs((ElemType)NO_LABELS); /// raise this so that -1 -> 0 and therefore 
+            colBegin.InplaceTruncateBottom(NO_INPUT);
+            colBegin.InplaceTruncateTop(SEQUENCE_START);
+            colBegin += fabs((ElemType)NO_INPUT); /// raise this so that -1 -> 0 and therefore 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
             colSeg.SetDiagonalValue(colBegin);
@@ -1572,8 +1572,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
             /// will reset to 0 if sentence begining at a posiiton is 0
             /// will keep the output if it is not the sentence begining
-            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
-            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE);
+            colBegin.InplaceTruncateBottom(SEQUENCE_START);
+            colBegin.InplaceTruncateTop(SEQUENCE_MIDDLE);
 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
@@ -1732,13 +1732,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType initStateValue = m_DefaultState;
                 Matrix<ElemType> boundary(m_deviceId);
                 boundary.Resize(1, nT);
-                boundary.SetValue(SENTENCE_MIDDLE);
-                boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+                boundary.SetValue(SEQUENCE_MIDDLE);
+                boundary.ColumnSlice(0, 1).SetValue(SEQUENCE_START);
 
                 vector<MinibatchPackingFlag> minibatchPackingFlag;
                 minibatchPackingFlag.resize(nT);
                 std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                minibatchPackingFlag[1] = MinibatchPackingFlag::UtteranceStart;
+                minibatchPackingFlag[1] = MinibatchPackingFlag::SequenceStart;
                 ComputationNode<ElemType>::ResetBound(&boundary, &minibatchPackingFlag);
 
                 f0 = Inputs(0)->FunctionValues();

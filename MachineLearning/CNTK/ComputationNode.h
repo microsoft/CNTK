@@ -247,9 +247,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
             colPos.SetValue(sentenceBegin); /// -1 0 1
-            colPos.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colPos.InplaceTruncateBottom(SEQUENCE_START);
             Matrix<ElemType>::Scale((ElemType)-1.0, colPos);
-            colPos += SENTENCE_MIDDLE;
+            colPos += SEQUENCE_MIDDLE;
             colSeg.SetDiagonalValue(colPos);
             Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
             ones.Resize(nStateRow, nStream);
@@ -291,7 +291,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         colSeg = m_sentenceSeg->ColumnSlice(j,1);
                         for (int i = 0; i < nS; i++)
                         {
-                            if (colSeg(i,0) == NO_LABELS)
+                            if ((int)colSeg(i,0) & NO_LABEL)
                             {
                                 matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
                             }

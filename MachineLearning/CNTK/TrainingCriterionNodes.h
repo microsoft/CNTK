@@ -1410,7 +1410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t i = t % nS;
                 if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
                 {
-                    if ((*m_sentenceSeg)(i,j) == NO_LABELS)
+                    if ((int)(*m_sentenceSeg)(i,j) & NO_LABEL)
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
 
