@@ -335,26 +335,21 @@ public:
             LogicError("lattices not supported in utterancereadermulti");
         }
 
+        allchunks = std::vector<std::vector<utterancechunkdata>>(infiles.size(), std::vector<utterancechunkdata>());
+        featdim = std::vector<size_t>(infiles.size(), 0);
+        sampperiod = std::vector<unsigned int>(infiles.size(), 0);
+        featkind = std::vector<string>(infiles.size(), "");
+        numclasses = std::vector<size_t>(labels.size(), 0);
+        counts = std::vector<std::vector<size_t>>(labels.size(), std::vector<size_t>());
         foreach_index (i, labels)
         {
-            //classids.push_back(biggrowablevector<CLASSIDTYPE>());
             classids.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
-            numclasses.push_back(0);
-            counts.push_back(std::vector<size_t>());
             //std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
             //std::unordered_map<std::string,size_t> modelsymmap;
             //lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
     
         }
 
-        // m is index for feature stream
-        // i is index for files within a stream (items in SCP file)
-        foreach_index(m, infiles){
-            allchunks.push_back(std::vector<utterancechunkdata>());
-            featdim.push_back(0); // initialize
-            sampperiod.push_back(0);
-            featkind.push_back("");
-        }
 
         // first check consistency across feature streams
         // We'll go through the SCP files for each stream to make sure the duration is consistent
@@ -376,7 +371,7 @@ public:
                     throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
-                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                            fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, uttframes, frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
                 }
@@ -386,7 +381,7 @@ public:
                         uttisvalid[i] = true;
                     }
                     else if (uttduration[i] != uttframes){
-                        fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)", i, uttduration[i], uttframes);
+                                fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)\n", i, uttduration[i], uttframes);
                         uttduration[i] = 0;
                         uttisvalid[i] = false;
                     }
@@ -399,9 +394,9 @@ public:
                 invalidutts++;
         }
         if (invalidutts > uttisvalid.size() / 2)
-            throw std::runtime_error("minibatchutterancesource: too many files not found in with inconsistent durations, assuming broken configuration\n");
+                    throw std::runtime_error("minibatchutterancesource: too many files with inconsistent durations, assuming broken configuration\n");
         else if (invalidutts>0)
-            fprintf(stderr, "Found inconsistent durations across feature streams in %d out of %d files.", invalidutts, uttisvalid.size());
+                    fprintf(stderr, "Found inconsistent durations across feature streams in %d out of %d files\n", invalidutts, uttisvalid.size());
 
 
         // now process the features and labels
@@ -409,11 +404,11 @@ public:
         foreach_index (m, infiles)
         {
             utteranceset.clear();
-            if (m==0)
-                numutts = infiles[m].size();
-            else
-                if (infiles[m].size()!=numutts)
-                    throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
+                    //if (m==0)
+                    //    numutts = infiles[m].size();
+                    //else
+                    //    if (infiles[m].size()!=numutts)
+                    //        throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances\n");
             if (m==0)
                 classidsbegin.clear();
 
@@ -528,7 +523,7 @@ public:
                             _totalframes += uttframes;
                     }
                 }
-                    else if (uttisvalid[i])
+                            else
                 {
                         utteranceset.push_back(std::move(utterance));
                     }
