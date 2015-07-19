@@ -256,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues, 
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
@@ -2035,6 +2035,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr node = new DummyCriterionNode<ElemType>(this, name, flags);
             return node;
         }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     };
 
