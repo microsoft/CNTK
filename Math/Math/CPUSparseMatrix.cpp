@@ -145,6 +145,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Resize(numRows, numCols, size, true, false);
     }
 
+    //copy constructor, deep copy
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>::CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom)
+    {
+        ZeroInit();
+        if (!deepCopyFrom.IsEmpty())
+            SetValue(deepCopyFrom);
+        SetMatrixName(deepCopyFrom.m_matrixName);
+    }
+
+    //assignment operator, deep copy
+    template<class ElemType>
+    CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom)
+    {
+        Clear();
+        if (!deepCopyFrom.IsEmpty())
+            SetValue(deepCopyFrom);
+        SetMatrixName(deepCopyFrom.m_matrixName);
+        return *this;
+    }
+
     template<class ElemType>
     CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
     {               
@@ -232,16 +253,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //make sure call order in colume wise for CSC and row wise for CSR
     template<class ElemType>
-    void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix& v)
+    void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
     {
         this->Reset();
+        m_format = v.GetFormat();
+
         this->Resize(v.GetNumRows(), v.GetNumCols(), v.NzSize());
+        m_nz = v.NzCount();
 
-        memcpy(this->NzValues(), v.NzValues(), v.NzSize());
-        memcpy(this->RowLocation(), v.RowLocation(), v.RowSize());
-        memcpy(this->ColLocation(), v.ColLocation(), v.ColSize());
-
-        m_nz = v.NzCount(); 
+        if (m_nz > 0)
+        {
+            memcpy(this->NzValues(), v.NzValues(), v.NzSize());
+            memcpy(this->RowLocation(), v.RowLocation(), v.RowSize());
+            memcpy(this->ColLocation(), v.ColLocation(), v.ColSize());
+        }
     }
 
     template<class ElemType>

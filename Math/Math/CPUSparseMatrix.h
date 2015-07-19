@@ -33,6 +33,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         CPUSparseMatrix(const MatrixFormat format);
         CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
+        CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom);  //copy constructor, deep copy
+        CPUSparseMatrix<ElemType>& operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
         
         
         ~CPUSparseMatrix();
@@ -41,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using B::GetNumCols; using B::GetNumRows;
 
         void SetValue(const size_t row, const size_t col, ElemType val); 
-        void SetValue(const CPUSparseMatrix& /*val*/);
+        void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
 
         void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
 
