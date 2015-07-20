@@ -19,8 +19,6 @@
 #include <random>
 #include "TimerUtility.h"
 #include "Profiler.h"
-#include "MinibatchFetcher.h"
-#include "MinibatchPrefetcher.h"
 
 #ifdef MPI_SUPPORT
 #include "mpi.h"
@@ -201,9 +199,6 @@ public:
         size_t numMBsToShowResult = configSGD("numMBsToShowResult", "10");
         size_t numMBsToCUDAProfile = configSGD("numMBsToCUDAProfile", "0");
 
-        // Whether it is OK for read to happen on a separate thread while compute is happening
-        bool doPrefetchTrainingData = configSGD("prefetchTrainingData", "false");
-
         bool keepCheckPointFiles = configSGD("keepCheckPointFiles", "false");
 
         bool gradientClippingWithTruncation = configSGD("gradientClippingWithTruncation", "true");
@@ -269,8 +264,7 @@ public:
              gradientCheckSigDigit, validateAfterModelReloading, rpi,
              learnRateAdjustInterval, UsingAllDataForPreComputedNode,
              needAveMultiplier, L2RegWeight, L1RegWeight,
-             autoAdjustMinibatch, minibatchSizeTuningFrequency, minibatchSizeTuningMax,
-             doPrefetchTrainingData);
+             autoAdjustMinibatch, minibatchSizeTuningFrequency, minibatchSizeTuningMax);
     }
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
@@ -316,8 +310,7 @@ public:
               const ElemType L1RegWeight = 0,
               const bool autoAdjustMinibatch = false,
               const size_t minibatchSizeTuningFrequency = 1,
-              const size_t minibatchSizeTuningMax = 1048576,
-              bool doPrefetchTrainingData = true)
+              const size_t minibatchSizeTuningMax = 1048576)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
@@ -477,7 +470,6 @@ public:
         m_doGradientCheck = doGradientCheck;
         m_gradientCheckSigDigit = gradientCheckSigDigit;
         m_validateAfterModelReloading = validateAfterModelReloading;
-        m_doPrefetchTrainingData = doPrefetchTrainingData;
 
         msra::files::make_intermediate_dirs(m_modelPath);
     }
@@ -1708,22 +1700,15 @@ protected:
         trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
 
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
-        std::unique_ptr<MinibatchFetcher<ElemType>> mbFetcher(
-            m_doPrefetchTrainingData ?
-                new MinibatchPrefetcher<ElemType>(trainSetDataReader, inputMatrices, &(net.SentenceBoundary()), &(net.MinibatchPackingFlags())) :
-                new MinibatchFetcher<ElemType>(trainSetDataReader, inputMatrices, &(net.SentenceBoundary()), &(net.MinibatchPackingFlags())));
-
-        fprintf(stderr, "\nStarting minibatch loop, prefetching is: %s\n", m_doPrefetchTrainingData ? "ENABLED" : "DISABLED");
 
         Timer timer;
         timer.Start();
 
-        while (mbFetcher->GetMinibatch())
+        while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
 #ifdef MPI_SUPPORT
             DecimateMinibatch(inputMatrices);
 #endif
-
             UpdateEvalTimeStamps(FeatureNodes);
             UpdateEvalTimeStamps(labelNodes);
 
@@ -1843,6 +1828,7 @@ protected:
                     }
                 }
             }
+
             timer.Restart();
             totalEpochSamples += actualMBSize;
             totalSamplesSeen += actualMBSize;
@@ -2401,7 +2387,7 @@ protected:
     bool m_needAveMultiplier;
     ElemType m_L2RegWeight;
     ElemType m_L1RegWeight;
-    bool m_doPrefetchTrainingData;
+
 };
 template class SGD<float>;
 template class SGD<double>;
