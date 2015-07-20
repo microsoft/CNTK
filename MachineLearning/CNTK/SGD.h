@@ -202,7 +202,7 @@ public:
         size_t numMBsToCUDAProfile = configSGD("numMBsToCUDAProfile", "0");
 
         // Whether it is OK for read to happen on a separate thread while compute is happening
-        bool doPrefetchTrainingData = configSGD("prefetchTrainingData", "true");
+        bool doPrefetchTrainingData = configSGD("prefetchTrainingData", "false");
 
         bool keepCheckPointFiles = configSGD("keepCheckPointFiles", "false");
 
