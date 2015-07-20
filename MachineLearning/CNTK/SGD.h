@@ -1720,6 +1720,7 @@ protected:
 
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
 
 #ifndef EVALDLL
             if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
