@@ -344,26 +344,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         static DEVICEID_TYPE GetBestGPUDeviceId(); //{ return GPUMatrix<ElemType>::GetBestGPUDeviceId();}
 
-        // This API records an event, in the case of GPU computation, that happens between two compute iterations
-        // (it's a compute delimiter between two minibatch iterations)
-        static void RecordComputeSyncPoint(DEVICEID_TYPE devId);
-
-        // This API ensures, in the case of GPU computation, that all compute is flushed before read decides to modify
-        // buffers, and potentially invalidate computation.
-        static void SyncComputeBeforeRead(DEVICEID_TYPE devId);
-
-        // This API ensures, in the case of GPU computation, that all async reads are finished before notifying compute
-        // that the read buffers are ready on the device.
-        static void SyncPendingRead(DEVICEID_TYPE devId);
-
-        // This API ensures, in the case of GPU computation, that all compute is flushed before transferring the criterion
-        // back to the host. This is a workaround for contention between two memcpy calls, one host-to-device and one
-        // device-to-host, which are for some reason getting serialized and cause big delays in compute.
-        static void SyncPendingCompute(DEVICEID_TYPE devId);
-
-        // This API ensures, in the case of GPU computation, creates a separate stream for reading data into GPU buffer.
-        static void EnableConcurrentRead(DEVICEID_TYPE devId);
-
         //static BLAS functions
 
         // singular value decomposition of A as A = U*SIGMA*VT
