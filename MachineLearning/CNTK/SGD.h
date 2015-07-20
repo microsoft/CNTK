@@ -865,9 +865,6 @@ protected:
                 break;
             }
 
-#ifdef MPI_SUPPORT
-            INT32 mySamples = (INT32)
-#endif
             size_t chosenMinibatchSize;
             size_t actualMinibatchSize;
 
@@ -910,20 +907,23 @@ protected:
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                 i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
 
+#ifdef MPI_SUPPORT
+            INT32 mySamples = (INT32)
+#endif
             TrainOneEpoch(net,
-                            refNet, 
-                            refNode, 
-                            i, 
-                            m_epochSize,
-                            trainSetDataReader, 
-                            learnRatePerSample, 
-                            chosenMinibatchSize, 
-                            FeatureNodes,
-                            labelNodes, 
-                            criterionNodes, 
-                            evaluationNodes,
-                            inputMatrices, 
-                            learnableNodes, smoothedGradients,
+                          refNet, 
+                          refNode, 
+                          i, 
+                          m_epochSize,
+                          trainSetDataReader, 
+                          learnRatePerSample, 
+                          chosenMinibatchSize, 
+                          FeatureNodes,
+                          labelNodes, 
+                          criterionNodes, 
+                          evaluationNodes,
+                          inputMatrices, 
+                          learnableNodes, smoothedGradients,
                           epochCriterion, epochEvalErrors, totalSamplesSeen);
 
             timer.Stop();
