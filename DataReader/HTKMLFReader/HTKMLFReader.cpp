@@ -113,7 +113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<wstring> statelistpaths;
             vector<size_t> numContextLeft;
             vector<size_t> numContextRight;
-
+            size_t numExpandToUtt = 0;
             // for the multi-utterance process
             m_featuresBufferMultiUtt.assign(m_numberOfuttsPerMinibatch,NULL);
             m_featuresBufferAllocatedMultiUtt.assign(m_numberOfuttsPerMinibatch,0);
@@ -171,6 +171,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 m_featuresBufferMultiIO.push_back(NULL);
                 m_featuresBufferAllocatedMultiIO.push_back(0);
+
+                bool expandToUtt = thisFeature("expandToUtterance", "false"); // should feature be processed as an ivector?
+                m_expandToUtt.push_back(expandToUtt);
+                if (expandToUtt)
+                    numExpandToUtt++;
 
                 iFeat++;            
             }
@@ -235,6 +240,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (iFeat!=scriptpaths.size() || iLabel!=mlfpathsmulti.size())
                 throw std::runtime_error(msra::strfun::strprintf ("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n"));
 
+            if (iFeat == numExpandToUtt)
+                throw std::runtime_error("At least one feature stream must be frame-based, not utterance-based\n");
+
+            if (m_expandToUtt[0]) // first feature stream is ivector type - that will mess up lower level feature reader
+                throw std::runtime_error("The first feature stream in the file must be frame-based not utterance based. Please reorder the feature blocks of your config appropriately\n");
+
             if (readerConfig.Exists("randomize"))
             {
                 const std::string& randomizeString = readerConfig("randomize");
@@ -267,6 +278,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 fprintf(stderr, "WARNING: Randomize cannot be set to None when readMethod is set to blockRandomize. Change it Auto");
                 randomize = randomizeAuto;
+            }
+
+            if (readMethod == "rollingWindow" && numExpandToUtt>0)
+            {
+                throw std::runtime_error("rollingWindow reader does not support expandToUtt. Change to blockRandomize.\n");
             }
 
             // see if they want to use readAhead
@@ -375,7 +391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_lattices = new msra::dbn::latticesource(latticetocs, modelsymmap);
 
                 // now get the frame source. This has better randomization and doesn't create temp files
-                m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode);
+                m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode, m_expandToUtt);
                 m_frameSource->setverbosity(verbosity);
                 //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, m_framemode);
 
