@@ -580,6 +580,44 @@ public:
     }
     // read an entire utterance into an already allocated matrix
     // Matrix type needs to have operator(i,j)
+    template<class MATRIX> void read(const parsedpath & ppath, const string & kindstr, const unsigned int period, MATRIX & feat, bool needsExpansion)
+    {
+        // open the file and check dimensions
+        size_t numframes = open(ppath);
+        if (needsExpansion)
+        {
+            if (numframes != 1)
+                throw std::logic_error("read: if doing utterance-based expansion of features (e.g. ivectors), utterance must contain 1 frame only");
+            if (feat.rows() != featdim)
+                throw std::logic_error("read: stripe read called with wrong dimensions");           
+        }
+        else
+        {
+            if (feat.cols() != numframes || feat.rows() != featdim)
+                throw std::logic_error("read: stripe read called with wrong dimensions");
+        }
+        
+        if (kindstr != featkind || period != featperiod)
+            throw std::logic_error("read: attempting to mixing different feature kinds");
+
+        // read vectors from file and push to our target structure
+        try { 
+            read(feat, 0, numframes);
+            if (needsExpansion){ // copy first frame to all the frames in the stripe
+                for (int t = 1; t < feat.cols(); t++){
+                    for (int k = 0; k < feat.rows(); k++){
+                        feat(k, t) = feat(k, 0);
+                    }
+                }
+            }
+        }
+        catch (...) { 
+            close(); 
+            throw; 
+        }
+    }
+    // read an entire utterance into an already allocated matrix
+    // Matrix type needs to have operator(i,j)
     template<class MATRIX> void read (const parsedpath & ppath, const string & kindstr, const unsigned int period, MATRIX & feat)
     {
         // open the file and check dimensions
