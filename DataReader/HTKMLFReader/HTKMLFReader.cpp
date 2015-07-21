@@ -133,11 +133,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ConfigParameters thisFeature = readerConfig(featureNames[i]);
                 m_featDims.push_back(thisFeature("dim"));
+                
+                
+                bool expandToUtt = thisFeature("expandToUtterance", "false"); // should feature be processed as an ivector?
+                m_expandToUtt.push_back(expandToUtt);
+                if (expandToUtt)
+                    numExpandToUtt++;
+
                 ConfigArray contextWindow = thisFeature("contextWindow", "1");
                 if (contextWindow.size() == 1) // symmetric
                 {
                     size_t windowFrames = contextWindow[0];
-                    if (windowFrames % 2 == 0 )
+                    if (windowFrames % 2 == 0)
                         RuntimeError("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowFrames);
                     size_t context = windowFrames / 2;           // extend each side by this
                     numContextLeft.push_back(context);
@@ -153,6 +160,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     RuntimeError("contextFrames must have 1 or 2 values specified, found %d", contextWindow.size());
                 }
+
+                if (expandToUtt && (numContextLeft[i] != 0 || numContextRight[1] != 0))
+                    RuntimeError("contextWindow expansion not permitted when expandToUtterance=true");
+
                 // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
                 // that is what the lower level feature readers expect
                 m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]); 
@@ -172,11 +183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_featuresBufferMultiIO.push_back(NULL);
                 m_featuresBufferAllocatedMultiIO.push_back(0);
 
-                bool expandToUtt = thisFeature("expandToUtterance", "false"); // should feature be processed as an ivector?
-                m_expandToUtt.push_back(expandToUtt);
-                if (expandToUtt)
-                    numExpandToUtt++;
-
+                
                 iFeat++;            
             }
 

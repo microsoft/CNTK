@@ -49,16 +49,26 @@ namespace msra {
                 msra::asr::htkfeatreader::parsedpath parsedpath;    // archive filename and frame range in that file
                 size_t classidsbegin;       // index into allclassids[] array (first frame)
 
-                utterancedesc(msra::asr::htkfeatreader::parsedpath && ppath, size_t classidsbegin) : parsedpath(ppath), classidsbegin(classidsbegin) {}
-                bool isUtteranceBased; //ivector type of feature
-                size_t expectedNumFrames; // expected number of frames (to expand ivectors) 
+                utterancedesc(msra::asr::htkfeatreader::parsedpath && ppath, size_t classidsbegin) : parsedpath(ppath), classidsbegin(classidsbegin) { framesToExpand = 0; needsExpansion = false; }
+                bool needsExpansion; //ivector type of feature
+                size_t framesToExpand; // expected number of frames (to expand ivectors) 
                 const wstring & logicalpath() const { return parsedpath; /*type cast will return logical path*/ }
-                size_t numframes() const { return parsedpath.numframes(); }
+                size_t numframes() const { 
+                    if (needsExpansion)
+                        return framesToExpand; 
+                    else 
+                        return parsedpath.numframes(); 
+                }
                 const wstring key() const                           // key used for looking up lattice (not stored to save space)
                 {
                     static const wstring emptywstring;
                     static const wregex deleteextensionre(L"\\.[^\\.\\\\/:]*$");
                     return regex_replace(logicalpath(), deleteextensionre, emptywstring);  // delete extension (or not if none)
+                }
+                void expandtoutterance(size_t requiredFrames)
+                {
+                    needsExpansion = true;
+                    framesToExpand = requiredFrames;
                 }
             };
             struct utterancechunkdata       // data for a chunk of utterances
@@ -129,7 +139,7 @@ namespace msra {
                             //fprintf (stderr, ".");
                             // read features for this file
                             auto uttframes = getutteranceframes(i);    // matrix stripe for this utterance (currently unfilled)
-                            reader.read(utteranceset[i].parsedpath, (const string &)featkind, sampperiod, uttframes);  // note: file info here used for checkuing only
+                            reader.read(utteranceset[i].parsedpath, (const string &)featkind, sampperiod, uttframes, utteranceset[i].needsExpansion);  // note: file info here used for checkuing only
                             // page in lattice data
                             if (!latticesource.empty())
                                 latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
@@ -415,13 +425,10 @@ namespace msra {
                             
                             if (expandToUtt[m]){
                                 assert(uttframes == 1);
-                                utterance.isUtteranceBased = true;
-                                utterance.expectedNumFrames = uttduration[i];
+                                utterance.expandtoutterance(uttduration[i]);
                             }
                             else{
                                 assert(uttframes == uttduration[i]); // ensure nothing funky happened
-                                utterance.isUtteranceBased = false;
-                                utterance.expectedNumFrames = uttframes;
                             }
                             // already performed these checks above
                             // we need at least 2 frames for boundary markers to work
