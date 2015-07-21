@@ -1998,10 +1998,9 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = !EnsureDataAvailable(m_mbStartSample);
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
-            for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
-                mProcessed[*ptr] = true;
-
-        mSentenceEnd = true;
+        if (mSentenceEnd)
+        for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
+            mProcessed[*ptr] = true;
         ret = mSentenceEnd;
         break;
     }

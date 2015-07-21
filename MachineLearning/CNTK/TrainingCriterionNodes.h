@@ -921,6 +921,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
             fstream >> m_evalMode;
+            if (m_evalMode > NCEEvalMode::None)
+                fstream.SetPosition(fstream.GetPosition() - sizeof(m_evalMode));
         }
 
         void SetEvalMode(NCEEvalMode& xevMode)
