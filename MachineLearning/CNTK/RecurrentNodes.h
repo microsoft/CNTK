@@ -170,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_boundaryInfo(j, i) = SEQUENCE_START | (m_boundaryInfo(j, i) & NO_INPUT);
+                            m_boundaryInfo(j, i) = (ElemType)(SEQUENCE_START | ((int)m_boundaryInfo(j, i) & NO_INPUT));
                             valueChanged = true;
                         }
                     }
@@ -575,7 +575,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_boundaryInfo(j, i) = SEQUENCE_END | (m_boundaryInfo(j, i) & NO_LABEL);
+                            m_boundaryInfo(j, i) = (ElemType)(SEQUENCE_END | ((int)m_boundaryInfo(j, i) & NO_LABEL));
                             valueChanged = true;
                         }
                     }
@@ -628,7 +628,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (!(int)colFlag(i, 0) & SEQUENCE_END && colFlag(i, 0) != NO_INPUT)
+                        if (((int)colFlag(i, 0) & SEQUENCE_END) == 0 && colFlag(i, 0) != NO_INPUT)
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + timeStep)*mNbr + i, 1);
                             Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
