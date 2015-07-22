@@ -235,7 +235,8 @@ namespace Microsoft {
             template<class ElemType>
             GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
             {
-                return ElemType(0);
+                GPUMatrix<ElemType> a;
+                return a;
             }
 
             template<class ElemType> ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
