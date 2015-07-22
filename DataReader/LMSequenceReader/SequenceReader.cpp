@@ -1742,8 +1742,8 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
         mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
         if (mNumRead == 0) return false;
 
-        if (mDoRandomize) 
-            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+        //if (mDoRandomize)
+        std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
 
         m_readNextSampleLine += mNumRead;
         sLn = FindNextSentences(mNumRead);
@@ -1998,10 +1998,9 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = !EnsureDataAvailable(m_mbStartSample);
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
-            for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
-                mProcessed[*ptr] = true;
-
-        mSentenceEnd = true;
+        if (mSentenceEnd)
+        for (auto ptr = mToProcess.begin(); ptr != mToProcess.end(); ptr++)
+            mProcessed[*ptr] = true;
         ret = mSentenceEnd;
         break;
     }
@@ -2094,6 +2093,10 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
     else // GPU
     {
         RuntimeError("GetLabelOutput::should use CPU for labels ");
+    }  
+    if (curDevId != CPUDEVICE && readerMode != ReaderMode::Class)
+    {
+        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
     }
 }
 
@@ -2126,5 +2129,4 @@ int BatchSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 
 template class BatchSequenceReader<double>; 
 template class BatchSequenceReader<float>;
-
 }}}
