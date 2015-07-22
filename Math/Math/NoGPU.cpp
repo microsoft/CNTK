@@ -403,16 +403,6 @@ namespace Microsoft {
                 return -1; // CPU
             }
 
-            template<class ElemType> void GPUMatrix<ElemType>::RecordComputeSyncPoint() { }
-
-            template<class ElemType> void GPUMatrix<ElemType>::SyncComputeBeforeRead() { }
-
-            template<class ElemType> void GPUMatrix<ElemType>::SyncPendingRead() { }
-
-            template<class ElemType> void GPUMatrix<ElemType>::SyncPendingCompute() { }
-
-            template<class ElemType> void GPUMatrix<ElemType>::EnableConcurrentRead(DEVICEID_TYPE devId) { }
-
             // PrepareDevice - Setup the correct cuda context for an operation
             // deviceId - the device on which the operation will take place
             //            defaults to -1, which means use matrices current device
