@@ -916,7 +916,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_evalMode;
         }
 
-        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
             fstream >> m_evalMode;
