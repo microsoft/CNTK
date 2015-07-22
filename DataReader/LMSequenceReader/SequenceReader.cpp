@@ -2129,42 +2129,4 @@ int BatchSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
 
 template class BatchSequenceReader<double>; 
 template class BatchSequenceReader<float>;
-
 }}}
-=======
-        labels->TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
-    }
-}
-
-template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
-{
-    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-    sentenceBegin.SetValue(mtSentenceBegin);
-    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
-
-    minibatchPackingFlag = m_minibatchPackingFlag;
-}
-
-template<class ElemType>
-int BatchSequenceReader<ElemType>::GetSentenceEndIdFromOutputLabel()
-{
-
-    // now get the labels
-    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-    auto found = word4idx.find(labelIn.endSequence);
-
-    // not yet found, add to the map
-    if (found != word4idx.end())
-    {
-        return (int)found->second;
-    }
-    else return -1;
-}
-
-template class BatchSequenceReader<double>; 
-template class BatchSequenceReader<float>;
-
-}}}
->>>>>>> b398d92b561a563c576e8a36ea7d583c6ce1a8e6
