@@ -4446,56 +4446,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::RecordComputeSyncPoint(DEVICEID_TYPE devId)
-    {
-        // This function is necessary and has any effect only on GPU
-        if (devId >= 0)
-        {
-            GPUMatrix<ElemType>::RecordComputeSyncPoint();
-        }
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::SyncComputeBeforeRead(DEVICEID_TYPE devId)
-    {
-        // This function is necessary and has any effect only on GPU
-        if (devId >= 0)
-        {
-            GPUMatrix<ElemType>::SyncComputeBeforeRead();
-        }
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::SyncPendingRead(DEVICEID_TYPE devId)
-    {
-        // This function is necessary and has any effect only on GPU
-        if (devId >= 0)
-        {
-            GPUMatrix<ElemType>::SyncPendingRead();
-        }
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::SyncPendingCompute(DEVICEID_TYPE devId)
-    {
-        // This function is necessary and has any effect only on GPU
-        if (devId >= 0)
-        {
-            GPUMatrix<ElemType>::SyncPendingCompute();
-        }
-    }
-
-    template<class ElemType>
-    void Matrix<ElemType>::EnableConcurrentRead(DEVICEID_TYPE devId)
-    {
-        // This function is necessary and has any effect only on GPU
-        if (devId >= 0)
-        {
-            GPUMatrix<ElemType>::EnableConcurrentRead(devId);
-        }
-    }
-
-    template<class ElemType>
     ElemType Matrix<ElemType>::Exp10(ElemType num)
     {
         return (ElemType)exp(num*2.302585093);
