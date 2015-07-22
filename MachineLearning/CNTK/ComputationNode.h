@@ -94,6 +94,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId);
+            m_minibatchPackingFlag = nullptr;
+            m_sentenceSeg = nullptr;
             InitRecurrentNode();
         }
 
