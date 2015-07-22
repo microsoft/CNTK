@@ -1,20 +1,20 @@
-// NDRMParser.cpp : Parses the NDRM format using a custom state machine (for speed)
+// SparsePCParser.cpp : Parses the SparsePC format using a custom state machine (for speed)
 //
 //
-// <copyright file="NDRMParser.cpp" company="Microsoft">
+// <copyright file="SparsePCParser.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
 
 #include "stdafx.h"
-#include "NDRMParser.h"
+#include "SparsePCParser.h"
 #include <stdexcept>
 #include <stdint.h>
 
 
 // SetState for a particular value
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::SetState(int value, ParseState m_current_state, ParseState next_state)
+void SparsePCParser<NumType, LabelType>::SetState(int value, ParseState m_current_state, ParseState next_state)
 {
     DWORD ul = (DWORD)next_state;
     int range_shift = ((int)m_current_state) << 8;
@@ -23,7 +23,7 @@ void NDRMParser<NumType, LabelType>::SetState(int value, ParseState m_current_st
 
 // SetStateRange - set states transitions for a range of values
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseState m_current_state, ParseState next_state)
+void SparsePCParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseState m_current_state, ParseState next_state)
 {
     DWORD ul = (DWORD)next_state;
     int range_shift = ((int)m_current_state) << 8;
@@ -36,7 +36,7 @@ void NDRMParser<NumType, LabelType>::SetStateRange(int value1, int value2, Parse
 // SetupStateTables - setup state transition tables for each state
 // each state has a block of 256 states indexed by the incoming character
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::SetupStateTables()
+void SparsePCParser<NumType, LabelType>::SetupStateTables()
 {
     //=========================
     // STATE = WHITESPACE
@@ -182,7 +182,7 @@ void NDRMParser<NumType, LabelType>::SetupStateTables()
 
 // reset all line state variables
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::PrepareStartLine()
+void SparsePCParser<NumType, LabelType>::PrepareStartLine()
 {
     m_numbersConvertedThisLine = 0;
     m_labelsConvertedThisLine = 0;
@@ -194,7 +194,7 @@ void NDRMParser<NumType, LabelType>::PrepareStartLine()
 
 // reset all number accumulation variables
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::PrepareStartNumber()
+void SparsePCParser<NumType, LabelType>::PrepareStartNumber()
 {
     m_partialResult = 0;
     m_builtUpNumber = 0;
@@ -205,7 +205,7 @@ void NDRMParser<NumType, LabelType>::PrepareStartNumber()
 
 // reset all state variables to start reading at a new position
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::PrepareStartPosition(size_t position)
+void SparsePCParser<NumType, LabelType>::PrepareStartPosition(size_t position)
 {
     m_current_state = Whitespace;
     m_byteCounter = position;  // must come before PrepareStartLine...
@@ -218,16 +218,16 @@ void NDRMParser<NumType, LabelType>::PrepareStartPosition(size_t position)
     m_totalLabelsConverted = 0;
 }
 
-// NDRMParser constructor
+// SparsePCParser constructor
 template <typename NumType, typename LabelType>
-NDRMParser<NumType, LabelType>::NDRMParser()
+SparsePCParser<NumType, LabelType>::SparsePCParser()
 {
     Init();
 }
 
 // setup all the state variables and state tables for state machine
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::Init()
+void SparsePCParser<NumType, LabelType>::Init()
 {
     PrepareStartPosition(0);
     m_fileBuffer = NULL;
@@ -238,7 +238,7 @@ void NDRMParser<NumType, LabelType>::Init()
 
 // Parser destructor
 template <typename NumType, typename LabelType>
-NDRMParser<NumType, LabelType>::~NDRMParser()
+SparsePCParser<NumType, LabelType>::~SparsePCParser()
 {
     delete m_stateTable;
     delete m_fileBuffer;
@@ -248,7 +248,7 @@ NDRMParser<NumType, LabelType>::~NDRMParser()
 
 // DoneWithLabel - Called when a string label is found
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::DoneWithLabel()
+void SparsePCParser<NumType, LabelType>::DoneWithLabel()
 {
     // if we haven't set the max yet, use the current byte Counter
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart) 
@@ -265,7 +265,7 @@ void NDRMParser<NumType, LabelType>::DoneWithLabel()
 
 // Called when a number is complete
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::DoneWithValue()
+void SparsePCParser<NumType, LabelType>::DoneWithValue()
 {
     // if we are storing it
     if (m_numbers != NULL)
@@ -315,7 +315,7 @@ void NDRMParser<NumType, LabelType>::DoneWithValue()
 
 // store label is specialized by LabelType
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::StoreLabel(NumType value)
+void SparsePCParser<NumType, LabelType>::StoreLabel(NumType value)
 {
     m_labels->push_back((LabelType)value);
     m_totalNumbersConverted++;
@@ -327,7 +327,7 @@ void NDRMParser<NumType, LabelType>::StoreLabel(NumType value)
 // StoreLastLabel - store the last label (for numeric types), tranfers to label vector
 // string label types handled in specialization
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::StoreLastLabel()
+void SparsePCParser<NumType, LabelType>::StoreLastLabel()
 {
     assert(!m_lastLabelIsString); // file format error, last label was a string...
     NumType value = m_numbers->back();
@@ -344,7 +344,7 @@ void NDRMParser<NumType, LabelType>::StoreLastLabel()
 // bufferSize - size of temporary buffer to store reads
 // startPosition - file position on which we should start
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeatures, size_t dimFeatures, size_t startLabels, size_t dimLabels, size_t bufferSize, size_t startPosition)
+void SparsePCParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFeatures, size_t dimFeatures, size_t startLabels, size_t dimLabels, size_t bufferSize, size_t startPosition)
 {
     assert(fileName != NULL);
     m_startLabels = startLabels;
@@ -358,14 +358,14 @@ void NDRMParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFea
 
     // if we have a file already open, cleanup
     if (m_pFile != NULL)
-        NDRMParser<NumType, LabelType>::~NDRMParser();
+        SparsePCParser<NumType, LabelType>::~SparsePCParser();
 
     errno_t err = _wfopen_s( &m_pFile, fileName, L"rb" );
     if (err)
-        std::runtime_error("NDRMParser::ParseInit - error opening file"); 
+        std::runtime_error("SparsePCParser::ParseInit - error opening file"); 
     int rc = _fseeki64(m_pFile, 0, SEEK_END);
     if (rc)
-        std::runtime_error("NDRMParser::ParseInit - error seeking in file");
+        std::runtime_error("SparsePCParser::ParseInit - error seeking in file");
 
     m_fileSize = GetFilePosition();
     m_fileBuffer = new BYTE[m_bufferSize];
@@ -375,11 +375,11 @@ void NDRMParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t startFea
 // GetFilePosition - Get the current file position in the text file
 // returns current position in the file
 template <typename NumType, typename LabelType>
-int64_t NDRMParser<NumType, LabelType>::GetFilePosition()
+int64_t SparsePCParser<NumType, LabelType>::GetFilePosition()
 {
     int64_t position = _ftelli64(m_pFile);
     if (position == -1L)
-        std::runtime_error("NDRMParser::GetFilePosition - error retrieving file position in file");
+        std::runtime_error("SparsePCParser::GetFilePosition - error retrieving file position in file");
     return position;
 }
 
@@ -388,11 +388,11 @@ int64_t NDRMParser<NumType, LabelType>::GetFilePosition()
 // it is recommneded that only return values from GetFilePosition() known to be the start of a line
 // and zero be passed to this function
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::SetFilePosition(int64_t position)
+void SparsePCParser<NumType, LabelType>::SetFilePosition(int64_t position)
 {
     int rc = _fseeki64(m_pFile, position, SEEK_SET);
     if (rc)
-        std::runtime_error("NDRMParser::SetFilePosition - error seeking in file");
+        std::runtime_error("SparsePCParser::SetFilePosition - error seeking in file");
 
     // setup state machine to start at this position
     PrepareStartPosition(position);
@@ -406,7 +406,7 @@ void NDRMParser<NumType, LabelType>::SetFilePosition(int64_t position)
 // HasMoreData - test if the current dataset have more data, or just whitespace
 // returns - true if it has more data, false if not
 template <typename NumType, typename LabelType>
-bool NDRMParser<NumType, LabelType>::HasMoreData()
+bool SparsePCParser<NumType, LabelType>::HasMoreData()
 {
     long long byteCounter = m_byteCounter;
     size_t bufferIndex = m_byteCounter-m_bufferStart;
@@ -430,7 +430,7 @@ bool NDRMParser<NumType, LabelType>::HasMoreData()
 // UpdateBuffer - load the next buffer full of data
 // returns - number of records read
 template <typename NumType, typename LabelType>
-size_t NDRMParser<NumType, LabelType>::UpdateBuffer()
+size_t SparsePCParser<NumType, LabelType>::UpdateBuffer()
 {
     // state machine might want to look back this far, so copy to beginning
     size_t saveBytes = m_byteCounter-m_spaceDelimitedStart;
@@ -445,12 +445,12 @@ size_t NDRMParser<NumType, LabelType>::UpdateBuffer()
     size_t bytesToRead = min(m_bufferSize, m_fileSize-m_bufferStart)-saveBytes;
     size_t bytesRead = fread(m_fileBuffer+saveBytes, 1, bytesToRead, m_pFile);
     if (bytesRead == 0 && ferror(m_pFile))
-        std::runtime_error("NDRMParser::UpdateBuffer - error reading file");
+        std::runtime_error("SparsePCParser::UpdateBuffer - error reading file");
     return bytesRead;
 }
 
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::SetParseMode(ParseMode mode)
+void SparsePCParser<NumType, LabelType>::SetParseMode(ParseMode mode)
 {
     // if already in this mode, nothing to do
     if (m_parseMode == mode)
@@ -471,7 +471,7 @@ void NDRMParser<NumType, LabelType>::SetParseMode(ParseMode mode)
 // SetTraceLevel - Set the level of screen output
 // traceLevel - traceLevel, zero means no output, 1 epoch related output, > 1 all output
 template <typename NumType, typename LabelType>
-void NDRMParser<NumType, LabelType>::SetTraceLevel(int traceLevel)
+void SparsePCParser<NumType, LabelType>::SetTraceLevel(int traceLevel)
 {
     m_traceLevel = traceLevel;
 }
@@ -482,7 +482,7 @@ void NDRMParser<NumType, LabelType>::SetTraceLevel(int traceLevel)
 // labels - pointer to vector to return the labels (defaults to null)
 // returns - number of records actually read, if the end of file is reached the return value will be < requested records
 template <typename NumType, typename LabelType>
-long NDRMParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<NumType> *numbers, std::vector<LabelType> *labels)
+long SparsePCParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<NumType> *numbers, std::vector<LabelType> *labels)
 {
     assert(numbers != NULL || m_dimFeatures == 0 || m_parseMode == ParseLineCount);
     assert(labels != NULL || m_dimLabels == 0 || m_parseMode == ParseLineCount);
@@ -654,7 +654,7 @@ long NDRMParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void NDRMParser<float, std::string>::StoreLabel(float /*finalResult*/)
+void SparsePCParser<float, std::string>::StoreLabel(float /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
@@ -668,7 +668,7 @@ void NDRMParser<float, std::string>::StoreLabel(float /*finalResult*/)
 
 // DoneWithLabel - string version stores string label
 template <>
-void NDRMParser<float, std::string>::DoneWithLabel()
+void SparsePCParser<float, std::string>::DoneWithLabel()
 {
     if (m_labels != NULL)
         StoreLabel(0);  // store the string label
@@ -677,7 +677,7 @@ void NDRMParser<float, std::string>::DoneWithLabel()
 
 // StoreLastLabel - string version
 template <>
-void NDRMParser<float, std::string>::StoreLastLabel()
+void SparsePCParser<float, std::string>::StoreLastLabel()
 {
     // see if it was already stored as a string label
     if (m_lastLabelIsString)
@@ -694,7 +694,7 @@ void NDRMParser<float, std::string>::StoreLastLabel()
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void NDRMParser<double, std::string>::StoreLabel(double /*finalResult*/)
+void SparsePCParser<double, std::string>::StoreLabel(double /*finalResult*/)
 {
     // for LabelFirst, Max will not be set yet, but the current byte counter is the Max, so set it
     if (m_spaceDelimitedMax <= m_spaceDelimitedStart)
@@ -708,7 +708,7 @@ void NDRMParser<double, std::string>::StoreLabel(double /*finalResult*/)
 
 // DoneWithLabel - string version stores string label
 template <>
-void NDRMParser<double, std::string>::DoneWithLabel()
+void SparsePCParser<double, std::string>::DoneWithLabel()
 {
     if (m_labels != NULL)
         StoreLabel(0);  // store the string label
@@ -717,7 +717,7 @@ void NDRMParser<double, std::string>::DoneWithLabel()
 
 // StoreLastLabel - string version
 template <>
-void NDRMParser<double, std::string>::StoreLastLabel()
+void SparsePCParser<double, std::string>::StoreLastLabel()
 {
     // see if it was already stored as a string label
     if (m_lastLabelIsString)
@@ -733,7 +733,7 @@ void NDRMParser<double, std::string>::StoreLastLabel()
 #ifdef STANDALONE
 int wmain(int argc, wchar_t* argv[])
 {
-    NDRMParser<double, int> parser;
+    SparsePCParser<double, int> parser;
     std::vector<double> values;
     values.reserve(784000*6);
     std::vector<int> labels;
@@ -755,11 +755,11 @@ int wmain(int argc, wchar_t* argv[])
 }
 #endif
 
-// instantiate NDRM parsers for supported types
-template class NDRMParser<float, int>;
-template class NDRMParser<float, float>;
-template class NDRMParser<float, std::string>;
-template class NDRMParser<double, int>;
-template class NDRMParser<double, double>;
-template class NDRMParser<double, std::string>;
+// instantiate SparsePC parsers for supported types
+template class SparsePCParser<float, int>;
+template class SparsePCParser<float, float>;
+template class SparsePCParser<float, std::string>;
+template class SparsePCParser<double, int>;
+template class SparsePCParser<double, double>;
+template class SparsePCParser<double, std::string>;
 
