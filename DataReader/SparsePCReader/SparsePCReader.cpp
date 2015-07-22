@@ -1,15 +1,15 @@
 //
-// <copyright file="NDRMReader.cpp" company="Microsoft">
+// <copyright file="SparsePCReader.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-// NDRMReader.cpp : Defines the reader for the Neural Document Ranking Model (NDRM).
+// SparsePCReader.cpp : Defines the Sparse Parallel Corpus reader.
 //
 
 #include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
-#include "NDRMReader.h"
+#include "SparsePCReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
@@ -20,7 +20,7 @@ DWORD HIDWORD(size_t size) {return size>>32;}
 DWORD LODWORD(size_t size) { return size & 0xFFFFFFFF; }
 
 template<class ElemType>
-NDRMReader<ElemType>::~NDRMReader()
+SparsePCReader<ElemType>::~SparsePCReader()
 {
     if (m_filemap != NULL)
     {
@@ -34,7 +34,7 @@ NDRMReader<ElemType>::~NDRMReader()
 
     CloseHandle(m_hndl);
 
-    for (int i = 0; i < FEATURE_COUNT; i++)
+    for (int i = 0; i < m_featureCount; i++)
     {
         if (m_values[i] != NULL)
         {
@@ -59,7 +59,7 @@ NDRMReader<ElemType>::~NDRMReader()
 }
 
 template<class ElemType>
-void NDRMReader<ElemType>::Destroy()
+void SparsePCReader<ElemType>::Destroy()
 {
     delete this;
 }
@@ -67,7 +67,7 @@ void NDRMReader<ElemType>::Destroy()
 // Init - Reader Initialize for multiple data sets
 // config - [in] configuration parameters for the datareader
 template<class ElemType>
-void NDRMReader<ElemType>::Init(const ConfigParameters& readerConfig)
+void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
     m_miniBatchSize = 0;
     m_traceLevel = readerConfig("traceLevel", "0");
@@ -86,18 +86,25 @@ void NDRMReader<ElemType>::Init(const ConfigParameters& readerConfig)
     // labels - [in,out] a vector of label name strings
     GetFileConfigNames(readerConfig, featureNames, labelNames);
 
-    if (featureNames.size() != FEATURE_COUNT || labelNames.size() != 1)
+    if (labelNames.size() != 1)
     {
-        RuntimeError("NDRM requires exactly two features and one label. Their names should match those in NDL definition");
+        RuntimeError("SparsePC requires exactly one label. Their names should match those in NDL definition");
         return;
     }
 
+    m_featureCount = featureNames.size();
     m_labelName = labelNames[0];
-    
-    for (int i = 0; i < FEATURE_COUNT; i++)
+
+    m_featureNames = std::vector<std::wstring>(m_featureCount);
+    m_dims = std::vector<size_t>(m_featureCount);
+    m_values = std::vector<ElemType*>(m_featureCount);
+    m_rowIndices = std::vector<int32_t*>(m_featureCount);
+    m_colIndices = std::vector<int32_t*>(m_featureCount);
+
+    for (int i = 0; i < m_featureCount; i++)
     {
         // In the config file, we must specify query features first, then document features. The sequence is different here. Pay attention
-        m_featureNames[i] = featureNames[FEATURE_COUNT - i - 1];
+        m_featureNames[i] = featureNames[m_featureCount - i - 1];
 
         ConfigParameters featureConfig = readerConfig(m_featureNames[i], "");
 
@@ -131,13 +138,13 @@ void NDRMReader<ElemType>::Init(const ConfigParameters& readerConfig)
 // epoch - [in] epoch number for this loop --ignored
 // requestedEpochSamples - [in] number of samples to randomize --ignored
 template<class ElemType>
-void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples*/)
+void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples*/)
 {
     if (m_values[0] == NULL || m_miniBatchSize != mbSize)
     {
         m_miniBatchSize = mbSize;
 
-        for (int i = 0; i < FEATURE_COUNT; i++)
+        for (int i = 0; i < m_featureCount; i++)
         {
             if (m_values[i] != NULL)
             {
@@ -163,7 +170,7 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, s
 //             [out] each matrix resized if necessary containing data. 
 // returns - true if there are more minibatches, false if no more minibatchs remain
 template<class ElemType>
-bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
     // get out if they didn't call StartMinibatchLoop() first
     if (m_miniBatchSize == 0)
@@ -190,8 +197,8 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         }
     }
     
-    std::vector<int32_t> currIndex = std::vector<int32_t>(FEATURE_COUNT);
-    for (int i = 0; i < FEATURE_COUNT; i++)
+    std::vector<int32_t> currIndex = std::vector<int32_t>(m_featureCount);
+    for (int i = 0; i < m_featureCount; i++)
     {
         currIndex[i] = 0;
     }
@@ -200,7 +207,7 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
 
     for (j = 0; j < m_miniBatchSize && m_currOffset < m_filePositionMax; j++)
     {
-        for (int i = 0; i < FEATURE_COUNT; i++)
+        for (int i = 0; i < m_featureCount; i++)
         {
             m_colIndices[i][j] = currIndex[i];
 
@@ -219,23 +226,6 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
             m_currOffset += (sizeof(int32_t)*nnz);
 
             currIndex[i] += nnz;
-
-            // Debug code - print first feature row
-            /*if (j == 0)
-            {
-                fprintf(stderr, "Feature Type=%S\n", m_featureNames[i].c_str());
-                fprintf(stderr, "Vals =\t");
-                for (int x = 0; x < nnz; x++)
-                {
-                    fprintf(stderr, "%d\t", (int)m_values[i][x]);
-                }
-                fprintf(stderr, "\nRIdx =\t");
-                for (int x = 0; x < nnz; x++)
-                {
-                    fprintf(stderr, "%d\t", m_rowIndices[i][x]);
-                }
-                fprintf(stderr, "\n");
-            }*/
         }
         
         ElemType label = *(ElemType*)((char*)m_dataBuffer + m_currOffset);
@@ -253,7 +243,7 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         m_currOffset += sizeof(int32_t);
     }
 
-    for (int i = 0; i < FEATURE_COUNT; i++)
+    for (int i = 0; i < m_featureCount; i++)
     {
         m_colIndices[i][j] = currIndex[i];
 
@@ -285,19 +275,11 @@ bool NDRMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
         (*labels).SetValue(labelRows, j, m_labelsBuffer, 0, (*labels).GetDeviceId());
     }
 
-    // Debug code - print labels
-    /*for (int i = 0; i < j; i++)
-    {
-        fprintf(stderr, "%d", (int)m_labelsBuffer[i]);
-        if (i % 20 == 19)
-            fprintf(stderr, "\n");
-    }*/
-
     return true;
 }
 
 template<class ElemType>
-bool NDRMReader<ElemType>::DataEnd(EndDataType endDataType)
+bool SparsePCReader<ElemType>::DataEnd(EndDataType endDataType)
 {
     bool ret = false;
     switch (endDataType)
@@ -322,7 +304,7 @@ bool NDRMReader<ElemType>::DataEnd(EndDataType endDataType)
 // GetLabelMapping - Gets the label mapping from integer index to label type 
 // returns - a map from numeric datatype to native label type 
 template<class ElemType>
-const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& NDRMReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
+const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader<ElemType>::LabelType>& SparsePCReader<ElemType>::GetLabelMapping(const std::wstring& /*sectionName*/)
 {
     return m_mapIdToLabel;
 }
@@ -331,7 +313,7 @@ const std::map<typename IDataReader<ElemType>::LabelIdType, typename IDataReader
 // labelMapping - mapping table from label values to IDs (must be 0-n)
 // note: for tasks with labels, the mapping table must be the same between a training run and a testing run 
 template<class ElemType>
-void NDRMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
+void SparsePCReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename IDataReader<ElemType>::LabelIdType, typename LabelType>& labelMapping)
 {
     m_mapIdToLabel = labelMapping;
     m_mapLabelToId.clear();
@@ -342,6 +324,6 @@ void NDRMReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, 
 }
 
 // instantiate all the combinations we expect to be used
-template class NDRMReader<double>; 
-template class NDRMReader<float>;
+template class SparsePCReader<double>; 
+template class SparsePCReader<float>;
 }}}
