@@ -74,12 +74,6 @@
     <ClInclude Include="IExecutionEngine.h">
       <Filter>Execution Engine</Filter>
     </ClInclude>
-    <ClInclude Include="MinibatchFetcher.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="MinibatchPrefetcher.h">
-      <Filter>Network</Filter>
-    </ClInclude>
     <ClInclude Include="ModelEditLanguage.h">
       <Filter>Model Editing</Filter>
     </ClInclude>
