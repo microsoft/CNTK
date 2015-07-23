@@ -111,7 +111,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
-        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource) const
+        void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource, int verbosity=0) const
         {
 
             if (numutterances() == 0)
@@ -142,7 +142,10 @@ class minibatchutterancesourcemulti : public minibatchsource
                         latticesource.getlattices (utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
                 //fprintf (stderr, "\n");
-                fprintf (stderr, "requiredata: %zu utterances read\n", utteranceset.size());
+				if (verbosity)
+                {
+                    fprintf (stderr, "requiredata: %zu utterances read\n", utteranceset.size());
+                }
             }
             catch (...)
             {
@@ -360,12 +363,17 @@ public:
                 throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
 
             foreach_index(i, infiles[m]){
-	      utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i],featuresections[m]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
+	            utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i],featuresections[m]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
                 const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
                 // we need at least 2 frames for boundary markers to work
                 if (uttframes < 2)
-                    throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
-                if (uttframes > frameref::maxframesperutterance)
+                {
+                    //throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it less than. frames (%d) for frameref bit field: %S", i, uttframes, 2, key.c_str());
+                    uttduration[i] = 0;
+                    uttisvalid[i] = false;
+                }
+                if (uttframes > frameref::maxframesperutterance || uttframes <2)
                 {
                     fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
@@ -672,7 +680,8 @@ private:
             return sweep;
 
         currentsweep = sweep;
-        fprintf (stderr, "lazyrandomization: re-randomizing for sweep %zu in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
+		if (verbosity>0)
+            fprintf (stderr, "lazyrandomization: re-randomizing for sweep %zu in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
 
         const size_t sweepts = sweep * _totalframes;     // first global frame index for this sweep
 
@@ -984,6 +993,7 @@ private:
             auto & chunkdata = randomizedchunks[m][k].getchunkdata();
             if (chunkdata.isinram())
             {
+                if (verbosity)
                 fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n",
                      k, randomizedchunks[m][k].globalts, randomizedchunks[m][k].globalte()-1, chunksinram-1);
                 chunkdata.releasedata();
@@ -1029,10 +1039,11 @@ private:
             {
                 auto & chunk = randomizedchunks[m][chunkindex];
                 auto & chunkdata = chunk.getchunkdata();
+				if (verbosity)
                 fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %zu (frame range [%zu..%zu]), %zu resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
-                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices);
+                    chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices, verbosity);
                 });
             }
             chunksinram++;
@@ -1228,7 +1239,8 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[0][firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[0][lastchunk].windowend;
-            fprintf (stderr, "getbatch: getting randomized frames [%zu..%zu] (%zu frames out of %zu requested) in sweep %zu; chunks [%zu..%zu] -> chunk window [%zu..%zu)\n",
+			if (verbosity)
+                fprintf (stderr, "getbatch: getting randomized frames [%zu..%zu] (%zu frames out of %zu requested) in sweep %zu; chunks [%zu..%zu] -> chunk window [%zu..%zu)\n",
                      globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
             // release all data outside, and page in all data inside
             for (size_t k = 0; k < windowbegin; k++)
