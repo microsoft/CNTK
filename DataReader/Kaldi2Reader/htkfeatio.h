@@ -300,6 +300,52 @@ public:
 
     // read an entire utterance into an already allocated matrix
     // Matrix type needs to have operator(i,j)
+    template<class MATRIX> void readNoAlloc (const parsedpath & ppath, const string & kindstr, const unsigned int period, MATRIX & feat, bool needsExpansion)
+    {
+        // open the file and check dimensions
+        size_t numframes = ppath.numframes();
+
+        // read vectors from file and push to our target structure
+        try {
+            kaldi::Matrix<kaldi::BaseFloat> & kaldifeat = ppath.featuresection->read(ppath);
+            size_t featdim = kaldifeat.NumCols();
+
+            if (needsExpansion)
+            {
+                if (numframes != 1)
+                    throw std::logic_error("read: if doing utterance-based expansion of features (e.g. ivectors), utterance must contain 1 frame only");
+                if (feat.rows() != featdim)
+                    throw std::logic_error("read: stripe read called with wrong dimensions");
+            }
+            else
+            {
+                if (feat.cols() != numframes || feat.rows() != featdim)
+                    throw std::logic_error("read: stripe read called with wrong dimensions");
+            }
+
+            copyKaldiToCntk(kaldifeat, feat);
+            if (needsExpansion){ // copy first frame to all the frames in the stripe
+                for (int t = 1; t < feat.cols(); t++){
+                    for (int k = 0; k < feat.rows(); k++){
+                        feat(k, t) = feat(k, 0);
+                    }
+                }
+            }
+#if 0
+            std::wcout << (wstring)ppath << std::endl;
+            for (int c=0; c<10; c++) {
+                for (int r=0; r<10; r++) {
+                    std::wcout << feat(r, c) << " ";
+                }
+                std::wcout << std::endl;
+            }
+            exit(1);
+#endif
+            
+        } catch (...) { throw; }
+    }
+    // read an entire utterance into an already allocated matrix
+    // Matrix type needs to have operator(i,j)
     template<class MATRIX> void readNoAlloc (const parsedpath & ppath, const string & kindstr, const unsigned int period, MATRIX & feat)
     {
         // open the file and check dimensions

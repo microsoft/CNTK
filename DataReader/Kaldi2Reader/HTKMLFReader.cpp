@@ -250,10 +250,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t iFeat = 0;
         vector<size_t> numContextLeft;
         vector<size_t> numContextRight;
+        size_t numExpandToUtt = 0;
         vector<msra::asr::FeatureSection *> & scriptpaths = m_trainingOrTestingFeatureSections;
         foreach_index(i, featureNames)
         {
             ConfigParameters thisFeature = readerConfig(featureNames[i]);
+            bool expandToUtt = thisFeature("expandToUtterance", "false"); // should feature be processed as an ivector?
+            m_expandToUtt.push_back(expandToUtt);
+            if (expandToUtt)
+                numExpandToUtt++;
 
             // Figures out the context.
             ConfigArray contextWindow = thisFeature("contextWindow", "1");
@@ -276,6 +281,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 RuntimeError("contextFrames must have 1 or 2 values specified, found %d", contextWindow.size());
             }
+
+            if (expandToUtt && (numContextLeft[i] != 0 || numContextRight[1] != 0))
+                RuntimeError("contextWindow expansion not permitted when expandToUtterance=true");
 
             // Figures the actual feature dimension, with context.
             m_featDims.push_back(thisFeature("dim"));
@@ -372,6 +380,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (iFeat != scriptpaths.size() || iLabel != mlfpathsmulti.size())
             throw std::runtime_error(msra::strfun::strprintf ("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n"));
 
+        if (iFeat == numExpandToUtt)
+            throw std::runtime_error("At least one feature stream must be frame-based, not utterance-based\n");
+
+        if (m_expandToUtt[0]) // first feature stream is ivector type - that will mess up lower level feature reader
+            throw std::runtime_error("The first feature stream in the file must be frame-based not utterance based. Please reorder the feature blocks of your config appropriately\n");
+
         // Loads randomization method.
         size_t randomize = randomizeAuto;
         if (readerConfig.Exists("randomize"))
@@ -450,7 +464,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // now get the frame source. This has better randomization and doesn't create temp files
             m_frameSource = new msra::dbn::minibatchutterancesourcemulti(
                 scriptpaths, infilesmulti, labelsmulti, m_featDims, m_labelDims,
-                numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode);
+                numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode, m_exandToUtt);
 
         }
         else if (!_stricmp(readMethod.c_str(), "rollingWindow"))
@@ -459,6 +473,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_doSeqTrain)
             {
                 LogicError("rollingWindow is not supported in sequence training.\n");
+            }
+            if (numExpandToUtt>0)
+            {
+                LogicError("rollingWindow reader does not support expandToUtt. Change to blockRandomize.\n");
             }
             std::string pageFilePath;
             std::vector<std::wstring> pagePaths;

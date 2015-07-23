@@ -81,6 +81,7 @@ private:
     size_t m_inputFileIndex;
     std::vector<size_t> m_featDims;
     std::vector<size_t> m_labelDims;
+    std::vector<bool> m_expandToUtt; // support for i-vector type of input - single frame should be applied to entire utterance
 
     std::vector<std::vector<std::vector<ElemType>>>m_labelToTargetMapMultiIO;
      
