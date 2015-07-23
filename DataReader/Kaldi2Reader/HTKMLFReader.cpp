@@ -464,7 +464,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // now get the frame source. This has better randomization and doesn't create temp files
             m_frameSource = new msra::dbn::minibatchutterancesourcemulti(
                 scriptpaths, infilesmulti, labelsmulti, m_featDims, m_labelDims,
-                numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode, m_exandToUtt);
+                numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode, m_expandToUtt);
 
         }
         else if (!_stricmp(readMethod.c_str(), "rollingWindow"))
