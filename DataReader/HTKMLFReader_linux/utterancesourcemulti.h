@@ -30,6 +30,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<unsigned int> sampperiod;        // (for reference and to check against model)
     std::vector<string> featkind;
     std::vector<size_t> featdim;
+    std::vector<bool> expandToUtt;             // indicator of whether features should be applied to entire utterance, e.g. ivectors
     const bool framemode;           // true -> actually return frame-level randomized frames (not possible in lattice mode)
     std::vector<std::vector<size_t>> counts;     // [s] occurence count for all states (used for priors)
     int verbosity;
@@ -47,10 +48,16 @@ class minibatchutterancesourcemulti : public minibatchsource
         msra::asr::htkfeatreader::parsedpath parsedpath;    // archive filename and frame range in that file
         size_t classidsbegin;       // index into allclassids[] array (first frame)
 
-        utterancedesc (msra::asr::htkfeatreader::parsedpath && ppath, size_t classidsbegin) : parsedpath (ppath), classidsbegin (classidsbegin) {}
-
+        utterancedesc(msra::asr::htkfeatreader::parsedpath && ppath, size_t classidsbegin) : parsedpath(ppath), classidsbegin(classidsbegin) { framesToExpand = 0; needsExpansion = false; }
+        bool needsExpansion; //ivector type of feature
+        size_t framesToExpand; // expected number of frames (to expand ivectors) 
         const wstring & logicalpath() const { return parsedpath; /*type cast will return logical path*/ }
-        size_t numframes() const { return parsedpath.numframes(); }
+        size_t numframes() const { 
+            if (needsExpansion)
+                return framesToExpand; 
+            else 
+                return parsedpath.numframes(); 
+        }
         const wstring key() const                           // key used for looking up lattice (not stored to save space)
         {
 #ifdef _WIN32
@@ -61,6 +68,11 @@ class minibatchutterancesourcemulti : public minibatchsource
 #ifdef __unix__
             return removeExtension(basename(logicalpath()));
 #endif
+        }
+        void expandtoutterance(size_t requiredFrames)
+        {
+            needsExpansion = true;
+            framesToExpand = requiredFrames;
         }
     };
     struct utterancechunkdata       // data for a chunk of utterances
@@ -142,7 +154,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                     //fprintf (stderr, ".");
                     // read features for this file
                     auto uttframes = getutteranceframes (i);    // matrix stripe for this utterance (currently unfilled)
-                    reader.read (utteranceset[i].parsedpath, (const string &) featkind, sampperiod, uttframes);  // note: file info here used for checkuing only
+                    reader.read(utteranceset[i].parsedpath, (const string &)featkind, sampperiod, uttframes, utteranceset[i].needsExpansion);  // note: file info here used for checkuing only
                     // page in lattice data
                     if (!latticesource.empty())
                         latticesource.getlattices (utteranceset[i].key(), lattices[i], uttframes.cols());
@@ -309,9 +321,9 @@ public:
     // This mode requires utterances with time stamps.
     minibatchutterancesourcemulti (const std::vector<std::vector<wstring>> & infiles, const std::vector<map<wstring,std::vector<msra::asr::htkmlfentry>>> & labels,
                               std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
-                              const latticesource & lattices, const map<wstring,msra::lattices::lattice::htkmlfwordsequence> & allwordtranscripts, const bool framemode)
+        const latticesource & lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> & allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt)
         : vdim (vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod (0), featdim (0), randomizationrange (randomizationrange), currentsweep (SIZE_MAX),
-          lattices (lattices), allwordtranscripts (allwordtranscripts), framemode (framemode), chunksinram (0), timegetbatch (0), verbosity(2)    
+        lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), expandToUtt(expandToUtt)
         // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
         // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {    
@@ -359,6 +371,8 @@ public:
                 numutts = infiles[m].size();
                 uttisvalid = std::vector<bool>(numutts, true);
                 uttduration = std::vector<size_t>(numutts, 0);
+                if (expandToUtt[m])
+                    throw std::runtime_error("minibatchutterancesourcemulti: the first feature stream must be frame-based not utterance based");
             }
             else if (infiles[m].size()!=numutts)
                 throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
@@ -366,8 +380,10 @@ public:
             foreach_index(i, infiles[m]){
                 utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
                 const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
+                if (expandToUtt[m] && uttframes != 1)
+                    throw std::runtime_error("minibatchutterancesource: utterance-based features must be 1 frame in duration");
                 // we need at least 2 frames for boundary markers to work
-                if (uttframes < 2)
+                else if (!expandToUtt[m] && uttframes < 2)
                     throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
@@ -380,8 +396,8 @@ public:
                         uttduration[i] = uttframes;
                         uttisvalid[i] = true;
                     }
-                    else if (uttduration[i] != uttframes){
-                                fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)\n", i, uttduration[i], uttframes);
+	                else if (uttduration[i] != uttframes && !expandToUtt[m]){
+	                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)\n", i, uttduration[i], uttframes);
                         uttduration[i] = 0;
                         uttisvalid[i] = false;
                     }
@@ -420,9 +436,15 @@ public:
                     classidsbegin.push_back(classids[0]->size());
                     
                 if (uttisvalid[i]){
-                utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels.empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
-                const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
+	                utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels.empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
+	                const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
+                    if (expandToUtt[m]){
+                        assert(uttframes == 1);
+                        utterance.expandtoutterance(uttduration[i]);
+                    }
+                    else{
                     assert(uttframes == uttduration[i]); // ensure nothing funky happened
+                    }
                     // already performed these checks above
                     // we need at least 2 frames for boundary markers to work
                     //if (uttframes < 2)
@@ -478,7 +500,7 @@ public:
                             {
                                 fprintf (stderr, " [duration mismatch (%zu in label vs. %zu in feat file), skipping %S]", labframes, uttframes, key.c_str());
                                 nomlf++;
-                                    uttisvalid[i] = false;
+                                uttisvalid[i] = false;
                                 break; // continue;   // skip this utterance at all
                             }
                         }
