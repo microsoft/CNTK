@@ -1771,8 +1771,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
-        sentenceBegin.SetValue(m_sentenceBegin);
-        minibatchPackingFlag = m_minibatchPackingFlag;
+        if (!m_framemode)
+        {
+            sentenceBegin.SetValue(m_sentenceBegin);
+            minibatchPackingFlag = m_minibatchPackingFlag;
+        }
     }
 
     // For Kaldi2Reader, we now make the following assumptions
