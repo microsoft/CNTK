@@ -2,6 +2,7 @@
 
 #include "kaldi.h"
 #include "Matrix.h"
+#include "basetypes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -12,50 +13,93 @@ class KaldiSequenceTrainingIO
 {
 private:
     bool m_oneSilenceClass;
-    bool m_currentUttHasDeriv;
-    bool m_derivRead;
-    bool m_objRead;
+    bool m_needLikelihood;
+    size_t m_numUttsPerMinibatch;
     wstring m_trainCriterion;
-    wstring m_currentUttID;
     ElemType m_oldAcousticScale;
     ElemType m_acousticScale;
     ElemType m_lmScale;
-    ElemType m_objective;
     std::vector<kaldi::int32> m_silencePhones;
-    size_t m_currentUttLength;
     kaldi::TransitionModel m_transModel;
-    kaldi::Posterior m_posteriors;
-    kaldi::RandomAccessCompactLatticeReader* m_denlatReader;  /*denominator lattices*/
-    kaldi::RandomAccessInt32VectorReader* m_aliReader;        /*alignment*/
+    kaldi::RandomAccessCompactLatticeReader* m_denlatReader;
+    kaldi::RandomAccessInt32VectorReader* m_aliReader;
+
+    struct UtteranceDerivativeUnit
+    {
+        bool hasDerivative;
+        size_t uttLength;
+        size_t progress;
+        size_t streamID;
+        Matrix<ElemType> logLikelihood;
+        kaldi::Posterior posterior;
+        ElemType objective;
+
+        UtteranceDerivativeUnit() : logLikelihood(CPUDEVICE)
+        {
+            hasDerivative = false;
+            uttLength = 0;
+            progress = 0;
+            streamID = 0;
+        }
+    };
+    ElemType m_currentObj;
+    int m_minCompleteMinibatchIndex;
+    size_t m_minibatchIndex;
+    std::vector<size_t> m_lastCompleteMinibatch;
+    std::vector<std::vector<std::pair<wstring, size_t>>> m_currentUttInfo;
+    unordered_map<wstring, UtteranceDerivativeUnit> m_uttPool;
 
     // Rescores the lattice with the lastest posteriors from the neural network.
-    void LatticeAcousticRescore(const std::vector<kaldi::int32>& stateTimes,
-                                const Matrix<ElemType>& outputs, kaldi::Lattice* lat);
+    void LatticeAcousticRescore(
+        const std::vector<kaldi::int32>& stateTimes,
+        const Matrix<ElemType>& outputs, kaldi::Lattice* lat) const;
+
+    // <uttInfoInMinibatch> is a vector of vector of the following:
+    //     uttID startFrameIndexInMinibatch numFrames
+    void ProcessUttInfo(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        const Matrix<ElemType>& sentenceBegin,
+        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        std::vector<std::vector<std::pair<
+            wstring, std::pair<size_t, size_t>>>>* uttInfoInMinibatch) const;
+
+    bool ComputeDerivative(const wstring& uttID);
 
 public:
     // Constructor.
-    KaldiSequenceTrainingIO(const wstring& denlatRspecifier, const wstring& aliRspecifier,
-                            const wstring& transModelFilename, const wstring& silencePhoneStr,
+    KaldiSequenceTrainingIO(const wstring& denlatRspecifier,
+                            const wstring& aliRspecifier,
+                            const wstring& transModelFilename,
+                            const wstring& silencePhoneStr,
                             const wstring& trainCriterion,
                             ElemType oldAcousticScale,
                             ElemType acousticScale,
                             ElemType lmScale,
-                            bool oneSilenceClass);
+                            bool oneSilenceClass,
+                            size_t numberOfuttsPerMinibatch);
 
     // Destructor.
     ~KaldiSequenceTrainingIO();
 
-    bool HasDerivatives(const wstring& uttID);
+    bool NeedLikelihoodToComputeDerivative() const { return m_needLikelihood; }
 
-    bool ComputeDerivatives(const wstring& uttID, const Matrix<ElemType>& outputs);
+    bool SetLikelihood(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        const Matrix<ElemType>& outputs,
+        const Matrix<ElemType>& sentenceBegin,
+        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     // Gets the computed derivatives for given utterance.
-    void GetDerivatives(size_t startFrame, size_t endFrame, size_t mbSize,
-                        const std::wstring& uttID, Matrix<ElemType>& derivatives);
+    bool GetDerivative(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        const Matrix<ElemType>& sentenceBegin,
+        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        Matrix<ElemType>* derivativesOut);
 
     // Gets the computed objectives for given utterance.
-    void GetObjectives(size_t startFrame, size_t endFrame,
-                       const std::wstring& uttID, Matrix<ElemType>& derivatives);
+    bool GetObjective(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        Matrix<ElemType>* objectivesIn);
 };
 
 }}}

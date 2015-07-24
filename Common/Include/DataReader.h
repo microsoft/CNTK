@@ -85,14 +85,27 @@ public:
 
     void SetDoRandomize(bool b){ mDoRandomize = b; }
 
-    // Gets utterance before getting the actual minibatch, which will not affect
-    // getting the minibatches. This can be useful in sequence training.
-    virtual bool GetForkedUtterance(std::wstring& , std::map<std::wstring, Matrix<ElemType>*>& ) { return false; }
+    // Gets a copy of the minibatch for the forward computation. This can be
+    // useful if some of the computation has to happen in the reader.
+    virtual bool GetMinibatchCopy(
+        std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
+        std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/,
+        Matrix<ElemType>& /*sentenceBegin*/,
+        std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+    {
+        return false;
+    }
 
-    // Computes certain derivatives given outputs from neural networks, which
-    // will later be fed to the neural network as features. This can be useful
-    // in sequence training.
-    virtual bool ComputeDerivativeFeatures(const std::wstring& , const Matrix<ElemType>& ) { return false; }
+    // Sets the neural network output to the reader. This can be useful if some
+    // of the computation has to happen in the reader.
+    virtual bool SetNetOutput(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
+        const Matrix<ElemType>& /*outputs*/,
+        const Matrix<ElemType>& /*sentenceBegin*/,
+        const std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+    {
+        return false;
+    }
 };
 
 // GetReader - get a reader type from the DLL
@@ -193,14 +206,21 @@ public:
 
     virtual bool DataEnd(EndDataType endDataType);
 
-    // Gets utterance before getting the actual minibatch, which will not affect
-    // getting the minibatches. This can be useful in sequence training.
-    virtual bool GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    // Gets a copy of the minibatch for the forward computation. This can be
+    // useful if some of the computation has to happen in the reader.
+    virtual bool GetMinibatchCopy(
+        std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        std::map<std::wstring, Matrix<ElemType>*>& matrices,
+        Matrix<ElemType>& sentenceBegin,
+        std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
-    // Computes certain derivatives given outputs from neural networks, which
-    // will later be fed to the neural network as features. This can be useful
-    // in sequence training.
-    virtual bool ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs);
+    // Sets the neural network output to the reader. This can be useful if some
+    // of the computation has to happen in the reader.
+    virtual bool SetNetOutput(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        const Matrix<ElemType>& outputs,
+        const Matrix<ElemType>& sentenceBegin,
+        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
