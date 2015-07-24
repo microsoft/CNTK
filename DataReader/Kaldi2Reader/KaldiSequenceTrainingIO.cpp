@@ -235,12 +235,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numFrames = 0;
             for (size_t j = 0; j < sentenceBegin.GetNumCols(); ++j)
             {
-                if (((size_t)sentenceBegin(i, j) & NO_LABELS) == NO_LABELS)
+                if (((size_t)sentenceBegin(i, j) & NO_LABEL) == NO_LABEL)
                 {
                     continue;
                 }
                 numFrames += 1;
-                if ((((size_t)sentenceBegin(i, j) & SENTENCE_END) == SENTENCE_END)
+                if ((((size_t)sentenceBegin(i, j) & SEQUENCE_END) == SEQUENCE_END)
                          || j == sentenceBegin.GetNumCols() - 1)
                 {
                     size_t uttIndex = (*uttInfoInMinibatch)[i].size();
