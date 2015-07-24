@@ -27,8 +27,11 @@ set a=%~dp0
 set buildpath="%a:\=\\%"
 echo #define _BUILDPATH_    %buildpath%     >> buildinfo.h$$
 
-set cuda_path="%CUDA_PATH:\=\\%"
-echo #define _CUDA_PATH_    %cuda_path%     >> buildinfo.h$$
+if "%cuda_path%" == "" ( 
+    echo #define _CUDA_PATH_    "NOT_DEFINED"     >> buildinfo.h$$  
+    ) else (
+        echo #define _CUDA_PATH_    "%cuda_path:\=\\%" >> buildinfo.h$$
+    )
 
 echo #endif >> buildinfo.h$$
 
