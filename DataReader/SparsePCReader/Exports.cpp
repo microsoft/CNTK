@@ -9,14 +9,14 @@
 #include "stdafx.h"
 #define DATAREADER_EXPORTS
 #include "DataReader.h"
-#include "NDRMReader.h"
+#include "SparsePCReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
 void DATAREADER_API GetReader(IDataReader<ElemType>** preader)
 {
-    *preader = new NDRMReader<ElemType>();
+    *preader = new SparsePCReader<ElemType>();
 }
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader<float>** preader)

@@ -1,7 +1,7 @@
-// NDRMParser.h : Parses the NDRM format using a custom state machine (for speed)
+// SparsePCParser.h : Parses the SparsePC format using a custom state machine (for speed)
 //
 //
-// <copyright file="NDRMParser.h" company="Microsoft">
+// <copyright file="SparsePCParser.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -11,7 +11,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-// NDRM label location types
+// SparsePC label location types
 enum LabelMode
 {
     LabelNone = 0,
@@ -25,10 +25,10 @@ enum ParseMode
     ParseLineCount = 1
 };
 
-// NDRMParser - the parser for the NDRM format files
+// SparsePCParser - the parser for the SparsePC format files
 // for ultimate speed, this class implements a state machine to read these format files
 template <typename NumType, typename LabelType=int>
-class NDRMParser
+class SparsePCParser
 {
 private:
     enum ParseState
@@ -128,13 +128,13 @@ private:
 
 public:
 
-    // NDRMParser constructor
-    NDRMParser();
+    // SparsePCParser constructor
+    SparsePCParser();
     // setup all the state variables and state tables for state machine
     void Init();
 
     // Parser destructor
-    ~NDRMParser();
+    ~SparsePCParser();
 
 private:
     // DoneWithLabel - Called when a string label is found
@@ -187,26 +187,26 @@ public:
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void NDRMParser<float, std::string>::StoreLabel(float finalResult);
+void SparsePCParser<float, std::string>::StoreLabel(float finalResult);
 
 // DoneWithLabel - string version stores string label
 template <>
-void NDRMParser<float, std::string>::DoneWithLabel();
+void SparsePCParser<float, std::string>::DoneWithLabel();
 
 // StoreLastLabel - string version
 template <>
-void NDRMParser<float, std::string>::StoreLastLabel();
+void SparsePCParser<float, std::string>::StoreLastLabel();
 
 // NOTE: Current code is identical to float, don't know how to specialize with template parameter that only covers one parameter
 
 // StoreLabel - string version gets last space delimited string and stores in labels vector
 template <>
-void NDRMParser<double, std::string>::StoreLabel(double finalResult);
+void SparsePCParser<double, std::string>::StoreLabel(double finalResult);
 
 // DoneWithLabel - string version stores string label
 template <>
-void NDRMParser<double, std::string>::DoneWithLabel();
+void SparsePCParser<double, std::string>::DoneWithLabel();
 
 // StoreLastLabel - string version
 template <>
-void NDRMParser<double, std::string>::StoreLastLabel();
+void SparsePCParser<double, std::string>::StoreLastLabel();

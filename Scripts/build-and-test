@@ -5,6 +5,9 @@ BUILD=1
 RUN=1
 CLEAN_AFTER=0
 CLEAN_BEFORE=0
+RANDOM_OUTPUT=0
+FLAVORS="debug:release"
+TARGETS="CPU:GPU"
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
@@ -15,11 +18,14 @@ case $key in
     -h|--help)
     echo "Usage: build-and-test [options]"
     echo "Options:"
-    echo "  -q|--quiet-build - redirect build output to file (by default those will be in <cntk_root>.run-<operating_system>-*)"
+    echo "  -q|--quiet-build - redirect build output to file"
     echo "  -r|--run-only - elides build step, runs the binaries that have already been built"
     echo "  -b|--build-only - just build, do not run"
+    echo "  -f|--flavor <flavor1:flavor2...> - which flavor to build/run (by default $FLAVORS)"
+    echo "  -t|--target <target1:target2...> - which target to run (by default $TARGETS)"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
-    echo "  -o|--output-directory <output_dir> - specify output directory to use"
+    echo "  -rnd|--random-output-suffix - add random suffix to output directory"
+    echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
     echo "The root directory used to build and run CNTK is hosts the Scripts directory that contains this script"
     exit 1
     ;;
@@ -30,6 +36,9 @@ case $key in
     BUILD=0
     RUN=1
     ;;
+    -rnd|--random-output-suffix)
+    RANDOM_OUTPUT=1
+    ;;
     -b|--build-only)
     BUILD=1
     RUN=0
@@ -37,6 +46,14 @@ case $key in
     -cb|--clean-build)
     CLEAN_BEFORE=1
     BUILD=1
+    ;;
+    -f|--flavors)
+    FLAVORS="$2"
+    shift # past argument
+    ;;
+    -t|--targets)
+    TARGETS="$2"
+    shift # past argument
     ;;
     -o|--output-directory)
     OUTPUT_DIR="$2"
@@ -100,7 +117,12 @@ CNTK_ROOT=`dirname $SCRIPT_DIR`
 
 # Setup the output directory
 if [[ $OUTPUT_DIR == "" ]]; then
-    OUTPUT_DIR="$CNTK_ROOT/.run-$BUILD_OS-$RANDOM"
+    OUTPUT_DIR="$CNTK_ROOT/.run-$BUILD_OS"
+fi
+
+# Add random number at the end of the output directory to prevent overwriting previous results
+if [[ $RANDOM_OUTPUT == 1 ]]; then
+    OUTPUT_DIR="$OUTPUT_DIR-$RANDOM"
 fi
 
 echo "============ Creating CNTK temp directory in $TMP_ROOT ============"
@@ -129,10 +151,14 @@ if [[ $QUIET_BUILD == 1 ]]; then
     echo "============ WARNING: You have selected quiet build. All build output will be placed in ($OUTPUT_DIR) ============"
 fi
 
+# Initialize lists of flavors and targets
+flavorArray=(${FLAVORS//:/ })
+targetArray=(${TARGETS//:/ })
+
 # Step 2 -- Build the project debug and release, if requested
 if [[ $BUILD == 1 ]]; then
     # Step 2 -- Perform necessary builds
-    for FLAVOR in debug release
+    for FLAVOR in "${flavorArray[@]}"
     do
         # Our make is too noisy right now and it is difficult to spot
         # issues from stdout and stderr. In the quiet mode these are
@@ -171,7 +197,7 @@ if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
 
-    for TARGET in CPU GPU
+    for TARGET in "${targetArray[@]}"
     do
         # These sed scripts are simply toggling DeviceNumber argument in the config file
         # If it is set to Auto, it will pick GPU over CPU. At -1 CPU is selected.
@@ -181,9 +207,9 @@ if [[ $RUN == 1 ]]; then
             sed -i -e 's/^DeviceNumber.*/DeviceNumber=Auto/g' $CONF_FILE || exit $?
         fi
 
-        for FLAVOR in debug release
+        for FLAVOR in "${flavorArray[@]}"
         do
-            if [[ FLAVOR == "debug" ]]; then
+            if [[ $FLAVOR == "debug" ]]; then
                 FLAVOR_DIR="$DEBUG_DIR"
             else
                 FLAVOR_DIR="$RELEASE_DIR"

@@ -57,11 +57,11 @@ void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
         string randomizeString = config("randomize");
         if (randomizeString == "None")
         {
-            mDoRandomize = false;
+            this->mDoRandomize = false;
         }
         else if (randomizeString == "Auto")
         {
-            mDoRandomize = true;
+            this->mDoRandomize = true;
         }
     }
 
