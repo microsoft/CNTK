@@ -62,7 +62,9 @@ public:
             setupTimeout(1);
             int r = fcntl(fd, wait ? F_SETLKW : F_SETLK, &m_lock);
             if (errno == EINTR) {
+                sleep(1);
                 // retrying in the case of signal or timeout
+                close(fd);
                 continue;
             }
             if (r != 0) {
@@ -80,6 +82,7 @@ public:
                 // we have a race with 'unlink' call in Release() 
                 // our lock is held to the previous instance of the file;
                 // this is not a problem, we just need to retry locking the new file
+                close(fd);
                 continue;
             }
             else {

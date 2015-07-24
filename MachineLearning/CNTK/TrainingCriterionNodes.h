@@ -913,14 +913,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream << m_evalMode;
         }
 
-        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
             fstream >> m_evalMode;
+            if (m_evalMode > NCEEvalMode::None)
+            {
+                m_evalMode = NCEEvalMode::None;
+                fstream.SetPosition(fstream.GetPosition() - sizeof(m_evalMode));
+            }
         }
 
         void SetEvalMode(NCEEvalMode& xevMode)

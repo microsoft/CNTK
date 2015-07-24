@@ -58,7 +58,7 @@ public:
     typedef unsigned int LabelIdType;
     unsigned m_seed;
     size_t   mBlgSize;  /// number of utterances per minibatch
-    bool     mDoRandomize; 
+    bool     mDoRandomize = true;
 
     virtual void Init(const ConfigParameters& /*config*/) = 0;
     virtual void Destroy() = 0;
@@ -160,9 +160,7 @@ public:
     virtual void Destroy();
 
     /// number of utterances per minibatch, for data parallelsim
-    size_t mNbrUttPerMinibatch; 
-
-    bool mDoRandomize; 
+    size_t mNbrUttPerMinibatch;
 
 public:
     // DataReader Constructor

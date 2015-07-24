@@ -457,12 +457,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             this,
             m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(*(moveFrom.m_CPUMatrix))), 
             m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(*(moveFrom.m_GPUMatrix))), 
-            NOT_IMPLEMENTED, 
+            m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(static_cast<CPUSparseMatrix<ElemType>&&>(*(moveFrom.m_CPUSparseMatrix))),
             m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(static_cast<GPUSparseMatrix<ElemType>&&>(*(moveFrom.m_GPUSparseMatrix)))
             );
 
         m_preferredDeviceId = moveFrom.m_preferredDeviceId;
-            }
+    }
 
     //move assignment operator, shallow copy
     template<class ElemType>
@@ -479,11 +479,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_GPUMatrix != nullptr) m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(*(moveFrom.m_GPUMatrix)));
             else m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(*(moveFrom.m_GPUMatrix))), 
 
-            NOT_IMPLEMENTED, 
+            if (m_CPUSparseMatrix != nullptr) m_CPUSparseMatrix->operator=(static_cast<CPUSparseMatrix<ElemType>&&>(*(moveFrom.m_CPUSparseMatrix)));
+            else m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(static_cast<CPUSparseMatrix<ElemType>&&>(*(moveFrom.m_CPUSparseMatrix))),
 
             if (m_GPUSparseMatrix != nullptr) m_GPUSparseMatrix->operator=(static_cast<GPUSparseMatrix<ElemType>&&>(*(moveFrom.m_GPUSparseMatrix)));
             else m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(static_cast<GPUSparseMatrix<ElemType>&&>(*(moveFrom.m_GPUSparseMatrix)))
-            );                
+            );
 
         return *this;
     }
