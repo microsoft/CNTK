@@ -341,7 +341,7 @@ namespace msra { namespace dbn {
                     {
                         msra::util::attempt (5, [&]()
                         {
-                            reader.readNoAlloc (ppath, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
+                            reader.readAlloc (ppath, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
                         });
                         if (featdim == 0)   // first time
                             featdim = feat.rows();

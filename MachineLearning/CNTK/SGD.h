@@ -1631,13 +1631,17 @@ protected:
         // Tries to read an utterance and run forward computation on the
         // whole utterance.
         assert(trainSetDataReader != NULL);
-        std::wstring uttID;
-                    if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
+        std::vector<std::vector<std::pair<wstring, size_t>>> uttInfo;
+        Matrix<ElemType> sentenceBoundary;
+        std::vector<MinibatchPackingFlag> minibatchPackingFlag;
+        while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices,
+                                                    sentenceBoundary,
+                                                    minibatchPackingFlag))
         {
             UpdateEvalTimeStamps(FeatureNodes);
 
-                        std::vector<ComputationNodePtr>* outputNodes = net.OutputNodes();
-                        if (outputNodes->size() < 1)
+            std::vector<ComputationNodePtr>* outputNodes = net.OutputNodes();
+            if (outputNodes->size() < 1)
             {
                 throw std::logic_error("no output node was found.");
             }
@@ -1645,8 +1649,11 @@ protected:
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
-                        net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
-                        trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
+            net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
+            trainSetDataReader->SetNetOutput(uttInfo,
+                                             (*outputNodes)[0]->FunctionValues(),
+                                             sentenceBoundary,
+                                             minibatchPackingFlag);
         }
     }
 

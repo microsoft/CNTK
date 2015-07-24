@@ -24,14 +24,25 @@ private:
     msra::dbn::latticesource* m_lattices;
     map<wstring,msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
 
-    // Sequence training related. Note that for now we only support single
-    // utterance in sequence training. But the utterance information holders
-    // are designed as if they support multiple utterances -- in case we will
-    // extend this soon.
+    // Sequence training realted members.
+    struct MinibatchBufferUnit
+    {
+        std::vector<std::vector<ElemType>> features;
+        std::vector<std::vector<ElemType>> labels;
+        Matrix<ElemType> sentenceBegin;
+        vector<MinibatchPackingFlag> minibatchPackingFlag;
+        std::vector<std::vector<std::pair<wstring, size_t>>> minibatchUttInfo;
+        size_t currentMBSize;
+    }; 
     bool m_doSeqTrain;
+    bool m_getMinibatchCopy;
+    size_t m_minibatchBufferIndex;
+    size_t m_minibatchBufferLeftovers;
     wstring m_seqTrainCriterion;
     KaldiSequenceTrainingIO<ElemType>* m_sequenceTrainingIO;
+    std::deque<MinibatchBufferUnit> m_minibatchBuffer;
     std::vector<std::vector<std::pair<wstring, size_t>>> m_uttInfo;
+    std::vector<std::vector<std::pair<wstring, size_t>>> m_minibatchUttInfo;
     
     vector<bool> m_sentenceEnd;
     bool m_readAhead;
@@ -42,6 +53,7 @@ private:
     size_t m_numberOfuttsPerMinibatch;
     size_t m_actualnumberOfuttsPerMinibatch;
     size_t m_mbSize;
+    size_t m_currentMBSize;
     vector<size_t> m_currentBufferFrames;
     vector<size_t> m_toProcess;
     vector<size_t> m_switchFrame;
@@ -72,6 +84,8 @@ private:
     std::map<std::wstring,size_t> m_nameToTypeMap;
     std::map<std::wstring,size_t> m_featureNameToDimMap;
     std::map<std::wstring,size_t> m_labelNameToDimMap;
+    std::vector<std::wstring> m_featureIdToNameMap;
+    std::vector<std::wstring> m_labelIdToNameMap;
     // for writing outputs to files (standard single input/output network) - deprecate eventually
     bool m_checkDictionaryKeys;
     bool m_convertLabelsToTargets;
@@ -89,10 +103,22 @@ private:
     void PrepareForSequenceTraining(const ConfigParameters& config);
     
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    bool GetOneMinibatchToTrainOrTestDataBuffer(const std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices);
-    bool PopulateUtteranceInMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t uttIndex, size_t startFrame, size_t endFrame, size_t mbSize, size_t mbOffset = 0);
+    bool PopulateUtteranceInMinibatch(const std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t uttIndex, size_t startFrame, size_t endFrame, size_t mbSize, size_t mbOffset = 0);
 
-    //-void GetCurrentUtteranceInfo(size_t uttIndex, size_t startFrame, size_t endFrame, wstring& uttID, size_t& startFrameInUtt, size_t& endFrameInUtt);
+    // If we have to read the current minibatch from buffer, return true,
+    // otherwise return false.
+    bool ShouldCopyMinibatchFromBuffer();
+
+    // Copys the current minibatch to buffer.
+    void CopyMinibatchToBuffer();
+
+    // Copys one minibatch from buffer to matrix.
+    void CopyMinibatchFromBufferToMatrix(size_t index, std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
+    // Copys one minibatch from <m_featuresBufferMultiIO> to matrix. 
+    void CopyMinibatchToMatrix(size_t size, const std::vector<ElemType*>& featureBuffer, const std::vector<ElemType*>& labelBuffer, std::map<std::wstring, Matrix<ElemType>*>& matrices) const;
 
     void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
@@ -157,9 +183,16 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
-    virtual bool GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices);
-    virtual bool ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs);
-    
+    virtual bool GetMinibatchCopy(
+        std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        std::map<std::wstring, Matrix<ElemType>*>& matrices,
+        Matrix<ElemType>& sentenceBegin,
+        vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
+    virtual bool SetNetOutput(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        const Matrix<ElemType>& outputs,
+        const Matrix<ElemType>& sentenceBegin,
+        const vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
 
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);

@@ -57,11 +57,11 @@ void DataReader<ElemType>::GetDataReader(const ConfigParameters& config)
         string randomizeString = config("randomize");
         if (randomizeString == "None")
         {
-            mDoRandomize = false;
+            this->mDoRandomize = false;
         }
         else if (randomizeString == "Auto")
         {
-            mDoRandomize = true;
+            this->mDoRandomize = true;
         }
     }
 
@@ -225,20 +225,28 @@ void DataReader<ElemType>::SetRandomSeed(int seed)
 }
 
 template<class ElemType>
-bool DataReader<ElemType>::GetForkedUtterance(std::wstring& uttID, std::map<std::wstring, Matrix<ElemType>*>& matrices)
+bool DataReader<ElemType>::GetMinibatchCopy(
+    std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+    std::map<std::wstring, Matrix<ElemType>*>& matrices,
+    Matrix<ElemType>& sentenceBegin,
+    std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->GetForkedUtterance(uttID, matrices) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, sentenceBegin, minibatchPackingFlag) || ans);
     return ans;
 }
 
 template<class ElemType>
-bool DataReader<ElemType>::ComputeDerivativeFeatures(const std::wstring& uttID, const Matrix<ElemType>& outputs)
+bool DataReader<ElemType>::SetNetOutput(
+    const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+    const Matrix<ElemType>& outputs,
+    const Matrix<ElemType>& sentenceBegin,
+    const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->ComputeDerivativeFeatures(uttID, outputs) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, sentenceBegin, minibatchPackingFlag) || ans);
     return ans;
 }
 
