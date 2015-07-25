@@ -51,6 +51,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t numFiles;
         size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
 
+        
+        m_verbosity = writerConfig("verbosity", "2");
+
         ConfigArray outputNames = writerConfig("outputNodeNames","");
         if (outputNames.size()<1)
             RuntimeError("writer needs at least one outputNodeName specified in config");
@@ -200,7 +203,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (nnet_out_host(j,i) > 50)
                         {
                             nnet_out_host(j,i)  = -(float)log(1.0/outputData.GetNumCols());
-                            fprintf (stderr, "overflowed!! : %d %d frames of %s\n", i,j, wfea.c_str());
+                            if (m_verbosity > 0)
+                            {
+                                fprintf (stderr, "overflowed!! : %d %d frames of %s\n", i,j, wfea.c_str());
+                            }
                         }
 
 
