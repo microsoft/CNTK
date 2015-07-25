@@ -1199,6 +1199,7 @@ These macros are used for sentence segmentation information.
 #define SEQUENCE_END ((int) MinibatchPackingFlag::SequenceEnd)
 #define NO_INPUT ((int) MinibatchPackingFlag::NoInput)
 #define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
+#define NO_FEATURE ((int) MinibatchPackingFlag::NoFeature)
 
 enum class MinibatchPackingFlag : unsigned char
 {

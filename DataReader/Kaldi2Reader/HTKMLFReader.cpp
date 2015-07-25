@@ -1139,10 +1139,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (size_t k = 0; k < m_currentMBSize; k++)
                         {
-                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_LABEL);
-                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoLabel;
+                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_INPUT);
+                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoInput;
 
-                            // Populates <NO_LABEL> with real features, the
+                            // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
                             assert(m_toProcess[i] > 0);
                             PopulateUtteranceInMinibatch(matrices, i, 0, 1, m_currentMBSize, k);
@@ -1220,10 +1220,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (size_t k = currentMBFilled; k < m_currentMBSize; k++)
                         {
-                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_LABEL);
-                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoLabel;
+                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_INPUT);
+                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoInput;
 
-                            // Populates <NO_LABEL> with real features, the
+                            // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
                             assert(m_toProcess[i] > 0);
                             PopulateUtteranceInMinibatch(matrices, i, 0, 1, m_currentMBSize, k);

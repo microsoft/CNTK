@@ -149,7 +149,7 @@ public:
     /// n_length is the maximum lenght of each stream
     /// for example, two sentences used in parallel in one minibatch would be
     /// [2 x 5] if the max length of one of the sentences is 5
-    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_LABEL in cbasetype.h 
+    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
     /// 0 1 1 0 1
     /// 1 0 1 0 0 
     /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
