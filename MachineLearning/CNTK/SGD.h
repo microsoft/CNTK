@@ -250,6 +250,9 @@ public:
 
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
 
+        bool useCVSetControlLRIfCVExists = configSGD("UseCVSetControlLRIfCVExists", "true");
+        bool useEvalCriterionControlLR = configSGD("UseEvalCriterionControlLR", "false");
+
         Init(learningRatesPerMB, learningRatesPerSample, mbSize, epochSize,
              maxEpochs, modelPath, momentumPerMB, momentumPerSample,
              gradientClippingWithTruncation, clippingThresholdPerSample,
@@ -264,7 +267,9 @@ public:
              gradientCheckSigDigit, validateAfterModelReloading, rpi,
              learnRateAdjustInterval, UsingAllDataForPreComputedNode,
              needAveMultiplier, L2RegWeight, L1RegWeight,
-             autoAdjustMinibatch, minibatchSizeTuningFrequency, minibatchSizeTuningMax);
+             autoAdjustMinibatch, minibatchSizeTuningFrequency, 
+             minibatchSizeTuningMax, useCVSetControlLRIfCVExists, 
+             useEvalCriterionControlLR);
     }
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
@@ -310,7 +315,9 @@ public:
               const ElemType L1RegWeight = 0,
               const bool autoAdjustMinibatch = false,
               const size_t minibatchSizeTuningFrequency = 1,
-              const size_t minibatchSizeTuningMax = 1048576)
+              const size_t minibatchSizeTuningMax = 1048576,
+              const bool useCVSetControlLRIfCVExists = true, 
+              const bool useEvalCriterionControlLR = false)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
@@ -470,6 +477,9 @@ public:
         m_doGradientCheck = doGradientCheck;
         m_gradientCheckSigDigit = gradientCheckSigDigit;
         m_validateAfterModelReloading = validateAfterModelReloading;
+
+        m_useCVSetControlLRIfCVExists = useCVSetControlLRIfCVExists;
+        m_useEvalCriterionControlLR = useEvalCriterionControlLR;
 
         msra::files::make_intermediate_dirs(m_modelPath);
     }
@@ -724,8 +734,8 @@ protected:
                                                          net.GetDeviceID()));
         }
 
-        ElemType epochCriterion, avgCriterion, prevCriterion;
-        epochCriterion = avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
+        ElemType epochCriterion, avgCriterion, prevCriterion, lrControlCriterion;
+        lrControlCriterion = epochCriterion = avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
         size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
         std::vector<ElemType> epochEvalErrors((*evaluationNodes).size(), std::numeric_limits<ElemType>::infinity());
@@ -921,6 +931,15 @@ protected:
             timer.Stop();
             double epochTime = timer.ElapsedSeconds();
 
+            if (m_useEvalCriterionControlLR)
+            {
+                lrControlCriterion = epochEvalErrors[0];
+            }
+            else
+            {
+                lrControlCriterion = epochCriterion;
+            }
+
             fprintf(stderr,
                     "Finished Epoch[%d]: [Training Set] TrainLossPerSample = %.8g; ",
                     i + 1, epochCriterion);
@@ -998,14 +1017,24 @@ protected:
                 {
                     SimpleEvaluator<ElemType> evalforvalidation(net);
                     vector<wstring> cvSetTrainAndEvalNodes;
-                                cvSetTrainAndEvalNodes.push_back((*criterionNodes)[0]->NodeName());
-                                cvSetTrainAndEvalNodes.push_back((*evaluationNodes)[0]->NodeName());
+                    cvSetTrainAndEvalNodes.push_back((*criterionNodes)[0]->NodeName());
+                    cvSetTrainAndEvalNodes.push_back((*evaluationNodes)[0]->NodeName());
 
-                                vector<ElemType> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
+                    vector<ElemType> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
                     fprintf(stderr, "Finished Epoch[%d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
-                            i + 1, vScore[0], vScore[1]);
+                        i + 1, vScore[0], vScore[1]);
 
-                    epochCriterion = vScore[0]; //the first one is the training criterion.
+                    if (m_useCVSetControlLRIfCVExists)
+                    {
+                        if (m_useEvalCriterionControlLR)
+                        {
+                            lrControlCriterion = vScore[1];
+                        }
+                        else
+                        {
+                            lrControlCriterion = vScore[0]; //the first one is the training criterion.
+                        }
+                    }
                 }
             }
 
@@ -1018,13 +1047,13 @@ protected:
             size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
             if (avgCriterion == std::numeric_limits<ElemType>::infinity())
             {
-                avgCriterion = epochCriterion;
+                avgCriterion = lrControlCriterion;
             }
             else
             {
                 avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
-                                avgCriterion + epochCriterion) /
-                                (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
+                    avgCriterion + lrControlCriterion) /
+                    (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
@@ -2350,6 +2379,9 @@ protected:
 
     // determine after how many epochs the learning rate should be auto adjusted.
     size_t m_learnRateAdjustInterval;
+
+    bool m_useCVSetControlLRIfCVExists;
+    bool m_useEvalCriterionControlLR;
 
     ElemType m_increaseLearnRateIfImproveMoreThan;
     ElemType m_learnRateIncreaseFactor;
