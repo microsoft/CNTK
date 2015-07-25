@@ -239,6 +239,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     continue;
                 }
+                if (((size_t)sentenceBegin(i, j) & NO_FEATURE) == NO_FEATURE)
+                {
+                    continue;
+                }
                 numFrames += 1;
                 if ((((size_t)sentenceBegin(i, j) & SEQUENCE_END) == SEQUENCE_END)
                          || j == sentenceBegin.GetNumCols() - 1)
