@@ -21,8 +21,8 @@ case $key in
     echo "  -q|--quiet-build - redirect build output to file"
     echo "  -r|--run-only - elides build step, runs the binaries that have already been built"
     echo "  -b|--build-only - just build, do not run"
-    echo "  -f|--flavor <flavor1:flavor2...> - which flavor to build/run (by default $FLAVORS)"
-    echo "  -t|--target <target1:target2...> - which target to run (by default $TARGETS)"
+    echo "  -f|--flavors <flavor1:flavor2...> - which flavor to build/run (by default $FLAVORS)"
+    echo "  -t|--targets <target1:target2...> - which target to run (by default $TARGETS)"
     echo "  -cb|--clean-build - clean up the enlistment binaries before build"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
@@ -190,10 +190,6 @@ fi
 
 # Step 3 -- Run the project tests, both debug and release, if requested
 if [[ $RUN == 1 ]]; then
-    if ! [[ -f "$CNTK_ROOT/$PREFIX_DIR/$DEBUG_DIR/$BIN_NAME" && -f "$CNTK_ROOT/$PREFIX_DIR/$RELEASE_DIR/$BIN_NAME" ]]; then
-        echo "============ ERROR: CNTK did not build properly  ============"
-        exit 1
-    fi
 
     cd $PREFIX_DIR
 
@@ -214,7 +210,12 @@ if [[ $RUN == 1 ]]; then
             else
                 FLAVOR_DIR="$RELEASE_DIR"
             fi
-            OUT_FILE="$RUN_FILE.$FLAVOR.out"
+            OUT_FILE="$RUN_FILE.$FLAVOR.$TARGET.out"
+
+            if ! [[ -f "./$FLAVOR_DIR/$BIN_NAME" ]]; then
+                echo "============ ERROR: CNTK did not build properly for flavor ($FLAVOR)  ============"
+                exit 1
+            fi
 
             echo "============ Running CNTK for ($FLAVOR) ($TARGET), output in ($RUN_FILE.*) ============"
             rm -rf models
