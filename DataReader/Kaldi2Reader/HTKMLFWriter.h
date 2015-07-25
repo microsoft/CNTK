@@ -29,6 +29,7 @@ private:
     void SaveToKaldiFile(std::wstring& outputFile, Matrix<ElemType>& outputData);
     ElemType * m_tempArray;
     size_t m_tempArraySize;
+    int m_verbosity;
 
     enum OutputTypes
     {
