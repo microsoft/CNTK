@@ -100,6 +100,8 @@ public:
     bool GetObjective(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         Matrix<ElemType>* objectivesIn);
+
+    bool HasLatticeAndAlignment(const wstring& uttID) const;
 };
 
 }}}
