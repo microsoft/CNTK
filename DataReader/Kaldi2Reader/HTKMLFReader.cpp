@@ -1597,15 +1597,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // gracefully later, e.g., remove the utterance in the reader.
             if (m_uttInfo[i].size() > 1)
             {
-                fprintf(stderr, "WARNING: Utterance length is smaller than the minibatch size, you may want to remove the utterance or reduce the minibatch size.\n");
+                fprintf(stderr, "WARNING: Utterance length is smaller than the "
+                    "minibatch size, you may want to remove the utterance or "
+                    "reduce the minibatch size.\n");
             }
 
             if (!m_truncated && (m_currentBufferFrames[i] > m_maxUtteranceLength))
             {
                 (*m_mbiter)++;
                 if (!(*m_mbiter))
+                {
                     m_noData = true;
-                fprintf(stderr, "WARNING: Utterance \"%S\" has length longer than the %d, skipping it.\n", m_uttInfo[i][0].first.c_str(), m_maxUtteranceLength);
+                }
+                fprintf(stderr, "WARNING: Utterance \"%S\" has length longer "
+                    "than the %d, skipping it.\n",
+                    m_uttInfo[i][0].first.c_str(), m_maxUtteranceLength);
+                return ReNewBufferForMultiIO(i);
+            }
+
+            if (m_doSeqTrain && !m_sequenceTrainingIO->HasLatticeAndAlignment(
+                  m_uttInfo[i][0].first))
+            {
+                (*m_mbiter)++;
+                if (!(*m_mbiter))
+                {
+                    m_noData = true;
+                }
+                fprintf(stderr, "WARNING: Utterance \"%S\" does not have "
+                    "lattice or alignment, skipping it.\n",
+                    m_uttInfo[i][0].first.c_str());
                 return ReNewBufferForMultiIO(i);
             }
 

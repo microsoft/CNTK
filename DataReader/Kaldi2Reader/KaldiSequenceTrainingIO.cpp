@@ -502,6 +502,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
+    template<class ElemType>
+    bool KaldiSequenceTrainingIO<ElemType>::HasLatticeAndAlignment(
+        const wstring& uttID) const
+    {
+        if(m_aliReader == false || m_denlatReader == false)
+        {
+            fprintf(stderr, "WARNING: lattice or alignemnt reader has not been"
+                            " set up yet.\n");
+            return false;
+        }
+
+        std::string uttIDStr = msra::asr::toStr(uttID);
+        if(!m_aliReader->HasKey(uttIDStr) || !m_denlatReader->HasKey(uttIDStr))
+        {
+            return false;
+        }
+        return true;
+    }
+
     template class KaldiSequenceTrainingIO<float>;
     template class KaldiSequenceTrainingIO<double>;
 }}}
