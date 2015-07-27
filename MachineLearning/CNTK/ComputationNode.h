@@ -306,6 +306,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return processedExistsNoLabelorFeatureMissing;
         }
 
+        size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+        {
+            if (m_sentenceSeg != nullptr &&
+                m_minibatchPackingFlag != nullptr &&
+                !m_sentenceSeg->IsEmpty() &&
+                !m_minibatchPackingFlag->size() == 0)
+            {
+                size_t numTimeSteps = m_sentenceSeg->GetNumCols();
+                size_t numSequences = m_sentenceSeg->GetNumRows();
+
+                if (m_minibatchPackingFlag->size() != numTimeSteps)
+                {
+                    LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+                }
+
+                size_t numSamplesWithoutLabel = 0;
+
+                for (size_t j = 0; j < numTimeSteps; j++)
+                {
+                    if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+                    {
+                        for (int i = 0; i < numSequences; i++)
+                        {
+                            if ((int)(*m_sentenceSeg)(i, j) & NO_LABEL)
+                            {
+                                numSamplesWithoutLabel++;
+                            }
+                        }
+                    }
+                }
+
+                return numTimeSteps*numSequences - numSamplesWithoutLabel;
+            }
+            else
+            {
+                return numAllSamples;
+            }
+        }
+
         void SetLoopId(const int id)
         {
             m_loopId = id;

@@ -1791,6 +1791,11 @@ protected:
             Matrix<ElemType>::AddElementToElement((*criterionNodes)[0]->FunctionValues(),
                                                   0, 0, localEpochCriterion, 0, 0);
 
+            //for now since we share the same label masking flag we call this on the training
+            //criterion node ony. Later, when we apply different labels on different nodes
+            //we need to add code to call this function multiple times, one for each criteria node
+            size_t numSamplesWithLabel = (*criterionNodes)[0]->GetNumSamplesWithLabel(actualMBSize);
+
             std::vector<ElemType> mbEvalErrors(numEvalNodes, 0);
             for (size_t i = 0; i < numEvalNodes; i++)
             {
@@ -1823,7 +1828,7 @@ protected:
             if (m_traceLevel > 0)
             {
                 totalTimeInMBs += timer.ElapsedSeconds();
-                numSamplesLastMBs += int(actualMBSize);
+                numSamplesLastMBs += int(numSamplesWithLabel);
 
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
@@ -1867,8 +1872,9 @@ protected:
             }
 
             timer.Restart();
-            totalEpochSamples += actualMBSize;
-            totalSamplesSeen += actualMBSize;
+
+            totalEpochSamples += numSamplesWithLabel;
+            totalSamplesSeen += numSamplesWithLabel;
 
             if (totalEpochSamples >= epochSize)
             {
