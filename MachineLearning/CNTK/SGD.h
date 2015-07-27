@@ -242,8 +242,9 @@ public:
         ElemType gradientCheckSigDigit = configSGD("sigFigs", "6");
 
         if (doGradientCheck && sizeof(ElemType) != sizeof(double))
+        {
             LogicError("Gradient check needs to use type = double");
-
+        }
         m_doUnitTest = configSGD("unittest", "false");
 
         bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
@@ -539,7 +540,9 @@ public:
         TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
     }
 
-    void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName, IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader, const DEVICEID_TYPE deviceID, const bool makeMode = true)
+    void SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
+                       IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
+                       const DEVICEID_TYPE deviceID, const bool makeMode = true)
     {
         if (netBuilder == nullptr || origModelFileName == L"" || trainSetDataReader == nullptr)
         {
@@ -904,8 +907,6 @@ protected:
                 actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->NumberSlicesInEachRecurrentIter();
             }
 
-
-
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                 i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
 
@@ -1022,7 +1023,7 @@ protected:
 
                     vector<ElemType> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
                     fprintf(stderr, "Finished Epoch[%d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
-                        i + 1, vScore[0], vScore[1]);
+                            i + 1, vScore[0], vScore[1]);
 
                     if (m_useCVSetControlLRIfCVExists)
                     {
@@ -1495,8 +1496,8 @@ protected:
         if (epochNumber < 2 && m_prevChosenMinibatchSize != 0)
         {
             // newly started training: any previous MB size stored in the model is to be ignored
-                        fprintf(stderr, "before epoch .2, previous minibatchSize %d is "
-                     "considered invalid -> resetting\n", m_prevChosenMinibatchSize);
+            fprintf(stderr, "before epoch .2, previous minibatchSize %d is "
+                    "considered invalid -> resetting\n", m_prevChosenMinibatchSize);
             m_prevChosenMinibatchSize = 0;
         }
 
@@ -1549,7 +1550,7 @@ protected:
 
     size_t RoundToMultipleOf64(float val)
     {
-                    return 64 * (size_t)((val + 32) / 64);
+        return 64 * (size_t)((val + 32) / 64);
     }
 
     size_t RoundToMultipleOf64(size_t val)
@@ -1600,7 +1601,7 @@ protected:
                     trialMinibatchSize, RoundToMultipleOf64(minMinibatchSize), RoundToMultipleOf64(maxMinibatchSize));
 
             size_t totalSamplesSeen;
-                        std::vector<ElemType> epochEvalErrors(evaluationNodes->size(), std::numeric_limits<ElemType>::infinity());
+            std::vector<ElemType> epochEvalErrors(evaluationNodes->size(), std::numeric_limits<ElemType>::infinity());
             ElemType epochCriterion = std::numeric_limits<ElemType>::infinity();
 
             // Train on a few minibatches and so we can observe the epochCriterion as we try increasing
@@ -1661,12 +1662,12 @@ protected:
         // whole utterance.
         assert(trainSetDataReader != NULL);
         std::wstring uttID;
-                    if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
+        if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
         {
             UpdateEvalTimeStamps(FeatureNodes);
 
-                        std::vector<ComputationNodePtr>* outputNodes = net.OutputNodes();
-                        if (outputNodes->size() < 1)
+            std::vector<ComputationNodePtr>* outputNodes = net.OutputNodes();
+            if (outputNodes->size() < 1)
             {
                 throw std::logic_error("no output node was found.");
             }
@@ -1674,8 +1675,8 @@ protected:
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
-                        net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
-                        trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
+            net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
+            trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
         }
     }
 
@@ -1796,7 +1797,7 @@ protected:
             if (learnRatePerSample > m_minLearnRate * 0.01)
             {
                 auto smoothedGradientIter = smoothedGradients.begin();
-                            for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++, smoothedGradientIter++)
+                for (auto nodeIter = learnableNodes->begin(); nodeIter != learnableNodes->end(); nodeIter++, smoothedGradientIter++)
                 {
                     ComputationNodePtr node = *nodeIter;
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
@@ -1902,7 +1903,7 @@ public:
         const ElemType momentum = MomentumPerMB(momentumPerSample, actualMBSize);
 #if DUMPOUTPUT
         fprintf(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
-            learnRatePerSample, momentum, actualMBSize);
+                learnRatePerSample, momentum, actualMBSize);
         fprintf(stderr, "sgd->GradUpdateType()=%d, sgd->GradientUpdateNoiseStd()=%0.8f\n",
                 sgd->GradUpdateType(), sgd->GradientUpdateNoiseStd());
         gradientValues.Print("Gradient Input");
@@ -1917,7 +1918,7 @@ public:
 
         GradientsUpdateType adpType = sgd->GradUpdateType();
         ElemType noiseStd = sgd->GradientUpdateNoiseStd();
-                    Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE)functionValues.GetDeviceId());
+        Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE)functionValues.GetDeviceId());
         if (noiseStd > 0)
         {
             // get the gradient structure since gradient is sparse
@@ -1950,8 +1951,8 @@ public:
         else if (adpType == GradientsUpdateType::RmsProp)
         {
             ElemType aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma,
-                            (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
-                            (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
+                                                              (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
+                                                              (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd(-learnRatePerSample / aveMultiplier, gradientValues, functionValues);
         }
 
@@ -1983,7 +1984,7 @@ protected:
                        const bool needAveMultiplier) const
     {
 #if DUMPOUTPUT
-                    fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
+        fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
 #endif
         UpdateWeightsS(this, node->FunctionValues(), node->GradientValues(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
@@ -2241,8 +2242,8 @@ public:
             for (size_t itry = 0; itry < min((size_t)50, node->FunctionValues().GetNumElements()); itry++)
             {
                 /// no support to sparse matrix yet
-                            int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
-                            int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                int irow = (int) fmod(rand(), node->FunctionValues().GetNumRows() - 1);
+                int icol = (int) fmod(rand(), node->FunctionValues().GetNumCols() - 1);
                 irow = max(0, irow);
                 icol = max(0, icol);
 
@@ -2267,7 +2268,7 @@ public:
 
                 //ElemType mbEvalCri =
                 //criterionNode should be a scalar
-                            (*criterionNodes)[npos]->FunctionValues().Get00Element();
+                (*criterionNodes)[npos]->FunctionValues().Get00Element();
                 ElemType eGradErr = node->GradientValues()(irow, icol);
                 if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
                 {
