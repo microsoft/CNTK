@@ -31,6 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_currentObj = 0;
         m_minibatchIndex = 1;
         m_lastCompleteMinibatch.assign(m_numUttsPerMinibatch, 0);
+        m_epochEnd = false;
         if (!kaldi::SplitStringToIntegers(toStr(silencePhoneStr),
                                           ":", false, &m_silencePhones))
         {
@@ -272,6 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
         assert(m_needLikelihood == true);
+        assert(m_epochEnd == false);
         std::vector<std::vector<
             std::pair<wstring, std::pair<size_t, size_t>>>> uttInfoInMinibatch;
         ProcessUttInfo(uttInfo, sentenceBegin,
@@ -365,6 +367,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>* derivativesOut)
     {
         assert(derivativesOut != NULL);
+        assert(m_needLikelihood == false);
         std::vector<std::vector<
             std::pair<wstring, std::pair<size_t, size_t>>>> uttInfoInMinibatch;
         ProcessUttInfo(uttInfo, sentenceBegin,
@@ -437,7 +440,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Checks if we need to read more loglikelihoods.
         m_needLikelihood = false;
         m_minCompleteMinibatchIndex -= 1;
-        if (m_minCompleteMinibatchIndex <= 0)
+        if (m_minCompleteMinibatchIndex <= 0 && !m_epochEnd)
         {
             m_needLikelihood = true;
             m_minibatchIndex = 1;
@@ -519,6 +522,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
         return true;
+    }
+
+    template<class ElemType>
+    void KaldiSequenceTrainingIO<ElemType>::ResetEpoch()
+    {
+        m_uttPool.clear();
+        m_needLikelihood = true;
+        m_currentObj = 0;
+        m_minibatchIndex = 1;
+        m_lastCompleteMinibatch.assign(m_numUttsPerMinibatch, 0);
+        m_minCompleteMinibatchIndex = 0;
+        m_epochEnd = false;
+        m_currentUttInfo.clear();
     }
 
     template class KaldiSequenceTrainingIO<float>;

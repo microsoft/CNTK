@@ -14,6 +14,7 @@ class KaldiSequenceTrainingIO
 private:
     bool m_oneSilenceClass;
     bool m_needLikelihood;
+    bool m_epochEnd;
     size_t m_numUttsPerMinibatch;
     wstring m_trainCriterion;
     ElemType m_oldAcousticScale;
@@ -44,8 +45,8 @@ private:
     };
     ElemType m_currentObj;
     int m_minCompleteMinibatchIndex;
-    size_t m_minibatchIndex;
-    std::vector<size_t> m_lastCompleteMinibatch;
+    int m_minibatchIndex;
+    std::vector<int> m_lastCompleteMinibatch;
     std::vector<std::vector<std::pair<wstring, size_t>>> m_currentUttInfo;
     unordered_map<wstring, UtteranceDerivativeUnit> m_uttPool;
 
@@ -102,6 +103,15 @@ public:
         Matrix<ElemType>* objectivesIn);
 
     bool HasLatticeAndAlignment(const wstring& uttID) const;
+
+    bool HasUtterance(const wstring& uttID) const
+    {
+        return (m_uttPool.find(uttID) != m_uttPool.end());
+    }
+
+    void SetEpochEnd() { m_epochEnd = true; m_needLikelihood = false; }
+
+    void ResetEpoch();
 };
 
 }}}

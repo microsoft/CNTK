@@ -803,6 +803,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t currentMBSize = (m_framemode == true) ? mbSize : 1;
         m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, currentMBSize, datapasses);
 
+        // Resets sequence training class.
+        if (m_doSeqTrain)
+        {
+            assert(m_sequenceTrainingIO != NULL);
+            m_sequenceTrainingIO->ResetEpoch();
+        }
+
+        // Clears minibatch buffer.
+        m_minibatchBuffer.clear();
+        m_getMinibatchCopy = false;
+        m_minibatchBufferIndex = 0;
+        m_minibatchBufferLeftovers = 0;
+        m_uttInfo.clear();
+        m_minibatchUttInfo.clear();
+
         // Clears feature and label buffer.
         if (!m_featuresBufferMultiIO.empty())
         {
@@ -846,7 +861,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_labelsBufferAllocatedMultiUtt[u] = 0;
             }
             ReNewBufferForMultiIO(u);
-        }    
+        }
     }
 
     template<class ElemType>
@@ -1436,6 +1451,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 CopyMinibatchToBuffer();
             }
 
+            // If we are in the "copy" mode, and we cannot get a full minibatch,
+            // then we have computed the posteriors for all the minibatches.
+            if (m_doSeqTrain && !success && m_getMinibatchCopy)
+            {
+                m_sequenceTrainingIO->SetEpochEnd();
+            }
+
             return success;
         }
 
@@ -1625,6 +1647,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 fprintf(stderr, "WARNING: Utterance \"%S\" does not have "
                     "lattice or alignment, skipping it.\n",
+                    m_uttInfo[i][0].first.c_str());
+                return ReNewBufferForMultiIO(i);
+            }
+
+            // We don't support having two utterances in the same buffer.
+            if (m_doSeqTrain &&
+                m_sequenceTrainingIO->HasUtterance(m_uttInfo[i][0].first))
+            {
+                (*m_mbiter)++;
+                if (!(*m_mbiter))
+                {
+                    m_noData = true;
+                }
+                fprintf(stderr, "WARNING: Utterance \"%S\" already exists in "
+                    "the buffer, skipping it.\n",
                     m_uttInfo[i][0].first.c_str());
                 return ReNewBufferForMultiIO(i);
             }
