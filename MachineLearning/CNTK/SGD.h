@@ -1720,7 +1720,8 @@ protected:
         }
     }
 
-    static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, ElemType value)
+    template <typename ValueType>
+    static string GeneratePaddedFloatOrExpFormat(int padSize, int precision, ValueType value)
     {
         char format[16];
         char buffer[512];
