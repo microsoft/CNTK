@@ -1662,12 +1662,12 @@ protected:
         // whole utterance.
         assert(trainSetDataReader != NULL);
         std::wstring uttID;
-                    if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
+        if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
         {
             UpdateEvalTimeStamps(FeatureNodes);
 
-                        std::vector<ComputationNodePtr>* outputNodes = net.OutputNodes();
-                        if (outputNodes->size() < 1)
+            std::vector<ComputationNodePtr>* outputNodes = net.OutputNodes();
+            if (outputNodes->size() < 1)
             {
                 throw std::logic_error("no output node was found.");
             }
@@ -1675,8 +1675,8 @@ protected:
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
-                        net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
-                        trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
+            net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
+            trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
         }
     }
 
