@@ -39,7 +39,7 @@
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NDRMReader.cpp">
+    <ClCompile Include="SparsePCReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Exports.cpp">
@@ -65,7 +65,7 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="NDRMReader.h">
+    <ClInclude Include="SparsePCReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="minibatchsourcehelpers.h">
