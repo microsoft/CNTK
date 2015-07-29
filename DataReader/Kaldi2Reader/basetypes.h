@@ -1198,8 +1198,8 @@ These macros are used for sentence segmentation information.
 #define SEQUENCE_MIDDLE ((int) MinibatchPackingFlag::None)
 #define SEQUENCE_END ((int) MinibatchPackingFlag::SequenceEnd)
 #define NO_INPUT ((int) MinibatchPackingFlag::NoInput)
-#define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
 #define NO_FEATURE ((int) MinibatchPackingFlag::NoFeature)
+#define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
 
 enum class MinibatchPackingFlag : unsigned char
 {
@@ -1210,10 +1210,11 @@ enum class MinibatchPackingFlag : unsigned char
     NoLabel = 1 << 3,      //binary 1000
 
     NoInput = NoFeature | NoLabel, //when we refactorize reader, NoInput will no longer needed
-    SequenceStartOrNoInput = SequenceStart | NoInput,
-    SequenceEndOrNoInput = SequenceEnd | NoInput,
-    SequenceStartOrEndOrNoInput = SequenceStart | SequenceEnd | NoInput,
+    SequenceStartOrNoFeature = SequenceStart | NoFeature,
+    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
+    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
 };
+
 
 inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
 {
