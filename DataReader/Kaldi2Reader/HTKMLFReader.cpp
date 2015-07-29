@@ -820,7 +820,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, currentMBSize, datapasses);
 
         // Resets utterance derivative buffering class.
-        m_doMinibatchBuffering = true;
         if (m_doMinibatchBuffering)
         {
             assert(m_uttDerivBuffer != NULL);
