@@ -6,7 +6,8 @@
 // HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
 #include "DataReader.h"
-#include "KaldiSequenceTrainingIO.h"
+#include "KaldiSequenceTrainingDerivative.h"
+#include "UtteranceDerivativeBuffer.h"
 #include "commandArgUtil.h" // for intargvector
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -25,6 +26,11 @@ private:
     map<wstring,msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
 
     // Sequence training realted members.
+    bool m_doSeqTrain;
+    wstring m_seqTrainCriterion;
+    KaldiSequenceTrainingDerivative<ElemType>* m_seqTrainDeriv;
+
+    // Minibatch buffering.
     struct MinibatchBufferUnit
     {
         std::vector<std::vector<ElemType>> features;
@@ -33,14 +39,15 @@ private:
         vector<MinibatchPackingFlag> minibatchPackingFlag;
         std::vector<std::vector<std::pair<wstring, size_t>>> minibatchUttInfo;
         size_t currentMBSize;
-    }; 
-    bool m_doSeqTrain;
+    };
+    bool m_doMinibatchBuffering;
     bool m_getMinibatchCopy;
     size_t m_minibatchBufferIndex;
     size_t m_minibatchBufferLeftovers;
-    wstring m_seqTrainCriterion;
-    KaldiSequenceTrainingIO<ElemType>* m_sequenceTrainingIO;
     std::deque<MinibatchBufferUnit> m_minibatchBuffer;
+    UtteranceDerivativeBuffer<ElemType>* m_uttDerivBuffer;
+
+    // Utterance information.
     std::vector<std::vector<std::pair<wstring, size_t>>> m_uttInfo;
     std::vector<std::vector<std::pair<wstring, size_t>>> m_minibatchUttInfo;
     
@@ -136,8 +143,8 @@ private:
     {
         real,
         category,
-        seqTrainDeriv, /*sequence training derivative, computed in the reader*/
-        seqTrainObj,   /*sequence training objective, computed in the reader*/
+        readerDeriv, /*derivative computed in the reader*/
+        readerObj,   /*objective computed in the reader*/
     };
 
 

@@ -48,7 +48,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_mbiter = NULL;
         m_frameSource = NULL;
         m_lattices = NULL;
-        m_sequenceTrainingIO = NULL;
+        m_seqTrainDeriv = NULL;
+        m_uttDerivBuffer = NULL;
         m_minibatchBuffer.resize(0);
         m_minibatchBufferIndex = 0;
         m_minibatchBufferLeftovers = 0;
@@ -56,6 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_convertLabelsToTargets = false;
         m_doSeqTrain = false;
         m_getMinibatchCopy = false;
+        m_doMinibatchBuffering = false;
 
         if (readerConfig.Exists("legacyMode"))
         {
@@ -172,47 +174,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         aliRspecifier = wstring(aliConfig("rx"));
 
-        // Initializes sequence training interface.
-        m_sequenceTrainingIO = new KaldiSequenceTrainingIO<ElemType>(
-            denlatRspecifier, aliRspecifier, transModelFilename,
-            silencePhoneStr, m_seqTrainCriterion, oldAcousticScale,
-            acousticScale, lmScale,
-            oneSilenceClass, m_numberOfuttsPerMinibatch);
-
-        // Scans the configurations to get "seqTrainDeriv" type input and
-        // "seqTrainObj" type input. Both are feature nodes, we feed derivatives
-        // to training criterion node through "seqTrainDeriv" and feed objective
-        // through "seqTrainObj".
+        // Scans the configurations to get "readerDeriv" type input and
+        // "readerObj" type input. Both are feature nodes, we feed derivatives
+        // to training criterion node through "readerDeriv" and feed objective
+        // through "readerObj".
         bool hasDrive = false, hasObj = false;
         for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
         {
             ConfigParameters temp = iter->second;
             if (temp.ExistsCurrent("type"))
             {
-                if (temp("type") == "seqTrainDeriv")
+                if (temp("type") == "readerDeriv"
+                    || temp("type") == "seqTrainDeriv" /*for back compatibility */)
                 {
-                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::seqTrainDeriv;
+                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerDeriv;
                     hasDrive = true;
                 }
-                else if (temp("type") == "seqTrainObj")
+                else if (temp("type") == "readerObj"
+                    || temp("type") == "seqTrainObj" /*for back compatibility */)
                 {
-                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::seqTrainObj;
+                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerObj;
                     hasObj = true;
                 }
             }
         }
         if (!hasDrive || !hasObj)
         {
-            LogicError("Missing seqTrainDeriv or seqTrainObj type feature\n");
+            LogicError("Missing readerDeriv or readerObj type feature\n");
         }
+
+        // Initializes sequence training interface.
+        m_seqTrainDeriv = new KaldiSequenceTrainingDerivative<ElemType>(
+            denlatRspecifier, aliRspecifier, transModelFilename,
+            silencePhoneStr, m_seqTrainCriterion, oldAcousticScale,
+            acousticScale, lmScale, oneSilenceClass);
+
+        // Initializes derivative buffering.
+        m_doMinibatchBuffering = true;
+        if (m_uttDerivBuffer != NULL)
+        {
+            LogicError("Derivative buffer has already been set, are you doing "
+                "sequence with some other metric that using derivative "
+                "buffering?\n");
+        }
+        m_uttDerivBuffer = new UtteranceDerivativeBuffer<ElemType>(
+            m_numberOfuttsPerMinibatch, m_seqTrainDeriv);
     }
 
     // Loads input and output data for training and testing. Below we list the
     // categories for different input/output:
     // features:      InputOutputTypes::real
     // labels:        InputOutputTypes::category
-    // derivatives:   InputOutputTypes::seqTrainDeriv
-    // objectives:    InputOutputTypes::seqTrainObj
+    // derivatives:   InputOutputTypes::readerDeriv
+    // objectives:    InputOutputTypes::readerObj
     //
     // Note that we treat <derivatives> and <objectives> as features, but they
     // will be computed in the reader, rather then reading from disks. Those
@@ -224,10 +238,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_doSeqTrain)
         {
             PrepareForSequenceTraining(readerConfig);
-        }
-        else
-        {
-            m_sequenceTrainingIO = NULL;
         }
 
         // Variables related to multi-utterance.
@@ -672,11 +682,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete m_lattices;
             m_lattices = NULL;
         }
-        if (m_sequenceTrainingIO != NULL)
+        if (m_seqTrainDeriv != NULL)
         {
-            delete m_sequenceTrainingIO;
-            m_sequenceTrainingIO = NULL;
+            delete m_seqTrainDeriv;
+            m_seqTrainDeriv = NULL;
         }
+        if (m_uttDerivBuffer != NULL)
+        {
+            delete m_uttDerivBuffer;
+            m_uttDerivBuffer = NULL;
+        }
+
 
         if (!m_featuresBufferMultiIO.empty())
         {
@@ -803,11 +819,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t currentMBSize = (m_framemode == true) ? mbSize : 1;
         m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, currentMBSize, datapasses);
 
-        // Resets sequence training class.
-        if (m_doSeqTrain)
+        // Resets utterance derivative buffering class.
+        m_doMinibatchBuffering = true;
+        if (m_doMinibatchBuffering)
         {
-            assert(m_sequenceTrainingIO != NULL);
-            m_sequenceTrainingIO->ResetEpoch();
+            assert(m_uttDerivBuffer != NULL);
+            m_uttDerivBuffer->ResetEpoch();
         }
 
         // Clears minibatch buffer.
@@ -1021,9 +1038,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_checkDictionaryKeys=false;
         }
 
-        // If we are doing sequence training, we need to keep the utterance
-        // information.
-        if (m_doSeqTrain)
+        // If we are doing utterance derivative buffering, we need to keep the
+        // utterance information.
+        if (m_doMinibatchBuffering)
         {
             m_minibatchUttInfo.assign(m_numberOfuttsPerMinibatch,
                 std::vector<std::pair<wstring, size_t>>(0));
@@ -1100,7 +1117,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     endFrame = startFrame + m_currentMBSize;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
-                    if (m_doSeqTrain && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
                     m_processedFrame[i] += m_currentMBSize;
                 }
                 else if ((startFrame + m_currentMBSize) == m_toProcess[i])
@@ -1134,7 +1151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // next one.
                     endFrame = startFrame + m_currentMBSize;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
-                    if (m_doSeqTrain && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
                     m_processedFrame[i] += m_currentMBSize;
                     bool reNewSucc = ReNewBufferForMultiIO(i);
                 }
@@ -1196,7 +1213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     endFrame = m_toProcess[i];
                     size_t currentMBFilled = endFrame - startFrame;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
-                    if (m_doSeqTrain && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
                     m_processedFrame[i] += currentMBFilled;
                     bool reNewSucc = ReNewBufferForMultiIO(i);
 
@@ -1211,7 +1228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_sentenceBegin.SetValue(i, currentMBFilled + m_toProcess[i] - 1, (ElemType)SEQUENCE_END);
                         m_minibatchPackingFlag[currentMBFilled + m_toProcess[i] - 1] |= MinibatchPackingFlag::SequenceEnd;
                         populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_toProcess[i], m_currentMBSize, currentMBFilled);
-                        if (m_doSeqTrain && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                        if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
                         assert(m_processedFrame[i] == 0);
                         m_processedFrame[i] = m_toProcess[i];
                         currentMBFilled += m_toProcess[i];
@@ -1223,7 +1240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (reNewSucc && !m_framemode && m_truncated)
                     {
                         populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_currentMBSize - currentMBFilled, m_currentMBSize, currentMBFilled);
-                        if (m_doSeqTrain && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                        if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
                         m_processedFrame[i] += m_currentMBSize - currentMBFilled;
                         if (currentMBFilled < m_currentMBSize)
                         {
@@ -1257,7 +1274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool HTKMLFReader<ElemType>::ShouldCopyMinibatchFromBuffer()
     {
-        if (m_doSeqTrain)
+        if (m_doMinibatchBuffering)
         {
             // If <m_getMinibatchCopy> is false, then we should copy data from
             // buffer for back-propagation.
@@ -1359,18 +1376,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_minibatchBuffer[index].labels[id].data(),
                     matrixFlagNormal);
             }
-            else if (m_doSeqTrain && !m_getMinibatchCopy)
+            else if (m_doMinibatchBuffering && !m_getMinibatchCopy)
             {
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::seqTrainDeriv)
+                if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
                 {
-                    m_sequenceTrainingIO->GetDerivative(
+                    m_uttDerivBuffer->GetDerivative(
                         m_minibatchUttInfo, m_sentenceBegin,
                         m_minibatchPackingFlag, matrices[iter->first]);
                 }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::seqTrainObj)
+                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
                 {
-                     m_sequenceTrainingIO->GetObjective(m_minibatchUttInfo,
-                                                        matrices[iter->first]);
+                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
+                                                    matrices[iter->first]);
                 }
             }
         }
@@ -1408,14 +1425,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(id < labelBuffer.size());
                 data.SetValue(dim, size, labelBuffer[id], matrixFlagNormal);
             }
-            else if (m_doSeqTrain)
+            else if (m_doMinibatchBuffering)
             {
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::seqTrainDeriv)
+                if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
                 {
                     data.Resize(data.GetNumRows(), m_currentMBSize);
                     data.SetValue(0);
                 }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::seqTrainObj)
+                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
                 {
                     data.SetValue(0);
                 }
@@ -1453,9 +1470,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // If we are in the "copy" mode, and we cannot get a full minibatch,
             // then we have computed the posteriors for all the minibatches.
-            if (m_doSeqTrain && !success && m_getMinibatchCopy)
+            if (m_doMinibatchBuffering && !success && m_getMinibatchCopy)
             {
-                m_sequenceTrainingIO->SetEpochEnd();
+                m_uttDerivBuffer->SetEpochEnd();
             }
 
             return success;
@@ -1637,8 +1654,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return ReNewBufferForMultiIO(i);
             }
 
-            if (m_doSeqTrain && !m_sequenceTrainingIO->HasLatticeAndAlignment(
-                  m_uttInfo[i][0].first))
+            if (m_doMinibatchBuffering
+                && !m_uttDerivBuffer->HasResourceForDerivative(
+                    m_uttInfo[i][0].first))
             {
                 (*m_mbiter)++;
                 if (!(*m_mbiter))
@@ -1646,14 +1664,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_noData = true;
                 }
                 fprintf(stderr, "WARNING: Utterance \"%S\" does not have "
-                    "lattice or alignment, skipping it.\n",
+                    "resource to compute derivative, skipping it.\n",
                     m_uttInfo[i][0].first.c_str());
                 return ReNewBufferForMultiIO(i);
             }
 
             // We don't support having two utterances in the same buffer.
-            if (m_doSeqTrain &&
-                m_sequenceTrainingIO->HasUtterance(m_uttInfo[i][0].first))
+            if (m_doMinibatchBuffering &&
+                m_uttDerivBuffer->HasUtterance(m_uttInfo[i][0].first))
             {
                 (*m_mbiter)++;
                 if (!(*m_mbiter))
@@ -1813,10 +1831,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // We need to get a "copy" of the minibatch to do the forward
         // computation for sequence training.
-        if (m_doSeqTrain)
+        if (m_doMinibatchBuffering)
         {
             assert(m_framemode == false);
-            if (m_sequenceTrainingIO->NeedLikelihoodToComputeDerivative())
+            if (m_uttDerivBuffer->NeedLikelihoodToComputeDerivative())
             {
                 m_getMinibatchCopy = true;
                 if (GetMinibatchToTrainOrTest(matrices))
@@ -1843,14 +1861,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // Set the likelihoods for the utterance with which we can comput the
         // derivatives. Note that the minibatch may only contain partial output
-        // for the utterance, <m_sequenceTrainingIO> takes care of "pasting"
-        // them together.
-        if (m_doSeqTrain)
+        // for the utterance, <m_uttDerivBuffer> takes care of "gluing" them
+        // together.
+        if (m_doMinibatchBuffering)
         {
             assert(m_framemode == false);
-            return m_sequenceTrainingIO->SetLikelihood(uttInfo, outputs,
-                                                       sentenceBegin,
-                                                       minibatchPackingFlag);
+            return m_uttDerivBuffer->SetLikelihood(uttInfo, outputs,
+                                                   sentenceBegin,
+                                                   minibatchPackingFlag);
         }
         return false;
     }
