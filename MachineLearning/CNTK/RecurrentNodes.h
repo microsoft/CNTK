@@ -123,45 +123,48 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
             m_boundaryInfo = *seg;
 
-            //each row has a number to indicate how many values should be reset for that utterance
-            int numRows = (int)seg->GetNumRows();
-            vector<int> numResetLeft;
-            numResetLeft.resize(numRows);
-            std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
-
-            for (int i = 0; i < minibatchPackingFlag->size(); i++)
+            if (m_timeStep > 1)
             {
-                if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::SequenceStartOrNoFeature)
+                //each row has a number to indicate how many values should be reset for that utterance
+                int numRows = (int)seg->GetNumRows();
+                vector<int> numResetLeft;
+                numResetLeft.resize(numRows);
+                std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
+
+                for (int i = 0; i < minibatchPackingFlag->size(); i++)
                 {
-                    //we set timeStep-1 elements following it to be SequenceStart until met NoInput
+                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::SequenceStartOrNoFeature)
+                    {
+                        //we set timeStep-1 elements following it to be SequenceStart until met NoInput
+                        for (int j = 0; j < numRows; j++)
+                        {
+                            //we use & since  SEQUENCE_START may come with NoLabel
+                            if ((int)(*seg)(j, i) & SEQUENCE_START)
+                            {
+                                numResetLeft[j] = m_timeStep;
+                            }
+                            else if ((int)(*seg)(j, i) & NO_FEATURE)
+                            {
+                                numResetLeft[j] = 0;
+                            }
+                        }
+                    }
+
+                    //now set the SequenceStart
+                    bool valueChanged = false;
                     for (int j = 0; j < numRows; j++)
                     {
-                        //we use & since  SEQUENCE_START may come with NoLabel
-                        if ((int)(*seg)(j, i) & SEQUENCE_START)
+                        if (numResetLeft[j]-- > 0)
                         {
-                            numResetLeft[j] = m_timeStep;
-                        }
-                        else if ((int)(*seg)(j, i) & NO_FEATURE)
-                        {
-                            numResetLeft[j] = 0;
+                            m_boundaryInfo(j, i) = (ElemType)(SEQUENCE_START | ((int)m_boundaryInfo(j, i) & NO_LABEL));
+                            valueChanged = true;
                         }
                     }
-                }
 
-                //now set the SequenceStart
-                bool valueChanged = false;
-                for (int j = 0; j < numRows; j++)
-                {
-                    if (numResetLeft[j]-- > 0)
+                    if (valueChanged)
                     {
-                        m_boundaryInfo(j, i) = (ElemType)(SEQUENCE_START | ((int)  m_boundaryInfo(j, i) & NO_LABEL));
-                        valueChanged = true;
+                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::SequenceStart;
                     }
-                }
-
-                if (valueChanged)
-                {
-                    m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::SequenceStart;
                 }
             }
         }
@@ -276,7 +279,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
 
-            if (minibatchPackingFlag & MinibatchPackingFlag::SequenceStartOrNoFeature)
+            if (minibatchPackingFlag & MinibatchPackingFlag::SequenceStart)
             {
                 for (int i = 0; i < mNbr; i ++)
                 {
@@ -522,44 +525,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
             m_boundaryInfo = *seg;
 
-            //each row has a number to indicate how many values should be reset for that utterance
-            int numRows = (int)seg->GetNumRows();
-            vector<int> numResetLeft;
-            numResetLeft.resize(numRows);
-            std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
-
-            for (int i = minibatchPackingFlag->size() - 1; i <= 0; i--)
+            if (m_timeStep > 1)
             {
-                if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::SequenceEndOrNoFeature)
+                //each row has a number to indicate how many values should be reset for that utterance
+                int numRows = (int)seg->GetNumRows();
+                vector<int> numResetLeft;
+                numResetLeft.resize(numRows);
+                std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
+
+                for (int i = minibatchPackingFlag->size() - 1; i >= 0; i--)
                 {
-                    //we set timeStep-1 elements following it to be SequenceStart until met NoInput
+                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::SequenceEndOrNoFeature)
+                    {
+                        //we set timeStep-1 elements following it to be SequenceStart until met NoInput
+                        for (int j = 0; j < numRows; j++)
+                        {
+                            if ((int)(*seg)(j, i) & SEQUENCE_END)
+                            {
+                                numResetLeft[j] = m_timeStep;
+                            }
+                            else if ((int)(*seg)(j, i) & NO_FEATURE)
+                            {
+                                numResetLeft[j] = 0;
+                            }
+                        }
+                    }
+
+                    //now set the SequenceEnd
+                    bool valueChanged = false;
                     for (int j = 0; j < numRows; j++)
                     {
-                        if ((int)(*seg)(j, i) & SEQUENCE_END)
+                        if (numResetLeft[j]-- > 0)
                         {
-                            numResetLeft[j] = m_timeStep;
-                        }
-                        else if ((int)(*seg)(j, i) & NO_FEATURE)
-                        {
-                            numResetLeft[j] = 0;
+                            m_boundaryInfo(j, i) = (ElemType)(SEQUENCE_END | ((int)m_boundaryInfo(j, i) & NO_LABEL));
+                            valueChanged = true;
                         }
                     }
-                }
 
-                //now set the SequenceEnd
-                bool valueChanged = false;
-                for (int j = 0; j < numRows; j++)
-                {
-                    if (numResetLeft[j]-- > 0)
+                    if (valueChanged)
                     {
-                        m_boundaryInfo(j, i) = (ElemType)(SEQUENCE_END | ((int)m_boundaryInfo(j, i) & NO_LABEL));
-                        valueChanged = true;
+                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::SequenceEnd;
                     }
-                }
-
-                if (valueChanged)
-                {
-                    m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::SequenceEnd;
                 }
             }
         }
@@ -651,39 +657,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_futureActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colFlag, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
         }
 
-        /// to-do: need to change to the new way of resetting state
-        static void WINAPI EvaluateThisNodeSR(const size_t timeIdxInSeq, const int timeStep, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& futureActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr)
-        {
-            ASSERT(timeStep > 0);
-
-            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
-                functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
-                functionValues.Resize(inputFunctionValues.GetNumRows(),
-                inputFunctionValues.GetNumCols());
-
-            int futureIndex = (int)(timeIdxInSeq + timeStep) * mNbr;
-            int d = futureIndex;
-            if (d >= inputFunctionValues.GetNumCols())
-                d = (int)functionValues.Mod((float)futureIndex, (float)futureActivity.GetNumCols());
-            /// this can point to the future activity of the previous mninibatch
-
-            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
-
-            if (reset)
-            {
-                out.SetValue(default_activity);
-            }
-            else
-            {
-                if (futureIndex >= inputFunctionValues.GetNumCols())
-                    inp = futureActivity.ColumnSlice(d, mNbr);
-                else
-                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
-                out.SetValue(inp);
-            }
-        }
-
         static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int timeStep, Matrix<ElemType>& functionValues, const Matrix<ElemType>& futureActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colFlag, const MinibatchPackingFlag minibatchPackingFlag)
         {
             ASSERT(timeStep > 0);
@@ -701,7 +674,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
 
-            if (minibatchPackingFlag & MinibatchPackingFlag::SequenceEndOrNoFeature)
+            if (minibatchPackingFlag & MinibatchPackingFlag::SequenceEnd)
             {
                 for (int i = 0; i < mNbr; i++)
                 {
