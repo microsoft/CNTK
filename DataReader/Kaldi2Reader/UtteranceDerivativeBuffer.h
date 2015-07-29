@@ -1,30 +1,18 @@
 #pragma once
 
-#include "kaldi.h"
 #include "Matrix.h"
 #include "basetypes.h"
+#include "UtteranceDerivativeComputationInterface.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// This class deals with the interaction with Kaldi in order to do sequence
-// in CNTK.
+// This class "gules" together the log-likelihood from different minibatches,
+// and then calls <UtteranceDerivativeComputationInterface> class to compute
+// the derivative for given utterance.
 template<class ElemType>
-class KaldiSequenceTrainingIO
+class UtteranceDerivativeBuffer
 {
 private:
-    bool m_oneSilenceClass;
-    bool m_needLikelihood;
-    bool m_epochEnd;
-    size_t m_numUttsPerMinibatch;
-    wstring m_trainCriterion;
-    ElemType m_oldAcousticScale;
-    ElemType m_acousticScale;
-    ElemType m_lmScale;
-    std::vector<kaldi::int32> m_silencePhones;
-    kaldi::TransitionModel m_transModel;
-    kaldi::RandomAccessCompactLatticeReader* m_denlatReader;
-    kaldi::RandomAccessInt32VectorReader* m_aliReader;
-
     struct UtteranceDerivativeUnit
     {
         bool hasDerivative;
@@ -32,10 +20,11 @@ private:
         size_t progress;
         size_t streamID;
         Matrix<ElemType> logLikelihood;
-        kaldi::Posterior posterior;
+        Matrix<ElemType> derivative;
         ElemType objective;
 
-        UtteranceDerivativeUnit() : logLikelihood(CPUDEVICE)
+        UtteranceDerivativeUnit() :
+            logLikelihood(CPUDEVICE), derivative(CPUDEVICE)
         {
             hasDerivative = false;
             uttLength = 0;
@@ -43,17 +32,18 @@ private:
             streamID = 0;
         }
     };
-    ElemType m_currentObj;
+
+    bool m_needLikelihood;
+    bool m_epochEnd;
     int m_minCompleteMinibatchIndex;
     int m_minibatchIndex;
+    size_t m_numUttsPerMinibatch;
+    size_t m_dimension;
+    ElemType m_currentObj;
     std::vector<int> m_lastCompleteMinibatch;
     std::vector<std::vector<std::pair<wstring, size_t>>> m_currentUttInfo;
     unordered_map<wstring, UtteranceDerivativeUnit> m_uttPool;
-
-    // Rescores the lattice with the lastest posteriors from the neural network.
-    void LatticeAcousticRescore(
-        const std::vector<kaldi::int32>& stateTimes,
-        const Matrix<ElemType>& outputs, kaldi::Lattice* lat) const;
+    UtteranceDerivativeComputationInterface<ElemType>* m_derivativeInterface;
 
     // <uttInfoInMinibatch> is a vector of vector of the following:
     //     uttID startFrameIndexInMinibatch numFrames
@@ -64,23 +54,19 @@ private:
         std::vector<std::vector<std::pair<
             wstring, std::pair<size_t, size_t>>>>* uttInfoInMinibatch) const;
 
-    bool ComputeDerivative(const wstring& uttID);
+    bool CompareUttInfo(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo1,
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo2);
 
 public:
     // Constructor.
-    KaldiSequenceTrainingIO(const wstring& denlatRspecifier,
-                            const wstring& aliRspecifier,
-                            const wstring& transModelFilename,
-                            const wstring& silencePhoneStr,
-                            const wstring& trainCriterion,
-                            ElemType oldAcousticScale,
-                            ElemType acousticScale,
-                            ElemType lmScale,
-                            bool oneSilenceClass,
-                            size_t numberOfuttsPerMinibatch);
+    // Does not take ownership of <derivativeInterface>.
+    UtteranceDerivativeBuffer(
+        size_t numberOfuttsPerMinibatch,
+        UtteranceDerivativeComputationInterface<ElemType>* derivativeInterface);
 
     // Destructor.
-    ~KaldiSequenceTrainingIO();
+    ~UtteranceDerivativeBuffer() {}
 
     bool NeedLikelihoodToComputeDerivative() const { return m_needLikelihood; }
 
@@ -102,7 +88,7 @@ public:
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         Matrix<ElemType>* objectivesIn);
 
-    bool HasLatticeAndAlignment(const wstring& uttID) const;
+    bool HasResourceForDerivative(const wstring& uttID) const;
 
     bool HasUtterance(const wstring& uttID) const
     {
