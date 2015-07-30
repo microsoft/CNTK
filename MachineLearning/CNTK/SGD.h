@@ -1668,10 +1668,6 @@ protected:
             else if (!std::isnan(epochCriterion) &&
                      (epochCriterion > (baseCriterion * (ElemType) (1.0 + ((ElemType) m_minibatchSearchCriterionErrorMargin / 100.0)))))
             {
-                fprintf(stderr, "AdaptiveMinibatchSearch: Search successful!!! Chose new minibatchSize of %d. "
-                        "EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
-                        (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion, baseCriterion);
-
                 // As soon as we see the Criterion (a measure of error) start to get larger than the
                 // Criterion we started with, we stop.
                 // TODO: if this is too sensitive, we can add a margin on the bases of percentage of
@@ -1682,11 +1678,18 @@ protected:
             {
                 lastTriedTrialMinibatchSize = trialMinibatchSize;
                 lastTriedTrialEpochCriterion = epochCriterion;
-                fprintf(stderr, "AdaptiveMinibatchSearch: Keep searching... "
-                        "EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
-                        epochCriterion, baseCriterion);
+                if (trialMinibatchSizeFloat * minibatchSizeTuningFactor <= maxMinibatchSize)
+                {
+                   fprintf(stderr, "AdaptiveMinibatchSearch: Keep searching... "
+                           "EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
+                           epochCriterion, baseCriterion);
+                }
             }
         }
+        fprintf(stderr, "AdaptiveMinibatchSearch: Search successful!!! Chose new minibatchSize of %d. "
+                "EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
+                (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion, baseCriterion);
+
 
         return lastTriedTrialMinibatchSize;
     }
