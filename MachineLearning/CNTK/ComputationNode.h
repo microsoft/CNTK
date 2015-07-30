@@ -306,7 +306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return processedExistsNoLabelorFeatureMissing;
         }
 
-        size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+        virtual size_t GetNumSamplesWithLabel(const size_t numAllSamples)
         {
             if (m_sentenceSeg != nullptr &&
                 m_minibatchPackingFlag != nullptr &&
