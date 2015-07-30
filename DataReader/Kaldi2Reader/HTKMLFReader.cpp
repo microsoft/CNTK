@@ -704,7 +704,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_featuresBufferMultiIO[i] = NULL;
                 }
             }
-
         }
 
         if (!m_labelsBufferMultiIO.empty())
@@ -717,28 +716,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_labelsBufferMultiIO[i] = NULL;
                 }
             }
-
         }
 
-        if (/*m_numberOfuttsPerMinibatch > 1 && */m_truncated)
+        for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i ++)
         {
-            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i ++)
+            if (m_featuresBufferMultiUtt[i] != NULL)
             {
-                if (m_featuresBufferMultiUtt[i] != NULL)
-                {
-                    delete[] m_featuresBufferMultiUtt[i];
-                    m_featuresBufferMultiUtt[i] = NULL;
-                }
-                if (m_labelsBufferMultiUtt[i] != NULL)
-                {
-                    delete[] m_labelsBufferMultiUtt[i];
-                    m_labelsBufferMultiUtt[i] = NULL;
-                }
-
+                delete[] m_featuresBufferMultiUtt[i];
+                m_featuresBufferMultiUtt[i] = NULL;
             }
-        }    
+            if (m_labelsBufferMultiUtt[i] != NULL)
+            {
+                delete[] m_labelsBufferMultiUtt[i];
+                m_labelsBufferMultiUtt[i] = NULL;
+            }
+        }
 
-        foreach_index(i, m_trainingOrTestingFeatureSections) {
+        foreach_index(i, m_trainingOrTestingFeatureSections)
+        {
             if (m_trainingOrTestingFeatureSections[i] != NULL)
             {
                 delete m_trainingOrTestingFeatureSections[i];
@@ -746,7 +741,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        foreach_index(i, m_writingFeatureSections) {
+        foreach_index(i, m_writingFeatureSections)
+        {
             if (m_writingFeatureSections[i] != NULL)
             {
                 delete m_writingFeatureSections[i];
