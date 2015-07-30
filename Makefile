@@ -105,7 +105,12 @@ NVCCFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64
 
 # Set up linker option to embed ORIGIN, i.e. directory where cntk is into the search path option
 # at runtime. This will try to resolve all dependent binaries in the same directory where cntk binary resides
-LDFLAGS=-Wl,-rpath,'$$ORIGIN'
+LDFLAGS:=-Wl,-rpath,'$$ORIGIN'
+ifeq ($(DEVICE),cpu)
+LDFLAGS:=$(LDFLAGS) -Wl,-rpath,$(MATHLIB_PATH)/lib
+else
+LDFLAGS:=$(LDFLAGS) -Wl,-rpath,$(CUDA_PATH)/lib  -Wl,-rpath,$(NVML_LIB)
+endif
 
 # Define all sources that need to be built
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
