@@ -916,7 +916,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_evalMode;
         }
 
-        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
         {
             ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
             fstream >> m_evalMode;
@@ -1414,7 +1414,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t i = t % nS;
                 if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
                 {
-                    if ((*m_sentenceSeg)(i,j) == NO_LABELS)
+                    if ((int)(*m_sentenceSeg)(i,j) & NO_LABEL)
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
 
