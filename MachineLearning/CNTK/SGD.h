@@ -1701,8 +1701,12 @@ protected:
         // Tries to read an utterance and run forward computation on the
         // whole utterance.
         assert(trainSetDataReader != NULL);
-        std::wstring uttID;
-        if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
+        std::vector<std::vector<std::pair<wstring, size_t>>> uttInfo;
+        Matrix<ElemType> sentenceBoundary;
+        std::vector<MinibatchPackingFlag> minibatchPackingFlag;
+        while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices,
+                                                    sentenceBoundary,
+                                                    minibatchPackingFlag))
         {
             UpdateEvalTimeStamps(FeatureNodes);
 
@@ -1716,7 +1720,10 @@ protected:
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
             net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
-            trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
+            trainSetDataReader->SetNetOutput(uttInfo,
+                                             (*outputNodes)[0]->FunctionValues(),
+                                             sentenceBoundary,
+                                             minibatchPackingFlag);
         }
     }
 
@@ -1846,6 +1853,11 @@ protected:
             Matrix<ElemType>::AddElementToElement((*criterionNodes)[0]->FunctionValues(),
                                                   0, 0, localEpochCriterion, 0, 0);
 
+            //for now since we share the same label masking flag we call this on the training
+            //criterion node ony. Later, when we apply different labels on different nodes
+            //we need to add code to call this function multiple times, one for each criteria node
+            size_t numSamplesWithLabel = (*criterionNodes)[0]->GetNumSamplesWithLabel(actualMBSize);
+
             std::vector<ElemType> mbEvalErrors(numEvalNodes, 0);
             for (size_t i = 0; i < numEvalNodes; i++)
             {
@@ -1878,7 +1890,7 @@ protected:
             if (m_traceLevel > 0)
             {
                 totalTimeInMBs += timer.ElapsedSeconds();
-                numSamplesLastMBs += int(actualMBSize);
+                numSamplesLastMBs += int(numSamplesWithLabel);
 
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
@@ -1928,8 +1940,9 @@ protected:
             }
 
             timer.Restart();
-            totalEpochSamples += actualMBSize;
-            totalSamplesSeen += actualMBSize;
+
+            totalEpochSamples += numSamplesWithLabel;
+            totalSamplesSeen += numSamplesWithLabel;
 
             if (totalEpochSamples >= epochSize)
             {

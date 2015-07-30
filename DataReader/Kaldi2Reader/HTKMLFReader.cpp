@@ -48,10 +48,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_mbiter = NULL;
         m_frameSource = NULL;
         m_lattices = NULL;
-        m_sequenceTrainingIO = NULL;
+        m_seqTrainDeriv = NULL;
+        m_uttDerivBuffer = NULL;
+        m_minibatchBuffer.resize(0);
+        m_minibatchBufferIndex = 0;
+        m_minibatchBufferLeftovers = 0;
         m_noData = false;
         m_convertLabelsToTargets = false;
         m_doSeqTrain = false;
+        m_getMinibatchCopy = false;
+        m_doMinibatchBuffering = false;
 
         if (readerConfig.Exists("legacyMode"))
         {
@@ -60,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // If <m_framemode> is false, throw away any utterance that is longer
         // than the specified <m_maxUtteranceLength>.
-        m_maxUtteranceLength = readerConfig("maxUtteranceLength", "1500");
+        m_maxUtteranceLength = readerConfig("maxUtteranceLength", "10000");
 
         // m_truncated:
         //     If true, truncate utterances to fit the minibatch size. Otherwise
@@ -168,46 +174,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         aliRspecifier = wstring(aliConfig("rx"));
 
-        // Initializes sequence training interface.
-        m_sequenceTrainingIO = new KaldiSequenceTrainingIO<ElemType>(
-            denlatRspecifier, aliRspecifier, transModelFilename,
-            silencePhoneStr, m_seqTrainCriterion, oldAcousticScale,
-            acousticScale, lmScale, oneSilenceClass);
-
-        // Scans the configurations to get "seqTrainDeriv" type input and
-        // "seqTrainObj" type input. Both are feature nodes, we feed derivatives
-        // to training criterion node through "seqTrainDeriv" and feed objective
-        // through "seqTrainObj".
+        // Scans the configurations to get "readerDeriv" type input and
+        // "readerObj" type input. Both are feature nodes, we feed derivatives
+        // to training criterion node through "readerDeriv" and feed objective
+        // through "readerObj".
         bool hasDrive = false, hasObj = false;
         for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
         {
             ConfigParameters temp = iter->second;
             if (temp.ExistsCurrent("type"))
             {
-                if (temp("type") == "seqTrainDeriv")
+                if (temp("type") == "readerDeriv"
+                    || temp("type") == "seqTrainDeriv" /*for back compatibility */)
                 {
-                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::seqTrainDeriv;
+                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerDeriv;
                     hasDrive = true;
                 }
-                else if (temp("type") == "seqTrainObj")
+                else if (temp("type") == "readerObj"
+                    || temp("type") == "seqTrainObj" /*for back compatibility */)
                 {
-                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::seqTrainObj;
+                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerObj;
                     hasObj = true;
                 }
             }
         }
         if (!hasDrive || !hasObj)
         {
-            LogicError("Missing seqTrainDeriv or seqTrainObj type feature\n");
+            LogicError("Missing readerDeriv or readerObj type feature\n");
         }
+
+        // Initializes sequence training interface.
+        m_seqTrainDeriv = new KaldiSequenceTrainingDerivative<ElemType>(
+            denlatRspecifier, aliRspecifier, transModelFilename,
+            silencePhoneStr, m_seqTrainCriterion, oldAcousticScale,
+            acousticScale, lmScale, oneSilenceClass);
+
+        // Initializes derivative buffering.
+        m_doMinibatchBuffering = true;
+        if (m_uttDerivBuffer != NULL)
+        {
+            LogicError("Derivative buffer has already been set, are you doing "
+                "sequence with some other metric that using derivative "
+                "buffering?\n");
+        }
+        m_uttDerivBuffer = new UtteranceDerivativeBuffer<ElemType>(
+            m_numberOfuttsPerMinibatch, m_seqTrainDeriv);
     }
 
     // Loads input and output data for training and testing. Below we list the
     // categories for different input/output:
     // features:      InputOutputTypes::real
     // labels:        InputOutputTypes::category
-    // derivatives:   InputOutputTypes::seqTrainDeriv
-    // objectives:    InputOutputTypes::seqTrainObj
+    // derivatives:   InputOutputTypes::readerDeriv
+    // objectives:    InputOutputTypes::readerObj
     //
     // Note that we treat <derivatives> and <objectives> as features, but they
     // will be computed in the reader, rather then reading from disks. Those
@@ -219,10 +238,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_doSeqTrain)
         {
             PrepareForSequenceTraining(readerConfig);
-        }
-        else
-        {
-            m_sequenceTrainingIO = NULL;
         }
 
         // Variables related to multi-utterance.
@@ -293,6 +308,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_featureNameToIdMap[featureNames[i]] = iFeat;
+            assert(iFeat == m_featureIdToNameMap.size());
+            m_featureIdToNameMap.push_back(featureNames[i]);
             scriptpaths.push_back(new msra::asr::FeatureSection(thisFeature("scpFile"), thisFeature("rx"), thisFeature("featureTransform", "")));
             m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
 
@@ -334,6 +351,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             statelistpaths.push_back(thisLabel("labelMappingFile",L""));
 
             m_labelNameToIdMap[labelNames[i]] = iLabel;
+            assert(iLabel == m_labelIdToNameMap.size());
+            m_labelIdToNameMap.push_back(labelNames[i]);
             m_labelNameToDimMap[labelNames[i]] = m_labelDims[i];
             mlfpaths.clear();
             mlfpaths.push_back(thisLabel("mlfFile"));
@@ -599,6 +618,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_featureNameToIdMap[featureNames[i]]= iFeat;
+            assert(iFeat == m_featureIdToNameMap.size());
+            m_featureIdToNameMap.push_back(featureNames[i]);
             scriptpaths.push_back(new msra::asr::FeatureSection(thisFeature("scpFile"), thisFeature("rx"), thisFeature("featureTransform", "")));
             m_featureNameToDimMap[featureNames[i]] = realDims[i];
 
@@ -661,11 +682,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete m_lattices;
             m_lattices = NULL;
         }
-        if (m_sequenceTrainingIO != NULL)
+        if (m_seqTrainDeriv != NULL)
         {
-            delete m_sequenceTrainingIO;
-            m_sequenceTrainingIO = NULL;
+            delete m_seqTrainDeriv;
+            m_seqTrainDeriv = NULL;
         }
+        if (m_uttDerivBuffer != NULL)
+        {
+            delete m_uttDerivBuffer;
+            m_uttDerivBuffer = NULL;
+        }
+
 
         if (!m_featuresBufferMultiIO.empty())
         {
@@ -677,7 +704,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_featuresBufferMultiIO[i] = NULL;
                 }
             }
-
         }
 
         if (!m_labelsBufferMultiIO.empty())
@@ -690,28 +716,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_labelsBufferMultiIO[i] = NULL;
                 }
             }
-
         }
 
-        if (/*m_numberOfuttsPerMinibatch > 1 && */m_truncated)
+        for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i ++)
         {
-            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i ++)
+            if (m_featuresBufferMultiUtt[i] != NULL)
             {
-                if (m_featuresBufferMultiUtt[i] != NULL)
-                {
-                    delete[] m_featuresBufferMultiUtt[i];
-                    m_featuresBufferMultiUtt[i] = NULL;
-                }
-                if (m_labelsBufferMultiUtt[i] != NULL)
-                {
-                    delete[] m_labelsBufferMultiUtt[i];
-                    m_labelsBufferMultiUtt[i] = NULL;
-                }
-
+                delete[] m_featuresBufferMultiUtt[i];
+                m_featuresBufferMultiUtt[i] = NULL;
             }
-        }    
+            if (m_labelsBufferMultiUtt[i] != NULL)
+            {
+                delete[] m_labelsBufferMultiUtt[i];
+                m_labelsBufferMultiUtt[i] = NULL;
+            }
+        }
 
-        foreach_index(i, m_trainingOrTestingFeatureSections) {
+        foreach_index(i, m_trainingOrTestingFeatureSections)
+        {
             if (m_trainingOrTestingFeatureSections[i] != NULL)
             {
                 delete m_trainingOrTestingFeatureSections[i];
@@ -719,7 +741,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        foreach_index(i, m_writingFeatureSections) {
+        foreach_index(i, m_writingFeatureSections)
+        {
             if (m_writingFeatureSections[i] != NULL)
             {
                 delete m_writingFeatureSections[i];
@@ -736,6 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void HTKMLFReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
     {
         m_mbSize = mbSize;
+        m_currentMBSize = mbSize;
 
         if (m_trainOrTest)
         {
@@ -788,7 +812,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_mbiter = NULL;
         }
         msra::dbn::minibatchsource* source = m_frameSource;
-        m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, mbSize, datapasses);
+        size_t currentMBSize = (m_framemode == true) ? mbSize : 1;
+        m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, currentMBSize, datapasses);
+
+        // Resets utterance derivative buffering class.
+        if (m_doMinibatchBuffering)
+        {
+            assert(m_uttDerivBuffer != NULL);
+            m_uttDerivBuffer->ResetEpoch();
+        }
+
+        // Clears minibatch buffer.
+        m_minibatchBuffer.clear();
+        m_getMinibatchCopy = false;
+        m_minibatchBufferIndex = 0;
+        m_minibatchBufferLeftovers = 0;
+        m_uttInfo.clear();
+        m_minibatchUttInfo.clear();
 
         // Clears feature and label buffer.
         if (!m_featuresBufferMultiIO.empty())
@@ -833,7 +873,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_labelsBufferAllocatedMultiUtt[u] = 0;
             }
             ReNewBufferForMultiIO(u);
-        }    
+        }
     }
 
     template<class ElemType>
@@ -882,7 +922,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // if startFrame = 5, endFrame = 10, then we copy frames 5, 6, 7, 8, 9.
     template<class ElemType>
     bool HTKMLFReader<ElemType>::PopulateUtteranceInMinibatch(
-        std::map<std::wstring, Matrix<ElemType>*>& matrices,
+        const std::map<std::wstring, Matrix<ElemType>*>& matrices,
         size_t uttIndex, size_t startFrame,
         size_t endFrame, size_t mbSize, size_t mbOffset)
     {
@@ -897,15 +937,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             return false;
         }
-        if (m_doSeqTrain && m_numberOfuttsPerMinibatch > 1)
-        {
-            LogicError("nbrUttsInEachRecurrentIter has to be 1 in sequence training.\n");
-        }
 
         size_t numOfFea = m_featuresBufferMultiIO.size();
         size_t numOfLabel = m_labelsBufferMultiIO.size();
-        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-        for (iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
             {   // Features.
@@ -972,65 +1007,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
             }
-            else if (m_doSeqTrain)
-            {
-                // TODO(GUOGUO): if we are going to allow "m_truncate" for
-                //               sequence training, we will have to modify the
-                //               following -- the following always assume we
-                //               start filling the minibatch from index 0.
-                // If we do sequence training we have to populate the derivative
-                // features as well as the objective features. But unlike the
-                // features and labels, we put them in to <matrices> directly.
-                // We assume we only process one utterance at a time in the
-                // current implementation.
-                assert(uttIndex == 0);
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::seqTrainDeriv)
-                {
-                    wstring uttID = m_uttInfo[uttIndex][0].first; 
-                    Matrix<ElemType>& data = *matrices[iter->first];
-                    if (m_sequenceTrainingIO->HasDerivatives(uttID))
-                        m_sequenceTrainingIO->GetDerivatives(startFrame, endFrame, mbSize, uttID, data);
-                    else
-                    {
-                        data.Resize(data.GetNumRows(), mbSize);
-                        data.SetValue(0);
-                    }
-                }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::seqTrainObj)
-                {
-                    wstring uttID = m_uttInfo[uttIndex][0].first; 
-                    Matrix<ElemType>& data = *matrices[iter->first];
-                    if (m_sequenceTrainingIO->HasDerivatives(uttID))
-                        m_sequenceTrainingIO->GetObjectives(startFrame, endFrame, uttID, data);
-                    else
-                        data.SetValue(0);
-                }
-            }
         }
         return success;
     }
 
     template<class ElemType>
-    bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    bool HTKMLFReader<ElemType>::GetOneMinibatchToTrainOrTestDataBuffer(
+        const std::map<std::wstring, Matrix<ElemType>*>& matrices)
     {
         bool skip = false;
 
         // On first minibatch, check if we have input for given names.
         if (m_checkDictionaryKeys)
         {
-            std::map<std::wstring,size_t>::iterator iter;
             for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
             {
                 if (m_nameToTypeMap.find(iter->first) == m_nameToTypeMap.end())
                 {
-                    throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %S not found in reader - cannot generate input\n", iter->first.c_str()));
+                    throw std::runtime_error(msra::strfun::strprintf(
+                          "minibatch requested for input node %S not found in"
+                          "reader - cannot generate input\n", iter->first.c_str()));
                 }
 
             }
             m_checkDictionaryKeys=false;
         }
 
-        size_t currentMBSize = m_mbSize;
+        // If we are doing utterance derivative buffering, we need to keep the
+        // utterance information.
+        if (m_doMinibatchBuffering)
+        {
+            m_minibatchUttInfo.assign(m_numberOfuttsPerMinibatch,
+                std::vector<std::pair<wstring, size_t>>(0));
+        }
+
+        m_currentMBSize = m_mbSize;
         do 
         {
             // Checks if we have finished all the utterances.
@@ -1050,30 +1061,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            // If <m_truncated> is true, <currentMBSize> is <m_mbSize>
-            // If <m_truncated> is false, <currentMBSize> equals to the longest
+            // If <m_truncated> is true, <m_currentMBSize> is <m_mbSize>
+            // If <m_truncated> is false, <m_currentMBSize> equals to the longest
             // utterance in the minibatch.
             if (!m_truncated)
             {
-                currentMBSize = 0;
+                m_currentMBSize = 0;
                 for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
                 {
-                    if (m_currentBufferFrames[i] > currentMBSize)
+                    if (m_currentBufferFrames[i] > m_currentMBSize)
                     {
-                        currentMBSize = m_currentBufferFrames[i];
+                        m_currentMBSize = m_currentBufferFrames[i];
                     }
                 }
             }
 
             // We initialize the sentence boundary information before we process
             // the utterances.
-            m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, currentMBSize);
-            m_minibatchPackingFlag.resize(currentMBSize);
+            m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_currentMBSize);
+            m_minibatchPackingFlag.resize(m_currentMBSize);
             for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
             {
-                for (size_t j = 0; j < currentMBSize; j++)
+                for (size_t j = 0; j < m_currentMBSize; j++)
                 {
-                    m_sentenceBegin.SetValue(i, j, (ElemType) SENTENCE_MIDDLE);
+                    m_sentenceBegin.SetValue(i, j, (ElemType) SEQUENCE_MIDDLE);
                 }
             }
             std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
@@ -1085,7 +1096,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t startFrame = m_processedFrame[i];
                 size_t endFrame = 0;
 
-                if ((startFrame + currentMBSize) < m_toProcess[i])
+                if ((startFrame + m_currentMBSize) < m_toProcess[i])
                 {
                     // There is only 1 case:
                     //     1. <m_framemode> is false, and <m_truncated> is true.
@@ -1095,15 +1106,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // Sets the utterance boundary.
                     if (startFrame == 0)
                     {
-                        m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                        m_minibatchPackingFlag[0] |= MinibatchPackingFlag::UtteranceStart;
+                        m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
+                        m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
                     }
 
-                    endFrame = startFrame + currentMBSize;
-                    bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
-                    m_processedFrame[i] += currentMBSize;
+                    endFrame = startFrame + m_currentMBSize;
+                    bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
+                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    m_processedFrame[i] += m_currentMBSize;
                 }
-                else if ((startFrame + currentMBSize) == m_toProcess[i])
+                else if ((startFrame + m_currentMBSize) == m_toProcess[i])
                 {
                     // There are 3 cases:
                     //     1. <m_framemode> is false, and <m_truncated> is true,
@@ -1121,20 +1133,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (m_truncated == false)
                         {
                             assert(startFrame == 0);
-                            m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::UtteranceStart;
+                            m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
+                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
                         }
 
                         // We have to set the utterance end.
-                        m_sentenceBegin.SetValue(i, m_sentenceBegin.GetNumCols() - 1, (ElemType)SENTENCE_END);
-                        m_minibatchPackingFlag[m_sentenceBegin.GetNumCols() - 1] |= MinibatchPackingFlag::UtteranceEnd;
+                        m_sentenceBegin.SetValue(i, m_sentenceBegin.GetNumCols() - 1, (ElemType)SEQUENCE_END);
+                        m_minibatchPackingFlag[m_sentenceBegin.GetNumCols() - 1] |= MinibatchPackingFlag::SequenceEnd;
                     }
 
                     // Now puts the utterance into the minibatch, and loads the
                     // next one.
-                    endFrame = startFrame + currentMBSize;
-                    bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
-                    m_processedFrame[i] += currentMBSize;
+                    endFrame = startFrame + m_currentMBSize;
+                    bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
+                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    m_processedFrame[i] += m_currentMBSize;
                     bool reNewSucc = ReNewBufferForMultiIO(i);
                 }
                 else
@@ -1151,15 +1164,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // Checks if we have reached the end of the minibatch.
                     if (startFrame == m_toProcess[i])
                     {
-                        for (size_t k = 0; k < currentMBSize; k++)
+                        for (size_t k = 0; k < m_currentMBSize; k++)
                         {
-                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_LABELS);
-                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoLabel;
+                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_INPUT);
+                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoInput;
 
-                            // Populates <NO_LABELS> with real features, the
+                            // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
                             assert(m_toProcess[i] > 0);
-                            PopulateUtteranceInMinibatch(matrices, i, 0, 1, currentMBSize, k);
+                            PopulateUtteranceInMinibatch(matrices, i, 0, 1, m_currentMBSize, k);
                         }
                         continue;
                     }
@@ -1183,32 +1196,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (m_truncated == false)
                         {
                             assert(startFrame == 0);
-                            m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::UtteranceStart;
+                            m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
+                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
                         }
 
                         // We have to set the utterance end.
                         assert(m_toProcess[i] - startFrame - 1 < m_sentenceBegin.GetNumCols());
-                        m_sentenceBegin.SetValue(i, m_toProcess[i] - startFrame - 1, (ElemType)SENTENCE_END);
-                        m_minibatchPackingFlag[m_toProcess[i] - startFrame - 1] |= MinibatchPackingFlag::UtteranceEnd;
+                        m_sentenceBegin.SetValue(i, m_toProcess[i] - startFrame - 1, (ElemType)SEQUENCE_END);
+                        m_minibatchPackingFlag[m_toProcess[i] - startFrame - 1] |= MinibatchPackingFlag::SequenceEnd;
                     }
                     endFrame = m_toProcess[i];
                     size_t currentMBFilled = endFrame - startFrame;
-                    bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, currentMBSize);
+                    bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
+                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
                     m_processedFrame[i] += currentMBFilled;
                     bool reNewSucc = ReNewBufferForMultiIO(i);
 
                     // Third, if the next utterance can fit into the current
                     // minibatch, we also pack the next utterance.
-                    while (reNewSucc && (currentMBFilled + m_toProcess[i] <= currentMBSize))
+                    while (reNewSucc && (currentMBFilled + m_toProcess[i] <= m_currentMBSize))
                     {
                         // Sets the utterance boundary.
                         assert(currentMBFilled + m_toProcess[i] <= m_sentenceBegin.GetNumCols());
-                        m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SENTENCE_BEGIN);
-                        m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::UtteranceStart;
-                        m_sentenceBegin.SetValue(i, currentMBFilled + m_toProcess[i] - 1, (ElemType)SENTENCE_END);
-                        m_minibatchPackingFlag[currentMBFilled + m_toProcess[i] - 1] |= MinibatchPackingFlag::UtteranceEnd;
-                        populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_toProcess[i], currentMBSize, currentMBFilled);
+                        m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SEQUENCE_START);
+                        m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::SequenceStart;
+                        m_sentenceBegin.SetValue(i, currentMBFilled + m_toProcess[i] - 1, (ElemType)SEQUENCE_END);
+                        m_minibatchPackingFlag[currentMBFilled + m_toProcess[i] - 1] |= MinibatchPackingFlag::SequenceEnd;
+                        populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_toProcess[i], m_currentMBSize, currentMBFilled);
+                        if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
                         assert(m_processedFrame[i] == 0);
                         m_processedFrame[i] = m_toProcess[i];
                         currentMBFilled += m_toProcess[i];
@@ -1219,52 +1234,246 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // minibatch is not full.
                     if (reNewSucc && !m_framemode && m_truncated)
                     {
-                        populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, currentMBSize - currentMBFilled, currentMBSize, currentMBFilled);
-                        m_processedFrame[i] += currentMBSize - currentMBFilled;
-                        if (currentMBFilled < currentMBSize)
+                        populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_currentMBSize - currentMBFilled, m_currentMBSize, currentMBFilled);
+                        if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                        m_processedFrame[i] += m_currentMBSize - currentMBFilled;
+                        if (currentMBFilled < m_currentMBSize)
                         {
-                            m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SENTENCE_BEGIN);
-                            m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::UtteranceStart;
+                            m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SEQUENCE_START);
+                            m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::SequenceStart;
                         }
                     }
                     else
                     {
-                        for (size_t k = currentMBFilled; k < currentMBSize; k++)
+                        for (size_t k = currentMBFilled; k < m_currentMBSize; k++)
                         {
-                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_LABELS);
-                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoLabel;
+                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_INPUT);
+                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoInput;
 
-                            // Populates <NO_LABELS> with real features, the
+                            // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
                             assert(m_toProcess[i] > 0);
-                            PopulateUtteranceInMinibatch(matrices, i, 0, 1, currentMBSize, k);
+                            PopulateUtteranceInMinibatch(matrices, i, 0, 1, m_currentMBSize, k);
                         }
                     }
                 }
             }
 
-            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-            for (iter = matrices.begin(); iter != matrices.end(); iter++)
-            {
-                Matrix<ElemType>& data = *matrices[iter->first];
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
-                {
-                    size_t id = m_featureNameToIdMap[iter->first];
-                    size_t dim = m_featureNameToDimMap[iter->first];
-                    data.SetValue(dim, currentMBSize * m_numberOfuttsPerMinibatch, m_featuresBufferMultiIO[id] , matrixFlagNormal);
-                }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
-                {
-                    size_t id = m_labelNameToIdMap[iter->first];
-                    size_t dim = m_labelNameToDimMap[iter->first];
-                    data.SetValue(dim, currentMBSize * m_numberOfuttsPerMinibatch, m_labelsBufferMultiIO[id], matrixFlagNormal);
-                }
-            }
             skip=false;
         }
         while(skip);
 
         return true;
+    }
+
+    template<class ElemType>
+    bool HTKMLFReader<ElemType>::ShouldCopyMinibatchFromBuffer()
+    {
+        if (m_doMinibatchBuffering)
+        {
+            // If <m_getMinibatchCopy> is false, then we should copy data from
+            // buffer for back-propagation.
+            if (m_getMinibatchCopy == false && m_minibatchBuffer.size() > 0)
+            {
+                m_minibatchBufferIndex = 0;
+                m_minibatchBufferLeftovers = m_minibatchBuffer.size() - 1;  // Will pop one more.
+                return true;
+            }
+
+            // If <m_getMinibatchCopy> is true, we first have to re-compute
+            // the likelihood for the frames that are already in the buffer.
+            if (m_getMinibatchCopy == true && m_minibatchBufferLeftovers > 0)
+            {
+                if (m_minibatchBufferLeftovers == m_minibatchBuffer.size())
+                {
+                    m_minibatchBufferIndex = 0;
+                }
+                else
+                {
+                    m_minibatchBufferIndex += 1;
+                }
+                m_minibatchBufferLeftovers -= 1;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::CopyMinibatchToBuffer()
+    {
+        MinibatchBufferUnit currentMinibatch;
+
+        // Stores variables realted to the current minibatch.
+        currentMinibatch.sentenceBegin.SetValue(m_sentenceBegin);
+        currentMinibatch.minibatchPackingFlag = m_minibatchPackingFlag;
+        currentMinibatch.currentMBSize = m_currentMBSize;
+        currentMinibatch.minibatchUttInfo = m_minibatchUttInfo;
+
+        size_t size = m_currentMBSize * m_numberOfuttsPerMinibatch;
+
+        // Copies features.
+        currentMinibatch.features.resize(0);
+        for (size_t i = 0; i < m_featuresBufferMultiIO.size(); ++i)
+        {
+            std::vector<ElemType> tmpFeatures(m_featuresBufferMultiIO[i],
+                m_featuresBufferMultiIO[i] + size * m_featureNameToDimMap[m_featureIdToNameMap[i]]);
+            currentMinibatch.features.push_back(tmpFeatures);
+        }
+
+        // Copies labels.
+        currentMinibatch.labels.resize(0);
+        for (size_t i = 0; i < m_labelsBufferMultiIO.size(); ++i)
+        {
+            std::vector<ElemType> tmpLabels(m_labelsBufferMultiIO[i],
+                m_labelsBufferMultiIO[i] + size * m_labelNameToDimMap[m_labelIdToNameMap[i]]);
+            currentMinibatch.labels.push_back(tmpLabels);
+        }
+
+        m_minibatchBuffer.push_back(currentMinibatch);
+    }
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::CopyMinibatchFromBufferToMatrix(
+        size_t index,
+        std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    {
+        assert(m_minibatchBuffer.size() > index);
+
+        // Restores the variables related to the minibatch.
+        m_sentenceBegin.SetValue(m_minibatchBuffer[index].sentenceBegin);
+        m_minibatchPackingFlag = m_minibatchBuffer[index].minibatchPackingFlag;
+        m_currentMBSize = m_minibatchBuffer[index].currentMBSize;
+        m_minibatchUttInfo = m_minibatchBuffer[index].minibatchUttInfo;
+
+        // Copies data to the matrix.
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        {
+            Matrix<ElemType>& data = *matrices[iter->first];
+            if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+            {
+                size_t id = m_featureNameToIdMap[iter->first];
+                size_t dim = m_featureNameToDimMap[iter->first];
+                assert(id < m_minibatchBuffer[index].features.size());
+                data.SetValue(dim, 
+                    m_minibatchBuffer[index].features[id].size() / dim,
+                    m_minibatchBuffer[index].features[id].data(),
+                    matrixFlagNormal);
+            }
+            else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+            {
+                size_t id = m_labelNameToIdMap[iter->first];
+                size_t dim = m_labelNameToDimMap[iter->first];
+                assert(id < m_minibatchBuffer[index].labels.size());
+                data.SetValue(dim,
+                    m_minibatchBuffer[index].labels[id].size() / dim,
+                    m_minibatchBuffer[index].labels[id].data(),
+                    matrixFlagNormal);
+            }
+            else if (m_doMinibatchBuffering && !m_getMinibatchCopy)
+            {
+                if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
+                {
+                    m_uttDerivBuffer->GetDerivative(
+                        m_minibatchUttInfo, m_sentenceBegin,
+                        m_minibatchPackingFlag, matrices[iter->first]);
+                }
+                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
+                {
+                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
+                                                    matrices[iter->first]);
+                }
+            }
+        }
+
+        // If we are not in the minibatch copy mode, then we can remove the
+        // minibatch from buffer.
+        if (m_getMinibatchCopy == false)
+        {
+            assert(index == 0);
+            m_minibatchBuffer.pop_front();
+        }
+    }
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::CopyMinibatchToMatrix(
+        size_t size,
+        const vector<ElemType*>& featureBuffer,
+        const vector<ElemType*>& labelBuffer,
+        std::map<std::wstring, Matrix<ElemType>*>& matrices) const
+    {
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        {
+            Matrix<ElemType>& data = *matrices[iter->first];
+            if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+            {
+                size_t id = m_featureNameToIdMap[iter->first];
+                size_t dim = m_featureNameToDimMap[iter->first];
+                assert(id < featureBuffer.size());
+                data.SetValue(dim, size, featureBuffer[id] , matrixFlagNormal);
+            }
+            else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+            {
+                size_t id = m_labelNameToIdMap[iter->first];
+                size_t dim = m_labelNameToDimMap[iter->first];
+                assert(id < labelBuffer.size());
+                data.SetValue(dim, size, labelBuffer[id], matrixFlagNormal);
+            }
+            else if (m_doMinibatchBuffering)
+            {
+                if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
+                {
+                    data.Resize(data.GetNumRows(), m_currentMBSize);
+                    data.SetValue(0);
+                }
+                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
+                {
+                    data.SetValue(0);
+                }
+            }
+        }
+    }
+
+    template<class ElemType>
+    bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(
+        std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    {
+        // We either copy a new minibatch from buffer or read one from minibatch
+        // iterator.
+        bool success = false;
+        if (ShouldCopyMinibatchFromBuffer())
+        {
+            CopyMinibatchFromBufferToMatrix(m_minibatchBufferIndex, matrices);
+            return true;
+        }
+        else
+        {
+            success = GetOneMinibatchToTrainOrTestDataBuffer(matrices);
+            if (success)
+            {
+                CopyMinibatchToMatrix(
+                    m_currentMBSize * m_numberOfuttsPerMinibatch,
+                    m_featuresBufferMultiIO, m_labelsBufferMultiIO, matrices);
+            }
+
+            // Checks if we need to move the current minibatch to buffer.
+            if (success && m_getMinibatchCopy)
+            {
+                CopyMinibatchToBuffer();
+            }
+
+            // If we are in the "copy" mode, and we cannot get a full minibatch,
+            // then we have computed the posteriors for all the minibatches.
+            if (m_doMinibatchBuffering && !success && m_getMinibatchCopy)
+            {
+                m_uttDerivBuffer->SetEpochEnd();
+            }
+
+            return success;
+        }
+
+        return false;
     }
 
     template<class ElemType>
@@ -1336,13 +1545,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
                         m_minibatchPackingFlag.resize(feat.cols());
-                        m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
-                        m_sentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
-                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SENTENCE_END);
+                        m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
+                        m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
+                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
                                 
                         std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
-                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::UtteranceEnd;
+                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
+                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
                         first = false;
                     }
 
@@ -1422,15 +1631,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // gracefully later, e.g., remove the utterance in the reader.
             if (m_uttInfo[i].size() > 1)
             {
-                fprintf(stderr, "WARNING: Utterance length is smaller than the minibatch size, you may want to remove the utterance or reduce the minibatch size.\n");
+                fprintf(stderr, "WARNING: Utterance length is smaller than the "
+                    "minibatch size, you may want to remove the utterance or "
+                    "reduce the minibatch size.\n");
             }
 
             if (!m_truncated && (m_currentBufferFrames[i] > m_maxUtteranceLength))
             {
                 (*m_mbiter)++;
                 if (!(*m_mbiter))
+                {
                     m_noData = true;
-                fprintf(stderr, "WARNING: Utterance \"%S\" has length longer than the %d, skipping it.\n", m_uttInfo[i][0].first.c_str(), m_maxUtteranceLength);
+                }
+                fprintf(stderr, "WARNING: Utterance \"%S\" has length longer "
+                    "than the %d, skipping it.\n",
+                    m_uttInfo[i][0].first.c_str(), m_maxUtteranceLength);
+                return ReNewBufferForMultiIO(i);
+            }
+
+            if (m_doMinibatchBuffering
+                && !m_uttDerivBuffer->HasResourceForDerivative(
+                    m_uttInfo[i][0].first))
+            {
+                (*m_mbiter)++;
+                if (!(*m_mbiter))
+                {
+                    m_noData = true;
+                }
+                fprintf(stderr, "WARNING: Utterance \"%S\" does not have "
+                    "resource to compute derivative, skipping it.\n",
+                    m_uttInfo[i][0].first.c_str());
+                return ReNewBufferForMultiIO(i);
+            }
+
+            // We don't support having two utterances in the same buffer.
+            if (m_doMinibatchBuffering &&
+                m_uttDerivBuffer->HasUtterance(m_uttInfo[i][0].first))
+            {
+                (*m_mbiter)++;
+                if (!(*m_mbiter))
+                {
+                    m_noData = true;
+                }
+                fprintf(stderr, "WARNING: Utterance \"%S\" already exists in "
+                    "the buffer, skipping it.\n",
+                    m_uttInfo[i][0].first.c_str());
                 return ReNewBufferForMultiIO(i);
             }
 
@@ -1567,82 +1812,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!(*m_mbiter))
             m_noData = true;
 
-        return true;    
+        return true; 
     }
 
     // Gets a copy of the utterance that corresponds to the current minibatches,
     // which will be used to do a neural network forward computation.
     template<class ElemType>
-    bool HTKMLFReader<ElemType>::GetForkedUtterance(std::wstring& uttID,
-                                                    std::map<std::wstring, Matrix<ElemType>*>& matrices)
+    bool HTKMLFReader<ElemType>::GetMinibatchCopy(
+        std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        std::map<std::wstring, Matrix<ElemType>*>& matrices,
+        Matrix<ElemType>& sentenceBegin,
+        std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
-        if (!m_doSeqTrain)
+        // We need to get a "copy" of the minibatch to do the forward
+        // computation for sequence training.
+        if (m_doMinibatchBuffering)
         {
+            assert(m_framemode == false);
+            if (m_uttDerivBuffer->NeedLikelihoodToComputeDerivative())
+            {
+                m_getMinibatchCopy = true;
+                if (GetMinibatchToTrainOrTest(matrices))
+                {
+                    sentenceBegin.SetValue(m_sentenceBegin);
+                    minibatchPackingFlag = m_minibatchPackingFlag;
+                    uttInfo = m_minibatchUttInfo;
+                    m_getMinibatchCopy = false;
+                    return true;
+                }
+                m_getMinibatchCopy = false;
+            }
             return false;
         }
-        assert(m_framemode == false);
-
-        // For the moment we only support single utterance.
-        if (m_numberOfuttsPerMinibatch != 1)
-        {
-            RuntimeError("The current sequence training implementation does not support multiple utterances.\n");
-        }
-
-        // Under our current assumption, we only have one utterance at a time.
-        uttID = m_uttInfo[0][0].first;
-        if (!m_sequenceTrainingIO->HasDerivatives(uttID))
-        {
-            size_t startFrame = 0;
-            size_t endFrame = m_uttInfo[0][0].second;
-            size_t currentMBSize = endFrame - startFrame;
-            bool populateSucc = PopulateUtteranceInMinibatch(
-                matrices, 0, startFrame, endFrame, currentMBSize);
-            if (!populateSucc)
-            {
-                return false;
-            }
-
-            // Sets sentence boundary.
-            m_sentenceBegin.Resize(1, currentMBSize);
-            m_minibatchPackingFlag.resize(currentMBSize);
-            for (size_t i = 0; i < currentMBSize; i++)
-            {
-                m_sentenceBegin.SetValue(0, i, (ElemType) SENTENCE_MIDDLE);
-            }
-            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-            m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
-            m_sentenceBegin.SetValue(0, m_sentenceBegin.GetNumCols() - 1, (ElemType) SENTENCE_END);
-            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
-            m_minibatchPackingFlag[m_sentenceBegin.GetNumCols() - 1] = MinibatchPackingFlag::UtteranceEnd;
-
-            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-            for (iter = matrices.begin(); iter != matrices.end(); iter++)
-            {
-                Matrix<ElemType>& data = *matrices[iter->first];
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
-                {
-                    size_t id = m_featureNameToIdMap[iter->first];
-                    size_t dim = m_featureNameToDimMap[iter->first];
-                    data.SetValue(dim, currentMBSize * m_numberOfuttsPerMinibatch, m_featuresBufferMultiIO[id] , matrixFlagNormal);
-                }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
-                {
-                    size_t id = m_labelNameToIdMap[iter->first];
-                    size_t dim = m_labelNameToDimMap[iter->first];
-                    data.SetValue(dim, currentMBSize * m_numberOfuttsPerMinibatch, m_labelsBufferMultiIO[id], matrixFlagNormal);
-                }
-            }
-            return true;
-        }
-
         return false;
     }
 
     template<class ElemType>
-    bool HTKMLFReader<ElemType>::ComputeDerivativeFeatures(const std::wstring& uttID,
-                                                           const Matrix<ElemType>& outputs)
+    bool HTKMLFReader<ElemType>::SetNetOutput(
+        const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
+        const Matrix<ElemType>& outputs,
+        const Matrix<ElemType>& sentenceBegin,
+        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
     {
-        return m_sequenceTrainingIO->ComputeDerivatives(uttID, outputs);
+        // Set the likelihoods for the utterance with which we can comput the
+        // derivatives. Note that the minibatch may only contain partial output
+        // for the utterance, <m_uttDerivBuffer> takes care of "gluing" them
+        // together.
+        if (m_doMinibatchBuffering)
+        {
+            assert(m_framemode == false);
+            return m_uttDerivBuffer->SetLikelihood(uttInfo, outputs,
+                                                   sentenceBegin,
+                                                   minibatchPackingFlag);
+        }
+        return false;
     }
 
 

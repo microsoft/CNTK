@@ -29,6 +29,10 @@ private:
     void SaveToKaldiFile(std::wstring& outputFile, Matrix<ElemType>& outputData);
     ElemType * m_tempArray;
     size_t m_tempArraySize;
+    int m_verbosity;
+    size_t m_overflowWarningCount;
+    size_t m_maxNumOverflowWarning;
+    float m_overflowValue;
 
     enum OutputTypes
     {
