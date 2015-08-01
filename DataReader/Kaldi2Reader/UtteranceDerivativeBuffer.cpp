@@ -15,8 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numUttsPerMinibatch = numberOfuttsPerMinibatch;
         m_needLikelihood = true;
         m_currentObj = 0;
-        m_minibatchIndex = 1;
-        m_lastCompleteMinibatch.assign(m_numUttsPerMinibatch, 0);
+        m_uttReady.assign(m_numUttsPerMinibatch, false);
         m_epochEnd = false;
         m_dimension = 0;
     }
@@ -148,26 +147,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             &m_uttPool[uttID].objective);
                         m_uttPool[uttID].hasDerivative = true;
                         m_uttPool[uttID].progress = 0;
-                        if (startFrame + numFrames == currentMBSize)
-                        {
-                            m_lastCompleteMinibatch[m_uttPool[uttID].streamID]
-                                = m_minibatchIndex;
-                        }
-                        else
-                        {
-                            m_lastCompleteMinibatch[m_uttPool[uttID].streamID]
-                                = m_minibatchIndex - 1;
-                        }
+                        m_uttReady[m_uttPool[uttID].streamID] = true;
                     }
                 }
             }
         }
 
         // Checks if we are ready to provide derivatives.
-        m_minCompleteMinibatchIndex = *std::min_element(
-            m_lastCompleteMinibatch.begin(), m_lastCompleteMinibatch.end());
-        m_needLikelihood = (m_minCompleteMinibatchIndex >= 1) ? false : true;
-        m_minibatchIndex += 1;
+        m_needLikelihood = false;
+        for (size_t i = 0; i < m_uttReady.size(); ++i)
+        {
+            if (m_uttReady[i] == false)
+            {
+                m_needLikelihood = true;
+                break;
+            }
+        }
     }
 
     // Suppose we have a, b, c 3 streams, the <derivativesOut> should be in the
@@ -245,22 +240,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_currentUttInfo = uttInfo;
 
         // Checks if we need to read more loglikelihoods.
-        m_needLikelihood = false;
-        m_minCompleteMinibatchIndex -= 1;
-        if (m_minCompleteMinibatchIndex <= 0 && !m_epochEnd)
+        m_needLikelihood = (m_epochEnd || m_uttPool.size() > 0) ? false : true;
+        if (m_needLikelihood == true)
         {
-            m_needLikelihood = true;
-            m_minibatchIndex = 1;
-            m_lastCompleteMinibatch.assign(m_numUttsPerMinibatch, 0);
-
-            // Un-do the logLikelihood for partial utterances.
-            for (auto iter = m_uttPool.begin(); iter != m_uttPool.end(); ++iter)
-            {
-                if (iter->second.hasDerivative == false)
-                {
-                    iter->second.progress = 0;
-                }
-            }
+            m_uttReady.assign(m_numUttsPerMinibatch, false);
         }
         return true;
     }
@@ -333,12 +316,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         m_needLikelihood = true;
         m_currentObj = 0;
-        m_minibatchIndex = 1;
-        m_minCompleteMinibatchIndex = 0;
         m_epochEnd = false;
-        m_lastCompleteMinibatch.assign(m_numUttsPerMinibatch, 0);
         m_uttPool.clear();
         m_currentUttInfo.clear();
+        m_uttReady.assign(m_numUttsPerMinibatch, false);
     }
 
     template class UtteranceDerivativeBuffer<float>;
