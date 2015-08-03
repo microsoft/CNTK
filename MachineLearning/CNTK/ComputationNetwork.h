@@ -1455,7 +1455,7 @@ public:
                     ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
                     if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
                     {
-                        fprintf(stderr, "PairNetwork : asked to pair a node with name l%s in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+                        fprintf(stderr, "PairNetwork : asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
                         throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
                     }
                     newNode->AttachInputs(a);
@@ -3243,7 +3243,7 @@ public:
 
                 bool UnitTest(const ComputationNodePtr rootNode)
                 {
-                    fprintf(stderr, "\n\n Unit test node %ws \n", rootNode->NodeName().c_str());
+                    fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
                     std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
 

@@ -38,36 +38,36 @@ namespace Microsoft {
             {
                 ElemType  m_default_activity;
 
-                typedef SGD<ElemType> SGD;
+                using SGDBase = SGD<ElemType>;
 
             public:
-                using SGD::m_modelPath;
-                using SGD::m_maxEpochs;
-                using SGD::m_doUnitTest;
-                using SGD::m_learnRateAdjustInterval;
-                using SGD::m_mbSize;
-                using SGD::m_momentumPerSample;
-                using SGD::m_learningRatesPerSample;
-                using SGD::m_dropoutRates;
-                using SGD::m_autoLearnRateSearchType;
-                using SGD::m_minLearnRate;
-                using SGD::m_loadBestModel;
-                using SGD::m_validateAfterModelReloading;
-                using SGD::m_continueReduce;
-                using SGD::m_reduceLearnRateIfImproveLessThan;
-                using SGD::m_epochSize;
-                using SGD::m_learnRateDecreaseFactor;
-                using SGD::m_increaseLearnRateIfImproveMoreThan;
-                using SGD::m_learnRateIncreaseFactor;
-                using SGD::m_keepCheckPointFiles;
-                using SGD::m_doGradientCheck;
-                using SGD::m_L2RegWeight;
-                using SGD::m_L1RegWeight;
-                using SGD::m_needAveMultiplier;
-                using SGD::m_traceLevel;
-                using SGD::m_numMBsToShowResult;
-                using SGD::m_gradientCheckSigDigit;
-                using SGD::m_prevChosenMinibatchSize;
+                using SGDBase::m_modelPath;
+                using SGDBase::m_maxEpochs;
+                using SGDBase::m_doUnitTest;
+                using SGDBase::m_learnRateAdjustInterval;
+                using SGDBase::m_mbSize;
+                using SGDBase::m_momentumPerSample;
+                using SGDBase::m_learningRatesPerSample;
+                using SGDBase::m_dropoutRates;
+                using SGDBase::m_autoLearnRateSearchType;
+                using SGDBase::m_minLearnRate;
+                using SGDBase::m_loadBestModel;
+                using SGDBase::m_validateAfterModelReloading;
+                using SGDBase::m_continueReduce;
+                using SGDBase::m_reduceLearnRateIfImproveLessThan;
+                using SGDBase::m_epochSize;
+                using SGDBase::m_learnRateDecreaseFactor;
+                using SGDBase::m_increaseLearnRateIfImproveMoreThan;
+                using SGDBase::m_learnRateIncreaseFactor;
+                using SGDBase::m_keepCheckPointFiles;
+                using SGDBase::m_doGradientCheck;
+                using SGDBase::m_L2RegWeight;
+                using SGDBase::m_L1RegWeight;
+                using SGDBase::m_needAveMultiplier;
+                using SGDBase::m_traceLevel;
+                using SGDBase::m_numMBsToShowResult;
+                using SGDBase::m_gradientCheckSigDigit;
+                using SGDBase::m_prevChosenMinibatchSize;
 
                 typedef ComputationNode<ElemType>* ComputationNodePtr;
 
@@ -80,7 +80,7 @@ namespace Microsoft {
                 list<pair<ComputationNodePtr, ComputationNodePtr>> m_lst_pair_encoder_decoder_nodes;
 
             public:
-                MultiNetworksSGD(const ConfigParameters& configSGD) : SGD(configSGD)
+                MultiNetworksSGD(const ConfigParameters& configSGD) : SGDBase(configSGD)
                 {
                 }
 
@@ -663,7 +663,7 @@ namespace Microsoft {
 
                         if (learnRatePerSample < m_minLearnRate)
                         {
-                            fprintf(stderr, "Learn Rate Per Sample for Epoch[%lu] = %.8g is less than minLearnRate %.8g. Training stops.\n", i + 1, learnRatePerSample, m_minLearnRate);
+                            fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n", i + 1, learnRatePerSample, m_minLearnRate);
                             break;
                         }
 
@@ -692,7 +692,7 @@ namespace Microsoft {
                         IDataReader<ElemType>* decoderTrainSetDataReader = trainDataReader[decoderIdx];
                         ComputationNetwork<ElemType>* decoderNet = nets[decoderIdx];
 
-                        fprintf(stderr, "Finished Epoch[%lu]: [Training Set] Decoder Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
+                        fprintf(stderr, "Finished Epoch[%d]: [Training Set] Decoder Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
                         if (epochEvalErrors.size() == 1)
                         {
                             fprintf(stderr, "EvalErr Per Sample = %.8g   Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", epochEvalErrors[0], learnRatePerSample, epochTime);
@@ -703,9 +703,9 @@ namespace Microsoft {
                             for (size_t j = 0; j<epochEvalErrors.size(); j++)
                                 fprintf(stderr, "[%lu]=%.8g ", j, epochEvalErrors[j]);
                             fprintf(stderr, "Ave Learn Rate Per Sample = %.10g  Epoch Time=%.8g\n", learnRatePerSample, epochTime);
-                            fprintf(stderr, "Finished Epoch[%lu]: Criterion Node Per Sample = %.8g\n", i + 1, epochCriterion);
+                            fprintf(stderr, "Finished Epoch[%d]: Criterion Node Per Sample = %.8g\n", i + 1, epochCriterion);
                             for (size_t j = 0; j<epochEvalErrors.size(); j++)
-                                fprintf(stderr, "Finished Epoch[%lu]: Evaluation Node [%ws] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                                fprintf(stderr, "Finished Epoch[%d]: Evaluation Node [%ls] Per Sample = %.8g\n", i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
                         }
 
                         if (decoderValidationSetDataReader != decoderTrainSetDataReader && decoderValidationSetDataReader != nullptr)
@@ -717,7 +717,7 @@ namespace Microsoft {
                                 validationDataReader,
                                 m_mbSize[i]);
 
-                            fprintf(stderr, "Finished Epoch[%lu]: [Validation Set] Loss Per Sample = %.8g \n ",  vScore );
+                            fprintf(stderr, "Finished Epoch[%d]: [Validation Set] Loss Per Sample = %.8g \n ", i+1, vScore );
 
                             epochCriterion = vScore; 
                         }
@@ -1013,7 +1013,7 @@ namespace Microsoft {
                     {
                         epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
                     }
-                    fprintf(stderr, "total samples in epoch[%d] = %d\n", epochNumber, totalEpochSamples);
+                    fprintf(stderr, "total samples in epoch[%d] = %zd\n", epochNumber, totalEpochSamples);
                 }
 
                 bool EncoderDecoderGradientCheck(
@@ -1053,7 +1053,7 @@ namespace Microsoft {
                                 irow = max(0, irow);
                                 icol = max(0, icol);
 
-                                fprintf(stderr, "\n###### d%ws######\n", node->NodeName().c_str());
+                                fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
                                 deviceId = node->FunctionValues().GetDeviceId();  // original device id
 
                                 node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
@@ -1124,7 +1124,7 @@ namespace Microsoft {
                                 if (wrong)
                                 {
                                     char serr[2048];
-                                    sprintf_s((char*)serr, 2048, "Decoder %ws Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), grdNum, grdErr);
+                                    sprintf_s((char*)serr, 2048, "Decoder %ls Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), grdNum, grdErr);
                                     fprintf(stdout, "%s\n", serr);
                                     verror_msgs.push_back(serr);
                                 }
