@@ -164,14 +164,34 @@ public:
     size_t NumberSlicesInEachRecurrentIter() {return 1;}
 
     void SetNbrSlicesEachRecurrentIter(const size_t ) {}
-    void SetSentenceEndInBatch(std::vector<size_t> &sentenceEnd)
+    void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd)
     {
         sentenceEnd.resize(m_switchFrame.size());
-        for (size_t i = 0; i < m_switchFrame.size() ; i++)
+        for (size_t i = 0; i < m_switchFrame.size(); i++)
         {
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
+    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    {
+        assert(m_switchFrame.size() == 1);        
+        sentenceBegin.Resize(1, m_mbSize);
+        minibatchPackingFlag.resize(m_mbSize);
+        sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+        std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None); 
+
+        if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
+        {
+            sentenceBegin.SetValue(0, m_switchFrame[0], (ElemType)SENTENCE_BEGIN); 
+            minibatchPackingFlag[m_switchFrame[0]] = MinibatchPackingFlag::UtteranceStart; 
+            if (m_switchFrame[0] > 0)
+            {
+                sentenceBegin.SetValue(0, m_switchFrame[0] - 1, (ElemType)SENTENCE_END); 
+                minibatchPackingFlag[m_switchFrame[0] - 1] = MinibatchPackingFlag::UtteranceEnd;
+            }
+        }
+    }
+
     void GetSentenceBoundary(std::vector<size_t> boundaryInfo)
     {
         m_switchFrame.resize(boundaryInfo.size());
@@ -180,6 +200,9 @@ public:
             m_switchFrame[i] = boundaryInfo[i];
         }
     }
+
+    void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
+
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
     virtual const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/) 

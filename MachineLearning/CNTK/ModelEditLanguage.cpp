@@ -62,6 +62,7 @@ enum MELProperty
     melPropFeature,
     melPropLabel,
     melPropFinalCriterion,
+    melPropMultiSeqHandling,
     melPropEvaluation,
     melPropOutput,
     melPropRecurrent
@@ -72,19 +73,19 @@ enum MELProperty
 // propArray - Array which contains all nodes that are associated with a particular property
 // set - true if property is to be added, false if property is deleted
 template <typename ElemType>
-void MELScript<ElemType>::SetProperty(ComputationNode<ElemType>* nodeProp, vector<ComputationNode<ElemType>*>& propArray, bool set)
+void MELScript<ElemType>::SetProperty(ComputationNode<ElemType>* nodeProp, vector<ComputationNode<ElemType>*>* propArray, bool set)
 {
-    auto found = propArray.begin();
-    for (;found != propArray.end() && *found != nodeProp; ++found)
+    auto found = propArray->begin();
+    for (;found != propArray->end() && *found != nodeProp; ++found)
         ; // loop until you find the node, or the end
 
-    if (set && found == propArray.end())
+    if (set && found == propArray->end())
     {
-        propArray.push_back(nodeProp);
+        propArray->push_back(nodeProp);
     }
-    else if (!set && found != propArray.end())
+    else if (!set && found != propArray->end())
     {
-        propArray.erase(found);
+        propArray->erase(found);
     }
 }
 
@@ -420,6 +421,10 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             prop = melPropFinalCriterion;
         }
+        else if (EqualInsensitive(propName, "MultiSeq", "ReqMultiSeqHandling"))
+        {
+            prop = melPropMultiSeqHandling;
+        }
         else if (EqualInsensitive(propName, "Evaluation", "Eval"))
         {
             prop = melPropEvaluation;
@@ -470,6 +475,12 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 {
                     bool set = params[2];
                     SetProperty(node, cn->FinalCriterionNodes(), set);
+                    break;
+                }
+                case melPropMultiSeqHandling:
+                {
+                    bool set = params[2];
+                    SetProperty(node, cn->NodesReqMultiSeqHandling(), set);
                     break;
                 }
                 case melPropEvaluation:

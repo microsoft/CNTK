@@ -36,10 +36,11 @@
 #include "ModelEditLanguage.h"
 #include "SGD.h"
 #include "commandArgUtil.h"
+#include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-
+#include <fileutil.h>
 
 // MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
 // HPC Pack 2012 R2 MS-MPI Redistributable Package
@@ -125,7 +126,7 @@ void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
     net.ResetEvalTimeStamp();
 
     SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
-    eval.Evaluate(reader, evalNodeNamesVector, mbSize[0], epochSize);
+    eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
 template <typename ElemType>
@@ -166,7 +167,7 @@ void DoEvalUnroll(const ConfigParameters& config)
 
     SimpleEvaluator<ElemType> eval(net);
     ElemType evalEntropy;
-    eval.EvaluateUnroll(testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
+    eval.EvaluateUnroll(&testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
 }
 
 template <typename ElemType>
@@ -232,7 +233,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
         fprintf(stderr, "model %ls --> \n", cvModelPath.c_str());
         std::vector<ElemType> evalErrors;
-        evalErrors = eval.Evaluate(cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
+        evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
         cvErrorResults.push_back(evalErrors);
 
         ::Sleep(1000 * sleepSecondsBetweenRuns);
@@ -431,20 +432,20 @@ void DoCreateLabelMap(const ConfigParameters& config)
 
 //////////////////////////////////////////////////////////////////////////
 //  for action SVD
-//		An action "SVD" performs the following process to transform an existing model: 
-//			1.	For a Learnable Parameter A whose name matches with the user specified regex, 
-//			    A is approximated by two matrice multiplication B*C ; 
-//			2.	In order to keep the low-rank structure in training, 
-//				the original A node will be replaced by A' whose opertions is Times
-//				with its left children being B and right chilren being 
+//      An action "SVD" performs the following process to transform an existing model: 
+//          1.  For a Learnable Parameter A whose name matches with the user specified regex, 
+//              A is approximated by two matrice multiplication B*C ; 
+//          2.  In order to keep the low-rank structure in training, 
+//              the original A node will be replaced by A' whose opertions is Times
+//              with its left children being B and right chilren being 
 //
-//		To use this command,
-//			user need to specify: 
-//					1)	modelPath			-- path to the existing model 
-//					2)  outputmodelPath		-- where to write the transformed model 
-//					3)  KeepRatio			-- how many percentage of energy we want to keep
-//					4)  ParameterName		-- name (regex) of the parameter node we want to perform a SVD decomposition 
-//				
+//      To use this command,
+//          user need to specify: 
+//                  1)  modelPath           -- path to the existing model 
+//                  2)  outputmodelPath     -- where to write the transformed model 
+//                  3)  KeepRatio           -- how many percentage of energy we want to keep
+//                  4)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
+//              
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //  helper function for DoParameterSVD 
@@ -454,8 +455,8 @@ bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
     msra::files::textreader reader(fn);
     for (; reader;)
     {
-        wstring line = reader.wgetline(); 
-        vector<wstring> tokens=msra::strfun::split(line, L"\t ");
+        wstring line = reader.wgetline();
+        vector<wstring> tokens = msra::strfun::split(line, L"\t ");
         if (tokens.size() != 2)
             return false;
         config[tokens[0]] = (float)msra::strfun::todouble(tokens[1]);
@@ -465,22 +466,22 @@ bool ParseSVDConfigFile(wstring fn, map<wstring, float>& config)
 // a brief on the SVD config file usage 
 void SVDConfigFileUsage()
 {
-    fprintf(stderr, "usage of SVDConfigFile\n"); 
-    fprintf(stderr, "A SVDConfigFile is referred in main config by \"SVDConfig\"\n"); 
+    fprintf(stderr, "usage of SVDConfigFile\n");
+    fprintf(stderr, "A SVDConfigFile is referred in main config by \"SVDConfig\"\n");
     fprintf(stderr, "Each line in this file specifies a group of Learnable Parameter nodes using regex and the KeepRatio associated with that group\n");
-    fprintf(stderr, "An example: \n"); 
-    fprintf(stderr, "W0         1.0\n"); 
-    fprintf(stderr, "W[1-5]     0.4\n"); 
-    
+    fprintf(stderr, "An example: \n");
+    fprintf(stderr, "W0         1.0\n");
+    fprintf(stderr, "W[1-5]     0.4\n");
+
 
 }
-template<typename ElemType> 
+template<typename ElemType>
 void  DoParameterSVD(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 
     wstring modelPath = config("modelPath");
     wstring outputmodelPath = config("outputmodelPath");
-    map<wstring, float>     svdconfig; 
+    map<wstring, float>     svdconfig;
 
     float keepratio = config("KeepRatio", "0.4");
     wstring svdnodeRegex = config("NodeNameRegex", L"");
@@ -495,7 +496,7 @@ void  DoParameterSVD(const ConfigParameters& config)
         if (!ParseSVDConfigFile(svdnodeConfigFile, svdconfig))
         {
             SVDConfigFileUsage();
-            return; 
+            return;
         }
     }
 
@@ -506,8 +507,8 @@ void  DoParameterSVD(const ConfigParameters& config)
         return;
     }
 
-    
-    ComputationNetwork<ElemType> net(deviceID); 
+
+    ComputationNetwork<ElemType> net(deviceID);
     net.LoadFromFile(modelPath);
 
     net.PerformSVDecomposition(svdconfig);
@@ -524,9 +525,9 @@ void  DoParameterSVD(const ConfigParameters& config)
 ///
 /// the outputs are the vocabulary, word2class and class2idx file with the information below
 ///     vocabulary format is as follows
-///       0	     42068	</s>	0
-///       1	     50770	the	0
-///       2	     45020	<unk>	1
+///       0      42068  </s>    0
+///       1      50770  the 0
+///       2      45020  <unk>   1
 ///       the first column is word index
 ///       the last column is class index of the word
 ///       the second column and the third column are for information purpose and 
@@ -573,8 +574,10 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         str.erase(str.find_last_not_of(' ') + 1);         //surfixing spaces
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
-        if (sposition == str.npos || eposition == str.npos)
-            str = "</s> " + str + " </s>";
+        if (sposition == str.npos)
+            str = "</s> " + str;
+        if (eposition == str.npos)
+            str = str + " </s>";
         vstr = msra::strfun::split(str, "\t ");
         for (int i = 1; i < vstr.size(); i++)
             v_count[vstr[i]]++;
@@ -596,9 +599,9 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
     size_t wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
-    for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
-    if (iter->second <= cutoff)
-        wordCountLessCutoff--;
+        for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
+            if (iter->second <= cutoff)
+                wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
         throw std::runtime_error("no word remained after cutoff");
 
@@ -696,6 +699,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (nbrCls > 0)
     {
         /// write the outputs
+        msra::files::make_intermediate_dirs(s2ws(outputWord2Cls));
         ofstream ofp(outputWord2Cls.c_str());
         if (!ofp)
             RuntimeError("cannot write to %s", outputWord2Cls.c_str());
@@ -703,6 +707,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
             ofp << (int)wrd2cls(r, 0) << endl;
         ofp.close();
 
+        msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
         ofp.open(outputCls2Index.c_str());
         if (!ofp)
             RuntimeError("cannot write to %s", outputCls2Index.c_str());
@@ -791,6 +796,345 @@ void DoAdapt(const ConfigParameters& config)
     delete cvDataReader;
 }
 
+/**
+This implements sequence to sequence translation paper in
+http://arxiv.org/pdf/1409.3215.pdf
+
+*/
+template <typename ElemType>
+void DoEncoderDecoder(const ConfigParameters& config)
+{
+    vector<IComputationNetBuilder<ElemType>*> netBuilders;
+    vector<IDataReader<ElemType>*> trainDataReader;
+    vector<IDataReader<ElemType>*> validationDataReader;
+
+    ConfigParameters configSGD = config("SGD");
+    bool makeMode = config("makeMode", "true");
+    IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* decoderNetBuilder = NULL;
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
+
+    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
+
+    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
+
+    if (config.Exists("EncoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need encoder network");
+
+    if (config.Exists("DecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        decoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    MultiNetworksSGD<ElemType> sgd(configSGD);
+
+    sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
+
+    netBuilders.push_back(encoderNetBuilder);
+    netBuilders.push_back(decoderNetBuilder);
+    trainDataReader.push_back(encoderDataReader);
+    trainDataReader.push_back(decoderDataReader);
+    validationDataReader.push_back(cvEncoderDataReader);
+    validationDataReader.push_back(cvDecoderDataReader);
+
+    sgd.EncoderDecoder(netBuilders, trainDataReader, validationDataReader, makeMode);
+
+    delete encoderDataReader;
+    delete decoderDataReader;
+    delete cvEncoderDataReader;
+    delete cvDecoderDataReader;
+}
+
+/**
+DoBidirecionEncoderDecoder
+*/
+template <typename ElemType>
+void DoBidirecionEncoderDecoder(const ConfigParameters& config)
+{
+
+    ConfigParameters configSGD = config("SGD");
+    bool makeMode = config("makeMode", "true");
+    IComputationNetBuilder<ElemType>* encoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* forwardDecoderNetBuilder = NULL;
+    IComputationNetBuilder<ElemType>* backwardDecoderNetBuilder = NULL;
+    vector<IComputationNetBuilder<ElemType>*> netBuilders;
+    vector<IDataReader<ElemType>*> trainDataReader;
+    vector<IDataReader<ElemType>*> validationDataReader;
+
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType>* encoderDataReader = new DataReader<ElemType>(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    DataReader<ElemType>* decoderDataReader = new DataReader<ElemType>(decoderReaderConfig);
+
+    ConfigParameters backwardDecoderReaderConfig = config("backwardDecoderReader");
+    DataReader<ElemType>* backwardDecoderDataReader = new DataReader<ElemType>(backwardDecoderReaderConfig);
+
+    ConfigParameters cvEncoderReaderConfig = config("encoderCVReader");
+    DataReader<ElemType>* cvEncoderDataReader = new DataReader<ElemType>(cvEncoderReaderConfig);
+
+    ConfigParameters cvDecoderReaderConfig = config("decoderCVReader");
+    DataReader<ElemType>* cvDecoderDataReader = new DataReader<ElemType>(cvDecoderReaderConfig);
+
+    ConfigParameters cvBackwardDecoderReaderConfig = config("BackwardDecoderCVReader");
+    DataReader<ElemType>* cvBackwardDecoderDataReader = new DataReader<ElemType>(cvBackwardDecoderReaderConfig);
+
+    if (config.Exists("EncoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("EncoderNetworkBuilder");
+        encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need encoder network");
+
+    if (config.Exists("DecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("DecoderNetworkBuilder");
+        forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    if (config.Exists("BackwardDecoderNetworkBuilder"))
+    {
+        ConfigParameters configSNB = config("BackwardDecoderNetworkBuilder");
+        backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+        LogicError("Need decoder networks");
+
+    MultiNetworksSGD<ElemType> sgd(configSGD);
+
+    sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
+
+    netBuilders.push_back(encoderNetBuilder);
+    netBuilders.push_back(forwardDecoderNetBuilder);
+    netBuilders.push_back(backwardDecoderNetBuilder);
+    trainDataReader.push_back(encoderDataReader);
+    trainDataReader.push_back(decoderDataReader);
+    trainDataReader.push_back(backwardDecoderDataReader);
+    validationDataReader.push_back(cvEncoderDataReader);
+    validationDataReader.push_back(cvDecoderDataReader);
+    validationDataReader.push_back(cvBackwardDecoderDataReader);
+
+    sgd.EncoderDecoder(netBuilders, trainDataReader, validationDataReader, makeMode);
+
+    delete encoderDataReader;
+    delete decoderDataReader;
+    delete cvEncoderDataReader;
+    delete cvDecoderDataReader;
+    delete backwardDecoderDataReader;
+    delete cvBackwardDecoderDataReader;
+}
+
+/**
+Oiginally, this is for testing models trained using the sequence to sequence translation method below
+http://arxiv.org/pdf/1409.3215.pdf
+Later on, it is extended to be more general to include a sequence of network operations. 
+*/
+template <typename ElemType>
+void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    vector<IDataReader<ElemType>*> readers;
+    ConfigParameters readerConfig = config("encoderReader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> encoderReader(readerConfig);
+
+    ConfigParameters decoderReaderConfig = config("decoderReader");
+    decoderReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> decoderReader(decoderReaderConfig);
+
+    readers.push_back(&encoderReader);
+    readers.push_back(&decoderReader);
+
+    ConfigArray minibatchSize = config("minibatchSize", "40960");
+    size_t epochSize = config("epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+
+    wstring encoderModelPath = config("encoderModelPath");
+    wstring decoderModelPath = config("decoderModelPath");
+
+    intargvector mbSize = minibatchSize;
+
+    int traceLevel = config("traceLevel", "0");
+    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+
+    vector<ComputationNetwork<ElemType>*> nets;
+    ComputationNetwork<ElemType> encoderNet(deviceId);
+    encoderNet.LoadFromFile(encoderModelPath, FileOptions::fileOptionsBinary, true);
+    encoderNet.ResetEvalTimeStamp();
+
+    ComputationNetwork<ElemType> decoderNet(deviceId);
+    decoderNet.LoadFromFile(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
+    decoderNet.ResetEvalTimeStamp();
+
+    nets.push_back(&encoderNet);
+    nets.push_back(&decoderNet);
+    ConfigArray evalNodeNames = config("evalNodeNames");
+    vector<wstring> evalNodeNamesVector;
+    for (int i = 0; i < evalNodeNames.size(); ++i)
+    {
+        evalNodeNamesVector.push_back(evalNodeNames[i]);
+    }
+
+    ConfigArray outputNodeNames = config("outputNodeNames");
+    vector<wstring> outputNodeNamesVector;
+    for (int i = 0; i < outputNodeNames.size(); ++i)
+    {
+        outputNodeNamesVector.push_back(outputNodeNames[i]);
+    }
+
+    ElemType beamWidth = config("beamWidth", "1");
+
+    ConfigParameters writerConfig = config("writer");
+    DataWriter<ElemType> testDataWriter(writerConfig);
+
+    SimpleEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
+    eval.InitTrainEncoderDecoderWithHiddenStates(config);
+
+    eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
+        testDataWriter, evalNodeNamesVector,
+        outputNodeNamesVector,
+        mbSize[0], beamWidth, epochSize);
+}
+
+/**
+This is beam search decoder.
+
+Developed by Kaisheng Yao.
+
+It is used in the following work:
+K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" in Interspeech 2015
+*/
+template <typename ElemType>
+void DoBeamSearchDecoding(const ConfigParameters& config)
+{
+    //test
+    ConfigParameters readerConfig = config("reader");
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    DataReader<ElemType> testDataReader(readerConfig);
+
+    DoEvalBeamSearch(config, testDataReader);
+}
+
+template <typename ElemType>
+void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& reader)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    ConfigArray minibatchSize = config("minibatchSize", "40960");
+    size_t epochSize = config("epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+    wstring modelPath = config("modelPath");
+    intargvector mbSize = minibatchSize;
+
+    int traceLevel = config("traceLevel", "0");
+    size_t numMBsToShowResult = config("numMBsToShowResult", "100");
+
+    ComputationNetwork<ElemType> net(deviceId);
+    net.LoadFromFile(modelPath);
+    net.ResetEvalTimeStamp();
+
+    ConfigArray evalNodeNames = config("evalNodeNames");
+    vector<wstring> evalNodeNamesVector;
+    for (int i = 0; i < evalNodeNames.size(); ++i)
+    {
+        evalNodeNamesVector.push_back(evalNodeNames[i]);
+    }
+
+    ConfigArray outputNodeNames = config("outputNodeNames");
+    vector<wstring> outputNodeNamesVector;
+    for (int i = 0; i < outputNodeNames.size(); ++i)
+    {
+        outputNodeNamesVector.push_back(outputNodeNames[i]);
+    }
+
+    ElemType beamWidth = config("beamWidth", "1");
+
+    ConfigParameters writerConfig = config("writer");
+    DataWriter<ElemType> testDataWriter(writerConfig);
+
+    SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+    eval.BeamSearch(&reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
+}
+
+template <typename ElemType>
+void DoSequenceTrain(const ConfigParameters& config)
+{
+    DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+
+    ConfigParameters configSGD(config("SGD"));
+    bool makeMode = config("makeMode", "true");
+
+    ConfigParameters readerConfig(config("reader"));
+    readerConfig.Insert("traceLevel", config("traceLevel", "0"));
+
+    IComputationNetBuilder<ElemType>* netBuilder = NULL;
+    if (config.Exists("NDLNetworkBuilder"))
+    {
+        ConfigParameters configNDL(config("NDLNetworkBuilder"));
+        netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
+    }
+    else if (config.Exists("SimpleNetworkBuilder"))
+    {
+        ConfigParameters configSNB(config("SimpleNetworkBuilder"));
+        netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+    }
+    else
+    {
+        RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
+    }
+
+    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
+
+    DataReader<ElemType>* cvDataReader = nullptr;
+    ConfigParameters cvReaderConfig(config("cvReader", L""));
+
+    if (cvReaderConfig.size() != 0)
+    {
+        cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
+        cvDataReader = new DataReader<ElemType>(cvReaderConfig);
+    }
+
+    wstring origModelFileName = config("origModelFileName", L"");
+
+    SGD<ElemType> sgd(configSGD);
+
+    sgd.SequenceTrain(netBuilder, origModelFileName, dataReader, cvDataReader, deviceId, makeMode);
+
+    delete dataReader;
+    delete cvDataReader;
+}
+
 template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
@@ -812,8 +1156,8 @@ void DoConvertFromDbn(const ConfigParameters& config)
     wstring dbnModelPath = config("dbnModelPath");
 
     IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
-    ComputationNetwork<ElemType>& net = netBuilder->LoadNetworkFromFile(dbnModelPath);
-    net.SaveToFile(modelPath);
+    ComputationNetwork<ElemType>* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
+    net->SaveToFile(modelPath);
     delete (netBuilder);
 }
 
@@ -821,49 +1165,49 @@ void DoConvertFromDbn(const ConfigParameters& config)
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
 {
-	wstring modelPath = config("modelPath");
-	wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
-	wstring outRending = config("outputFile");      // filename for the rendered topology plot
-	// this can be empty, in that case no rendering will be done
-	// or if this is set, renderCmd must be set, so CNTK will call re       
-	wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
-	// e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
-	//              where <IN> and <OUT> are two special placeholders
+    wstring modelPath = config("modelPath");
+    wstring outdot = config("outputDotFile");           // filename for the dot language output, if not specified, %modelpath%.dot will be used
+    wstring outRending = config("outputFile");      // filename for the rendered topology plot
+    // this can be empty, in that case no rendering will be done
+    // or if this is set, renderCmd must be set, so CNTK will call re       
+    wstring RenderCmd = config("RenderCmd");               // if this option is set, then CNTK will call the render to convert the outdotFile to a graph
+    // e.g. "d:\Tools\graphviz\bin\dot.exe -Tpng -x <IN> -o<OUT>"
+    //              where <IN> and <OUT> are two special placeholders
 
-	//========================================
-	// Sec. 1 option check
-	//========================================
-	if (outdot.empty())
-	{
-		outdot = modelPath +L".dot";
-	}
+    //========================================
+    // Sec. 1 option check
+    //========================================
+    if (outdot.empty())
+    {
+        outdot = modelPath + L".dot";
+    }
 
-	wstring rescmd;
-	if (!outRending.empty())        // we need to render the plot
-	{
-		std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
-		std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
+    wstring rescmd;
+    if (!outRending.empty())        // we need to render the plot
+    {
+        std::wregex inputPlaceHolder(L"(.+)(<IN>)(.*)");
+        std::wregex outputPlaceHolder(L"(.+)(<OUT>)(.*)");
 
-		rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1"+outdot+L"$3");
-		rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1"+outRending+L"$3");
-	}
+        rescmd = regex_replace(RenderCmd, inputPlaceHolder, L"$1" + outdot + L"$3");
+        rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1" + outRending + L"$3");
+    }
 
 
-	ComputationNetwork<ElemType> net(-1);
-	net.LoadFromFile(modelPath);
-	net.PlotNetworkTopology(outdot);
+    ComputationNetwork<ElemType> net(-1);
+    net.LoadFromFile(modelPath);
+    net.PlotNetworkTopology(outdot);
     fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 
-	if (!outRending.empty())
-	{
+    if (!outRending.empty())
+    {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
 #ifdef __unix__
         system(msra::strfun::utf8(rescmd).c_str());
 #else
-		_wsystem(rescmd.c_str());
+        _wsystem(rescmd.c_str());
 #endif
         fprintf(stderr, "Done\n");
-	}
+    }
 }
 
 
@@ -891,6 +1235,8 @@ void DoCommand(const ConfigParameters& config)
         {
             if (action[j] == "train" || action[j] == "trainRNN")
                 DoTrain<ElemType>(commandParams);
+            else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
+                DoSequenceTrain<ElemType>(commandParams);
             else if (action[j] == "adapt")
                 DoAdapt<ElemType>(commandParams);
             else if (action[j] == "test" || action[j] == "eval")
@@ -912,11 +1258,19 @@ void DoCommand(const ConfigParameters& config)
             else if (action[j] == "createLabelMap")
                 DoCreateLabelMap<ElemType>(commandParams);
             else if (action[j] == "writeWordAndClass")
-	            DoWriteWordAndClassInfo<ElemType>(commandParams);
+                DoWriteWordAndClassInfo<ElemType>(commandParams);
             else if (action[j] == "plot")
                 DoTopologyPlot<ElemType>(commandParams);
             else if (action[j] == "SVD")
                 DoParameterSVD<ElemType>(commandParams);
+            else if (action[j] == "trainEncoderDecoder")
+                DoEncoderDecoder<ElemType>(commandParams);
+            else if (action[j] == "testEncoderDecoder")
+                DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
+            else if (action[j] == "trainBidirectionEncoderDecoder")
+                DoBidirecionEncoderDecoder<ElemType>(commandParams);
+            else if (action[j] == "beamSearch")
+                DoBeamSearchDecoding<ElemType>(commandParams);
             else
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
 
@@ -1011,7 +1365,7 @@ void PrintUsageInfo()
     fprintf(stderr, "-------------------------------------------------------------------\n");
     fprintf(stderr, "Usage: cntk configFile=yourConfigFile\n");
     fprintf(stderr, "For detailed information please consult the CNTK book\n");
-    fprintf(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");    
+    fprintf(stderr, "\"An Introduction to Computational Networks and the Computational Network Toolkit\"\n");
     fprintf(stderr, "-------------------------------------------------------------------\n");
 }
 

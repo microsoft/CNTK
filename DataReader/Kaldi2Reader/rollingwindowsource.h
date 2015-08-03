@@ -341,7 +341,7 @@ namespace msra { namespace dbn {
                     {
                         msra::util::attempt (5, [&]()
                         {
-                            reader.readNoAlloc (ppath, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
+                            reader.readAlloc (ppath, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
                         });
                         if (featdim == 0)   // first time
                             featdim = feat.rows();
@@ -484,6 +484,7 @@ namespace msra { namespace dbn {
         // sweep-boundary-spanning mini-batch will simply be shortened.
         // This function is NOT thread-safe (due to caching of random sequence).
         bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+            std::vector<std::pair<wstring, size_t>> & /*utterances*/,
             std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
             std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
         {
@@ -556,7 +557,8 @@ namespace msra { namespace dbn {
 
         }
 
-        bool getbatch (const size_t /*globalts*/, const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
+        bool getbatch (const size_t /*globalts*/, const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/,
+            std::vector<size_t> & /*uids*/, std::vector<std::pair<wstring, size_t>> & /*utterances*/,
             std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/, 
             std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
         {

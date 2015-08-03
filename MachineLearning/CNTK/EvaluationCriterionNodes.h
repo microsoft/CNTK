@@ -36,8 +36,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-                
-        virtual const std::wstring OperationName() const {return TypeName();}
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"ErrorPrediction";} 
 
         void Reset()
@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues);
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -64,10 +64,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("ErrorPrediction node should never be in a loop.");
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues)  
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues, ComputationNodePtr curNode)
         {
             inputFunctionValues0.VectorMax(maxIndexes0, maxValues, true);
             inputFunctionValues1.VectorMax(maxIndexes1, maxValues, true);
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(maxIndexes0); //we are fine since it will only be called with full minibatch
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(maxIndexes1);
             functionValues.AssignNumOfDiff(maxIndexes0, maxIndexes1);
         #if NANCHECK
             functionValues.HasNan("ErrorPrediction");
@@ -113,7 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(1,1);
-            CopyImageSizeFromInputs(); 
+            InferImageDimsFromInputs(); 
 
             // resize the temporaries to their proper size
             size_t cols = Inputs(0)->FunctionValues().GetNumCols();
@@ -122,9 +124,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxValues.Resize(1,cols);
         }
 
-        virtual void CopyImageSizeFromInputs()
+        virtual void InferImageDimsFromInputs()
         {
-            CopyImageSizeFromInput(0, false);
+            InferImageDimsFromInput(0, false);
 
             m_outputChannels = 1;
             m_outputWidth = 1;
@@ -182,6 +184,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr node = new ErrorPredictionNode<ElemType>(this, name, flags);
             return node;
         }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     private:
         Matrix<ElemType> m_maxIndexes0, m_maxIndexes1;

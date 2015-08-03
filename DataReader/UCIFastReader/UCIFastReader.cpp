@@ -421,6 +421,10 @@ void UCIFastReader<ElemType>::Init(const ConfigParameters& readerConfig)
     if (udim < m_labelIdMax)
         udim = m_labelIdMax;
     m_labelDim = (LabelIdType)udim;
+
+    mOneLinePerFile = false;
+    mOneLinePerFile = readerConfig("onelineperfile", "false");
+
 }
 
 // InitCache - Initialize the caching reader if cache files exist, otherwise the writer
@@ -625,6 +629,14 @@ size_t RoundUp(size_t value, size_t size)
     return ((value + size -1)/size)*size;
 }
 
+template<class ElemType>
+void UCIFastReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz) 
+{
+    mBlgSize = sz; 
+    if (mOneLinePerFile)
+        m_mbSize = mBlgSize;
+};
+
 //StartMinibatchLoop - Startup a minibatch loop 
 // mbSize - [in] size of the minibatch (number of Samples, etc.)
 // epoch - [in] epoch number for this loop, if > 0 the requestedEpochSamples must be specified (unless epoch zero was completed this run)
@@ -633,6 +645,9 @@ size_t RoundUp(size_t value, size_t size)
 template<class ElemType>
 void UCIFastReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
+    if (mOneLinePerFile)
+        mbSize = mBlgSize; /// each file has only one observation, therefore the number of data to read is the number of files
+
     // if we aren't currently caching, see if we can use a cache
     if (!m_cachingReader && !m_cachingWriter)
     {

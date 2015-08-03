@@ -59,7 +59,12 @@ void DataWriter<ElemType>::GetDataWriter(const ConfigParameters& config)
     else if (writerType == "LUSequenceWriter" || writerType == "LUSequenceReader")
     {
         writerType = "LUSequenceReader";
-    }else if (writerType == "KaldiReader" || writerType == "KaldiWriter")
+    }
+    else if (writerType == "LMSequenceWriter" || writerType == "LMSequenceReader")
+    {
+        writerType = "LMSequenceReader";
+    }
+    else if (writerType == "KaldiReader" || writerType == "KaldiWriter")
     {
         writerType = "KaldiReader";
     }
