@@ -1532,7 +1532,7 @@ protected:
         if (epochNumber < 2 && m_prevChosenMinibatchSize != 0)
         {
             // newly started training: any previous MB size stored in the model is to be ignored
-            fprintf(stderr, "before epoch .2, previous minibatchSize %d is "
+            fprintf(stderr, "before epoch .2, previous minibatchSize %zd is "
                     "considered invalid -> resetting\n", m_prevChosenMinibatchSize);
             m_prevChosenMinibatchSize = 0;
         }
@@ -1543,7 +1543,7 @@ protected:
             (epochNumber + 1) % m_minibatchSizeTuningFrequency != 0)
         {
             fprintf(stderr, "AdaptiveMinibatchSearch: Search for a better minibatchSize "
-                    "in epoch %d skipped, keeping minibatchSize of %d\n",
+                    "in epoch %d skipped, keeping minibatchSize of %zd\n",
                     epochNumber + 1, m_prevChosenMinibatchSize);
             chosenMinibatchSize = m_prevChosenMinibatchSize;
         }
@@ -1568,7 +1568,7 @@ protected:
                 assert(m_prevChosenMinibatchSize >= chosenMinibatchSize);
 
                 fprintf(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to "
-                        "previous minibatchSize %d*2\n", m_prevChosenMinibatchSize);
+                        "previous minibatchSize %zd*2\n", m_prevChosenMinibatchSize);
                 maxMinibatchSize = min(maxMinibatchSize, m_prevChosenMinibatchSize * 2);
             }
 
@@ -1634,7 +1634,7 @@ protected:
             // round mbsize to something meaningful
             trialMinibatchSize = RoundToMultipleOf64(trialMinibatchSizeFloat);
 
-            fprintf(stderr, "\nAdaptiveMinibatchSearch: Evaluating trial minibatchSize=%d out of range %d..%d ...\n\n",
+            fprintf(stderr, "\nAdaptiveMinibatchSearch: Evaluating trial minibatchSize=%zd out of range %zd..%zd ...\n\n",
                     trialMinibatchSize, RoundToMultipleOf64(minMinibatchSize), RoundToMultipleOf64(maxMinibatchSize));
 
             size_t totalSamplesSeen;
