@@ -49,12 +49,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_frameSource = NULL;
         m_lattices = NULL;
         m_seqTrainDeriv = NULL;
+        m_CtcTrainDeriv = NULL;
         m_uttDerivBuffer = NULL;
         m_minibatchBuffer.resize(0);
         m_minibatchBufferIndex = 0;
         m_noData = false;
         m_convertLabelsToTargets = false;
         m_doSeqTrain = false;
+        m_doCtcTrain = false;
         m_getMinibatchCopy = false;
         m_doMinibatchBuffering = false;
         m_doMinibatchBufferTruncation = false;
@@ -101,12 +103,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("Current Supported sequence training criterion are: mpfe, smbr.\n");
             }
         }
+        // Checks if we need to do sequence training.
+        if (readerConfig.Exists("CtcTrainCriterion"))
+        {
+            m_doCtcTrain = true;
+        }
 
         // Checks if framemode is false in sequence training.
         m_framemode = readerConfig("frameMode", "true");
-        if (m_framemode && m_doSeqTrain)
+        if (m_framemode && m_doSeqTrain || m_framemode && m_doCtcTrain)
         {
-            LogicError("frameMode has to be false in sequence training.\n");
+            LogicError("FrameMode has to be false in Sequence or Ctc training.\n");
         }
 
         // Checks if partial minibatches are allowed.
@@ -232,6 +239,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numberOfuttsPerMinibatch, m_seqTrainDeriv);
     }
 
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::PrepareForCtcTraining(const ConfigParameters& readerConfig)
+    {
+        // Parameters for Ctc Training.
+        wstring labRspecifier;
+
+        // Makes sure that "labels" sections exist.
+        if (!readerConfig.Exists("labels"))
+        {
+            LogicError("Ctc training requested, but \"labels\" section is not provided.\n");
+        }
+
+        // Processes "alignments" section.
+        ConfigParameters labConfig = readerConfig("labels");
+        if (!labConfig.Exists("rx"))
+        {
+            LogicError("Rspecifier is not provided for labels.\n");
+        }
+        labRspecifier = wstring(labConfig("rx"));
+
+        // Scans the configurations to get "readerDeriv" type input and
+        // "readerObj" type input. Both are feature nodes, we feed derivatives
+        // to training criterion node through "readerDeriv" and feed objective
+        // through "readerObj".
+        bool hasDerivative = false, hasObj = false;
+        for (auto iter = readerConfig.begin(); iter != readerConfig.end(); ++iter)
+        {
+            ConfigParameters temp = iter->second;
+            if (temp.ExistsCurrent("type"))
+            {
+                if (temp("type") == "readerDeriv")
+                {
+                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerDeriv;
+                    hasDerivative = true;
+                }
+                else if (temp("type") == "readerObj")
+                {
+                    m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerObj;
+                    hasObj = true;
+                }
+            }
+        }
+        if (!hasDerivative || !hasObj)
+        {
+            LogicError("Missing readerDeriv or readerObj type feature\n");
+        }
+
+        // Initializes sequence training interface.
+        m_CtcTrainDeriv = new CtcTrainingIO<ElemType>(
+            labRspecifier,
+            m_seqTrainCriterion);
+
+        // Initializes derivative buffering.
+        m_doMinibatchBuffering = true;
+        if (m_uttDerivBuffer != NULL)
+        {
+            LogicError("Derivative buffer has already been set, are you doing "
+                "CTC training using derivative "
+                "buffering?\n");
+        }
+        m_uttDerivBuffer = new UtteranceDerivativeBuffer<ElemType>(
+            m_numberOfuttsPerMinibatch, m_CtcTrainDeriv);
+    }
+
     // Loads input and output data for training and testing. Below we list the
     // categories for different input/output:
     // features:      InputOutputTypes::real
@@ -249,6 +321,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_doSeqTrain)
         {
             PrepareForSequenceTraining(readerConfig);
+        }
+        if (m_doCtcTrain)
+        {
+            PrepareForCtcTraining(readerConfig);
         }
 
         // Variables related to multi-utterance.
@@ -697,6 +773,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             delete m_seqTrainDeriv;
             m_seqTrainDeriv = NULL;
+        }
+        if (m_CtcTrainDeriv != NULL)
+        {
+            delete m_CtcTrainDeriv;
+            m_CtcTrainDeriv = NULL;
         }
         if (m_uttDerivBuffer != NULL)
         {

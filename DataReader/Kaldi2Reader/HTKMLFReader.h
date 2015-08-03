@@ -7,6 +7,7 @@
 #pragma once
 #include "DataReader.h"
 #include "KaldiSequenceTrainingDerivative.h"
+#include "CtcTrainingIO.h"
 #include "UtteranceDerivativeBuffer.h"
 #include "commandArgUtil.h" // for intargvector
 
@@ -29,6 +30,10 @@ private:
     bool m_doSeqTrain;
     wstring m_seqTrainCriterion;
     KaldiSequenceTrainingDerivative<ElemType>* m_seqTrainDeriv;
+
+    // CTC training related members.
+    bool m_doCtcTrain;
+    CtcTrainingIO<ElemType>* m_CtcTrainDeriv;
 
     // Minibatch buffering.
     struct MinibatchBufferUnit
@@ -110,6 +115,8 @@ private:
     void PrepareForWriting(const ConfigParameters& config);
     void PrepareForSequenceTraining(const ConfigParameters& config);
     
+    void PrepareForCtcTraining(const ConfigParameters& config);
+
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool GetOneMinibatchToTrainOrTestDataBuffer(const std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>& matrices);

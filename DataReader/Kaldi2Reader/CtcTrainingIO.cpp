@@ -32,9 +32,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return a + b;
     }
 
-    //template <> float AddAB<float>(float a, float b);
-    //template <> double AddAB<double>(double a, double b);
-
     // a - b, where a and b are assumed to be in the log scale
     float SubAB(float a, float b)
     {
@@ -45,9 +42,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
       else
         return a - b;
     }
-
-    //template <> float SubAB<float>(float a, float b);
-    //template <> double SubAB<double>(double a, double b);
 
     // exp(a)
     float ExpA(float a)
@@ -60,9 +54,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return exp(a);
     }
 
-    //template <> float ExpA<float>(float a);
-    //template <> double ExpA<double>(double a);
-
     // Approximation of  log(a + b) = log(a) + log(1 + b/a), if b < a
     //                              = log(b) + log(1 + a/b), if a < b
     float LogAPlusB(float a, float b) // x and y are in log scale and so is the result
@@ -73,33 +64,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
           return AddAB(b, log(1 + ExpA(SubAB(a, b))));
     }
 
-    //template <> float LogAPlusB<float>(float a, float b);
-    //template <> double LogAPlusB<double>(double a, double b);
-
     // Constructor.
     template<class ElemType>
     CtcTrainingIO<ElemType>::CtcTrainingIO(
         const wstring& labRspecifier,
-        const wstring& transModelFilename,
         const wstring& trainCriterion)
     {
         using namespace msra::asr;
         assert(labRspecifier != L"");
         m_labRspecifier = new kaldi::RandomAccessInt32VectorReader(
             trimmed(fileToStr(toStr(labRspecifier))));
-        ReadKaldiObject(toStr(transModelFilename), &m_transModel);
         m_trainCriterion = trainCriterion;
-        m_objective = 0;
-        //m_posteriors.clear();
+
         if (m_trainCriterion != L"CTC")
         {
             LogicError("Supported training criterion is: CTC.\n");
         }
-        m_derivRead = false;
-        m_objRead = false;
-        m_currentUttHasDeriv = false;
         m_currentUttID = L"";
-        m_currentUttLength = 0;
     }
 
     // Destructor.
@@ -111,14 +92,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete m_labRspecifier;
             m_labRspecifier = NULL;
         }
-    }
-
-    template<class ElemType>
-    bool CtcTrainingIO<ElemType>::HasDerivatives(const wstring& uttID)
-    {
-        if (uttID == m_currentUttID && m_currentUttHasDeriv)
-            return true;
-        return false;
     }
 
     template<class ElemType>
@@ -218,8 +191,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    bool CtcTrainingIO<ElemType>::ComputeDerivatives(
-        const wstring& uttID, const Matrix<ElemType>& logLikelihoodIn)
+    bool CtcTrainingIO<ElemType>::ComputeDerivative(const wstring& uttID,
+        const Matrix<ElemType>& logLikelihoodIn,
+        Matrix<ElemType>* derivative,
+        ElemType* objective)
     {
         //transpose the matrix so that it is in kaldi format
         Matrix<ElemType> log_nnet_out(logLikelihoodIn.Transpose());
@@ -298,98 +273,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //TODO: this is not the correct posterior format
         //Set the correct posterior format
-        m_posteriors = diff.Transpose();
+        *derivative = diff.Transpose();
 
         //Set the objective
-        m_objective = logLikelihoodIn.GetNumCols() - pzx;
+        *objective = logLikelihoodIn.GetNumCols() - pzx;
 
-        assert(m_posteriors.GetNumCols() == logLikelihoodIn.GetNumCols());
+        assert(derivative->GetNumCols() == logLikelihoodIn.GetNumCols());
 
-        m_derivRead = false;
-        m_objRead = false;
-        m_currentUttHasDeriv = true;
         m_currentUttID = uttID;
-        m_currentUttLength = logLikelihoodIn.GetNumCols();
         return true;
     }
 
     template<class ElemType>
-    void CtcTrainingIO<ElemType>::GetDerivatives(size_t startFrame,
-                                                 size_t endFrame,
-                                                 const std::wstring& uttID,
-                                                 Matrix<ElemType>& derivativesIn)
+    bool CtcTrainingIO<ElemType>::HasResourceForDerivative(
+        const wstring& uttID) const
     {
-        // Does some sanity check first.
-        if (uttID != m_currentUttID)
+        if(!m_labRspecifier)
         {
-            RuntimeError("Requested utterance does not matched the utterance that we have computed derivatives for: %S v.s. %S\n", uttID.c_str(), m_currentUttID.c_str());
+            fprintf(stderr, "WARNING: label reader has not been"
+                            " set up yet.\n");
+            return false;
         }
-        if (!m_currentUttHasDeriv)
+
+        std::string uttIDStr = msra::asr::toStr(uttID);
+        if(!m_labRspecifier->HasKey(uttIDStr))
         {
-            RuntimeError("Derivatives have not been computed, you have to call CtcTrainingIO::ComputeDerivative() before using it.\n");
+            return false;
         }
-        assert(startFrame >= 0);
-        assert(endFrame <= m_currentUttLength);
-
-        // Checks if we need to move data to GPU.
-        if (derivativesIn.GetDeviceId() >= 0)
-          m_posteriors.TransferFromDeviceToDevice(CPUDEVICE, derivativesIn.GetDeviceId(), true, false, false);
-
-        derivativesIn.SetValue(m_posteriors);
-
-        // We've used up all the derivatives, reset it.
-        if (endFrame >= m_currentUttLength)
-        {
-            m_derivRead = true;
-            if (m_objRead)
-            {
-                m_currentUttID = L"";
-                m_currentUttHasDeriv = false;
-                m_currentUttLength = 0;
-            }
-        }
-    }
-
-    template<class ElemType>
-    void CtcTrainingIO<ElemType>::GetObjectives(size_t startFrame,
-                                                          size_t endFrame,
-                                                          const std::wstring& uttID,
-                                                          Matrix<ElemType>& objectivesIn)
-    {
-        Matrix<ElemType> objectives(CPUDEVICE);
-
-        // Does some sanity check first.
-        if (uttID != m_currentUttID)
-        {
-            RuntimeError("Requested utterance does not matched the utterance that we have computed objectives for: %S v.s. %S\n", uttID.c_str(), m_currentUttID.c_str());
-        }
-        if (!m_currentUttHasDeriv)
-        {
-            RuntimeError("Objectives have not been computed, you have to call CtcTrainingIO::ComputeDerivative() before using it.\n");
-        }
-        assert(startFrame >= 0);
-        assert(endFrame <= m_currentUttLength);
-
-        objectives.Resize(1, 1);
-        objectives.SetValue(m_objective * static_cast<ElemType>(endFrame - startFrame) / static_cast<ElemType>(m_currentUttLength));
-
-        // Checks if we need to move data to GPU.
-        if (objectivesIn.GetDeviceId() >= 0)
-            objectives.TransferFromDeviceToDevice(CPUDEVICE, objectivesIn.GetDeviceId(), true, false, false);
-
-        objectivesIn.SetValue(objectives);
-
-        // We've used up all the objectives, reset it.
-        if (endFrame >= m_currentUttLength)
-        {
-            m_objRead = true;
-            if (m_derivRead)
-            {
-                m_currentUttID = L"";
-                m_currentUttHasDeriv = false;
-                m_currentUttLength = 0;
-            }
-        }
+        return true;
     }
 
     template class CtcTrainingIO<float>;

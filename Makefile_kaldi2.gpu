@@ -41,18 +41,21 @@
 # Besides, if you compile Kaldi with -O4 option instead of -g, it will be faster
 # in sequence training.
 
-CC = g++-4.8
-NVCC = nvcc
+# CC = g++-4.8
+CC = g++
+# NVCC = nvcc
+NVCC = /usr/local/cuda/bin/nvcc
 ARCH = x86_64
 DEVICE = gpu
-#BUILDTYPE = debug
+# BUILDTYPE = debug
 BUILDTYPE = release
 # comment following and uncomment the next one to enable MKL library
-#MATHLIB = acml
-MATHLIB = mkl
+MATHLIB = acml
+# MATHLIB = mkl
 # modify relevant path below for your system
 MKL_PATH = /usr/users/yzhang87/tools/composer_xe_2015.2.164
-ACML_PATH = /usr/users/yzhang87/code/acml/gfortran64
+# ACML_PATH = /usr/users/yzhang87/code/acml/gfortran64
+ACML_PATH = /export/ws15-dnn-data/tools/acml/gfortran64
 #######
 
 BUILDFOR = $(ARCH).$(DEVICE).$(BUILDTYPE).$(MATHLIB)
@@ -77,11 +80,13 @@ else
 	MATHLIB_LIB = -L$(ACML_PATH)/lib -lacml -lm -lpthread
 	MATHLIB_DEFINE = -DUSE_ACML
 endif
-CUDA_PATH = /scratch/cuda-6.5
+# CUDA_PATH = /scratch/cuda-6.5
+CUDA_PATH = /usr/local/cuda
 CUDA_INCLUDE = $(CUDA_PATH)/include
 CUDA_LIB = -L$(CUDA_PATH)/lib64 -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
-NVML_INCLUDE = /scratch/usr/include/nvidia/gdk # install and include it @ https://developer.nvidia.com/gpu-deployment-kit
+# NVML_INCLUDE = /scratch/usr/include/nvidia/gdk # install and include it @ https://developer.nvidia.com/gpu-deployment-kit
+NVML_INCLUDE = /export/ws15-dnn-data/tools/nvml/usr/include/nvidia/gdk
 
 
 # Add KALDI (you need to add your Kaldi path into this file)
@@ -105,7 +110,7 @@ CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CN
 BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
 KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp
-KALDI2READER_SRC = DataReader/Kaldi2Reader/HTKMLFWriter.cpp DataReader/Kaldi2Reader/DataWriter.cpp DataReader/Kaldi2Reader/DataReader.cpp DataReader/Kaldi2Reader/HTKMLFReader.cpp DataReader/Kaldi2Reader/UtteranceDerivativeBuffer.cpp DataReader/Kaldi2Reader/KaldiSequenceTrainingDerivative.cpp DataReader/Kaldi2Reader/CtcTrainingIO.cpp
+KALDI2READER_SRC = DataReader/Kaldi2Reader/HTKMLFWriter.cpp DataReader/Kaldi2Reader/DataWriter.cpp DataReader/Kaldi2Reader/DataReader.cpp DataReader/Kaldi2Reader/HTKMLFReader.cpp DataReader/Kaldi2Reader/KaldiSequenceTrainingDerivative.cpp DataReader/Kaldi2Reader/CtcTrainingIO.cpp
 
 SEQUENCEREADER_SRC = DataReader/LMSequenceReader/SequenceReader.cpp DataReader/LMSequenceReader/SequenceParser.cpp DataReader/LMSequenceReader/Exports.cpp
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
