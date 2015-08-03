@@ -55,6 +55,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
     static inline void LogicError(const string & message) { RuntimeError("%s", message.c_str()); }
 
+    // Warning - warn with a formatted error string
+    static inline void Warning(const char * format, ...)
+    {
+        va_list args;
+        char buffer[1024];
+
+        va_start(args, format);
+        vsprintf(buffer, format, args);
+    };
+    static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
+
     // ----------------------------------------------------------------------------
     // dynamic loading of modules  --TODO: not Basics, should move to its own header
     // ----------------------------------------------------------------------------

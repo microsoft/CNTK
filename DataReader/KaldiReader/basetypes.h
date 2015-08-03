@@ -1188,5 +1188,51 @@ public:
     }
 };
 #endif
+#define EPSILON 1e-5
+#define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
+
+/**
+These macros are used for sentence segmentation information. 
+*/
+#define SENTENCE_BEGIN ((int) MinibatchPackingFlag::UtteranceStart)
+#define SENTENCE_MIDDLE ((int) MinibatchPackingFlag::None)
+#define SENTENCE_END ((int) MinibatchPackingFlag::UtteranceEnd)
+#define NO_LABELS ((int) MinibatchPackingFlag::NoLabel)
+
+enum class MinibatchPackingFlag : unsigned char
+{
+    None = 0,
+    UtteranceStart = 1 << 0,   //binary 0001
+    UtteranceEnd = 1 << 1,   //binary 0010
+    NoLabel = 1 << 2,      //binary 0100
+
+    UtteranceStartOrNoLabel = UtteranceStart | NoLabel,
+    UtteranceEndOrNoLabel = UtteranceEnd | NoLabel,
+    UtteranceStartOrEndOrNoLabel = UtteranceStart | UtteranceEnd | NoLabel,
+};
+
+inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+}
+
+inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+{
+    a = a | b;
+    return a;
+}
+
+
+inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+{
+    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
+}
+
+template<class F>
+static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
+{
+    return l.second > r.second;
+}
+
 
 #endif    // _BASETYPES_

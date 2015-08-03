@@ -111,7 +111,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t iFeat, iLabel;
             iFeat = iLabel = 0;
             vector<wstring> statelistpaths;
-            bool framemode = true;
             vector<size_t> numContextLeft;
             vector<size_t> numContextRight;
 
@@ -253,14 +252,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (readerConfig.Exists("frameMode"))
-            {
-                const std::string& framemodeString = readerConfig("frameMode");
-                if (framemodeString == "false")
-                {
-                    framemode = false;
-                }
-            }
+            m_framemode = readerConfig("frameMode", "true");
 
             int verbosity = readerConfig("verbosity","2");
 
@@ -383,9 +375,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_lattices = new msra::dbn::latticesource(latticetocs, modelsymmap);
 
                 // now get the frame source. This has better randomization and doesn't create temp files
-                m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, framemode);
+                m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode);
                 m_frameSource->setverbosity(verbosity);
-                //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, framemode);
+                //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, m_framemode);
 
             }
             else if (!_stricmp(readMethod.c_str(),"rollingWindow"))
@@ -778,6 +770,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         return false;
 
                     // now, access all features and and labels by iterating over map of "matrices"
+                    bool first = true;
                     std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                     for (iter = matrices.begin();iter!=matrices.end(); iter++)
                     {
@@ -792,6 +785,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             dim = m_featureNameToDimMap[iter->first];
                             const msra::dbn::matrixstripe feat = m_mbiter->frames(id);
                             const size_t actualmbsize = feat.cols();   // it may still return less if at end of sweep TODO: this check probably only needs to happen once
+                            if (first)
+                            {
+                                m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
+                                m_minibatchPackingFlag.resize(feat.cols());
+
+                                m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+                                m_sentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
+
+                                std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                                first = false;
+                            }
+
                             assert (actualmbsize == m_mbiter->currentmbframes());
                             skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
 
@@ -932,6 +938,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
+
+                    m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
+                    m_minibatchPackingFlag.resize(m_mbSize);
+
+                    for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                    {
+                        for (size_t j = 0; j < m_mbSize; j++)
+                        {
+                            m_sentenceBegin.SetValue(i,j,(ElemType) SENTENCE_MIDDLE);
+                        }
+                    }
+                    std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+
+
                     vector<size_t> actualmbsize;
                     actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
@@ -949,6 +969,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
+                                m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
@@ -957,8 +979,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data =
-                                *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                 {
@@ -1035,8 +1056,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data =
-                                *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data =*matrices[iter->first]; // can be features or labels
 
                                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                 {
@@ -1099,6 +1119,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             m_processedFrame[i] += (endFr-startFr);
                             m_switchFrame[i] = actualmbsize[i];
+                            if (actualmbsize[i] < m_mbSize)
+                            {
+                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
+                                m_minibatchPackingFlag[actualmbsize[i]] |= MinibatchPackingFlag::UtteranceStart;
+                            }
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
                             bool reNewSucc = ReNewBufferForMultiIO(i);
@@ -1106,8 +1131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
                                 // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data =
-                                *matrices[iter->first]; // can be features or labels
+                            //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
                                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                 {
@@ -1228,7 +1252,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_fileEvalSource->CreateEvalMinibatch();
 
                 // populate input matrices
-
+                bool first = true;
                 std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                 for (iter = matrices.begin();iter!=matrices.end(); iter++)
                 {
@@ -1242,6 +1266,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         size_t dim = m_featureNameToDimMap[iter->first];
 
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
+                        if (first)
+                        {
+                            m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
+                            m_minibatchPackingFlag.resize((size_t)feat.cols());
+                            m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+                            m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+
+                            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                            first = false;
+                        }
 
                         // copy the features over to our array type
                         assert(feat.rows()==dim); dim; // check feature dimension matches what's expected
@@ -1545,14 +1580,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     template<class ElemType>
-        void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    {
+        if (!m_framemode)
         {
-            sentenceEnd.resize(m_switchFrame.size());
-            for (size_t i = 0; i < m_switchFrame.size() ; i++)
-            {
-                sentenceEnd[i] = m_switchFrame[i];
-            }
+            sentenceBegin.SetValue(m_sentenceBegin);
+            minibatchPackingFlag = m_minibatchPackingFlag;
         }
+    }
+
 
     // GetFileConfigNames - determine the names of the features and labels sections in the config file
     // features - [in,out] a vector of feature name strings

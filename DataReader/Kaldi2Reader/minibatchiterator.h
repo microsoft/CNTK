@@ -81,13 +81,28 @@ public:
     //  - lattices are returned as a shared_ptr
     // Thus, getbatch() can be called in a thread-safe fashion, allowing for a 'minibatchsource' implementation that wraps another with a read-ahead thread.
     // Return value is 'true' if it did read anything from disk, and 'false' if data came only from RAM cache. This is used for controlling the read-ahead thread.
+    //
+    // This version introduces <utteranceinfo>, which contains the utterance ID
+    // information for each frame in the minibatch. Ideally we would like to
+    // call it as <uids>, but that is already taken by the labels... If the
+    // shuffling happens at the frame level, then it will be empty. Otherwise
+    // if at utterance level the pair looks as follows:
+    //   utterance_ID1 number_of_consecutive_frames_in_utterance_ID1
+    //   utterance_ID2 number_of_consecutive_frames_in_utterance_ID2
+    // The above information should be enough to figure out which utterance
+    // each frame belongs to if the shuffling happens at the utterance level.
+    // We use this information to load corresponding lattices/alignments for
+    // sequence training.
+    // TODO(Guoguo): clean up the lattices in Kaldi2Reader, since we are not
+    //               going to use those HTK format lattices.
     virtual bool getbatch (const size_t globalts,
                            const size_t framesrequested, msra::dbn::matrix & feat, std::vector<size_t> & uids,
+                           std::vector<std::pair<wstring, size_t>> & utteranceinfo,
                            std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
                            std::vector<shared_ptr<const latticesource::latticepair>> & lattices) = 0;
-    // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
     virtual bool getbatch (const size_t globalts,
                            const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+                           std::vector<std::pair<wstring, size_t>> & utteranceinfo,
                            std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
                            std::vector<shared_ptr<const latticesource::latticepair>> & lattices) = 0;
     virtual size_t totalframes() const = 0;
@@ -119,6 +134,7 @@ class minibatchiterator
 
     std::vector<msra::dbn::matrix> featbuf;              // buffer for holding curernt minibatch's frames
     std::vector<std::vector<size_t>> uids;               // buffer for storing current minibatch's frame-level label sequence
+    std::vector<std::pair<wstring, size_t>> utteranceinfo;  // buffer for current minibatch's utterance ID information.
     std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> transcripts;    // buffer for storing current minibatch's word-level label sequences (if available and used; empty otherwise)
     std::vector<shared_ptr<const latticesource::latticepair>> lattices;     // lattices of the utterances in current minibatch (empty in frame mode)
 
@@ -148,7 +164,7 @@ private:
         assert (requestedmbframes > 0);
         const size_t requestedframes = min (requestedmbframes, epochendframe - mbstartframe);    // (< mbsize at end)
         assert (requestedframes > 0);
-        source.getbatch (mbstartframe, requestedframes, featbuf, uids, transcripts, lattices);
+        source.getbatch (mbstartframe, requestedframes, featbuf, uids, utteranceinfo, transcripts, lattices);
         timegetbatch = source.gettimegetbatch();
         actualmbframes = featbuf[0].cols(); // for single i/o, there featbuf is length 1
         // note:
@@ -232,6 +248,7 @@ public:
     size_t currentmbstartframe() const { return mbstartframe; }
     size_t currentmbframes() const { return actualmbframes; }
     size_t currentmblattices() const { return lattices.size(); }
+    size_t currentmbutterances() const { return utteranceinfo.size(); }
     size_t currentdatapass() const { return datapass; } // 0..datapasses-1; use this for sub-sampling
     size_t requestedframes() const {return requestedmbframes; }
     double gettimegetbatch () {return timegetbatch;}
@@ -257,6 +274,8 @@ public:
     // return the reference transcript labels (state alignment) for current minibatch
     /*const*/ std::vector<size_t> & labels() { checkhasdata(); assert(uids.size()==1);return uids[0]; }
     /*const*/ std::vector<size_t> & labels(size_t i) { checkhasdata(); assert(uids.size()>=i+1); return uids[i]; }
+
+    std::vector<std::pair<wstring, size_t>> getutteranceinfo() { checkhasdata(); return utteranceinfo; }
 
     // return a lattice for an utterance (caller should first get total through currentmblattices())
     shared_ptr<const msra::dbn::latticesource::latticepair> lattice (size_t uttindex) const { return lattices[uttindex]; }    // lattices making up the current 

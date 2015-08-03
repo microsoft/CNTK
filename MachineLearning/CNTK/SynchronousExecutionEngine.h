@@ -83,7 +83,7 @@ public:
                     nodePtr = m_net.CreateInputNode(name, rows, cols);
             }
         }
-        else if (SparseInputValue<ElemType>::TypeName() == cnNodeType)
+        else if (InputValue<ElemType>::SparseTypeName() == cnNodeType)
         {
             if (parameter.size() < 1 || parameter.size() > 2)
                 RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
@@ -117,6 +117,23 @@ public:
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
 
                 nodePtr = m_net.CreateInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
+            }
+        }
+        else if (cnNodeType == L"SparseImageInput")
+        {
+            if (parameter.size() < 3 || parameter.size() > 4)
+                RuntimeError("%ls should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType.c_str());
+
+            if (pass == ndlPassInitial)
+            {
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
+                size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+
+                nodePtr = m_net.CreateSparseInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
             }
         }
         else if (LearnableParameter<ElemType>::TypeName() == cnNodeType)
@@ -275,8 +292,8 @@ public:
         }
         else if (cnNodeType == ReshapeNode<ElemType>::TypeName())
         {
-            if (parameter.size() != 2)
-                RuntimeError("Reshape should have two parameters. Usage: Reshape(origNodeName, numRows.");
+            if (parameter.size() < 2 || parameter.size() > 5)
+                RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
 
             nodeParamCount = 1;
             nodeParamStart = 0;
@@ -286,19 +303,22 @@ public:
                 // evaluate only scalar parameters
                 vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
                 size_t num_rows = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                size_t img_width = node->GetOptionalParameter("imageWidth", "0");
+                size_t img_height = node->GetOptionalParameter("imageHeight", "0");
+                size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = m_net.Reshape(NULL, num_rows, name);
+                nodePtr = m_net.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
                 nodePtr->NeedGradient() = needGradient;
             }
         }
-        else if (cnNodeType == DelayNode<ElemType>::TypeName())
+        else if (cnNodeType == PastValueNode<ElemType>::TypeName() || 
+                 cnNodeType == FutureValueNode<ElemType>::TypeName())
         {
             if (parameter.size() <2 || parameter.size() >3)
-                RuntimeError("Delay should have two to three fixed parameters. Usage: Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1]).");
+                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
 
             nodeParamCount = 1;
-            // parameters are (rows, [cols], delayNode)
             nodeParamStart = parameter.size() > 2?2:1;
 
             if (pass == ndlPassInitial)
@@ -311,9 +331,24 @@ public:
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
-                nodePtr = m_net.Delay(NULL, defaultHiddenActivity, rows, cols, name);
-                size_t delayTime = node->GetOptionalParameter("delayTime","1");
-                ((DelayNode<ElemType>*)nodePtr)->SetDelay(delayTime);
+
+                //for backward compatibility we check timeStep first
+                size_t timeStep = node->GetOptionalParameter("timeStep", "1");
+                if (timeStep == 1)
+                {
+                    timeStep = node->GetOptionalParameter("delayTime", "1");
+                }
+
+                if (cnNodeType == PastValueNode<ElemType>::TypeName())
+                {
+                    nodePtr = m_net.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
+                    ((PastValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
+                }
+                else
+                {
+                    nodePtr = m_net.FutureValue(NULL, defaultHiddenActivity, rows, cols, name);
+                    ((FutureValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
+                }
 
                 nodePtr->NeedGradient() = needGradient;
             }
@@ -730,6 +765,10 @@ public:
             {
                 SetOutputNode(m_net.FinalCriterionNodes(), compNode);
             }
+            else if (!_stricmp(value.c_str(), "multiseq"))
+            {
+                SetOutputNode(m_net.NodesReqMultiSeqHandling(), compNode);
+            }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {
                 SetOutputNode(m_net.EvaluationNodes(), compNode);
@@ -745,14 +784,14 @@ public:
     // SetOutputNode - Set the output node, checks to see if it already exists first
     // nodeGroup - group vector to add to
     // compNode - computation node to add
-    void SetOutputNode(std::vector<ComputationNode<ElemType>*>& nodeGroup, ComputationNode<ElemType>* compNode)
+    void SetOutputNode(std::vector<ComputationNode<ElemType>*>* nodeGroup, ComputationNode<ElemType>* compNode)
     {
-        for (ComputationNodePtr node : nodeGroup)
+        for (ComputationNodePtr node : *nodeGroup)
         {
             if (node == compNode)
                 return;
         }
-        nodeGroup.push_back(compNode);
+        nodeGroup->push_back(compNode);
     }
 
     // FindSymbol - Search the nodes for a fully quantified symbol

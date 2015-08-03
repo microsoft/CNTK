@@ -33,6 +33,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         CPUSparseMatrix(const MatrixFormat format);
         CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
+        CPUSparseMatrix(const CPUSparseMatrix<ElemType>& deepCopyFrom);  //copy constructor, deep copy
+        CPUSparseMatrix<ElemType>& operator=(const CPUSparseMatrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
         
         
         ~CPUSparseMatrix();
@@ -41,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using B::GetNumCols; using B::GetNumRows;
 
         void SetValue(const size_t row, const size_t col, ElemType val); 
-        void SetValue(const CPUSparseMatrix& /*val*/) { NOT_IMPLEMENTED; }
+        void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
 
         void ShiftBy(int /*numShift*/) { NOT_IMPLEMENTED; }
 
@@ -75,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         int GetComputeDeviceId() const {return -1;}
         
-        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
+        void Resize(const size_t numRows, const size_t numCols, size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false);
         void Reset();
 
         const ElemType operator() (const size_t row, const size_t col) const

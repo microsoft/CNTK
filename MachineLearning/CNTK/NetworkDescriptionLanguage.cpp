@@ -140,7 +140,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
     if (EqualInsensitive(nodeType, InputValue<ElemType>::TypeName(), L"Input"))
         ret = true;   
-    else if (EqualInsensitive(nodeType, SparseInputValue<ElemType>::TypeName(), L"SparseInput"))
+    else if (EqualInsensitive(nodeType, InputValue<ElemType>::SparseTypeName(), L"SparseInput"))
         ret = true; 
     else if (EqualInsensitive(nodeType, LearnableParameter<ElemType>::TypeName(), L"Parameter"))
         ret = true;   
@@ -150,9 +150,15 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;   
     else if (EqualInsensitive(nodeType, L"ImageInput", L"Image"))
         ret = true;   
+    else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage"))
+        ret = true;   
     else if (EqualInsensitive(nodeType, SumElementsNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, SumColumnElementsNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, ScaleNode<ElemType>::TypeName()))
+        ret = true;
+    else if (EqualInsensitive(nodeType, TransposeNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, TimesNode<ElemType>::TypeName()))
         ret = true;
@@ -222,7 +228,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;   
     else if (EqualInsensitive(nodeType, AveragePoolingNode<ElemType>::TypeName()))
         ret = true;   
-    else if (EqualInsensitive(nodeType, DelayNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, PastValueNode<ElemType>::TypeName(), L"Delay"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, FutureValueNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, RowSliceNode<ElemType>::TypeName()))
         ret = true;
@@ -237,6 +245,16 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, TimeReverseNode<ElemType>::TypeName(), L"TimeReverse"))
         ret = true;
     else if (EqualInsensitive(nodeType, CRFNode<ElemType>::TypeName(), L"CRF"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, DummyCriterionNode<ElemType>::TypeName(), L"DummyCriterion"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, ParallelNode<ElemType>::TypeName(), L"Parallel"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), L"LSTM"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, PairNetworkNode<ElemType>::TypeName(), L"PairNetwork"))
+        ret = true;
+    else if (EqualInsensitive(nodeType, StrideTimesNode<ElemType>::TypeName(), L"StrideTimes"))
         ret = true;
 
     // return the actual node name in the parameter if we found something
