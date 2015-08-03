@@ -33,6 +33,9 @@ namespace Microsoft {
     namespace MSR {
         namespace CNTK {
 
+            extern std::wstring GetEncoderModelNameForEpoch(int epoch, bool b = false);
+            extern std::wstring GetDecoderModelNameForEpoch(int epoch, bool b = false);
+
             template<class ElemType>
             class MultiNetworksSGD : SGD<ElemType>
             {
@@ -68,6 +71,12 @@ namespace Microsoft {
                 using SGDBase::m_numMBsToShowResult;
                 using SGDBase::m_gradientCheckSigDigit;
                 using SGDBase::m_prevChosenMinibatchSize;
+                using SGDBase::GetTrainCriterionNodes;
+                using SGDBase::GetEvalCriterionNodes;
+                using SGDBase::SetDropoutRate;
+                using SGDBase::UpdateEvalTimeStamps;
+                using SGDBase::UpdateWeights;
+                using SGDBase::GetCheckPointFileNameForEpoch;
 
                 typedef ComputationNode<ElemType>* ComputationNodePtr;
 
@@ -1124,7 +1133,7 @@ namespace Microsoft {
                                 if (wrong)
                                 {
                                     char serr[2048];
-                                    sprintf_s((char*)serr, 2048, "Decoder %ls Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), grdNum, grdErr);
+                                    sprintf_s((char*)serr, 2048, "Decoder %ls Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), static_cast<double>(grdNum), static_cast<double>(grdErr));
                                     fprintf(stdout, "%s\n", serr);
                                     verror_msgs.push_back(serr);
                                 }
