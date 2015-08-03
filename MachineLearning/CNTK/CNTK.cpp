@@ -60,6 +60,9 @@ using namespace Microsoft::MSR::CNTK;
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
 
+template <typename ElemType>
+void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& reader);
+
 template <typename T>
 struct compare_second
 {
@@ -726,41 +729,37 @@ void DoTrain(const ConfigParameters& config)
     ConfigParameters readerConfig(config("reader"));
     readerConfig.Insert("traceLevel", config("traceLevel", "0"));
 
-    IComputationNetBuilder<ElemType>* netBuilder = NULL;
+    unique_ptr<IComputationNetBuilder<ElemType> > netBuilder;
 
     if (config.Exists("NDLNetworkBuilder"))
     {
         ConfigParameters configNDL(config("NDLNetworkBuilder"));
-        netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >( static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(configNDL)));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
         ConfigParameters configSNB(config("SimpleNetworkBuilder"));
-        netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >{ static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(configSNB)) };
     }
     else
     {
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
-    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
+    unique_ptr<DataReader<ElemType> > dataReader { new DataReader<ElemType>(readerConfig) };
 
-    DataReader<ElemType>* cvDataReader = nullptr;
+    unique_ptr<DataReader<ElemType> > cvDataReader;
     ConfigParameters cvReaderConfig(config("cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
     {
         cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
-        cvDataReader = new DataReader<ElemType>(cvReaderConfig);
+        cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
     SGD<ElemType> sgd(configSGD);
 
-    sgd.Train(netBuilder, dataReader, cvDataReader, makeMode);
-
-    delete netBuilder;
-    delete dataReader;
-    delete cvDataReader;
+    sgd.Train(netBuilder.get(), dataReader.get(), cvDataReader.get(), makeMode);
 }
 
 template <typename ElemType>
