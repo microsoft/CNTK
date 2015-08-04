@@ -6,6 +6,7 @@
 #include <cassert>
 #include <stdio.h>
 #include "Profiler.h"
+#include "BestGpu.h"    // for CPUONLY flag only
 
 #ifndef CPUONLY
 #include <cuda_profiler_api.h>
@@ -14,7 +15,6 @@
 void cudaProfilerStart() {}
 void cudaProfilerStop() {}
 #endif
-
 
 Profiler::Profiler(int numSamples)
    :m_numSamples(numSamples),
