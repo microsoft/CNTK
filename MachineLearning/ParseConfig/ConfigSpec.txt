@@ -10,8 +10,7 @@ CNTK configuration language redesign (ongoing work)
        - dictionaries                       // [ a=expr1 ; c=expr2 ]
        - math ops and parentheses as usual  // W*v+a, n==0
        - conditional expression             // if c then a else b
-       - vectors                            // a:b:c
-          - for expression                  // for (i : 1..5) i    // generates vector 1:2:3:4:5
+       - array                              // a:b:c ; array [1..N] (i => f(i))
  - syntax supports usual math and boolean expressions
  - functions are runtime objects defined through macros, e.g. Replace(s,with,withwhat) = String [ from=s ; replacing=what ; with=withwhat ]
  - config is parsed eagerly but evaluated lazily
@@ -22,10 +21,7 @@ current issues
 
  - syntax does not distinguish between dictionary members, intermediate variables, and actual parameter names
  - dictionary editing needs to allow a.b.c syntax; and subtracting is not pretty as it needs dummy values -> maybe use a delete symbol? a=delete?
- - syntax inconsistency between if condexpr then ... else ... and for () ... ('if' uses no parentheses, while 'for' does)
  - missing: optional parameters to macros; and how this whole thing would work with MEL
- - 'for' can be misleading: it creates a zero-based sequence; the index is only used inside. Better call it 'seq' or use curly brackets?
-   F#: seq { for i in 1 .. 10 -> i * i }   ;   seq { for row in 0 .. width - 1 do for col in 0 .. height - 1 do yield (row, col, row*width + col) }
 
 grammar
 -------
@@ -49,7 +45,7 @@ $classname = $identifier
 // examples: [ arg1=A ; arg2=B ]
 //           dict1 + (if (dpt && layer < totallayers) then [ numiter = 5 ] else []) // overrides 'numiter' in 'dict1' if condition is fulfilled
 
-$dict = '[' $dictitems ']'
+$dictdef = '[' $dictitems ']'
 $dictitems = $itemdef*
 
 $itemdef = $paramdef            // var=val
@@ -74,9 +70,7 @@ $infixop =      // highest precedence level
          | '+'                                  // numbers; ComputeNodes; strings; dictionary editing
          | '-'                                  // numbers; ComputeNodes; dictionary editing
                 // next lower precedence level
-         | '..'                                 // numbers (vector representing consecutive numbers)
-                // next lower precedence level
-         | ':'                                  // concatenate items and/or vectors    --TODO: can vectors have nested vectors? Syntax?
+         | ':'                                  // concatenate items and/or arrays --TODO: can arrays have nested arrays? Syntax?
                 // next lower precedence level
          | '==' '!=' '<' '>' '<=' '>='          // applies to config items only; objects other than boxed primitive values are compared by object identity not content
                 // next lower precedence level
@@ -86,12 +80,13 @@ $infixop =      // highest precedence level
 $operand = $literal                             // "Hello World"
          | $itemref                             // a  also:   dict.a
          | $macroapplication                    // a(13)   also:  dict.a(13)
-         | $dict                                // [ a="Hello World" ]
+         | $dictdef                             // [ a="Hello World" ]
          | $newinstance                         // new ComputeNode [ ... ]
-         | ('-' | '+' | '!') $expr              // -X+Y
+         | ('-' | '+' | '!') $operand           // -X+Y
          | '(' $expr ')'                        // (a==b) || (c==d)
+         | $arrayconstructor                    // array [1..N] (i => i*i)
          | $expr '[' $expr ']'                  // h_fwd[t]
-           where first expr must be a vector and second expr a number (that must be an integer value)
+           where first expr must be a array and second expr a number (that must be an integer value)
 
 $literal = $number                              // built-in literal types are numeric, string, and boolean
          | $string
@@ -107,6 +102,9 @@ $itemref = $identifier                          // will search parent scopes
            where $expr evaluates to a dict or a runtime-object instance
 $macroapplication = $itemref '(' $expr (',' $expr)* ')'    // expressions resolve macro parameters; partial application possible (creates new macro)
                     where $itemref refers to a macro
+
+$arrayconstructor = 'array' '[' $expr '..' $expr ']' '(' $identifier '=>' $expr ')'     // array [1..N] (i => i*i)
+                    where       ^start     ^end (int)    ^index variable  ^function of index variable
 
 // --- predefined functions
 //     *All* functions are defined as macros that instantiate a runtime object. (The same is true for operators above, too, actually.)
@@ -137,33 +135,27 @@ dictionaries
    Subtracting a dictionary will remove all items in the second dict from the first.
    This is used to allow for overriding variables on the command line.   --TODO: not fully fleshed out how to access nested inner variables inside a dict
 
-vectors and 'for' expression
-----------------------------
+arrays
+------
 
- - another core data type is the vector. Like dictionaries, vectors are immutable and exist inside the parser only.
- - vectors are created at once in two ways
-    - 'for' expression:
-      for (i : range) expr(i)
-    - ':' operator concatenates vectors and/or elements
+ - another core data type is the array. Like dictionaries, arrays are immutable and exist inside the parser only.
+ - arrays are created at once in two ways
+    - 'array' expression:
+      array [1..N] (i => f(i))        // fake lambda syntax could be made real lambda; also could extend to multi-dim arrays
+    - ':' operator concatenates arrays and/or elements. Arrays are flattened.
       1:2:3
  - elements are read-accessed with index operator
    X[i]
- - length of a vector is given by Length(X)
- - complex example:
-   layers = for (layer : 1..numlayers) (
-                if layer==1 then FF(input)
-                else if layer<numlayers then FF(layers[layer-1])
-                else Softmax(layers[layer-1])
-            )
- - this works because of lazy evaluation. Note: parentheses not necessary, but of course allowed
- - example syntax of how one could define useful operators for vectors
+ - bounds of array is given by FirstIndex(X) and LastIndex(X)
+    - Bounds(X) = [ First = FirstIndex(X) ; Last - LastIndex(X) ]
+ - example syntax of how one could define useful operators for arrays
     - Append(seq,item) = seq : item
-    - Truncate(seq,N) = for (i : 1..Min(N,Length(seq)) seq[i]
-    - Repeat(item,N) = for (i : 1..N) item
- - vectors with repetition can be created like this:
-      0.8 : for(i:1..3) 0.2 : 0.05
+    - Repeat(item,N) = array [1..N] (i => item)
+ - arrays with repetition can be created like this:
+      0.8 : array [1..3] (i => 0.2) : 0.05
    or 
       0.8 : Repeat(0.2,3) : 0.05
+ - the array[] () argument looks like a C# lambda, but for now is hard-coded syntax (but with potential to be a true lambda in the future)
 
 sample
 ------
@@ -182,7 +174,7 @@ deviceId = DeviceNumber                             // before: $DeviceNumber$
 #  TRAINING CONFIG (Simple, Fixed LR) #
 #######################################
 
-Repeat(val,count) = for (i : 1..count) val          // new: vector helper to repeat a value (result is a vector) (this would be defined in a library eventually)
+Repeat(val,count) = array [1..count] (i => val)        // new: array helper to repeat a value (result is a array) (this would be defined in a library eventually)
 
 TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; this is a class name of the underlying runtime object
     // new: TrainAction takes three main parameters: 'source' -> 'model' -> 'optimizer'  (-> indicating logical dependency)
@@ -251,13 +243,13 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
 
             // new: define network in a loop. This allows parameterizing over the network depth.
             numLayers = 7
-            layers = for (layer : 0..numLayers) (
+            layers = array [0..numLayers] ( layer =>
                 if layer == 0 then             featNorm
                 else if layer == 1 then        SBFF(layers[layer-1].Eh, hiddenDim, featDim)
                 else if layer < numLayers then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim)
                 else                            BFF(layers[layer-1].Eh, labelDim,  hiddenDim)
             )
-            outZ = layers[numlayers].z              // new: to access the output value, the variable name (dictionary member) cannot be omitted
+            outZ = layers[numLayers].z              // new: to access the output value, the variable name (dictionary member) cannot be omitted
 
             // alternative to the above: define network with recursion
             HiddenStack(layer) = if layer > 1 then SBFF(HiddenStack(layer-1).Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)
@@ -274,7 +266,7 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
     ]
 
     // the SGD optimizer
-    optimizer = new SGD [                       // before: SGD = [
+    optimizer = new SGDOptimizer [                  // before: SGD = [
         epochSize = 0 
         minibatchSize = 256 : 1024
         learningRatesPerMB = 0.8 : Repeat(3.2,14) : 0.08    // (syntax change for repetition)
@@ -282,18 +274,18 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
         dropoutRate = 0.0
         maxEpochs = 25
         // new: link to the criterion node
-        trainingCriterion = model.network.CE    // (note: I would like to rename this to 'objective')
+        trainingCriterion = model.network.CE        // (note: I would like to rename this to 'objective')
     ]
 
     // The RandomizingSource performs randomization and mini-batching, while driving low-level random-access readers.
-    source = new RandomizingSource [            // before: reader = [
-        //readerType = HTKMLFReader             // removed since covered by class name
+    source = new RandomizingSource [                // before: reader = [
+        //readerType = HTKMLFReader                 // removed since covered by class name
 
         // new: define what utterances to get from what stream sources
         dataSetFile = ScpDir + "\TIMIT.train.scp.fbank.fullpath"  // (new) defines set of utterances to train on; accepts HTK archives
         streams = ( features : labels )                           // (new) This tells the source which streams to read. Note: parentheses not required (just added for readability)
-                                                                  // This is a vector that passes the 'features' and 'labels' runtime objects to the source;
-                                                                  // 'features' and 'labels' themselves are not read by the source constructor
+                                                                  // This is a array that passes the 'features' and 'labels' runtime objects to the source;
+                                                                  // The dictionary members 'features' and 'labels' themselves are not read by the source constructor.
 
         readMethod = 'blockRandomize'               // before: no quotes
         miniBatchMode = 'Partial'                   // before: no quotes
@@ -321,6 +313,8 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
 Example 2: truncated bidirectional RNN
 --------------------------------------
 
+Back(vec) = if Length(vec) > 0 then vec[Length(vec)-1] else Fail("Back(.) applied to array of length 0")   // convenience helper... because we can!
+
 network = new NDL [
     // network parameters
     hiddenDim = 512
@@ -332,45 +326,42 @@ network = new NDL [
     myLabels = source.labels.data
 
     // derived dimensions
-    augmentedFeatDim = myFeatures.dim       // feature vectors are context window frames stacked into a single long vector
+    augmentedFeatDim = myFeatures.dim       // feature arrays are context window frames stacked into a single long array
     labelDim = myLabels.dim
 
     centerT = Floor(T/2)                    // center frame to predict
     featDim = Floor(augmentedFeatDim / T)
 
-    // macro to extract sub-frame from the stacked augmented long vector
-    subframes = for (t : 0..T-1) RowSlice(t * featDim, featDim, myFeatures)     // this can now be indexed as SubFrames[t]
+    // split the augmented input vector into individual frame vectors
+    subframes = array [0..T-1] (t => RowSlice(t * featDim, featDim, myFeatures))
 
     // hidden layers
-    // Hidden state vectors for all frames are stored in a vector object.
-    Undef(what) = Fail("Using undefined variable " + what)
-    layers = for (layer : 1..numHiddenLayers) [   // each layer stores its output hidden state
-        // inputs
-        in_fwd = if layer > 1 then layers[layer-1].h_fwd else subframes         // first layer reads frames
-        in_bwd = if layer > 1 then layers[layer-1].h_bwd else Undef("n in_bwd") // (0 should never be used)
+    // Hidden state arrays for all frames are stored in a array object.
+    undefined = Fail("trying to access where there's no value")
+    layers = array [1..numHiddenLayers] (layer => [     // each layer stores a dictionary that stores its output hidden fwd and bwd state vectors
         // model parameters
-        W_fwd = Parameter(hiddenDim, in_fwd.rows)                                       // Parameter(outdim, indim) --in_fwd.rows is an initialization parameter read from the dict
-        W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else Undef("W_bwd")   // W denotes input-to-hidden connections
-        H_fwd = Parameter(hiddenDim, hiddenDim)                                         // H denotes hidden-to-hidden lateral connections
+        W_fwd = Parameter(hiddenDim, featDim)                                       // Parameter(outdim, indim) --in_fwd.rows is an initialization parameter read from the dict
+        W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else undefined    // W denotes input-to-hidden connections
+        H_fwd = Parameter(hiddenDim, hiddenDim)                                     // H denotes hidden-to-hidden lateral connections
         H_bwd = Parameter(hiddenDim, hiddenDim)
-        b = Parameter(hiddenDim, 1)                                                     // bias
-        // recurrence
-        neededT = if layer < numHiddenLayers then T else centerT+1              // last hidden layer does not require all frames
-        // shared part (input)
-        z_shared = { for (t : 0..neededT-1) (if layers > 1 then W_fwd * in_fwd[t] + W_bwd * in_bwd[t] else W_fwd * in_fwd[t]) + b }
-        // recurrent parts and non-linearity
-        h_fwd = for (t :   0..neededT-1) Sigmoid(if t > 0         then z_shared[t] + H_fwd * h_fwd[t-1] else z_shared[t])
-        // BUGBUG: 'for' creates a zero-based sequence
-        h_bwd = for (t : T-1..T-neededT) Sigmoid(if t < neededT-1 then z_shared[t] + H_bwd * h_bwd[t+1] else z_shared[t])
-    ]
+        b     = Parameter(hiddenDim, 1)                                             // bias
+        // shared part of activations (from the layer's input)
+        z_shared = array [1..T] (t => if layers > 1 then W_fwd * layers[layer-1].h_fwd[t] + W_bwd * layers[layer-1].h_bwd[t] + b    // intermediate layer gets fed fwd and bwd hidden state
+                                                    else W_fwd * subframes                                                   + b)   // input layer reads frames directly
+        // recurrent part and non-linearity
+        neededT = if layer < numHiddenLayers then T else centerT+1                  // last hidden layer does not require all frames
+        step(H,h,dt,t) = Sigmoid(if (t+dt > 0 && t+dt < T) then z_shared[t] + H * h[t-dt]
+                                                           else z_shared[t])
+        h_fwd = array [0..neededT-1]   (step(H_fwd, h_fwd, -1))     // partial application; last parameter filled in by array constructor
+        h_bwd = array [T-neededT..T-1] (step(H_bwd, h_bwd,  1))
+    ])
     // output layer --linear only at this point; Softmax is applied later
     outZ = [
         // model parameters
-        W_fwd = Parameters(labelDim, hiddenDim)
-        W_bwd = Parameters(labelDim, hiddenDim)
-        b = Parameter(labelDim, 1)
+        W_fwd = Parameter(labelDim, hiddenDim)
+        W_bwd = Parameter(labelDim, hiddenDim)
+        b     = Parameter(labelDim, 1)
         //  output
-        Back(vec) = if Length(vec) > 0 then vec[Length(vec)-1] else Fail("Back(.) applied to vector of length 0")   // convenience helper... because we can!
         topHiddenLayer = Back(layers)
         z = W_fwd * topHiddenLayer.h_fwd[centerT] + W_bwd * topHiddenLayer.h_bwd[centerT] + b
     ].z     // we only want this one & don't care about the rest of this dictionary
