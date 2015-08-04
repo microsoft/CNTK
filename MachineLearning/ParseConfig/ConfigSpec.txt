@@ -24,6 +24,8 @@ current issues
  - dictionary editing needs to allow a.b.c syntax; and subtracting is not pretty as it needs dummy values -> maybe use a delete symbol? a=delete?
  - syntax inconsistency between if condexpr then ... else ... and for () ... ('if' uses no parentheses, while 'for' does)
  - missing: optional parameters to macros; and how this whole thing would work with MEL
+ - 'for' can be misleading: it creates a zero-based sequence; the index is only used inside. Better call it 'seq' or use curly brackets?
+   F#: seq { for i in 1 .. 10 -> i * i }   ;   seq { for row in 0 .. width - 1 do for col in 0 .. height - 1 do yield (row, col, row*width + col) }
 
 grammar
 -------
@@ -341,22 +343,24 @@ network = new NDL [
 
     // hidden layers
     // Hidden state vectors for all frames are stored in a vector object.
+    Undef(what) = Fail("Using undefined variable " + what)
     layers = for (layer : 1..numHiddenLayers) [   // each layer stores its output hidden state
         // inputs
         in_fwd = if layer > 1 then layers[layer-1].h_fwd else subframes         // first layer reads frames
-        in_bwd = if layer > 1 then layers[layer-1].h_bwd else 0                 // (0 should never be used)
+        in_bwd = if layer > 1 then layers[layer-1].h_bwd else Undef("n in_bwd") // (0 should never be used)
         // model parameters
-        W_fwd = Parameter(hiddenDim, in_fwd.rows)                               // Parameter(outdim, indim) --in_fwd.rows is an initialization parameter read from the dict
-        W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else 0        // W denotes input-to-hidden connections
-        H_fwd = Parameter(hiddenDim, hiddenDim)                                 // H denotes hidden-to-hidden lateral connections
+        W_fwd = Parameter(hiddenDim, in_fwd.rows)                                       // Parameter(outdim, indim) --in_fwd.rows is an initialization parameter read from the dict
+        W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else Undef("W_bwd")   // W denotes input-to-hidden connections
+        H_fwd = Parameter(hiddenDim, hiddenDim)                                         // H denotes hidden-to-hidden lateral connections
         H_bwd = Parameter(hiddenDim, hiddenDim)
-        b = Parameter(hiddenDim, 1)                                             // bias
+        b = Parameter(hiddenDim, 1)                                                     // bias
         // recurrence
         neededT = if layer < numHiddenLayers then T else centerT+1              // last hidden layer does not require all frames
         // shared part (input)
-        z_shared = for (t : 0..neededT-1) (if layers > 1 then W_fwd * in_fwd[t] + W_bwd * in_bwd[t] else W_fwd * in_fwd[t]) + b
+        z_shared = { for (t : 0..neededT-1) (if layers > 1 then W_fwd * in_fwd[t] + W_bwd * in_bwd[t] else W_fwd * in_fwd[t]) + b }
         // recurrent parts and non-linearity
         h_fwd = for (t :   0..neededT-1) Sigmoid(if t > 0         then z_shared[t] + H_fwd * h_fwd[t-1] else z_shared[t])
+        // BUGBUG: 'for' creates a zero-based sequence
         h_bwd = for (t : T-1..T-neededT) Sigmoid(if t < neededT-1 then z_shared[t] + H_bwd * h_bwd[t+1] else z_shared[t])
     ]
     // output layer --linear only at this point; Softmax is applied later
