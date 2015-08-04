@@ -41,12 +41,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(KALDI_PATH)\src;$(KALDI_PATH)\tools\OpenBLAS-v0.2.14-Win64-int32\include;..\..\common\include;..\..\math\math;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(KALDI_PATH)\kaldiwin_vs12_auto\x64\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration);$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(KALDI_PATH)\src;$(KALDI_PATH)\tools\OpenBLAS-v0.2.14-Win64-int32\include;..\..\common\include;..\..\math\math;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(KALDI_PATH)\kaldiwin_vs12_auto\x64\$(Configuration);$(SolutionDir)$(Platform)\$(Configuration);$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -54,7 +54,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>KALDI_DOUBLEPRECISION=0; HAVE_POSIX_MEMALIGN;HAVE_EXECINFO_H=1;HAVE_CXXABI_H;HAVE_OPENBLAS;HAVE_OPENFST_GE_10400;WIN32;_DEBUG;_WINDOWS;_USRDLL;HTKREADERKALDIWRITER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(KALDI_PATH)\src;$(KALDI_PATH)\tools\openfst-1.4.1\src\include; $(KALDI_PATH)\tools\OpenBLAS-v0.2.14-Win64-int32\include;..\..\common\include;..\..\math\math;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -69,7 +71,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>KALDI_DOUBLEPRECISION=0; HAVE_POSIX_MEMALIGN;HAVE_EXECINFO_H=1;HAVE_CXXABI_H;HAVE_OPENFST_GE_10400;HAVE_OPENBLAS;WIN32;NDEBUG;_WINDOWS;_USRDLL;HTKREADERKALDIWRITER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(KALDI_PATH)\src;$(KALDI_PATH)\tools\openfst-1.4.1\src\include; $(KALDI_PATH)\tools\OpenBLAS-v0.2.14-Win64-int32\include;..\..\common\include;..\..\math\math;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -83,10 +86,10 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="basetypes.h" />
+    <ClInclude Include="..\..\Common\Include\basetypes.h" />
+    <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="biggrowablevectors.h" />
     <ClInclude Include="chunkevalsource.h" />
-    <ClInclude Include="fileutil.h" />
     <ClInclude Include="htkfeatio.h" />
     <ClInclude Include="htkfeatio_utils.h" />
     <ClInclude Include="HTKMLFReader.h" />
@@ -114,18 +117,32 @@
     <ClInclude Include="utterancesourcemulti.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DataReader.cpp" />
-    <ClCompile Include="DataWriter.cpp" />
-    <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="fileutil.cpp" />
-    <ClCompile Include="HTKMLFReader.cpp" />
-    <ClCompile Include="HTKMLFWriter.cpp" />
-    <ClCompile Include="KaldiReaderWriter.cpp" />
-    <ClCompile Include="KaldiSequenceTrainingIO.cpp" />
-    <ClCompile Include="latticearchive.cpp" />
-    <ClCompile Include="stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    <ClCompile Include="..\..\Common\fileutil.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="DataReader.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="DataWriter.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="dllmain.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="HTKMLFReader.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="HTKMLFWriter.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="KaldiReaderWriter.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="KaldiSequenceTrainingIO.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="latticearchive.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
