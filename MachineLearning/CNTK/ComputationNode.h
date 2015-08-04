@@ -306,6 +306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return processedExistsNoLabelorFeatureMissing;
         }
 
+        /*
         virtual size_t GetNumSamplesWithLabel(const size_t numAllSamples)
         {
             if (m_sentenceSeg != nullptr &&
@@ -344,6 +345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return numAllSamples;
             }
         }
+        */
 
         void SetLoopId(const int id)
         {
