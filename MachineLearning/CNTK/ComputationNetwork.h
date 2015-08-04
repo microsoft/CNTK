@@ -854,6 +854,45 @@ public:
         }
     }
 
+    //this is a temp solution since some nodes such as plus can be just aggregate of two scalar values 
+    //in which case the packing info is not available (and not meaningful) for them
+    size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+    {
+        if (!m_SentenceBoundary.IsEmpty() &&
+            !m_minibatchPackingFlag.size() == 0)
+        {
+            size_t numTimeSteps = m_SentenceBoundary.GetNumCols();
+            size_t numSequences = m_SentenceBoundary.GetNumRows();
+
+            if (m_minibatchPackingFlag.size() != numTimeSteps)
+            {
+                LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+            }
+
+            size_t numSamplesWithoutLabel = 0;
+
+            for (size_t j = 0; j < numTimeSteps; j++)
+            {
+                if (m_minibatchPackingFlag[j] & MinibatchPackingFlag::NoLabel)
+                {
+                    for (int i = 0; i < numSequences; i++)
+                    {
+                        if ((int)(m_SentenceBoundary(i, j)) & NO_LABEL)
+                        {
+                            numSamplesWithoutLabel++;
+                        }
+                    }
+                }
+            }
+
+            return numTimeSteps*numSequences - numSamplesWithoutLabel;
+        }
+        else
+        {
+            return numAllSamples;
+        }
+    }
+
     // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
     // and return a flat array containing the contents of this file in column-major format.
     // filePath: path to file containing matrix in text format.

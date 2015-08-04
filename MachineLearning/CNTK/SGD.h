@@ -1859,7 +1859,7 @@ protected:
             //for now since we share the same label masking flag we call this on the training
             //criterion node ony. Later, when we apply different labels on different nodes
             //we need to add code to call this function multiple times, one for each criteria node
-            size_t numSamplesWithLabel = (*criterionNodes)[0]->GetNumSamplesWithLabel(actualMBSize);
+            size_t numSamplesWithLabel = net.GetNumSamplesWithLabel(actualMBSize);
 
             std::vector<ElemType> mbEvalErrors(numEvalNodes, 0);
             for (size_t i = 0; i < numEvalNodes; i++)

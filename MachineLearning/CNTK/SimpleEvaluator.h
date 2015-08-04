@@ -141,7 +141,7 @@ namespace Microsoft {
                         //for now since we share the same label masking flag we call this on one node only
                         //Later, when we apply different labels on different nodes
                         //we need to add code to call this function multiple times, one for each criteria node
-                        size_t numSamplesWithLabel = evalNodes[0]->GetNumSamplesWithLabel(actualMBSize);
+                        size_t numSamplesWithLabel = m_net.GetNumSamplesWithLabel(actualMBSize);
                         for (int i = 0; i<evalNodes.size(); i++)
                         {
                             m_net.Evaluate(evalNodes[i]);
