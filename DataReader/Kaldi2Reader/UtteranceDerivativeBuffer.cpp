@@ -261,7 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             RuntimeError("Current objective does not correspond to the"
                          " minibatch utterance information, perhaps you did not"
-                         " run GetObjective() right after GetDerivatives()?");
+                         " run GetObjective() right after GetDerivative()?");
         }
 
         // Sets the objectives...
