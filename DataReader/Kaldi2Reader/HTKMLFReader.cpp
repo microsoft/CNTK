@@ -1467,7 +1467,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_getMinibatchCopy)
                     {
-                        matrices[iter->first]->Resize(data.GetNumRows(), m_currentMBSize);
+                        if (data.GetNumCols()
+                            != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                        {
+                            matrices[iter->first]->Resize(data.GetNumRows(),
+                                                          m_currentMBSize
+                                                          * m_numberOfuttsPerMinibatch);
+                        }
                         matrices[iter->first]->SetValue(0);
                     }
                     else
@@ -1481,6 +1487,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_getMinibatchCopy)
                     {
+                        if (data.GetNumCols() != 1)
+                        {
+                            data.Resize(1, 1);
+                        }
                         data.SetValue(0);
                     }
                     else
@@ -1527,11 +1537,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
                 {
-                    data.Resize(data.GetNumRows(), m_currentMBSize);
+                    if (data.GetNumCols()
+                        != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                    {
+                        data.Resize(data.GetNumRows(),
+                                    m_currentMBSize * m_numberOfuttsPerMinibatch);
+                    }
                     data.SetValue(0);
                 }
                 else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
                 {
+                    if (data.GetNumCols() != 1)
+                    {
+                        data.Resize(1, 1);
+                    }
                     data.SetValue(0);
                 }
             }
