@@ -107,10 +107,7 @@ public:
     }
 
     // we chan also return the address of the current character, e.g. for passing it to a C stdlib funcion such as wcstod()
-    const wchar_t * GotCharPtr() const
-    {
-        return currentLine + cursor.charPos;
-    }
+    const wchar_t * GotCharPtr() const { return currentLine + cursor.charPos; }
 
     // advance cursor by #chars (but across line boundaries)
     void ConsumeChars(size_t chars)
@@ -156,7 +153,7 @@ public:
         };
         punctuations = set<wstring>
         {
-            L"=", L";", L"\n",
+            L"=", L";", L",", L"\n",
             L"[", L"]", L"(", L")",
             L"+", L"-", L"*", L"/", L"**", L".*", L"%", L"||", L"&&", L"^",
             L"!",
@@ -307,7 +304,7 @@ private:
             {
                 t.symbol.pop_back();                                    // drop the last one & try again
                 if (punctuations.find(t.symbol) == punctuations.end())  // unknown
-                    Fail("unexpected character", t);
+                    Fail("unexpected character: " + utf8(t.symbol), t);
             }
             // special case: comments
             if (t.symbol == L"#" || t.symbol == L"//")
@@ -378,6 +375,14 @@ class Parser : public Lexer
         ConsumeToken();
     }
 
+    void ConsumeKeyword(const wchar_t * s)
+    {
+        let & tok = GotToken();
+        if (tok.kind != keyword || tok.symbol != s)
+            Expected(L"'" + wstring(s) + L"'");
+        ConsumeToken();
+    }
+
     wstring ConsumeIdentifier()
     {
         let & tok = GotToken();
@@ -408,7 +413,7 @@ public:
     ExpressionRef ParseOperand()
     {
         let & tok = GotToken();
-        ExpressionRef operand = make_shared<Expression>(tok.beginLocation);
+        auto operand = make_shared<Expression>(tok.beginLocation);
         if (tok.kind == numberliteral)                                  // === numeral literal
         {
             operand->op = L"d";
@@ -445,6 +450,16 @@ public:
             ConsumeToken();
             operand->id = ConsumeIdentifier();
             operand->args.push_back(ParseOperand());
+        }
+        else if (tok.symbol == L"if")                                   // === conditional expression
+        {
+            operand->op = tok.symbol;
+            ConsumeToken();
+            operand->args.push_back(ParseExpression(0, false));         // [0] condition
+            ConsumeKeyword(L"then");
+            operand->args.push_back(ParseExpression(0, false));         // [1] then expression
+            ConsumeKeyword(L"else");
+            operand->args.push_back(ParseExpression(0, false));         // [2] else expression
         }
         else if (tok.symbol == L"(")                                    // === nested parentheses
         {
@@ -530,7 +545,7 @@ public:
     ExpressionRef ParseMacroArgs(bool defining)
     {
         ConsumePunctuation(L"(");
-        ExpressionRef macroArgs = make_shared<Expression>(GotToken().beginLocation, L"()");
+        auto macroArgs = make_shared<Expression>(GotToken().beginLocation, L"()");
         for (;;)
         {
             let expr = ParseExpression(0, false);   // this could be an optional arg (var = val)
@@ -543,7 +558,7 @@ public:
                 let defValueExpr = ParseExpression(0, false);  // default value
                 let res = macroArgs->namedArgs.insert(make_pair(id, defValueExpr));
                 if (!res.second)
-                    Fail("duplicate optional argument '" + utf8(id) + "'", expr->location);
+                    Fail("duplicate optional parameter '" + utf8(id) + "'", expr->location);
             }
             else
                 macroArgs->args.push_back(expr);    // [0..]: position args
