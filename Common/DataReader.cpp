@@ -137,6 +137,30 @@ void DataReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
         m_dataReader[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
 }
 
+template<class ElemType>
+bool DataReader<ElemType>::SupportsDistributedMBRead() const
+{
+    bool supportsDistributedMBRead = true;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        auto currReaderIter = m_dataReader.find(m_ioNames[i]);
+        assert(currReaderIter != m_dataReader.end());
+
+        supportsDistributedMBRead &= currReaderIter->second->SupportsDistributedMBRead();
+    }
+
+    return supportsDistributedMBRead;
+}
+
+template<class ElemType>
+void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        m_dataReader[m_ioNames[i]]->StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
+    }
+}
+
 // GetMinibatch - Get the next minibatch (features and labels)
 // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
 //             [out] each matrix resized if necessary containing data. 

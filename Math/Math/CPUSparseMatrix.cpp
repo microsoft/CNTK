@@ -1141,4 +1141,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CPUSparseMatrix<float>;
     template class CPUSparseMatrix<double>;
 
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explciitly instantiate the methods we need for that purpose
+    template CPUSparseMatrix<char>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
+    template CPUSparseMatrix<char>::CPUSparseMatrix(MatrixFormat);
+    template CPUSparseMatrix<char>::CPUSparseMatrix(CPUSparseMatrix<char> const &);
+    template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
+    template char* CPUSparseMatrix<char>::BufferPointer() const;
+    template void CPUSparseMatrix<char>::Reset(void);
+    template CPUSparseMatrix<char>::~CPUSparseMatrix();
+    template CPUMatrix<char> CPUSparseMatrix<char>::ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+
 }}}

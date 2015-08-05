@@ -5147,5 +5147,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CPUMatrix<float>;
     template class CPUMatrix<double>;
 
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explciitly instantiate the methods we need for that purpose
+    template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols);
+    template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags);
+    template CPUMatrix<char>::CPUMatrix();
+    template CPUMatrix<char>::CPUMatrix(CPUMatrix<char> const &);
+    template size_t CPUMatrix<char>::LocateElement(size_t, size_t) const;
+    template CPUMatrix<char>::~CPUMatrix();
+    template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+    template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 }}}
 

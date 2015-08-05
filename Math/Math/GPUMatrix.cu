@@ -4133,6 +4133,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void* GPUMatrix<ElemType>::s_curandGenerator=NULL;    
+
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explicitly instantiate the methods we need for that purpose
+    template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
+    template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, int deviceId);
+    template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
+    template char* GPUMatrix<char>::CopyToArray() const;
+    template void GPUMatrix<char>::ChangeDeviceTo(int);
+    template void GPUMatrix<char>::Resize(size_t, size_t, bool);
+
+    template GPUMatrix<char>::~GPUMatrix();
+    template int GPUMatrix<char>::GetBestGPUDeviceId();
+    template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+    template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
+    template GPUMatrix<char>::GPUMatrix(int);
 }}}
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h

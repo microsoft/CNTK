@@ -16,7 +16,7 @@
 #
 # make BUILDTYPE=release -j
 
-CC = g++
+CC = mpic++
 NVCC = nvcc
 ARCH = x86_64
 
@@ -111,10 +111,10 @@ LDFLAGS=-Wl,-rpath,'$$ORIGIN'
 COMMON_SRC = Common/fileutil.cpp Common/DataWriter.cpp Common/ConfigFile.cpp Common/DataReader.cpp \
 			 Common/Eval.cpp Common/File.cpp Common/BestGpu.cpp Common/TimerUtility.cpp
 
-MATH_COMMON_SRC = Math/Math/Matrix.cpp Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp
+MATH_COMMON_SRC = Math/Math/Matrix.cpp Math/Math/CPUMatrix.cpp Math/Math/CPUSparseMatrix.cpp Math/Math/MatrixQuantizer.cpp Math/Math/MatrixQuantizerCPU.cpp Math/Math/QuantizedMatrix.cpp
 
 ifeq ($(DEVICE),gpu)
-	MATH_SRC = $(MATH_COMMON_SRC) Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKernels.cu Math/Math/GPUSparseMatrix.cu Math/Math/GPUWatcher.cu
+	MATH_SRC = $(MATH_COMMON_SRC) Math/Math/GPUMatrix.cu Math/Math/GPUMatrixCUDAKernels.cu Math/Math/GPUSparseMatrix.cu Math/Math/GPUWatcher.cu Math/Math/CUDAPageLockedMemAllocator.cpp Math/Math/MatrixQuantizerGPU.cu
 else
 	MATH_SRC = $(MATH_COMMON_SRC) Math/Math/NoGPU.cpp
 endif

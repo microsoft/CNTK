@@ -160,6 +160,7 @@
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="CPUMatrix.h" />
     <None Include="ClassDiagram.cd" />
+    <None Include="GPUWatcher.cu" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
     </None>
@@ -167,8 +168,14 @@
       <FileType>CppHeader</FileType>
     </None>
     <ClInclude Include="CPUSparseMatrix.h" />
+    <ClInclude Include="CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Matrix.h" />
+    <ClInclude Include="MatrixQuantizer.h" />
+    <ClInclude Include="MatrixQuantizerCPU.h" />
+    <ClInclude Include="MatrixQuantizerGPU.h" />
+    <ClInclude Include="MemAllocator.h" />
+    <ClInclude Include="QuantizedMatrix.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -180,14 +187,18 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CPUSparseMatrix.cpp" />
+    <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CPUMatrix.cpp" />
+    <ClCompile Include="MatrixQuantizer.cpp" />
+    <ClCompile Include="MatrixQuantizerCPU.cpp" />
     <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="Matrix.cpp" />
+    <ClCompile Include="QuantizedMatrix.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
