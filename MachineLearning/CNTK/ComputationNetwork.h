@@ -1268,13 +1268,21 @@ public:
         {
             newNode = new TransposeTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-                    }
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+        {
+            newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new RowElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new ColumnElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
@@ -1606,13 +1614,21 @@ public:
         {
             newNode = new TransposeTimesNode<ElemType>(m_deviceId, nodeName);
         }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
-                    }
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+        {
+            newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new RowElementTimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new ColumnElementTimesNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
@@ -2110,7 +2126,26 @@ public:
         return newNode;
     }
 
-                ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
+    ComputationNodePtr RowElementTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new RowElementTimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr ColumnElementTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new ColumnElementTimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+    ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
                 {
                     ComputationNodePtr newNode(new StrideTimesNode<ElemType>(m_deviceId, nodeName));
                     newNode->AttachInputs(a, b, c);
