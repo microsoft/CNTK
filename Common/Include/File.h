@@ -127,6 +127,8 @@ public:
 
     void GetLine(std::wstring& str);
     void GetLine(std::string& str);
+    void GetLines(std::vector<std::wstring>& lines);
+    void GetLines(std::vector<std::string>& lines);
 
     // put operator for basic types
     template <typename T>

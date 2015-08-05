@@ -169,6 +169,20 @@ void File::GetLine(string& str)
     str = fgetline(m_file);
 }
 
+// GetLines - get all lines from a file
+template<typename STRING> static void FileGetLines(File & file, std::vector<STRING>& lines)
+{
+    STRING line;
+    while (!file.IsEOF())
+    {
+        file.GetLine(line);
+        lines.push_back(line);
+    }
+}
+void File::GetLines(std::vector<std::wstring>& lines) { FileGetLines(*this, lines); };
+void File::GetLines(std::vector<std::string>&  lines) { FileGetLines(*this, lines); }
+
+
 // Put a zero/space terminated wstring into a file
 // val - value to write to the file
 File& File::operator<<(const std::wstring& val)

@@ -146,8 +146,6 @@ arrays
       1:2:3
  - elements are read-accessed with index operator
    X[i]
- - bounds of array is given by FirstIndex(X) and LastIndex(X)
-    - Bounds(X) = [ First = FirstIndex(X) ; Last - LastIndex(X) ]
  - example syntax of how one could define useful operators for arrays
     - Append(seq,item) = seq : item
     - Repeat(item,N) = array [1..N] (i => item)
@@ -156,6 +154,26 @@ arrays
    or 
       0.8 : Repeat(0.2,3) : 0.05
  - the array[] () argument looks like a C# lambda, but for now is hard-coded syntax (but with potential to be a true lambda in the future)
+
+towards MEL
+-----------
+
+Model editing is now done in a functional manner, like this:
+
+TIMIT_AddLayer = new EditAction [
+
+    currModelPath = "ExpDir\TrainWithPreTrain\dptmodel1\cntkSpeech.dnn"
+    newModelPath  = "ExpDir\TrainWithPreTrain\dptmodel2\cntkSpeech.dnn.0"
+
+    model = LoadModel(currModelPath);
+    newModel = EditModel(model, [
+        // new items here
+        outZ = SBFF(model.outZ.INPUT, LABELDIM, outZ.INPUT.OUTDIM)
+    ])
+    do = ( Dump(newModel, newModelPath + ".dump.txt")
+         : SaveModel(newModel, newModelPath) )
+
+]
 
 sample
 ------
@@ -185,7 +203,7 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
     model = new Model [                             // this is an input to TrainAction
         modelPath = ExpDir + "\TrainSimpleNetwork\model\cntkSpeech.dnn"  // before: $ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
 
-        // EXAMPLE 1: SimpleNetworkBuilder
+        // EXAMPLE 1: SimpleNetworkBuilder   --TODO: do we even need a C++ class, or can we use a macro instead? Would make life easier re connecting inputs
         network = new SimpleNetworkBuilder [        // before: SimpleNetworkBuilder = [
             layerSizes = 792 : Repeat(512,3) : 183  // before: 792:512*3:183
             layerTypes = 'Sigmoid'                  // before: no quotes
@@ -202,6 +220,9 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
             // criteria are configurable here; these are ComputeNodes created here
             trainingCriterion = CrossEntropyWithSoftmax (source.labels.data, output)
             evalCriterion = ErrorPrediction (source.labels.data, output)
+            // new: (and half-baked) define Input nodes
+            myFeatures=Input(featDim)               // reader stream will reference this
+            myLabels=Input(labelDim)
         ]
 
         // EXAMPLE 2: network from NDL (an actual config would contain one of these two examples)
@@ -211,10 +232,8 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
             hiddenDim = 512
 
             // input nodes
-            myFeatures = source.features.data       // note: we could also say source.streams[0] to access them through the source config rather than from the side
-            myLabels = source.labels.data
-            //myFeatures=Input(featDim, tag=feature)
-            //myLabels=Input(labelDim, tag=label)
+            myFeatures=Input(featDim)               // before: optional arg tag=feature
+            myLabels=Input(labelDim)                // before: optional arg tag=label
                
             // old                                        
             //# define network
@@ -282,10 +301,15 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
         //readerType = HTKMLFReader                 // removed since covered by class name
 
         // new: define what utterances to get from what stream sources
-        dataSetFile = ScpDir + "\TIMIT.train.scp.fbank.fullpath"  // (new) defines set of utterances to train on; accepts HTK archives
-        streams = ( features : labels )                           // (new) This tells the source which streams to read. Note: parentheses not required (just added for readability)
-                                                                  // This is a array that passes the 'features' and 'labels' runtime objects to the source;
-                                                                  // The dictionary members 'features' and 'labels' themselves are not read by the source constructor.
+        dataSetFile = ScpDir + "\TIMIT.train.scp.fbank.fullpath"    // (new) defines set of utterances to train on; accepts HTK archives
+        streams = ( [                                               // This passes the 'features' and 'labels' runtime objects to the source, and also connects them to the model's Input nodes.
+                        reader = features                           // random-access reader
+                        input = model.network.myFeatures            // Input node that this feeds into
+                    ]
+                  : [
+                        reader = labels
+                        input = model.network.myLabels
+                    ] ) // note: ':' is array syntax. Parentheses are only for readability
 
         readMethod = 'blockRandomize'               // before: no quotes
         miniBatchMode = 'Partial'                   // before: no quotes
@@ -313,8 +337,6 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
 Example 2: truncated bidirectional RNN
 --------------------------------------
 
-Back(vec) = if Length(vec) > 0 then vec[Length(vec)-1] else Fail("Back(.) applied to array of length 0")   // convenience helper... because we can!
-
 network = new NDL [
     // network parameters
     hiddenDim = 512
@@ -337,17 +359,16 @@ network = new NDL [
 
     // hidden layers
     // Hidden state arrays for all frames are stored in a array object.
-    undefined = Fail("trying to access where there's no value")
     layers = array [1..numHiddenLayers] (layer => [     // each layer stores a dictionary that stores its output hidden fwd and bwd state vectors
         // model parameters
-        W_fwd = Parameter(hiddenDim, featDim)                                       // Parameter(outdim, indim) --in_fwd.rows is an initialization parameter read from the dict
-        W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else undefined    // W denotes input-to-hidden connections
-        H_fwd = Parameter(hiddenDim, hiddenDim)                                     // H denotes hidden-to-hidden lateral connections
+        W_fwd = Parameter(hiddenDim, featDim)                                           // Parameter(outdim, indim) --in_fwd.rows is an initialization parameter read from the dict
+        W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else Fail("no W_bwd") // W denotes input-to-hidden connections
+        H_fwd = Parameter(hiddenDim, hiddenDim)                                         // H denotes hidden-to-hidden lateral connections
         H_bwd = Parameter(hiddenDim, hiddenDim)
-        b     = Parameter(hiddenDim, 1)                                             // bias
-        // shared part of activations (from the layer's input)
-        z_shared = array [1..T] (t => if layers > 1 then W_fwd * layers[layer-1].h_fwd[t] + W_bwd * layers[layer-1].h_bwd[t] + b    // intermediate layer gets fed fwd and bwd hidden state
-                                                    else W_fwd * subframes                                                   + b)   // input layer reads frames directly
+        b     = Parameter(hiddenDim, 1)                                                 // bias
+        // shared part of activations (input connections and bias)
+        z_shared = array [0..T-1] (t => if layers > 1 then W_fwd * layers[layer-1].h_fwd[t] + W_bwd * layers[layer-1].h_bwd[t] + b    // intermediate layer gets fed fwd and bwd hidden state
+                                                      else W_fwd * subframes                                                   + b)   // input layer reads frames directly
         // recurrent part and non-linearity
         neededT = if layer < numHiddenLayers then T else centerT+1                  // last hidden layer does not require all frames
         step(H,h,dt,t) = Sigmoid(if (t+dt > 0 && t+dt < T) then z_shared[t] + H * h[t-dt]
@@ -362,7 +383,7 @@ network = new NDL [
         W_bwd = Parameter(labelDim, hiddenDim)
         b     = Parameter(labelDim, 1)
         //  output
-        topHiddenLayer = Back(layers)
+        topHiddenLayer = layers[numHiddenLayers]
         z = W_fwd * topHiddenLayer.h_fwd[centerT] + W_bwd * topHiddenLayer.h_bwd[centerT] + b
     ].z     // we only want this one & don't care about the rest of this dictionary
 
