@@ -1402,7 +1402,7 @@ int wmain(int argc, wchar_t* argv[])
         wstring DoneFile = config("DoneFile", L"");
         ConfigArray command = config("command", "train");
 
-        //paralleltrain training
+        // paralleltrain training
         g_mpi = nullptr;
         bool paralleltrain = config("parallelTrain", "false");
         if (paralleltrain)
@@ -1427,7 +1427,7 @@ int wmain(int argc, wchar_t* argv[])
             if (paralleltrain)
             {
                 std::wostringstream oss;
-                oss << g_mpi->node();
+                oss << g_mpi->CurrentNodeRank();
                 logpath += L"rank" + oss.str();
             }
             RedirectStdErr(logpath);

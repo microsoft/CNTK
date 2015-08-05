@@ -22,12 +22,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t NumProc()
         {
-            return m_mpi->nodes();
+            return m_mpi->NumNodesInUse();
         }
 
         size_t MyRank()
         {
-            return m_mpi->node();
+            return m_mpi->CurrentNodeRank();
         }
 
         void WaitAll()
