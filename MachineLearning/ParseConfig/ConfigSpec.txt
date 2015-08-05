@@ -59,7 +59,14 @@ $macrodef = $identifier '(' $arg (',' $arg) ')' = $expr     // e.g. sqr(x) = x*x
 //     ML-style "let ... in" (expression-local variables) are possible but not super-pretty: [ a=13; b=42; res=a*b ].res
 //     There are infix ops for strings (concatenation) and dictionaries (editing).
 
-$expr = $operand ($infixop $operand)*
+$expr = $operand
+      | $expr $infixop $operand
+      | $expr '.' $memberref                    // dict.member   TODO: fix this; memberrefs exist without '.'
+        where $expr is a dictionary
+      | $expr '(' $expr (',' $expr)* ')'        // a(13)   also:  dict.a(13); note: partial application possible, i.e. macros may be passed as args and curried
+        where $expr is a macro
+      | $expr '[' $expr ']'                     // h_fwd[t]
+        where first $expr must be a array and second $expr a number (that must be an integer value)
 $infixop =      // highest precedence level
            '*'                                  // numbers; also magic short-hand for "Times" and "Scale" ComputeNodes
          | '/'                                  // numbers; Scale ComputeNode
@@ -70,23 +77,20 @@ $infixop =      // highest precedence level
          | '+'                                  // numbers; ComputeNodes; strings; dictionary editing
          | '-'                                  // numbers; ComputeNodes; dictionary editing
                 // next lower precedence level
-         | ':'                                  // concatenate items and/or arrays --TODO: can arrays have nested arrays? Syntax?
-                // next lower precedence level
          | '==' '!=' '<' '>' '<=' '>='          // applies to config items only; objects other than boxed primitive values are compared by object identity not content
                 // next lower precedence level
          | '&&'                                 // booleans
                 // next lower precedence level
          | '||' | '^'                           // booleans
+                // next lower precedence level
+         | ':'                                  // concatenate items and/or arrays --TODO: can arrays have nested arrays? Syntax?
 $operand = $literal                             // "Hello World"
-         | $itemref                             // a  also:   dict.a
-         | $macroapplication                    // a(13)   also:  dict.a(13)
+         | $memberref                           // a
          | $dictdef                             // [ a="Hello World" ]
          | $newinstance                         // new ComputeNode [ ... ]
          | ('-' | '+' | '!') $operand           // -X+Y
          | '(' $expr ')'                        // (a==b) || (c==d)
          | $arrayconstructor                    // array [1..N] (i => i*i)
-         | $expr '[' $expr ']'                  // h_fwd[t]
-           where first expr must be a array and second expr a number (that must be an integer value)
 
 $literal = $number                              // built-in literal types are numeric, string, and boolean
          | $string
@@ -94,14 +98,9 @@ $literal = $number                              // built-in literal types are nu
 $number = // floating point number; no separate 'int' type, 'int' args are checked at runtime to be non-fractional
 $string = // characters enclosed in "" or ''; no escape characters inside, use combinations of "", '', and + instead (TODO: do we need string interpolation?).
           // Strings may span multiple lines (containing newlines)
-$boolconst = $identifier
-           where $identifier = 'true' or 'false'
+$boolconst = 'true' | 'false'
 
-$itemref = $identifier                          // will search parent scopes
-         | $expr '.' $identifier
-           where $expr evaluates to a dict or a runtime-object instance
-$macroapplication = $itemref '(' $expr (',' $expr)* ')'    // expressions resolve macro parameters; partial application possible (creates new macro)
-                    where $itemref refers to a macro
+$memberref = $identifier                          // will search parent scopes
 
 $arrayconstructor = 'array' '[' $expr '..' $expr ']' '(' $identifier '=>' $expr ')'     // array [1..N] (i => i*i)
                     where       ^start     ^end (int)    ^index variable  ^function of index variable
