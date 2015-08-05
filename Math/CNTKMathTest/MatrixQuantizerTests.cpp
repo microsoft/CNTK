@@ -111,7 +111,7 @@ namespace CNTKMathTest
                 allocator = new CUDAPageLockedMemAllocator(deviceId);
             }
 
-            Matrix<ElemType> inMatrix;
+            Matrix<ElemType> inMatrix(numRows, numCols, deviceId);
             auto quantizer = MatrixQuantizer<ElemType>::CreateMatrixQuantizer(inMatrix);
 
             // Verify that the initial residue is comprised of all zeros
@@ -166,9 +166,10 @@ namespace CNTKMathTest
                 delete[] gpuNewOutMatrix;
                 delete[] refNewOutMatrix;
                 delete[] refNewResidualMatrix;
-                delete quantizer;
-                delete allocator;
             }
+
+            delete quantizer;
+            delete allocator;
         }
 
     public:

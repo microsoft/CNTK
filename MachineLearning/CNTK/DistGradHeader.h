@@ -2,15 +2,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // Careful of the memory alignment, maybe use #pragma pack(1) for safety
     template<typename ElemType>
     struct DistGradHeader
     {
     public:
         size_t numSample;
-        ElemType criterion;                              // quantization range for this column
+        ElemType criterion;
+
+        // variable-size array to hold the bits, grouped into 'qbwords'
         int numEvalNode;
-        ElemType evalErrors[1];                         // variable-size array to hold the bits, grouped into 'qbwords'
+        ElemType evalErrors[1];
 
         static size_t DistGradHeaderSize(size_t nEvalNode)
         {

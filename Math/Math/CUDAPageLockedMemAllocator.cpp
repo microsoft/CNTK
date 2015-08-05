@@ -14,8 +14,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void* p;
         cudaSetDevice(m_deviceID);
 
-        // Note: I ask for '0' but cudaHostGetFlags() shows that it is allocated as 'cudaHostAllocMapped'
-        cudaHostAlloc(&p, size, 0/*cudaHostAllocPortable + cudaHostAllocWriteCombined*/) || "Malloc in CUDAPageLockedMemAllocator failed";
+        // Note: I ask for cudaHostAllocDefault but cudaHostGetFlags() shows that it is allocated as 'cudaHostAllocMapped'
+        cudaHostAlloc(&p, size, cudaHostAllocDefault) || "Malloc in CUDAPageLockedMemAllocator failed";
 
         return (char*)p;
     }

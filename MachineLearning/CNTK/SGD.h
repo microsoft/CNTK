@@ -106,6 +106,17 @@ enum class GradientsUpdateType : int
     RmsProp
 };
 
+// TODO: While currently combining these methods is not supported,
+// these are not mutually exclusive and we can/should support combinations of these
+// in the future
+enum class ParallelizationMethod : int
+{
+    None = 0,
+    DataParallelSGD = 1,
+    ModelAveraging = (1 << 1),   // Currently unsupported but will soon replace #ifdef MPI_SUPPORT
+    ModelParallelSGD = (1 << 2), // Currently unsupported
+};
+
 // configuration parameters associated with RMSProp learning algorithm
 typedef struct stRMSPropInfo
 {
@@ -267,21 +278,26 @@ public:
 
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
 
-        //distribute gradient aggregation
-        m_pDistGradAgg = nullptr;
-        m_pGradHeader = nullptr;
-        m_nGradientBit = 0;
-        m_useDistGradAgg = false;
+        // Parallel training
+        m_parallelizationMethod = ParallelizationMethod::None;
+        m_distGradAgg = nullptr;
+        m_gradHeader = nullptr;
+        m_numGradientBits = 32;
         m_enableDistributedMBReading = false;
-        m_nParallelizationStartEpoch = 0;
+        m_parallelizationStartEpochNum = 0;
         if ((g_mpi != nullptr) && configSGD.ExistsCurrent("ParallelTrain"))
         {
-            ConfigParameters configPTrain(configSGD("ParallelTrain", ""));
-            m_nGradientBit = configPTrain("gradientbits", "32");
-            m_useDistGradAgg = true;
-            m_enableDistributedMBReading = configPTrain("distributedMBReading", "false");
-            m_nParallelizationStartEpoch = configPTrain("parallelizationStartEpoch", "1");
-            m_nParallelizationStartEpoch -= 1; // Epoch numbers internally are 0 based
+            ConfigParameters configParallelTrain(configSGD("ParallelTrain", ""));
+            m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", "None"));
+            m_enableDistributedMBReading = configParallelTrain("distributedMBReading", "false");
+
+            if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
+            {
+                ConfigParameters configDataParallelSGD(configParallelTrain("DataParallelSGD", ""));
+                m_numGradientBits = configDataParallelSGD("gradientBits", "32");
+                m_parallelizationStartEpochNum = configDataParallelSGD("parallelizationStartEpoch", "1");
+                m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
+            }
         }
 
         Init(learningRatesPerMB,
@@ -828,9 +844,9 @@ protected:
         {
             // Synchronize all ranks before writing the model to ensure that 
             // everyone is done loading the model
-            if (m_useDistGradAgg)
+            if (m_parallelizationMethod != ParallelizationMethod::None)
             {
-                g_mpi->waitall();
+                g_mpi->WaitAll();
             }
 
             if (mpiRank == 0)
@@ -896,9 +912,9 @@ protected:
         {
             // Synchronize all ranks before proceeding to ensure that 
             // rank 0 has finished writing the previous model file
-            if (m_useDistGradAgg)
+            if (m_parallelizationMethod != ParallelizationMethod::None)
             {
-                g_mpi->waitall();
+                g_mpi->WaitAll();
             }
 
             Timer timer;
@@ -1221,9 +1237,9 @@ protected:
             // Synchronize all ranks before proceeding to ensure that 
             // nobody tries reading the checkpoint file at the same time
             // as rank 0 deleting it below
-            if (m_useDistGradAgg)
+            if (m_parallelizationMethod != ParallelizationMethod::None)
             {
-                g_mpi->waitall();
+                g_mpi->WaitAll();
             }
 
             // persist model and check-point info
@@ -1842,7 +1858,7 @@ protected:
         localEpochCriterion.SetValue(0);
         localEpochEvalErrors.SetValue(0);
 
-        if (m_useDistGradAgg && (epochNumber >= m_nParallelizationStartEpoch))
+        if ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum))
         {
             epochCriterion = ElemType(0.0);
             epochEvalErrors.assign(numEvalNodes, ElemType(0.0));
@@ -1855,11 +1871,11 @@ protected:
 
         bool useDistributedMBReading = false;
 #ifndef MPI_SUPPORT
-        useDistributedMBReading = m_enableDistributedMBReading && trainSetDataReader->SupportsDistributedMBRead() && m_useDistGradAgg && (epochNumber >= m_nParallelizationStartEpoch);
+        useDistributedMBReading = m_enableDistributedMBReading && trainSetDataReader->SupportsDistributedMBRead() && (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum);
 #endif
         if (useDistributedMBReading)
         {
-            trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->node(), g_mpi->nodes(), m_epochSize);
+            trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_epochSize);
         }
         else
         {
@@ -1878,9 +1894,9 @@ protected:
 #ifdef MPI_SUPPORT
             DecimateMinibatch(inputMatrices);
 #endif
-            if (!useDistributedMBReading && m_useDistGradAgg && (epochNumber >= m_nParallelizationStartEpoch))
+            if (!useDistributedMBReading && (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum))
             {
-                DecimateMinibatch(*inputMatrices, g_mpi->nodes(), g_mpi->node());
+                DecimateMinibatch(*inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
             }
             UpdateEvalTimeStamps(FeatureNodes);
             UpdateEvalTimeStamps(labelNodes);
@@ -1934,7 +1950,7 @@ protected:
             size_t aggregateMBSizeAllTrainingNodes = actualMBSize;
 
             //distributed gradient aggregation
-            if (!m_useDistGradAgg || (epochNumber < m_nParallelizationStartEpoch))
+            if ((m_parallelizationMethod != ParallelizationMethod::DataParallelSGD) || (epochNumber < m_parallelizationStartEpochNum))
             {
                 Matrix<ElemType>::AddElementToElement((*criterionNodes)[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
                 for (size_t i = 0; i<numEvalNodes; i++)
@@ -1947,21 +1963,21 @@ protected:
                 LazyInitDistGradAgg(*learnableNodes, numEvalNodes);
 
                 //prepare the header
-                m_pGradHeader->numEvalNode = numEvalNodes;
-                m_pGradHeader->numSample = actualMBSize;
-                m_pGradHeader->criterion = (float)(*criterionNodes)[0]->FunctionValues().Get00Element();
+                m_gradHeader->numEvalNode = numEvalNodes;
+                m_gradHeader->numSample = actualMBSize;
+                m_gradHeader->criterion = (float)(*criterionNodes)[0]->FunctionValues().Get00Element();
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
-                    m_pGradHeader->evalErrors[i] = (float)(*evaluationNodes)[i]->FunctionValues().Get00Element();
+                    m_gradHeader->evalErrors[i] = (float)(*evaluationNodes)[i]->FunctionValues().Get00Element();
                 }
 
-                m_pDistGradAgg->AggregateGradients(m_pGradHeader);
+                m_distGradAgg->AggregateGradients(m_gradHeader);
 
-                aggregateMBSizeAllTrainingNodes = m_pGradHeader->numSample;
-                epochCriterion += m_pGradHeader->criterion;
+                aggregateMBSizeAllTrainingNodes = m_gradHeader->numSample;
+                epochCriterion += m_gradHeader->criterion;
                 for (size_t i = 0; i<numEvalNodes; i++)
                 {
-                    epochEvalErrors[i] += m_pGradHeader->evalErrors[i];
+                    epochEvalErrors[i] += m_gradHeader->evalErrors[i];
                 }
             }
 
@@ -1994,7 +2010,7 @@ protected:
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
                     // get the epoch Values updated
-                    if (!m_useDistGradAgg || (epochNumber < m_nParallelizationStartEpoch))
+                    if ((m_parallelizationMethod != ParallelizationMethod::DataParallelSGD) || (epochNumber < m_parallelizationStartEpochNum))
                     {
                         timer.Restart();
                         epochCriterion = localEpochCriterion.Get00Element();
@@ -2057,7 +2073,7 @@ protected:
             profiler.NextSample();
         }
 
-        if (m_useDistGradAgg && (epochNumber >= m_nParallelizationStartEpoch))
+        if ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum))
         {
             epochCriterion /= float(totalEpochSamples);
             for (size_t i = 0; i< numEvalNodes; i++)
@@ -2084,9 +2100,9 @@ protected:
 
     void LazyInitDistGradAgg(const std::list<ComputationNodePtr>& learnableNodes, int numEvalNodes)
     {
-        if (m_useDistGradAgg)
+        if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
         {
-            if (m_pDistGradAgg == nullptr)
+            if (m_distGradAgg == nullptr)
             {
                 std::vector<Matrix<ElemType>*> learnParamsGradients;
                 learnParamsGradients.reserve(learnableNodes.size());
@@ -2096,30 +2112,30 @@ protected:
                     learnParamsGradients.push_back(&(node->GradientValues()));
                 }
 
-                m_pDistGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_nGradientBit, g_mpi, true /*useQuantizationForSelfStripe*/);
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, true /*useQuantizationForSelfStripe*/);
             }
 
-            if (m_pGradHeader == nullptr)
+            if (m_gradHeader == nullptr)
             {
-                m_pGradHeader = (DistGradHeader<ElemType>*)new char[DistGradHeader<ElemType>::DistGradHeaderSize(numEvalNodes)];
+                m_gradHeader = (DistGradHeader<ElemType>*)new char[DistGradHeader<ElemType>::DistGradHeaderSize(numEvalNodes)];
             }
         }
     }
 
     void UninitDistGradAgg()
     {
-        if (m_useDistGradAgg)
+        if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
         {
-            if (m_pDistGradAgg != nullptr)
+            if (m_distGradAgg != nullptr)
             {
-                delete m_pDistGradAgg;
-                m_pDistGradAgg = nullptr;
+                delete m_distGradAgg;
+                m_distGradAgg = nullptr;
             }
 
-            if (m_pGradHeader != nullptr)
+            if (m_gradHeader != nullptr)
             {
-                delete[]((char*)m_pGradHeader);
-                m_pGradHeader = nullptr;
+                delete[]((char*)m_gradHeader);
+                m_gradHeader = nullptr;
             }
         }
     }
@@ -2424,6 +2440,23 @@ protected:
         }
     }
 
+    ParallelizationMethod ParseParallelizationMethod(wstring s)
+    {
+        msra::strfun::tolower_ascii(s);
+        if ((s == L"") || (s == L"none"))
+        {
+            return ParallelizationMethod::None;
+        }
+        else if (s == L"dataparallelsgd")
+        {
+            return ParallelizationMethod::DataParallelSGD;
+        }
+        else
+        {
+            throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD)");
+        }
+    }
+
     LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
     {
         msra::strfun::tolower_ascii(s);
@@ -2657,13 +2690,13 @@ protected:
 
     bool m_useAllDataForPreComputedNode;
 
-    //one-bit SGD based 
-    IDistGradAggregator<ElemType>* m_pDistGradAgg;
-    DistGradHeader<ElemType>* m_pGradHeader;
-    int m_nGradientBit;
-    bool m_useDistGradAgg;
+    // Parallel training
+    ParallelizationMethod m_parallelizationMethod;
+    IDistGradAggregator<ElemType>* m_distGradAgg;
+    DistGradHeader<ElemType>* m_gradHeader;
+    int m_numGradientBits;
     bool m_enableDistributedMBReading;
-    int m_nParallelizationStartEpoch;
+    int m_parallelizationStartEpochNum;
 
     bool m_needAveMultiplier;
     ElemType m_L2RegWeight;
