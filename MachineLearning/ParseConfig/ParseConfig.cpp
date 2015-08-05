@@ -46,7 +46,8 @@ class CodeSource
     vector<TextLocation> locationStack; // parent locations in case of included files
     TextLocation cursor;                // current location
     const wchar_t * currentLine;        // cache of cursor.GetSourceFile().lines[cursor.lineNo]
-    void CacheCurrentLine()             // update currentLine from cursor
+    // update currentLine from cursor
+    void CacheCurrentLine()
     {
         let & lines = cursor.GetSourceFile().lines;
         if (cursor.lineNo == lines.size())
@@ -54,8 +55,14 @@ class CodeSource
         else
             currentLine = lines[cursor.lineNo].c_str();
     }
+protected:
+    // set a source file; only do that from constructor or inside PushSourceFile()
+    void SetSourceFile(SourceFile && sourceFile)
+    {
+        cursor = TextLocation::NewSourceFile(move(sourceFile)); // save source file and set the cursor to its start
+        CacheCurrentLine();             // re-cache current line
+    }
 public:
-
     class CodeSourceError : public ConfigError
     {
     public:
@@ -69,12 +76,11 @@ public:
     void PushSourceFile(SourceFile && sourceFile)
     {
         locationStack.push_back(cursor);
-        cursor = TextLocation::NewSourceFile(move(sourceFile)); // save source file and set the cursor to its start
-        CacheCurrentLine();             // re-cache current line
+        SetSourceFile(move(sourceFile));
     }
 
     // are we inside an include file?
-    bool IsInInclude() { return locationStack.size() > 1; }     // note: entry[0] is invalid
+    bool IsInInclude() { return locationStack.size() > 0; }
 
     // done with a source file. Only call this for nested files; the outermost one must not be popped.
     void PopSourceFile()
@@ -221,8 +227,8 @@ private:
     Token NextToken()
     {
         auto ch = GotChar();
-        // skip white space     --TODO: may or may not include newlines (iswblank() does not match CRLF)
-        while (iswblank(ch))
+        // skip white space
+        while (iswblank(ch) || (ch == '\n' /* and ...*/))    // TODO: need to be newline-sensitive
             ch = GetChar();
         Token t(GetCursor());
         // handle end of (include) file
@@ -375,7 +381,7 @@ class Parser : public Lexer
 
     map<wstring, int> infixPrecedence;      // precedence level of infix operators
 public:
-    Parser() : Lexer()
+    Parser(SourceFile && sourceFile) : Lexer()
     {
         infixPrecedence = map<wstring, int>
         {
@@ -387,6 +393,8 @@ public:
             { L"||", 6 },
             { L":", 5 },
         };
+        SetSourceFile(move(sourceFile));
+        ConsumeToken();     // get the very first token
     }
     ExpressionRef ParseOperand()
     {
@@ -564,7 +572,14 @@ public:
         }
         return members;
     }
-    void Test()
+    ExpressionRef Parse()
+    {
+        let topDict = ParseExpression(0, true);
+        if (GotToken().kind != eof)
+            Fail("junk at end of source", GetCursor());
+        return topDict;
+    }
+    static void Test()
     {
         let parserTest = L"[ do = (print:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ] ]";
         ParseConfigString(parserTest)->Dump();
@@ -572,13 +587,7 @@ public:
 };
 
 // globally exported functions to execute the parser
-static ExpressionRef Parse(SourceFile && sourceFile)
-{
-    Parser parser;
-    parser.PushSourceFile(move(sourceFile));
-    parser.ConsumeToken();
-    return parser.ParseExpression(0, true);
-}
+static ExpressionRef Parse(SourceFile && sourceFile) { return Parser(move(sourceFile)).Parse(); }
 ExpressionRef ParseConfigString(wstring text) { return Parse(SourceFile(L"(command line)", text)); }
 ExpressionRef ParseConfigFile(wstring path) { return Parse(SourceFile(path)); }
 
@@ -590,8 +599,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
 {
     try
     {
-        Parser parser;
-        parser.Test();
+        Parser::Test();
     }
     catch (const ConfigError & err)
     {
