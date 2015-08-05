@@ -1885,9 +1885,6 @@ protected:
                 }
             }
 
-            // Tries to set up derivative features for the next utterance.
-            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
-
             timer.Stop();
             numMBsRun++;
             if (m_traceLevel > 0)
@@ -1955,6 +1952,9 @@ protected:
             // call DataEnd function
             // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(endDataSentence);
+
+            // Tries to set up derivative features for the next utterance.
+            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
 
             profiler.NextSample();
         }
