@@ -105,6 +105,7 @@
     <ClInclude Include="biggrowablevectors.h" />
     <ClInclude Include="chunkevalsource.h" />
     <ClInclude Include="fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="htkfeatio.h" />
     <ClInclude Include="HTKMLFReader.h" />
     <ClInclude Include="HTKMLFWriter.h" />
@@ -139,6 +140,10 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="fileutil.cpp" />
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="HTKMLFReader.cpp" />
     <ClCompile Include="HTKMLFWriter.cpp" />
     <ClCompile Include="latticearchive.cpp" />

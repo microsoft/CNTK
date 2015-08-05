@@ -5,6 +5,7 @@
 //
 
 #include "BestGpu.h"
+#include "DebugUtil.h"
 
 #ifndef CPUONLY
 
@@ -37,7 +38,7 @@ void CUDACALL(cudaError_t x)
     { 
         const char* errmsg = cudaGetErrorString(x);
         std::cerr<< "!!!!!!!!CUDA EXCEPTION: " << errmsg << std::endl;
-
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         throw std::runtime_error(errmsg);
     }    
 }
@@ -47,6 +48,7 @@ void CUSPARSECALL(cusparseStatus_t x)
     if(x!= CUSPARSE_STATUS_SUCCESS) 
     {         
         std::cerr << "!!!!!!!!CUSPARSE EXCEPTION: " << std::endl;
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         throw std::runtime_error("CUSPARSE EXCEPTION");
     }    
 }
@@ -56,6 +58,7 @@ void CUBLASCALL(cublasStatus_t x)
     if (x != CUBLAS_STATUS_SUCCESS)
     {
         std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         throw std::runtime_error("CUBLAS fail");
     }
 }
@@ -339,7 +342,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         outMatrix.Resize(m_numRows, m_numCols, m_nz,newFormat, true, false);
         outMatrix.SetNzCount(m_nz);
 
-        if (oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
+        if ((oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
+            || (oldFormat == matrixFormatSparseCSC && newFormat == matrixFormatSparseCSR))
         {
             if (sizeof(ElemType) == sizeof(float))
             {
@@ -1495,7 +1499,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
+    void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
+    {
+        GPUSparseMatrix<ElemType> ax(MatrixFormat::matrixFormatSparseCSR);
+        GPUSparseMatrix<ElemType> bx(MatrixFormat::matrixFormatSparseCSR);
+        GPUSparseMatrix<ElemType> cx(MatrixFormat::matrixFormatSparseCSR);
+
+        bool aCSC = (a.m_format == matrixFormatSparseCSC);
+        bool bCSC = (b.m_format == matrixFormatSparseCSC);
+        bool cCSC = (c.m_format == matrixFormatSparseCSC);
+
+        if (aCSC)
+            a.ConvertToSparseFormat(MatrixFormat::matrixFormatSparseCSR, ax);
+
+        if (bCSC)
+            b.ConvertToSparseFormat(MatrixFormat::matrixFormatSparseCSR, bx);
+
+        if (cCSC)
+            c.ConvertToSparseFormat(MatrixFormat::matrixFormatSparseCSR, cx);
+
+        GPUSparseMatrix<ElemType>::ScaleAndAddCSR(  alpha,
+                                                    (aCSC ? ax : a),
+                                                    beta,
+                                                    (bCSC ? bx : b),
+                                                    (cCSC ? cx : c));
+
+        if (cCSC)
+            cx.ConvertToSparseFormat(MatrixFormat::matrixFormatSparseCSC, c);
+    }
+
+    template<class ElemType>
+    void GPUSparseMatrix<ElemType>::ScaleAndAddCSR(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
     {
         if (a.m_format != matrixFormatSparseCSR || b.m_format != matrixFormatSparseCSR || c.m_format != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
@@ -1547,7 +1581,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
+    void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
+    {
+        if (a.m_format == matrixFormatSparseCSC)
+        {
+            GPUSparseMatrix<ElemType> ax;
+            a.ConvertToSparseFormat(MatrixFormat::matrixFormatSparseCSR, ax);
+            GPUSparseMatrix<ElemType>::ScaleAndAddCSR(alpha, ax, beta, b, c);
+        }
+        else
+        {
+            GPUSparseMatrix<ElemType>::ScaleAndAddCSR(alpha, a, beta, b, c);
+        }
+    }
+
+    template<class ElemType>
+    void GPUSparseMatrix<ElemType>::ScaleAndAddCSR(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
     {
         if (a.m_format != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
@@ -2009,6 +2058,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         slice.SetMatrixName(m_matrixName);
 
         return slice;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
+    {
+        int m = (int)GetNumRows();
+        int n = (int)GetNumCols();
+
+        if (m != n)
+            throw std::logic_error("Diagonal can be called only for square matrix.");
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        GPUMatrix<ElemType> tmp(m, n, GetComputeDeviceId());
+
+        // TODO: Implement optimized diagonal functions for sparse matrices. For now copy to dense first.
+        CopyToDenseMatrix(tmp);
+
+        return tmp.Diagonal();
     }
 
     template<class ElemType>

@@ -2157,6 +2157,176 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
+    template<class ElemType>
+    class DiagonalNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+
+    public:
+
+        DiagonalNode(const DEVICEID_TYPE deviceId, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+
+        DiagonalNode(const DiagonalNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+
+        DiagonalNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            ComputationNodePtr node = new DiagonalNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+        }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            ComputationNode<ElemType>::SaveToFile(fstream);
+        }
+
+        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        {
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"Diagonal"; }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, true);
+
+            m_outputWidth = 1;
+            m_outputChannels = 1;
+
+            if (m_inputWidth * m_inputChannels != 1)
+                fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i < ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        throw runtime_error("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                }
+
+                fprintf(stderr, ")");
+            }
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1)
+                throw std::logic_error("Diagonal operation: Should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("Diagonal operation: The input node has 0 element.");
+
+            size_t cols = Inputs(0)->FunctionValues().GetNumCols();
+
+            FunctionValues().Resize(1, cols);
+            InferImageDimsFromInputs();
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
+        {
+            NOT_IMPLEMENTED
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            functionValues.Resize(1, inputFunctionValues.GetNumCols());
+            inputFunctionValues.AssignDiagonalValuesTo(functionValues);
+#if NANCHECK
+            functionValues.HasNan("Diagonal");
+#endif
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Diagonal operation only takes one input.");
+
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
+        }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
+        {
+            NOT_IMPLEMENTED
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+            inputGradientValues.SetValue(0);
+            gradientValues.AssignDiagonalValuesTo(inputGradientValues);
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            return m_functionValues;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+        }
+    };
+
+    template class DiagonalNode<float>;
+    template class DiagonalNode<double>;
+
 
     template<class ElemType>
     class RowRepeatNode : public ComputationNode<ElemType>

@@ -13,6 +13,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
 
 // predeclare cublasHandle_t
@@ -118,6 +119,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
+
+        GPUMatrix<ElemType> Diagonal() const;
 
         size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
         ElemType* BufferPointer() const {return m_pArray;}

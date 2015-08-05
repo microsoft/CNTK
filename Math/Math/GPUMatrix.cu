@@ -6,6 +6,7 @@
 
 #include "stdafx.h"
 #include "BestGpu.h"
+#include "DebugUtil.h"
 
 #ifndef CPUONLY
 
@@ -70,6 +71,7 @@ void CURAND_CALL(curandStatus x)
     if (x != CURAND_STATUS_SUCCESS)
     {
         std::cerr << "!!!!!!!!CURAND EXCEPTION: " << std::endl;
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         throw std::runtime_error("CURAND fail");
     }
 }
@@ -79,6 +81,7 @@ void CUBLAS_CALL(cublasStatus_t x)
     if(x!=CUBLAS_STATUS_SUCCESS) 
     { 
         std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         throw std::runtime_error("CUBLAS fail");
     }
 }
@@ -89,6 +92,7 @@ void CUDA_CALL(cudaError_t x)
     { 
         const char* errmsg = cudaGetErrorString(x);
         std::cerr << "!!!!!!!!CUDA EXCEPTION: " << errmsg << std::endl;
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         cudaDeviceSynchronize();
         throw std::runtime_error(errmsg);
     }    
@@ -677,6 +681,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
 
         return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
+    {
+        if (GetNumRows() != GetNumCols())
+            throw std::logic_error("Diagonal can be called only for square matrix.");
+
+        GPUMatrix<ElemType> diag(1, m_numCols, m_computeDevice);
+
+        CUDA_LONG N = (CUDA_LONG)GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignToDiagonalValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(diag.m_pArray, m_pArray, N, (CUDA_LONG)GetNumCols());
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return diag;
     }
 
     //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.

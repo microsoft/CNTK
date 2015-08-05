@@ -10,6 +10,9 @@
     <ClCompile Include="fileutil.cpp">
       <Filter>Duplicates to remove</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <Filter>Duplicates to remove</Filter>
+    </ClCompile>
     <ClCompile Include="DataReader.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -40,6 +43,9 @@
       <Filter>Duplicates to remove</Filter>
     </ClInclude>
     <ClInclude Include="fileutil.h">
+      <Filter>Duplicates to remove</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Duplicates to remove</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\DataReader.h">

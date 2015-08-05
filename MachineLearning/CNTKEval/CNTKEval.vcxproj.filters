@@ -14,6 +14,9 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
@@ -38,6 +41,9 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\TimerUtility.h">

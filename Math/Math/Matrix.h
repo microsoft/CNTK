@@ -113,6 +113,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        Matrix<ElemType> Diagonal() const;
+        Matrix<ElemType> AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
+
         void ShiftBy(int numShift) ;
 
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);

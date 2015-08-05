@@ -16,6 +16,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="DebugUtil.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -26,6 +29,9 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\basetypes.h">

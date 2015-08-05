@@ -8,6 +8,7 @@
 #define _BASICS_H_
 
 #include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
+#include "DebugUtil.h"
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
@@ -36,6 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         va_start(args, format);
         vsprintf(buffer, format, args);
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         throw std::runtime_error(buffer);
     };
     static inline void RuntimeError(const string & message) { RuntimeError("%s", message.c_str()); }
@@ -51,9 +53,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         va_start(args, format);
         vsprintf(buffer, format, args);
+        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
         throw std::logic_error(buffer);
     };
-    static inline void LogicError(const string & message) { RuntimeError("%s", message.c_str()); }
+    static inline void LogicError(const string & message) { LogicError("%s", message.c_str()); }
 
     // Warning - warn with a formatted error string
     static inline void Warning(const char * format, ...)
