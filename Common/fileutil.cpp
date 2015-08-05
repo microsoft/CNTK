@@ -425,10 +425,14 @@ void unlinkOrDie (const std::wstring & pathname)
 void renameOrDie (const std::string & from, const std::string & to)
 {
 #ifdef _WIN32
-    if (!MoveFileA (from.c_str(),to.c_str()))
-        RuntimeError("error renaming: %s", GetLastError());
-#else   // TODO: test this
-    if (!rename (from.c_str(), to.c_str()))
+    // deleting destination file if exits (to match Linux semantic)
+    if (fexists(to.c_str()) && !DeleteFileA(to.c_str())) 
+        RuntimeError("error deleting file: '%s': %d", to.c_str(), GetLastError());
+    
+    if (!MoveFileA (from.c_str(), to.c_str()))
+        RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
+#else
+    if (rename (from.c_str(), to.c_str()) != 0)
         RuntimeError("error renaming file '%s': %s", from.c_str(), strerror(errno));
 #endif
 }
@@ -436,8 +440,12 @@ void renameOrDie (const std::string & from, const std::string & to)
 void renameOrDie (const std::wstring & from, const std::wstring & to)
 {
 #ifdef _WIN32
+    // deleting destination file if exits (to match Linux semantic)
+    if (fexists(to.c_str()) && !DeleteFileW(to.c_str())) 
+        RuntimeError("error deleting file '%S': %d", to.c_str(), GetLastError());
+
     if (!MoveFileW(from.c_str(), to.c_str()))
-    RuntimeError ("error renaming: %s", GetLastError());
+        RuntimeError ("error renaming file '%S': %d", from.c_str(), GetLastError());
 #else
     renameOrDie (charpath(from), charpath(to));
 #endif

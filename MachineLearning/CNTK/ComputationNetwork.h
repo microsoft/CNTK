@@ -483,6 +483,16 @@ public:
 
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
     {
+       // Saving into temporary file and then renaming it to the requested fileName
+       // This is a standard trick to avoid havign corrupted model files if process dies during writing
+       wstring tmpFileName = fileName + L".tmp";
+       SaveToFileImpl(tmpFileName, fileFormat);
+       renameOrDie(tmpFileName, fileName);
+    }
+
+private:
+    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const
+    {
         File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
@@ -589,8 +599,11 @@ public:
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECN");
+       
+        fstream.Flush();
     }
 
+public:
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary)
     {
