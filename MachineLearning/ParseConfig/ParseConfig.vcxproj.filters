@@ -24,4 +24,9 @@
   <ItemGroup>
     <Text Include="ConfigSpec.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ParseConfig.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
