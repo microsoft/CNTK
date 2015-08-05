@@ -22,6 +22,7 @@
 #define NOT_IMPLEMENTED \
     {   \
     fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
+    Microsoft::MSR::CNTK::DebugUtil::PrintStack(); \
     throw std::logic_error("Not Implemented"); \
     }
 

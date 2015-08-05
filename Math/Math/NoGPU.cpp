@@ -477,6 +477,12 @@ namespace Microsoft {
 
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols) { return *this; }
 
+            template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
+            {
+                GPUMatrix<ElemType> diag;
+
+                return diag;
+            }
 
             //for each column of a, we assign numRows starting from startIndex to this
             template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }

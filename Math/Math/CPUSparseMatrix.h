@@ -52,6 +52,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         CPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
+        CPUMatrix<ElemType> DiagonalToDense() const;
+
         void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/) { NOT_IMPLEMENTED; }
         
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,

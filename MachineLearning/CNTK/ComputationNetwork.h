@@ -1364,6 +1364,10 @@ public:
         {
             newNode = new RowRepeatNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
+        else if (nodeType == DiagonalNode<ElemType>::TypeName())
+        {
+            newNode = new DiagonalNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == MeanNode<ElemType>::TypeName())
         {
             newNode = new MeanNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1693,6 +1697,10 @@ public:
         else if (nodeType == RowRepeatNode<ElemType>::TypeName())
         {
             newNode = new RowRepeatNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == DiagonalNode<ElemType>::TypeName())
+        {
+            newNode = new DiagonalNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == MeanNode<ElemType>::TypeName())
         {
@@ -2194,6 +2202,15 @@ public:
                                  const std::wstring nodeName = L"")
     {
         ComputationNodePtr newNode(new RowRepeatNode<ElemType>(m_deviceId, num_repeat, nodeName));
+        newNode->AttachInputs(a);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr Diagonal(const ComputationNodePtr a,
+                                const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new DiagonalNode<ElemType>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;

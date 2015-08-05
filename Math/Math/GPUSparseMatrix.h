@@ -190,6 +190,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
+        GPUMatrix<ElemType> DiagonalToDense() const;
+
         GPUMatrix<ElemType> CopyToDenseMatrix() const;
         void CopyToDenseMatrix(GPUMatrix<ElemType> &denseMatrix) const;
         void CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType> &cpuSparseMatrix) const;
@@ -325,6 +327,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t ElemCountFromBufferSize() const;
         DEVICEID_TYPE PrepareDevice(const DEVICEID_TYPE deviceId = -1) const;
         size_t IdentifyRowsWithValues() const;
+
+    private:
+        static void ScaleAndAddCSR(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c);
+        static void ScaleAndAddCSR(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
 
      private:
 

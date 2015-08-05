@@ -218,6 +218,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, RowRepeatNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, DiagonalNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, MeanNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, InvStdDevNode<ElemType>::TypeName()))

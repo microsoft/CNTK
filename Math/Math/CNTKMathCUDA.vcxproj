@@ -121,6 +121,7 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="CommonMatrix.h" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
@@ -141,6 +142,9 @@
     </CudaCompile>
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <PrecompiledHeader></PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

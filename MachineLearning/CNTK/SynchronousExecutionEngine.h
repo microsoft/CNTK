@@ -274,7 +274,7 @@ public:
         else if (cnNodeType == RowRepeatNode<ElemType>::TypeName())
         {
             if (parameter.size() != 2)
-                RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats.");
+                RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats).");
 
             nodeParamCount = 1;
             nodeParamStart = 0;
@@ -293,7 +293,7 @@ public:
         else if (cnNodeType == ReshapeNode<ElemType>::TypeName())
         {
             if (parameter.size() < 2 || parameter.size() > 5)
-                RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
+                RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=]).");
 
             nodeParamCount = 1;
             nodeParamStart = 0;
@@ -309,6 +309,24 @@ public:
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 nodePtr = m_net.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
+                nodePtr->NeedGradient() = needGradient;
+            }
+        }
+        else if (cnNodeType == DiagonalNode<ElemType>::TypeName())
+        {
+            if (parameter.size() != 1)
+                RuntimeError("DiagonalNode should have one parameter. Usage: RowRepeat(origNodeName).");
+
+            nodeParamCount = 1;
+            nodeParamStart = 0;
+
+            if (pass == ndlPassInitial)
+            {
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+
+                bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                nodePtr = m_net.Diagonal(NULL, name);
                 nodePtr->NeedGradient() = needGradient;
             }
         }
