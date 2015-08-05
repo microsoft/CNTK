@@ -16,6 +16,7 @@ build/
 [Bb]in/
 [Oo]bj/
 .run-*
+x86_64.*
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
