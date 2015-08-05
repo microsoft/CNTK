@@ -152,6 +152,9 @@
   <ItemGroup>
     <Text Include="ConfigSpec.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ParseConfig.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

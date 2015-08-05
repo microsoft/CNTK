@@ -1,10 +1,8 @@
-// ParseConfig.cpp : tool for developing and testing the config parser
-//
+// ParseConfig.cpp -- config parser
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include "Basics.h"
-#include "File.h"
+#include "ParseConfig.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
@@ -12,7 +10,6 @@
 #include <vector>
 #include <deque>
 #include <set>
-#include <memory>
 #include <stdexcept>
 #include <algorithm>
 
@@ -25,53 +22,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 using namespace std;
 using namespace msra::strfun;
 
-struct SourceFile               // content of one source file
-{
-    /*const*/ wstring path;                     // where it came from
-    /*const*/ vector<wstring> lines;            // source code lines
-    SourceFile(wstring location, wstring text) : path(location), lines(split(text, L"\r\n")) { }  // from string, e.g. command line
-    SourceFile(wstring path) : path(path)       // from file
-    {
-        File(path, fileOptionsRead).GetLines(lines);
-    }
-};
-
-struct TextLocation                 // position in the text. Lightweight value struct that we can copy around, even into dictionaries etc., for error messages
-{
-    // source-code locations are given by line number, character position, and the source file
-    size_t lineNo, charPos;         // line number and character index (0-based)
-    const SourceFile & GetSourceFile() const { return sourceFileMap[sourceFileAsIndex]; }    // get the corresponding source-code line
-
-    // register a new source file and return a TextPosition that points to its start
-    static TextLocation NewSourceFile(SourceFile && sourceFile)
-    {
-        TextLocation loc;
-        loc.lineNo = 0;
-        loc.charPos = 0;
-        loc.sourceFileAsIndex = sourceFileMap.size();   // index under which we store the source file
-        sourceFileMap.push_back(move(sourceFile));      // take ownership of the source file and give it a numeric index
-        return loc;
-    }
-    TextLocation() : lineNo(SIZE_MAX), charPos(SIZE_MAX), sourceFileAsIndex(SIZE_MAX) { }   // default: location
-
-    // helper for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
-    wstring FormatErroneousLine() const
-    {
-        let & lines = GetSourceFile().lines;
-        let line = (lineNo == lines.size()) ? L"(end)" : lines[lineNo].c_str();
-        return wstring(line) + L"\n" + wstring(charPos, L'.') + L"^";
-    }
-
-    void PrintIssue(const char * errorKind, const char * kind, const char * what) const
-    {
-        fprintf(stderr, "%ls(%d): %s %s: %s\n%ls\n", GetSourceFile().path.c_str(), lineNo+1/*report 1-based*/, errorKind, kind, what, FormatErroneousLine().c_str());
-    }
-
-private:
-    size_t sourceFileAsIndex;                   // source file is remembered in the value struct as an index into the static sourceFileMap[]
-    // the meaning of the 'sourceFile' index is global, stored in this static map
-    static vector<SourceFile> sourceFileMap;
-};
 /*static*/ vector<SourceFile> TextLocation::sourceFileMap;
 
 // all errors from processing the config files are reported as ConfigError
@@ -402,7 +352,8 @@ class Parser : public Lexer
 
     void Fail(const string & msg, Token where) { throw LexerError(msg, where.beginLocation); }
 
-    void Expected(const wstring & what) { Fail(strprintf("%ls expected", what.c_str()), GotToken().beginLocation); }
+    //void Expected(const wstring & what) { Fail(strprintf("%ls expected", what.c_str()), GotToken().beginLocation); }  // I don't know why this does not work
+    void Expected(const wstring & what) { Fail(utf8(what) + " expected", GotToken().beginLocation); }
 
     void ConsumePunctuation(const wchar_t * s)
     {
@@ -437,23 +388,6 @@ public:
             { L":", 5 },
         };
     }
-    // --- this gets exported
-    struct Expression
-    {
-        TextLocation location;      // where in the source code (for downstream error reporting)
-        Expression(TextLocation location) : location(location) { }
-        wstring op;                 // operation, encoded as a string; 'symbol' for punctuation and keywords, otherwise used in constructors below ...TODO: use constexpr
-        double d;                   // numeric literal; op == "d"
-        wstring s;                  // string literal;  op == "s"
-        boolean b;                  // boolean literal; op == "b"
-        wstring id;                 // identifier;      op == "id" (if macro then it also has args)
-        typedef shared_ptr<struct Expression> ExpressionRef;
-        vector<ExpressionRef> args;             // position-dependent expression/function args
-        map<wstring, ExpressionRef> namedArgs;  // named expression/function args; also dictionary members
-        Expression() : d(0.0), b(false) { }
-    };
-    typedef Expression::ExpressionRef ExpressionRef;    // circumvent some circular definition problem
-    // --- end this gets exported
     ExpressionRef ParseOperand()
     {
         let & tok = GotToken();
@@ -505,7 +439,12 @@ public:
         {
             operand->op = L"[]";
             ConsumeToken();
-            //operand->namedArgs = ParseDictMembers();  // ...CONTINUE HERE
+#if 1
+            let namedArgs = ParseDictMembers();  // ...CONTINUE HERE
+            for (const auto & arg : namedArgs)
+                operand->namedArgs.insert(make_pair(arg.first->id, arg.second));
+#endif
+            /*operand->namedArgs = */ParseDictMembers();  // ...CONTINUE HERE
             ConsumePunctuation(L"]");
         }
         else if (tok.symbol == L"array")                                // === array constructor
@@ -544,7 +483,6 @@ public:
             ExpressionRef operation = make_shared<Expression>(opTok.beginLocation);
             operation->op = op;
             operation->args.push_back(left);        // [0] is left operand; [1] is right except for macro application
-            ConsumeToken();
             // deal with special cases first
             // We treat member lookup (.), macro application (a()), and indexing (a[i]) together with the true infix operators.
             if (op == L".")                                 // === reference of a dictionary item
@@ -564,6 +502,7 @@ public:
             }
             else                                            // === regular infix operator
             {
+                ConsumeToken();
                 let right = ParseExpression(opPrecedence + 1, stopAtNewline);   // get right operand, or entire multi-operand expression with higher precedence
                 operation->args.push_back(right);           // [1]: right operand
             }
@@ -588,7 +527,7 @@ public:
                 ConsumeToken();
                 let valueExpr = ParseExpression(0, false);
                 let res = macroArgs->namedArgs.insert(make_pair(expr->id, valueExpr));
-                if (res.second)
+                if (!res.second)
                     Fail(strprintf("duplicate optional argument '%ls'", expr->id.c_str()), expr->location);
             }
             else
@@ -616,26 +555,32 @@ public:
             let valueExpr = ParseExpression(0, false);              // and the right-hand side
             // insert
             let res = members.insert(make_pair(var, valueExpr));
-            if (res.second)
+            if (!res.second)
                 Fail(strprintf("duplicate member definition '%ls'", var->id.c_str()), var->location);
             // advance
             idTok = GotToken();
             if (idTok.symbol == L";")
-                idTok = GotToken();
+                idTok = GetToken();
         }
         return members;
     }
     void Test()
     {
-        let parserTest = L"[ do = (train:eval) ; x = 13 ]";
-        PushSourceFile(SourceFile(L"(command line)", parserTest));
-        ConsumeToken();
-        ConsumePunctuation(L"[");
-        let topDict = ParseDictMembers();
-        ConsumePunctuation(L"]");
-        topDict;    // find item 'do' and evaluate it
+        let parserTest = L"[ do = (print:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ] ]";
+        ParseConfigString(parserTest)->Dump();
     }
 };
+
+// globally exported functions to execute the parser
+static ExpressionRef Parse(SourceFile && sourceFile)
+{
+    Parser parser;
+    parser.PushSourceFile(move(sourceFile));
+    parser.ConsumeToken();
+    return parser.ParseExpression(0, true);
+}
+ExpressionRef ParseConfigString(wstring text) { return Parse(SourceFile(L"(command line)", text)); }
+ExpressionRef ParseConfigFile(wstring path) { return Parse(SourceFile(path)); }
 
 }}}   // namespaces
 
