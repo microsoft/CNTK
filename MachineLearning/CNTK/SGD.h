@@ -2092,30 +2092,40 @@ protected:
                             const size_t minibatchSize)
     {
         wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
+        // Saving into temporary file and then renaming it to the checkPointFileName
+        // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing
+        wstring tempFileName = checkPointFileName + L".tmp";
 
-        File fstream(checkPointFileName,
-                     FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
-
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
-        fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
-
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
-        fstream << minibatchSize;
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
-
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
-
-        for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
         {
-            const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-            fstream << smoothedGradient;
+            File fstream(tempFileName,
+                         FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
+            fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
+            fstream << minibatchSize;
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
+
+            for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
+            {
+                const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
+                fstream << smoothedGradient;
+            }
+
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
+
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+
+            // Ensuring that data is written
+            fstream.Flush();
         }
 
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
-
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+        renameOrDie(tempFileName, checkPointFileName);
     }
 
     bool LoadCheckPointInfo(const size_t epochNumber,
