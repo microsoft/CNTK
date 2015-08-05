@@ -64,7 +64,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     struct Expression
     {
-        Expression(TextLocation location) : location(location), d(0.0), b(false) { }
         wstring op;                 // operation, encoded as a string; 'symbol' for punctuation and keywords, otherwise used in constructors below ...TODO: use constexpr
         wstring id;                 // identifier;      op == "id", "new", "array", and "." (if macro then it also has args)
         wstring s;                  // string literal;  op == "s"
@@ -74,7 +73,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         vector<ExpressionRef> args;             // position-dependent expression/function args
         map<wstring, ExpressionRef> namedArgs;  // named expression/function args; also dictionary members
         TextLocation location;      // where in the source code (for downstream error reporting)
-        //Expression() : d(0.0), b(false) { }
+        Expression(TextLocation location) : location(location), d(0.0), b(false) { }
+        Expression(TextLocation location, wstring op) : location(location), d(0.0), b(false), op(op) { }
+        Expression(TextLocation location, wstring op, ExpressionRef arg) : location(location), d(0.0), b(false), op(op) { args.push_back(arg); }
+        Expression(TextLocation location, wstring op, ExpressionRef arg1, ExpressionRef arg2) : location(location), d(0.0), b(false), op(op) { args.push_back(arg1); args.push_back(arg2); }
         // diagnostics helper: print the content
         void Dump(int indent = 0) const
         {
