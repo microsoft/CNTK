@@ -104,6 +104,7 @@
     <ClInclude Include="SynchronousExecutionEngine.h">
       <Filter>Execution Engine</Filter>
     </ClInclude>
+    <ClInclude Include="MPIWrapper.h" />
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
     </ClInclude>
@@ -152,6 +153,9 @@
     <ClInclude Include="InputAndParamNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="AllReduceDistGradAggregator.h" />
+    <ClInclude Include="DistGradHeader.h" />
+    <ClInclude Include="IDistGradAggregator.h" />
     <ClInclude Include="DecoderNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>

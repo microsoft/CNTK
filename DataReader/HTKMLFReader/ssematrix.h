@@ -1346,6 +1346,15 @@ public:
 #endif
     }
 
+    // non-destructive resize() to a smaller size
+    void shrink (size_t newrows/*rows*/, size_t newcols/*cols*/)
+    {
+        if (newrows > numrows || newcols > numcols)
+            throw std::logic_error ("shrink: attempted to grow the matrix");
+        numrows = newrows;
+        numcols = newcols;
+    }
+
     // file I/O
     void write (FILE * f, const char * name) const
     {

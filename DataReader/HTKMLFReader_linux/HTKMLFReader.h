@@ -7,6 +7,7 @@
 #pragma once
 #include "DataReader.h"
 #include "commandArgUtil.h" // for intargvector
+#include "CUDAPageLockedMemAllocator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -52,9 +53,10 @@ private:
     std::vector<size_t> m_featuresStartIndexMultiUtt;
     std::vector<size_t> m_labelsStartIndexMultiUtt;
 
-    std::vector<ElemType*> m_featuresBufferMultiIO;
+    CUDAPageLockedMemAllocator* m_cudaAllocator;
+    std::vector<std::shared_ptr<ElemType>> m_featuresBufferMultiIO;
     std::vector<size_t> m_featuresBufferAllocatedMultiIO;
-    std::vector<ElemType*> m_labelsBufferMultiIO;
+    std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
 
     std::map<std::wstring,size_t> m_featureNameToIdMap;
@@ -80,7 +82,7 @@ private:
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     
-    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
     void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
 
     bool ReNewBufferForMultiIO(size_t i);
@@ -99,7 +101,25 @@ private:
         category,
     };
 
+private:
+    CUDAPageLockedMemAllocator* GetCUDAAllocator(int deviceID)
+    {
+        if (m_cudaAllocator != nullptr)
+        {
+            if (m_cudaAllocator->GetDeviceID() != deviceID)
+            {
+                delete m_cudaAllocator;
+                m_cudaAllocator = nullptr;
+            }
+        }
 
+        if (m_cudaAllocator == nullptr)
+        {
+            m_cudaAllocator = new CUDAPageLockedMemAllocator(deviceID);
+        }
+
+        return m_cudaAllocator;
+    }
 
 public:
     /// a matrix of n_stream x n_length
@@ -135,7 +155,19 @@ public:
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
     virtual ~HTKMLFReader();
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+    {
+        return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+    }
+
+    virtual bool SupportsDistributedMBRead() const override
+    {
+        return m_frameSource->supportsbatchsubsetting(); 
+    }
+
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);

@@ -13,6 +13,7 @@
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
 #include "minibatchsourcehelpers.h"
 #include "minibatchiterator.h"
+#include "unordered_set"
 
 namespace msra { namespace dbn {
 
@@ -1082,9 +1083,15 @@ public:
     // We specify the utterance by its global start time (in a space of a infinitely repeated training set).
     // This is efficient since getbatch() is called with sequential 'globalts' except at epoch start.
     // Note that the start of an epoch does not necessarily fall onto an utterance boundary. The caller must use firstvalidglobalts() to find the first valid globalts at or after a given time.
-    /*implement*/ bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+    // Support for data parallelism:  If mpinodes > 1 then we will
+    //  - load only a subset of blocks from the disk
+    //  - skip frames/utterances in not-loaded blocks in the returned data
+    //  - 'framesadvanced' will still return the logical #frames; that is, by how much the global time index is advanced
+    /*implement*/ bool getbatch(const size_t globalts, const size_t framesrequested,
+                                 const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced,
+                                 std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
                                  std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
-                                 std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
+                                 std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs) override
     {
         bool readfromdisk = false;  // return value: shall be 'true' if we paged in anything
 
@@ -1094,6 +1101,7 @@ public:
         // update randomization if a new sweep is entered  --this is a complex operation that updates many of the data members used below
         const size_t sweep = lazyrandomization (globalts);
 
+        size_t mbframes = 0;
         const std::vector<char> noboundaryflags;    // dummy
         if (!framemode)      // regular utterance mode
         {
@@ -1106,9 +1114,20 @@ public:
             const size_t spos = positer->second;
 
             // determine how many utterances will fit into the requested minibatch size
-            size_t mbframes = randomizedutterancerefs[spos].numframes;   // at least one utterance, even if too long
-            size_t epos;
-            for (epos = spos + 1; epos < numutterances && mbframes + randomizedutterancerefs[epos].numframes < framesrequested; epos++)  // add more utterances as long as they fit within requested minibatch size
+            // In case of MPI we need to choose enough number of frames such that current MPI subset
+            // gets at least one utterance even if 'mbframes' execeeds 'framesrequested'
+            size_t epos = spos;
+            bool currentSubsetCovered = false;
+            do
+            {
+                mbframes += randomizedutterancerefs[epos].numframes;
+                currentSubsetCovered = ((randomizedutterancerefs[epos].chunkindex % numsubsets) == subsetnum);
+                epos++;
+
+            } while (!currentSubsetCovered && (epos < numutterances));
+
+            // add more utterances as long as they fit within requested minibatch size
+            for (; epos < numutterances && ((mbframes + randomizedutterancerefs[epos].numframes) < framesrequested); epos++)
                 mbframes += randomizedutterancerefs[epos].numframes;
 
             // do some paging housekeeping
@@ -1124,7 +1143,22 @@ public:
                 releaserandomizedchunk (k);
 
             for (size_t pos = spos; pos < epos; pos++)
-                readfromdisk |= requirerandomizedchunk (randomizedutterancerefs[pos].chunkindex, windowbegin, windowend); // (window range passed in for checking only)
+                if ((randomizedutterancerefs[pos].chunkindex % numsubsets) == subsetnum)
+                    readfromdisk |= requirerandomizedchunk(randomizedutterancerefs[pos].chunkindex, windowbegin, windowend); // (window range passed in for checking only)
+
+            // Note that the above loop loops over all chunks incl. those that we already should have.
+            // This has an effect, e.g., if 'numsubsets' has changed (we will fill gaps).
+
+            // determine the true #frames we return, for allocation--it is less than mbframes in the case of MPI/data-parallel sub-set mode
+            size_t tspos = 0;
+            for (size_t pos = spos; pos < epos; pos++)
+            {
+                const auto & uttref = randomizedutterancerefs[pos];
+                if ((uttref.chunkindex % numsubsets) != subsetnum)            // chunk not to be returned for this MPI node
+                    continue;
+
+                tspos += uttref.numframes;
+            }
 
             // resize feat and uids
             feat.resize(vdim.size());
@@ -1133,14 +1167,14 @@ public:
             assert(feat.size()==randomizedchunks.size());
             foreach_index(i, feat)
             {
-                feat[i].resize (vdim[i], mbframes);
+                feat[i].resize (vdim[i], tspos);
 
                 if (i==0)
                 {
                     foreach_index(j, uids)
                     {
                         if (issupervised())             // empty means unsupervised training -> return empty uids
-                            uids[j].resize (mbframes);
+                            uids[j].resize (tspos);
                         else
                             uids[i].clear();
                         latticepairs.clear();               // will push_back() below
@@ -1150,17 +1184,20 @@ public:
             }
             // return these utterances
             if (verbosity > 0)
-                fprintf (stderr, "getbatch: getting utterances %zu..%zu (%zu frames out of %zu requested) in sweep %zu\n", spos, epos -1, mbframes, framesrequested, sweep);
-            size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
+                fprintf(stderr, "getbatch: getting utterances %d..%d (%d subset of %d frames out of %d requested) in sweep %d\n", spos, epos - 1, tspos, mbframes, framesrequested, sweep);
+            tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
                 const auto & uttref = randomizedutterancerefs[pos];
-                size_t n=0;
+                if ((uttref.chunkindex % numsubsets) != subsetnum)            // chunk not to be returned for this MPI node
+                    continue;
+
+                size_t n = 0;
                 foreach_index(i, randomizedchunks)
                 {
                     const auto & chunk = randomizedchunks[i][uttref.chunkindex];
                     const auto & chunkdata = chunk.getchunkdata();
-                    assert (uttref.globalts == globalts + tspos);
+                    assert((numsubsets > 1) || (uttref.globalts == globalts + tspos));
                     auto uttframes = chunkdata.getutteranceframes (uttref.utteranceindex);
                     matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                     n = uttframevectors.size();
@@ -1213,14 +1250,18 @@ public:
                 }
                 tspos += n;
             }
-            assert (tspos == mbframes);
+            
+            foreach_index(i, feat)
+            {
+                assert(tspos == feat[i].cols());
+            }
         }
         else                // // debug mode returning randomized frames again, to see whether convergence is better (we don't ensure non-repetition at this point)
         {
             const size_t sweepts = sweep * _totalframes;         // first global frame index for this sweep
             const size_t sweepte = sweepts + _totalframes;       // and its end
             const size_t globalte = min (globalts + framesrequested, sweepte);  // we return as much as requested, but not exceeding sweep end
-            const size_t mbframes = globalte - globalts;        // that's our mb size
+            mbframes = globalte - globalts;        // that's our mb size
 
             // determine window range
             // We enumerate all frames--can this be done more efficiently?
@@ -1235,9 +1276,23 @@ public:
             for (size_t k = 0; k < windowbegin; k++)
                 releaserandomizedchunk (k);
             for (size_t k = windowbegin; k < windowend; k++)
-                readfromdisk |= requirerandomizedchunk (k, windowbegin, windowend); // (window range passed in for checking only, redundant here)
+                if ((k % numsubsets) == subsetnum)        // in MPI mode, we skip chunks this way
+                    readfromdisk |= requirerandomizedchunk(k, windowbegin, windowend); // (window range passed in for checking only, redundant here)
             for (size_t k = windowend; k < randomizedchunks[0].size(); k++)
                 releaserandomizedchunk (k);
+
+            // determine the true #frames we return--it is less than mbframes in the case of MPI/data-parallel sub-set mode
+            // First determine it for all nodes, then pick the min over all nodes, as to give all the same #frames for better load balancing.
+            // TODO: No, return all; and leave it to caller to redistribute them [Zhijie Yan]
+            std::vector<size_t> subsetsizes(numsubsets, 0);
+            for (size_t i = 0; i < mbframes; i++)   // i is input frame index; j < i in case of MPI/data-parallel sub-set mode
+            {
+                const size_t framepos = (globalts + i) % _totalframes;  // (for comments, see main loop below)
+                const frameref & frameref = randomizedframerefs[framepos];
+                subsetsizes[frameref.chunkindex % numsubsets]++;
+            }
+            size_t j = subsetsizes[subsetnum];        // return what we have  --TODO: we can remove the above full computation again now
+            const size_t allocframes = max(j, (mbframes + numsubsets - 1) / numsubsets);  // we leave space for the desired #frames, assuming caller will try to pad them later
 
             // resize feat and uids
             feat.resize(vdim.size());
@@ -1246,16 +1301,17 @@ public:
             assert(feat.size()==randomizedchunks.size());
             foreach_index(i, feat)
             {
-                feat[i].resize (vdim[i], mbframes);
+                feat[i].resize(vdim[i], allocframes);
+                feat[i].shrink(vdim[i], j);
 
                 if (i==0)
                 {
-                    foreach_index(j, uids)
+                    foreach_index(k, uids)
                     {
                         if (issupervised())             // empty means unsupervised training -> return empty uids
-                            uids[j].resize (mbframes);
+                            uids[k].resize (j);
                         else
-                            uids[i].clear();
+                            uids[k].clear();
                         latticepairs.clear();               // will push_back() below
                         transcripts.clear();
                     }
@@ -1263,11 +1319,19 @@ public:
             }
             
             // return randomized frames for the time range of those utterances
+            size_t currmpinodeframecount = 0;
             for (size_t j = 0; j < mbframes; j++)
             {
+                if (currmpinodeframecount >= feat[0].cols())               // MPI/data-parallel mode: all nodes return the same #frames, which is how feat(,) is allocated
+                    break;
+
                 // map to time index inside arrays
                 const size_t framepos = (globalts + j) % _totalframes;  // using mod because we may actually run beyond the sweep for the last call
                 const frameref & frameref = randomizedframerefs[framepos];
+
+                // in MPI/data-parallel mode, skip frames that are not in chunks loaded for this MPI node
+                if ((frameref.chunkindex % numsubsets) != subsetnum)
+                    continue;
 
                 // random utterance
                 readfromdisk |= requirerandomizedchunk (frameref.chunkindex, windowbegin, windowend);    // (this is just a check; should not actually page in anything)
@@ -1277,7 +1341,7 @@ public:
                     const auto & chunk = randomizedchunks[i][frameref.chunkindex];
                     const auto & chunkdata = chunk.getchunkdata();
                     auto uttframes = chunkdata.getutteranceframes (frameref.utteranceindex);
-                    matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
+                    matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[.].size() and m[.][.] as required by augmentneighbors())
                     const size_t n = uttframevectors.size();
                     assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n); n;
 
@@ -1295,21 +1359,41 @@ public:
                         leftextent = leftcontext[i];
                         rightextent = rightcontext[i];
                     }
-                    augmentneighbors(uttframevectors, noboundaryflags, t, leftextent, rightextent, feat[i], j);
+                    augmentneighbors(uttframevectors, noboundaryflags, t, leftextent, rightextent, feat[i], currmpinodeframecount);
                     
-                    //augmentneighbors(uttframevectors, noboundaryflags, t, feat[i], j);
                     if (issupervised() && i == 0)
                     {
                         auto frameclassids = getclassids(frameref);
                         foreach_index(k, uids)
-                            uids[k][j] = frameclassids[k][t];
+                            uids[k][currmpinodeframecount] = frameclassids[k][t];
                     }
                 }                
+
+                currmpinodeframecount++;
             }
         }
         timegetbatch = timergetbatch;
+
+        // this is the number of frames we actually moved ahead in time
+        framesadvanced = mbframes;
+        
         return readfromdisk;
     }
+    
+    bool supportsbatchsubsetting() const override
+    {
+        return true;
+    }
+
+    bool getbatch(const size_t globalts,
+        const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+        std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
+        std::vector<shared_ptr<const latticesource::latticepair>> & lattices)
+    {
+        size_t dummy;
+        return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices);
+    }
+
     double gettimegetbatch() { return timegetbatch;}
 
     // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
