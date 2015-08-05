@@ -483,6 +483,16 @@ public:
 
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
     {
+       // Saving into temporary file and then renaming it to the requested fileName
+       // This is a standard trick to avoid havign corrupted model files if process dies during writing
+       wstring tmpFileName = fileName + L".tmp";
+       SaveToFileImpl(tmpFileName, fileFormat);
+       renameOrDie(tmpFileName, fileName);
+    }
+
+private:
+    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const
+    {
         File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
@@ -589,8 +599,11 @@ public:
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECN");
+       
+        fstream.Flush();
     }
 
+public:
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary)
     {
@@ -1307,13 +1320,21 @@ public:
         {
             newNode = new TransposeTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-                    }
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+        {
+            newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new RowElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new ColumnElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
@@ -1645,13 +1666,21 @@ public:
         {
             newNode = new TransposeTimesNode<ElemType>(m_deviceId, nodeName);
         }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
-                    }
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+        {
+            newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new RowElementTimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new ColumnElementTimesNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
@@ -2149,7 +2178,26 @@ public:
         return newNode;
     }
 
-                ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
+    ComputationNodePtr RowElementTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new RowElementTimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr ColumnElementTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new ColumnElementTimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+    ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
                 {
                     ComputationNodePtr newNode(new StrideTimesNode<ElemType>(m_deviceId, nodeName));
                     newNode->AttachInputs(a, b, c);
