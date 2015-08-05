@@ -141,7 +141,7 @@ public:
     // Special cases:
     //  - end of line is returned as '\n'
     //  - end of file is returned as 0
-    wchar_t GotChar() const     // trivia: did you know that this function was named by Bill Gates?
+    wchar_t GotChar() const
     {
         if (!currentLine) return 0;                             // end of file
         else if (!currentLine[cursor.charPos]) return '\n';     // end of line
@@ -168,12 +168,6 @@ public:
         }
         else
             cursor.charPos += chars;
-    }
-    wchar_t Consume()   // combine GotChar() and Consume(1)   --TODO: it's a bit ugly--keep?
-    {
-        let ch = GotChar();
-        Consume(1);
-        return ch;
     }
 
     // get the next character
@@ -330,7 +324,7 @@ private:
             }
             if (ch == 0)    // runaway string
                 Fail("string without closing quotation mark", t);
-            Consume();  // consume the closing quote
+            GetChar();  // consume the closing quote
         }
         else                                                            // --- punctuation
         {
@@ -338,7 +332,7 @@ private:
             t.symbol = ch;
             t.symbol.append(1, GetChar());                              // first try two-char punctuation
             if (punctuations.find(t.symbol) != punctuations.end())
-                Consume();                                              // it is a two-char one: need to consume the second one of them
+                GetChar();                                              // it is a two-char one: need to consume the second one of them
             else                                                        // try single-char one
             {
                 t.symbol.pop_back();                                    // drop the last one & try again
@@ -358,7 +352,7 @@ private:
                     ch = GetChar();
                 if (ch == 0)
                     Fail("comment without closing */", t);
-                Consume();  // consume the final '/'
+                GetChar();  // consume the final '/'
                 return ConsumeToken();  // and return the next token
             }
         }
