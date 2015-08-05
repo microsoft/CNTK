@@ -178,7 +178,8 @@ public:
         double number;              // number
         TokenKind kind;
         TextLocation beginLocation; // text loc of first character of this token
-        Token(TextLocation loc) : beginLocation(loc), kind(invalid), number(0.0) { }
+        bool isLineInitial;         // this token is the first on the line (ignoring comments)
+        Token(TextLocation loc) : beginLocation(loc), kind(invalid), number(0.0), isLineInitial(false) { }
         // diagnostic helper
         static wstring TokenKindToString(TokenKind kind)
         {
@@ -228,16 +229,24 @@ private:
     {
         auto ch = GotChar();
         // skip white space
-        while (iswblank(ch) || (ch == '\n' /* and ...*/))    // TODO: need to be newline-sensitive
+        // We remember whether we crossed a line end. Dictionary assignments end at newlines if syntactically acceptable.
+        bool crossedLineEnd = (GetCursor().lineNo == 0 && GetCursor().charPos == 0);
+        while (iswblank(ch) || ch == '\n' || ch == '\r')
+        {
+            crossedLineEnd |= (ch == '\n' || ch == '\r');
             ch = GetChar();
+        }
         Token t(GetCursor());
+        t.isLineInitial = crossedLineEnd;
         // handle end of (include) file
         if (ch == 0)
         {
             if (IsInInclude())
             {
                 PopSourceFile();
-                return NextToken();      // tail call--the current 't' gets dropped/ignored
+                t = NextToken();            // tail call--the current 't' gets dropped/ignored
+                t.isLineInitial = true;     // eof is a line end
+                return t;
             }
             // really end of all source code: we are done. If calling this function multiple times, we will keep returning this.
             t.kind = eof;
@@ -447,12 +456,7 @@ public:
         {
             operand->op = L"[]";
             ConsumeToken();
-#if 1
-            let namedArgs = ParseDictMembers();  // ...CONTINUE HERE
-            for (const auto & arg : namedArgs)
-                operand->namedArgs.insert(make_pair(arg.first->id, arg.second));
-#endif
-            /*operand->namedArgs = */ParseDictMembers();  // ...CONTINUE HERE
+            operand->namedArgs = ParseDictMembers();
             ConsumePunctuation(L"]");
         }
         else if (tok.symbol == L"array")                                // === array constructor
@@ -481,6 +485,8 @@ public:
         for (;;)
         {
             let & opTok = GotToken();
+            if (stopAtNewline && opTok.isLineInitial)
+                break;
             let opIter = infixPrecedence.find(opTok.symbol);
             if (opIter == infixPrecedence.end())    // not an infix operator: we are done here, 'left' is our expression
                 break;
@@ -488,9 +494,7 @@ public:
             if (opPrecedence < requiredPrecedence)  // operator below required precedence level: does not belong to this sub-expression
                 break;
             let op = opTok.symbol;
-            ExpressionRef operation = make_shared<Expression>(opTok.beginLocation);
-            operation->op = op;
-            operation->args.push_back(left);        // [0] is left operand; [1] is right except for macro application
+            auto operation = make_shared<Expression>(opTok.beginLocation, op, left);    // [0] is left operand; we will add [1] except for macro application
             // deal with special cases first
             // We treat member lookup (.), macro application (a()), and indexing (a[i]) together with the true infix operators.
             if (op == L".")                                 // === reference of a dictionary item
@@ -500,6 +504,9 @@ public:
             }
             else if (op == L"(")                            // === macro application
             {
+                // op = "("   means 'apply'
+                // args[0] = lambda expression (lambda: op="=>", args[0] = param list, args[1] = expression with unbound vars)
+                // args[1] = arguments    (arguments: op="(), args=vector of expressions, one per arg; and namedArgs)
                 operation->args.push_back(ParseMacroArgs(false));    // [1]: all arguments
             }
             else if (op == L"[")                            // === array index
@@ -523,8 +530,7 @@ public:
     ExpressionRef ParseMacroArgs(bool defining)
     {
         ConsumePunctuation(L"(");
-        ExpressionRef macroArgs = make_shared<Expression>(GotToken().beginLocation);
-        macroArgs->op = L"()";
+        ExpressionRef macroArgs = make_shared<Expression>(GotToken().beginLocation, L"()");
         for (;;)
         {
             let expr = ParseExpression(0, false);   // this could be an optional arg (var = val)
@@ -532,11 +538,12 @@ public:
                 Fail("argument identifier expected", expr->location);
             if (expr->op == L"id" && GotToken().symbol == L"=")
             {
+                let id = expr->id;                  // 'expr' gets resolved (to 'id') and forgotten
                 ConsumeToken();
-                let valueExpr = ParseExpression(0, false);
-                let res = macroArgs->namedArgs.insert(make_pair(expr->id, valueExpr));
+                let defValueExpr = ParseExpression(0, false);  // default value
+                let res = macroArgs->namedArgs.insert(make_pair(id, defValueExpr));
                 if (!res.second)
-                    Fail(strprintf("duplicate optional argument '%ls'", expr->id.c_str()), expr->location);
+                    Fail("duplicate optional argument '" + utf8(id) + "'", expr->location);
             }
             else
                 macroArgs->args.push_back(expr);    // [0..]: position args
@@ -547,24 +554,32 @@ public:
         ConsumePunctuation(L")");
         return macroArgs;
     }
-    map<ExpressionRef, ExpressionRef> ParseDictMembers()
+    map<wstring, ExpressionRef> ParseDictMembers()
     {
-        map<ExpressionRef, ExpressionRef> members;
+        // A dictionary is a map
+        //  member identifier -> expression
+        // Macro declarations are translated into lambdas, e.g.
+        //  F(A,B) = expr(A,B)
+        // gets represented in the dictionary as
+        //  F = (A,B) => expr(A,B)
+        // where a lambda expression has this structure:
+        //  op="=>"
+        //  args[0] = parameter list (op="()", with args (all of op="id") and namedArgs)
+        //  args[1] = expression with unbound arguments
+        map<wstring, ExpressionRef> members;
         auto idTok = GotToken();
         while (idTok.kind == identifier)
         {
-            ExpressionRef var = make_shared<Expression>(idTok.beginLocation);
-            // parse
-            var->op = L"id";
-            var->id = ConsumeIdentifier();                          // left-hand side
-            if (GotToken().symbol == L"(")                          // optionally, macro arguments
-                var->args.push_back(ParseMacroArgs(true/*defining*/));
+            let id = ConsumeIdentifier();       // the member's name    --TODO: do we need to keep its location?
+            let location = idTok.beginLocation; // for error message
+            let parameters = (GotToken().symbol == L"(") ? ParseMacroArgs(true/*defining*/) : ExpressionRef();  // optionally, macro arguments
             ConsumePunctuation(L"=");
-            let valueExpr = ParseExpression(0, false);              // and the right-hand side
+            let rhs = ParseExpression(0, true/*can end at newline*/);   // and the right-hand side
+            let val = parameters ? make_shared<Expression>(parameters->location, L"=>", parameters, rhs) : rhs;  // rewrite to lambda if it's a macro
             // insert
-            let res = members.insert(make_pair(var, valueExpr));
+            let res = members.insert(make_pair(id, val));
             if (!res.second)
-                Fail(strprintf("duplicate member definition '%ls'", var->id.c_str()), var->location);
+                Fail("duplicate member definition '" + utf8(id) + "'", location);
             // advance
             idTok = GotToken();
             if (idTok.symbol == L";")
@@ -572,16 +587,19 @@ public:
         }
         return members;
     }
+    // top-level parse function parses dictonary members
     ExpressionRef Parse()
     {
-        let topDict = ParseExpression(0, true);
+        let topMembers = ParseDictMembers();
         if (GotToken().kind != eof)
             Fail("junk at end of source", GetCursor());
+        ExpressionRef topDict = make_shared<Expression>(GetCursor(), L"[]");
+        topDict->namedArgs = topMembers;
         return topDict;
     }
     static void Test()
     {
-        let parserTest = L"[ do = (print:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ] ]";
+        let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = (print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
         ParseConfigString(parserTest)->Dump();
     }
 };
@@ -600,6 +618,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         Parser::Test();
+        //ParseConfigFile(L"c:/me/test.txt")->Dump();
     }
     catch (const ConfigError & err)
     {
