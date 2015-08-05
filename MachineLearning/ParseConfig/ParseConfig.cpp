@@ -365,6 +365,20 @@ public:
         currentToken = ConsumeToken();
         return GotToken();
     }
+
+    // some simpel test function
+    void Test()
+    {
+        let lexerTest = L"new CNTK [ do = (train:eval) # main\ntrain=/*test * */if eval include 'c:/me/test.txt' then 13 else array[1..10](i=>i*i); eval=\"a\"+'b'  // line-end\n ] 'a\nb\nc' new";
+        PushSourceFile(SourceFile(L"(command line)", lexerTest));
+        auto token = GetToken();   // get first token
+        while (token.kind != Lexer::TokenKind::eof)
+        {
+            fprintf(stderr, "%ls\n", token.ToString().c_str());
+            token = GetToken();
+        }
+        Fail("error test", GetCursor());
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -373,6 +387,7 @@ public:
 
 class Parser : Lexer
 {
+public:
 };
 
 }}}   // namespaces
@@ -384,15 +399,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         Lexer lexer;
-        let lexerTest = L"new CNTK [ do = (train:eval) # main\ntrain=/*test * */if eval include 'c:/me/test.txt' then 13 else array[1..10](i=>i*i); eval=\"a\"+'b'  // line-end\n ] 'a\nb\nc' new";
-        lexer.PushSourceFile(SourceFile(L"(command line)", lexerTest));
-        auto token = lexer.GetToken();   // get first token
-        while (token.kind != Lexer::TokenKind::eof)
-        {
-            fprintf (stderr, "%ls\n", token.ToString().c_str());
-            token = lexer.GetToken();
-        }
-        lexer.Fail("error test", lexer.GetCursor());
+        lexer.Test();
     }
     catch (const ConfigError & err)
     {
