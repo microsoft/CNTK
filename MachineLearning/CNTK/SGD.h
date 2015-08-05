@@ -849,7 +849,11 @@ protected:
                 g_mpi->WaitAll();
             }
 
+#ifdef MPI_SUPPORT
             if (mpiRank == 0)
+#else
+            if (g_mpi->CurrentNodeRank() == 0)
+#endif
             {
                 // only needs to be done by one process
                 net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
@@ -958,7 +962,11 @@ protected:
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
+#ifdef MPI_SUPPORT
                     if (mpiRank == 0)
+#else
+                    if (g_mpi->CurrentNodeRank() == 0)
+#endif
                     {
                         net.SaveToFile(m_modelPath);
                     }
@@ -1109,7 +1117,11 @@ protected:
 #endif
 
             // only evaluate once, on the master process. TODO: This could be faster by farming out the validation parts
+#ifdef MPI_SUPPORT
             if (mpiRank == 0)
+#else
+            if (g_mpi->CurrentNodeRank() == 0)
+#endif
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
                 {
@@ -1187,7 +1199,11 @@ protected:
                         }
                         else
                         {
+#ifdef MPI_SUPPORT
                             if (mpiRank == 0)
+#else
+                            if (g_mpi->CurrentNodeRank() == 0)
+#endif
                             {
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
                             }
@@ -1243,7 +1259,11 @@ protected:
             }
 
             // persist model and check-point info
+#ifdef MPI_SUPPORT
             if (mpiRank == 0)
+#else
+            if (g_mpi->CurrentNodeRank() == 0)
+#endif
             {
                 net.SaveToFile(GetModelNameForEpoch(i));
                 SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);

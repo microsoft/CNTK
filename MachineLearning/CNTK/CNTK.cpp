@@ -1438,7 +1438,10 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        if (mpiRank == 0) // main process
+        // main process
+#ifdef MPI_SUPPORT
+        if (mpiRank == 0)
+#endif
         {
             //dump config info
             fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
@@ -1476,7 +1479,9 @@ int wmain(int argc, wchar_t* argv[])
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
             type = config("type", "float");
+#ifdef MPI_SUPPORT
         if (mpiRank == 0)
+#endif
             fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
             DoCommand<float>(config);
