@@ -247,7 +247,7 @@ public:
 
         if (doGradientCheck && sizeof(ElemType) != sizeof(double))
         {
-            LogicError("Gradient check needs to use type = double");
+            LogicError("Gradient check needs to use precision = double");
         }
         m_doUnitTest = configSGD("unittest", "false");
 
