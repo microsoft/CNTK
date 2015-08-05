@@ -145,6 +145,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Common\File.cpp" />
+    <ClCompile Include="..\..\Common\fileutil.cpp" />
     <ClCompile Include="ParseConfig.cpp" />
   </ItemGroup>
   <ItemGroup>
