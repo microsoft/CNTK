@@ -25,13 +25,18 @@
 #   If not specified, Kaldi plugins will not be built
 
 ifdef PREFIX
-ifneq ("$(wildcard $(PREFIX)/Config.make)","")
-include $(PREFIX)/Config.make
+  ifneq ("$(wildcard $(PREFIX)/Config.make)","")
+    include $(PREFIX)/Config.make
+  else
+    $(error Cannot fine $(PREFIX)/Config.make.  Please see the README file for configuration instructions.)
+  endif
 else
-$(error Cannot fine $(PREFIX)/Config.make)
-endif
-else
-$(error PREFIX must be defined)
+  # No PREFIX case, do old-style build
+  ifndef CUDA_PATH
+    ifneq ("$(wildcard /usr/local/cuda-7.0)","")
+      CUDA_PATH=/usr/local/cuda-7.0
+    endif
+  endif
 endif
 
 ifndef BUILDTYPE
@@ -48,18 +53,12 @@ endif
 
 CXX = g++
 
-ifndef ARCH
-ARCH = $(shell uname -m)
-endif
-
 INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
-ORIGINLIBDIR:='$$ORIGIN/../lib'
-ORIGINDIR:='$$ORIGIN'
 
 SEPARATOR = "=-----------------------------------------------------------="
 ALL:=
@@ -142,9 +141,28 @@ endif
 
 #######
 
-OBJDIR:= $(PREFIX)/.build
-BINDIR:= $(PREFIX)/bin
-LIBDIR:= $(PREFIX)/lib
+ifdef PREFIX
+  OBJDIR:= $(PREFIX)/.build
+  BINDIR:= $(PREFIX)/bin
+  LIBDIR:= $(PREFIX)/lib
+
+  ORIGINLIBDIR:='$$ORIGIN/../lib'
+  ORIGINDIR:='$$ORIGIN'
+else
+  ARCH = $(shell uname -m)
+  ifdef CUDA_PATH
+    TARGET=GPU
+  else
+    TARGET=CPU
+  endif
+  BUILDFOR=$(ARCH).$(TARGET).$(BUILDTYPE).$(MATHLIB)
+  OBJDIR:= .build/$(BUILDFOR)
+  BINDIR:= bin/$(BUILDFOR)
+  LIBDIR:= bin/$(BUILDFOR)
+
+  ORIGINLIBDIR:='$$ORIGIN'
+  ORIGINDIR:='$$ORIGIN'
+endif
 
 CNTKMATH:=cntkmath
 
