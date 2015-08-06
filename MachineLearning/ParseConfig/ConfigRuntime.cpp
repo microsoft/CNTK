@@ -34,6 +34,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
+    class AnotherAction
+    {
+    public:
+        AnotherAction(const ConfigRecord &) { fprintf(stderr, "Another\n"); }
+        virtual ~AnotherAction(){}
+    };
+
+    // error handling
+
     class EvaluationError : public ConfigError
     {
     public:
@@ -46,32 +55,50 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
     static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown member name " + id, where); }
 
-    // ConfigValue variants
-    //class ConfigValueLiteral : public ConfigValueBase { };
+    // config value types
 
-    template<typename T> class ConfigValueLiteral : public ConfigValueBase
+    template<typename T> class ConfigValueWithLateInit : public ConfigValue<T>, public HasLateInit
     {
     public:
-        /*const*/ T value;
-        ConfigValueLiteral(T value) : value(value) { }
+        ConfigValueWithLateInit(T value) : ConfigValue(value) { }
+        /*implement*/ void Init(const ConfigRecord & config)
+        {
+            let hasLateInit = dynamic_cast<HasLateInit*>(ConfigValue::value.get());
+            if (!hasLateInit) LogicError("Init on class without HasLateInit");
+            hasLateInit->Init(config);
+        }
     };
-    ConfigRecord::ConfigMember::operator wstring() const { return As<ConfigValueLiteral<wstring>>()->value; }
 
-    template<class T> ConfigValueLiteral<shared_ptr<T>> MakeConfigValuePtr(const ConfigRecord & config)
+    template<class T> ConfigValue<shared_ptr<T>> MakeConfigValuePtr(const ConfigRecord & config)
     {
-        return new ConfigValueLiteral<shared_ptr<T>>(make_shared(config));
+        return new ConfigValue<shared_ptr<T>>(make_shared(config));
     }
 
-    map<wstring,function<ConfigValuePtr(const ConfigRecord &)>> configurableRuntimeTypes =
+    // helper for configurableRuntimeTypes initializer below
+    // This returns a lambda that is a constructor for a given runtime type.
+    template<class C>
+    function<ConfigValuePtr(const ConfigRecord &)> MakeRuntimeTypeConstructor()
     {
-        { L"PrintAction", [](const ConfigRecord & config){ return make_shared<ConfigValueLiteral<shared_ptr<PrintAction>>>(make_shared<PrintAction>(config)); } }
+        bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
+        if (hasLateInit)
+            return [](const ConfigRecord & config){ return make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)); };
+        else
+            return [](const ConfigRecord & config){ return make_shared<ConfigValue<shared_ptr<C>>>(make_shared<C>(config)); };
+    }
+
+    // this table lists all C++ types that can be instantiated from "new" expressions
+    map<wstring, function<ConfigValuePtr(const ConfigRecord &)>> configurableRuntimeTypes =
+    {
+        { L"PrintAction", MakeRuntimeTypeConstructor<PrintAction>() },
+        { L"AnotherAction", MakeRuntimeTypeConstructor<AnotherAction>() }
     };
 
     // "new!" expressions get queued for execution after all other nodes of tree have been executed
-    struct LateInitItem
+    class LateInitItem
     {
-        ConfigValuePtr object;  // the object to late-initialize
-        ExpressionPtr dictExpr; // the dictionary expression that now can be fully evaluated
+        ConfigValuePtr object;
+        ExpressionPtr dictExpr;                             // the dictionary expression that now can be fully evaluated
+    public:
         LateInitItem(ConfigValuePtr object, ExpressionPtr dictExpr) : object(object), dictExpr(dictExpr) { }
         void Init(deque<LateInitItem> & workList);
     };
@@ -93,13 +120,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         return config;
     }
 
+    // perform late initialization
+    // This assumes that the ConfigValuePtr points to a ConfigValueWithLateInit. If not, it will fail with a nullptr exception.
     void LateInitItem::Init(deque<LateInitItem> & workList)
     {
         ConfigRecord config = ConfigRecordFromNamedArgs(dictExpr, workList);
-        let configValuePtr = object.get();
-        configValuePtr;
-        // BUGBUG: This is broken. How do we get the type back?
-        dynamic_cast<HasLateInit*>(object.get())->Init(config);
+        dynamic_cast<HasLateInit*>(object.get())->Init(config);     // call ConfigValueWithLateInit::Init() which in turn will call HasLateInite::Init() on the actual object
     }
 
     // evaluate the "new" operator. Also used in late init.
@@ -115,8 +141,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return newIter->second(ConfigRecordFromNamedArgs(dictExpr, workList)); // this constructs it
         else                // ...unless it's late init. Then we defer initialization.
         {
-            // TODO: need a check here whether the class allows late init
+            // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
             let value = newIter->second(ConfigRecord());
+            //let & initFunc = newIter->second.second;  // function to execute Init() with the necessary type casts
+            //let objectInit = [value, initFunc](const ConfigRecord & config){ initFunc(value, config); };
             workList.push_back(LateInitItem(value, dictExpr)); // construct empty and remember to Init() later
             return value;   // we return the created but not initialized object as the value, so others can reference it
         }
@@ -125,9 +153,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     static ConfigValuePtr Evaluate(ExpressionPtr e, deque<LateInitItem> & workList)
     {
         // this evaluates any evaluation node
-        if (e->op == L"d") { return make_shared<ConfigValueLiteral<double>>(e->d); }
-        else if (e->op == L"s") { return make_shared<ConfigValueLiteral<wstring>>(e->s); }
-        else if (e->op == L"b") { return make_shared<ConfigValueLiteral<bool>>(e->b); }
+        if (e->op == L"d") { return make_shared<ConfigValue<double>>(e->d); }
+        else if (e->op == L"s") { return make_shared<ConfigValue<wstring>>(e->s); }
+        else if (e->op == L"b") { return make_shared<ConfigValue<bool>>(e->b); }
         else if (e->op == L"new" || e->op == L"new!") return EvaluateNew(e->op, e, workList);
         LogicError("unknown e->op");
     }
@@ -161,6 +189,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     // top-level entry
     // A config sequence X=A;Y=B;do=(A,B) is really parsed as [X=A;Y=B].do. That's the tree we get. I.e. we try to compute the 'do' member.
+    // TODO: This is not good--constructors should always be fast to run. Do() should run after late initializations.
     void Do(ExpressionPtr e)
     {
         let doValueExpr = LookupDictMember(e, e->location, L"do"); // expr to compute 'do' member
@@ -192,7 +221,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest = L"do = new /*!*/ PrintAction [ message = 'Hello World']";
+        let parserTest = L"do = new ! AnotherAction [ message = 'Hello World']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
