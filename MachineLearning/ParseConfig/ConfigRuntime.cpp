@@ -64,7 +64,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         /*implement*/ void Init(const ConfigRecord & config)
         {
             let hasLateInit = dynamic_cast<HasLateInit*>(ConfigValue::value.get());
-            if (!hasLateInit) LogicError("Init on class without HasLateInit");
+            if (!hasLateInit)
+                LogicError("Init on class without HasLateInit");
             hasLateInit->Init(config);
         }
     };
@@ -100,21 +101,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ExpressionPtr dictExpr;                             // the dictionary expression that now can be fully evaluated
     public:
         LateInitItem(ConfigValuePtr object, ExpressionPtr dictExpr) : object(object), dictExpr(dictExpr) { }
-        void Init(deque<LateInitItem> & workList);
+        void Init(deque<LateInitItem> & deferredInitList);
     };
 
-    static ConfigValuePtr Evaluate(ExpressionPtr e, deque<LateInitItem> & workList);
+    static ConfigValuePtr Evaluate(ExpressionPtr e, deque<LateInitItem> & deferredInitList);
 
     // evaluate all elements in a dictionary and turn that into a ConfigRecord
     // BUGBUG: This must be memorized. That's what variables are for!
-    ConfigRecord ConfigRecordFromNamedArgs(ExpressionPtr e, deque<LateInitItem> & workList)
+    ConfigRecord ConfigRecordFromNamedArgs(ExpressionPtr e, deque<LateInitItem> & deferredInitList)
     {
         if (e->op != L"[]")
             TypeExpected(L"record", e);
         ConfigRecord config;
         for (let & namedArg : e->namedArgs)
         {
-            let value = Evaluate(namedArg.second, workList);
+            let value = Evaluate(namedArg.second, deferredInitList);
             config.Add(namedArg.first, value);
         }
         return config;
@@ -122,55 +123,66 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     // perform late initialization
     // This assumes that the ConfigValuePtr points to a ConfigValueWithLateInit. If not, it will fail with a nullptr exception.
-    void LateInitItem::Init(deque<LateInitItem> & workList)
+    void LateInitItem::Init(deque<LateInitItem> & deferredInitList)
     {
-        ConfigRecord config = ConfigRecordFromNamedArgs(dictExpr, workList);
+        ConfigRecord config = ConfigRecordFromNamedArgs(dictExpr, deferredInitList);
         dynamic_cast<HasLateInit*>(object.get())->Init(config);     // call ConfigValueWithLateInit::Init() which in turn will call HasLateInite::Init() on the actual object
     }
 
-    // evaluate the "new" operator. Also used in late init.
-    static ConfigValuePtr EvaluateNew(const wstring & op, ExpressionPtr e, deque<LateInitItem> & workList)
+    static bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
     {
-        // find the constructor lambda
-        let newIter = configurableRuntimeTypes.find(e->id);
-        if (newIter == configurableRuntimeTypes.end())
-            Fail(L"unknown runtime type " + e->id, e->location);
-        // form the config record
-        let dictExpr = e->args[0];
-        if (op == L"new")   // evaluate the parameter dictionary into a config record
-            return newIter->second(ConfigRecordFromNamedArgs(dictExpr, workList)); // this constructs it
-        else                // ...unless it's late init. Then we defer initialization.
-        {
-            // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
-            let value = newIter->second(ConfigRecord());
-            //let & initFunc = newIter->second.second;  // function to execute Init() with the necessary type casts
-            //let objectInit = [value, initFunc](const ConfigRecord & config){ initFunc(value, config); };
-            workList.push_back(LateInitItem(value, dictExpr)); // construct empty and remember to Init() later
-            return value;   // we return the created but not initialized object as the value, so others can reference it
-        }
+        let val = dynamic_cast<ConfigValue<bool>*>(value.get());
+        if (!val)
+            TypeExpected(L"boolean", e);
+        return val->value;
     }
 
-    static ConfigValuePtr Evaluate(ExpressionPtr e, deque<LateInitItem> & workList)
+    static ConfigValuePtr Evaluate(ExpressionPtr e, deque<LateInitItem> & deferredInitList)
     {
         // this evaluates any evaluation node
-        if (e->op == L"d") { return make_shared<ConfigValue<double>>(e->d); }
-        else if (e->op == L"s") { return make_shared<ConfigValue<wstring>>(e->s); }
-        else if (e->op == L"b") { return make_shared<ConfigValue<bool>>(e->b); }
-        else if (e->op == L"new" || e->op == L"new!") return EvaluateNew(e->op, e, workList);
+        if (e->op == L"d")      return make_shared<ConfigValue<double>>(e->d);
+        else if (e->op == L"s") return make_shared<ConfigValue<wstring>>(e->s);
+        else if (e->op == L"b") return make_shared<ConfigValue<bool>>(e->b);
+        else if (e->op == L"new" || e->op == L"new!")
+        {
+            // find the constructor lambda
+            let newIter = configurableRuntimeTypes.find(e->id);
+            if (newIter == configurableRuntimeTypes.end())
+                Fail(L"unknown runtime type " + e->id, e->location);
+            // form the config record
+            let dictExpr = e->args[0];
+            if (e->op == L"new")   // evaluate the parameter dictionary into a config record
+                return newIter->second(ConfigRecordFromNamedArgs(dictExpr, deferredInitList)); // this constructs it
+            else                // ...unless it's late init. Then we defer initialization.
+            {
+                // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
+                let value = newIter->second(ConfigRecord());
+                deferredInitList.push_back(LateInitItem(value, dictExpr)); // construct empty and remember to Init() later
+                return value;   // we return the created but not initialized object as the value, so others can reference it
+            }
+        }
+        else if (e->op == L"if")
+        {
+            let condition = ToBoolean(Evaluate(e->args[0], deferredInitList), e->args[0]);
+            if (condition)
+                return Evaluate(e->args[1], deferredInitList);
+            else
+                Evaluate(e->args[2], deferredInitList);
+        }
         LogicError("unknown e->op");
     }
 
     // Traverse through the expression (parse) tree to evaluate a value.
     ConfigValuePtr Evaluate(ExpressionPtr e)
     {
-        deque<LateInitItem> workList;
-        auto result = Evaluate(e, workList);
-        // The workList contains unresolved Expressions due to "new!". This is specifically needed to support ComputeNodes
+        deque<LateInitItem> deferredInitList;
+        auto result = Evaluate(e, deferredInitList);
+        // The deferredInitList contains unresolved Expressions due to "new!". This is specifically needed to support ComputeNodes
         // (or similar classes) that need circular references, while allowing to be initialized late (construct them empty first).
-        while (!workList.empty())
+        while (!deferredInitList.empty())
         {
-            workList.front().Init(workList);
-            workList.pop_front();
+            deferredInitList.front().Init(deferredInitList);
+            deferredInitList.pop_front();
         }
         return result;
     }
@@ -221,7 +233,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest = L"do = new ! AnotherAction [ message = 'Hello World']";
+        let parserTest = L"do = new ! PrintAction [ message = 'Hello World']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
