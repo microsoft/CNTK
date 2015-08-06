@@ -42,10 +42,11 @@ private:
     };
     bool m_doMinibatchBuffering;
     bool m_getMinibatchCopy;
+    bool m_doMinibatchBufferTruncation;
     size_t m_minibatchBufferIndex;
-    size_t m_minibatchBufferLeftovers;
     std::deque<MinibatchBufferUnit> m_minibatchBuffer;
     UtteranceDerivativeBuffer<ElemType>* m_uttDerivBuffer;
+    unordered_map<wstring, bool> m_hasUttInCurrentMinibatch;
 
     // Utterance information.
     std::vector<std::vector<std::pair<wstring, size_t>>> m_uttInfo;
