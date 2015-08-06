@@ -34,54 +34,67 @@ To build the cpu version, you have to install intel MKL blas library or ACML lib
 for MKL:
 1. Download from https://software.intel.com/en-us/intel-mkl
 2. You can modify variable MKL_PATH in makefile.cpu to change your mkl path.
-Then add ${MKL_PATH}/mkl/lib/intel64, ${MKL_PATH}/mkl/lib/mic, ${MKL_PATH}/compiler/lib/intel64. ${MKL_PATH}/compiler/lib/mic to your ${LD_LIBRARY_PATH} to make sure the program links the library correctly.
 
 for ACML:
 1. Download from http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/
 2. Modify ACML_PATH in the makefile.cpu and makefile.gpu to provide your ACML library path.
-You need to add ${ACML_PATH}/lib to your ${LD_LIBRARY_PATH}.
 
 for Kaldi:
 1. In kaldi-trunk/tools/Makefile, uncomment # OPENFST_VERSION = 1.4.1, and
    re-install OpenFst using the makefile.
 2. In kaldi-trunk/src/, do ./configure --shared; make depend -j 8; make -j 8;
    and re-compile Kaldi (the -j option is for parallelization).
-3. Set KALDI_PATH in kaldi_vars.mk
-4. When running the binaries, make sure you add $KALDI_PATH/tools/openfst/lib
-   and $KALDI_PATH/src/lib/ to your $LD_LIBRARY_PATH 
 
 To build the gpu version, you have to install NIVIDIA CUDA first
-You can modify the path CUDA_PATH in makefile.cpu to change your cuda path
-We use cuda-7.0 as default.
-Then add ${CUDA_PATH}/lib, ${CUDA_PATH}/lib64 to your ${LD_LIBRARY_PATH} to make sure the program links to the library correctly.
 
-... TODO: add documentation on nvml lib
+== Build Preparation ==
+Create a directory for your build.  You can create different directories for different build configuration,
+for example, different directories for GPU versus CPU, debug versus release.  Each directory must have a
+Config.make file in it which defines your build configuration, as follows:
 
-== Build ==
-To build the cpu version, run
-	make DEVICE=cpu 
-To build the gpu version, run
-	make
-To clean the compile, just run
-	make DEVICE=cpu clean
-or
-	make clean
+ACML_PATH= path to ACML library installation
+  only needed if MATHLIB=acml
+MKL_PATH= path to MKL library installation
+  only needed if MATHLIB=mkl
+GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
+  defaults to /usr
+BUILDTYPE= One of release or debug
+  defaults to release
+MATHLIB= One of acml or mkl
+  defaults to acml
+CUDA_PATH= Path to CUDA
+  If not specified, GPU will not be enabled
+KALDI_PATH= Path to Kaldi
+  If not specified, Kaldi plugins will not be built
 
-For release version, just add BUILDTYPE=release to the make command line.
+A possible configuration is to create a directory called "build" (which is ignored by .gitignore)
+and create directories in build for various configurations.  The build directory can have a Paths.make
+that defines the paths the various configurations will choose from.  A Config.make can include
+build/Paths.make and then set CUDA_PATH, KALDI_PATH, and BUILDTYPE appropriately.
+
+To build
+make PREFIX=build_directory
+
+  .build will contain object files, and can be deleted
+  bin contains the cntk program
+  lib contains libraries and plugins
+
+  The bin and lib directories can safely be moved as long as they remain siblings.
+
+To clean
+make PREFIX=build_directory clean
 
 == Run ==
-All executables are in bin/ directory:
-	cn.exe: The main executable for CNTK
+All executables are in bin directory:
+	cntk: The main executable for CNTK
 	*.so: shared library for corresponding reader, these readers will be linked and loaded dynamically at runtime.
 
-To run the executable, make sure bin/ is in your ${LD_LIBRARY_PATH}, if not, running cn.exe will fail when cn.exe tries to link the corresponding reader. Once it's done, run in command line:
-	./cn.exe configFile=${your config file}
+	./cntk configFile=${your cntk config file}
 
 == Kaldi Reader ==
 This is a HTKMLF reader and kaldi writer (for decode)
 
-To build the cpu/gpu version, run
-    make -f Makefile_kaldi.cpu/gpu
+To build, set KALDI_PATH in your Config.make
 
 The feature section is like:
 
@@ -102,9 +115,7 @@ writer=[
 == Kaldi2 Reader ==
 This is a kaldi reader and kaldi writer (for decode)
 
-To build the cpu/gpu version, run
-    make -f Makefile_kaldi2.cpu/gpu
-
+To build, set KALDI_PATH in your Config.make
 
 The features section is different:
 
