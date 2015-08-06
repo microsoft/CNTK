@@ -61,19 +61,6 @@ void TextLocation::PrintIssue(const char * errorKind, const char * kind, const c
 }
 /*static*/ vector<SourceFile> TextLocation::sourceFileMap;
 
-// all errors from processing the config files are reported as ConfigError
-class ConfigError : public runtime_error
-{
-    TextLocation location;
-public:
-    TextLocation where() const { return location; }
-    virtual const char * kind() const = 0;
-    ConfigError(const string & msg, TextLocation where) : location(where), runtime_error(msg) { }
-
-    // pretty-print this as an error message
-    void PrintError() const { location.PrintIssue("error", kind(), what()); }
-};
-
 // ---------------------------------------------------------------------------
 // reader -- reads source code, including loading from disk
 // ---------------------------------------------------------------------------
@@ -420,6 +407,7 @@ void Expression::Dump(int indent) const
 
 class Parser : public Lexer
 {
+    // errors
     class ParseError : public ConfigError
     {
     public:
@@ -432,6 +420,7 @@ class Parser : public Lexer
     //void Expected(const wstring & what) { Fail(strprintf("%ls expected", what.c_str()), GotToken().beginLocation); }  // I don't know why this does not work
     void Expected(const wstring & what) { Fail(utf8(what) + " expected", GotToken().beginLocation); }
 
+    // this token must be punctuation 's'; check and get the next
     void ConsumePunctuation(const wchar_t * s)
     {
         let & tok = GotToken();
@@ -440,6 +429,7 @@ class Parser : public Lexer
         ConsumeToken();
     }
 
+    // this token must be keyword 's'; check and get the next
     void ConsumeKeyword(const wchar_t * s)
     {
         let & tok = GotToken();
@@ -448,6 +438,7 @@ class Parser : public Lexer
         ConsumeToken();
     }
 
+    // this token must be an identifier; check and get the next token. Return the identifier.
     wstring ConsumeIdentifier()
     {
         let & tok = GotToken();
@@ -475,51 +466,56 @@ public:
         SetSourceFile(move(sourceFile));
         ConsumeToken();     // get the very first token
     }
+    ExpressionPtr OperandFromTokenSymbol(const Token & tok)   // helper to make an Operand expression with op==tok.symbol and then consume it
+    {
+        auto operand = make_shared<Expression>(tok.beginLocation, tok.symbol);
+        ConsumeToken();
+        return operand;
+    }
     ExpressionPtr ParseOperand()
     {
         let & tok = GotToken();
-        auto operand = make_shared<Expression>(tok.beginLocation);
+        ExpressionPtr operand;
         if (tok.kind == numberliteral)                                  // === numeral literal
         {
-            operand->op = L"d";
-            operand->d = tok.number;
+            operand = make_shared<Expression>(tok.beginLocation, L"d", tok.number, wstring(), false);
             ConsumeToken();
         }
         else if (tok.kind == stringliteral)                             // === string literal
         {
-            operand->op = L"s";
-            operand->s = tok.symbol;
+            operand = make_shared<Expression>(tok.beginLocation, L"s", 0.0, tok.symbol, false);
             ConsumeToken();
         }
         else if (tok.symbol == L"true" || tok.symbol == L"false")       // === boolean literal
         {
-            operand->op = L"b";
-            operand->b = (tok.symbol == L"true");
+            operand = make_shared<Expression>(tok.beginLocation, L"b", 0.0, wstring(), (tok.symbol == L"true"));
             ConsumeToken();
         }
         else if (tok.kind == identifier)                                // === dict member (unqualified)
         {
-            operand->op = L"id";
+            operand = make_shared<Expression>(tok.beginLocation, L"id");
             operand->id = ConsumeIdentifier();
         }
         else if (tok.symbol == L"+" || tok.symbol == L"-"               // === unary operators
             || tok.symbol == L"!")
         {
-            operand->op = tok.symbol;
-            ConsumeToken();
+            operand = OperandFromTokenSymbol(tok);
             operand->args.push_back(ParseOperand());
         }
         else if (tok.symbol == L"new")                                  // === new class instance
         {
-            operand->op = tok.symbol;
-            ConsumeToken();
+            operand = OperandFromTokenSymbol(tok);
+            if (GotToken().symbol == L"!")                              // new! class [ ] will initialize the class delayed (this is specifically used for the Delay node to break circular references)
+            {
+                operand->op = L"new!";
+                ConsumeToken();
+            }
             operand->id = ConsumeIdentifier();
             operand->args.push_back(ParseOperand());
         }
         else if (tok.symbol == L"if")                                   // === conditional expression
         {
-            operand->op = tok.symbol;
-            ConsumeToken();
+            operand = OperandFromTokenSymbol(tok);
             operand->args.push_back(ParseExpression(0, false));         // [0] condition
             ConsumeKeyword(L"then");
             operand->args.push_back(ParseExpression(0, false));         // [1] then expression
@@ -529,20 +525,19 @@ public:
         else if (tok.symbol == L"(")                                    // === nested parentheses
         {
             ConsumeToken();
-            operand = ParseExpression(0, false/*go across newlines*/);  // note: we abandon the current operand object
+            operand = ParseExpression(0, false/*go across newlines*/);
             ConsumePunctuation(L")");
         }
         else if (tok.symbol == L"[")                                    // === dictionary constructor
         {
-            operand->op = L"[]";
+            operand = make_shared<Expression>(tok.beginLocation, L"[]");
             ConsumeToken();
             operand->namedArgs = ParseDictMembers();
             ConsumePunctuation(L"]");
         }
         else if (tok.symbol == L"array")                                // === array constructor
         {
-            operand->op = tok.symbol;
-            ConsumeToken();
+            operand = OperandFromTokenSymbol(tok);
             ConsumePunctuation(L"[");
             operand->args.push_back(ParseExpression(0, false));         // [0] first index
             ConsumePunctuation(L"..");
@@ -667,6 +662,15 @@ public:
         }
         return members;
     }
+    // set the parent pointer in the entire tree (we don't need them inside here, so this is a final step)
+    void SetParents(ExpressionPtr us, ExpressionPtr parent)
+    {
+        us->parent = parent;                // this is our parent
+        for (auto & child : us->args)       // now tell our children about ourselves
+            SetParents(child, us);
+        for (auto & child : us->namedArgs)
+            SetParents(child.second, us);
+    }
     // top-level parse function parses dictonary members
     ExpressionPtr Parse()
     {
@@ -675,6 +679,7 @@ public:
             Fail("junk at end of source", GetCursor());
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
         topDict->namedArgs = topMembers;
+        SetParents(topDict, nullptr);    // set all parent pointer
         return topDict;
     }
     // simple test function for use during development
@@ -691,21 +696,3 @@ ExpressionPtr ParseConfigString(wstring text) { return Parse(SourceFile(L"(comma
 ExpressionPtr ParseConfigFile(wstring path) { return Parse(SourceFile(path)); }
 
 }}}     // namespaces
-
-#if 1   // use this for standalone development of the parser
-using namespace Microsoft::MSR::CNTK;
-
-int wmain(int /*argc*/, wchar_t* /*argv*/[])
-{
-    try
-    {
-        Parser::Test();
-        //ParseConfigFile(L"c:/me/test.txt")->Dump();
-    }
-    catch (const ConfigError & err)
-    {
-        err.PrintError();
-    }
-    return EXIT_SUCCESS;
-}
-#endif

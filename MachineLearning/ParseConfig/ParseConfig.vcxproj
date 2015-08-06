@@ -147,12 +147,14 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\File.cpp" />
     <ClCompile Include="..\..\Common\fileutil.cpp" />
+    <ClCompile Include="ConfigRuntime.cpp" />
     <ClCompile Include="ParseConfig.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ConfigSpec.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConfigRuntime.h" />
     <ClInclude Include="ConfigurableRuntimeObjects.h" />
     <ClInclude Include="ParseConfig.h" />
   </ItemGroup>
