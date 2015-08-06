@@ -7,46 +7,49 @@
 #
 # This makefile will be extended/completed as we go.
 #
-# export PATH=$PATH:/usr/local/bin:<path_to_cuda>/bin
-#
-# In order to deviate from the default settings in this Makefile, please specify options on
-# the make command line, like this, for example, to build debug with Kaldi for cuda,
-#
-# make DEBUG=1 USE_CUDA=1 USE_KALDI=1
+# To use this Makefile, create a directory to build in and make a Config.make in the directory
+# that provides
+# ACML_PATH= path to ACML library installation
+#   only needed if MATHLIB=acml
+# MKL_PATH= path to MKL library installation
+#   only needed if MATHLIB=mkl
+# GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
+#   defaults to /usr
+# BUILDTYPE= One of release or debug
+#   defaults to release
+# MATHLIB= One of acml or mkl
+#   defaults to acml
+# CUDA_PATH= Path to CUDA
+#   If not specified, GPU will not be enabled
+# KALDI_PATH= Path to Kaldi
+#   If not specified, Kaldi plugins will not be built
 
-# These are the options.  USE_ACML is the default for CPU math.
-#DEBUG
-#USE_ACML
-#USE_MKL
-#USE_CUDA
-#USE_KALDI
+ifdef PREFIX
+ifneq ("$(wildcard $(PREFIX)/Config.make)","")
+include $(PREFIX)/Config.make
+else
+$(error Cannot fine $(PREFIX)/Config.make)
+endif
+else
+$(error PREFIX must be defined)
+endif
 
-# Paths.  This still needs some generification
-ACML_PATH = /usr/local/acml5.3.1/ifort64
-MKL_PATH = /usr/users/yzhang87/tools/composer_xe_2015.2.164
-CUDA_PATH = /scratch/cuda-6.5
-#CUDA_PATH = /usr/local/cuda-7.0
+ifndef BUILDTYPE
+$(info Defaulting BUILDTYPE=release)
+BUILDTYPE=release
+endif
 
-# Kaldi build should correspond to whether you are using cuda
-KALDI_CPU_PATH = /usr/users/cyphers/kaldi-trunk
-KALDI_CUDA_PATH = /usr/users/yzhang87/code/kaldi-trunk
-
-# You need to install the deployment kit from https://developer.nvidia.com/gpu-deployment-kit
-# This is for the default install location, /
-GDK_PATH=/usr
+ifndef MATHLIB
+$(info DEFAULTING MATHLIB=acml)
+MATHLIB=acml
+endif
 
 #### Configure based on options above
 
-CC = g++
+CXX = g++
 
 ifndef ARCH
 ARCH = $(shell uname -m)
-endif
-
-ifndef USE_MKL
-ifndef USE_ACML
-USE_ACML=1
-endif
 endif
 
 INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK
@@ -59,10 +62,12 @@ ORIGINLIBDIR:='$$ORIGIN/../lib'
 ORIGINDIR:='$$ORIGIN'
 
 SEPARATOR = "=-----------------------------------------------------------="
-TARGETS:=
+ALL:=
 SRC:=
 
-all : alltargets
+# Make sure all is the first (i.e. default) target, but we can't actually define it
+# this early in the file, so let buildall do the work.
+all : buildall
 
 # Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary)
 GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
@@ -73,12 +78,15 @@ GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35)
 # Set up basic nvcc options and add CUDA targets from above
 CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64 $(GENCODE_FLAGS)
 
-ifdef USE_CUDA
+ifdef CUDA_PATH
+  ifndef GDK_PATH
+    $(info defaulting GDK_PATH to /usr)
+    GDK_PATH=/usr
+  endif
+
   DEVICE = gpu
 
   NVCC = $(CUDA_PATH)/bin/nvcc
-
-  KALDI_PATH = $(KALDI_CUDA_PATH)
 
   # This is a suggested/default location for NVML
   INCLUDEPATH+=$(GDK_PATH)/include/nvidia/gdk
@@ -92,21 +100,17 @@ ifdef USE_CUDA
 else
   DEVICE = cpu
 
-  KALDI_PATH = $(KALDI_CPU_PATH)
-
   CPPFLAGS +=-DCPUONLY
 endif
 
-ifdef USE_ACML
-  MATHLIB = acml
+ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
   LIBS += -lacml -lm -lpthread
   CPPFLAGS += -DUSE_ACML
 endif
 
-ifdef USE_MKL
-  MATHLIB = mkl
+ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/mkl/include
   LIBPATH += $(MKL_PATH)/compiler/lib/intel64 $(MKL_PATH)/mkl/lib/intel64 $(MKL_PATH)/compiler/lib/mic $(MKL_PATH)/mkl/lib/mic
   LIBS += -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
@@ -114,7 +118,7 @@ ifdef USE_MKL
 endif
 
 
-ifdef USE_KALDI
+ifdef KALDI_PATH
   ########## Copy includes and defines from $(KALDI_PATH)/src/kaldi.mk ##########
   FSTROOT = $(KALDI_PATH)/tools/openfst
   ATLASINC = $(KALDI_PATH)/tools/ATLAS/include
@@ -126,26 +130,27 @@ ifdef USE_KALDI
   KALDI_LIBS += -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet -lkaldi-lat
 endif
 
-# BUILDTYPE can also be release
-ifdef DEBUG
-  BUILDTYPE = debug
+ifeq ("$(BUILDTYPE)","debug")
   CXXFLAGS += -g
   CUFLAGS += -O0 -G -lineinfo
-else
-  BUILDTYPE = release
+endif
+
+ifeq ("$(BUILDTYPE)","release")
   CXXFLAGS += -O4
   CUFLAGS += -O3 -use_fast_math -lineinfo
 endif
 
 #######
 
-BUILDFOR:= $(ARCH).$(DEVICE).$(BUILDTYPE).$(MATHLIB)
-
-OBJDIR:= .build/$(BUILDFOR)
-BINDIR:= $(BUILDFOR)/bin
-LIBDIR:= $(BUILDFOR)/lib
+OBJDIR:= $(PREFIX)/.build
+BINDIR:= $(PREFIX)/bin
+LIBDIR:= $(PREFIX)/lib
 
 CNTKMATH:=cntkmath
+
+########################################
+# Math library
+########################################
 
 # Define all sources that need to be built
 COMMON_SRC =\
@@ -163,7 +168,7 @@ MATH_SRC =\
 	Math/Math/CPUSparseMatrix.cpp \
 	Math/Math/Matrix.cpp \
 
-ifdef USE_CUDA
+ifdef CUDA_PATH
 MATH_SRC +=\
 	Math/Math/GPUMatrix.cu \
 	Math/Math/GPUMatrixCUDAKernels.cu \
@@ -181,7 +186,7 @@ MATH_SRC+=$(COMMON_SRC)
 MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(MATH_SRC)))
 
 CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
-TARGETS += $(CNTKMATH_LIB)
+ALL += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
 RPATH=-Wl,-rpath,
@@ -190,9 +195,12 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
 
-LIBLIBPATH:=$(LIBDIR) $(LIBPATH)
+########################################
+# BinaryReader plugin
+########################################
+
 
 BINARYREADER_SRC =\
 	DataReader/BinaryReader/BinaryFile.cpp \
@@ -203,12 +211,17 @@ BINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARYREADER_SRC))
 
 BINARY_READER:= $(LIBDIR)/BinaryReader.so
 
-#TARGETS += $(BINARY_READER)
+#ALL += $(BINARY_READER)
 #SRC+=$(BINARYREADER_SRC)
 
 $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
+# HTKMLFReader plugin
+########################################
+
 
 HTKMLFREADER_SRC =\
 	DataReader/HTKMLFReader_linux/DataReader.cpp \
@@ -219,12 +232,16 @@ HTKMLFREADER_SRC =\
 HTKMLREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 
 HTKMLREADER:=$(LIBDIR)/HTKMLFReader.so
-TARGETS+=$(HTKMLREADER)
+ALL+=$(HTKMLREADER)
 SRC+=$(HTKMLREADER_SRC)
 
 $(LIBDIR)/HTKMLFReader.so: $(HTKMLREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
+# LMSequenceReader plugin
+########################################
 
 LMSEQUENCEREADER_SRC =\
 	DataReader/LMSequenceReader/Exports.cpp \
@@ -234,14 +251,16 @@ LMSEQUENCEREADER_SRC =\
 LMSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LMSEQUENCEREADER_SRC))
 
 LMSEQUENCEREADER:= $(LIBDIR)/LMSequenceReader.so
-TARGETS+=$(LMSEQUENCEREADER)
+ALL+=$(LMSEQUENCEREADER)
 SRC+=$(LMSEQUENCEREADER_SRC)
 
 $(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
-
+########################################
+# LUSequenceReader plugin
+########################################
 
 LUSEQUENCEREADER_SRC =\
 	DataReader/LUSequenceReader/Exports.cpp \
@@ -251,14 +270,16 @@ LUSEQUENCEREADER_SRC =\
 LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
 
 LUSEQUENCEREADER:=$(LIBDIR)/LUSequenceReader.so
-TARGETS+=$(LUSEQUENCEREADER)
+ALL+=$(LUSEQUENCEREADER)
 SRC+=$(LUSEQUENCEREADER_SRC)
 
 $(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
-
+########################################
+# UCIFastReader plugin
+########################################
 
 UCIFASTREADER_SRC =\
 	DataReader/UCIFastReader/Exports.cpp \
@@ -268,14 +289,18 @@ UCIFASTREADER_SRC =\
 UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
 
 UCIFASTREADER:=$(LIBDIR)/UCIFastReader.so
-TARGETS += $(UCIFASTREADER)
+ALL += $(UCIFASTREADER)
 SRC+=$(UCIFASTREADER_SRC)
 
 $(UCIFASTREADER): $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
-ifdef USE_KALDI
+########################################
+# Kaldi plugins
+########################################
+
+ifdef KALDI_PATH
 KALDIREADER_SRC = \
 	DataReader/KaldiReader/DataReader.cpp \
 	DataReader/KaldiReader/DataWriter.cpp \
@@ -285,19 +310,19 @@ KALDIREADER_SRC = \
 KALDIREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDIREADER_SRC))
 
 KALDIREADER:=$(LIBDIR)/KaldiReader.so
-TARGETS+=$(KALDIREADER)
+ALL+=$(KALDIREADER)
 SRC+=$(KALDIREADER_SRC)
 
 $(KALDIREADER): $(KALDIREADER_OBJ)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 
 KALDIWRITER:=$(LIBDIR)/KaldiWriter.so
-TARGETS+=$(KALDIWRITER)
+ALL+=$(KALDIWRITER)
 
 $(KALDIWRITER): $(KALDIREADER_OBJ)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 
 KALDI2READER_SRC = \
@@ -311,16 +336,20 @@ KALDI2READER_SRC = \
 KALDI2READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDI2READER_SRC))
 
 KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
-TARGETS+=$(KALDI2READER)
+ALL+=$(KALDI2READER)
 SRC+=$(KALDI2READER_SRC)
 
 $(KALDI2READER): $(KALDI2READER_OBJ)
 	@echo $(SEPARATOR)
-	$(CC) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 
 endif
 
-CN_SRC =\
+########################################
+# cntk
+########################################
+
+CNTK_SRC =\
 	MachineLearning/CNTK/CNTK.cpp \
 	MachineLearning/CNTK/ComputationNode.cpp \
 	MachineLearning/CNTK/ModelEditLanguage.cpp \
@@ -330,16 +359,20 @@ CN_SRC =\
 	MachineLearning/CNTK/tests.cpp \
 	MachineLearning/CNTKEval/CNTKEval.cpp \
 
-CN_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CN_SRC))
+CNTK_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC))
 
 CNTK:=$(BINDIR)/cntk
-TARGETS+=$(CNTK)
+ALL+=$(CNTK)
 
-$(CNTK): $(CN_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CC) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+
+########################################
+# General compile and dependency rules
+########################################
 
 VPATH := $(sort  $(dir $(SRC)))
 
@@ -363,17 +396,16 @@ $(OBJDIR)/%.o : %.cpp Makefile
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
-	$(CC) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
+	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
-.PHONY: clean alltargets
+.PHONY: clean buildall all
 
 clean:
 	@echo $(SEPARATOR)
 	@rm -rf $(OBJDIR)
-	@rm -rf $(BINDIR)
-	@rm -rf $(LIBDIR)
+	@rm -rf $(ALL)
 	@echo finished cleaning up the project 
 
-alltargets : $(TARGETS)
+buildall : $(ALL)
 	@echo $(SEPARATOR)
 	@echo finished building for $(ARCH) with build type $(BUILDTYPE)
