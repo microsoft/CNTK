@@ -28,7 +28,7 @@ private:
 
     // Sequence training realted members.
     bool m_doSeqTrain;
-    wstring m_seqTrainCriterion;
+    wstring m_seqTrainCriterion, m_ctcTrainCriterion;
     KaldiSequenceTrainingDerivative<ElemType>* m_seqTrainDeriv;
 
     // CTC training related members.

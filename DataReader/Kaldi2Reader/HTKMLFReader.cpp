@@ -104,9 +104,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // Checks if we need to do sequence training.
-        if (readerConfig.Exists("CtcTrainCriterion"))
+        if (readerConfig.Exists("ctcTrainCriterion"))
         {
             m_doCtcTrain = true;
+            m_ctcTrainCriterion = wstring(readerConfig("ctcTrainCriterion"));
+            if (m_ctcTrainCriterion != L"ctc")
+            {
+                LogicError("Unsupported training criterion.\n");
+            }
         }
 
         // Checks if framemode is false in sequence training.
@@ -121,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
 
         // Figures out if we have to do minibatch buffering and how.
-        if (m_doSeqTrain)
+        if (m_doSeqTrain || m_doCtcTrain)
         {
             m_doMinibatchBuffering = true;
             if (m_truncated)
@@ -253,7 +258,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // Processes "alignments" section.
-        ConfigParameters labConfig = readerConfig("labels");
+        ConfigParameters labConfig = readerConfig("ctcLabels");
         if (!labConfig.Exists("rx"))
         {
             LogicError("Rspecifier is not provided for labels.\n");
@@ -270,12 +275,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ConfigParameters temp = iter->second;
             if (temp.ExistsCurrent("type"))
             {
-                if (temp("type") == "readerDeriv")
+                if (temp("type") == "readerDeriv"
+                    || temp("type") == "ctcTrainDeriv" /*for back compatibility */)
                 {
                     m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerDeriv;
                     hasDerivative = true;
                 }
-                else if (temp("type") == "readerObj")
+                else if (temp("type") == "readerObj"
+                    || temp("type") == "ctcTrainObj" /*for back compatibility */)
                 {
                     m_nameToTypeMap[msra::strfun::utf16(iter->first)] = InputOutputTypes::readerObj;
                     hasObj = true;
@@ -290,7 +297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Initializes sequence training interface.
         m_CtcTrainDeriv = new CtcTrainingIO<ElemType>(
             labRspecifier,
-            m_seqTrainCriterion);
+            m_ctcTrainCriterion);
 
         // Initializes derivative buffering.
         m_doMinibatchBuffering = true;

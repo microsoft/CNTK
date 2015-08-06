@@ -76,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trimmed(fileToStr(toStr(labRspecifier))));
         m_trainCriterion = trainCriterion;
 
-        if (m_trainCriterion != L"CTC")
+        if (m_trainCriterion != L"ctc")
         {
             LogicError("Supported training criterion is: CTC.\n");
         }
@@ -201,6 +201,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (log_nnet_out.GetDeviceId() >= 0)
           log_nnet_out.TransferFromDeviceToDevice(log_nnet_out.GetDeviceId(), CPUDEVICE, true, false, false);
 
+        Matrix<ElemType> nnet_out(CPUDEVICE);       // posterior matrix
+        nnet_out.Resize(log_nnet_out.GetNumRows(), log_nnet_out.GetNumCols());
+        for(int i =0;i<log_nnet_out.GetNumRows();i++) {
+          float row_sum=0;
+          for(int j=0; j<log_nnet_out.GetNumCols();j++) {
+            nnet_out(i,j) = ExpA(log_nnet_out(i,j));
+            row_sum = row_sum + nnet_out(i,j);
+          }
+          for(int j=0; j<log_nnet_out.GetNumCols();j++) {
+            nnet_out(i,j) = nnet_out(i,j)/row_sum;
+          }
+          for(int j=0; j<log_nnet_out.GetNumCols();j++) {
+            assert(nnet_out(i,j) >= 0.0);
+            log_nnet_out(i,j) = log(nnet_out(i,j));
+          }
+        }
+
         std::string uttIDStr = msra::asr::toStr(uttID);
 
         size_t num_frames = log_nnet_out.GetNumRows();
@@ -230,15 +247,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> alpha(CPUDEVICE);       // alpha matrix
         Matrix<ElemType> beta(CPUDEVICE);        // beta matrix
 
-        alpha.Reshape(num_frames, exp_len_labels);
+        alpha.Resize(num_frames, exp_len_labels);
         alpha.SetValue(kSetZero);
-        beta.Reshape(num_frames, exp_len_labels);
+        beta.Resize(num_frames, exp_len_labels);
         beta.SetValue(kSetZero);
 
         for (size_t t = 0; t < num_frames; t++) {
           ComputeCtcLatticeForward(alpha, log_nnet_out, t, label_expand);
         }
-        for (size_t t = (num_frames - 1); t >= 0; t--) {
+        for (int t = (num_frames - 1); t >= 0; t--) {
           ComputeCtcLatticeBackward(beta, log_nnet_out, t, label_expand);
         }
 
@@ -249,20 +266,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // compute the errors
         Matrix<ElemType> ctc_err(CPUDEVICE);       // error matrix
-        ctc_err.Reshape(num_frames, num_classes);
+        ctc_err.Resize(num_frames, num_classes);
         ComputeCtcError(ctc_err, alpha, beta, log_nnet_out, label_expand, pzx);
 
         // back-propagate the errors through the softmax layer
+        /*
         Matrix<ElemType> nnet_out(log_nnet_out);       // posterior matrix
         for(int i =0;i<log_nnet_out.GetNumRows();i++) {
           for(int j=0; j<log_nnet_out.GetNumCols();j++) {
             nnet_out(i,j) = ExpA(log_nnet_out(i,j));
           }
         }
+        */
 
         ctc_err.ElementMultiplyWith(nnet_out);
         Matrix<ElemType> row_sum(CPUDEVICE);
-        row_sum.Reshape(1, num_frames);
+        row_sum.Resize(1, num_frames);
         Matrix<ElemType>::VectorSum(ctc_err, row_sum, false);
 
         Matrix<ElemType> net_out_tmp(nnet_out);

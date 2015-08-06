@@ -110,7 +110,7 @@ CN_SRC =  MachineLearning/CNTK/NetworkDescriptionLanguage.cpp MachineLearning/CN
 BINARYREADER_SRC = #DataReader/BinaryReader/BinaryWriter.cpp DataReader/BinaryReader/BinaryReader.cpp DataReader/BinaryReader/BinaryFile.cpp
 HTKMLFREADER_SRC = DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp DataReader/HTKMLFReader_linux/DataWriter.cpp DataReader/HTKMLFReader_linux/DataReader.cpp DataReader/HTKMLFReader_linux/HTKMLFReader.cpp
 KALDIREADER_SRC = DataReader/KaldiReader/HTKMLFWriter.cpp DataReader/KaldiReader/DataWriter.cpp DataReader/KaldiReader/DataReader.cpp DataReader/KaldiReader/HTKMLFReader.cpp
-KALDI2READER_SRC = DataReader/Kaldi2Reader/HTKMLFWriter.cpp DataReader/Kaldi2Reader/DataWriter.cpp DataReader/Kaldi2Reader/DataReader.cpp DataReader/Kaldi2Reader/HTKMLFReader.cpp DataReader/Kaldi2Reader/KaldiSequenceTrainingDerivative.cpp DataReader/Kaldi2Reader/CtcTrainingIO.cpp
+KALDI2READER_SRC = DataReader/Kaldi2Reader/HTKMLFWriter.cpp DataReader/Kaldi2Reader/DataWriter.cpp DataReader/Kaldi2Reader/DataReader.cpp DataReader/Kaldi2Reader/HTKMLFReader.cpp DataReader/Kaldi2Reader/UtteranceDerivativeBuffer.cpp DataReader/Kaldi2Reader/KaldiSequenceTrainingDerivative.cpp DataReader/Kaldi2Reader/CtcTrainingIO.cpp
 
 SEQUENCEREADER_SRC = DataReader/LMSequenceReader/SequenceReader.cpp DataReader/LMSequenceReader/SequenceParser.cpp DataReader/LMSequenceReader/Exports.cpp
 LUSEQUENCEREADER_SRC = DataReader/LUSequenceReader/LUSequenceReader.cpp DataReader/LUSequenceReader/LUSequenceParser.cpp DataReader/LUSequenceReader/Exports.cpp
