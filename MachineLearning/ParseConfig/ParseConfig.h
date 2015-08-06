@@ -13,7 +13,10 @@
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
     using namespace std;
-    using namespace msra::strfun;
+
+    // ---------------------------------------------------------------------------
+    // TextLocation -- holds a pointer into a source file
+    // ---------------------------------------------------------------------------
 
     struct SourceFile               // content of one source file  (only in this header because TextLocation's private member uses it)
     {
@@ -28,7 +31,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // source-code locations are given by line number, character position, and the source file
         size_t lineNo, charPos;         // line number and character index (0-based)
         const SourceFile & GetSourceFile() const { return sourceFileMap[sourceFileAsIndex]; }    // get the corresponding source-code line
-    
+
         // helpesr for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
         wstring FormatErroneousLine() const;
         void PrintIssue(const char * errorKind, const char * kind, const char * what) const;
@@ -45,6 +48,29 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         static vector<SourceFile> sourceFileMap;
     };
 
+    // ---------------------------------------------------------------------------
+    // ConfigError -- all errors from processing the config files are reported as ConfigError
+    // ---------------------------------------------------------------------------
+
+    class ConfigError : public runtime_error
+    {
+        TextLocation location;
+    public:
+        ConfigError(const string & msg, TextLocation where) : location(where), runtime_error(msg) { }
+
+        // these are used in pretty-printing
+        TextLocation where() const { return location; } // where the error happened
+        virtual const char * kind() const = 0;          // e.g. "warning" or "error"
+
+        // pretty-print this as an error message
+        void PrintError() const { location.PrintIssue("error", kind(), what()); }
+    };
+
+    // ---------------------------------------------------------------------------
+    // Expression -- the entire config is a tree of Expression types
+    // We don't use polymorphism here because C++ is so verbose...
+    // ---------------------------------------------------------------------------
+
     struct Expression
     {
         wstring op;                 // operation, encoded as a string; 'symbol' for punctuation and keywords, otherwise used in constructors below ...TODO: use constexpr
@@ -56,11 +82,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         vector<ExpressionPtr> args;             // position-dependent expression/function args
         map<wstring, ExpressionPtr> namedArgs;  // named expression/function args; also dictionary members
         TextLocation location;      // where in the source code (for downstream error reporting)
+        // parent
+        ExpressionPtr parent;       // used in searching dictionary scope upwards
         // constructors
-        Expression(TextLocation location) : location(location), d(0.0), b(false) { }
-        Expression(TextLocation location, wstring op) : location(location), d(0.0), b(false), op(op) { }
-        Expression(TextLocation location, wstring op, ExpressionPtr arg) : location(location), d(0.0), b(false), op(op) { args.push_back(arg); }
-        Expression(TextLocation location, wstring op, ExpressionPtr arg1, ExpressionPtr arg2) : location(location), d(0.0), b(false), op(op) { args.push_back(arg1); args.push_back(arg2); }
+        Expression(TextLocation location) : location(location), d(0.0), b(false), parent(nullptr) { }
+        Expression(TextLocation location, wstring op) : location(location), d(0.0), b(false), op(op), parent(nullptr) { }
+        Expression(TextLocation location, wstring op, double d, wstring s, bool b) : location(location), d(d), s(s), b(b), op(op), parent(nullptr) { }
+        Expression(TextLocation location, wstring op, ExpressionPtr arg) : location(location), d(0.0), b(false), op(op), parent(nullptr) { args.push_back(arg); }
+        Expression(TextLocation location, wstring op, ExpressionPtr arg1, ExpressionPtr arg2) : location(location), d(0.0), b(false), op(op), parent(nullptr) { args.push_back(arg1); args.push_back(arg2); }
         // diagnostics helper: print the content
         void Dump(int indent = 0) const;
     };
