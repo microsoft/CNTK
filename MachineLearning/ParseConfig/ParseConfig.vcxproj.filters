@@ -28,5 +28,8 @@
     <ClInclude Include="ParseConfig.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="ConfigurableRuntimeObjects.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -372,8 +372,8 @@ network = new NDL [
         neededT = if layer < numHiddenLayers then T else centerT+1                  // last hidden layer does not require all frames
         step(H,h,dt,t) = Sigmoid(if (t+dt > 0 && t+dt < T) then z_shared[t] + H * h[t+dt]
                                                            else z_shared[t])
-        h_fwd = array [0..neededT-1]   (step(H_fwd, h_fwd, -1))     // partial application; last parameter filled in by array constructor
-        h_bwd = array [T-neededT..T-1] (step(H_bwd, h_bwd,  1))
+        h_fwd = array [0..neededT-1]   (t => step(H_fwd, h_fwd, -1, t))
+        h_bwd = array [T-neededT..T-1] (t => step(H_bwd, h_bwd,  1, t))
     ])
     // output layer --linear only at this point; Softmax is applied later
     outZ = [
