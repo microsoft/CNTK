@@ -52,12 +52,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_uttDerivBuffer = NULL;
         m_minibatchBuffer.resize(0);
         m_minibatchBufferIndex = 0;
-        m_minibatchBufferLeftovers = 0;
         m_noData = false;
         m_convertLabelsToTargets = false;
         m_doSeqTrain = false;
         m_getMinibatchCopy = false;
         m_doMinibatchBuffering = false;
+        m_doMinibatchBufferTruncation = false;
 
         if (readerConfig.Exists("legacyMode"))
         {
@@ -112,6 +112,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Checks if partial minibatches are allowed.
         std::string minibatchMode(readerConfig("minibatchMode", "Partial"));
         m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
+
+        // Figures out if we have to do minibatch buffering and how.
+        if (m_doSeqTrain)
+        {
+            m_doMinibatchBuffering = true;
+            if (m_truncated)
+            {
+                m_truncated = false;
+                m_doMinibatchBufferTruncation = true;
+            }
+        }
 
         // Checks if we are in "write" mode or "train/test" mode.
         string command(readerConfig("action",L""));
@@ -826,7 +837,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_minibatchBuffer.clear();
         m_getMinibatchCopy = false;
         m_minibatchBufferIndex = 0;
-        m_minibatchBufferLeftovers = 0;
         m_uttInfo.clear();
         m_minibatchUttInfo.clear();
 
@@ -1039,10 +1049,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_minibatchUttInfo.assign(m_numberOfuttsPerMinibatch,
                 std::vector<std::pair<wstring, size_t>>(0));
+
+            // For the moment we don't support same utterance in the same
+            // minibatch.
+            m_hasUttInCurrentMinibatch.clear();
+            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+            {
+                while (m_hasUttInCurrentMinibatch.find(m_uttInfo[i][0].first)
+                       != m_hasUttInCurrentMinibatch.end())
+                {
+                    fprintf(stderr, "WARNING: Utterance \"%S\" already exists "
+                        "in the minibatch, skipping it.\n",
+                        m_uttInfo[i][0].first.c_str());
+                    ReNewBufferForMultiIO(i);
+                }
+                if (m_uttInfo[i].size() > 0)
+                {
+                    m_hasUttInCurrentMinibatch[m_uttInfo[i][0].first] = true;
+                }
+            }
         }
 
         m_currentMBSize = m_mbSize;
-        do 
+        do
         {
             // Checks if we have finished all the utterances.
             if (m_noData)
@@ -1112,7 +1141,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     endFrame = startFrame + m_currentMBSize;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
-                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    if (m_doMinibatchBuffering && populateSucc)
+                    {
+                        m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]);
+                        m_hasUttInCurrentMinibatch[m_uttInfo[i][0].first] = true;
+                    }
                     m_processedFrame[i] += m_currentMBSize;
                 }
                 else if ((startFrame + m_currentMBSize) == m_toProcess[i])
@@ -1124,7 +1157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //        and it reaches the end of the utterance.
                     //     3. <m_framemode> is true, then we do not have to set
                     //        utterance boundary.
-                    
+
                     // Sets the utterance boundary.
                     if (m_framemode == false)
                     {
@@ -1146,7 +1179,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // next one.
                     endFrame = startFrame + m_currentMBSize;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
-                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    if (m_doMinibatchBuffering && populateSucc)
+                    {
+                        m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]);
+                        m_hasUttInCurrentMinibatch[m_uttInfo[i][0].first] = true;
+                    }
                     m_processedFrame[i] += m_currentMBSize;
                     bool reNewSucc = ReNewBufferForMultiIO(i);
                 }
@@ -1160,7 +1197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //     3. <m_framemode> is false, <m_truncated> is false,
                     //        then the utterance is too short, we should try to
                     //        pull next utterance.
-                    
+
                     // Checks if we have reached the end of the minibatch.
                     if (startFrame == m_toProcess[i])
                     {
@@ -1171,7 +1208,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                             // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
-                            assert(m_toProcess[i] > 0);
                             PopulateUtteranceInMinibatch(matrices, i, 0, 1, m_currentMBSize, k);
                         }
                         continue;
@@ -1208,7 +1244,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     endFrame = m_toProcess[i];
                     size_t currentMBFilled = endFrame - startFrame;
                     bool populateSucc = PopulateUtteranceInMinibatch(matrices, i, startFrame, endFrame, m_currentMBSize);
-                    if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                    if (m_doMinibatchBuffering && populateSucc)
+                    {
+                        m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]);
+                        m_hasUttInCurrentMinibatch[m_uttInfo[i][0].first] = true;
+                    }
                     m_processedFrame[i] += currentMBFilled;
                     bool reNewSucc = ReNewBufferForMultiIO(i);
 
@@ -1223,7 +1263,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_sentenceBegin.SetValue(i, currentMBFilled + m_toProcess[i] - 1, (ElemType)SEQUENCE_END);
                         m_minibatchPackingFlag[currentMBFilled + m_toProcess[i] - 1] |= MinibatchPackingFlag::SequenceEnd;
                         populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_toProcess[i], m_currentMBSize, currentMBFilled);
-                        if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                        if (m_doMinibatchBuffering && populateSucc)
+                        {
+                            m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]);
+                            m_hasUttInCurrentMinibatch[m_uttInfo[i][0].first] = true;
+                        }
                         assert(m_processedFrame[i] == 0);
                         m_processedFrame[i] = m_toProcess[i];
                         currentMBFilled += m_toProcess[i];
@@ -1235,7 +1279,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (reNewSucc && !m_framemode && m_truncated)
                     {
                         populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_currentMBSize - currentMBFilled, m_currentMBSize, currentMBFilled);
-                        if (m_doMinibatchBuffering && populateSucc) { m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]); }
+                        if (m_doMinibatchBuffering && populateSucc)
+                        {
+                            m_minibatchUttInfo[i].push_back(m_uttInfo[i][0]);
+                            m_hasUttInCurrentMinibatch[m_uttInfo[i][0].first] = true;
+                        }
                         m_processedFrame[i] += m_currentMBSize - currentMBFilled;
                         if (currentMBFilled < m_currentMBSize)
                         {
@@ -1252,7 +1300,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                             // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
-                            assert(m_toProcess[i] > 0);
                             PopulateUtteranceInMinibatch(matrices, i, 0, 1, m_currentMBSize, k);
                         }
                     }
@@ -1276,23 +1323,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_getMinibatchCopy == false && m_minibatchBuffer.size() > 0)
             {
                 m_minibatchBufferIndex = 0;
-                m_minibatchBufferLeftovers = m_minibatchBuffer.size() - 1;  // Will pop one more.
                 return true;
             }
 
             // If <m_getMinibatchCopy> is true, we first have to re-compute
             // the likelihood for the frames that are already in the buffer.
-            if (m_getMinibatchCopy == true && m_minibatchBufferLeftovers > 0)
+            if (m_getMinibatchCopy == true
+                && m_minibatchBufferIndex + 1 < m_minibatchBuffer.size())
             {
-                if (m_minibatchBufferLeftovers == m_minibatchBuffer.size())
-                {
-                    m_minibatchBufferIndex = 0;
-                }
-                else
-                {
-                    m_minibatchBufferIndex += 1;
-                }
-                m_minibatchBufferLeftovers -= 1;
+                m_minibatchBufferIndex += 1;
                 return true;
             }
         }
@@ -1303,35 +1342,86 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void HTKMLFReader<ElemType>::CopyMinibatchToBuffer()
     {
-        MinibatchBufferUnit currentMinibatch;
-
-        // Stores variables realted to the current minibatch.
-        currentMinibatch.sentenceBegin.SetValue(m_sentenceBegin);
-        currentMinibatch.minibatchPackingFlag = m_minibatchPackingFlag;
-        currentMinibatch.currentMBSize = m_currentMBSize;
-        currentMinibatch.minibatchUttInfo = m_minibatchUttInfo;
-
-        size_t size = m_currentMBSize * m_numberOfuttsPerMinibatch;
-
-        // Copies features.
-        currentMinibatch.features.resize(0);
-        for (size_t i = 0; i < m_featuresBufferMultiIO.size(); ++i)
+        size_t originalMBSize = m_currentMBSize;
+        size_t currentMBSize = m_currentMBSize;
+        size_t numMinibatches = 1;
+        if (m_doMinibatchBufferTruncation)
         {
-            std::vector<ElemType> tmpFeatures(m_featuresBufferMultiIO[i],
-                m_featuresBufferMultiIO[i] + size * m_featureNameToDimMap[m_featureIdToNameMap[i]]);
-            currentMinibatch.features.push_back(tmpFeatures);
+            currentMBSize = m_mbSize;
+            numMinibatches = (ElemType)originalMBSize / (ElemType)m_mbSize;
+            numMinibatches += (originalMBSize % m_mbSize == 0) ? 0 : 1;
         }
 
-        // Copies labels.
-        currentMinibatch.labels.resize(0);
-        for (size_t i = 0; i < m_labelsBufferMultiIO.size(); ++i)
+        for (size_t i = 0; i < numMinibatches; ++i)
         {
-            std::vector<ElemType> tmpLabels(m_labelsBufferMultiIO[i],
-                m_labelsBufferMultiIO[i] + size * m_labelNameToDimMap[m_labelIdToNameMap[i]]);
-            currentMinibatch.labels.push_back(tmpLabels);
-        }
+            MinibatchBufferUnit currentMinibatch;
 
-        m_minibatchBuffer.push_back(currentMinibatch);
+            size_t startIndex = i * currentMBSize;
+            size_t numFrames =
+                (startIndex + currentMBSize <= originalMBSize) ?
+                currentMBSize : (originalMBSize - startIndex);
+
+            // Sets sentence boundary for the current minibatch.
+            currentMinibatch.sentenceBegin.SetValue(
+                m_sentenceBegin.ColumnSlice(startIndex, numFrames));
+
+            // Sets packing flag for the current minibatch.
+            currentMinibatch.minibatchPackingFlag.resize(numFrames);
+            currentMinibatch.minibatchPackingFlag.assign(
+                m_minibatchPackingFlag.begin() + startIndex,
+                m_minibatchPackingFlag.begin() + startIndex + numFrames);
+
+            // Sets the minibatch size for the current minibatch.
+            currentMinibatch.currentMBSize = numFrames;
+
+            // Sets the utterance information for the current minibatch.
+            currentMinibatch.minibatchUttInfo.assign(
+                m_numberOfuttsPerMinibatch,
+                std::vector<std::pair<wstring, size_t>>(0));
+            for (size_t j = 0; j < m_minibatchUttInfo.size(); ++j)
+            {
+                size_t uttStartIndex = 0;
+                for (size_t k = 0; k < m_minibatchUttInfo[j].size(); ++k)
+                {
+                    if (startIndex >= uttStartIndex + m_minibatchUttInfo[j][k].second)
+                    {
+                        uttStartIndex += m_minibatchUttInfo[j][k].second;
+                        continue;
+                    }
+                    if (startIndex + numFrames <= uttStartIndex)
+                    {
+                        break;
+                    }
+                    currentMinibatch.minibatchUttInfo[j].push_back(m_minibatchUttInfo[j][k]);
+                    uttStartIndex += m_minibatchUttInfo[j][k].second;
+                }
+            }
+
+            size_t startDataCopy = startIndex * m_numberOfuttsPerMinibatch;
+            size_t endDataCopy = (startIndex + numFrames) * m_numberOfuttsPerMinibatch;
+
+            // Copies features.
+            currentMinibatch.features.resize(0);
+            for (size_t i = 0; i < m_featuresBufferMultiIO.size(); ++i)
+            {
+                std::vector<ElemType> tmpFeatures(
+                    m_featuresBufferMultiIO[i] + startDataCopy * m_featureNameToDimMap[m_featureIdToNameMap[i]],
+                    m_featuresBufferMultiIO[i] + endDataCopy * m_featureNameToDimMap[m_featureIdToNameMap[i]]);
+                currentMinibatch.features.push_back(tmpFeatures);
+            }
+
+            // Copies labels.
+            currentMinibatch.labels.resize(0);
+            for (size_t i = 0; i < m_labelsBufferMultiIO.size(); ++i)
+            {
+                std::vector<ElemType> tmpLabels(
+                    m_labelsBufferMultiIO[i] + startDataCopy * m_labelNameToDimMap[m_labelIdToNameMap[i]],
+                    m_labelsBufferMultiIO[i] + endDataCopy * m_labelNameToDimMap[m_labelIdToNameMap[i]]);
+                currentMinibatch.labels.push_back(tmpLabels);
+            }
+
+            m_minibatchBuffer.push_back(currentMinibatch);
+        }
     }
 
     template<class ElemType>
@@ -1371,24 +1461,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_minibatchBuffer[index].labels[id].data(),
                     matrixFlagNormal);
             }
-            else if (m_doMinibatchBuffering && !m_getMinibatchCopy)
+            else if (m_doMinibatchBuffering)
             {
                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
                 {
-                    m_uttDerivBuffer->GetDerivative(
-                        m_minibatchUttInfo, m_sentenceBegin,
-                        m_minibatchPackingFlag, matrices[iter->first]);
+                    if (m_getMinibatchCopy)
+                    {
+                        if (data.GetNumCols()
+                            != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                        {
+                            matrices[iter->first]->Resize(data.GetNumRows(),
+                                                          m_currentMBSize
+                                                          * m_numberOfuttsPerMinibatch);
+                        }
+                        matrices[iter->first]->SetValue(0);
+                    }
+                    else
+                    {
+                        m_uttDerivBuffer->GetDerivative(
+                            m_minibatchUttInfo, m_sentenceBegin,
+                            m_minibatchPackingFlag, matrices[iter->first]);
+                    }
                 }
                 else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
                 {
-                     m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
-                                                    matrices[iter->first]);
+                    if (m_getMinibatchCopy)
+                    {
+                        if (data.GetNumCols() != 1)
+                        {
+                            data.Resize(1, 1);
+                        }
+                        data.SetValue(0);
+                    }
+                    else
+                    {
+                        m_uttDerivBuffer->GetObjective(m_minibatchUttInfo,
+                                                       matrices[iter->first]);
+                    }
                 }
             }
         }
 
-        // If we are not in the minibatch copy mode, then we can remove the
-        // minibatch from buffer.
         if (m_getMinibatchCopy == false)
         {
             assert(index == 0);
@@ -1424,11 +1537,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
                 {
-                    data.Resize(data.GetNumRows(), m_currentMBSize);
+                    if (data.GetNumCols()
+                        != m_currentMBSize * m_numberOfuttsPerMinibatch)
+                    {
+                        data.Resize(data.GetNumRows(),
+                                    m_currentMBSize * m_numberOfuttsPerMinibatch);
+                    }
                     data.SetValue(0);
                 }
                 else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
                 {
+                    if (data.GetNumCols() != 1)
+                    {
+                        data.Resize(1, 1);
+                    }
                     data.SetValue(0);
                 }
             }
@@ -1452,15 +1574,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             success = GetOneMinibatchToTrainOrTestDataBuffer(matrices);
             if (success)
             {
-                CopyMinibatchToMatrix(
-                    m_currentMBSize * m_numberOfuttsPerMinibatch,
-                    m_featuresBufferMultiIO, m_labelsBufferMultiIO, matrices);
-            }
-
-            // Checks if we need to move the current minibatch to buffer.
-            if (success && m_getMinibatchCopy)
-            {
-                CopyMinibatchToBuffer();
+                if (m_getMinibatchCopy)
+                {
+                    assert(m_minibatchBuffer.size() == 0);
+                    CopyMinibatchToBuffer();
+                    CopyMinibatchFromBufferToMatrix(0, matrices);
+                    m_minibatchBufferIndex = 0;
+                }
+                else
+                {
+                    CopyMinibatchToMatrix(
+                        m_currentMBSize * m_numberOfuttsPerMinibatch,
+                        m_featuresBufferMultiIO, m_labelsBufferMultiIO, matrices);
+                }
             }
 
             // If we are in the "copy" mode, and we cannot get a full minibatch,
@@ -1612,6 +1738,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (m_noData)
         {
+            m_currentBufferFrames[i] = 0;
+            m_processedFrame[i] = 0;
+            m_toProcess[i] = 0;
+            m_uttInfo[i].clear();
             return false;
         }
 
@@ -1665,8 +1795,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // We don't support having two utterances in the same buffer.
-            if (m_doMinibatchBuffering &&
-                m_uttDerivBuffer->HasUtterance(m_uttInfo[i][0].first))
+            if (m_doMinibatchBuffering
+                && m_hasUttInCurrentMinibatch.find(m_uttInfo[i][0].first)
+                != m_hasUttInCurrentMinibatch.end())
             {
                 (*m_mbiter)++;
                 if (!(*m_mbiter))
@@ -1674,7 +1805,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_noData = true;
                 }
                 fprintf(stderr, "WARNING: Utterance \"%S\" already exists in "
-                    "the buffer, skipping it.\n",
+                    "the minibatch, skipping it.\n",
                     m_uttInfo[i][0].first.c_str());
                 return ReNewBufferForMultiIO(i);
             }

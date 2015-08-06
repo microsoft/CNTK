@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         PastValueNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
                 
         PastValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
 
@@ -439,7 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         FutureValueNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId),m_boundaryInfo(CPUDEVICE)
         {
                 m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
                 m_deviceId = deviceId;
@@ -453,7 +453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
         FutureValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId)
+            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
                 m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
 

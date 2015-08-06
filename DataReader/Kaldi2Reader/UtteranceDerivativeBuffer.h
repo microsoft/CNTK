@@ -35,12 +35,10 @@ private:
 
     bool m_needLikelihood;
     bool m_epochEnd;
-    int m_minCompleteMinibatchIndex;
-    int m_minibatchIndex;
     size_t m_numUttsPerMinibatch;
     size_t m_dimension;
     ElemType m_currentObj;
-    std::vector<int> m_lastCompleteMinibatch;
+    std::vector<bool> m_uttReady;
     std::vector<std::vector<std::pair<wstring, size_t>>> m_currentUttInfo;
     unordered_map<wstring, UtteranceDerivativeUnit> m_uttPool;
     UtteranceDerivativeComputationInterface<ElemType>* m_derivativeInterface;

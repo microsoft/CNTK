@@ -247,7 +247,7 @@ public:
 
         if (doGradientCheck && sizeof(ElemType) != sizeof(double))
         {
-            LogicError("Gradient check needs to use type = double");
+            LogicError("Gradient check needs to use precision = double");
         }
         m_doUnitTest = configSGD("unittest", "false");
 
@@ -1668,10 +1668,6 @@ protected:
             else if (!std::isnan(epochCriterion) &&
                      (epochCriterion > (baseCriterion * (ElemType) (1.0 + ((ElemType) m_minibatchSearchCriterionErrorMargin / 100.0)))))
             {
-                fprintf(stderr, "AdaptiveMinibatchSearch: Search successful!!! Chose new minibatchSize of %d. "
-                        "EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
-                        (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion, baseCriterion);
-
                 // As soon as we see the Criterion (a measure of error) start to get larger than the
                 // Criterion we started with, we stop.
                 // TODO: if this is too sensitive, we can add a margin on the bases of percentage of
@@ -1682,11 +1678,18 @@ protected:
             {
                 lastTriedTrialMinibatchSize = trialMinibatchSize;
                 lastTriedTrialEpochCriterion = epochCriterion;
-                fprintf(stderr, "AdaptiveMinibatchSearch: Keep searching... "
-                        "EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
-                        epochCriterion, baseCriterion);
+                if (trialMinibatchSizeFloat * minibatchSizeTuningFactor <= maxMinibatchSize)
+                {
+                   fprintf(stderr, "AdaptiveMinibatchSearch: Keep searching... "
+                           "EpochCriterion = %.10g vs BaseCriterion = %.10g\n",
+                           epochCriterion, baseCriterion);
+                }
             }
         }
+        fprintf(stderr, "AdaptiveMinibatchSearch: Search successful!!! Chose new minibatchSize of %d. "
+                "EpochCriterion = %.10g vs BaseCriterion = %.10g\n\n",
+                (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion, baseCriterion);
+
 
         return lastTriedTrialMinibatchSize;
     }
@@ -1856,7 +1859,7 @@ protected:
             //for now since we share the same label masking flag we call this on the training
             //criterion node ony. Later, when we apply different labels on different nodes
             //we need to add code to call this function multiple times, one for each criteria node
-            size_t numSamplesWithLabel = (*criterionNodes)[0]->GetNumSamplesWithLabel(actualMBSize);
+            size_t numSamplesWithLabel = net.GetNumSamplesWithLabel(actualMBSize);
 
             std::vector<ElemType> mbEvalErrors(numEvalNodes, 0);
             for (size_t i = 0; i < numEvalNodes; i++)
@@ -1881,9 +1884,6 @@ protected:
                                   m_needAveMultiplier);
                 }
             }
-
-            // Tries to set up derivative features for the next utterance.
-            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
 
             timer.Stop();
             numMBsRun++;
@@ -1952,6 +1952,9 @@ protected:
             // call DataEnd function
             // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(endDataSentence);
+
+            // Tries to set up derivative features for the next utterance.
+            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
 
             profiler.NextSample();
         }
@@ -2102,30 +2105,40 @@ protected:
                             const size_t minibatchSize)
     {
         wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
+        // Saving into temporary file and then renaming it to the checkPointFileName
+        // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing
+        wstring tempFileName = checkPointFileName + L".tmp";
 
-        File fstream(checkPointFileName,
-                     FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
-
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
-        fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
-
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
-        fstream << minibatchSize;
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
-
-        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
-
-        for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
         {
-            const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-            fstream << smoothedGradient;
+            File fstream(tempFileName,
+                         FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
+            fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
+            fstream << minibatchSize;
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
+
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
+
+            for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
+            {
+                const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
+                fstream << smoothedGradient;
+            }
+
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
+
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+
+            // Ensuring that data is written
+            fstream.Flush();
         }
 
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
-
-        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+        renameOrDie(tempFileName, checkPointFileName);
     }
 
     bool LoadCheckPointInfo(const size_t epochNumber,
