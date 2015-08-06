@@ -22,6 +22,43 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 using namespace std;
 using namespace msra::strfun;
 
+// ---------------------------------------------------------------------------
+// source files and text references (location) into them
+// ---------------------------------------------------------------------------
+
+// SourceFile constructors
+SourceFile::SourceFile(wstring location, wstring text) : path(location), lines(split(text, L"\r\n")) { }  // from string, e.g. command line
+SourceFile::SourceFile(wstring path) : path(path)       // from file
+{
+    File(path, fileOptionsRead).GetLines(lines);
+}
+
+// default constructor constructs an unmissably invalid object
+TextLocation::TextLocation() : lineNo(SIZE_MAX), charPos(SIZE_MAX), sourceFileAsIndex(SIZE_MAX) { }
+
+// register a new source file and return a TextPosition that points to its start
+/*static*/ TextLocation TextLocation::NewSourceFile(SourceFile && sourceFile)
+{
+    TextLocation loc;
+    loc.lineNo = 0;
+    loc.charPos = 0;
+    loc.sourceFileAsIndex = sourceFileMap.size();   // index under which we store the source file
+    sourceFileMap.push_back(move(sourceFile));      // take ownership of the source file and give it a numeric index
+    return loc;
+}
+
+// helper for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
+wstring TextLocation::FormatErroneousLine() const
+{
+    const auto & lines = GetSourceFile().lines;
+    const auto line = (lineNo == lines.size()) ? L"(end)" : lines[lineNo].c_str();
+    return wstring(line) + L"\n" + wstring(charPos, L'.') + L"^";
+}
+
+void TextLocation::PrintIssue(const char * errorKind, const char * kind, const char * what) const
+{
+    fprintf(stderr, "%ls(%d): %s %s: %s\n%ls\n", GetSourceFile().path.c_str(), lineNo + 1/*report 1-based*/, errorKind, kind, what, FormatErroneousLine().c_str());
+}
 /*static*/ vector<SourceFile> TextLocation::sourceFileMap;
 
 // all errors from processing the config files are reported as ConfigError
@@ -205,10 +242,10 @@ public:
         }
     };
 
-    class LexerError : public CodeSourceError
+    class LexerError : public ConfigError
     {
     public:
-        LexerError(const string & msg, TextLocation where) : CodeSourceError(msg, where) { }
+        LexerError(const string & msg, TextLocation where) : ConfigError(msg, where) { }
         /*implement*/ const char * kind() const { return "tokenizing"; }
     };
 
@@ -353,16 +390,44 @@ public:
 // parser -- parses configurations
 // ---------------------------------------------------------------------------
 
+// diagnostics helper: print the content
+void Expression::Dump(int indent) const
+{
+    fprintf(stderr, "%*s", indent, "", op.c_str());
+    if (op == L"s") fprintf(stderr, "'%ls' ", s.c_str());
+    else if (op == L"d") fprintf(stderr, "%.f ", d);
+    else if (op == L"b") fprintf(stderr, "%s ", b ? "true" : "false");
+    else if (op == L"id") fprintf(stderr, "%ls ", id.c_str());
+    else if (op == L"new" || op == L"array" || op == L".") fprintf(stderr, "%ls %ls ", op.c_str(), id.c_str());
+    else fprintf(stderr, "%ls ", op.c_str());
+    if (!args.empty())
+    {
+        fprintf(stderr, "\n");
+        for (const auto & arg : args)
+            arg->Dump(indent + 2);
+    }
+    if (!namedArgs.empty())
+    {
+        fprintf(stderr, "\n");
+        for (const auto & arg : namedArgs)
+        {
+            fprintf(stderr, "%*s%ls =\n", indent + 2, "", arg.first.c_str());
+            arg.second->Dump(indent + 4);
+        }
+    }
+    fprintf(stderr, "\n");
+}
+
 class Parser : public Lexer
 {
-    class ParseError : public LexerError
+    class ParseError : public ConfigError
     {
     public:
-        ParseError(const string & msg, TextLocation where) : LexerError(msg, where) { }
+        ParseError(const string & msg, TextLocation where) : ConfigError(msg, where) { }
         /*implement*/ const char * kind() const { return "parsing"; }
     };
 
-    void Fail(const string & msg, Token where) { throw LexerError(msg, where.beginLocation); }
+    void Fail(const string & msg, Token where) { throw ParseError(msg, where.beginLocation); }
 
     //void Expected(const wstring & what) { Fail(strprintf("%ls expected", what.c_str()), GotToken().beginLocation); }  // I don't know why this does not work
     void Expected(const wstring & what) { Fail(utf8(what) + " expected", GotToken().beginLocation); }
@@ -410,7 +475,7 @@ public:
         SetSourceFile(move(sourceFile));
         ConsumeToken();     // get the very first token
     }
-    ExpressionRef ParseOperand()
+    ExpressionPtr ParseOperand()
     {
         let & tok = GotToken();
         auto operand = make_shared<Expression>(tok.beginLocation);
@@ -483,8 +548,8 @@ public:
             ConsumePunctuation(L"..");
             operand->args.push_back(ParseExpression(0, false));         // [1] last index
             ConsumePunctuation(L"]");
+            // TODO: change to parse proper lambda expressions and use that here (make '=>' a real infix operator), then just call ParseExpression() here
             ConsumePunctuation(L"(");
-            // Note: needs a new local scope for this
             operand->id = ConsumeIdentifier();                          // identifier kept here
             ConsumePunctuation(L"=>");
             operand->args.push_back(ParseExpression(0, false));         // [2] function expression
@@ -494,7 +559,7 @@ public:
             Expected(L"operand");
         return operand; // not using returns above to avoid "not all control paths return a value"
     }
-    ExpressionRef ParseExpression(int requiredPrecedence, bool stopAtNewline)
+    ExpressionPtr ParseExpression(int requiredPrecedence, bool stopAtNewline)
     {
         auto left = ParseOperand();                 // get first operand
         for (;;)
@@ -542,7 +607,7 @@ public:
     }
     // a macro-args expression lists position-dependent and optional parameters
     // This is used both for defining macros (LHS) and using macros (RHS).
-    ExpressionRef ParseMacroArgs(bool defining)
+    ExpressionPtr ParseMacroArgs(bool defining)
     {
         ConsumePunctuation(L"(");
         auto macroArgs = make_shared<Expression>(GotToken().beginLocation, L"()");
@@ -569,7 +634,7 @@ public:
         ConsumePunctuation(L")");
         return macroArgs;
     }
-    map<wstring, ExpressionRef> ParseDictMembers()
+    map<wstring, ExpressionPtr> ParseDictMembers()
     {
         // A dictionary is a map
         //  member identifier -> expression
@@ -581,13 +646,13 @@ public:
         //  op="=>"
         //  args[0] = parameter list (op="()", with args (all of op="id") and namedArgs)
         //  args[1] = expression with unbound arguments
-        map<wstring, ExpressionRef> members;
+        map<wstring, ExpressionPtr> members;
         auto idTok = GotToken();
         while (idTok.kind == identifier)
         {
             let id = ConsumeIdentifier();       // the member's name    --TODO: do we need to keep its location?
             let location = idTok.beginLocation; // for error message
-            let parameters = (GotToken().symbol == L"(") ? ParseMacroArgs(true/*defining*/) : ExpressionRef();  // optionally, macro arguments
+            let parameters = (GotToken().symbol == L"(") ? ParseMacroArgs(true/*defining*/) : ExpressionPtr();  // optionally, macro arguments
             ConsumePunctuation(L"=");
             let rhs = ParseExpression(0, true/*can end at newline*/);   // and the right-hand side
             let val = parameters ? make_shared<Expression>(parameters->location, L"=>", parameters, rhs) : rhs;  // rewrite to lambda if it's a macro
@@ -603,15 +668,16 @@ public:
         return members;
     }
     // top-level parse function parses dictonary members
-    ExpressionRef Parse()
+    ExpressionPtr Parse()
     {
         let topMembers = ParseDictMembers();
         if (GotToken().kind != eof)
             Fail("junk at end of source", GetCursor());
-        ExpressionRef topDict = make_shared<Expression>(GetCursor(), L"[]");
+        ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
         topDict->namedArgs = topMembers;
         return topDict;
     }
+    // simple test function for use during development
     static void Test()
     {
         let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = (print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
@@ -620,12 +686,13 @@ public:
 };
 
 // globally exported functions to execute the parser
-static ExpressionRef Parse(SourceFile && sourceFile) { return Parser(move(sourceFile)).Parse(); }
-ExpressionRef ParseConfigString(wstring text) { return Parse(SourceFile(L"(command line)", text)); }
-ExpressionRef ParseConfigFile(wstring path) { return Parse(SourceFile(path)); }
+static ExpressionPtr Parse(SourceFile && sourceFile) { return Parser(move(sourceFile)).Parse(); }
+ExpressionPtr ParseConfigString(wstring text) { return Parse(SourceFile(L"(command line)", text)); }
+ExpressionPtr ParseConfigFile(wstring path) { return Parse(SourceFile(path)); }
 
-}}}   // namespaces
+}}}     // namespaces
 
+#if 1   // use this for standalone development of the parser
 using namespace Microsoft::MSR::CNTK;
 
 int wmain(int /*argc*/, wchar_t* /*argv*/[])
@@ -641,3 +708,4 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     }
     return EXIT_SUCCESS;
 }
+#endif

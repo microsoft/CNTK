@@ -153,6 +153,7 @@
     <Text Include="ConfigSpec.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConfigurableRuntimeObjects.h" />
     <ClInclude Include="ParseConfig.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
