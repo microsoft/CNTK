@@ -24,19 +24,14 @@
 # KALDI_PATH= Path to Kaldi
 #   If not specified, Kaldi plugins will not be built
 
-ifdef PREFIX
-  ifneq ("$(wildcard $(PREFIX)/Config.make)","")
-    include $(PREFIX)/Config.make
-  else
-    $(error Cannot fine $(PREFIX)/Config.make.  Please see the README file for configuration instructions.)
-  endif
+ifndef BUILD_TOP
+BUILD_TOP=.
+endif
+
+ifneq ("$(wildcard $(BUILD_TOP)/Config.make)","")
+  include $(BUILD_TOP)/Config.make
 else
-  # No PREFIX case, do old-style build
-  ifndef CUDA_PATH
-    ifneq ("$(wildcard /usr/local/cuda-7.0)","")
-      CUDA_PATH=/usr/local/cuda-7.0
-    endif
-  endif
+  $(error Cannot fine $(BUILD_TOP)/Config.make.  Please see the README file for configuration instructions.)
 endif
 
 ifndef BUILDTYPE
@@ -141,28 +136,12 @@ endif
 
 #######
 
-ifdef PREFIX
-  OBJDIR:= $(PREFIX)/.build
-  BINDIR:= $(PREFIX)/bin
-  LIBDIR:= $(PREFIX)/lib
+OBJDIR:= $(BUILD_TOP)/.build
+BINDIR:= $(BUILD_TOP)/bin
+LIBDIR:= $(BUILD_TOP)/lib
 
-  ORIGINLIBDIR:='$$ORIGIN/../lib'
-  ORIGINDIR:='$$ORIGIN'
-else
-  ARCH = $(shell uname -m)
-  ifdef CUDA_PATH
-    TARGET=GPU
-  else
-    TARGET=CPU
-  endif
-  BUILDFOR=$(ARCH).$(TARGET).$(BUILDTYPE).$(MATHLIB)
-  OBJDIR:= .build/$(BUILDFOR)
-  BINDIR:= bin/$(BUILDFOR)
-  LIBDIR:= bin/$(BUILDFOR)
-
-  ORIGINLIBDIR:='$$ORIGIN'
-  ORIGINDIR:='$$ORIGIN'
-endif
+ORIGINLIBDIR:='$$ORIGIN/../lib'
+ORIGINDIR:='$$ORIGIN'
 
 CNTKMATH:=cntkmath
 
