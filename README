@@ -33,11 +33,9 @@ To build the cpu version, you have to install intel MKL blas library or ACML lib
 
 for MKL:
 1. Download from https://software.intel.com/en-us/intel-mkl
-2. You can modify variable MKL_PATH in makefile.cpu to change your mkl path.
 
 for ACML:
 1. Download from http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/
-2. Modify ACML_PATH in the makefile.cpu and makefile.gpu to provide your ACML library path.
 
 for Kaldi:
 1. In kaldi-trunk/tools/Makefile, uncomment # OPENFST_VERSION = 1.4.1, and
@@ -48,32 +46,27 @@ for Kaldi:
 To build the gpu version, you have to install NIVIDIA CUDA first
 
 == Build Preparation ==
-Create a directory for your build.  You can create different directories for different build configuration,
-for example, different directories for GPU versus CPU, debug versus release.  Each directory must have a
-Config.make file in it which defines your build configuration, as follows:
+Let $CNTK be the CNTK directory.
+>mkdir build
+>$CNTK/configure -h
 
-ACML_PATH= path to ACML library installation
-  only needed if MATHLIB=acml
-MKL_PATH= path to MKL library installation
-  only needed if MATHLIB=mkl
-GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
-  defaults to /usr
-BUILDTYPE= One of release or debug
-  defaults to release
-MATHLIB= One of acml or mkl
-  defaults to acml
-CUDA_PATH= Path to CUDA
-  If not specified, GPU will not be enabled
-KALDI_PATH= Path to Kaldi
-  If not specified, Kaldi plugins will not be built
+You will see various options for configure, as well as their default
+values.  CNTK needs a CPU math directory, either acml or mkl.  If you
+do not specify one and both are available, acml will be used.  For GPU
+use, a cuda and gdk directory are also required.  Similary, to build
+the kaldi plugin a kaldi directory is required.  You may also specify
+whether you want a debug or release build.  Rerun configure with the
+desired options.
 
-A possible configuration is to create a directory called "build" (which is ignored by .gitignore)
-and create directories in build for various configurations.  The build directory can have a Paths.make
-that defines the paths the various configurations will choose from.  A Config.make can include
-build/Paths.make and then set CUDA_PATH, KALDI_PATH, and BUILDTYPE appropriately.
+>$CNTK/configure ...
 
-To build
-make PREFIX=build_directory
+This will create a Config.make and a Makefile (if you are in the $CNTK
+directory, a Makefile will not be created).  The Config.make file
+records the configuration parameters and the Makefile reinvokes the
+$CNTK/Makefile, passing it the build directory where it can find the
+Config.make.
+
+After make completes, you will have the following directories:
 
   .build will contain object files, and can be deleted
   bin contains the cntk program
@@ -82,7 +75,8 @@ make PREFIX=build_directory
   The bin and lib directories can safely be moved as long as they remain siblings.
 
 To clean
-make PREFIX=build_directory clean
+
+>make clean
 
 == Run ==
 All executables are in bin directory:

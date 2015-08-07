@@ -1,0 +1,412 @@
+#!/bin/bash
+
+configure=$0
+build_top=$PWD
+
+have_cuda=no
+cuda_path=
+cuda_check=include/cuda.h
+enable_cuda=
+
+have_acml=no
+acml_path=
+acml_check=include/acml.h
+
+have_mkl=no
+mkl_path=
+mkl_check=mkl/include/mkl.h
+
+have_kaldi=no
+kaldi_path=
+kaldi_check=src/kaldi.mk 
+
+have_buildtype=no
+buildtype=
+default_buildtype=release
+
+have_gdk=no
+gdk_path=
+gdk_check=include/nvidia/gdk/nvml.h
+
+mathlib=
+
+# List from best to worst choice
+default_path_list="/usr /usr/local /opt /opt/local"
+
+# List from best to worst choice
+default_acmls="acml5.3.1/ifort64"
+default_mkls=""
+
+# NOTE: Will get compilation errors with cuda-6.0
+default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
+default_kaldis="kaldi-trunk"
+default_gdks="."
+
+function default_paths ()
+{
+    echo $build_top $HOME $default_path_list
+}
+
+# $1 is directory
+# $2 is file that must be present
+function check_dir ()
+{
+    if test -e $1/$2
+    then
+        echo yes
+    else
+        echo no
+    fi
+}
+
+# $1 is the list of tails to search, ordered by preference
+# $2 is some file that must exist in $1
+function find_dir ()
+{
+    for tail in $1
+    do
+        for head in $(default_paths)
+        do
+            if test x$(check_dir "$head/$tail" $2) = xyes
+            then
+                echo $head/$tail
+                return 0
+            fi
+        done
+    done
+}
+
+function find_acml ()
+{
+    find_dir "$default_acmls" "$acml_check"
+}
+
+function find_mkl ()
+{
+    find_dir "$default_mkls" "$mkl_check"
+}
+
+function find_cuda ()
+{
+    find_dir "$default_cudas" "$cuda_check"
+}
+
+function find_kaldi ()
+{
+    find_dir "$default_kaldis" "$kaldi_check"
+}
+
+function find_gdk ()
+{
+    find_dir "$default_gdks" "$gdk_check"
+}
+
+function is_hardlinked ()
+{
+    r=no
+    if test -e $1 && test -e $2
+    then
+        r=yes
+        [ "`stat -c '%i' $1`" != "`stat -c '%i' $2`" ] && r=no
+    fi
+    echo $r
+}
+
+function default_use_cuda () 
+{
+    if test x$(find_cuda) = x || test x$(find_gdk) = x
+    then
+        echo no
+    else
+        echo yes
+    fi
+}
+enable_cuda=$(default_use_cuda)
+
+function show_default () 
+{
+    if test x$1 = x
+    then
+        echo "(no default)"
+    else
+        echo "(default $1)"
+    fi
+}
+
+function show_help ()
+{
+    echo "Usage: configure [options]"
+    echo "Options:"
+    echo "  -h|--help this help"
+    echo "  --with-build-top=directory build directory $(show_default $build_top)"
+    echo "  --add directory add directory to library search path"
+    echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
+    echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
+    echo "  --with-gdk[=directory] $(show_default $(find_gdk))"
+    echo "  --with-acml[=directory] $(show_default $(find_acml))"
+    echo "  --with-mkl[=directory] $(show_default $(find_mkl))"
+    echo "  --with-buildtype=(debug|release) $(show_default $default_buildtype)"
+    echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
+    echo "Libraries search path:"
+    for head in $(default_paths)
+    do
+        echo "    $head"
+    done
+}
+
+while [[ $# > 0 ]]
+do
+    key="$1"
+    case $key in
+        *=?*) optarg=`expr "X$key" : '[^=]*=\(.*\)'` ;;
+        *=)   optarg= ;;
+        *)    optarg= ;;
+    esac
+
+    case $key in
+        -h|--help)
+            show_help
+            exit 1
+            ;;
+        --with-build-top*)
+            if test x$optarg != x
+            then
+                build_top=$optarg
+                mkdir -p $build_top
+            fi
+            ;;
+        --add*)
+            if test x$optarg = x
+            then
+                shift ; optarg=$1
+            fi
+            default_path_list="$optarg $default_path_list"
+            ;;
+        --cuda)
+            if test x$optarg = yes || test x$optarg = no
+            then
+                enable_cuda=$optarg
+            else
+                echo "Invalid value for --cuda"
+                show_help
+                exit
+            fi
+            ;;
+
+        --with-cuda*)
+            have_cuda=yes
+            enable_cuda=yes
+            if test x$optarg = x
+            then
+                cuda_path=$(find_cuda)
+                if test x$cuda_path = x
+                then
+                    echo "Cannot find cuda directory."
+                    echo "Please specify a value for --with-cuda"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $cuda_check) = yes
+                then
+                    cuda_path=$optarg
+                else
+                    echo "Invalid cuda directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --with-gdk*)
+            have_gdk=yes
+            if test x$optarg = x
+            then
+                gdk_path=$(find_gdk)
+                if test x$gdk_path = x
+                then
+                    echo "Cannot find gdk directory."
+                    echo "Please specify a value for --with-gdk"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $gdk_check) = yes
+                then
+                    gdk_path=$optarg
+                else
+                    echo "Invalid gdk directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --with-acml*)
+            have_acml=yes
+            mathlib=acml
+            if test x$optarg = x
+            then
+                acml_path=$(find_acml)
+                if test x$acml_path = x
+                then
+                    echo "Cannot fine acml directory"
+                    echo "Please specify a value for --with-acml"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $acml_check) = yes
+                then
+                    acml_path=$optarg
+                else
+                    echo "Invalid acml directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --with-mkl*)
+            have_mkl=yes
+            mathlib=mkl
+            if test x$optarg = x
+            then
+                mkl_path=$(find_mkl)
+                if test x$mkl_path = x
+                then
+                    echo "Cannot fine mkl directory"
+                    echo "Please specify a value for --with-mkl"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $mkl_check) = yes
+                then
+                    mkl_path=$optarg
+                else
+                    echo "Invalid mkl directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --with-buildtype*)
+            have_buildtype=yes
+            case $optarg in
+                debug|release)
+                    buildtype=$optarg
+                    ;;
+                *)
+                    echo Invalid buildtype $optarg
+                    echo Must be debug or release
+                    exit 1
+            esac
+            ;;
+        --with-kaldi*)
+            have_kaldi=yes
+            if test x$optarg = x
+            then
+                kaldi_path=$(find_kaldi)
+                if test x$kaldi_path = x
+                then
+                    echo "Cannot find kaldi directory"
+                    echo "Please specify a value for --with-kaldi"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $kaldi_check)
+                then
+                    kaldi_path=$optarg
+                else
+                    echo "Invalid kaldi directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        *)
+            echo Invalid option $key
+            show_help
+            exit 1
+    esac
+    shift
+done
+
+if test x$buildtype = x
+then
+    buildtype=$default_buildtype
+    echo Defaulting to --with-buildtype=release
+fi
+
+# If no math library was specified, search for acml and then mkl
+if test x$have_acml = xno && test x$have_mkl = xno
+then
+    acml_path=$(find_acml)
+    if test x$acml_path = x
+    then
+        mkl_path=$(find_mkl)
+        if test x$mkl_path = x
+        then
+            echo "Cannot find a CPU math library."
+            echo "Please specify --with-acml or --with-mkl with a path."
+            exit 1
+        else
+            mathlib=mkl
+        fi
+    else
+        mathlib=acml
+    fi
+fi
+
+# If no cuda library specified, search for one
+if test x$enable_cuda = xyes && test x$cuda_path = x
+then
+    cuda_path=$(find_cuda)
+    if test x$cuda_path = x ; then
+        echo Cannot locate a cuda directory
+        echo GPU will be disabled
+        enable_cuda=no
+    else
+        echo Found cuda at $cuda_path
+    fi
+fi
+
+if test $enable_cuda = yes && test x$gdk_path = x
+then
+    gdk_path=$(find_gdk)
+    if test x$gdk_path = x ; then
+        echo Cannot locate a gdk directory
+        echo GPU will be disabled
+        enable_cuda=no
+    else
+        echo Found gdk at $gdk_path
+    fi
+fi
+
+config=$build_top/Config.make
+echo Generating $config
+echo "#Configuration file for cntk" > $config
+echo BUILDTYPE=$buildtype >> $config
+echo MATHLIB=$mathlib >> $config
+case $mathlib in
+    acml)
+        echo ACML_PATH=$acml_path >> $config
+        ;;
+    mkl)
+        echo MKL_PATH=$mkl_path >> $config
+        ;;
+esac
+if test $enable_cuda = yes ; then
+    echo CUDA_PATH=$cuda_path >> $config
+    echo GDK_PATH=$gdk_path >> $config
+fi
+if test x$kaldi_path != x ; then
+    echo KALDI_PATH=$kaldi_path >> $config
+fi
+
+# If we are not in the configure directory, generate a trampoline Makefile
+makefile=$build_top/Makefile
+if test $(is_hardlinked "$configure" "$build_top/configure") = no
+then
+    echo Generating $makefile
+    realconf=`readlink -f $configure`
+    dir=`dirname $realconf`
+    echo "#Generate Makefile" > $makefile
+    echo dir=$dir >> $makefile
+    echo BUILD_TOP=$build_top >> $makefile
+    echo >> $makefile
+    echo all clean : >> $makefile
+    printf '\t$(MAKE) -C $(dir) BUILD_TOP=$(BUILD_TOP) $@\n' >> $makefile
+fi
+echo run 
+echo '>make -j all'
+echo to build
