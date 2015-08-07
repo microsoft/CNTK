@@ -852,7 +852,7 @@ protected:
 #ifdef MPI_SUPPORT
             if (mpiRank == 0)
 #else
-            if (g_mpi->CurrentNodeRank() == 0)
+            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
 #endif
             {
                 // only needs to be done by one process
@@ -965,7 +965,7 @@ protected:
 #ifdef MPI_SUPPORT
                     if (mpiRank == 0)
 #else
-                    if (g_mpi->CurrentNodeRank() == 0)
+                    if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
 #endif
                     {
                         net.SaveToFile(m_modelPath);
@@ -1120,7 +1120,7 @@ protected:
 #ifdef MPI_SUPPORT
             if (mpiRank == 0)
 #else
-            if (g_mpi->CurrentNodeRank() == 0)
+            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
 #endif
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
@@ -1202,7 +1202,7 @@ protected:
 #ifdef MPI_SUPPORT
                             if (mpiRank == 0)
 #else
-                            if (g_mpi->CurrentNodeRank() == 0)
+                            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
 #endif
                             {
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
@@ -1262,7 +1262,7 @@ protected:
 #ifdef MPI_SUPPORT
             if (mpiRank == 0)
 #else
-            if (g_mpi->CurrentNodeRank() == 0)
+            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
 #endif
             {
                 net.SaveToFile(GetModelNameForEpoch(i));
@@ -1878,7 +1878,8 @@ protected:
         localEpochCriterion.SetValue(0);
         localEpochEvalErrors.SetValue(0);
 
-        if ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum))
+        bool useGradientAggregation = ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
+        if (useGradientAggregation)
         {
             epochCriterion = ElemType(0.0);
             epochEvalErrors.assign(numEvalNodes, ElemType(0.0));
@@ -1889,10 +1890,7 @@ protected:
         // resetting this, so profiling is performed for one epoch only
         m_numMBsToCUDAProfile = 0;
 
-        bool useDistributedMBReading = false;
-#ifndef MPI_SUPPORT
-        useDistributedMBReading = m_enableDistributedMBReading && trainSetDataReader->SupportsDistributedMBRead() && (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum);
-#endif
+        bool useDistributedMBReading = useGradientAggregation && m_enableDistributedMBReading && trainSetDataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
         {
             trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_epochSize);
@@ -1909,68 +1907,96 @@ protected:
         Timer timer;
         timer.Start();
 
-        while (trainSetDataReader->GetMinibatch(*inputMatrices))
+        for (;;)
         {
+            bool wasDataRead = trainSetDataReader->GetMinibatch(*inputMatrices);
+
+            if (useGradientAggregation)
+            {
+                // In case of data-parallel SGD, the current node needs to continue even with a minibatch size of 0 if any
+                // other node in the group has a non-zero size minibatch to process. This is needed to ensure that
+                // the gradient aggregation barriers do not get stuck and also to ensure that all nodes update their weights
+                // properly using the aggregate gradients from other nodes before moving on to the next epoch even though the current
+                // node itself may not have any gradient contribution.
+                std::array<int, 1> numNodesWithDataToProcess;
+                numNodesWithDataToProcess[0] = wasDataRead ? 1 : 0;
+                g_mpi->AllReduce(numNodesWithDataToProcess);
+
+                if (numNodesWithDataToProcess[0] == 0)
+                {
+                    break;
+                }
+            }
+            else if (!wasDataRead)
+            {
+                break;
+            }
+
+            size_t actualMBSize = 0;
+            if (wasDataRead)
+            {
 #ifdef MPI_SUPPORT
-            DecimateMinibatch(inputMatrices);
+                DecimateMinibatch(inputMatrices);
 #endif
-            if (!useDistributedMBReading && (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum))
-            {
-                DecimateMinibatch(*inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
-            }
-            UpdateEvalTimeStamps(FeatureNodes);
-            UpdateEvalTimeStamps(labelNodes);
+                if (!useDistributedMBReading && useGradientAggregation)
+                {
+                    DecimateMinibatch(*inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
+                }
+                UpdateEvalTimeStamps(FeatureNodes);
+                UpdateEvalTimeStamps(labelNodes);
 
-            size_t actualMBSize = net.GetActualMBSize();
-            if (actualMBSize == 0)
-            {
-                continue;
-            }
+                actualMBSize = net.GetActualMBSize();
 
-            net.SetActualMiniBatchSize(actualMBSize);
-            net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+                if (actualMBSize == 0)
+                {
+                    continue;
+                }
+
+                net.SetActualMiniBatchSize(actualMBSize);
+                net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
 
 #ifndef EVALDLL
-            if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
-            {
-                throw std::logic_error("cannot pass gradient checker");
-            }
+                if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
+                {
+                    throw std::logic_error("cannot pass gradient checker");
+                }
 #endif
-            // TODO: currently only support one node regularization
-            if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
-            {
-                refNet.SetActualMiniBatchSize(actualMBSize);
-                refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                refNet.Evaluate(refNode);
-                Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
-                                              refNode->FunctionValues(),
-                                              1 - m_adaptationRegWeight,
-                                              (*labelNodes)[0]->FunctionValues());
+                // TODO: currently only support one node regularization
+                if (m_needRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
+                {
+                    refNet.SetActualMiniBatchSize(actualMBSize);
+                    refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                    refNet.Evaluate(refNode);
+                    Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
+                        refNode->FunctionValues(),
+                        1 - m_adaptationRegWeight,
+                        (*labelNodes)[0]->FunctionValues());
+                }
+
+                // only compute gradient when learning rate is large enough
+                if (learnRatePerSample > m_minLearnRate * 0.01)
+                {
+                    // use only the first criterion. Is there any possibility to use more?
+                    net.ComputeGradient((*criterionNodes)[0]);
+                }
+                else
+                {
+                    // use only the first criterion. Is there any possibility to use more?
+                    net.Evaluate((*criterionNodes)[0]);
+                }
+
+                for (size_t i = 0; i < numEvalNodes; i++)
+                {
+                    net.Evaluate((*evaluationNodes)[i]);
+                }
             }
 
-            // only compute gradient when learning rate is large enough
-            if (learnRatePerSample > m_minLearnRate * 0.01)
-            {
-                // use only the first criterion. Is there any possibility to use more?
-                net.ComputeGradient((*criterionNodes)[0]);
-            }
-            else
-            {
-                // use only the first criterion. Is there any possibility to use more?
-                net.Evaluate((*criterionNodes)[0]);
-            }
-
-            for (size_t i = 0; i < numEvalNodes; i++)
-            {
-                net.Evaluate((*evaluationNodes)[i]);
-            }
-
-            //sum of MBSize for all computing slave DecimateMinibatch
+            // Sum of MBSize across all nodes when using parallel training
             size_t aggregateMBSizeAllTrainingNodes = actualMBSize;
 
             //distributed gradient aggregation
-            if ((m_parallelizationMethod != ParallelizationMethod::DataParallelSGD) || (epochNumber < m_parallelizationStartEpochNum))
+            if (!useGradientAggregation)
             {
                 Matrix<ElemType>::AddElementToElement((*criterionNodes)[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
                 for (size_t i = 0; i<numEvalNodes; i++)
@@ -1985,10 +2011,10 @@ protected:
                 //prepare the header
                 m_gradHeader->numEvalNode = numEvalNodes;
                 m_gradHeader->numSample = actualMBSize;
-                m_gradHeader->criterion = (float)(*criterionNodes)[0]->FunctionValues().Get00Element();
+                m_gradHeader->criterion = wasDataRead ? (*criterionNodes)[0]->FunctionValues().Get00Element() : 0;
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
-                    m_gradHeader->evalErrors[i] = (float)(*evaluationNodes)[i]->FunctionValues().Get00Element();
+                    m_gradHeader->evalErrors[i] = wasDataRead ? (*evaluationNodes)[i]->FunctionValues().Get00Element() : 0;
                 }
 
                 m_distGradAgg->AggregateGradients(m_gradHeader);
@@ -2030,7 +2056,7 @@ protected:
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
                     // get the epoch Values updated
-                    if ((m_parallelizationMethod != ParallelizationMethod::DataParallelSGD) || (epochNumber < m_parallelizationStartEpochNum))
+                    if (!useGradientAggregation)
                     {
                         timer.Restart();
                         epochCriterion = localEpochCriterion.Get00Element();
@@ -2093,7 +2119,7 @@ protected:
             profiler.NextSample();
         }
 
-        if ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum))
+        if (useGradientAggregation)
         {
             epochCriterion /= float(totalEpochSamples);
             for (size_t i = 0; i< numEvalNodes; i++)
