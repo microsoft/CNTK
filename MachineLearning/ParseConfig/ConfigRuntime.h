@@ -2,13 +2,21 @@
 
 #pragma once
 
-#include <memory>   // for shared_ptr
+#include "Basics.h"
 #include "ConfigurableRuntimeObjects.h"
 #include "ParseConfig.h"
+#include <memory>   // for shared_ptr
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
     using namespace std;
+
+    class EvaluationError : public ConfigError
+    {
+    public:
+        EvaluationError(const wstring & msg, TextLocation where) : ConfigError(msra::strfun::utf8(msg), where) { }
+        /*implement*/ const char * kind() const { return "evaluating"; }
+    };
 
     // config values
     // All values in a ConfigRecord derive from ConfigValueBase.
@@ -32,19 +40,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         class ConfigMember
         {
             ConfigValuePtr value;
+            TextLocation location;      // in source code
             template<typename T> T * As() const
             {
                 auto * p = dynamic_cast<T*>(value.get());
-                if (p == nullptr)
-                    RuntimeError("config member has wrong type");
+                if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
+                    throw EvaluationError(L"config member has wrong type", location);
                 return p;
             }
         public:
             operator double() const { return As<ConfigValue<double>>()->value; }
             operator wstring() const { return As<ConfigValue<wstring>>()->value; }
             operator bool() const { return As<ConfigValue<bool>>()->value; }
+            operator size_t() const { return (size_t) As<ConfigValue<double>>()->value; }   // TODO: fail if fractional
             template<typename T> operator shared_ptr<T>() const { return As<ConfigValue<shared_ptr<T>>>()->value; }
-            ConfigMember(ConfigValuePtr value) : value(value) { }
+            ConfigMember(ConfigValuePtr value) : value(value) { }   // TODO: get the TextLocation as an arg in here & remember it
             ConfigMember(){}    // needed for map below
         };
     private:
