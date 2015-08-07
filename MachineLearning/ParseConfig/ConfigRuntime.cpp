@@ -259,43 +259,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return idIter->second;  // found it
         }
 
-        // helper lambdas for evaluating infix operators
-        InfixFunction BadOp() { return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr { FailBinaryOpTypes(e); return nullptr; }; };
-        InfixFunction NumOp()
+        template<typename T>
+        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right)
         {
-            return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
-            {
-                let left  = As<double>(leftVal);
-                let right = As<double>(rightVal);
-                if (e->op == L"+")       return MakeConfigValue(left + right);
-                else if (e->op == L"-")  return MakeConfigValue(left - right);
-                else if (e->op == L"*")  return MakeConfigValue(left * right);
-                else if (e->op == L"/")  return MakeConfigValue(left / right);
-                else if (e->op == L"%")  return MakeConfigValue(fmod(left, right));
-                else if (e->op == L"**") return MakeConfigValue(pow(left, right));
-                else LogicError("");
-            };
-        }
-        InfixFunction StrOp() {
-            return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
-            {
-                let left  = As<wstring>(leftVal);
-                let right = As<wstring>(rightVal);
-                if (e->op == L"+")  return MakeConfigValue(left + right);
-                else LogicError("");
-            };
-        }
-        InfixFunction BoolOp()
-        {
-            return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
-            {
-                let left  = As<bool>(leftVal);
-                let right = As<bool>(rightVal);
-                if (e->op == L"||")       return MakeConfigValue(left || right);
-                else if (e->op == L"&&")  return MakeConfigValue(left && right);
-                else if (e->op == L"^")   return MakeConfigValue(left ^  right);
-                else LogicError("");
-            };
+            if (e->op == L"==")      return MakeConfigValue(left == right);
+            else if (e->op == L"!=") return MakeConfigValue(left != right);
+            else if (e->op == L"<")  return MakeConfigValue(left <  right);
+            else if (e->op == L">")  return MakeConfigValue(left >  right);
+            else if (e->op == L"<=") return MakeConfigValue(left <= right);
+            else if (e->op == L">=") return MakeConfigValue(left >= right);
+            else LogicError("unexpected infix op");
         }
 
         // Traverse through the expression (parse) tree to evaluate a value.
@@ -310,26 +283,56 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 { L"AnotherAction", MakeRuntimeTypeConstructor<AnotherAction>() }
             };
             // lookup table for infix operators
+            // helper lambdas for evaluating infix operators
+            InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            {
+                let left = As<double>(leftVal);
+                let right = As<double>(rightVal);
+                if (e->op == L"+")       return MakeConfigValue(left + right);
+                else if (e->op == L"-")  return MakeConfigValue(left - right);
+                else if (e->op == L"*")  return MakeConfigValue(left * right);
+                else if (e->op == L"/")  return MakeConfigValue(left / right);
+                else if (e->op == L"%")  return MakeConfigValue(fmod(left, right));
+                else if (e->op == L"**") return MakeConfigValue(pow(left, right));
+                else return CompOp<double> (e, left, right);
+            };
+            InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            {
+                let left = As<wstring>(leftVal);
+                let right = As<wstring>(rightVal);
+                if (e->op == L"+")  return MakeConfigValue(left + right);
+                else return CompOp<wstring>(e, left, right);
+            };
+            InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            {
+                let left = As<bool>(leftVal);
+                let right = As<bool>(rightVal);
+                if (e->op == L"||")       return MakeConfigValue(left || right);
+                else if (e->op == L"&&")  return MakeConfigValue(left && right);
+                else if (e->op == L"^")   return MakeConfigValue(left ^  right);
+                else return CompOp<bool>(e, left, right);
+            };
+            InfixFunction BadOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr { FailBinaryOpTypes(e); return nullptr; };
             infixOps = decltype(infixOps)
             {
                 // NumbersOp StringsOp BoolOp ComputeNodeOp NumberComputeNodeOp ComputeNodeNumberOp CompOp DictOp
                 // CompOp does not work, fix this. Use a different mechanism.
-                { L"*",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"/",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L".*", InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"**", InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"%",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"+",  InfixFunctions(NumOp(), StrOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"-",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"==", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"!=", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"<",  InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L">",  InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"<=", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L">=", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"&&", InfixFunctions(BadOp(), BadOp(), BoolOp(), BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"||", InfixFunctions(BadOp(), BadOp(), BoolOp(), BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
-                { L"^",  InfixFunctions(BadOp(), BadOp(), BoolOp(), BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) }
+                { L"*",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"/",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L".*", InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"**", InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"%",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"+",  InfixFunctions(NumOp, StrOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"-",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"==", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"!=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"<",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L">",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"<=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L">=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"&&", InfixFunctions(BadOp, BadOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"||", InfixFunctions(BadOp, BadOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
+                { L"^",  InfixFunctions(BadOp, BadOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) }
             };
         }
 
@@ -391,7 +394,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest = L"do = new PrintAction [ message = if true || false then 'Hello World' + \"!\" else 'Oops?']";
+        let parserTest = L"do = new PrintAction [ message = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
