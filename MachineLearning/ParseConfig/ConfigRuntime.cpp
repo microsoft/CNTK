@@ -5,6 +5,7 @@
 #include "ConfigRuntime.h"
 #include <deque>
 #include <functional>
+#include <cmath>
 
 #ifndef let
 #define let const auto
@@ -41,22 +42,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         virtual ~AnotherAction(){}
     };
 
-    // error handling
-
-    class EvaluationError : public ConfigError
-    {
-    public:
-        EvaluationError(const wstring & msg, TextLocation where) : ConfigError(utf8(msg), where) { }
-        /*implement*/ const char * kind() const { return "evaluating"; }
-    };
-
-    static void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
-
-    static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
-    static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown member name " + id, where); }
-
-    // config value types
-
     template<typename T> class ConfigValueWithLateInit : public ConfigValue<T>, public HasLateInit
     {
     public:
@@ -70,133 +55,307 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    template<class T> ConfigValue<shared_ptr<T>> MakeConfigValuePtr(const ConfigRecord & config)
+    class Evaluator
     {
-        return new ConfigValue<shared_ptr<T>>(make_shared(config));
-    }
+        // error handling
 
-    // helper for configurableRuntimeTypes initializer below
-    // This returns a lambda that is a constructor for a given runtime type.
-    template<class C>
-    function<ConfigValuePtr(const ConfigRecord &)> MakeRuntimeTypeConstructor()
-    {
-        bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
-        if (hasLateInit)
-            return [](const ConfigRecord & config){ return make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)); };
-        else
-            return [](const ConfigRecord & config){ return make_shared<ConfigValue<shared_ptr<C>>>(make_shared<C>(config)); };
-    }
-
-    // this table lists all C++ types that can be instantiated from "new" expressions
-    map<wstring, function<ConfigValuePtr(const ConfigRecord &)>> configurableRuntimeTypes =
-    {
-        { L"PrintAction", MakeRuntimeTypeConstructor<PrintAction>() },
-        { L"AnotherAction", MakeRuntimeTypeConstructor<AnotherAction>() }
-    };
-
-    // "new!" expressions get queued for execution after all other nodes of tree have been executed
-    class LateInitItem
-    {
-        ConfigValuePtr object;
-        ExpressionPtr dictExpr;                             // the dictionary expression that now can be fully evaluated
-    public:
-        LateInitItem(ConfigValuePtr object, ExpressionPtr dictExpr) : object(object), dictExpr(dictExpr) { }
-        void Init(deque<LateInitItem> & deferredInitList);
-    };
-
-    static ConfigValuePtr Evaluate(ExpressionPtr e, deque<LateInitItem> & deferredInitList);
-
-    // evaluate all elements in a dictionary and turn that into a ConfigRecord
-    // BUGBUG: This must be memorized. That's what variables are for!
-    ConfigRecord ConfigRecordFromNamedArgs(ExpressionPtr e, deque<LateInitItem> & deferredInitList)
-    {
-        if (e->op != L"[]")
-            TypeExpected(L"record", e);
-        ConfigRecord config;
-        for (let & namedArg : e->namedArgs)
+        class EvaluationError : public ConfigError
         {
-            let value = Evaluate(namedArg.second, deferredInitList);
-            config.Add(namedArg.first, value);
-        }
-        return config;
-    }
+        public:
+            EvaluationError(const wstring & msg, TextLocation where) : ConfigError(utf8(msg), where) { }
+            /*implement*/ const char * kind() const { return "evaluating"; }
+        };
 
-    // perform late initialization
-    // This assumes that the ConfigValuePtr points to a ConfigValueWithLateInit. If not, it will fail with a nullptr exception.
-    void LateInitItem::Init(deque<LateInitItem> & deferredInitList)
-    {
-        ConfigRecord config = ConfigRecordFromNamedArgs(dictExpr, deferredInitList);
-        dynamic_cast<HasLateInit*>(object.get())->Init(config);     // call ConfigValueWithLateInit::Init() which in turn will call HasLateInite::Init() on the actual object
-    }
+        void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
 
-    static bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
-    {
-        let val = dynamic_cast<ConfigValue<bool>*>(value.get());
-        if (!val)
-            TypeExpected(L"boolean", e);
-        return val->value;
-    }
+        void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
+        void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown member name " + id, where); }
 
-    static ConfigValuePtr Evaluate(ExpressionPtr e, deque<LateInitItem> & deferredInitList)
-    {
-        // this evaluates any evaluation node
-        if (e->op == L"d")      return make_shared<ConfigValue<double>>(e->d);
-        else if (e->op == L"s") return make_shared<ConfigValue<wstring>>(e->s);
-        else if (e->op == L"b") return make_shared<ConfigValue<bool>>(e->b);
-        else if (e->op == L"new" || e->op == L"new!")
+        // config value types
+
+        template<typename T> ConfigValuePtr MakeConfigValue(const T & val) { return make_shared<ConfigValue<T>>(val); }
+
+        // helper for configurableRuntimeTypes initializer below
+        // This returns a lambda that is a constructor for a given runtime type.
+        template<class C>
+        function<ConfigValuePtr(const ConfigRecord &)> MakeRuntimeTypeConstructor()
         {
-            // find the constructor lambda
-            let newIter = configurableRuntimeTypes.find(e->id);
-            if (newIter == configurableRuntimeTypes.end())
-                Fail(L"unknown runtime type " + e->id, e->location);
-            // form the config record
-            let dictExpr = e->args[0];
-            if (e->op == L"new")   // evaluate the parameter dictionary into a config record
-                return newIter->second(ConfigRecordFromNamedArgs(dictExpr, deferredInitList)); // this constructs it
-            else                // ...unless it's late init. Then we defer initialization.
-            {
-                // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
-                let value = newIter->second(ConfigRecord());
-                deferredInitList.push_back(LateInitItem(value, dictExpr)); // construct empty and remember to Init() later
-                return value;   // we return the created but not initialized object as the value, so others can reference it
-            }
-        }
-        else if (e->op == L"if")
-        {
-            let condition = ToBoolean(Evaluate(e->args[0], deferredInitList), e->args[0]);
-            if (condition)
-                return Evaluate(e->args[1], deferredInitList);
+            bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
+            if (hasLateInit)
+                return [this](const ConfigRecord & config){ return make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)); };
             else
-                Evaluate(e->args[2], deferredInitList);
+                return [this](const ConfigRecord & config){ return MakeConfigValue(make_shared<C>(config)); };
         }
-        LogicError("unknown e->op");
-    }
 
-    // Traverse through the expression (parse) tree to evaluate a value.
+        // "new!" expressions get queued for execution after all other nodes of tree have been executed
+        struct LateInitItem
+        {
+            ConfigValuePtr object;
+            ExpressionPtr dictExpr;                             // the dictionary expression that now can be fully evaluated
+            LateInitItem(ConfigValuePtr object, ExpressionPtr dictExpr) : object(object), dictExpr(dictExpr) { }
+        };
+
+        // evaluate all elements in a dictionary and turn that into a ConfigRecord
+        // BUGBUG: This must be memorized. That's what variables are for!
+        ConfigRecord ConfigRecordFromNamedArgs(ExpressionPtr e)
+        {
+            if (e->op != L"[]")
+                TypeExpected(L"record", e);
+            ConfigRecord config;
+            for (let & namedArg : e->namedArgs)
+            {
+                let value = Evaluate(namedArg.second);
+                config.Add(namedArg.first, value);
+            }
+            return config;
+        }
+
+        // perform late initialization
+        // This assumes that the ConfigValuePtr points to a ConfigValueWithLateInit. If not, it will fail with a nullptr exception.
+        void LateInit(LateInitItem & lateInitItem)
+        {
+            ConfigRecord config = ConfigRecordFromNamedArgs(lateInitItem.dictExpr);
+            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(config);     // call ConfigValueWithLateInit::Init() which in turn will call HasLateInite::Init() on the actual object
+        }
+
+        double ToDouble(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = dynamic_cast<ConfigValue<double>*>(value.get());
+            if (!val)
+                TypeExpected(L"number", e);
+            return val->value;
+        }
+
+        // get number and return it as an integer (fail if it is fractional)
+        long long ToInt(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = ToDouble(value, e);
+            let res = (long long)(val);
+            if (val != res)
+                TypeExpected(L"integer number", e);
+            return res;
+        }
+
+        wstring ToString(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = dynamic_cast<ConfigValue<wstring>*>(value.get());
+            if (!val)
+                TypeExpected(L"number", e);
+            return val->value;
+        }
+
+        bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = dynamic_cast<ConfigValue<bool>*>(value.get());            // TODO: factor out this expression
+            if (!val)
+                TypeExpected(L"boolean", e);
+            return val->value;
+        }
+
+        // check if ConfigValuePtr is of a certain type
+        template<typename T>
+        bool Is(const ConfigValuePtr & value)
+        {
+            return dynamic_cast<ConfigValue<T>*>(value.get()) != nullptr;
+        }
+
+        // check if ConfigValuePtr is of a certain type
+        template<typename T>
+        const T & As(const ConfigValuePtr & value)
+        {
+            return dynamic_cast<ConfigValue<T>*>(value.get())->value;
+        }
+
+        typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
+        struct InfixFunctions
+        {
+            InfixFunction NumbersOp;            // number OP number -> number
+            InfixFunction StringsOp;            // string OP string -> string
+            InfixFunction BoolOp;               // bool OP bool -> bool
+            InfixFunction ComputeNodeOp;        // ComputeNode OP ComputeNode -> ComputeNode
+            InfixFunction NumberComputeNodeOp;  // number OP ComputeNode -> ComputeNode, e.g. 3 * M
+            InfixFunction ComputeNodeNumberOp;  // ComputeNode OP Number -> ComputeNode, e.g. M * 3
+            InfixFunction CompOp;               // ANY OP ANY -> bool
+            InfixFunction DictOp;               // dict OP dict
+            InfixFunctions(InfixFunction NumbersOp, InfixFunction StringsOp, InfixFunction BoolOp, InfixFunction ComputeNodeOp, InfixFunction NumberComputeNodeOp, InfixFunction ComputeNodeNumberOp, InfixFunction CompOp, InfixFunction DictOp)
+                : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), CompOp(CompOp), DictOp(DictOp) { }
+        };
+
+        void FailBinaryOpTypes(ExpressionPtr e)
+        {
+            Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
+        }
+
+        // all infix operators with lambdas for evaluating them
+        map<wstring, InfixFunctions> infixOps;
+
+        // this table lists all C++ types that can be instantiated from "new" expressions
+        map<wstring, function<ConfigValuePtr(const ConfigRecord &)>> configurableRuntimeTypes;
+
+        ConfigValuePtr Evaluate(ExpressionPtr e)
+        {
+            // this evaluates any evaluation node
+            if (e->op == L"d")      return MakeConfigValue(e->d);
+            else if (e->op == L"s") return MakeConfigValue(e->s);
+            else if (e->op == L"b") return MakeConfigValue(e->b);
+            else if (e->op == L"new" || e->op == L"new!")
+            {
+                // find the constructor lambda
+                let newIter = configurableRuntimeTypes.find(e->id);
+                if (newIter == configurableRuntimeTypes.end())
+                    Fail(L"unknown runtime type " + e->id, e->location);
+                // form the config record
+                let dictExpr = e->args[0];
+                if (e->op == L"new")   // evaluate the parameter dictionary into a config record
+                    return newIter->second(ConfigRecordFromNamedArgs(dictExpr)); // this constructs it
+                else                // ...unless it's late init. Then we defer initialization.
+                {
+                    // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
+                    let value = newIter->second(ConfigRecord());
+                    deferredInitList.push_back(LateInitItem(value, dictExpr)); // construct empty and remember to Init() later
+                    return value;   // we return the created but not initialized object as the value, so others can reference it
+                }
+            }
+            else if (e->op == L"if")
+            {
+                let condition = ToBoolean(Evaluate(e->args[0]), e->args[0]);
+                if (condition)
+                    return Evaluate(e->args[1]);
+                else
+                    return Evaluate(e->args[2]);
+            }
+            else
+            {
+                let opIter = infixOps.find(e->op);
+                if (opIter == infixOps.end())
+                    LogicError("e->op " + utf8(e->op) + " not implemented");
+                let & functions = opIter->second;
+                let leftArg = e->args[0];
+                let rightArg = e->args[1];
+                let leftValPtr = Evaluate(leftArg);
+                let rightValPtr = Evaluate(rightArg);
+                if (Is<double>(leftValPtr) && Is<double>(rightValPtr))
+                    return functions.NumbersOp(e, leftValPtr, rightValPtr);
+                else if (Is<wstring>(leftValPtr) && Is<wstring>(rightValPtr))
+                    return functions.StringsOp(e, leftValPtr, rightValPtr);
+                else if (Is<bool>(leftValPtr) && Is<bool>(rightValPtr))
+                    return functions.BoolOp(e, leftValPtr, rightValPtr);
+                // TODO: switch on the types
+                else
+                    FailBinaryOpTypes(e);
+            }
+            LogicError("should not get here");
+        }
+
+        // look up a member by id in a dictionary expression
+        // If it is not found, it tries all lexically enclosing scopes inside out.
+        ExpressionPtr LookupDictMember(ExpressionPtr dict, TextLocation idLocation, const wstring & id)
+        {
+            if (!dict)  // we recursively go up; only when we reach the top do we fail
+                UnknownIdentifier(id, idLocation);
+            let idIter = dict->namedArgs.find(id);
+            if (idIter == dict->namedArgs.end())
+                return LookupDictMember(dict->parent, idLocation, id);  // not found: try parent
+            return idIter->second;  // found it
+        }
+
+        // helper lambdas for evaluating infix operators
+        InfixFunction BadOp() { return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr { FailBinaryOpTypes(e); return nullptr; }; };
+        InfixFunction NumOp()
+        {
+            return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            {
+                let left  = As<double>(leftVal);
+                let right = As<double>(rightVal);
+                if (e->op == L"+")       return MakeConfigValue(left + right);
+                else if (e->op == L"-")  return MakeConfigValue(left - right);
+                else if (e->op == L"*")  return MakeConfigValue(left * right);
+                else if (e->op == L"/")  return MakeConfigValue(left / right);
+                else if (e->op == L"%")  return MakeConfigValue(fmod(left, right));
+                else if (e->op == L"**") return MakeConfigValue(pow(left, right));
+                else LogicError("");
+            };
+        }
+        InfixFunction StrOp() {
+            return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            {
+                let left  = As<wstring>(leftVal);
+                let right = As<wstring>(rightVal);
+                if (e->op == L"+")  return MakeConfigValue(left + right);
+                else LogicError("");
+            };
+        }
+        InfixFunction BoolOp()
+        {
+            return [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            {
+                let left  = As<bool>(leftVal);
+                let right = As<bool>(rightVal);
+                if (e->op == L"||")       return MakeConfigValue(left || right);
+                else if (e->op == L"&&")  return MakeConfigValue(left && right);
+                else if (e->op == L"^")   return MakeConfigValue(left ^  right);
+                else LogicError("");
+            };
+        }
+
+        // Traverse through the expression (parse) tree to evaluate a value.
+        deque<LateInitItem> deferredInitList;
+    public:
+        Evaluator()
+        {
+            // lookup table for "new" expression
+            configurableRuntimeTypes = decltype(configurableRuntimeTypes)
+            {
+                { L"PrintAction", MakeRuntimeTypeConstructor<PrintAction>() },
+                { L"AnotherAction", MakeRuntimeTypeConstructor<AnotherAction>() }
+            };
+            // lookup table for infix operators
+            infixOps = decltype(infixOps)
+            {
+                // NumbersOp StringsOp BoolOp ComputeNodeOp NumberComputeNodeOp ComputeNodeNumberOp CompOp DictOp
+                // CompOp does not work, fix this. Use a different mechanism.
+                { L"*",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"/",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L".*", InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"**", InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"%",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"+",  InfixFunctions(NumOp(), StrOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"-",  InfixFunctions(NumOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"==", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"!=", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"<",  InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L">",  InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"<=", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L">=", InfixFunctions(BadOp(), BadOp(), BadOp(),  BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"&&", InfixFunctions(BadOp(), BadOp(), BoolOp(), BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"||", InfixFunctions(BadOp(), BadOp(), BoolOp(), BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) },
+                { L"^",  InfixFunctions(BadOp(), BadOp(), BoolOp(), BadOp(), BadOp(), BadOp(), BadOp(), BadOp()) }
+            };
+        }
+
+        ConfigValuePtr EvaluateParse(ExpressionPtr e)
+        {
+            auto result = Evaluate(e);
+            // The deferredInitList contains unresolved Expressions due to "new!". This is specifically needed to support ComputeNodes
+            // (or similar classes) that need circular references, while allowing to be initialized late (construct them empty first).
+            while (!deferredInitList.empty())
+            {
+                LateInit(deferredInitList.front());
+                deferredInitList.pop_front();
+            }
+            return result;
+        }
+
+        void Do(ExpressionPtr e)
+        {
+            let doValueExpr = LookupDictMember(e, e->location, L"do"); // expr to compute 'do' member
+            EvaluateParse(doValueExpr);
+        }
+    };
+
     ConfigValuePtr Evaluate(ExpressionPtr e)
     {
-        deque<LateInitItem> deferredInitList;
-        auto result = Evaluate(e, deferredInitList);
-        // The deferredInitList contains unresolved Expressions due to "new!". This is specifically needed to support ComputeNodes
-        // (or similar classes) that need circular references, while allowing to be initialized late (construct them empty first).
-        while (!deferredInitList.empty())
-        {
-            deferredInitList.front().Init(deferredInitList);
-            deferredInitList.pop_front();
-        }
-        return result;
-    }
-
-    // look up a member by id in a dictionary expression
-    // If it is not found, it tries all lexically enclosing scopes inside out.
-    ExpressionPtr LookupDictMember(ExpressionPtr dict, TextLocation idLocation, const wstring & id)
-    {
-        if (!dict)  // we recursively go up; only when we reach the top do we fail
-            UnknownIdentifier(id, idLocation);
-        let idIter = dict->namedArgs.find(id);
-        if (idIter == dict->namedArgs.end())
-            return LookupDictMember(dict->parent, idLocation, id);  // not found: try parent
-        return idIter->second;  // found it
+        return Evaluator().EvaluateParse(e);
     }
 
     // top-level entry
@@ -204,8 +363,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // TODO: This is not good--constructors should always be fast to run. Do() should run after late initializations.
     void Do(ExpressionPtr e)
     {
-        let doValueExpr = LookupDictMember(e, e->location, L"do"); // expr to compute 'do' member
-        Evaluate(doValueExpr);
+        Evaluator().Do(e);
     }
 
 }}}     // namespaces
@@ -233,7 +391,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest = L"do = new ! PrintAction [ message = 'Hello World']";
+        let parserTest = L"do = new PrintAction [ message = if true || false then 'Hello World' + \"!\" else 'Oops?']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
