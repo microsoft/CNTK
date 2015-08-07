@@ -5,6 +5,7 @@
 #include "ConfigRuntime.h"
 #include <deque>
 #include <functional>
+#include <memory>
 #include <cmath>
 
 #ifndef let
@@ -17,6 +18,68 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     using namespace msra::strfun;
 
     struct HasLateInit { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
+
+    // skeleton of ComputeNode
+    struct ComputationNode : public ConfigurableRuntimeObject { virtual ~ComputationNode() { } };
+    typedef shared_ptr<ComputationNode> ComputationNodePtr;
+    class BinaryComputationNode : public ComputationNode
+    {
+    public:
+        BinaryComputationNode(const ConfigRecord & config)
+        {
+            let left = (ComputationNodePtr) config[L"left"];
+            let right = (ComputationNodePtr) config[L"right"];
+            left; right;
+        }
+    };
+    class TimesNode : public BinaryComputationNode
+    {
+    public:
+        TimesNode(const ConfigRecord & config) : BinaryComputationNode(config) { }
+    };
+    class PlusNode : public BinaryComputationNode
+    {
+    public:
+        PlusNode(const ConfigRecord & config) : BinaryComputationNode(config) { }
+    };
+    class MinusNode : public BinaryComputationNode
+    {
+    public:
+        MinusNode(const ConfigRecord & config) : BinaryComputationNode(config) { }
+    };
+    class DelayNode : public ComputationNode, public HasLateInit
+    {
+    public:
+        DelayNode(const ConfigRecord & config)
+        {
+            if (!config.empty())
+                Init(config);
+        }
+        /*override*/ void Init(const ConfigRecord & config)
+        {
+            let in = (ComputationNodePtr)config[L"in"];
+            in;
+            // dim?
+        }
+    };
+    class InputValue : public ComputationNode
+    {
+    public:
+        InputValue(const ConfigRecord & config)
+        {
+            config;
+        }
+    };
+    class LearnableParameter : public ComputationNode
+    {
+    public:
+        LearnableParameter(const ConfigRecord & config)
+        {
+            let outDim = (size_t)config[L"outDim"];
+            let inDim = (size_t)config[L"inDim"];
+            outDim; inDim;
+        }
+    };
 
     // sample runtime objects for testing
     class PrintAction : public ConfigurableRuntimeObject, public HasLateInit
@@ -58,13 +121,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     class Evaluator
     {
         // error handling
-
-        class EvaluationError : public ConfigError
-        {
-        public:
-            EvaluationError(const wstring & msg, TextLocation where) : ConfigError(utf8(msg), where) { }
-            /*implement*/ const char * kind() const { return "evaluating"; }
-        };
 
         void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
 
@@ -175,10 +231,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             InfixFunction ComputeNodeOp;        // ComputeNode OP ComputeNode -> ComputeNode
             InfixFunction NumberComputeNodeOp;  // number OP ComputeNode -> ComputeNode, e.g. 3 * M
             InfixFunction ComputeNodeNumberOp;  // ComputeNode OP Number -> ComputeNode, e.g. M * 3
-            InfixFunction CompOp;               // ANY OP ANY -> bool
             InfixFunction DictOp;               // dict OP dict
-            InfixFunctions(InfixFunction NumbersOp, InfixFunction StringsOp, InfixFunction BoolOp, InfixFunction ComputeNodeOp, InfixFunction NumberComputeNodeOp, InfixFunction ComputeNodeNumberOp, InfixFunction CompOp, InfixFunction DictOp)
-                : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), CompOp(CompOp), DictOp(DictOp) { }
+            InfixFunctions(InfixFunction NumbersOp, InfixFunction StringsOp, InfixFunction BoolOp, InfixFunction ComputeNodeOp, InfixFunction NumberComputeNodeOp, InfixFunction ComputeNodeNumberOp, InfixFunction DictOp)
+                : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), DictOp(DictOp) { }
         };
 
         void FailBinaryOpTypes(ExpressionPtr e)
@@ -240,7 +295,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return functions.StringsOp(e, leftValPtr, rightValPtr);
                 else if (Is<bool>(leftValPtr) && Is<bool>(rightValPtr))
                     return functions.BoolOp(e, leftValPtr, rightValPtr);
-                // TODO: switch on the types
+                // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
+                else if (Is<shared_ptr<ComputationNode>>(leftValPtr) && Is<shared_ptr<ComputationNode>>(rightValPtr))
+                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr);
+                else if (Is<shared_ptr<ComputationNode>>(leftValPtr) && Is<double>(rightValPtr))
+                    return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr);
+                else if (Is<double>(leftValPtr) && Is<shared_ptr<ComputationNode>>(rightValPtr))
+                    return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr);
+                // TODO: DictOp
                 else
                     FailBinaryOpTypes(e);
             }
@@ -259,6 +321,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return idIter->second;  // found it
         }
 
+        // evaluate a Boolean expression (all types)
         template<typename T>
         ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right)
         {
@@ -270,17 +333,40 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else if (e->op == L">=") return MakeConfigValue(left >= right);
             else LogicError("unexpected infix op");
         }
+        // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
+        ConfigValuePtr MakeMagicComputationNode(const wstring & classId, const ConfigValuePtr & left, const ConfigValuePtr & right)
+        {
+            // find creation lambda
+            let newIter = configurableRuntimeTypes.find(classId);
+            if (newIter == configurableRuntimeTypes.end())
+                LogicError("unknown magic runtime-object class");
+            // form the ConfigRecord
+            ConfigRecord config;
+            config.Add(L"left", left);
+            config.Add(L"right", right);
+            // instantiate
+            return newIter->second(config);
+        }
 
         // Traverse through the expression (parse) tree to evaluate a value.
         deque<LateInitItem> deferredInitList;
     public:
         Evaluator()
         {
+#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
             // lookup table for "new" expression
             configurableRuntimeTypes = decltype(configurableRuntimeTypes)
             {
-                { L"PrintAction", MakeRuntimeTypeConstructor<PrintAction>() },
-                { L"AnotherAction", MakeRuntimeTypeConstructor<AnotherAction>() }
+                // ComputationNodes
+                DefineRuntimeType(TimesNode),
+                DefineRuntimeType(PlusNode),
+                DefineRuntimeType(MinusNode),
+                DefineRuntimeType(DelayNode),
+                DefineRuntimeType(InputValue),
+                DefineRuntimeType(LearnableParameter),
+                // Actions
+                DefineRuntimeType(PrintAction),
+                DefineRuntimeType(AnotherAction),
             };
             // lookup table for infix operators
             // helper lambdas for evaluating infix operators
@@ -312,27 +398,43 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else if (e->op == L"^")   return MakeConfigValue(left ^  right);
                 else return CompOp<bool>(e, left, right);
             };
+            InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            {
+                if (Is<double>(rightVal))           // ComputeNode * scalar
+                    swap(leftVal, rightVal);        // -> scalar * ComputeNode
+                if (Is<double>(leftVal))            // scalar * ComputeNode
+                {
+                    if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", leftVal, rightVal);
+                    else LogicError("unexpected infix op");
+                }
+                else                                // ComputeNode OP ComputeNode
+                {
+                    if (e->op == L"+")       return MakeMagicComputationNode(L"PlusNode",  leftVal, rightVal);
+                    else if (e->op == L"-")  return MakeMagicComputationNode(L"MinusNode", leftVal, rightVal);
+                    else if (e->op == L"*")  return MakeMagicComputationNode(L"TimesNode", leftVal, rightVal);
+                    else LogicError("unexpected infix op");
+                }
+            };
             InfixFunction BadOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr { FailBinaryOpTypes(e); return nullptr; };
             infixOps = decltype(infixOps)
             {
-                // NumbersOp StringsOp BoolOp ComputeNodeOp NumberComputeNodeOp ComputeNodeNumberOp CompOp DictOp
-                // CompOp does not work, fix this. Use a different mechanism.
-                { L"*",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"/",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L".*", InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"**", InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"%",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"+",  InfixFunctions(NumOp, StrOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"-",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"==", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"!=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"<",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L">",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"<=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L">=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"&&", InfixFunctions(BadOp, BadOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"||", InfixFunctions(BadOp, BadOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) },
-                { L"^",  InfixFunctions(BadOp, BadOp, BoolOp, BadOp, BadOp, BadOp, BadOp, BadOp) }
+                // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+                { L"*",  InfixFunctions(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
+                { L"/",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+                { L".*", InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"**", InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"%",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"+",  InfixFunctions(NumOp, StrOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+                { L"-",  InfixFunctions(NumOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+                { L"==", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"!=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"<",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L">",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"<=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L">=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"&&", InfixFunctions(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"||", InfixFunctions(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+                { L"^",  InfixFunctions(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) }
             };
         }
 
@@ -374,18 +476,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 #if 1   // use this for standalone development of the parser
 using namespace Microsoft::MSR::CNTK;
 
-// experimenting
-
-// Thunk is a proxy with a type cast for accessing its value.
-
-template<typename T> class ThunkOf : public Thunk
-{
-public:
-    shared_ptr<T> p;
-    T* operator->() const { return p.get(); }
-    T& operator*() const { return *p.get(); }
-};
-
 int wmain(int /*argc*/, wchar_t* /*argv*/[])
 {
     // there is record of parameters
@@ -394,7 +484,8 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest = L"do = new PrintAction [ message = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
+        let parserTest = L"do = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
+                         L"do1 = new PrintAction [ message = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
