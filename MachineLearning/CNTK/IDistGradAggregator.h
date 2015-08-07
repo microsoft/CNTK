@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void WaitAll()
         {
-            m_mpi->waitall();
+            m_mpi->WaitAll();
         }
 
     protected:
