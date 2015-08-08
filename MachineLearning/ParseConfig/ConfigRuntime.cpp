@@ -96,6 +96,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
+    // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
+    static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how)
+    {
+        size_t pos = how.find(L'%');
+        if (pos != wstring::npos)
+            RuntimeError("FormatConfigValue: format string must not contain %");
+        if (arg.Is<wstring>())
+        {
+            return wstrprintf((L"%" + how + L"s").c_str(), arg.As<wstring>());
+        }
+        else if (arg.Is<double>())
+        {
+            return wstrprintf((L"%" + how + L"f").c_str(), arg.As<double>());
+        }
+        return L"?";
+    }
+
     // sample objects to implement functions
     class StringFunction : public wstring, public Polymorphic
     {
@@ -107,7 +124,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             wstring what = config[L"what"];
             if (what == L"format")
             {
-                us = (wstring)arg;
+                wstring how = config[L"how"];
+                us = FormatConfigValue(arg, how);
                 // TODO: implement this
             }
         }
@@ -320,9 +338,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr Evaluate(ExpressionPtr e)
         {
             // this evaluates any evaluation node
-            if (e->op == L"d")      return MakeConfigValue(e->d, e->location);
-            else if (e->op == L"s") return MakeConfigValue(e->s, e->location);
-            else if (e->op == L"b") return MakeConfigValue(e->b, e->location);
+            if (e->op == L"d")       return MakeConfigValue(e->d, e->location);
+            else if (e->op == L"s")  return MakeConfigValue(e->s, e->location);
+            else if (e->op == L"b")  return MakeConfigValue(e->b, e->location);
+            else if (e->op == L"id") return ResolveIdentifier(e->id, e->location);  // access a variable within current scope
             else if (e->op == L"new" || e->op == L"new!")
             {
                 // find the constructor lambda
@@ -369,11 +388,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     LogicError("invalid field selector expression, must be 'id'");
                 let id = idExpr->id;
                 return RecordLookup(recordExpr, id, idExpr->location);
-            }
-            else if (e->op == L"id")    // access a variable within current scope
-            {
-                let & configMember = ResolveIdentifier(e->id, e->location);
-                return configMember;
             }
             else if (e->op == L":")     // array expression
             {
@@ -425,7 +439,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // look up a member by id in the search scope
         // If it is not found, it tries all lexically enclosing scopes inside out.
-        const ConfigRecord::ConfigMember & ResolveIdentifier(const wstring & id, TextLocation idLocation)
+        const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation)
         {
             for (auto iter = scopes.rbegin(); iter != scopes.rend(); iter++/*goes backwards*/)
             {
@@ -436,7 +450,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     // If it is not yet resolved then the value holds an ExpressionPtr.
                     p->ResolveValue([this](ExpressionPtr exprToResolve) { return Evaluate(exprToResolve); });
                     // now the value is available
-                    return *p;                  // return ConfigMember, like record[id], which one can now type-cast etc.
+                    return *p;                  // return ConfigValuePtr, like record[id], which one can now type-cast etc.
                 }
                 // if not found then try next outer scope
             }
@@ -611,8 +625,8 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
         let parserTest = L"do3 = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
                          L"do2 = array [1..10] (i=>i*i) ;"
-                         L"do = new PrintAction [ what = 13*42.1 ] ;"
-                         L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; arg = '13 > 42' ]\" ] ;"
+                         L"do = new PrintAction [ what = new StringFunction [ x = 13 ; y = 42 ; what = 'format' ; how = '.2' ; arg = x*y ] ] ;"
+                         L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; how = '.2' ; arg = '13 > 42' ]\" ] ;"
                          L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
