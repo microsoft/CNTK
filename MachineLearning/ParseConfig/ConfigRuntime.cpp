@@ -17,13 +17,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     using namespace std;
     using namespace msra::strfun;
 
-    struct HasLateInit { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
+    struct HasLateInit : public Polymorphic { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
 
     // dummy implementation of ComputationNode for experimental purposes
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
 
-    struct ComputationNode
+    struct ComputationNode : public Polymorphic
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
 
@@ -33,8 +33,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // other
         wstring nodeName;               // node name in the graph
-
-        virtual ~ComputationNode() { }
     };
     typedef ComputationNode::ComputationNodePtr ComputationNodePtr;
     class BinaryComputationNode : public ComputationNode
@@ -161,7 +159,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    class AnotherAction
+    class AnotherAction : public Polymorphic
     {
     public:
         AnotherAction(const ConfigRecord &) { fprintf(stderr, "Another\n"); }
@@ -197,6 +195,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<class C>
         function<ConfigValuePtr(const ConfigRecord &,TextLocation)> MakeRuntimeTypeConstructor()
         {
+#if 0       // for now
             bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
             if (hasLateInit)
                 return [this](const ConfigRecord & config, TextLocation location)
@@ -204,10 +203,30 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return ConfigValuePtr(make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)), location);
                 };
             else
+#endif
                 return [this](const ConfigRecord & config, TextLocation location)
                 {
                     return MakeConfigValue(make_shared<C>(config), location);
                 };
+        }
+        template<>
+        function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor<StringFunction>()
+        {
+#if 0       // for now
+            bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
+            if (hasLateInit)
+                return [this](const ConfigRecord & config, TextLocation location)
+            {
+                return ConfigValuePtr(make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)), location);
+            };
+            else
+#endif
+                return [this](const ConfigRecord & config, TextLocation location)
+            {
+                const auto r = ConfigValuePtr(make_shared<StringFunction>(config), location);
+                return r;
+//                return MakeConfigValue(make_shared<StringFunction>(config), location);
+            };
         }
 
         // "new!" expressions get queued for execution after all other nodes of tree have been executed
@@ -623,11 +642,14 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest = L"do3 = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
+        let parserTest1 = L"do3 = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
                          L"do2 = array [1..10] (i=>i*i) ;"
-                         L"do = new PrintAction [ what = new StringFunction [ x = 13 ; y = 42 ; what = 'format' ; how = '.2' ; arg = x*y ] ] ;"
+                         L"do = new PrintAction [ what = 'abc' ] ;"
+                         L"do5 = new PrintAction [ what = new StringFunction [ x = 13 ; y = 42 ; what = 'format' ; how = '.2' ; arg = x*y ] ] ;"
                          L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; how = '.2' ; arg = '13 > 42' ]\" ] ;"
                          L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
+        parserTest1;
+        let parserTest = L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; how = '.2' ; arg = 42 ] ] ";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
