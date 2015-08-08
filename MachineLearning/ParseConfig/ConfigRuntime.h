@@ -28,7 +28,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     struct ConfigValueBase { virtual ~ConfigValueBase(){} };    // one value in a config dictionary
 
     // TODO: a ConfigValuePtr should be a shared_ptr to the value directly (such as ComputationNode), while having the base class
-    // ConfigValues are value structs. E.g. we can copy them to construct a ConfigMember from them.
+    // ConfigValues are value structs. E.g. we can copy them to construct a ConfigValuePtrfrom them.
     template<typename T> class ConfigValue : public ConfigValueBase
     {
     public:
@@ -40,39 +40,37 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
         bool currentlyResolving;    // set during resolution phase, to detect circular references
         TextLocation location;      // in source code
+        template<typename T> ConfigValue<T> * DynamicCast() const { return dynamic_cast<ConfigValue<T>*>(get()); }    // this casts the raw pointer that's inside the shared_ptr
     public:
         // construction     ---TODO: no template here
         template<typename T>
         ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<ConfigValueBase>(p), currentlyResolving(false), location(location) {}
         ConfigValuePtr() : currentlyResolving(false) {} // (formally needed somehow)
-        // accessing values
+        // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
-        template<typename T> ConfigValue<T> * DynamicCast() const { return dynamic_cast<ConfigValue<T>*>(get()); }    // this casts the raw pointer that's inside the shared_ptr
-        template<typename T> bool Is() const { return DynamicCast<T>() != nullptr; }
-        //template<typename T> bool Is() const { return dynamic_cast<ConfigValue<T>*>(get()) != nullptr; }  // test for type
-        template<typename T> T & As() const     // returns reference to what the 'value' member
-        {
-            auto * p = DynamicCast<T>();        // -> ConfigValue<T>
-            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type", TextLocation()); // TODO: we need location here
-            return p->value;                    // this unwraps the value out from its ConfigValue wrapper
-        }
         operator double() const { return As<double>(); }
         operator wstring() const { return As<wstring>(); }
         operator bool() const { return As<bool>(); }
+        template<typename T> operator shared_ptr<T>() const { return As<shared_ptr<T>>(); }
         operator size_t() const
         {
             const auto val = As<double>();
             const auto ival = (size_t)val;
             if (ival != val)
-                throw EvaluationError(L"numeric value is not an integer", TextLocation());
+                throw EvaluationError(L"numeric value is not an integer", location);
             // TODO: ^^this cannot be done, since we don't have TextLocation here.
             return (size_t)As<double>();
         }
-        // methods for retrieving values
-        template<typename T> operator shared_ptr<T>() const { return As<shared_ptr<T>>(); }
-        //operator ConfigValuePtr() const { return value; }   // or the untyped config value
-        // resolving
+        // type helpers
+        template<typename T> bool Is() const { return DynamicCast<T>() != nullptr; }
+        template<typename T> T & As() const     // returns reference to what the 'value' member
+        {
+            auto * p = DynamicCast<T>();        // -> ConfigValue<T>
+            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
+                throw EvaluationError(L"config member has wrong type", location);
+            return p->value;                    // this unwraps the value out from its ConfigValue wrapper
+        }
+        const char * TypeName() const { return typeid(*get()).name(); }
         // methods for resolving the value
         template<typename F>
         void ResolveValue(const F & Evaluate, TextLocation location)
@@ -91,9 +89,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (currentlyResolving)
                 LogicError("ResolveValue: spurious 'currentlyResolving' flag");
         }
-
-
-        const char * TypeName() const { return typeid(*get()).name(); }
         // resolution
         template<typename F>
         void ResolveValue(const F & Evaluate)
@@ -106,20 +101,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     class ConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
-    public:
-        typedef ConfigValuePtr ConfigMember;
-    private:
-        map<wstring, ConfigMember> members;
+        map<wstring, ConfigValuePtr> members;
     public:
         // regular lookup: just use record[id]
-        const ConfigMember & operator[](const wstring & id) const // e.g. confRec[L"message"]
+        const ConfigValuePtr & operator[](const wstring & id) const // e.g. confRec[L"message"]
         {
             const auto memberIter = members.find(id);
             if (memberIter == members.end())
                 RuntimeError("unknown class parameter");
             return memberIter->second;
         }
-        ConfigMember * Find(const wstring & id)                 // returns nullptr if not found
+        ConfigValuePtr * Find(const wstring & id)                 // returns nullptr if not found
         {
             auto memberIter = members.find(id);
             if (memberIter == members.end())
@@ -129,7 +121,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
         bool empty() const { return members.empty(); }      // late-init object constructors can test this
         // add a member
-        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = ConfigMember(value, idLocation); }
+        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = ConfigValuePtr(value, idLocation); }
         // member resolution
         template<typename F>
         void ResolveAll(const F & Evaluate)   // resolve all members; do this before handing a ConfigRecord to C++ code
@@ -141,7 +133,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     typedef shared_ptr<ConfigRecord> ConfigRecordPtr;       // dictionaries evaluate to this
 
     // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a ConfigValue
-    typedef vector<ConfigValuePtr> ConfigArray;  // TODO: change to vector<ConfigMember>
+    typedef vector<ConfigValuePtr> ConfigArray;  // TODO: change to vector<ConfigValuePtr>
 
     // understand and execute from the syntactic expression tree
     ConfigValuePtr Evaluate(ExpressionPtr);
