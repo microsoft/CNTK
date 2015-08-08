@@ -22,18 +22,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // To get a value of an expected type T, dynamic-cast that base pointer to ConfigValue<T>.
     // Pointers to type U have the type shared_ptr<U>.
 
+    struct Polymorphic { virtual ~Polymorphic() { } };
+
     // TODO: this goes elsewhere
     struct ConfigValueBase { virtual ~ConfigValueBase(){} };    // one value in a config dictionary
-    typedef shared_ptr<ConfigValueBase> ConfigValuePtr;
-
-#if 0   // struggling
-    struct ConfigValuePtrBase { virtual ~ConfigValuePtrBase(){} };    // all ConfigValuePtrs share this base class
-    template<typename T>
-    struct ConfigValuePtr : public ConfigValueBase, shared_ptr<T>
+    struct ConfigValuePtr : public shared_ptr<ConfigValueBase>
     {
-        ConfigValuePtr(shared_ptr<T> object) : shared_ptr<T>(object) { }
+        template<typename T>
+        ConfigValuePtr(const shared_ptr<T> & val) : shared_ptr<ConfigValueBase>(val){}
+        ConfigValuePtr(){}
     };
-#endif
 
     // TODO: a ConfigValuePtr should be a shared_ptr to the value directly (such as ComputationNode), while having the base class
     template<typename T> class ConfigValue : public ConfigValueBase
@@ -43,6 +41,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         /*const*/ T value;      // primitive type (e.g. double) or shared_ptr<runtime type>
         ConfigValue(T value) : value(value) { } // TODO: take a shared_ptr<T> and construct base shared_ptr from it
     };
+
+    template<typename T> ConfigValuePtr MakeConfigValue(const T & val) { return make_shared<ConfigValue<T>>(val); }
 
     class ConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
