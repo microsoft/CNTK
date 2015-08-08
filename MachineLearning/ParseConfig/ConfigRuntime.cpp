@@ -177,13 +177,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // helper for configurableRuntimeTypes initializer below
         // This returns a lambda that is a constructor for a given runtime type.
         template<class C>
-        function<ConfigValuePtr(const ConfigRecord &)> MakeRuntimeTypeConstructor()
+        function<ConfigValuePtr(const ConfigRecord &,TextLocation)> MakeRuntimeTypeConstructor()
         {
             bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
             if (hasLateInit)
-                return [this](const ConfigRecord & config){ return make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)); };
+                return [this](const ConfigRecord & config, TextLocation location)
+                {
+                    return ConfigValuePtr(make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)), location);
+                };
             else
-                return [this](const ConfigRecord & config){ return MakeConfigValue(make_shared<C>(config)); };
+                return [this](const ConfigRecord & config, TextLocation location)
+                {
+                    return MakeConfigValue(make_shared<C>(config), location);
+                };
         }
 
         // "new!" expressions get queued for execution after all other nodes of tree have been executed
@@ -309,14 +315,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         map<wstring, InfixFunctions> infixOps;
 
         // this table lists all C++ types that can be instantiated from "new" expressions
-        map<wstring, function<ConfigValuePtr(const ConfigRecord &)>> configurableRuntimeTypes;
+        map<wstring, function<ConfigValuePtr(const ConfigRecord &, TextLocation)>> configurableRuntimeTypes;
 
         ConfigValuePtr Evaluate(ExpressionPtr e)
         {
             // this evaluates any evaluation node
-            if (e->op == L"d")      return MakeConfigValue(e->d);
-            else if (e->op == L"s") return MakeConfigValue(e->s);
-            else if (e->op == L"b") return MakeConfigValue(e->b);
+            if (e->op == L"d")      return MakeConfigValue(e->d, e->location);
+            else if (e->op == L"s") return MakeConfigValue(e->s, e->location);
+            else if (e->op == L"b") return MakeConfigValue(e->b, e->location);
             else if (e->op == L"new" || e->op == L"new!")
             {
                 // find the constructor lambda
@@ -326,11 +332,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // form the config record
                 let dictExpr = e->args[0];
                 if (e->op == L"new")   // evaluate the parameter dictionary into a config record
-                    return newIter->second(*ConfigRecordFromDictExpression(dictExpr)); // this constructs it
+                    return newIter->second(*ConfigRecordFromDictExpression(dictExpr), e->location); // this constructs it
                 else                // ...unless it's late init. Then we defer initialization.
                 {
                     // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
-                    let value = newIter->second(ConfigRecord());
+                    let value = newIter->second(ConfigRecord(), e->location);
                     deferredInitList.push_back(LateInitItem(value, dictExpr)); // construct empty and remember to Init() later
                     return value;   // we return the created but not initialized object as the value, so others can reference it
                 }
@@ -351,9 +357,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // Instead, as the value, we keep the ExpressionPtr itself.
                 // Members are evaluated on demand when they are used.
                 for (let & entry : e->namedArgs)
-                    record->Add(entry.first, entry.second.first, MakeConfigValue(entry.second.second));
+                    record->Add(entry.first, entry.second.first, MakeConfigValue(entry.second.second, entry.second.second->location));
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
-                return MakeConfigValue(record);
+                return MakeConfigValue(record, e->location);
             }
             else if (e->op == L".")     // access ConfigRecord element
             {
@@ -385,7 +391,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     else
                         array.push_back(item);
                 }
-                return MakeConfigValue(array);
+                return MakeConfigValue(array, e->location); // location will be that of the first ':', not sure if that is best way
             }
             else
             {
@@ -441,12 +447,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<typename T>
         ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right)
         {
-            if (e->op == L"==")      return MakeConfigValue(left == right);
-            else if (e->op == L"!=") return MakeConfigValue(left != right);
-            else if (e->op == L"<")  return MakeConfigValue(left <  right);
-            else if (e->op == L">")  return MakeConfigValue(left >  right);
-            else if (e->op == L"<=") return MakeConfigValue(left <= right);
-            else if (e->op == L">=") return MakeConfigValue(left >= right);
+            if (e->op == L"==")      return MakeConfigValue(left == right, e->location);
+            else if (e->op == L"!=") return MakeConfigValue(left != right, e->location);
+            else if (e->op == L"<")  return MakeConfigValue(left <  right, e->location);
+            else if (e->op == L">")  return MakeConfigValue(left >  right, e->location);
+            else if (e->op == L"<=") return MakeConfigValue(left <= right, e->location);
+            else if (e->op == L">=") return MakeConfigValue(left >= right, e->location);
             else LogicError("unexpected infix op");
         }
         // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
@@ -458,10 +464,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 LogicError("unknown magic runtime-object class");
             // form the ConfigRecord
             ConfigRecord config;
-            config.Add(L"left", location, left);
-            config.Add(L"right", location, right);
+            config.Add(L"left",  left.location,  left);
+            config.Add(L"right", right.location, right);
             // instantiate
-            return newIter->second(config);
+            return newIter->second(config, location);
         }
 
         // Traverse through the expression (parse) tree to evaluate a value.
@@ -493,28 +499,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 let left = As<double>(leftVal);
                 let right = As<double>(rightVal);
-                if (e->op == L"+")       return MakeConfigValue(left + right);
-                else if (e->op == L"-")  return MakeConfigValue(left - right);
-                else if (e->op == L"*")  return MakeConfigValue(left * right);
-                else if (e->op == L"/")  return MakeConfigValue(left / right);
-                else if (e->op == L"%")  return MakeConfigValue(fmod(left, right));
-                else if (e->op == L"**") return MakeConfigValue(pow(left, right));
+                if (e->op == L"+")       return MakeConfigValue(left + right, e->location);
+                else if (e->op == L"-")  return MakeConfigValue(left - right, e->location);
+                else if (e->op == L"*")  return MakeConfigValue(left * right, e->location);
+                else if (e->op == L"/")  return MakeConfigValue(left / right, e->location);
+                else if (e->op == L"%")  return MakeConfigValue(fmod(left, right), e->location);
+                else if (e->op == L"**") return MakeConfigValue(pow(left, right), e->location);
                 else return CompOp<double> (e, left, right);
             };
             InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
                 let left = As<wstring>(leftVal);
                 let right = As<wstring>(rightVal);
-                if (e->op == L"+")  return MakeConfigValue(left + right);
+                if (e->op == L"+")  return MakeConfigValue(left + right, e->location);
                 else return CompOp<wstring>(e, left, right);
             };
             InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
                 let left = As<bool>(leftVal);
                 let right = As<bool>(rightVal);
-                if (e->op == L"||")       return MakeConfigValue(left || right);
-                else if (e->op == L"&&")  return MakeConfigValue(left && right);
-                else if (e->op == L"^")   return MakeConfigValue(left ^  right);
+                if (e->op == L"||")       return MakeConfigValue(left || right, e->location);
+                else if (e->op == L"&&")  return MakeConfigValue(left && right, e->location);
+                else if (e->op == L"^")   return MakeConfigValue(left ^  right, e->location);
                 else return CompOp<bool>(e, left, right);
             };
             InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr

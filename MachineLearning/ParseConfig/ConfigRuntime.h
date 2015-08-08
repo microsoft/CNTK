@@ -39,12 +39,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     struct ConfigValuePtr : public shared_ptr<ConfigValueBase>
     {
         bool currentlyResolving;    // set during resolution phase, to detect circular references
+        TextLocation location;      // in source code
     public:
         // construction     ---TODO: no template here
         template<typename T>
-        ConfigValuePtr(const shared_ptr<T> & p) : shared_ptr<ConfigValueBase>(p), currentlyResolving(false) {}
-        ConfigValuePtr() : currentlyResolving(false){}
-        //ConfigValuePtr & operator=(const shared_ptr<ConfigValueBase> & newPtr) { *this = newPtr; }
+        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<ConfigValueBase>(p), currentlyResolving(false), location(location) {}
+        ConfigValuePtr() : currentlyResolving(false) {} // (formally needed somehow)
         // accessing values
         // One accesses when values are constant, so we can just return values as const &.
         template<typename T> ConfigValue<T> * DynamicCast() const { return dynamic_cast<ConfigValue<T>*>(get()); }    // this casts the raw pointer that's inside the shared_ptr
@@ -91,39 +91,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (currentlyResolving)
                 LogicError("ResolveValue: spurious 'currentlyResolving' flag");
         }
+
+
+        const char * TypeName() const { return typeid(*get()).name(); }
+        // resolution
+        template<typename F>
+        void ResolveValue(const F & Evaluate)
+        {
+            ConfigValuePtr::ResolveValue(Evaluate, location);
+        }
     };
 
-    template<typename T> ConfigValuePtr MakeConfigValue(const T & val) { return make_shared<ConfigValue<T>>(val); }
+    template<typename T> ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<ConfigValue<T>>(val), location); }
 
     class ConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
     public:
-        class ConfigMember : public ConfigValuePtr
-        {
-            // TODO: got a double shared_ptr here. Instead,
-            // wrap constants into objects as well
-            TextLocation location;      // in source code  --TODO: initialize this to some meaningful value
-#if 0
-            template<typename T> T * As() const
-            {
-                auto * p = dynamic_cast<T*>(get());
-                if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
-                    throw EvaluationError(L"config member has wrong type", location);
-                return p;
-            }
-#endif
-        public:
-            const char * TypeName() const { return typeid(*get()).name(); }
-            // constructors
-            ConfigMember(const ConfigValuePtr & value, TextLocation location) : ConfigValuePtr(value), location(location) {}
-            ConfigMember() {}    // needed for map below
-            // resolution
-            template<typename F>
-            void ResolveValue(const F & Evaluate)
-            {
-                ConfigValuePtr::ResolveValue(Evaluate, location);
-            }
-        };
+        typedef ConfigValuePtr ConfigMember;
     private:
         map<wstring, ConfigMember> members;
     public:
