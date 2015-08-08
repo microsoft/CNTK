@@ -69,7 +69,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             operator size_t() const { return (size_t) As<ConfigValue<double>>()->value; }   // TODO: fail if fractional
             template<typename T> operator shared_ptr<T>() const { return As<ConfigValue<shared_ptr<T>>>()->value; }
             operator ConfigValuePtr() const { return value; }   // or the untyped config value
-            template<typename T> bool Is() const { return dynamic_cast<T*>(value.get()); }  // test for type
+            template<typename T> bool Is() const { return dynamic_cast<ConfigValue<T>*>(value.get()) != nullptr; }  // test for type
+            // BUGBUG: ^^ does not work for testing if type is derived from T
+            const char * TypeName() const { return typeid(*value.get()).name(); }
             // methods for resolving the value
             template<typename F>
             void ResolveValue(const F & Evaluate)
