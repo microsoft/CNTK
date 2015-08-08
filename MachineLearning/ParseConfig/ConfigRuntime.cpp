@@ -96,8 +96,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    struct Polymorphic { virtual ~Polymorphic() { } };
-
     // sample objects to implement functions
     class StringFunction : public wstring, public Polymorphic
     {
@@ -175,8 +173,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown member name " + id, where); }
 
         // config value types
-
-        template<typename T> ConfigValuePtr MakeConfigValue(const T & val) { return make_shared<ConfigValue<T>>(val); }
 
         // helper for configurableRuntimeTypes initializer below
         // This returns a lambda that is a constructor for a given runtime type.
@@ -303,6 +299,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), DictOp(DictOp) { }
         };
 
+        __declspec(noreturn)
         void FailBinaryOpTypes(ExpressionPtr e)
         {
             Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
@@ -417,7 +414,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else
                     FailBinaryOpTypes(e);
             }
-            LogicError("should not get here");
+            //LogicError("should not get here");
         }
 
         // look up a member by id in the search scope
@@ -538,7 +535,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     else LogicError("unexpected infix op");
                 }
             };
-            InfixFunction BadOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr { FailBinaryOpTypes(e); return nullptr; };
+            InfixFunction BadOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr { FailBinaryOpTypes(e); };
             infixOps = decltype(infixOps)
             {
                 // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
@@ -608,7 +605,8 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
         let parserTest = L"do3 = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
                          L"do2 = array [1..10] (i=>i*i) ;"
-                         L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; arg = '13 > 42' ] ] ;"
+                         L"do = new PrintAction [ what = 13*42.1 ] ;"
+                         L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; arg = '13 > 42' ]\" ] ;"
                          L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
