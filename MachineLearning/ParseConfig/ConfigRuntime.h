@@ -33,6 +33,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValue(T value) : value(value) { } // TODO: take a shared_ptr<T> and construct base shared_ptr from it
     };
 
+    // a string (STL wstring, to be precise) that can be help in a ConfigValuePtr
+    // TODO: templatize this, call it ConfigObject
+    class ConfigString : public Polymorphic, public wstring
+    {
+    public:
+        ConfigString(const wstring & val) : wstring(val) { }
+    };
+
     struct ConfigValuePtr : public shared_ptr<Polymorphic>
     {
         bool currentlyResolving;    // set during resolution phase, to detect circular references
@@ -71,6 +79,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 throw EvaluationError(L"config member has wrong type", location);
             return p->value;                    // this unwraps the value out from its ConfigValue wrapper
         }
+        // TODO: clean this up; get rid of specalization
+        template<> bool IsConfigValue<wstring>() const
+        {
+            const auto p = dynamic_cast<wstring*>(get());
+            return p != nullptr;
+        }
+        template<> wstring & AsConfigValue<wstring>() const     // returns reference to what the 'value' member
+        {
+            const auto p = dynamic_cast<wstring*>(get());
+            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
+                throw EvaluationError(L"config member has wrong type", location);
+            return *p;
+        }
         const char * TypeName() const { return typeid(*get()).name(); }
         // methods for resolving the value
         template<typename F>
@@ -99,6 +120,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
 
     template<typename T> ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<ConfigValue<T>>(val), location); }
+    // strings are stored in a ConfigString instead
+    template<> ConfigValuePtr MakeConfigValue<wstring>(const wstring & val, TextLocation location) {
+        const auto r = ConfigValuePtr(make_shared<ConfigString>(val), location);
+        return r;
+    }
 
     class ConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
