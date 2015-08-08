@@ -4,7 +4,6 @@
 
 #include "Basics.h"
 #include "File.h"
-#include "ConfigurableRuntimeObjects.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -34,7 +33,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // helpesr for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
         wstring FormatErroneousLine() const;
-        void PrintIssue(const char * errorKind, const char * kind, const char * what) const;
+        void PrintIssue(const wchar_t * errorKind, const wchar_t * kind, const wchar_t * what) const;
 
         // construction
         TextLocation();
@@ -56,14 +55,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
         TextLocation location;
     public:
-        ConfigError(const string & msg, TextLocation where) : location(where), runtime_error(msg) { }
+        // Note: All our Error objects use wide strings, which we round-trip through runtime_error as utf8.
+        ConfigError(const wstring & msg, TextLocation where) : location(where), runtime_error(msra::strfun::utf8(msg)) { }
 
         // these are used in pretty-printing
         TextLocation where() const { return location; } // where the error happened
-        virtual const char * kind() const = 0;          // e.g. "warning" or "error"
+        virtual const wchar_t * kind() const = 0;          // e.g. "warning" or "error"
 
         // pretty-print this as an error message
-        void PrintError() const { location.PrintIssue("error", kind(), what()); }
+        void PrintError() const { location.PrintIssue(L"error", kind(), msra::strfun::utf16(what()).c_str()); }
     };
 
     // ---------------------------------------------------------------------------

@@ -31,9 +31,6 @@
     <ClInclude Include="ParseConfig.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="ConfigurableRuntimeObjects.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="ConfigRuntime.h">
       <Filter>Source Files</Filter>
     </ClInclude>

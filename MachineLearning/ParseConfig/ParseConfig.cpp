@@ -55,9 +55,9 @@ wstring TextLocation::FormatErroneousLine() const
     return wstring(line) + L"\n" + wstring(charPos, L'.') + L"^";
 }
 
-void TextLocation::PrintIssue(const char * errorKind, const char * kind, const char * what) const
+void TextLocation::PrintIssue(const wchar_t * errorKind, const wchar_t * kind, const wchar_t * what) const
 {
-    fprintf(stderr, "%ls(%d): %s %s: %s\n%ls\n", GetSourceFile().path.c_str(), lineNo + 1/*report 1-based*/, errorKind, kind, what, FormatErroneousLine().c_str());
+    fprintf(stderr, "%ls(%d): %ls %ls: %ls\n%ls\n", GetSourceFile().path.c_str(), lineNo + 1/*report 1-based*/, errorKind, kind, what, FormatErroneousLine().c_str());
 }
 /*static*/ vector<SourceFile> TextLocation::sourceFileMap;
 
@@ -90,11 +90,11 @@ public:
     class CodeSourceError : public ConfigError
     {
     public:
-        CodeSourceError(const string & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*implement*/ const char * kind() const { return "reading source"; }
+        CodeSourceError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
+        /*implement*/ const wchar_t * kind() const { return L"reading source"; }
     };
 
-    void Fail(string msg, TextLocation where) { throw CodeSourceError(msg, where); }
+    void Fail(wstring msg, TextLocation where) { throw CodeSourceError(msg, where); }
 
     // enter a source file, at start or as a result of an include statement
     void PushSourceFile(SourceFile && sourceFile)
@@ -232,12 +232,12 @@ public:
     class LexerError : public ConfigError
     {
     public:
-        LexerError(const string & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*implement*/ const char * kind() const { return "tokenizing"; }
+        LexerError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
+        /*implement*/ const wchar_t * kind() const { return L"tokenizing"; }
     };
 
 private:
-    void Fail(string msg, Token where) { throw LexerError(msg, where.beginLocation); }
+    void Fail(wstring msg, Token where) { throw LexerError(msg, where.beginLocation); }
 
     Token currentToken;
     // consume input characters to form a next token
@@ -277,7 +277,7 @@ private:
             let beginPtr = GotCharPtr();
             wchar_t * endPtr = nullptr;
             t.number = wcstod(beginPtr, &endPtr);   // BUGBUG: this seems to honor locale settings. We need one that doesn't. With this, CNTK won't parse right in Germany.
-            if (endPtr == beginPtr) Fail("parsing number", t);  // should not really happen!
+            if (endPtr == beginPtr) Fail(L"parsing number", t);  // should not really happen!
             t.kind = numberliteral;
             if (endPtr[0] == L'.' && endPtr[-1] == L'.')    // prevent 1..2 from begin tokenized 1. .2
                 endPtr--;
@@ -297,7 +297,7 @@ private:
             if (t.symbol == L"include")
             {
                 let nameTok = NextToken();       // must be followed by a string literal
-                if (nameTok.kind != stringliteral) Fail("'include' must be followed by a quoted string", nameTok);
+                if (nameTok.kind != stringliteral) Fail(L"'include' must be followed by a quoted string", nameTok);
                 let path = nameTok.symbol;          // TODO: some massaging of the path
                 PushSourceFile(SourceFile(path));   // current cursor is right after the pathname; that's where we will pick up later
                 return NextToken();
@@ -314,7 +314,7 @@ private:
                 ch = GetChar();
             }
             if (ch == 0)    // runaway string
-                Fail("string without closing quotation mark", t);
+                Fail(L"string without closing quotation mark", t);
             GetChar();  // consume the closing quote
         }
         else                                                            // --- punctuation
@@ -328,7 +328,7 @@ private:
             {
                 t.symbol.pop_back();                                    // drop the last one & try again
                 if (punctuations.find(t.symbol) == punctuations.end())  // unknown
-                    Fail("unexpected character: " + utf8(t.symbol), t);
+                    Fail(L"unexpected character: " + t.symbol, t);
             }
             // special case: comments
             if (t.symbol == L"#" || t.symbol == L"//")
@@ -342,7 +342,7 @@ private:
                 while (ch != 0 && !(ch == L'*' && GetChar() == L'/'))   // note: this test leverages short-circuit evaluation semantics of C
                     ch = GetChar();
                 if (ch == 0)
-                    Fail("comment without closing */", t);
+                    Fail(L"comment without closing */", t);
                 GetChar();  // consume the final '/'
                 return NextToken();  // and return the next token
             }
@@ -369,7 +369,7 @@ public:
             fprintf(stderr, "%ls\n", token.ToString().c_str());
             ConsumeToken();
         }
-        Fail("error test", GetCursor());
+        Fail(L"error test", GetCursor());
     }
 };
 
@@ -411,14 +411,14 @@ class Parser : public Lexer
     class ParseError : public ConfigError
     {
     public:
-        ParseError(const string & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*implement*/ const char * kind() const { return "parsing"; }
+        ParseError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
+        /*implement*/ const wchar_t * kind() const { return L"parsing"; }
     };
 
-    void Fail(const string & msg, Token where) { throw ParseError(msg, where.beginLocation); }
+    void Fail(const wstring & msg, Token where) { throw ParseError(msg, where.beginLocation); }
 
     //void Expected(const wstring & what) { Fail(strprintf("%ls expected", what.c_str()), GotToken().beginLocation); }  // I don't know why this does not work
-    void Expected(const wstring & what) { Fail(utf8(what) + " expected", GotToken().beginLocation); }
+    void Expected(const wstring & what) { Fail(what + L" expected", GotToken().beginLocation); }
 
     // this token must be punctuation 's'; check and get the next
     void ConsumePunctuation(const wchar_t * s)
@@ -625,7 +625,7 @@ public:
         {
             let expr = ParseExpression(0, false);   // this could be an optional arg (var = val)
             if (defining && expr->op != L"id")      // when defining we only allow a single identifier
-                Fail("argument identifier expected", expr->location);
+                Fail(L"argument identifier expected", expr->location);
             if (expr->op == L"id" && GotToken().symbol == L"=")
             {
                 let id = expr->id;                  // 'expr' gets resolved (to 'id') and forgotten
@@ -633,7 +633,7 @@ public:
                 let defValueExpr = ParseExpression(0, false);  // default value
                 let res = macroArgs->namedArgs.insert(make_pair(id, make_pair(expr->location, defValueExpr)));
                 if (!res.second)
-                    Fail("duplicate optional parameter '" + utf8(id) + "'", expr->location);
+                    Fail(L"duplicate optional parameter '" + id + L"'", expr->location);
             }
             else
                 macroArgs->args.push_back(expr);    // [0..]: position args
@@ -669,7 +669,7 @@ public:
             // insert
             let res = members.insert(make_pair(id, make_pair(location, val)));
             if (!res.second)
-                Fail("duplicate member definition '" + utf8(id) + "'", location);
+                Fail(L"duplicate member definition '" + id + L"'", location);
             // advance
             idTok = GotToken();
             if (idTok.symbol == L";")
@@ -691,7 +691,7 @@ public:
     {
         let topMembers = ParseDictMembers();
         if (GotToken().kind != eof)
-            Fail("junk at end of source", GetCursor());
+            Fail(L"junk at end of source", GetCursor());
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
         topDict->namedArgs = topMembers;
         SetParents(topDict, nullptr);    // set all parent pointer
