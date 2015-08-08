@@ -96,6 +96,25 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
+    struct Polymorphic { virtual ~Polymorphic() { } };
+
+    // sample objects to implement functions
+    class StringFunction : public wstring, public Polymorphic
+    {
+    public:
+        StringFunction(const ConfigRecord & config)
+        {
+            wstring & us = *this;   // we write to this
+            let arg = config[L"arg"];
+            wstring what = config[L"what"];
+            if (what == L"format")
+            {
+                us = (wstring)arg;
+                // TODO: implement this
+            }
+        }
+    };
+
     // sample runtime objects for testing
     class PrintAction : public HasLateInit
     {
@@ -108,8 +127,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // example of late init (makes no real sense for PrintAction, of course)
         /*implement*/ void Init(const ConfigRecord & config)
         {
-            wstring message = config[L"message"];
-            fprintf(stderr, "%ls\n", message.c_str());
+            let & what = config[L"what"];
+            if (what.Is<wstring>())
+                fprintf(stderr, "%ls\n", ((wstring)what).c_str());
+            else if (what.Is<double>())
+            {
+                let val = (double)what;
+                if (val == (long long)val)
+                    fprintf(stderr, "%d\n", (int)val);
+                else
+                    fprintf(stderr, "%f\n", val);
+            }
+            else if (what.Is<bool>())
+                fprintf(stderr, "%s\n", (bool)what ? "true" : "false");
+            else
+                fprintf(stderr, "(%s)\n", what.TypeName());
         }
     };
 
@@ -452,6 +484,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 DefineRuntimeType(DelayNode),
                 DefineRuntimeType(InputValue),
                 DefineRuntimeType(LearnableParameter),
+                // Functions
+                DefineRuntimeType(StringFunction),
                 // Actions
                 DefineRuntimeType(PrintAction),
                 DefineRuntimeType(AnotherAction),
@@ -572,10 +606,10 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest = L"do = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
+        let parserTest = L"do3 = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
                          L"do2 = array [1..10] (i=>i*i) ;"
-                         L"do3 = new PrintAction [ message = do + 'a' + 'b' ] ;"
-                         L"do1 = new PrintAction [ message = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
+                         L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; arg = '13 > 42' ] ] ;"
+                         L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
