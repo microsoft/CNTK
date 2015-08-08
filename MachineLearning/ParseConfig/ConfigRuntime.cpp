@@ -102,13 +102,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         size_t pos = how.find(L'%');
         if (pos != wstring::npos)
             RuntimeError("FormatConfigValue: format string must not contain %");
-        if (arg.Is<wstring>())
+        if (arg.IsConfigValue<wstring>())
         {
-            return wstrprintf((L"%" + how + L"s").c_str(), arg.As<wstring>());
+            return wstrprintf((L"%" + how + L"s").c_str(), arg.AsConfigValue<wstring>());
         }
-        else if (arg.Is<double>())
+        else if (arg.IsConfigValue<double>())
         {
-            return wstrprintf((L"%" + how + L"f").c_str(), arg.As<double>());
+            return wstrprintf((L"%" + how + L"f").c_str(), arg.AsConfigValue<double>());
         }
         return L"?";
     }
@@ -144,9 +144,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         /*implement*/ void Init(const ConfigRecord & config)
         {
             let & what = config[L"what"];
-            if (what.Is<wstring>())
+            if (what.IsConfigValue<wstring>())
                 fprintf(stderr, "%ls\n", ((wstring)what).c_str());
-            else if (what.Is<double>())
+            else if (what.IsConfigValue<double>())
             {
                 let val = (double)what;
                 if (val == (long long)val)
@@ -154,7 +154,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else
                     fprintf(stderr, "%f\n", val);
             }
-            else if (what.Is<bool>())
+            else if (what.IsConfigValue<bool>())
                 fprintf(stderr, "%s\n", (bool)what ? "true" : "false");
             else
                 fprintf(stderr, "(%s)\n", what.TypeName());
@@ -221,7 +221,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // look up an identifier in a ConfigValue<ConfigRecord>
         ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation)
         {
-            let record = As<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
+            let record = AsConfigValue<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
             // add it to the name-resolution scope
             scopes.push_back(record);
             // look up the name
@@ -239,7 +239,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             // evaluate the record expression itself
             // This will leave its members unevaluated since we do that on-demand
             // (order and what gets evaluated depends on what is used).
-            let record = As<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
+            let record = AsConfigValue<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
             // add it to the name-resolution scope
             scopes.push_back(record);
             // resolve all entries
@@ -259,7 +259,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // convert a ConfigValue to a specific type
         template<typename T>
-        T As(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
+        T AsConfigValue(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
         {
             let val = dynamic_cast<ConfigValue<T>*>(value.get());
             if (!val)
@@ -267,7 +267,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return val->value;
         }
 
-        double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return As<double>(value, e, L"number"); }
+        double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return AsConfigValue<double>(value, e, L"number"); }
 
         // get number and return it as an integer (fail if it is fractional)
         long long ToInt(ConfigValuePtr value, ExpressionPtr e)
@@ -297,14 +297,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // check if ConfigValuePtr is of a certain type
         template<typename T>
-        bool Is(const ConfigValuePtr & value)
+        bool IsConfigValue(const ConfigValuePtr & value)
         {
             return dynamic_cast<ConfigValue<T>*>(value.get()) != nullptr;
         }
 
         // check if ConfigValuePtr is of a certain type
         template<typename T>
-        const T & As(const ConfigValuePtr & value)
+        const T & AsConfigValue(const ConfigValuePtr & value)
         {
             return dynamic_cast<ConfigValue<T>*>(value.get())->value;
         }
@@ -397,9 +397,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (let expr : e->args)        // concatenate the two args
                 {
                     let item = Evaluate(expr);  // result can be an item or a vector
-                    if (Is<ConfigArray>(item))
+                    if (IsConfigValue<ConfigArray>(item))
                     {
-                        let items = As<ConfigArray>(item);
+                        let items = AsConfigValue<ConfigArray>(item);
                         array.insert(array.end(), items.begin(), items.end());
                     }
                     else
@@ -417,18 +417,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let rightArg = e->args[1];
                 let leftValPtr = Evaluate(leftArg);
                 let rightValPtr = Evaluate(rightArg);
-                if (Is<double>(leftValPtr) && Is<double>(rightValPtr))
+                if (IsConfigValue<double>(leftValPtr) && IsConfigValue<double>(rightValPtr))
                     return functions.NumbersOp(e, leftValPtr, rightValPtr);
-                else if (Is<wstring>(leftValPtr) && Is<wstring>(rightValPtr))
+                else if (IsConfigValue<wstring>(leftValPtr) && IsConfigValue<wstring>(rightValPtr))
                     return functions.StringsOp(e, leftValPtr, rightValPtr);
-                else if (Is<bool>(leftValPtr) && Is<bool>(rightValPtr))
+                else if (IsConfigValue<bool>(leftValPtr) && IsConfigValue<bool>(rightValPtr))
                     return functions.BoolOp(e, leftValPtr, rightValPtr);
                 // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
-                else if (Is<shared_ptr<ComputationNode>>(leftValPtr) && Is<shared_ptr<ComputationNode>>(rightValPtr))
+                else if (IsConfigValue<shared_ptr<ComputationNode>>(leftValPtr) && IsConfigValue<shared_ptr<ComputationNode>>(rightValPtr))
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr);
-                else if (Is<shared_ptr<ComputationNode>>(leftValPtr) && Is<double>(rightValPtr))
+                else if (IsConfigValue<shared_ptr<ComputationNode>>(leftValPtr) && IsConfigValue<double>(rightValPtr))
                     return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr);
-                else if (Is<double>(leftValPtr) && Is<shared_ptr<ComputationNode>>(rightValPtr))
+                else if (IsConfigValue<double>(leftValPtr) && IsConfigValue<shared_ptr<ComputationNode>>(rightValPtr))
                     return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr);
                 // TODO: DictOp
                 else
@@ -511,8 +511,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             // helper lambdas for evaluating infix operators
             InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left = As<double>(leftVal);
-                let right = As<double>(rightVal);
+                let left  = AsConfigValue<double>(leftVal);
+                let right = AsConfigValue<double>(rightVal);
                 if (e->op == L"+")       return MakeConfigValue(left + right, e->location);
                 else if (e->op == L"-")  return MakeConfigValue(left - right, e->location);
                 else if (e->op == L"*")  return MakeConfigValue(left * right, e->location);
@@ -523,15 +523,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             };
             InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left = As<wstring>(leftVal);
-                let right = As<wstring>(rightVal);
+                let left  = AsConfigValue<wstring>(leftVal);
+                let right = AsConfigValue<wstring>(rightVal);
                 if (e->op == L"+")  return MakeConfigValue(left + right, e->location);
                 else return CompOp<wstring>(e, left, right);
             };
             InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left = As<bool>(leftVal);
-                let right = As<bool>(rightVal);
+                let left  = AsConfigValue<bool>(leftVal);
+                let right = AsConfigValue<bool>(rightVal);
                 if (e->op == L"||")       return MakeConfigValue(left || right, e->location);
                 else if (e->op == L"&&")  return MakeConfigValue(left && right, e->location);
                 else if (e->op == L"^")   return MakeConfigValue(left ^  right, e->location);
@@ -540,9 +540,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
                 // TODO: test this
-                if (Is<double>(rightVal))           // ComputeNode * scalar
-                    swap(leftVal, rightVal);        // -> scalar * ComputeNode
-                if (Is<double>(leftVal))            // scalar * ComputeNode
+                if (IsConfigValue<double>(rightVal))    // ComputeNode * scalar
+                    swap(leftVal, rightVal);            // -> scalar * ComputeNode
+                if (IsConfigValue<double>(leftVal))     // scalar * ComputeNode
                 {
                     if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal);
                     else LogicError("unexpected infix op");
