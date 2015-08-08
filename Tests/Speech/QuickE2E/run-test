@@ -1,5 +1,5 @@
 #!/bin/bash
-CNTK_BINARY=$TEST_BUILD_LOCATION/x86_64.gpu.$TEST_FLAVOR.acml/cntk
+CNTK_BINARY=$TEST_BUILD_LOCATION/$TEST_FLAVOR/bin/cntk
 if [ "$TEST_DEVICE" == "CPU" ]; then
    CNTK_DEVICE_ID=-1
 else

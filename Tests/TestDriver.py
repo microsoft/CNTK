@@ -522,7 +522,7 @@ runSubparser.add_argument("test", nargs="*",
                          "Use list command to list available tests. "
                          "If not specified then all tests will be run.")
 #TODO: port paths to Windows
-defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "..", "bin"))
+defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "..", "build"))
 runSubparser.add_argument("-b", "--build-location", default=defaultBuildLocation, help="location of the CNTK build to run")
 runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specific device")
 runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specific flavor")
