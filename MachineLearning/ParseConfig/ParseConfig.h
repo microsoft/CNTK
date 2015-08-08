@@ -80,7 +80,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         bool b;                     // boolean literal; op == "b"
         typedef shared_ptr<struct Expression> ExpressionPtr;
         vector<ExpressionPtr> args;             // position-dependent expression/function args
-        map<wstring, ExpressionPtr> namedArgs;  // named expression/function args; also dictionary members
+        map<wstring, pair<TextLocation,ExpressionPtr>> namedArgs;  // named expression/function args; also dictionary members (loc is of the identifier)
         TextLocation location;      // where in the source code (for downstream error reporting)
         // parent
         ExpressionPtr parent;       // used in searching dictionary scope upwards
