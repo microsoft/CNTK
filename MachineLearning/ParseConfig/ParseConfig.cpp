@@ -399,7 +399,7 @@ void Expression::Dump(int indent) const
         for (const auto & arg : namedArgs)
         {
             fprintf(stderr, "%*s%ls =\n", indent + 2, "", arg.first.c_str());
-            arg.second->Dump(indent + 4);
+            arg.second.second->Dump(indent + 4);
         }
     }
     fprintf(stderr, "\n");
@@ -462,6 +462,7 @@ public:
             { L"&&", 7 },
             { L"||", 6 },
             { L":", 5 },
+            { L"=>", 0 },
         };
         SetSourceFile(move(sourceFile));
         ConsumeToken();     // get the very first token
@@ -543,11 +544,8 @@ public:
             ConsumePunctuation(L"..");
             operand->args.push_back(ParseExpression(0, false));         // [1] last index
             ConsumePunctuation(L"]");
-            // TODO: change to parse proper lambda expressions and use that here (make '=>' a real infix operator), then just call ParseExpression() here
             ConsumePunctuation(L"(");
-            operand->id = ConsumeIdentifier();                          // identifier kept here
-            ConsumePunctuation(L"=>");
-            operand->args.push_back(ParseExpression(0, false));         // [2] function expression
+            operand->args.push_back(ParseExpression(0, false));         // [2] one-argument lambda to initialize
             ConsumePunctuation(L")");
         }
         else
@@ -577,6 +575,17 @@ public:
                 ConsumeToken();
                 operation->id = ConsumeIdentifier();
             }
+            else if (op == L"=>")
+            {
+                if (left->op != L"id")      // currently only allow for a single argument
+                    Expected(L"identifier");
+                ConsumeToken();
+                let macroArgs = make_shared<Expression>(left->location, L"()", left); // wrap identifier in a '()' macro-args expression
+                // TODO: test parsing of i => j => i*j
+                let body = ParseExpression(opPrecedence, stopAtNewline);   // pass same precedence; this makes '=>' right-associative  e.g.i=>j=>i*j
+                operation->args[0] = macroArgs;             // [0]: parameter list
+                operation->args.push_back(body);            // [1]: right operand
+            }
             else if (op == L"(")                            // === macro application
             {
                 // op = "("   means 'apply'
@@ -602,6 +611,12 @@ public:
     }
     // a macro-args expression lists position-dependent and optional parameters
     // This is used both for defining macros (LHS) and using macros (RHS).
+    // Result:
+    //  op = "()"
+    //  args = vector of arguments (which are given comma-separated)
+    //         In case of macro definition, all arguments must be of type "id". Pass 'defining' to check for that.
+    //  namedArgs = dictionary of optional args
+    //         In case of macro definition, dictionary values are default values that are used if the argument is not given
     ExpressionPtr ParseMacroArgs(bool defining)
     {
         ConsumePunctuation(L"(");
@@ -616,7 +631,7 @@ public:
                 let id = expr->id;                  // 'expr' gets resolved (to 'id') and forgotten
                 ConsumeToken();
                 let defValueExpr = ParseExpression(0, false);  // default value
-                let res = macroArgs->namedArgs.insert(make_pair(id, defValueExpr));
+                let res = macroArgs->namedArgs.insert(make_pair(id, make_pair(expr->location, defValueExpr)));
                 if (!res.second)
                     Fail("duplicate optional parameter '" + utf8(id) + "'", expr->location);
             }
@@ -629,7 +644,7 @@ public:
         ConsumePunctuation(L")");
         return macroArgs;
     }
-    map<wstring, ExpressionPtr> ParseDictMembers()
+    map<wstring, pair<TextLocation,ExpressionPtr>> ParseDictMembers()
     {
         // A dictionary is a map
         //  member identifier -> expression
@@ -641,18 +656,18 @@ public:
         //  op="=>"
         //  args[0] = parameter list (op="()", with args (all of op="id") and namedArgs)
         //  args[1] = expression with unbound arguments
-        map<wstring, ExpressionPtr> members;
+        map<wstring, pair<TextLocation,ExpressionPtr>> members;
         auto idTok = GotToken();
         while (idTok.kind == identifier)
         {
-            let id = ConsumeIdentifier();       // the member's name    --TODO: do we need to keep its location?
             let location = idTok.beginLocation; // for error message
+            let id = ConsumeIdentifier();       // the member's name    --TODO: do we need to keep its location?
             let parameters = (GotToken().symbol == L"(") ? ParseMacroArgs(true/*defining*/) : ExpressionPtr();  // optionally, macro arguments
             ConsumePunctuation(L"=");
             let rhs = ParseExpression(0, true/*can end at newline*/);   // and the right-hand side
             let val = parameters ? make_shared<Expression>(parameters->location, L"=>", parameters, rhs) : rhs;  // rewrite to lambda if it's a macro
             // insert
-            let res = members.insert(make_pair(id, val));
+            let res = members.insert(make_pair(id, make_pair(location, val)));
             if (!res.second)
                 Fail("duplicate member definition '" + utf8(id) + "'", location);
             // advance
@@ -669,7 +684,7 @@ public:
         for (auto & child : us->args)       // now tell our children about ourselves
             SetParents(child, us);
         for (auto & child : us->namedArgs)
-            SetParents(child.second, us);
+            SetParents(child.second.second, us);
     }
     // top-level parse function parses dictonary members
     ExpressionPtr Parse()
