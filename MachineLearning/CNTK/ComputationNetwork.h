@@ -1295,6 +1295,10 @@ public:
         else if (nodeType == MinusNode<ElemType>::TypeName())
         {
             newNode = new MinusNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        } 
+        else if (nodeType == ExpandWordNode<ElemType>::TypeName())
+        {
+            newNode = new ExpandWordNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SquareErrorNode<ElemType>::TypeName())
         {
@@ -1303,7 +1307,7 @@ public:
         else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())
         {
             newNode = new CrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId,nodeName);
-        }
+        } 
         else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
         {
             newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1633,6 +1637,10 @@ public:
         else if (nodeType == MinusNode<ElemType>::TypeName())
         {
             newNode = new MinusNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == ExpandWordNode<ElemType>::TypeName())
+        {
+            newNode = new ExpandWordNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == SquareErrorNode<ElemType>::TypeName())
         {
@@ -2163,6 +2171,16 @@ public:
                              const std::wstring nodeName = L"")
     {
         ComputationNodePtr newNode(new MinusNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr ExpandWord(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new ExpandWordNode<ElemType>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;

@@ -1137,7 +1137,6 @@ void SequenceReader<ElemType>::GetClassInfo()
 template<class ElemType>
 bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
         return false;
@@ -1211,7 +1210,6 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
                 features.Reset();
             }
         }
-
         for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
             // pick the right sample with randomization if desired
@@ -1289,7 +1287,6 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     {
         RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut].c_str());
     }
-
     // we read some records, so process them
     return true;
 }

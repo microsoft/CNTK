@@ -3395,5 +3395,116 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class StrideTimesNode<float>;
     template class StrideTimesNode<double>;
+    
+    //Expand the wordId from LMSequenceReader to a one-hot vector
+    template<class ElemType>
+    class ExpandWordNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        ExpandWordNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            m_deviceId = deviceId;
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+        ExpandWordNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        {
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+        //copy constructor
+        ExpandWordNode(const ExpandWordNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        {
+            node->CopyTo(this, newName, flags);
+        }
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
+            ComputationNodePtr node = new ExpandWordNode<ElemType>(this, name, flags);
+            return node;
+        }
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"ExpandWord"; }
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex < 0)
+            {
+                throw std::invalid_argument("inputIndex should be larger than -1.");
+            }
+            //Do nothing
+        }
+        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        {
+            if (inputIndex < 0 || timeIdxInSeq < 0)
+            {
+                throw std::invalid_argument("inputIndex and timeIdxInSeq should be larger than -1.");
+            }
+            //Do nothing
+        }
+        virtual void EvaluateThisNode()
+        {
+            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            FunctionValues().Resize(rows1, cols0);
+
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+        }
+
+        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        {
+            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            FunctionValues().Resize(rows1, cols0);
+
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+
+            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues());
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0)
+        {
+            #if DUMPOUTPUT
+                input0.Print("ExpandWordNode - Input0");
+            #endif
+                functionValues.SetValue(0);
+                for (int i = 0; i < input0.GetNumCols(); i++)
+                {
+                    functionValues((size_t)input0(0, i), i) = 1;
+                }
+            #if NANCHECK
+                functionValues.HasNan("ExpandWord");
+            #endif
+            #if DUMPOUTPUT
+                functionValues.Print("ExpandWordNode");
+            #endif
+        }
+
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 2)
+                throw std::logic_error("WordExpand operation requires two inputs(input(wordId), a vector(whose rownum will be the output rownum)).");
+
+            //support automatic dimention inference for learnable parameters
+            size_t cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows();
+
+            FunctionValues().Resize(rows1, cols0);
+            //InferImageDimsFromInputs();
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        {
+            m_children.resize(2);
+            m_children[0] = leftNode;
+            m_children[1] = rightNode;
+        }
+    };
+
+    template class ExpandWordNode<float>;
+    template class ExpandWordNode<double>;
 }}}

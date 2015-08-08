@@ -209,5 +209,6 @@
     <None Include="prebuild.bat">
       <Filter>Misc</Filter>
     </None>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>

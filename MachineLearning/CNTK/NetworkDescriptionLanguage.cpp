@@ -176,6 +176,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, MinusNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, ExpandWordNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, NegateNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, RectifiedLinearNode<ElemType>::TypeName(), L"ReLU"))
