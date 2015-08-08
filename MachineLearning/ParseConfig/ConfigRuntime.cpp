@@ -23,7 +23,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
 
-    struct ComputationNode : public ConfigurableRuntimeObject
+    struct ComputationNode
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
 
@@ -97,7 +97,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
 
     // sample runtime objects for testing
-    class PrintAction : public ConfigurableRuntimeObject, public HasLateInit
+    class PrintAction : public HasLateInit
     {
     public:
         PrintAction(const ConfigRecord & config)

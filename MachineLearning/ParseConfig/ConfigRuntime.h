@@ -3,7 +3,6 @@
 #pragma once
 
 #include "Basics.h"
-#include "ConfigurableRuntimeObjects.h"
 #include "ParseConfig.h"
 #include <memory>   // for shared_ptr
 
@@ -14,8 +13,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     class EvaluationError : public ConfigError
     {
     public:
-        EvaluationError(const wstring & msg, TextLocation where) : ConfigError(msra::strfun::utf8(msg), where) { }
-        /*implement*/ const char * kind() const { return "evaluating"; }
+        EvaluationError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
+        /*implement*/ const wchar_t * kind() const { return L"evaluating"; }
     };
 
     // config values

@@ -155,7 +155,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConfigRuntime.h" />
-    <ClInclude Include="ConfigurableRuntimeObjects.h" />
     <ClInclude Include="ParseConfig.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
