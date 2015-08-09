@@ -316,21 +316,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return *val;
         }
 
-        // check if ConfigValuePtr is of a certain type
-        template<typename T>
-        bool IsBoxOf(const ConfigValuePtr & value)
-        {
-            //return dynamic_cast<BoxOf<T>*>(value.get()) != nullptr;
-            return value.IsBoxOf<T>();
-        }
-
-        // check if ConfigValuePtr is of a certain type
-        template<typename T>
-        const T & AsBoxOf(const ConfigValuePtr & value)
-        {
-            //return *dynamic_cast<BoxOf<T>*>(value.get());
-            return value.AsBoxOf<T>();
-        }
 
         typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
         struct InfixFunctions
@@ -420,9 +405,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (let expr : e->args)        // concatenate the two args
                 {
                     let item = Evaluate(expr);  // result can be an item or a vector
-                    if (IsBoxOf<ConfigArray>(item))
+                    if (item.IsBoxOf<ConfigArray>())
                     {
-                        let items = AsBoxOf<ConfigArray>(item);
+                        let items = item.AsBoxOf<ConfigArray>();
                         array.insert(array.end(), items.begin(), items.end());
                     }
                     else
@@ -440,18 +425,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let rightArg = e->args[1];
                 let leftValPtr = Evaluate(leftArg);
                 let rightValPtr = Evaluate(rightArg);
-                if (IsBoxOf<double>(leftValPtr) && IsBoxOf<double>(rightValPtr))
+                if (leftValPtr.IsBoxOf<double>() && rightValPtr.IsBoxOf<double>())
                     return functions.NumbersOp(e, leftValPtr, rightValPtr);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
                     return functions.StringsOp(e, leftValPtr, rightValPtr);
-                else if (IsBoxOf<bool>(leftValPtr) && IsBoxOf<bool>(rightValPtr))
+                else if (leftValPtr.IsBoxOf<bool>() && rightValPtr.IsBoxOf<bool>())
                     return functions.BoolOp(e, leftValPtr, rightValPtr);
                 // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
-                else if (IsBoxOf<shared_ptr<ComputationNode>>(leftValPtr) && IsBoxOf<shared_ptr<ComputationNode>>(rightValPtr))
+                else if (leftValPtr.IsBoxOf<shared_ptr<ComputationNode>>() && rightValPtr.IsBoxOf<shared_ptr<ComputationNode>>())
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr);
-                else if (IsBoxOf<shared_ptr<ComputationNode>>(leftValPtr) && IsBoxOf<double>(rightValPtr))
+                else if (leftValPtr.IsBoxOf<shared_ptr<ComputationNode>>() && rightValPtr.IsBoxOf<double>())
                     return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr);
-                else if (IsBoxOf<double>(leftValPtr) && IsBoxOf<shared_ptr<ComputationNode>>(rightValPtr))
+                else if (leftValPtr.IsBoxOf<double>() && rightValPtr.IsBoxOf<shared_ptr<ComputationNode>>())
                     return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr);
                 // TODO: DictOp
                 else
@@ -534,8 +519,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             // helper lambdas for evaluating infix operators
             InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = AsBoxOf<double>(leftVal);
-                let right = AsBoxOf<double>(rightVal);
+                let left  = leftVal.AsBoxOf<double>();
+                let right = rightVal.AsBoxOf<double>();
                 if (e->op == L"+")       return MakeConfigValue(left + right, e->location);
                 else if (e->op == L"-")  return MakeConfigValue(left - right, e->location);
                 else if (e->op == L"*")  return MakeConfigValue(left * right, e->location);
@@ -553,8 +538,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             };
             InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = AsBoxOf<bool>(leftVal);
-                let right = AsBoxOf<bool>(rightVal);
+                let left  = leftVal.AsBoxOf<bool>();
+                let right = rightVal.AsBoxOf<bool>();
                 if (e->op == L"||")       return MakeConfigValue(left || right, e->location);
                 else if (e->op == L"&&")  return MakeConfigValue(left && right, e->location);
                 else if (e->op == L"^")   return MakeConfigValue(left ^  right, e->location);
@@ -563,9 +548,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
                 // TODO: test this
-                if (IsBoxOf<double>(rightVal))    // ComputeNode * scalar
-                    swap(leftVal, rightVal);            // -> scalar * ComputeNode
-                if (IsBoxOf<double>(leftVal))     // scalar * ComputeNode
+                if (rightVal.IsBoxOf<double>())     // ComputeNode * scalar
+                    swap(leftVal, rightVal);        // -> scalar * ComputeNode
+                if (leftVal.IsBoxOf<double>())      // scalar * ComputeNode
                 {
                     if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal);
                     else LogicError("unexpected infix op");
