@@ -25,7 +25,9 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; how = '.2' ; arg = '13 > 42' ]\" ] ;"
             L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
         parserTest1;
-        let parserTest = L"do = new PrintAction [ what = new StringFunction [ what = 'for'+'mat' ; how = '.2' ; arg = (([v=(i=>i+1) ].v)(5))+13 ] ] ";
+        let parserTest2 = L"do = new PrintAction [ what = new StringFunction [ what = 'for'+'mat' ; how = '.2' ; arg = (([v=(i=>i+1) ].v)(5))+13 ] ] ";
+        parserTest2;
+        let parserTest = L"text = 'hello'; do = new PrintAction [ what = text ] ";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
