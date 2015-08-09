@@ -346,6 +346,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
         }
 
+        // create a lambda that calls Evaluate() on an expr to get or realize its value
+        ConfigValuePtr::Thunk MakeEvaluateThunk(ExpressionPtr expr, ScopePtr scope)
+        {
+            function<ConfigValuePtr()> f = [this, expr, scope]()   // lambda that computes this value of 'expr'
+            {
+                return Evaluate(expr, scope);
+            };
+            return ConfigValuePtr::Thunk(f, expr->location);
+        }
+
         // all infix operators with lambdas for evaluating them
         map<wstring, InfixFunctions> infixOps;
 
@@ -401,8 +411,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     let argName = argList[i];   // parameter name
                     if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
                     let argValExpr = args[i];       // value of the parameter
-                    // BUGBUG: how give this expression a search scope??
-                    record->Add(argName->id, argName->location, MakeWrappedAndBoxedConfigValue(argValExpr, argValExpr->location));
+                    record->Add(argName->id, argName->location, MakeBoxedConfigValue(MakeEvaluateThunk(argValExpr, scope), argValExpr->location));
+                    // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                 }
 #if 0
                 for (let & entry : e->namedArgs)            // named args   --TODO: check whether arguments are matching and/or duplicate, use defaults
@@ -434,11 +444,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (let & entry : e->namedArgs)
                 {
                     let expr = entry.second.second;                 // expression to compute the entry
-                    function<ConfigValuePtr()> f = [this, expr, thisScope]()   // lambda that computes this value
-                    {
-                        return Evaluate(expr, thisScope);
-                    };
-                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, MakeBoxedConfigValue(ConfigValuePtr::Thunk(f, expr->location), expr->location));
+                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, MakeBoxedConfigValue(MakeEvaluateThunk(expr, thisScope), expr->location));
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
                 return ConfigValuePtr(record, e->location);
