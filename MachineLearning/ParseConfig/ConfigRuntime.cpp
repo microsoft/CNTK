@@ -17,13 +17,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     using namespace std;
     using namespace msra::strfun;
 
-    struct HasLateInit : public Polymorphic { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
+    struct HasLateInit : public Object { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
 
     // dummy implementation of ComputationNode for experimental purposes
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
 
-    struct ComputationNode : public Polymorphic
+    struct ComputationNode : public Object
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
 
@@ -112,7 +112,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     }
 
     // sample objects to implement functions
-    class StringFunction : public wstring, public Polymorphic
+    class StringFunction : public String
     {
     public:
         StringFunction(const ConfigRecord & config)
@@ -159,20 +159,20 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    class AnotherAction : public Polymorphic
+    class AnotherAction : public Object
     {
     public:
         AnotherAction(const ConfigRecord &) { fprintf(stderr, "Another\n"); }
         virtual ~AnotherAction(){}
     };
 
-    template<typename T> class ConfigValueWithLateInit : public ConfigValue<T>, public HasLateInit
+    template<typename T> class ConfigValueWithLateInit : public Wrapped<T>, public HasLateInit
     {
     public:
-        ConfigValueWithLateInit(T value) : ConfigValue(value) { }
+        ConfigValueWithLateInit(T value) : Wrapped(value) { }
         /*implement*/ void Init(const ConfigRecord & config)
         {
-            let hasLateInit = dynamic_cast<HasLateInit*>(ConfigValue::value.get());
+            let hasLateInit = dynamic_cast<HasLateInit*>(Wrapped::value.get());
             if (!hasLateInit)
                 LogicError("Init on class without HasLateInit");
             hasLateInit->Init(config);
@@ -237,7 +237,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             LateInitItem(ConfigValuePtr object, ExpressionPtr dictExpr) : object(object), dictExpr(dictExpr) { }
         };
 
-        // look up an identifier in a ConfigValue<ConfigRecord>
+        // look up an identifier in a Wrapped<ConfigRecord>
         ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation)
         {
             let record = AsConfigValue<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
@@ -276,11 +276,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call ConfigValueWithLateInit::Init() which in turn will call HasLateInite::Init() on the actual object
         }
 
-        // convert a ConfigValue to a specific type
+        // convert a Wrapped to a specific type
         template<typename T>
         T AsConfigValue(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
         {
-            let val = dynamic_cast<ConfigValue<T>*>(value.get());
+            let val = dynamic_cast<Wrapped<T>*>(value.get());
             if (!val)
                 TypeExpected(typeForMessage, e);
             return val->value;
@@ -300,7 +300,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         wstring ToString(ConfigValuePtr value, ExpressionPtr e)
         {
-            let val = dynamic_cast<ConfigValue<wstring>*>(value.get());
+            let val = dynamic_cast<Wrapped<wstring>*>(value.get());
             if (!val)
                 TypeExpected(L"number", e);
             return val->value;
@@ -308,7 +308,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
         {
-            let val = dynamic_cast<ConfigValue<bool>*>(value.get());            // TODO: factor out this expression
+            let val = dynamic_cast<Wrapped<bool>*>(value.get());            // TODO: factor out this expression
             if (!val)
                 TypeExpected(L"boolean", e);
             return val->value;
@@ -318,14 +318,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<typename T>
         bool IsConfigValue(const ConfigValuePtr & value)
         {
-            return dynamic_cast<ConfigValue<T>*>(value.get()) != nullptr;
+            return dynamic_cast<Wrapped<T>*>(value.get()) != nullptr;
         }
 
         // check if ConfigValuePtr is of a certain type
         template<typename T>
         const T & AsConfigValue(const ConfigValuePtr & value)
         {
-            return dynamic_cast<ConfigValue<T>*>(value.get())->value;
+            return dynamic_cast<Wrapped<T>*>(value.get())->value;
         }
 
         typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
