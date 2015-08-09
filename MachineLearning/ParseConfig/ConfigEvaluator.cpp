@@ -250,8 +250,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let record = AsBoxOfWrapped<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
             // add it to the name-resolution scope
             scopes.push_back(record);
-            // resolve all entries
-            record->ResolveAll([this](ExpressionPtr exprToResolve) { return Evaluate(exprToResolve); });
+            // resolve all entries, as they need to be passed to the C++ world which knows nothing about this
+            record->ResolveAll();
             // remove it again
             scopes.pop_back();
             return record;
@@ -431,7 +431,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // Instead, as the value, we keep the ExpressionPtr itself.
                 // Members are evaluated on demand when they are used.
                 for (let & entry : e->namedArgs)
-                    record->Add(entry.first, entry.second.first, MakeWrappedAndBoxedConfigValue(entry.second.second, entry.second.second->location));
+                {
+                    let expr = entry.second.second;                 // expression to compute the entry
+                    function<ConfigValuePtr()> f = [this, expr]()   // lambda that computes this value
+                    {
+                        return Evaluate(expr);  // TODO: include Scope pointer as well
+                    };
+                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, MakeBoxedConfigValue(ConfigValuePtr::Thunk(f, expr->location), expr->location));
+                }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
                 return MakeWrappedAndBoxedConfigValue(record, e->location);
             }
@@ -499,8 +506,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 if (p)
                 {
                     // resolve the value lazily
-                    // If it is not yet resolved then the value holds an ExpressionPtr.
-                    p->ResolveValue([this](ExpressionPtr exprToResolve) { return Evaluate(exprToResolve); });
+                    // If it is not yet resolved then the value holds a Thunk to compute the value.
+                    p->ResolveValue();          // the entry will know
                     // now the value is available
                     return *p;                  // return ConfigValuePtr, like record[id], which one can now type-cast etc.
                 }

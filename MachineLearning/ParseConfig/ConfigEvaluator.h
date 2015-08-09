@@ -27,7 +27,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     struct ConfigValuePtr : public shared_ptr<Object>
     {
-        bool currentlyResolving;    // set during resolution phase, to detect circular references
         TextLocation location;      // in source code
         template<typename T> BoxOfWrapped<T> * DynamicCastBoxOfWrapped() const {
             const auto p = get(); p;
@@ -37,8 +36,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     public:
         // construction     ---TODO: no template here
         template<typename T>
-        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(p), currentlyResolving(false), location(location) {}
-        ConfigValuePtr() : currentlyResolving(false) {} // (formally needed somehow)
+        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(p), location(location) {}
+        ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
         //operator double() const { return AsBoxOfWrapped<double>(); } DELETE THIS when fully tested
@@ -81,28 +80,32 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
         const char * TypeName() const { return typeid(*get()).name(); }
         // methods for resolving the value
-        template<typename F>
-        void ResolveValue(const F & Evaluate, TextLocation location)
+        // Thunk for resolving a value. This Object represents a function that returns a ConfigValuePtr; call to resolve a deferred value
+        class Thunk : public Object
+        {
+            function<ConfigValuePtr()> f;   // the function to compute the value
+            bool currentlyResolving;        // set during resolution phase, to detect circular references
+            TextLocation location;          // in source code
+        public:
+            Thunk(function<ConfigValuePtr()> f, TextLocation location) : f(f), location(location), currentlyResolving(false) { }
+            ConfigValuePtr ResolveValue()
+            {
+                if (currentlyResolving)                 // detect circular references (infinite recursion)
+                    throw EvaluationError(L"circular reference (expression to compute identifier's value uses the identifier's value)", location);
+                currentlyResolving = true;              // can't run from inside ourselves
+                return f();
+                // no need to reset currentlyResolving because this object gets replaced anyway
+            }
+        };
+        void ResolveValue()
         {
             // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
-            // value.get() is a pointer to BoxOfWrapped<type of value>
-            // Type of value is ExpressionPtr if the value is not yet resolved.
-            auto * p = DynamicCastBoxOfWrapped<ExpressionPtr>();    // -> BoxOfWrapped<ExpressionPtr>
-            if (!p)                             // value is not an ExpressionPtr: we already got a proper value; done.
+            // get() is a pointer to a Thunk in that case, that is, a function object that yields the value
+            const auto thunkp = dynamic_cast<Thunk*>(get());   // is it a Thunk?
+            if (!thunkp)                            // value is not a Thunk: we already got a proper value; done.
                 return;
-            if (currentlyResolving)             // detect circular references (infinite recursion)
-                throw EvaluationError(L"circular reference (expression to compute identifier's value uses the identifier's value)", location);
-            currentlyResolving = true;
-            ExpressionPtr valueExpr = *p;
-            *this = Evaluate(valueExpr);        // completely replace ourselves with the actual result
-            if (currentlyResolving)
-                LogicError("ResolveValue: spurious 'currentlyResolving' flag");
-        }
-        // resolution
-        template<typename F>
-        void ResolveValue(const F & Evaluate)
-        {
-            ConfigValuePtr::ResolveValue(Evaluate, location);
+            *this = thunkp->ResolveValue();         // completely replace ourselves with the actual result. This also releases the Thunk object
+            ResolveValue();                         // allow it to return another Thunk...
         }
     };
 
@@ -147,11 +150,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // add a member
         void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = ConfigValuePtr(value, idLocation); }
         // member resolution
-        template<typename F>
-        void ResolveAll(const F & Evaluate)   // resolve all members; do this before handing a ConfigRecord to C++ code
+        void ResolveAll()   // resolve all members; do this before handing a ConfigRecord to C++ code
         {
             for (auto & member : members)
-                member.second.ResolveValue(Evaluate);
+                member.second.ResolveValue();
         }
     };
     typedef shared_ptr<ConfigRecord> ConfigRecordPtr;       // dictionaries evaluate to this
