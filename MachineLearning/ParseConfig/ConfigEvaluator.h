@@ -85,6 +85,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return p;
         }
         const char * TypeName() const { return typeid(*get()).name(); }
+        TextLocation GetLocation() const { return location; }
         // methods for resolving the value
         // Thunk for resolving a value. This Object represents a function that returns a ConfigValuePtr; call to resolve a deferred value
         class Thunk : public Object
@@ -192,6 +193,26 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             auto & elem = GetElem(index, indexLocation);
             elem.ResolveValue();
+        }
+    };
+
+    // a lambda
+    class ConfigLambda : public Object
+    {
+        // the function itself is a C++ lambda
+        function<ConfigValuePtr(const vector<ConfigValuePtr>&, shared_ptr<ConfigRecord>)> f;
+        // inputs. This defines the interface to the function. Very simple in our case though.
+        size_t numParams;                     // number of position-dependent arguments
+        shared_ptr<ConfigRecord> namedParams; // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
+    public:
+        template<typename F>
+        ConfigLambda(size_t numParams, shared_ptr<ConfigRecord> namedParams, const F & f) : numParams(numParams), namedParams(namedParams), f(f) { }
+        size_t GetNumParams() const { return numParams; }
+        ConfigValuePtr Apply(vector<ConfigValuePtr> args, shared_ptr<ConfigRecord> namedArgs)
+        {
+            const auto actualNamedArgs = namedArgs;
+            // BUGBUG: need to inject defaults for named args, and remove entries that are not in namedArgs
+            return f(args, actualNamedArgs);
         }
     };
 
