@@ -24,7 +24,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"do5 = new PrintAction [ what = new StringFunction [ x = 13 ; y = 42 ; what = 'format' ; how = '.2' ; arg = x*y ] ] ;"
             L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; how = '.2' ; arg = '13 > 42' ]\" ] ;"
             L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
-        let parserTest2 = L"do = new PrintAction [ what = new StringFunction [ what = 'for'+'mat' ; how = '.2' ; arg = delta+(([v=(i=>i+1) ].v(5)))+13 ] ] ; delta = 42 ";
+        let parserTest2 = L"i2s(i) = new StringFunction [ what = 'format' ; arg = i ; how = '.2' ] ; print(s) = new PrintAction [ what = s ] ; do = print('result=' + i2s(delta+(( [ v = (i => i + 1) ].v(5)))+13)) ; delta = 42 ";
         let parserTest3 = L"do = new PrintAction [ what = text ] ; text = 'hello' ";
         let parserTest4 = L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; arg = (13:(fortytwo:1):100) ; how = '' ] ];fortytwo=42 ";
         parserTest1;
