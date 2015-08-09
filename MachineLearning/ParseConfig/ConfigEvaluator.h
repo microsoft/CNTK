@@ -41,10 +41,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr() : currentlyResolving(false) {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
-        operator double() const { return AsBoxOfWrapped<double>(); }
-        operator String() const { return As<String>(); }   // shouldn't this be return type String? Will it still work?
-        operator bool()   const { return AsBoxOfWrapped<bool>(); }
-        template<typename T> operator shared_ptr<T>() const { return AsBoxOfWrapped<shared_ptr<T>>(); }
+        //operator double() const { return AsBoxOfWrapped<double>(); } DELETE THIS when fully tested
+        //operator bool()   const { return AsBoxOfWrapped<bool>(); }
+        operator double() const { return (Double)*this; }
+        operator bool() const { return (Bool)*this; }
+        template<typename T> operator T() const { return As<T>(); }
         operator size_t() const
         {
             const auto val = AsBoxOfWrapped<double>();

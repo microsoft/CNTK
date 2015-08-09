@@ -104,9 +104,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             return wstrprintf((L"%" + how + L"s").c_str(), arg.As<String>());
         }
-        else if (arg.IsBoxOfWrapped<double>())
+        else if (arg.Is<Double>())
         {
-            return wstrprintf((L"%" + how + L"f").c_str(), arg.AsBoxOfWrapped<double>());
+            return wstrprintf((L"%" + how + L"f").c_str(), arg.As<Double>());
         }
         return L"?";
     }
@@ -144,7 +144,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let & what = config[L"what"];
             if (what.Is<String>())
                 fprintf(stderr, "%ls\n", ((wstring)what).c_str());
-            else if (what.IsBoxOfWrapped<double>())
+            else if (what.Is<Double>())
             {
                 let val = (double)what;
                 if (val == (long long)val)
@@ -152,7 +152,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else
                     fprintf(stderr, "%f\n", val);
             }
-            else if (what.IsBoxOfWrapped<bool>())
+            else if (what.Is<Bool>())
                 fprintf(stderr, "%s\n", (bool)what ? "true" : "false");
             else
                 fprintf(stderr, "(%s)\n", what.TypeName());
@@ -276,17 +276,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call ConfigValueWithLateInit::Init() which in turn will call HasLateInite::Init() on the actual object
         }
 
-        // convert a BoxOfWrapped to a specific type
+        // get value
         template<typename T>
-        T AsBoxOfWrapped(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
+        T & As(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
         {
-            let val = dynamic_cast<BoxOfWrapped<T>*>(value.get());
+            let val = dynamic_cast<T*>(value.get());
             if (!val)
                 TypeExpected(typeForMessage, e);
             return *val;
         }
+        // convert a BoxOfWrapped to a specific type
+        // BUGBUG: If this returns a reference, it will crash when retrieving a ConfigRecord. May go away once ConfigRecord is used without Box
+        template<typename T>
+        T /*&*/ AsBoxOfWrapped(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
+        {
+            return As<BoxOfWrapped<T>>(value, e, typeForMessage);
+            //let val = dynamic_cast<BoxOfWrapped<T>*>(value.get());
+            //if (!val)
+            //    TypeExpected(typeForMessage, e);
+            //return *val;
+        }
 
-        double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return AsBoxOfWrapped<double>(value, e, L"number"); }
+        double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return As<Double>(value, e, L"number"); }
 
         // get number and return it as an integer (fail if it is fractional)
         long long ToInt(ConfigValuePtr value, ExpressionPtr e)
@@ -310,7 +321,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
         {
-            let val = dynamic_cast<BoxOfWrapped<bool>*>(value.get());            // TODO: factor out this expression
+            let val = dynamic_cast<Bool*>(value.get());            // TODO: factor out this expression
             if (!val)
                 TypeExpected(L"boolean", e);
             return *val;
@@ -425,18 +436,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let rightArg = e->args[1];
                 let leftValPtr = Evaluate(leftArg);
                 let rightValPtr = Evaluate(rightArg);
-                if (leftValPtr.IsBoxOfWrapped<double>() && rightValPtr.IsBoxOfWrapped<double>())
+                if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                     return functions.NumbersOp(e, leftValPtr, rightValPtr);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
                     return functions.StringsOp(e, leftValPtr, rightValPtr);
-                else if (leftValPtr.IsBoxOfWrapped<bool>() && rightValPtr.IsBoxOfWrapped<bool>())
+                else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
                     return functions.BoolOp(e, leftValPtr, rightValPtr);
                 // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
                 else if (leftValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>() && rightValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>())
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr);
-                else if (leftValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>() && rightValPtr.IsBoxOfWrapped<double>())
+                else if (leftValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>() && rightValPtr.Is<Double>())
                     return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr);
-                else if (leftValPtr.IsBoxOfWrapped<double>() && rightValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>())
+                else if (leftValPtr.Is<Double>() && rightValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>())
                     return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr);
                 // TODO: DictOp
                 else
@@ -519,8 +530,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             // helper lambdas for evaluating infix operators
             InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = leftVal.AsBoxOfWrapped<double>();
-                let right = rightVal.AsBoxOfWrapped<double>();
+                let left  = leftVal.As<Double>();
+                let right = rightVal.As<Double>();
                 if (e->op == L"+")       return MakeConfigValue(left + right, e->location);
                 else if (e->op == L"-")  return MakeConfigValue(left - right, e->location);
                 else if (e->op == L"*")  return MakeConfigValue(left * right, e->location);
@@ -538,8 +549,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             };
             InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = leftVal.AsBoxOfWrapped<bool>();
-                let right = rightVal.AsBoxOfWrapped<bool>();
+                let left  = leftVal.As<Bool>();
+                let right = rightVal.As<Bool>();
                 if (e->op == L"||")       return MakeConfigValue(left || right, e->location);
                 else if (e->op == L"&&")  return MakeConfigValue(left && right, e->location);
                 else if (e->op == L"^")   return MakeConfigValue(left ^  right, e->location);
@@ -548,9 +559,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
                 // TODO: test this
-                if (rightVal.IsBoxOfWrapped<double>())     // ComputeNode * scalar
+                if (rightVal.Is<Double>())     // ComputeNode * scalar
                     swap(leftVal, rightVal);        // -> scalar * ComputeNode
-                if (leftVal.IsBoxOfWrapped<double>())      // scalar * ComputeNode
+                if (leftVal.Is<Double>())      // scalar * ComputeNode
                 {
                     if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal);
                     else LogicError("unexpected infix op");

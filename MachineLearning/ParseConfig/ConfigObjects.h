@@ -14,13 +14,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     //
     // This code supports three kinds of value types:
     //  - self-defined classes -> derive from Object, e.g. Expression
-    //  - classes defined outside -> wrap in a Box object, e.g. String = Box<wstring>
-    //  - C++ primitives like 'double' -> wrap in a Wrapper first then in a Box, e.g. Number = Box<Wrapper<double>> = BoxOfWrapped<double>
+    //  - classes defined outside -> wrap in a BoxOf object, e.g. String = BoxOf<wstring>
+    //  - C++ primitives like 'double' -> wrap in a Wrapper first then in a BoxOf, e.g. Number = BoxOf<Wrapped<double>> = BoxOfWrapped<double>
 
     struct Object { virtual ~Object() { } };
 
     // Wrapped<T> wraps non-class primitive C++ type into a class.
-    // (It can also be used for class types, but better use Box<> below directly.)
+    // (It can also be used for class types, but better use BoxOf<> below directly.)
     template<typename T> class Wrapped
     {
         T value;    // meant to be a primitive type
@@ -30,6 +30,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         Wrapped(T value) : value(value) { }
         T & operator=(const T & newValue) { value = newValue; }
     };
+    typedef Wrapped<double> Double;
+    typedef Wrapped<bool> Bool;
 
     // ...no, define the BoxOfWrapped without Object; call it BoxOfWrapped; then change String to BoxOfWrapped
 
@@ -37,22 +39,22 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // TODO: templatize this, call it ConfigObject
     // This can dynamic_cast to wstring.
 
-    // Box<T> wrappes a pre-defined type, e.g. std::wstring, to derive from Object.
-    // Box<T> can dynamic_cast to T (e.g. Box<wstring> is a wstring).
+    // BoxOf<T> wrappes a pre-defined type, e.g. std::wstring, to derive from Object.
+    // BoxOf<T> can dynamic_cast to T (e.g. BoxOf<wstring> is a wstring).
     template<class C>
-    class Box : public Object, public C
+    class BoxOf : public Object, public C
     {
     public:
-        Box(const C & val) : C(val) { }
-        Box(){}
+        BoxOf(const C & val) : C(val) { }
+        BoxOf(){}
     };
-    typedef Box<wstring> String;
+    typedef BoxOf<wstring> String;
 
     // class to box a primitive C++ type so that it derives from Object
-    template<typename T> class BoxOfWrapped : public Box<Wrapped<T>>
+    template<typename T> class BoxOfWrapped : public BoxOf<Wrapped<T>>
     {
     public:
-        BoxOfWrapped(T value) : Box(value) { }
+        BoxOfWrapped(T value) : BoxOf(value) { }
     };
 
 }}} // end namespaces
