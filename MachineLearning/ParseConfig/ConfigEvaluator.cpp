@@ -372,6 +372,48 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return value;   // we return the created but not initialized object as the value, so others can reference it
                 }
             }
+            else if (e->op == L"(")
+            {
+                let function = e->args[0];              // [0] = function
+                let argListExpr = function->args[0];    // [0][0] = argument list ("()" expression of identifiers, possibly optional args)
+                let expr = function->args[1];           // [0][1] = expression of the function itself
+                let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
+                if (argsExpr->op != L"()" || argListExpr->op != L"()")
+                    LogicError("() expression(s) expected");
+                let & argList = argListExpr->args;
+                let & namedArgList = argListExpr->namedArgs;
+                let & args = argsExpr->args;
+                let & namedArgs = argsExpr->namedArgs;
+                // evaluate 'expr' where any named identifier in 'expr' that matches 'argList' is replaced by the corresponding args
+                if (args.size() != argList.size())
+                    Fail(L"mismatching number of function arguments (partial application/lambdas not implemented yet)", argsExpr->location);
+                // create a dictionary with all arguments
+                let record = make_shared<ConfigRecord>();
+                // create an entry for every argument entry. Like in an [] expression, we do not evaluate at this point, but keep the ExpressionPtr for on-demand evaluation.
+                for (size_t i = 0; i < args.size(); i++)    // positional arguments
+                {
+                    let argName = argList[i];   // parameter name
+                    if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
+                    let argValExpr = args[i];       // value of the parameter
+                    // BUGBUG: how give this expression a search scope??
+                    record->Add(argName->id, argName->location, MakeWrappedAndBoxedConfigValue(argValExpr, argValExpr->location));
+                }
+#if 0
+                for (let & entry : e->namedArgs)            // named args   --TODO: check whether arguments are matching and/or duplicate, use defaults
+                    record->Add(entry.first, entry.second.first, MakeWrappedAndBoxedConfigValue(entry.second.second, entry.second.second->location));
+                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
+#endif
+                namedArgs; namedArgList;
+                // 'record' has the function parameters. Set as scope, and evaluate function expression.
+                // BUGBUG: again, the function parameters will be evaluated with the wrong scope
+                // add it to the name-resolution scope
+                scopes.push_back(record);
+                // look up the name
+                let functionValue = Evaluate(expr);     // any identifier that is a function parameter will be found in this scope
+                // remove it again
+                scopes.pop_back();
+                return functionValue;
+            }
             else if (e->op == L"if")
             {
                 let condition = ToBoolean(Evaluate(e->args[0]), e->args[0]);
@@ -451,6 +493,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // look up a member by id in the search scope
         // If it is not found, it tries all lexically enclosing scopes inside out.
+        // BIG BUGBUG: for deferred evaluation (dictionary contains an ExpressionPtr), the scope is wrong! It should be the scope at time the deferral was created, not at time of actual evaluation.
         const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation)
         {
             for (auto iter = scopes.rbegin(); iter != scopes.rend(); iter++/*goes backwards*/)
