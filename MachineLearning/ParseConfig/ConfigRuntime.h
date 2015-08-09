@@ -21,23 +21,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
 
     // config values
-    // All values in a ConfigRecord derive from Polymorphic.
-    // To get a value of an expected type T, dynamic-cast that base pointer to ConfigValue<T>.
+    // All values in a ConfigRecord derive from Object.
+    // To get a value of an expected type T, dynamic-cast that base pointer to Wrapped<T>.
     // Pointers to type U have the type shared_ptr<U>.
 
-    struct ConfigValuePtr : public shared_ptr<Polymorphic>
+    struct ConfigValuePtr : public shared_ptr<Object>
     {
         bool currentlyResolving;    // set during resolution phase, to detect circular references
         TextLocation location;      // in source code
-        template<typename T> ConfigValue<T> * DynamicCastConfigValue() const {
+        template<typename T> Wrapped<T> * DynamicCastConfigValue() const {
             const auto p = get(); p;
-            const auto r = dynamic_cast<ConfigValue<T>*>(get());
+            const auto r = dynamic_cast<Wrapped<T>*>(get());
             return r;
         }    // this casts the raw pointer that's inside the shared_ptr
     public:
         // construction     ---TODO: no template here
         template<typename T>
-        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Polymorphic>(p), currentlyResolving(false), location(location) {}
+        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(p), currentlyResolving(false), location(location) {}
         ConfigValuePtr() : currentlyResolving(false) {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
@@ -58,10 +58,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<typename T> bool IsConfigValue() const { return DynamicCastConfigValue<T>() != nullptr; }
         template<typename T> T & AsConfigValue() const     // returns reference to what the 'value' member
         {
-            auto * p = DynamicCastConfigValue<T>();        // -> ConfigValue<T>
+            auto * p = DynamicCastConfigValue<T>();        // -> Wrapped<T>
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
-            return p->value;                    // this unwraps the value out from its ConfigValue wrapper
+            return p->value;                    // this unwraps the value out from its Wrapped wrapper
         }
         // TODO: clean this up; get rid of specalization
         template<> bool IsConfigValue<wstring>() const
@@ -82,9 +82,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         void ResolveValue(const F & Evaluate, TextLocation location)
         {
             // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
-            // value.get() is a pointer to ConfigValue<type of value>
+            // value.get() is a pointer to Wrapped<type of value>
             // Type of value is ExpressionPtr if the value is not yet resolved.
-            auto * p = DynamicCastConfigValue<ExpressionPtr>();    // -> ConfigValue<ExpressionPtr>
+            auto * p = DynamicCastConfigValue<ExpressionPtr>();    // -> Wrapped<ExpressionPtr>
             if (!p)                             // value is not an ExpressionPtr: we already got a proper value; done.
                 return;
             if (currentlyResolving)             // detect circular references (infinite recursion)
@@ -103,10 +103,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    template<typename T> static inline ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<ConfigValue<T>>(val), location); }
-    // strings are stored in a ConfigString instead
+    template<typename T> static inline ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<Wrapped<T>>(val), location); }
+    // strings are stored in a String instead
     template<> ConfigValuePtr static inline MakeConfigValue<wstring>(const wstring & val, TextLocation location) {
-        const auto r = ConfigValuePtr(make_shared<ConfigString>(val), location);
+        const auto r = ConfigValuePtr(make_shared<String>(val), location);
         return r;
     }
 
@@ -143,7 +143,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
     typedef shared_ptr<ConfigRecord> ConfigRecordPtr;       // dictionaries evaluate to this
 
-    // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a ConfigValue
+    // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a Wrapped
     typedef vector<ConfigValuePtr> ConfigArray;  // TODO: change to vector<ConfigValuePtr>
 
     // understand and execute from the syntactic expression tree

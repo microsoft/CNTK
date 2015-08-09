@@ -6,23 +6,31 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     using namespace std;
 
-    struct Polymorphic { virtual ~Polymorphic() { } };
+    struct Object { virtual ~Object() { } };
 
-    // TODO: a ConfigValuePtr should be a shared_ptr to the value directly (such as ComputationNode), while having the base class
-    // ConfigValues are value structs. E.g. we can copy them to construct a ConfigValuePtrfrom them.
-    template<typename T> class ConfigValue : public Polymorphic
+    // ...TODO: a ConfigValuePtr should be a shared_ptr to the value directly (such as ComputationNode), while having the base class
+    // ...ConfigValues are value structs. E.g. we can copy them to construct a ConfigValuePtrfrom them.
+
+    // class to box a primitive C++ type so that it derives from Object
+    template<typename T> class Wrapped : public Object
     {
     public:
-        /*const*/ T value;      // primitive type (e.g. double) or shared_ptr<runtime type>
-        ConfigValue(T value) : value(value) { } // TODO: take a shared_ptr<T> and construct base shared_ptr from it
+        T value;                        // primitive type (e.g. double) or shared_ptr<runtime type>
+        Wrapped(T value) : value(value) { }
     };
+
+    // ...no, define the Wrapped without Object; call it Wrapped; then change String to Wrapped
 
     // a string (STL wstring, to be precise) that can be help in a ConfigValuePtr
     // TODO: templatize this, call it ConfigObject
-    class ConfigString : public Polymorphic, public wstring
+    // This can dynamic_cast to wstring.
+    template<class C>
+    class Box : public Object, public C
     {
     public:
-        ConfigString(const wstring & val) : wstring(val) { }
+        Box(const C & val) : C(val) { }
+        Box(){}
     };
+    typedef Box<wstring> String;
 
 }}} // end namespaces
