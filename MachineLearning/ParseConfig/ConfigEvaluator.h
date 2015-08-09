@@ -22,16 +22,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     // config values
     // All values in a ConfigRecord derive from Object.
-    // To get a value of an expected type T, dynamic-cast that base pointer to Wrapped<T>.
+    // To get a value of an expected type T, dynamic-cast that base pointer to BoxOf<T>.
     // Pointers to type U have the type shared_ptr<U>.
 
     struct ConfigValuePtr : public shared_ptr<Object>
     {
         bool currentlyResolving;    // set during resolution phase, to detect circular references
         TextLocation location;      // in source code
-        template<typename T> Wrapped<T> * DynamicCastConfigValue() const {
+        template<typename T> BoxOf<T> * DynamicCastBoxOf() const {
             const auto p = get(); p;
-            const auto r = dynamic_cast<Wrapped<T>*>(get());
+            const auto r = dynamic_cast<BoxOf<T>*>(get());
             return r;
         }    // this casts the raw pointer that's inside the shared_ptr
     public:
@@ -41,13 +41,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr() : currentlyResolving(false) {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
-        operator double()  const { return AsConfigValue<double>(); }
-        operator wstring() const { return AsConfigValue<wstring>(); }
-        operator bool()    const { return AsConfigValue<bool>(); }
-        template<typename T> operator shared_ptr<T>() const { return AsConfigValue<shared_ptr<T>>(); }
+        operator double()  const { return AsBoxOf<double>(); }
+        operator wstring() const { return AsBoxOf<wstring>(); }
+        operator bool()    const { return AsBoxOf<bool>(); }
+        template<typename T> operator shared_ptr<T>() const { return AsBoxOf<shared_ptr<T>>(); }
         operator size_t() const
         {
-            const auto val = AsConfigValue<double>();
+            const auto val = AsBoxOf<double>();
             const auto ival = (size_t)val;
             if (ival != val)
                 throw EvaluationError(L"numeric value is not an integer", location);
@@ -55,21 +55,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return ival;
         }
         // type helpers
-        template<typename T> bool IsConfigValue() const { return DynamicCastConfigValue<T>() != nullptr; }
-        template<typename T> T & AsConfigValue() const     // returns reference to what the 'value' member
+        template<typename T> bool IsBoxOf() const { return DynamicCastBoxOf<T>() != nullptr; }
+        template<typename T> T & AsBoxOf() const     // returns reference to what the 'value' member
         {
-            auto * p = DynamicCastConfigValue<T>();        // -> Wrapped<T>
+            auto * p = DynamicCastBoxOf<T>();        // -> BoxOf<T>
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
-            return *p;                    // this unwraps the value out from its Wrapped wrapper
+            return *p;                    // this unwraps the value out from its BoxOf wrapper
         }
         // TODO: clean this up; get rid of specalization
-        template<> bool IsConfigValue<wstring>() const
+        template<> bool IsBoxOf<wstring>() const
         {
             const auto p = dynamic_cast<wstring*>(get());
             return p != nullptr;
         }
-        template<> wstring & AsConfigValue<wstring>() const     // returns reference to what the 'value' member
+        template<> wstring & AsBoxOf<wstring>() const     // returns reference to what the 'value' member
         {
             const auto p = dynamic_cast<wstring*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
@@ -82,9 +82,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         void ResolveValue(const F & Evaluate, TextLocation location)
         {
             // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
-            // value.get() is a pointer to Wrapped<type of value>
+            // value.get() is a pointer to BoxOf<type of value>
             // Type of value is ExpressionPtr if the value is not yet resolved.
-            auto * p = DynamicCastConfigValue<ExpressionPtr>();    // -> Wrapped<ExpressionPtr>
+            auto * p = DynamicCastBoxOf<ExpressionPtr>();    // -> BoxOf<ExpressionPtr>
             if (!p)                             // value is not an ExpressionPtr: we already got a proper value; done.
                 return;
             if (currentlyResolving)             // detect circular references (infinite recursion)
@@ -103,7 +103,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    template<typename T> static inline ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<Wrapped<T>>(val), location); }
+    template<typename T> static inline ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<BoxOf<T>>(val), location); }
     // strings are stored in a String instead
     template<> ConfigValuePtr static inline MakeConfigValue<wstring>(const wstring & val, TextLocation location) {
         const auto r = ConfigValuePtr(make_shared<String>(val), location);
@@ -143,7 +143,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
     typedef shared_ptr<ConfigRecord> ConfigRecordPtr;       // dictionaries evaluate to this
 
-    // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a Wrapped
+    // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a BoxOf
     typedef vector<ConfigValuePtr> ConfigArray;  // TODO: change to vector<ConfigValuePtr>
 
     // understand and execute from the syntactic expression tree
