@@ -446,7 +446,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else if (e->op == L".")     // access ConfigRecord element
             {
                 let recordExpr = e->args[0];
-                return RecordLookup(recordExpr, e->id, e->location, scope);
+                return RecordLookup(recordExpr, e->id, e->location, nullptr/*no parent scope*/);
             }
             else if (e->op == L":")     // array expression
             {
