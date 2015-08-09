@@ -17,7 +17,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     using namespace std;
     using namespace msra::strfun;
 
-    struct HasLateInit : public Object { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
+    struct HasLateInit { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
 
     // dummy implementation of ComputationNode for experimental purposes
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
@@ -130,7 +130,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
 
     // sample runtime objects for testing
-    class PrintAction : public HasLateInit
+    class PrintAction : public Object, public HasLateInit
     {
     public:
         PrintAction(const ConfigRecord & config)
@@ -192,8 +192,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // helper for configurableRuntimeTypes initializer below
         // This returns a lambda that is a constructor for a given runtime type.
+#if 0
         template<class C>
-        function<ConfigValuePtr(const ConfigRecord &,TextLocation)> MakeRuntimeTypeConstructor()
+        function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor()
         {
 #if 0       // for now
             bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
@@ -210,7 +211,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 };
         }
         template<>
-        function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor<StringFunction>()
+#endif
+        template<class C>
+        function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor()
         {
 #if 0       // for now
             bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
@@ -224,7 +227,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 return [this](const ConfigRecord & config, TextLocation location)
                 {
                     //return MakeBoxedConfigValue(make_shared<StringFunction>(config), location);
-                    const auto r = ConfigValuePtr(make_shared<StringFunction>(config), location);
+                    const auto r = ConfigValuePtr(make_shared<C>(config), location);
                     return r;
                 };
         }
