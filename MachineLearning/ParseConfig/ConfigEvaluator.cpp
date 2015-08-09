@@ -402,55 +402,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return value;   // we return the created but not initialized object as the value, so others can reference it
                 }
             }
-            else if (e->op == L"(")
-            {
-                let function = e->args[0];              // [0] = function
-                let argListExpr = function->args[0];    // [0][0] = argument list ("()" expression of identifiers, possibly optional args)
-                // BUGBUG: currently only works if function is a lambda expression. Need to turn lambdas into ConfigValues...
-                let expr = function->args[1];           // [0][1] = expression of the function itself
-                let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
-                if (argsExpr->op != L"()" || argListExpr->op != L"()")
-                    LogicError("() expression(s) expected");
-                let & argList = argListExpr->args;
-                let & namedArgList = argListExpr->namedArgs;
-                let & args = argsExpr->args;
-                let & namedArgs = argsExpr->namedArgs;
-                // evaluate 'expr' where any named identifier in 'expr' that matches 'argList' is replaced by the corresponding args
-                if (args.size() != argList.size())
-                    Fail(L"mismatching number of function arguments (partial application/lambdas not implemented yet)", argsExpr->location);
-                // create a dictionary with all arguments
-                let record = make_shared<ConfigRecord>();
-                // create an entry for every argument entry. Like in an [] expression, we do not evaluate at this point, but keep the ExpressionPtr for on-demand evaluation.
-                for (size_t i = 0; i < args.size(); i++)    // positional arguments
-                {
-                    let argName = argList[i];   // parameter name
-                    if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
-                    let argValExpr = args[i];       // value of the parameter
-                    record->Add(argName->id, argName->location, MakeBoxedConfigValue(MakeEvaluateThunk(argValExpr, scope), argValExpr->location));
-                    // note: these are expressions for the parameter values; so they must be evaluated in the current scope
-                }
-#if 0
-                for (let & entry : e->namedArgs)            // named args   --TODO: check whether arguments are matching and/or duplicate, use defaults
-                    record->Add(entry.first, entry.second.first, MakeWrappedAndBoxedConfigValue(entry.second.second, entry.second.second->location));
-                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
-#endif
-                namedArgs; namedArgList;
-                // 'record' has the function parameters. Set as scope, and evaluate function expression.
-                // BUGBUG: again, the function parameters will be evaluated with the wrong scope
-                // look up the name
-                return Evaluate(expr, MakeScope(record, scope));     // any identifier that is a function parameter will be found in this scope
-            }
-            else if (e->op == L"[")     // index lookup
-            {
-                let arrExpr = Evaluate(e->args[0], scope);
-                let indexExpr = e->args[1];
-                let arr = AsPtr<ConfigArray>(arrExpr, indexExpr, L"array");
-                let dindex = As<Double>(Evaluate(indexExpr, scope), indexExpr, L"integer");
-                let index = (int)dindex;
-                if (index != dindex)
-                    TypeExpected(L"integer", indexExpr);
-                return arr->At(index, indexExpr->location);
-            }
             else if (e->op == L"if")
             {
                 let condition = ToBoolean(Evaluate(e->args[0], scope), e->args[0]);
@@ -458,6 +409,63 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return Evaluate(e->args[1], scope);
                 else
                     return Evaluate(e->args[2], scope);
+            }
+            else if (e->op == L"=>")                    // lambda
+            {
+                // on scope: The lambda expression remembers the lexical scope of the '=>'; this is how it captures its context.
+                let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
+                if (argListExpr->op != L"()") LogicError("parameter list expected");
+                let fnExpr = e->args[1];                // [1] = expression of the function itself
+                let f = [this, argListExpr, fnExpr, scope](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs) -> ConfigValuePtr
+                {
+                    let & argList = argListExpr->args;
+                    if (args.size() != argList.size()) LogicError("function application with mismatching number of arguments");
+                    // create a ConfigRecord with param names from 'argList' and values from 'args'
+                    // create a dictionary with all arguments
+                    let record = make_shared<ConfigRecord>();
+                    let thisScope = MakeScope(record, scope);   // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
+                    // create an entry for every argument value
+                    // Note that these values should normally be thunks since we only want to evaluate what's used.
+                    for (size_t i = 0; i < args.size(); i++)    // positional arguments
+                    {
+                        let argName = argList[i];       // parameter name
+                        if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
+                        let & argVal = args[i];         // value of the parameter
+                        record->Add(argName->id, argName->location, argVal);
+                        // note: these are expressions for the parameter values; so they must be evaluated in the current scope
+                    }
+                    namedArgs;  // TODO: later
+                    return Evaluate(fnExpr, MakeScope(record, scope));  // bring args into scope; keep lex scope of '=>' as upwards chain
+                };
+                let record = make_shared<ConfigRecord>();   // TODO: named args go here
+                return ConfigValuePtr(make_shared<ConfigLambda>(argListExpr->args.size(), record, f), e->location);
+            }
+            else if (e->op == L"(")
+            {
+                let lambdaExpr = e->args[0];            // [0] = function
+                let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
+                let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope), lambdaExpr, L"function");
+                if (argsExpr->op != L"()") LogicError("argument list expected");
+                // put all args into a vector of values
+                // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
+                let args = argsExpr->args;
+                if (args.size() != lambda->GetNumParams())
+                    Fail(L"function parameter list must consist of identifiers", argsExpr->location);
+                vector<ConfigValuePtr> argVals(args.size());
+                for (size_t i = 0; i < args.size(); i++)    // positional arguments
+                {
+                    let argValExpr = args[i];               // expression of arg [i]
+                    argVals[i] = MakeBoxedConfigValue(MakeEvaluateThunk(argValExpr, scope), argValExpr->location);  // make it a thunked value
+                }
+                // deal with namedArgs later
+                let namedArgs = make_shared<ConfigRecord>();
+#if 0
+                for (let & entry : e->namedArgs)            // named args   --TODO: check whether arguments are matching and/or duplicate, use defaults
+                    record->Add(entry.first, entry.second.first, MakeWrappedAndBoxedConfigValue(entry.second.second, entry.second.second->location));
+                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
+#endif
+                // call the function!
+                return lambda->Apply(argVals, namedArgs);
             }
             else if (e->op == L"[]")    // construct ConfigRecord
             {
@@ -493,6 +501,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                         arr->Append(item);
                 }
                 return ConfigValuePtr(arr, e->location);        // location will be that of the first ':', not sure if that is best way
+            }
+            else if (e->op == L"[")     // index lookup
+            {
+                let arrValue = Evaluate(e->args[0], scope);
+                let indexExpr = e->args[1];
+                let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
+                let dindex = As<Double>(Evaluate(indexExpr, scope), indexExpr, L"integer");
+                let index = (int)dindex;
+                if (index != dindex)
+                    TypeExpected(L"integer", indexExpr);
+                return arr->At(index, indexExpr->location);
             }
             else
             {
