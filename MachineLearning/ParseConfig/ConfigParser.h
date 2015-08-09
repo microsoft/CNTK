@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "ConfigObjects.h"
 #include "File.h"
 #include <string>
 #include <vector>

@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ParseConfig.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\File.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -23,16 +20,25 @@
     <ClCompile Include="ConfigRuntime.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConfigParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ConfigSpec.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ParseConfig.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="ConfigObjects.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigParser.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConfigRuntime.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

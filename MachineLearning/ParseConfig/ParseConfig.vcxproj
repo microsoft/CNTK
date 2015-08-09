@@ -148,14 +148,16 @@
     <ClCompile Include="..\..\Common\File.cpp" />
     <ClCompile Include="..\..\Common\fileutil.cpp" />
     <ClCompile Include="ConfigRuntime.cpp" />
-    <ClCompile Include="ParseConfig.cpp" />
+    <ClCompile Include="ConfigParser.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ConfigSpec.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConfigObjects.h" />
     <ClInclude Include="ConfigRuntime.h" />
-    <ClInclude Include="ParseConfig.h" />
+    <ClInclude Include="ConfigParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
