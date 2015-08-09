@@ -162,10 +162,38 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 member.second.ResolveValue();
         }
     };
-    typedef shared_ptr<ConfigRecord> ConfigRecordPtr;       // dictionaries evaluate to this
 
     // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a BoxOfWrappedWrapped
-    typedef vector<ConfigValuePtr> ConfigArray;  // TODO: change to vector<ConfigValuePtr>
+    class ConfigArray : public Object
+    {
+        vector<ConfigValuePtr> values;
+        int firstIndex;
+        ConfigValuePtr & GetElem(int index, TextLocation indexLocation)
+        {
+            if (index < firstIndex || index >= firstIndex + values.size())
+                throw EvaluationError(L"index out of bounds", indexLocation);
+            return values[(size_t)(index - firstIndex)];
+        }
+    public:
+        ConfigArray() : firstIndex(0) { }
+        ConfigArray(int firstIndex, int lastIndex) : firstIndex(firstIndex), values(lastIndex + 1 - firstIndex) { }
+        pair<int, int> GetRange() const { return make_pair(firstIndex, firstIndex+(int)values.size()-1); }
+        // building the array from expressions: append an element or an array
+        void Append(ConfigValuePtr value) { values.push_back(value); }
+        void Append(const ConfigArray & other) { values.insert(values.end(), other.values.begin(), other.values.end()); }
+        // get element at index, including bounds check
+        ConfigValuePtr At(int index, TextLocation indexLocation) /*const*/
+        {
+            auto & elem = GetElem(index, indexLocation);
+            return elem;
+        }
+        // values in arrays are resolved on demand so that we can have one element reference another, like in a truncated recurrent network
+        void ResolveValue(int index, TextLocation indexLocation)
+        {
+            auto & elem = GetElem(index, indexLocation);
+            elem.ResolveValue();
+        }
+    };
 
     // understand and execute from the syntactic expression tree
     ConfigValuePtr Evaluate(ExpressionPtr);     // evaluate the expression tree

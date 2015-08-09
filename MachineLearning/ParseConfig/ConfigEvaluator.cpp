@@ -108,7 +108,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             return wstrprintf((L"%" + how + L"f").c_str(), arg.As<Double>());
         }
-        return L"?";
+        else if (arg.Is<ConfigArray>())
+        {
+            // TODO: this is not pretty at all
+            let arr = arg.AsPtr<ConfigArray>();
+            wstring result;
+            let range = arr->GetRange();
+            for (int i = range.first; i <= range.second; i++)
+            {
+                if (i > range.first)
+                    result.append(L"\n");
+                result.append(FormatConfigValue(arr->At(i, TextLocation()), how));
+            }
+            return result;
+        }
+        return L"FormatConfigValue: unknown type";  // TODO: some fallback
     }
 
     // sample objects to implement functions
@@ -243,7 +257,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
         // which is meant to be passed to the constructor or Init() function of a runtime object
-        ConfigRecordPtr ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope)
+        shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope)
         {
             // evaluate the record expression itself
             // This will leave its members unevaluated since we do that on-demand
@@ -351,7 +365,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             function<ConfigValuePtr()> f = [this, expr, scope]()   // lambda that computes this value of 'expr'
             {
-                return Evaluate(expr, scope);
+                let value = Evaluate(expr, scope);
+                return value;   // this is a great place to set a breakpoint!
             };
             return ConfigValuePtr::Thunk(f, expr->location);
         }
@@ -425,6 +440,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // look up the name
                 return Evaluate(expr, MakeScope(record, scope));     // any identifier that is a function parameter will be found in this scope
             }
+            else if (e->op == L"[")     // index lookup
+            {
+                let arrExpr = Evaluate(e->args[0], scope);
+                let indexExpr = e->args[1];
+                let arr = AsPtr<ConfigArray>(arrExpr, indexExpr, L"array");
+                let dindex = As<Double>(Evaluate(indexExpr, scope), indexExpr, L"integer");
+                let index = (int)dindex;
+                if (index != dindex)
+                    TypeExpected(L"integer", indexExpr);
+                return arr->At(index, indexExpr->location);
+            }
             else if (e->op == L"if")
             {
                 let condition = ToBoolean(Evaluate(e->args[0], scope), e->args[0]);
@@ -456,21 +482,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             }
             else if (e->op == L":")     // array expression
             {
-                // TODO: test this
                 // this returns a flattened list of all members as a ConfigArray type
-                ConfigArray array;
+                let arr = make_shared<ConfigArray>();   // note: we could speed this up by keeping the left arg and appending to it
                 for (let expr : e->args)        // concatenate the two args
                 {
-                    let item = Evaluate(expr, scope);  // result can be an item or a vector
-                    if (item.IsBoxOfWrapped<ConfigArray>())
-                    {
-                        let items = item.AsBoxOfWrapped<ConfigArray>();
-                        array.insert(array.end(), items.begin(), items.end());
-                    }
+                    let item = Evaluate(expr, scope);           // result can be an item or a vector
+                    if (item.Is<ConfigArray>())
+                        arr->Append(item.As<ConfigArray>());     // append all elements (this flattens it)
                     else
-                        array.push_back(item);
+                        arr->Append(item);
                 }
-                return MakeWrappedAndBoxedConfigValue(array, e->location); // location will be that of the first ':', not sure if that is best way
+                return ConfigValuePtr(arr, e->location);        // location will be that of the first ':', not sure if that is best way
             }
             else
             {
