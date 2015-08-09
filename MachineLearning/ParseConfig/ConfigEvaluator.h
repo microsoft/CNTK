@@ -61,7 +61,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             auto * p = DynamicCastConfigValue<T>();        // -> Wrapped<T>
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
-            return p->value;                    // this unwraps the value out from its Wrapped wrapper
+            return *p;                    // this unwraps the value out from its Wrapped wrapper
         }
         // TODO: clean this up; get rid of specalization
         template<> bool IsConfigValue<wstring>() const
@@ -90,7 +90,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (currentlyResolving)             // detect circular references (infinite recursion)
                 throw EvaluationError(L"circular reference (expression to compute identifier's value uses the identifier's value)", location);
             currentlyResolving = true;
-            ExpressionPtr valueExpr = p->value;
+            ExpressionPtr valueExpr = *p;
             *this = Evaluate(valueExpr);        // completely replace ourselves with the actual result
             if (currentlyResolving)
                 LogicError("ResolveValue: spurious 'currentlyResolving' flag");

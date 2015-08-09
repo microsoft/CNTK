@@ -13,7 +13,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     template<typename T> class wrapped
     {
-        T value;
+        T value;    // meant to be a primitive type
     public:
         operator const T&() const { return value; }
         operator T&() { return value; }
@@ -22,11 +22,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
 
     // class to box a primitive C++ type so that it derives from Object
-    template<typename T> class Wrapped : public Object
+    template<typename T> class Wrapped : public Object, public wrapped<T>
     {
     public:
-        wrapped<T> value;               // primitive type (e.g. double) or shared_ptr<runtime type>
-        Wrapped(T value) : value(value) { }
+        Wrapped(T value) : wrapped(value) { }
     };
 
     // ...no, define the Wrapped without Object; call it Wrapped; then change String to Wrapped
