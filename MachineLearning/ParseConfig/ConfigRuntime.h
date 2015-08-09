@@ -3,12 +3,15 @@
 #pragma once
 
 #include "Basics.h"
-#include "ParseConfig.h"
+#include "ConfigParser.h"
+#include "ConfigObjects.h"
 #include <memory>   // for shared_ptr
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
     using namespace std;
+
+    // error object
 
     class EvaluationError : public ConfigError
     {
@@ -21,25 +24,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // All values in a ConfigRecord derive from Polymorphic.
     // To get a value of an expected type T, dynamic-cast that base pointer to ConfigValue<T>.
     // Pointers to type U have the type shared_ptr<U>.
-
-    struct Polymorphic { virtual ~Polymorphic() { } };
-
-    // TODO: a ConfigValuePtr should be a shared_ptr to the value directly (such as ComputationNode), while having the base class
-    // ConfigValues are value structs. E.g. we can copy them to construct a ConfigValuePtrfrom them.
-    template<typename T> class ConfigValue : public Polymorphic
-    {
-    public:
-        /*const*/ T value;      // primitive type (e.g. double) or shared_ptr<runtime type>
-        ConfigValue(T value) : value(value) { } // TODO: take a shared_ptr<T> and construct base shared_ptr from it
-    };
-
-    // a string (STL wstring, to be precise) that can be help in a ConfigValuePtr
-    // TODO: templatize this, call it ConfigObject
-    class ConfigString : public Polymorphic, public wstring
-    {
-    public:
-        ConfigString(const wstring & val) : wstring(val) { }
-    };
 
     struct ConfigValuePtr : public shared_ptr<Polymorphic>
     {
@@ -119,9 +103,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    template<typename T> ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<ConfigValue<T>>(val), location); }
+    template<typename T> static inline ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<ConfigValue<T>>(val), location); }
     // strings are stored in a ConfigString instead
-    template<> ConfigValuePtr MakeConfigValue<wstring>(const wstring & val, TextLocation location) {
+    template<> ConfigValuePtr static inline MakeConfigValue<wstring>(const wstring & val, TextLocation location) {
         const auto r = ConfigValuePtr(make_shared<ConfigString>(val), location);
         return r;
     }
@@ -163,6 +147,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     typedef vector<ConfigValuePtr> ConfigArray;  // TODO: change to vector<ConfigValuePtr>
 
     // understand and execute from the syntactic expression tree
-    ConfigValuePtr Evaluate(ExpressionPtr);
+    ConfigValuePtr Evaluate(ExpressionPtr);     // evaluate the expression tree
+    void Do(ExpressionPtr e);                   // evaluate e.do
 
 }}} // end namespaces
