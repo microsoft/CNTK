@@ -1,4 +1,4 @@
-// ParseConfig.h -- config parser
+// ConfigParser.h -- config parser (syntactic only, that is, source -> Expression tree)
 
 #pragma once
 

@@ -147,7 +147,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\File.cpp" />
     <ClCompile Include="..\..\Common\fileutil.cpp" />
-    <ClCompile Include="ConfigRuntime.cpp" />
+    <ClCompile Include="ConfigEvaluator.cpp" />
     <ClCompile Include="ConfigParser.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
@@ -156,7 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConfigObjects.h" />
-    <ClInclude Include="ConfigRuntime.h" />
+    <ClInclude Include="ConfigEvaluator.h" />
     <ClInclude Include="ConfigParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
