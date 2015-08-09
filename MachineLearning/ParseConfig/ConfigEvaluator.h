@@ -40,9 +40,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
+        template<typename T> operator T() const { return As<T>(); }
+        // TODO: we cannot cast to e.g. ConfigRecord, only to shared_ptr<ConfigRecord). E.g. can't write  'ComputationNodePtr x = config[L"arg"]', as that will deref.
+        //       Maybe make cast to shared_ptr the default, and have special ones for double, bool, and wstring that also dereference?
+        //       E.g. (Double) would return a shared_ptr<Wrapped<double>> whereas (double) would deref it.
+        //       The special case makes sense since all other objects of relevance are accessed through pointers anyway, so make this the default.
         operator double() const { return (Double)*this; }
         operator bool() const { return (Bool)*this; }
-        template<typename T> operator T() const { return As<T>(); }
         operator size_t() const
         {
             const auto val = AsBoxOfWrapped<double>();
