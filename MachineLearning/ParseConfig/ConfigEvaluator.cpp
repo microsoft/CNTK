@@ -190,6 +190,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
         __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown member name " + id, where); }
 
+        // lexical scope
+
+        struct Scope
+        {
+            shared_ptr<ConfigRecord> symbols;   // symbols in this scope
+            shared_ptr<Scope> up;               // one scope up
+            Scope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) : symbols(symbols), up(up) { }
+        };
+        typedef shared_ptr<Scope> ScopePtr;
+        ScopePtr MakeScope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) { return make_shared<Scope>(symbols, up); }
+
         // config value types
 
         // helper for configurableRuntimeTypes initializer below
@@ -218,42 +229,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         struct LateInitItem
         {
             ConfigValuePtr object;
+            ScopePtr scope;
             ExpressionPtr dictExpr;                             // the dictionary expression that now can be fully evaluated
-            LateInitItem(ConfigValuePtr object, ExpressionPtr dictExpr) : object(object), dictExpr(dictExpr) { }
+            LateInitItem(ConfigValuePtr object, ScopePtr scope, ExpressionPtr dictExpr) : object(object), scope(scope), dictExpr(dictExpr) { }
         };
 
-        // look up an identifier in a BoxOfWrapped<ConfigRecord>
-        ConfigValuePtr RecordLookup(shared_ptr<ConfigRecord> record, const wstring & id, TextLocation idLocation)
+        // look up an identifier in an expression that is a ConfigRecord
+        ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope)
         {
-            // add it to the name-resolution scope
-            scopes.push_back(record);
-            // look up the name
-            let & configMember = ResolveIdentifier(id, idLocation);
-            // remove it again
-            scopes.pop_back();
-            //return (ConfigValuePtr)configMember;
-            return configMember;
-        }
-        ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation)
-        {
-            let record = AsBoxOfWrapped<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
-            return RecordLookup(record, id, idLocation);
+            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope), recordExpr, L"record");
+            return ResolveIdentifier(id, idLocation, MakeScope(record, scope));
         }
 
         // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
         // which is meant to be passed to the constructor or Init() function of a runtime object
-        ConfigRecordPtr ConfigRecordFromDictExpression(ExpressionPtr recordExpr)
+        ConfigRecordPtr ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope)
         {
             // evaluate the record expression itself
             // This will leave its members unevaluated since we do that on-demand
             // (order and what gets evaluated depends on what is used).
-            let record = AsBoxOfWrapped<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
-            // add it to the name-resolution scope
-            scopes.push_back(record);
+            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope), recordExpr, L"record");
             // resolve all entries, as they need to be passed to the C++ world which knows nothing about this
             record->ResolveAll();
-            // remove it again
-            scopes.pop_back();
             return record;
         }
 
@@ -261,7 +258,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // This assumes that the ConfigValuePtr points to a BoxWithLateInitOf. If not, it will fail with a nullptr exception.
         void LateInit(LateInitItem & lateInitItem)
         {
-            let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr);
+            let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr, lateInitItem.scope);
             let object = lateInitItem.object;
             auto & p = object.As<HasLateInit>();
             p.Init(*config);
@@ -289,7 +286,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             //    TypeExpected(typeForMessage, e);
             //return *val;
         }
+        template<typename T>
+        shared_ptr<T> AsPtr(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
+        {
+            if (!value.Is<T>())
+                TypeExpected(typeForMessage, e);
+            return value.AsPtr<T>();
+        }
 
+#if 0
         double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return As<Double>(value, e, L"number"); }
 
         // get number and return it as an integer (fail if it is fractional)
@@ -311,6 +316,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 TypeExpected(L"string", e);
             return *val;
         }
+#endif
 
         bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
         {
@@ -319,7 +325,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 TypeExpected(L"boolean", e);
             return *val;
         }
-
 
         typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
         struct InfixFunctions
@@ -347,13 +352,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // this table lists all C++ types that can be instantiated from "new" expressions
         map<wstring, function<ConfigValuePtr(const ConfigRecord &, TextLocation)>> configurableRuntimeTypes;
 
-        ConfigValuePtr Evaluate(ExpressionPtr e)
+        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope)
         {
             // this evaluates any evaluation node
             if (e->op == L"d")       return MakePrimitiveConfigValue(e->d, e->location);
             else if (e->op == L"s")  return MakeStringConfigValue(e->s, e->location);
             else if (e->op == L"b")  return MakePrimitiveConfigValue(e->b, e->location);
-            else if (e->op == L"id") return ResolveIdentifier(e->id, e->location);  // access a variable within current scope
+            else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);  // access a variable within current scope
             else if (e->op == L"new" || e->op == L"new!")
             {
                 // find the constructor lambda
@@ -363,12 +368,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // form the config record
                 let dictExpr = e->args[0];
                 if (e->op == L"new")   // evaluate the parameter dictionary into a config record
-                    return newIter->second(*ConfigRecordFromDictExpression(dictExpr), e->location); // this constructs it
+                    return newIter->second(*ConfigRecordFromDictExpression(dictExpr, scope), e->location); // this constructs it
                 else                // ...unless it's late init. Then we defer initialization.
                 {
                     // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
                     let value = newIter->second(ConfigRecord(), e->location);
-                    deferredInitList.push_back(LateInitItem(value, dictExpr)); // construct empty and remember to Init() later
+                    deferredInitList.push_back(LateInitItem(value, scope, dictExpr)); // construct empty and remember to Init() later
                     return value;   // we return the created but not initialized object as the value, so others can reference it
                 }
             }
@@ -407,21 +412,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 namedArgs; namedArgList;
                 // 'record' has the function parameters. Set as scope, and evaluate function expression.
                 // BUGBUG: again, the function parameters will be evaluated with the wrong scope
-                // add it to the name-resolution scope
-                scopes.push_back(record);
                 // look up the name
-                let functionValue = Evaluate(expr);     // any identifier that is a function parameter will be found in this scope
-                // remove it again
-                scopes.pop_back();
-                return functionValue;
+                return Evaluate(expr, MakeScope(record, scope));     // any identifier that is a function parameter will be found in this scope
             }
             else if (e->op == L"if")
             {
-                let condition = ToBoolean(Evaluate(e->args[0]), e->args[0]);
+                let condition = ToBoolean(Evaluate(e->args[0], scope), e->args[0]);
                 if (condition)
-                    return Evaluate(e->args[1]);
+                    return Evaluate(e->args[1], scope);
                 else
-                    return Evaluate(e->args[2]);
+                    return Evaluate(e->args[2], scope);
             }
             else if (e->op == L"[]")    // construct ConfigRecord
             {
@@ -430,22 +430,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // We do not evaluate the members at this point.
                 // Instead, as the value, we keep the ExpressionPtr itself.
                 // Members are evaluated on demand when they are used.
+                let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
                 for (let & entry : e->namedArgs)
                 {
                     let expr = entry.second.second;                 // expression to compute the entry
-                    function<ConfigValuePtr()> f = [this, expr]()   // lambda that computes this value
+                    function<ConfigValuePtr()> f = [this, expr, thisScope]()   // lambda that computes this value
                     {
-                        return Evaluate(expr);  // TODO: include Scope pointer as well
+                        return Evaluate(expr, thisScope);
                     };
                     record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, MakeBoxedConfigValue(ConfigValuePtr::Thunk(f, expr->location), expr->location));
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
-                return MakeWrappedAndBoxedConfigValue(record, e->location);
+                return ConfigValuePtr(record, e->location);
             }
             else if (e->op == L".")     // access ConfigRecord element
             {
                 let recordExpr = e->args[0];
-                return RecordLookup(recordExpr, e->id, e->location);
+                return RecordLookup(recordExpr, e->id, e->location, scope);
             }
             else if (e->op == L":")     // array expression
             {
@@ -454,7 +455,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 ConfigArray array;
                 for (let expr : e->args)        // concatenate the two args
                 {
-                    let item = Evaluate(expr);  // result can be an item or a vector
+                    let item = Evaluate(expr, scope);  // result can be an item or a vector
                     if (item.IsBoxOfWrapped<ConfigArray>())
                     {
                         let items = item.AsBoxOfWrapped<ConfigArray>();
@@ -473,8 +474,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let & functions = opIter->second;
                 let leftArg = e->args[0];
                 let rightArg = e->args[1];
-                let leftValPtr = Evaluate(leftArg);
-                let rightValPtr = Evaluate(rightArg);
+                let leftValPtr = Evaluate(leftArg, scope);
+                let rightValPtr = Evaluate(rightArg, scope);
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                     return functions.NumbersOp(e, leftValPtr, rightValPtr);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
@@ -498,22 +499,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // look up a member by id in the search scope
         // If it is not found, it tries all lexically enclosing scopes inside out.
         // BIG BUGBUG: for deferred evaluation (dictionary contains an ExpressionPtr), the scope is wrong! It should be the scope at time the deferral was created, not at time of actual evaluation.
-        const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation)
+        const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ScopePtr scope)
         {
-            for (auto iter = scopes.rbegin(); iter != scopes.rend(); iter++/*goes backwards*/)
-            {
-                auto p = (*iter)->Find(id);     // look up the name
-                if (p)
-                {
-                    // resolve the value lazily
-                    // If it is not yet resolved then the value holds a Thunk to compute the value.
-                    p->ResolveValue();          // the entry will know
-                    // now the value is available
-                    return *p;                  // return ConfigValuePtr, like record[id], which one can now type-cast etc.
-                }
-                // if not found then try next outer scope
-            }
-            UnknownIdentifier(id, idLocation);
+            if (!scope)                                         // no scope or went all the way up: not found
+                UnknownIdentifier(id, idLocation);
+            auto p = scope->symbols->Find(id);                  // look up the name
+            if (!p)
+                return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
+            // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
+            p->ResolveValue();          // the entry will know
+            // now the value is available
+            return *p;
         }
 
         // evaluate a Boolean expression (all types)
@@ -545,7 +541,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // Traverse through the expression (parse) tree to evaluate a value.
         deque<LateInitItem> deferredInitList;
-        deque<ConfigRecordPtr> scopes;  // last entry is closest scope to be searched first
     public:
         Evaluator()
         {
@@ -642,7 +637,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         //       Need to move this list into Evaluate() directly and figure it out.
         ConfigValuePtr EvaluateParse(ExpressionPtr e)
         {
-            auto result = Evaluate(e);
+            auto result = Evaluate(e, nullptr/*top scope*/);
             // The deferredInitList contains unresolved Expressions due to "new!". This is specifically needed to support ComputeNodes
             // (or similar classes) that need circular references, while allowing to be initialized late (construct them empty first).
             while (!deferredInitList.empty())
@@ -655,10 +650,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         void Do(ExpressionPtr e)
         {
-            // not working with new! due to lazy eval, need to figure that out
-            let recordValue = EvaluateParse(e);
-            let record = AsBoxOfWrapped<ConfigRecordPtr>(recordValue, e, L"record");
-            RecordLookup(record, L"do", e->location);  // we evaluate the member 'do'
+            RecordLookup(e, L"do", e->location, nullptr);  // we evaluate the member 'do'
         }
     };
 
