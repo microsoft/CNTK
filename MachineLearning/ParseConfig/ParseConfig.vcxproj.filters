@@ -17,13 +17,13 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ConfigRuntime.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ConfigParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigEvaluator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -37,7 +37,7 @@
     <ClInclude Include="ConfigParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ConfigRuntime.h">
+    <ClInclude Include="ConfigEvaluator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

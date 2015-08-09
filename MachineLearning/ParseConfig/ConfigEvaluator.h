@@ -1,4 +1,4 @@
-// ConfigRuntime.h -- execute what's given in a config file
+// ConfigEvaluator.h -- execute what's given in a config file
 
 #pragma once
 
