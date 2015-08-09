@@ -283,7 +283,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let val = dynamic_cast<Wrapped<T>*>(value.get());
             if (!val)
                 TypeExpected(typeForMessage, e);
-            return val->value;
+            return *val;
         }
 
         double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return AsConfigValue<double>(value, e, L"number"); }
@@ -303,7 +303,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let val = dynamic_cast<Wrapped<wstring>*>(value.get());
             if (!val)
                 TypeExpected(L"number", e);
-            return val->value;
+            return *val;
         }
 
         bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
@@ -311,7 +311,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let val = dynamic_cast<Wrapped<bool>*>(value.get());            // TODO: factor out this expression
             if (!val)
                 TypeExpected(L"boolean", e);
-            return val->value;
+            return *val;
         }
 
         // check if ConfigValuePtr is of a certain type
@@ -325,7 +325,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<typename T>
         const T & AsConfigValue(const ConfigValuePtr & value)
         {
-            return dynamic_cast<Wrapped<T>*>(value.get())->value;
+            return *dynamic_cast<Wrapped<T>*>(value.get());
         }
 
         typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
