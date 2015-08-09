@@ -36,13 +36,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     public:
         // construction     ---TODO: no template here
         template<typename T>
-        //ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(dynamic_pointer_cast<Object>(p)), location(location) {}
         ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(p), location(location) {}
         ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
-        //operator double() const { return AsBoxOfWrapped<double>(); } DELETE THIS when fully tested
-        //operator bool()   const { return AsBoxOfWrapped<bool>(); }
         operator double() const { return (Double)*this; }
         operator bool() const { return (Bool)*this; }
         template<typename T> operator T() const { return As<T>(); }
