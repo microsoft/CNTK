@@ -42,7 +42,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
         operator double()  const { return AsBoxOf<double>(); }
-        operator wstring() const { return AsBoxOf<wstring>(); }
+        operator wstring() const { return As<String>(); }   // shouldn't this be return type String? Will it still work?
         operator bool()    const { return AsBoxOf<bool>(); }
         template<typename T> operator shared_ptr<T>() const { return AsBoxOf<shared_ptr<T>>(); }
         operator size_t() const
@@ -64,14 +64,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return *p;                    // this unwraps the value out from its BoxOf wrapper
         }
         // TODO: clean this up; get rid of specalization
-        template<> bool IsBoxOf<wstring>() const
+        template<class C>
+        bool Is() const
         {
-            const auto p = dynamic_cast<wstring*>(get());
+            const auto p = dynamic_cast<C*>(get());
             return p != nullptr;
         }
-        template<> wstring & AsBoxOf<wstring>() const     // returns reference to what the 'value' member
+        template<class C>
+        C & As() const     // returns reference to what the 'value' member
         {
-            const auto p = dynamic_cast<wstring*>(get());
+            const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
             return *p;
