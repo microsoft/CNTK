@@ -15,7 +15,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // This code supports three kinds of value types:
     //  - self-defined classes -> derive from Object, e.g. Expression
     //  - classes defined outside -> wrap in a Box object, e.g. String = Box<wstring>
-    //  - C++ primitives like 'double' -> wrap in a Wrapper first then in a Box, e.g. Number = Box<Wrapper<double>> = BoxOf<double>
+    //  - C++ primitives like 'double' -> wrap in a Wrapper first then in a Box, e.g. Number = Box<Wrapper<double>> = BoxOfWrapped<double>
 
     struct Object { virtual ~Object() { } };
 
@@ -31,7 +31,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         T & operator=(const T & newValue) { value = newValue; }
     };
 
-    // ...no, define the BoxOf without Object; call it BoxOf; then change String to BoxOf
+    // ...no, define the BoxOfWrapped without Object; call it BoxOfWrapped; then change String to BoxOfWrapped
 
     // a string (STL wstring, to be precise) that can be help in a ConfigValuePtr
     // TODO: templatize this, call it ConfigObject
@@ -49,10 +49,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     typedef Box<wstring> String;
 
     // class to box a primitive C++ type so that it derives from Object
-    template<typename T> class BoxOf : public Box<Wrapped<T>>
+    template<typename T> class BoxOfWrapped : public Box<Wrapped<T>>
     {
     public:
-        BoxOf(T value) : Box(value) { }
+        BoxOfWrapped(T value) : Box(value) { }
     };
 
 }}} // end namespaces
