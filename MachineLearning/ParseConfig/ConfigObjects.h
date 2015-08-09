@@ -11,11 +11,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // ...TODO: a ConfigValuePtr should be a shared_ptr to the value directly (such as ComputationNode), while having the base class
     // ...ConfigValues are value structs. E.g. we can copy them to construct a ConfigValuePtrfrom them.
 
+    template<typename T> class wrapped
+    {
+        T value;
+    public:
+        operator const T&() const { return value; }
+        operator T&() { return value; }
+        wrapped(T value) : value(value) { }
+        T & operator=(const T & newValue) { value = newValue; }
+    };
+
     // class to box a primitive C++ type so that it derives from Object
     template<typename T> class Wrapped : public Object
     {
     public:
-        T value;                        // primitive type (e.g. double) or shared_ptr<runtime type>
+        wrapped<T> value;               // primitive type (e.g. double) or shared_ptr<runtime type>
         Wrapped(T value) : value(value) { }
     };
 
