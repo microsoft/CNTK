@@ -376,6 +376,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 let function = e->args[0];              // [0] = function
                 let argListExpr = function->args[0];    // [0][0] = argument list ("()" expression of identifiers, possibly optional args)
+                // BUGBUG: currently only works if function is a lambda expression. Need to turn lambdas into ConfigValues...
                 let expr = function->args[1];           // [0][1] = expression of the function itself
                 let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
                 if (argsExpr->op != L"()" || argListExpr->op != L"()")
@@ -437,11 +438,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else if (e->op == L".")     // access ConfigRecord element
             {
                 let recordExpr = e->args[0];
-                let idExpr = e->args[1];
-                if (idExpr->op != L"id")
-                    LogicError("invalid field selector expression, must be 'id'");
-                let id = idExpr->id;
-                return RecordLookup(recordExpr, id, idExpr->location);
+                return RecordLookup(recordExpr, e->id, e->location);
             }
             else if (e->op == L":")     // array expression
             {

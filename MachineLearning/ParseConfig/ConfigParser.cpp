@@ -573,6 +573,7 @@ public:
             if (op == L".")                                 // === reference of a dictionary item
             {
                 ConsumeToken();
+                operation->location = GotToken().beginLocation; // location of the identifier after the .
                 operation->id = ConsumeIdentifier();
             }
             else if (op == L"=>")
