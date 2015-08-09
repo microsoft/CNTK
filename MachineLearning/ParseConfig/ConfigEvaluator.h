@@ -106,11 +106,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    template<typename T> static inline ConfigValuePtr MakeConfigValue(const T & val, TextLocation location) { return ConfigValuePtr(make_shared<BoxOfWrapped<T>>(val), location); }
-    // strings are stored in a String instead
-    template<> ConfigValuePtr static inline MakeConfigValue<wstring>(const wstring & val, TextLocation location) {
-        const auto r = ConfigValuePtr(make_shared<String>(val), location);
+    template<typename T> ConfigValuePtr static inline MakeBoxedConfigValue(const T & val, TextLocation location) {
+        const auto r = ConfigValuePtr(make_shared<T>(val), location);
         return r;
+    }
+    // use this for old-style classes, TO BE REMOVED
+    template<typename T> static inline ConfigValuePtr MakeWrappedAndBoxedConfigValue(const T & val, TextLocation location) {
+        return ConfigValuePtr(make_shared<BoxOfWrapped<T>>(val), location);
+    }
+    // use this for primitive values, double and bool
+    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValue(const T & val, TextLocation location) {
+        return MakeWrappedAndBoxedConfigValue(val, location);
+    }
+    // strings are stored in a String instead
+    ConfigValuePtr static inline MakeStringConfigValue(const String & val, TextLocation location) {
+        return MakeBoxedConfigValue(val, location);
     }
 
     class ConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
