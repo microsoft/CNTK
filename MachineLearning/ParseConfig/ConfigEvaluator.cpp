@@ -100,9 +100,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         size_t pos = how.find(L'%');
         if (pos != wstring::npos)
             RuntimeError("FormatConfigValue: format string must not contain %");
-        if (arg.IsBoxOf<wstring>())
+        if (arg.Is<String>())
         {
-            return wstrprintf((L"%" + how + L"s").c_str(), arg.AsBoxOf<wstring>());
+            return wstrprintf((L"%" + how + L"s").c_str(), arg.As<String>());
         }
         else if (arg.IsBoxOf<double>())
         {
@@ -142,7 +142,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         /*implement*/ void Init(const ConfigRecord & config)
         {
             let & what = config[L"what"];
-            if (what.IsBoxOf<wstring>())
+            if (what.Is<String>())
                 fprintf(stderr, "%ls\n", ((wstring)what).c_str());
             else if (what.IsBoxOf<double>())
             {
@@ -302,7 +302,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         wstring ToString(ConfigValuePtr value, ExpressionPtr e)
         {
             // TODO: shouldn't this be <String>?
-            let val = dynamic_cast<BoxOf<wstring>*>(value.get());
+            let val = dynamic_cast<String*>(value.get());
             if (!val)
                 TypeExpected(L"string", e);
             return *val;
@@ -320,14 +320,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<typename T>
         bool IsBoxOf(const ConfigValuePtr & value)
         {
-            return dynamic_cast<BoxOf<T>*>(value.get()) != nullptr;
+            //return dynamic_cast<BoxOf<T>*>(value.get()) != nullptr;
+            return value.IsBoxOf<T>();
         }
 
         // check if ConfigValuePtr is of a certain type
         template<typename T>
         const T & AsBoxOf(const ConfigValuePtr & value)
         {
-            return *dynamic_cast<BoxOf<T>*>(value.get());
+            //return *dynamic_cast<BoxOf<T>*>(value.get());
+            return value.AsBoxOf<T>();
         }
 
         typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
@@ -440,7 +442,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let rightValPtr = Evaluate(rightArg);
                 if (IsBoxOf<double>(leftValPtr) && IsBoxOf<double>(rightValPtr))
                     return functions.NumbersOp(e, leftValPtr, rightValPtr);
-                else if (IsBoxOf<wstring>(leftValPtr) && IsBoxOf<wstring>(rightValPtr))
+                else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
                     return functions.StringsOp(e, leftValPtr, rightValPtr);
                 else if (IsBoxOf<bool>(leftValPtr) && IsBoxOf<bool>(rightValPtr))
                     return functions.BoolOp(e, leftValPtr, rightValPtr);
@@ -544,8 +546,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             };
             InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = AsBoxOf<wstring>(leftVal);
-                let right = AsBoxOf<wstring>(rightVal);
+                let left  = leftVal.As<String>();
+                let right = rightVal.As<String>();
                 if (e->op == L"+")  return MakeConfigValue(left + right, e->location);
                 else return CompOp<wstring>(e, left, right);
             };
