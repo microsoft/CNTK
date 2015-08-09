@@ -166,18 +166,20 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         virtual ~AnotherAction(){}
     };
 
-    template<typename T> class ConfigValueWithLateInit : public BoxOfWrapped<T>, public HasLateInit
+#if 0
+    template<typename T> class BoxWithLateInitOf : public BoxOf<T>, public HasLateInit
     {
     public:
-        ConfigValueWithLateInit(T value) : BoxOfWrapped(value) { }
+        BoxWithLateInitOf(T value) : BoxOf(value) { }
         /*implement*/ void Init(const ConfigRecord & config)
         {
-            let hasLateInit = dynamic_cast<HasLateInit*>(BoxOfWrapped::value.get());
+            let hasLateInit = dynamic_cast<HasLateInit*>(BoxOf::value.get());
             if (!hasLateInit)
                 LogicError("Init on class without HasLateInit");
             hasLateInit->Init(config);
         }
     };
+#endif
 
     class Evaluator
     {
@@ -192,47 +194,27 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // helper for configurableRuntimeTypes initializer below
         // This returns a lambda that is a constructor for a given runtime type.
+        template<class C>
+        function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor()
+        {
 #if 0
-        template<class C>
-        function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor()
-        {
-#if 0       // for now
             bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
             if (hasLateInit)
                 return [this](const ConfigRecord & config, TextLocation location)
                 {
-                    return ConfigValuePtr(make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)), location);
-                };
-            else
-#endif
-                return [this](const ConfigRecord & config, TextLocation location)
-                {
-                    return MakeWrappedAndBoxedConfigValue(make_shared<C>(config), location);
-                };
-        }
-        template<>
-#endif
-        template<class C>
-        function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor()
-        {
-#if 0       // for now
-            bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
-            if (hasLateInit)
-                return [this](const ConfigRecord & config, TextLocation location)
-            {
-                return ConfigValuePtr(make_shared<ConfigValueWithLateInit<shared_ptr<C>>>(make_shared<C>(config)), location);
+                    return ConfigValuePtr(make_shared<BoxWithLateInitOf<shared_ptr<C>>>(make_shared<C>(config)), location);
+                    return ConfigValuePtr(make_shared<C>(config), location);
             };
             else
 #endif
                 return [this](const ConfigRecord & config, TextLocation location)
                 {
-                    //return MakeBoxedConfigValue(make_shared<StringFunction>(config), location);
-                    const auto r = ConfigValuePtr(make_shared<C>(config), location);
-                    return r;
+                    return ConfigValuePtr(make_shared<C>(config), location);
                 };
         }
 
         // "new!" expressions get queued for execution after all other nodes of tree have been executed
+        // TODO: This is totally broken, need to figuree out the deferred process first.
         struct LateInitItem
         {
             ConfigValuePtr object;
@@ -241,9 +223,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         };
 
         // look up an identifier in a BoxOfWrapped<ConfigRecord>
-        ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation)
+        ConfigValuePtr RecordLookup(shared_ptr<ConfigRecord> record, const wstring & id, TextLocation idLocation)
         {
-            let record = AsBoxOfWrapped<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
             // add it to the name-resolution scope
             scopes.push_back(record);
             // look up the name
@@ -252,6 +233,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             scopes.pop_back();
             //return (ConfigValuePtr)configMember;
             return configMember;
+        }
+        ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation)
+        {
+            let record = AsBoxOfWrapped<ConfigRecordPtr>(Evaluate(recordExpr), recordExpr, L"record");
+            return RecordLookup(record, id, idLocation);
         }
 
         // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
@@ -272,11 +258,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
 
         // perform late initialization
-        // This assumes that the ConfigValuePtr points to a ConfigValueWithLateInit. If not, it will fail with a nullptr exception.
+        // This assumes that the ConfigValuePtr points to a BoxWithLateInitOf. If not, it will fail with a nullptr exception.
         void LateInit(LateInitItem & lateInitItem)
         {
             let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr);
-            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call ConfigValueWithLateInit::Init() which in turn will call HasLateInite::Init() on the actual object
+            let object = lateInitItem.object;
+            auto & p = object.As<HasLateInit>();
+            p.Init(*config);
+//            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
         }
 
         // get value
@@ -601,6 +590,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             };
         }
 
+        // TODO: deferred list not working at all.
+        //       Do() just calls into EvaluateParse directly.
+        //       Need to move this list into Evaluate() directly and figure it out.
         ConfigValuePtr EvaluateParse(ExpressionPtr e)
         {
             auto result = Evaluate(e);
@@ -616,7 +608,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         void Do(ExpressionPtr e)
         {
-            RecordLookup(e, L"do", e->location);  // we evaluate the member 'do'
+            // not working with new! due to lazy eval, need to figure that out
+            let recordValue = EvaluateParse(e);
+            let record = AsBoxOfWrapped<ConfigRecordPtr>(recordValue, e, L"record");
+            RecordLookup(record, L"do", e->location);  // we evaluate the member 'do'
         }
     };
 
