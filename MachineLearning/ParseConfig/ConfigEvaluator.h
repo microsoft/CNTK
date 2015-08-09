@@ -36,6 +36,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     public:
         // construction     ---TODO: no template here
         template<typename T>
+        //ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(dynamic_pointer_cast<Object>(p)), location(location) {}
         ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(p), location(location) {}
         ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
@@ -77,6 +78,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
             return *p;
+        }
+        template<class C>
+        shared_ptr<C> AsPtr() const     // returns a shared_ptr cast to the 'value' member
+        {
+            const auto p = dynamic_pointer_cast<C>(*this);
+            if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
+                throw EvaluationError(L"config member has wrong type", location);
+            return p;
         }
         const char * TypeName() const { return typeid(*get()).name(); }
         // methods for resolving the value
@@ -126,7 +135,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         return MakeBoxedConfigValue(val, location);
     }
 
-    class ConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
+    class ConfigRecord : public Object      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
         map<wstring, ConfigValuePtr> members;
     public:

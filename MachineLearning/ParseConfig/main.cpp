@@ -27,7 +27,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         parserTest1;
         let parserTest2 = L"do = new PrintAction [ what = new StringFunction [ what = 'for'+'mat' ; how = '.2' ; arg = (([v=(i=>i+1) ].v)(5))+13 ] ] ";
         parserTest2;
-        let parserTest = L"text = 'hello'; do = new PrintAction [ what = text ] ";
+        let parserTest = L"do = new PrintAction [ what = text ] ; text = 'hello' ";
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
