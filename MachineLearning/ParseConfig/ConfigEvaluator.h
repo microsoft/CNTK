@@ -181,7 +181,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     public:
         ConfigArray() : firstIndex(0) { }
-        ConfigArray(int firstIndex, int lastIndex) : firstIndex(firstIndex), values(lastIndex + 1 - firstIndex) { }
+        ConfigArray(int firstIndex, vector<ConfigValuePtr> && values) : firstIndex(firstIndex), values(values) { }
         pair<int, int> GetRange() const { return make_pair(firstIndex, firstIndex+(int)values.size()-1); }
         // building the array from expressions: append an element or an array
         void Append(ConfigValuePtr value) { values.push_back(value); }

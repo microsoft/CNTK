@@ -102,11 +102,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             RuntimeError("FormatConfigValue: format string must not contain %");
         if (arg.Is<String>())
         {
-            return wstrprintf((L"%" + how + L"s").c_str(), arg.As<String>());
+            return wstrprintf((L"%" + how + L"s").c_str(), arg.As<String>().c_str());
         }
         else if (arg.Is<Double>())
         {
-            return wstrprintf((L"%" + how + L"f").c_str(), arg.As<Double>());
+            let val = arg.As<Double>();
+            if (val == (int)val)
+                return wstrprintf((L"%" + how + L"d").c_str(), (int)val);
+            else
+                return wstrprintf((L"%" + how + L"f").c_str(), val);
         }
         else if (arg.Is<ConfigArray>())
         {
@@ -122,7 +126,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             }
             return result;
         }
-        return L"FormatConfigValue: unknown type";  // TODO: some fallback
+        else
+            return msra::strfun::utf16(arg.TypeName());             // cannot print this type
     }
 
     // sample objects to implement functions
@@ -133,13 +138,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             wstring & us = *this;   // we write to this
             let arg = config[L"arg"];
-            wstring what = config[L"what"];
+            let whatArg = config[L"what"];
+            wstring what = whatArg;
             if (what == L"format")
             {
                 wstring how = config[L"how"];
                 us = FormatConfigValue(arg, how);
-                // TODO: implement this
             }
+            else
+                throw EvaluationError(L"unknown 'what' value to StringFunction: " + what, whatArg.GetLocation());
         }
     };
 
@@ -155,21 +162,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // example of late init (makes no real sense for PrintAction, of course)
         /*implement*/ void Init(const ConfigRecord & config)
         {
-            let & what = config[L"what"];
-            if (what.Is<String>())
-                fprintf(stderr, "%ls\n", ((wstring)what).c_str());
-            else if (what.Is<Double>())
-            {
-                let val = (double)what;
-                if (val == (long long)val)
-                    fprintf(stderr, "%d\n", (int)val);
-                else
-                    fprintf(stderr, "%f\n", val);
-            }
-            else if (what.Is<Bool>())
-                fprintf(stderr, "%s\n", (bool)what ? "true" : "false");
-            else
-                fprintf(stderr, "(%s)\n", what.TypeName());
+            let what = config[L"what"];
+            let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
+            fprintf(stderr, "%ls\n", str.c_str());
         }
     };
 
@@ -219,6 +214,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // helper for configurableRuntimeTypes initializer below
         // This returns a lambda that is a constructor for a given runtime type.
+        // LateInit currently broken.
         template<class C>
         function<ConfigValuePtr(const ConfigRecord &, TextLocation)> MakeRuntimeTypeConstructor()
         {
@@ -308,19 +304,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return value.AsPtr<T>();
         }
 
-#if 0
         double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return As<Double>(value, e, L"number"); }
 
         // get number and return it as an integer (fail if it is fractional)
-        long long ToInt(ConfigValuePtr value, ExpressionPtr e)
+        int ToInt(ConfigValuePtr value, ExpressionPtr e)
         {
             let val = ToDouble(value, e);
-            let res = (long long)(val);
+            let res = (int)(val);
             if (val != res)
                 TypeExpected(L"integer number", e);
             return res;
         }
 
+#if 0
         // could just return String; e.g. same as To<String>
         wstring ToString(ConfigValuePtr value, ExpressionPtr e)
         {
@@ -377,14 +373,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // this table lists all C++ types that can be instantiated from "new" expressions
         map<wstring, function<ConfigValuePtr(const ConfigRecord &, TextLocation)>> configurableRuntimeTypes;
 
+        // main evaluator function (highly recursive)
+        //  - input:  expression
+        //  - output: ConfigValuePtr that holds the evaluated value of the expression
+        // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
         ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope)
         {
-            // this evaluates any evaluation node
-            if (e->op == L"d")       return MakePrimitiveConfigValue(e->d, e->location);
-            else if (e->op == L"s")  return MakeStringConfigValue(e->s, e->location);
-            else if (e->op == L"b")  return MakePrimitiveConfigValue(e->b, e->location);
-            else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);  // access a variable within current scope
-            else if (e->op == L"new" || e->op == L"new!")
+            // --- literals
+            if (e->op == L"d")       return MakePrimitiveConfigValue(e->d, e->location);    // === double literal
+            else if (e->op == L"s")  return MakeStringConfigValue(e->s, e->location);       // === string literal
+            else if (e->op == L"b")  return MakePrimitiveConfigValue(e->b, e->location);    // === bool literal
+            else if (e->op == L"new" || e->op == L"new!")                                   // === 'new' expression: instantiate C++ runtime object
             {
                 // find the constructor lambda
                 let newIter = configurableRuntimeTypes.find(e->id);
@@ -402,7 +401,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return value;   // we return the created but not initialized object as the value, so others can reference it
                 }
             }
-            else if (e->op == L"if")
+            else if (e->op == L"if")                                                    // === conditional expression
             {
                 let condition = ToBoolean(Evaluate(e->args[0], scope), e->args[0]);
                 if (condition)
@@ -410,7 +409,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else
                     return Evaluate(e->args[2], scope);
             }
-            else if (e->op == L"=>")                    // lambda
+            // --- functions
+            else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
             {
                 // on scope: The lambda expression remembers the lexical scope of the '=>'; this is how it captures its context.
                 let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
@@ -467,7 +467,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // call the function!
                 return lambda->Apply(argVals, namedArgs);
             }
-            else if (e->op == L"[]")    // construct ConfigRecord
+            // --- variable access
+            else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
             {
                 let record = make_shared<ConfigRecord>();
                 // create an entry for every dictionary entry.
@@ -483,12 +484,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
                 return ConfigValuePtr(record, e->location);
             }
-            else if (e->op == L".")     // access ConfigRecord element
+            else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
+            else if (e->op == L".")                                                 // === variable/macro access in given ConfigRecord element
             {
                 let recordExpr = e->args[0];
                 return RecordLookup(recordExpr, e->id, e->location, nullptr/*no parent scope*/);
             }
-            else if (e->op == L":")     // array expression
+            // --- arrays
+            else if (e->op == L":")                                                 // === array expression (-> ConfigArray)
             {
                 // this returns a flattened list of all members as a ConfigArray type
                 let arr = make_shared<ConfigArray>();   // note: we could speed this up by keeping the left arg and appending to it
@@ -502,7 +505,39 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 }
                 return ConfigValuePtr(arr, e->location);        // location will be that of the first ':', not sure if that is best way
             }
-            else if (e->op == L"[")     // index lookup
+            else if (e->op == L"array")                                             // === array constructor from lambda function
+            {
+                let firstIndexExpr = e->args[0];    // first index
+                let lastIndexExpr  = e->args[1];    // last index
+                let initLambdaExpr = e->args[2];    // lambda to initialize the values
+                let firstIndex = ToInt(Evaluate(firstIndexExpr, scope), firstIndexExpr);
+                let lastIndex  = ToInt(Evaluate(lastIndexExpr, scope),  lastIndexExpr);
+                let lambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope), initLambdaExpr, L"function");
+                if (lambda->GetNumParams() != 1)
+                    Fail(L"'array' requires an initializer function with one argument (the index)", initLambdaExpr->location);
+                // At this point, we must know the dimensions and the initializer lambda, but we don't need to know all array elements.
+                // Resolving array members on demand allows recursive access to the array variable, e.g. h[t] <- f(h[t-1]).
+                // create a vector of Thunks to initialize each value
+                vector<ConfigValuePtr> elementThunks;
+                for (int index = firstIndex; index <= lastIndex; index++)
+                {
+                    let indexValue = MakePrimitiveConfigValue((double)index, e->location);      // index as a ConfigValuePtr
+                    // create an expression
+                    function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope]()   // lambda that computes this value of 'expr'
+                    {
+                        // apply initLambdaExpr to indexValue and return the resulting value
+                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope), initLambdaExpr, L"function");
+                        vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
+                        let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
+                        let value = initLambda->Apply(argVals, namedArgs);
+                        return value;   // this is a great place to set a breakpoint!
+                    };
+                    elementThunks.push_back(MakeBoxedConfigValue(ConfigValuePtr::Thunk(f, initLambdaExpr->location), initLambdaExpr->location));
+                }
+                auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
+                return ConfigValuePtr(arr, e->location);
+            }
+            else if (e->op == L"[")                                                 // === access array element by index
             {
                 let arrValue = Evaluate(e->args[0], scope);
                 let indexExpr = e->args[1];
@@ -511,8 +546,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let index = (int)dindex;
                 if (index != dindex)
                     TypeExpected(L"integer", indexExpr);
+                arr->ResolveValue(index, indexExpr->location);      // resolve each element only when it is used, to allow for recursive array access
                 return arr->At(index, indexExpr->location);
             }
+            // --- unary operators '+' '-' and '!'
+            // ...
+            // --- regular infix operators such as '+' and '=='
             else
             {
                 let opIter = infixOps.find(e->op);
