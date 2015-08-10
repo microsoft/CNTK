@@ -248,7 +248,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope)
         {
             let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope), recordExpr, L"record");
-            return ResolveIdentifier(id, idLocation, MakeScope(record, scope));
+            return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
         }
 
         // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
@@ -488,7 +488,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else if (e->op == L".")                                                 // === variable/macro access in given ConfigRecord element
             {
                 let recordExpr = e->args[0];
-                return RecordLookup(recordExpr, e->id, e->location, nullptr/*no parent scope*/);
+                return RecordLookup(recordExpr, e->id, e->location, scope);
             }
             // --- arrays
             else if (e->op == L":")                                                 // === array expression (-> ConfigArray)
@@ -584,7 +584,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // look up a member by id in the search scope
         // If it is not found, it tries all lexically enclosing scopes inside out.
-        // BIG BUGBUG: for deferred evaluation (dictionary contains an ExpressionPtr), the scope is wrong! It should be the scope at time the deferral was created, not at time of actual evaluation.
         const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ScopePtr scope)
         {
             if (!scope)                                         // no scope or went all the way up: not found
