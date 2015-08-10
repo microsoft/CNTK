@@ -30,8 +30,11 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest5 = L"do = new PrintAction [ what = arr ] ; val=13:14; arr = array [1..10] (i => 2*i) ";
         let parserTest6 = L"do = new PrintAction [ what = arg ] ; N = 5 ; arr = array [1..N] (i => if i > 1 then arr[i-1]*i else i) ; arg = arr ";
         let parserTest7 = L"do = new PrintAction [ what = val ] ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ";
-        parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7;
-        let parserTest = parserTest5;
+        let parserTest8 = L"Parameters(O,I) = new ComputationNode [ class = 'LearnableParameter'; outDim=O; inDim=I ] \n"
+                          L"do = new PrintAction [ what = val ] \n"
+                          L"A = Parameters(13,42) ; val = A*A+A-A ";
+        parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8;
+        let parserTest = parserTest8;
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);

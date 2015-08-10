@@ -46,7 +46,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
-        template<typename T> operator shared_ptr<T>() { return AsPtr<T>(); }
+        template<typename T> operator shared_ptr<T>() const { return AsPtr<T>(); }
         template<typename T> operator T() const { return As<T>(); }
         // TODO: we cannot cast to e.g. ConfigRecord, only to shared_ptr<ConfigRecord). E.g. can't write  'ComputationNodePtr x = config[L"arg"]', as that will deref.
         //       Maybe make cast to shared_ptr the default, and have special ones for double, bool, and wstring that also dereference?
@@ -83,6 +83,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         const C & As() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
             ResolveValue();
+            const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
@@ -176,6 +177,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 member.second.ResolveValue();
         }
     };
+
+    // create a runtime object from its type --general case
+    // There can be specializations of this that instantiate objects that do not take ConfigRecords or involve mapping like ComputationNode.
+    template<typename C>
+    shared_ptr<C> MakeRuntimeObject(const ConfigRecord & config)
+    {
+        return make_shared<C>(config);
+    }
 
     // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a BoxOfWrappedWrapped
     class ConfigArray : public Object

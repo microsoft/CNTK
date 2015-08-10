@@ -6,6 +6,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     using namespace std;
 
+    // objects that can print their content
+
+    struct HasToString { virtual wstring ToString() const = 0; };
+
     // All values that can be used in config files
     //  - are heap objects
     //     - primitives are wrapped
