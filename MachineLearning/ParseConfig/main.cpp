@@ -34,9 +34,9 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                           L"do = new PrintAction [ what = val ] \n"
                           L"A = Parameters(13,42) ; val = A*A+A-A ";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8;
-        let parserTest = parserTest5;
+        let parserTest = parserTest8;
         let expr = ParseConfigString(parserTest);
-        expr->Dump();
+        //expr->Dump();
         Do(expr);
         //ParseConfigFile(L"c:/me/test.txt")->Dump();
     }
