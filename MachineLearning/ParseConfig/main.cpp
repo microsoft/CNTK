@@ -32,9 +32,9 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest7 = L"do = new PrintAction [ what = val ] ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ";
         let parserTest8 = L"Parameters(O,I) = new ComputationNode [ class = 'LearnableParameter'; outDim=O; inDim=I ] \n"
                           L"do = new PrintAction [ what = val ] \n"
-                          L"A = Parameters(13,42) ; val = A*A+A-A ";
+                          L"A = Parameters(13,42) ; B = A*A+A ; val = B*B+A-A ";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8;
-        let parserTest = parserTest6;
+        let parserTest = parserTest8;
         let expr = ParseConfigString(parserTest);
         //expr->Dump();
         Do(expr);

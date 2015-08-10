@@ -4,6 +4,7 @@
 
 #include "ConfigEvaluator.h"
 #include <deque>
+#include <set>
 #include <functional>
 #include <memory>
 #include <cmath>
@@ -50,6 +51,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
 
+    set<wstring> nodesPrinted;      // HACK: ToString only formats nodes not already in here
+
     struct ComputationNode : public Object, public HasToString
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
@@ -64,7 +67,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         virtual const wchar_t * TypeName() const = 0;
         const wstring & NodeName() const { return m_nodeName; }
 
-        ComputationNode() : m_nodeName(L"someNode") { }
+        ComputationNode()
+        {
+            // node nmaes are not implemented yet; use a unique node name instead
+            static int nodeIndex = 1;
+            m_nodeName = wstrprintf(L"anonymousNode%d", nodeIndex);
+            nodeIndex++;
+        }
 
         virtual void AttachInputs(ComputationNodePtr leftNode, ComputationNodePtr rightNode)
         {
@@ -72,9 +81,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             m_children[0] = leftNode;
             m_children[1] = rightNode;
         }
+        virtual void AttachInputs(ComputationNodePtr arg)
+        {
+            m_children.resize(1);
+            m_children[0] = arg;
+        }
 
         /*implement*/ wstring ToString() const
         {
+            // hack: remember we were already formatted
+            let res = nodesPrinted.insert(NodeName());
+            let alreadyPrinted = !res.second;
+            if (alreadyPrinted)
+                return NodeName() + L"^";
             // we format it like "[TYPE] ( args )"
             wstring result = NodeName() + L" : " + wstring(TypeName());
             if (m_children.empty()) result.append(L"()");
@@ -96,6 +115,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
     typedef ComputationNode::ComputationNodePtr ComputationNodePtr;
+    class UnaryComputationNode : public ComputationNode
+    {
+    public:
+        UnaryComputationNode(ComputationNodePtr arg)
+        {
+            AttachInputs(arg);
+        }
+    };
     class BinaryComputationNode : public ComputationNode
     {
     public:
@@ -160,14 +187,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
         size_t outDim, inDim;
     public:
-        LearnableParameter(size_t inDim, size_t outDim) : outDim(outDim), inDim(inDim)
+        LearnableParameter(size_t outDim, size_t inDim) : outDim(outDim), inDim(inDim)
         {
         }
         /*implement*/ const wchar_t * TypeName() const { return L"LearnableParameter"; }
         /*implement*/ wstring ToString() const
         {
-            // we format it like "[TYPE] ( args )"
-            return wstrprintf(L"%ls : %ls (%d, %d)", NodeName().c_str(), TypeName(), (int)outDim, (int)inDim);
+            let res = nodesPrinted.insert(NodeName());
+            let alreadyPrinted = !res.second;
+            if (alreadyPrinted)
+                return NodeName() + L"^";
+            else
+                return wstrprintf(L"%ls : %ls (%d, %d)", NodeName().c_str(), TypeName(), (int)outDim, (int)inDim);
         }
     };
     // factory function for ComputationNodes
@@ -245,6 +276,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         else
             return msra::strfun::utf16(arg.TypeName());             // cannot print this type
     }
+
+    // Network class
+    class Network : public Object
+    {
+    };
+
+    class NDLNetwork : public Network
+    {
+        map<wstring, ComputationNodePtr> nodes; // nodes in this network
+    public:
+        NDLNetwork(const ConfigRecord & config)
+        {
+            // we collect all ComputationNodes from the config; that's it
+            let members = config.GetMembers();
+            for (auto iter : members)
+            {
+                if (!iter.second.Is<ComputationNode>())
+                    continue;
+                nodes[iter.first] = (ComputationNodePtr)config[iter.first];
+            }
+        }
+    };
 
     // sample objects to implement functions
     class StringFunction : public String
@@ -758,6 +811,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 // ComputationNodes
                 DefineRuntimeType(ComputationNode),
+                // other relevant classes
+                DefineRuntimeType(NDLNetwork),
                 // Functions
                 DefineRuntimeType(StringFunction),
                 // Actions
