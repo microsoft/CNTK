@@ -27,11 +27,15 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest2 = L"i2s(i) = new StringFunction [ what = 'format' ; arg = i ; how = '.2' ] ; print(s) = new PrintAction [ what = s ] ; do = print('result=' + i2s(delta+(( [ v = (i => i + 1) ].v(5)))+13)) ; delta = 42 ";
         let parserTest3 = L"do = new PrintAction [ what = text ] ; text = 'hello' ";
         let parserTest4 = L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; arg = (13:(fortytwo:1):100) ; how = '' ] ];fortytwo=42 ";
+        let parserTest5 = L"do = new PrintAction [ what = arr ] ; val=13:14; arr = array [1..10] (i => 2*i) ";
+        let parserTest6 = L"do = new PrintAction [ what = arg[N] ] ; N = 5 ; arr = array [1..N] (i => if i > 1 then arr[i-1]*i else i) ; arg = arr ";
         parserTest1;
         parserTest2;
         parserTest3;
         parserTest4;
-        let parserTest = parserTest2;
+        parserTest5;
+        parserTest6;
+        let parserTest = parserTest6;
         let expr = ParseConfigString(parserTest);
         expr->Dump();
         Do(expr);
