@@ -30,9 +30,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             pos++;
         }
     }
-    static wstring NestString(wstring s, wchar_t open, wchar_t close)
+    static wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close)
     {
-        wstring result = IndentString(s, 2) + L"  ";
+        wstring result = IndentString(s, 2);
+        if (newline)        // have a new line after the open symbol
+            result = L" \n" + result + L"\n ";
+        else
+            result.append(L"  ");
         result.front() = open;
         result.back() = close;
         return result;
@@ -56,6 +60,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         wstring m_nodeName;                     // node name in the graph
 
         virtual const wchar_t * TypeName() const = 0;
+        const wstring & NodeName() const { return m_nodeName; }
+
+        ComputationNode() : m_nodeName(L"someNode") { }
 
         virtual void AttachInputs(ComputationNodePtr leftNode, ComputationNodePtr rightNode)
         {
@@ -66,7 +73,24 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         /*implement*/ wstring ToString() const
         {
-            return wstrprintf(L"%ls (%d inputs)", TypeName(), (int)m_children.size());
+            // we format it like "[TYPE] ( args )"
+            wstring result = NodeName() + L" : " + wstring(TypeName());
+            if (m_children.empty()) result.append(L"()");
+            else
+            {
+                wstring args;
+                bool first = true;
+                for (auto & child : m_children)
+                {
+                    if (first)
+                        first = false;
+                    else
+                        args.append(L"\n");
+                    args.append(child->ToString());
+                }
+                result += L" " + NestString(args, L'(', true, ')');
+            }
+            return result;
         }
     };
     typedef ComputationNode::ComputationNodePtr ComputationNodePtr;
@@ -132,12 +156,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
     class LearnableParameter : public ComputationNode
     {
+        size_t outDim, inDim;
     public:
-        LearnableParameter(size_t inDim, size_t outDim)
+        LearnableParameter(size_t inDim, size_t outDim) : outDim(outDim), inDim(inDim)
         {
-            outDim; inDim;
         }
         /*implement*/ const wchar_t * TypeName() const { return L"LearnableParameter"; }
+        /*implement*/ wstring ToString() const
+        {
+            // we format it like "[TYPE] ( args )"
+            return wstrprintf(L"%ls : %ls (%d, %d)", NodeName().c_str(), TypeName(), (int)outDim, (int)inDim);
+        }
     };
     // factory function for ComputationNodes
     template<>
@@ -194,7 +223,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 result.append(L" = ");
                 result.append(FormatConfigValue(iter.second, how));
             }
-            return NestString(result, L'[', L']');
+            return NestString(result, L'[', true, L']');
         }
         else if (arg.Is<ConfigArray>())
         {
@@ -207,7 +236,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     result.append(L"\n");
                 result.append(FormatConfigValue(arr->At(i, TextLocation()), how));
             }
-            return NestString(result, L'(', L')');
+            return NestString(result, L'(', false, L')');
         }
         else if (arg.Is<HasToString>())
             return arg.As<HasToString>().ToString();
