@@ -1161,11 +1161,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // Sets the utterance boundary.
                     if (m_framemode == false)
                     {
-                        // If <m_truncated> is false, then the whole utterance
-                        // will be loaded into the minibatch.
-                        if (m_truncated == false)
+                        if (startFrame == 0)
                         {
-                            assert(startFrame == 0);
                             m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
                             m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
                         }
@@ -1227,11 +1224,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // minibatch, and then load it.
                     if (m_framemode == false)
                     {
-                        // If <m_truncated> is false, then the whole utterance
-                        // will be loaded into the minibatch.
-                        if (m_truncated == false)
+                        if (startFrame == 0)
                         {
-                            assert(startFrame == 0);
                             m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
                             m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
                         }
