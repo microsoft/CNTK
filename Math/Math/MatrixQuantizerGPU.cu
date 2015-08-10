@@ -78,28 +78,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEventSynchronize(ev) || "cudaEventSynchronize failed";
     }
 
-
-    //lazy initialization 
-    template<class ElemType>
-    int MatrixQuantizerGPU<ElemType>::numDevices = -1;
-    
-    template<class ElemType>
-    size_t MatrixQuantizerGPU<ElemType>::GetNumDevice()
-    {
-        if (numDevices < 0)
-        {
-            cudaGetDeviceCount(&numDevices) || "cudaGetDeviceCount failed";
-            fprintf(stderr, "MatrixQuantizerGPU::GetNumDevice: %d physical CUDA devices detected\n", numDevices);
-        }
-        return numDevices;
-    }
-
     //streams
     template<class ElemType>
-    std::vector<cudaStream_t> MatrixQuantizerGPU<ElemType>::m_fetchStreams;
+    cudaStream_t MatrixQuantizerGPU<ElemType>::m_fetchStream = NULL;
     
     template<class ElemType>
-    std::vector<cudaStream_t> MatrixQuantizerGPU<ElemType>::m_assignStreams;
+    cudaStream_t MatrixQuantizerGPU<ElemType>::m_assignStream = NULL;
     
     template<class ElemType>
     cudaStream_t MatrixQuantizerGPU<ElemType>::GetComputeStream() const
@@ -110,19 +94,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     cudaStream_t MatrixQuantizerGPU<ElemType>::GetFetchStream()  const
     {
-        return  m_fetchStreams[this->GetDeviceId()]; 
+        return  m_fetchStream; 
     }
     
     template<class ElemType>
     cudaStream_t MatrixQuantizerGPU<ElemType>::GetAssignStream() const
     {
-        return  m_assignStreams[this->GetDeviceId()];
+        return  m_assignStream;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // computestream: the stream the caller issued the quant op on
     template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::FlagQuantizeCompleteEvent(cudaStream_t computestream) const
+    void MatrixQuantizerGPU<ElemType>::RecordQuantizeCompleteEvent(cudaStream_t computestream) const
     {
         // schedule to flag the quantize-complete event (on main stream)
         cudaEventRecord(m_quantizeCompleteEvent, computestream) || "cudaEventRecord failed";
@@ -135,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::SyncQuantizeCompleEventAndFetchAndFlagFetchCompleteEvent(char *cpuBuffer, char*gpuBuffer, size_t size) const
+    void MatrixQuantizerGPU<ElemType>::SyncQuantizeCompleEventAndFetchAndRecordFetchCompleteEvent(char *cpuBuffer, char*gpuBuffer, size_t size) const
     {
         // schedule fetch stream to wait until the last quantize op is complete, i.e. the data in the buffer is now valid
         // wait until commencement
@@ -153,14 +137,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // schedule main stream to wait until fetch is complete, i.e. buffer is free again to be written to by GPU code
-    // computestream: the stream the caller issued the quant op on
-    template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::SyncFetchCompleteEvent(cudaStream_t computestream) const
-    {
-        cudaStreamWaitEvent(computestream, m_fetchCompleteEvent, 0/*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";    // wait until commencement
-    }
-
     template<class ElemType>
     void MatrixQuantizerGPU<ElemType>::SyncAssignCompleteEvent(cudaStream_t computestream) const
     {
@@ -176,8 +152,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    QuantizedMatrix<ElemType>& MatrixQuantizerGPU<ElemType>::GetTempGPUQuantizedMatrix(size_t nBits)
+    QuantizedMatrix<ElemType>& MatrixQuantizerGPU<ElemType>::GetTempGPUQuantizedMatrix(size_t nBits, bool& newlyAllocated)
     {
+        newlyAllocated = false;
+
         // Check if the existing one is good for our needs
         if ((m_tempGPUQuantizedMatrix != nullptr) && (m_tempGPUQuantizedMatrix->GetNumBits() == nBits))
         {
@@ -191,7 +169,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         m_tempGPUQuantizedMatrix = new QuantizedMatrix<ElemType>(this->m_inMatrix.GetNumRows(), this->m_inMatrix.GetNumCols(), nBits, this->GetDeviceId());
-        
+        newlyAllocated = true;
+
         return *m_tempGPUQuantizedMatrix;
     }    
     
@@ -208,19 +187,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEventCreateWithFlags(&m_fetchCompleteEvent, cudaEventDisableTiming) || "cudaEventCreateWithFlags failed";
         cudaEventCreateWithFlags(&m_assignCompleteEvent, cudaEventDisableTiming) || "cudaEventCreateWithFlags failed";
 
-        // lazily create the shared transfer streams
-        // Using one stream for now for each purpose, shared per device (we can only do one transfer at a time with one stream). For model parallelism, they need to be device-specific.
-        if (m_fetchStreams.empty())
-        {
-            m_fetchStreams.resize(GetNumDevice(), NULL);
-            m_assignStreams.resize(GetNumDevice(), NULL);
-        }
-        
 #pragma warning (disable: 4127)
-        if (!m_fetchStreams[this->GetDeviceId()])
+        if (m_fetchStream == NULL)
         {
-            cudaStreamCreateWithFlags(&m_fetchStreams[this->GetDeviceId()], cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed";
-            cudaStreamCreateWithFlags(&m_assignStreams[this->GetDeviceId()], cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed";
+            cudaStreamCreateWithFlags(&m_fetchStream, cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed";
+            cudaStreamCreateWithFlags(&m_assignStream, cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed";
         }
     }
 
@@ -233,19 +204,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempGPUQuantizedMatrix = nullptr;
         }
         
-        try
-        {
-            // BUGBUG: we don't destroy our streams (they are static variables); we need a static destructor, I am too lazy now
-            cudaEventDestroy(m_assignCompleteEvent);
-            cudaEventDestroy(m_fetchCompleteEvent);
-            cudaEventDestroy(m_quantizeCompleteEvent);
-            Sync();
-        }
-        catch (const std::exception &)
-        {
-            fflush(stderr);        // needed?
-            throw;
-        }
+        // BUGBUG: we don't destroy our streams (they are static variables); we need a static destructor, I am too lazy now
+        cudaEventDestroy(m_assignCompleteEvent);
+        cudaEventDestroy(m_fetchCompleteEvent);
+        cudaEventDestroy(m_quantizeCompleteEvent);
     }
 
     template<class ElemType>
@@ -259,10 +221,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PrepareDevice(this->GetDeviceId());
         if (m_forceSync) 
         {
-            Sync();             
+            Sync();
         }
         
-        QuantizedMatrix<ElemType>& outQMatrixGPU = (outQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(nBits) : outQMatrix;
+        bool GPUMatrixNewlyAllocated = false;
+        QuantizedMatrix<ElemType>& outQMatrixGPU = (outQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(nBits, GPUMatrixNewlyAllocated) : outQMatrix;
 
         // Do the quantization on compute sstream and insert event into stream
         _QuantizeMatrix<ElemType>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(),
@@ -270,13 +233,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                   outQMatrixGPU.GetArray(), nBits, GetComputeStream(),
                                   this->m_residual->BufferPointer());
         
-        FlagQuantizeCompleteEvent(GetComputeStream());            
+        RecordQuantizeCompleteEvent(GetComputeStream());
 
         // copy from gpu to cpu if needed
         m_quantizeOpIncludedFetch = false;
         if (outQMatrix.GetDeviceId() == CPUDEVICE)
         {
-            SyncQuantizeCompleEventAndFetchAndFlagFetchCompleteEvent(outQMatrix.GetArray(), outQMatrixGPU.GetArray(), outQMatrixGPU.GetSize());
+            SyncQuantizeCompleEventAndFetchAndRecordFetchCompleteEvent(outQMatrix.GetArray(), outQMatrixGPU.GetArray(), outQMatrixGPU.GetSize());
             m_quantizeOpIncludedFetch = true;
         }
     }
@@ -309,10 +272,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Verify  input matrix parameter's dimensions
         assert((inQMatrix.GetNumRows() == outMatrix.GetNumRows()) && (inQMatrix.GetNumCols() == outMatrix.GetNumCols()));                
         
-        QuantizedMatrix<ElemType>& inQMatrixGPU = (inQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(nBits) : inQMatrix;
+        bool GPUMatrixNewlyAllocated = false;
+        QuantizedMatrix<ElemType>& inQMatrixGPU = (inQMatrix.GetDeviceId() == CPUDEVICE) ? GetTempGPUQuantizedMatrix(nBits, GPUMatrixNewlyAllocated) : inQMatrix;
         
         if (inQMatrix.GetDeviceId() == CPUDEVICE)
         {
+            // If the intermediate GPU Matrix was newly allocated, we need to wait for its zeroing to finish
+            // before assigning the inQMatrix contents
+            if (GPUMatrixNewlyAllocated)
+            {
+                cudaEventRecord(m_assignCompleteEvent, GetComputeStream()) || "cudaEventRecord failed";
+                cudaStreamWaitEvent(GetAssignStream(), m_assignCompleteEvent, 0/*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
+            }
+
             // schedule assign to GPU (on transfer stream)
             cudaMemcpyAsync(inQMatrixGPU.GetArray(), inQMatrix.GetArray(), inQMatrix.GetSize(), cudaMemcpyHostToDevice, GetAssignStream()) || "cudaMemcpyAsync failed";
             
@@ -325,7 +297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             
             // let the computing stream wait for the assign complete
-            SyncAssignCompleteEvent(GetComputeStream());            
+            SyncAssignCompleteEvent(GetComputeStream());
         }            
         
         //do the actually unquantization 
@@ -333,8 +305,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             outMatrix.BufferPointer(), outMatrix.GetNumRows(), outMatrix.GetNumCols(),
             nBits, add, GetComputeStream());
 
-        //flag the event of quantization
-        FlagQuantizeCompleteEvent(GetComputeStream());
+        // Record the event of unquantization
+        RecordQuantizeCompleteEvent(GetComputeStream());
     }
 
     template<class ElemType>

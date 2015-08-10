@@ -18,9 +18,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixQuantizerGPU(const Matrix<ElemType>& inMatrix, bool forceSync = false);
         ~MatrixQuantizerGPU();
 
-        // Disallow copy construction and assignment
+        // Disallow copy and move construction and assignment
         MatrixQuantizerGPU(const MatrixQuantizerGPU&) = delete;
         MatrixQuantizerGPU& operator=(const MatrixQuantizerGPU&) = delete;
+        MatrixQuantizerGPU(MatrixQuantizerGPU&&) = delete;
+        MatrixQuantizerGPU& operator=(MatrixQuantizerGPU&&) = delete;
 
         void QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix) override;
         void WaitQuantizeAsyncDone() override;
@@ -30,11 +32,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:        
         //helper functions
-        QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t nBits);
+        QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t nBits, bool& newlyAllocated);
         
-        void FlagQuantizeCompleteEvent(cudaStream_t computestream) const;
-        void SyncQuantizeCompleEventAndFetchAndFlagFetchCompleteEvent(char *cpuBuffer, char*gpuBuffer, size_t size) const;
-        void SyncFetchCompleteEvent(cudaStream_t computestream)const;
+        void RecordQuantizeCompleteEvent(cudaStream_t computestream) const;
+        void SyncQuantizeCompleEventAndFetchAndRecordFetchCompleteEvent(char *cpuBuffer, char*gpuBuffer, size_t size) const;
         void SyncAssignCompleteEvent(cudaStream_t computestream)const;
 
         //for concurrent computation and memcpy
@@ -49,16 +50,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         //helper functions for gpus
-        static size_t GetNumDevice();
         static void Sync();
         static void SyncStream(cudaStream_t stream);
         static void SyncEvent(cudaEvent_t ev);
         
     private:
-        static  int numDevices;
-        
-        static std::vector<cudaStream_t> m_fetchStreams;
-        static std::vector<cudaStream_t> m_assignStreams;
+        static cudaStream_t m_fetchStream;
+        static cudaStream_t m_assignStream;
 
         mutable cudaEvent_t m_quantizeCompleteEvent;
         mutable cudaEvent_t m_fetchCompleteEvent;
@@ -66,7 +64,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool m_forceSync;
         bool m_quantizeOpIncludedFetch;
-        QuantizedMatrix<ElemType>* m_tempGPUQuantizedMatrix; // A temporary intermediate QuantizedMatrix buffer on the GPU               
+
+        // A temporary intermediate QuantizedMatrix buffer on the GPU
+        QuantizedMatrix<ElemType>* m_tempGPUQuantizedMatrix; 
     };
     
 }}}
