@@ -21,31 +21,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - array of                              // one for each column
 //     - lower bound: float
 //     - upper bound: float
-//     - array of 'qbwords'                 // same for each column, rounded to multiple of 32 bits
-// one quantized column with header
+//     - array of 'QWords'                 // same for each column, rounded to multiple of number of bits in a QWord
 // This is a variable-length structure.
 // A matrix is an array of these.
 template<class ElemType>    
 struct QuantizedColumn
 {
+    typedef typename ValueQuantizer<ElemType>::QWord QWord;
+    static const size_t QWordNumBits = ValueQuantizer<ElemType>::QWordNumBits;
+
 public:
-    ElemType lower;                            // quantization range for this column
-    ElemType upper;                             // 
-    QBWord bits[1/*variable*/];                  // variable-size array to hold the bits, grouped into 'qbwords'
+    // quantization range for this column
+    ElemType lower;
+    ElemType upper;
+
+    // variable-size array to hold the bits, grouped into 'QWords'
+    QWord bits[1];
 
     // required storage size of one columne in bytes for a given column
-    // (incl. header, aligned to 4 bytes for 'float')
     cudasharedcode
-    static size_t QuantizedColumnSize (size_t bits, size_t rows) 
+    static size_t QuantizedColumnSize(size_t bits, size_t rows) 
     {
-        const size_t columnDataSize = (rows * bits + (qbwordbits-1)) / qbwordbits * sizeof(QBWord);       // bit array for one column, rounded to multiple of 4 bytes
-        return 2 * sizeof (float) + columnDataSize;
+        // bit array for one column, rounded to multiple of QWord size
+        const size_t columnDataSize = (((rows * bits) + (QWordNumBits - 1)) / QWordNumBits) * sizeof(QWord);
+        return (2 * sizeof(ElemType)) + columnDataSize;
     }
 };
 
 template<class ElemType>
 class MATH_API QuantizedMatrix
 {
+    static const size_t QWordNumBits = ValueQuantizer<ElemType>::QWordNumBits;
+
 public:       
     QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, short deviceId, MemAllocator* allocator = nullptr);
     
@@ -77,7 +84,7 @@ public:
     
     QuantizedColumn<ElemType>* GetQuantizedColumn(size_t colIdx)
     {
-        return (QuantizedColumn<ElemType>*)&((this->GetArray())[m_qColSize * colIdx]);
+        return (QuantizedColumn<ElemType>*)(&((this->GetArray())[m_qColSize * colIdx]));
     }
     
     Matrix<char>* GetQuantizedData() const
@@ -102,7 +109,9 @@ private:
     size_t m_numRows;  
     size_t m_numCols;
     size_t m_numBits;
-    size_t m_qColSize; //number of bytes in a quantized column
+
+    //number of bytes in a quantized column
+    size_t m_qColSize; 
 
     template <typename T>
     friend class MatrixQuantizer;

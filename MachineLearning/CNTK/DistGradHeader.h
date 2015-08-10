@@ -9,7 +9,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t numSample;
         ElemType criterion;
 
-        // variable-size array to hold the bits, grouped into 'qbwords'
+        // variable-size array
         int numEvalNode;
         ElemType evalErrors[1];
 

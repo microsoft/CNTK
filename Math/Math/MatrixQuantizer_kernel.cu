@@ -136,36 +136,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t colSizeByte = Microsoft::MSR::CNTK::QuantizedColumn<ElemType>::QuantizedColumnSize(bits, rows);
         auto & qcol = *(Microsoft::MSR::CNTK::QuantizedColumn<ElemType>*)&qpackage[colSizeByte * j];
 
-        //compiler problem?
-        //subset, subsets, allreducef<subsets>, allreducen<subsets>);
         Microsoft::MSR::CNTK::ColumnQuantizer<ElemType>::ComputeRangeStatColjSubset(us, inResidual, M, j, bits, qcol.lower, qcol.upper,
             subset, REDUCTION_BLOCK_SIZE, allreduce<ElemType, REDUCTION_BLOCK_SIZE>, allreduce<unsigned int, REDUCTION_BLOCK_SIZE>);
-
-        //CUPRINTF("%d %f %f\n", j, qcol.lower, qcol.upper);
     }
 
     //caller: griddim and blockdim should be both 1d
-    //total thread number is: totalNumQBWordsAlMatrix = numCols() * numQBWordsPerCol
+    //total thread number is: totalNumQWordsAlMatrix = numCols() * numQWordsPerCol
     //called to quantize a GPU matrix
     template<class ElemType>
-    __global__ void _QuantizeStripjOneQbword(
+    __global__ void _QuantizeStripjOneQWord(
         const ElemType* us,
         ElemType* curResidual,
         long M, long N,
-        char*qMat,
+        char* qMat,
         size_t qColSize,
-        size_t numQbwordsPerCol,
+        size_t numQWordsPerCol,
         size_t ldNbits,
         ElemType*  newResidual)
     {
         // map our thread index into a linear index
         const size_t linindex = ParallelizeOverRangeIndex();
 
-        // map to (qbword index, column index)
-        const size_t j = linindex / numQbwordsPerCol;
+        // map to (QWord index, column index)
+        const size_t j = linindex / numQWordsPerCol;
         if (j >= N)         // out of col range
             return;
-        const size_t iqbword = linindex % numQbwordsPerCol;
+
+        const size_t iQWord = linindex % numQWordsPerCol;
 
         // get data pointers to the quantized column
         auto & qCol = *(Microsoft::MSR::CNTK::QuantizedColumn<ElemType>*)&qMat[qColSize * j];
@@ -173,32 +170,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //and quantizer
         const  Microsoft::MSR::CNTK::ColumnQuantizer<ElemType> q(ldNbits, qCol.lower, qCol.upper);
 
-        // quantize one qbword to qCol[iqbword]
-        qCol.bits[iqbword] = q.QuantizeOneQbword(us, curResidual, M, iqbword, M, numQbwordsPerCol, j, newResidual);
-
-        //CUPRINTF("[col%d qword%d %d]\n", j, iqbword, qCol.bits[iqbword]);
+        // quantize one QWord to qCol[iQWord]
+        qCol.bits[iQWord] = q.QuantizeOneQWord(us, curResidual, M, iQWord, M, numQWordsPerCol, j, newResidual);
     }
 
-
     template<class ElemType>
-    __global__ void UnquantizeStripejOneQbWord(ElemType* us, const long M, const long N, const char* qpackage, size_t colsize, size_t numqbwordspercol, size_t ldNbits, bool add)
+    __global__ void UnquantizeStripejOneQWord(ElemType* us, const long M, const long N, const char* qpackage, size_t colsize, size_t numQWordsPerCol, size_t ldNbits, bool add)
     {
         // this follows the same as  quantizestripej()
         // map our thread index into a linear index
         const size_t linindex = ParallelizeOverRangeIndex();
-        // map to (qbword index, column index)
-        const size_t j = linindex / numqbwordspercol;
+        // map to (QWord index, column index)
+        const size_t j = linindex / numQWordsPerCol;
+
         if (j >= N)         // out of col range 
             return;
-        const size_t iqbword = linindex % numqbwordspercol;
+
+        const size_t iQWord = linindex % numQWordsPerCol;
+
         // get data pointers and quantizer
         const auto & qcol = *(const Microsoft::MSR::CNTK::QuantizedColumn<ElemType>*)&qpackage[colsize * j];
-        const float lower = qcol.lower;
-        const float upper = qcol.upper;
+        const ElemType lower = qcol.lower;
+        const ElemType upper = qcol.upper;
         Microsoft::MSR::CNTK::ColumnQuantizer<ElemType> q(ldNbits, lower, upper);
-        // unquantize from this one qbword
-        q.UnquantizeOneQbword(us, M, iqbword, M, numqbwordspercol, j, qcol.bits[iqbword], add);
-        //CUPRINTF("%f  %f\n", lower, upper);
+        // unquantize from this one QWord
+        q.UnquantizeOneQWord(us, M, iQWord, M, numQWordsPerCol, j, qcol.bits[iQWord], add);
     }
 
 
@@ -248,14 +244,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //     - re-linearize block index and thread index
         //     - map to (i,j) coordinate (start of the set of floats)
 
-        const size_t numqbwordspercol = Microsoft::MSR::CNTK::ColumnQuantizer<ElemType>::QbwordsPerCol(nRow, Nbits);
-        const size_t totalqbwords = nCol * numqbwordspercol;
+        const size_t numQWordsPerCol = Microsoft::MSR::CNTK::ColumnQuantizer<ElemType>::QWordsPerCol(nRow, Nbits);
+        const size_t totalQWords = nCol * numQWordsPerCol;
 
         const size_t colsizebyte = Microsoft::MSR::CNTK::QuantizedColumn<ElemType>::QuantizedColumnSize(Nbits, nRow);
 
         dim3 griddim, blockdim;
-        ParallelizeOverRangeDim(totalqbwords, griddim, blockdim, 256);
-        _QuantizeStripjOneQbword<ElemType> <<< griddim, blockdim, 0, stream >>>(us, curResidual, M, N, qPackage, colsizebyte, numqbwordspercol, ldNbits, newResidual);
+        ParallelizeOverRangeDim(totalQWords, griddim, blockdim, 256);
+        _QuantizeStripjOneQWord<ElemType> << < griddim, blockdim, 0, stream >> >(us, curResidual, M, N, qPackage, colsizebyte, numQWordsPerCol, ldNbits, newResidual);
     }
 
     // unquantize
@@ -280,14 +276,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // #bits must be a power of two; we operate on shift values
         const size_t ldNbits = ValueQuantizer<ElemType>::ld(nBits);
         // unquantize in the same thread layout as quantize(), see there
-        const size_t numqbwordspercol = ColumnQuantizer<ElemType>::QbwordsPerCol(M, nBits);
-        const size_t totalqbwords = N * numqbwordspercol;
+        const size_t numQWordsPerCol = ColumnQuantizer<ElemType>::QWordsPerCol(M, nBits);
+        const size_t totalQWords = N * numQWordsPerCol;
 
         const size_t colsize = QuantizedColumn<ElemType>::QuantizedColumnSize(nBits, M);
 
         dim3 griddim, blockdim;
-        ParallelizeOverRangeDim(totalqbwords, griddim, blockdim, 256);
-        UnquantizeStripejOneQbWord <<<griddim, blockdim, 0, stream >>> (us,M, N, gpuBuffer, colsize, numqbwordspercol, ldNbits, add);
+        ParallelizeOverRangeDim(totalQWords, griddim, blockdim, 256);
+        UnquantizeStripejOneQWord << <griddim, blockdim, 0, stream >> > (us, M, N, gpuBuffer, colsize, numQWordsPerCol, ldNbits, add);
     }
 
 }}}
