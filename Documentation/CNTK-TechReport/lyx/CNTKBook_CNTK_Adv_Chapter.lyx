@@ -2080,6 +2080,45 @@ m - input matrix
 \end_layout
 
 \begin_layout Subsubsection
+SumColumnElements
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+SumColumnElements
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Calculate the sum of all elements in each column of the input matrix.
+ The result is a row vector.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+SumColumnElements(m)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix 
+\end_layout
+
+\begin_layout Subsubsection
 Negate
 \begin_inset Index idx
 status open
@@ -2116,6 +2155,55 @@ Negate(m)
 
 \begin_layout Itemize
 m - input matrix.
+\end_layout
+
+\begin_layout Subsubsection
+Reshape
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+Reshape
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Reshape the input matrix.
+ The resulting matrix has the same number of elements as that of the input
+ matrix but is interpreted differently.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Reshape(m, numRows, [imageWidth=], [imageHeight=], [imageChannels=]
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m - input matrix.
+\end_layout
+
+\begin_layout Itemize
+numRows - reshape to a matrix with numRows rows.
+\end_layout
+
+\begin_layout Itemize
+imageWidth, imageHeight, imageChannels - are named optional parameters that
+ allow you to interpret each column as images with different dimensions.
 \end_layout
 
 \begin_layout Subsubsection
@@ -2401,23 +2489,13 @@ Minus
 
 \end_inset
 
-, ElementTimes
-\begin_inset Index idx
-status open
-
-\begin_layout Plain Layout
-ElementTimes
-\end_layout
-
-\end_inset
-
 
 \end_layout
 
 \begin_layout Standard
-Calculate the sum (Plus), difference (Minus), or element-wise product (ElementTi
-mes) of two matrices.
- The resulting matrices have the same dimension as that of the input matrices.
+Calculate the sum (Plus) and difference (Minus) of two matrices.
+ The resulting matrices have the same dimension as that of the input matrix
+ with larger dimension.
  The syntax is
 \end_layout
 
@@ -2436,9 +2514,75 @@ Plus(m1, m2)
 Minus(m1, m2)
 \end_layout
 
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+m1, m2 - input matrices.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+ElementTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ElementTimes
+\end_layout
+
+\end_inset
+
+, RowElementTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+RowElementTimes
+\end_layout
+
+\end_inset
+
+, ColumnElementTimes
+\begin_inset Index idx
+status open
+
+\begin_layout Plain Layout
+ColumnElementTimes
+\end_layout
+
+\end_inset
+
+, 
+\end_layout
+
+\begin_layout Standard
+Calculate the element-wise product of two matrices.
+ The resulting matrices have the same dimension as that of the input matrix
+ with larger dimension.
+ The syntax is
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
 \begin_layout Plain Layout
 
 ElementTimes(m1, m2)
+\end_layout
+
+\begin_layout Plain Layout
+
+RowElementTimes(m, vrow)
+\end_layout
+
+\begin_layout Plain Layout
+
+ColumnElementTimes(m, vcol)
 \end_layout
 
 \end_inset
@@ -2447,8 +2591,18 @@ ElementTimes(m1, m2)
 \end_layout
 
 \begin_layout Itemize
-m1, m2 - input matrices.
- Must be the same dimensions.
+m1, m2, m - input matrices.
+ 
+\end_layout
+
+\begin_layout Itemize
+vrow, vcol - row and column vectors
+\end_layout
+
+\begin_layout Standard
+m1 and m2 must have same dimension in ElementTimes.
+ m and vrow must have same number of columns in RowElementTimes, and m and
+ vcol must have same number of rows in ColumnElementTimes.
 \end_layout
 
 \begin_layout Subsubsection
@@ -3547,7 +3701,7 @@ stepH - step (or stride) used in the height direction
 \end_layout
 
 \begin_layout Subsubsection
-Delay
+PastValue (or Delay
 \begin_inset Index idx
 status open
 
@@ -3557,11 +3711,21 @@ Delay
 
 \end_inset
 
+) and FutureValue
+\begin_inset Index idx
+status open
 
+\begin_layout Plain Layout
+FutureValue
+\end_layout
+
+\end_inset
+
+ 
 \end_layout
 
 \begin_layout Standard
-Used to apply a value in the past to the current time.
+Used to get the past or future value of a node.
  It is most often used to create recurrent networks.
  The resulting matrix has the same dimension as that of the input matrix.
  The syntax is
@@ -3574,7 +3738,17 @@ status open
 
 \begin_layout Plain Layout
 
-Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1])
+PastValue(rows, [cols], m, [timeStep=1, defaultHiddenActivity=0.1])
+\end_layout
+
+\begin_layout Plain Layout
+
+Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1]) #deprecated
+\end_layout
+
+\begin_layout Plain Layout
+
+FutureValue(rows, [cols], m, [timeStep=1, defaultHiddenActivity=0.1])
 \end_layout
 
 \end_inset
@@ -3583,19 +3757,19 @@ Delay(rows, [cols], m, [delayTime=1, defaultPastValue=0.1])
 \end_layout
 
 \begin_layout Itemize
-rows - the number of rows in the delay node (and in the input matrix).
+rows - the number of rows in the input matrix.
  This parameter is needed because under some loopy conditions the dimensions
  cannot be automatically inferred from the input matrix.
 \end_layout
 
 \begin_layout Itemize
-cols - the number of columns in the delay node (and in the input matrix).
+cols - the number of columns in the input matrix.
  This parameter is optional since it will be set based on the minibatch
  size during training and testing.
 \end_layout
 
 \begin_layout Itemize
-m - input matrix to be delayed.
+m - input matrix from which the past or future value is obtained.
  Each column is a sample.
  The samples may be from different utterances as explained in Chapter .
 \begin_inset CommandInset ref
@@ -3608,13 +3782,14 @@ reference "chap:CN"
 \end_layout
 
 \begin_layout Itemize
-delayTime - [named optional] the amount of delay.
+timeStep, delayTime - [named optional] the amount of time steps look into
+ past or future.
  Default is 1.
 \end_layout
 
 \begin_layout Itemize
-defaultPastValue - [named optional] the default value to use if the past
- value is not available.
+defaultHiddenActivity, defaultPastValue - [named optional] the default value
+ to use if the past or future values are not available.
  Default is 0.1.
 \end_layout
 
