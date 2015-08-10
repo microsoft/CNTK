@@ -294,7 +294,13 @@ public:
             if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
             {
                 ConfigParameters configDataParallelSGD(configParallelTrain("DataParallelSGD", ""));
-                m_numGradientBits = configDataParallelSGD("gradientBits", "32");
+                const char* defaultGradientBitsStr = (sizeof(ElemType) == sizeof(float)) ? "32" : "64";
+                m_numGradientBits = configDataParallelSGD("gradientBits", defaultGradientBitsStr);
+                if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
+                {
+                    throw std::invalid_argument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
+                }
+
                 m_parallelizationStartEpochNum = configDataParallelSGD("parallelizationStartEpoch", "1");
                 m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
             }

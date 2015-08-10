@@ -24,15 +24,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #include <ppl.h>    // in non-CUDA: also use PPL lib
     #endif
 
-    // quantized values are stored in groups of 'qbwords'     = unsigned ints 
-    // (which happen to memory-align with 'float' as used in 'quantizedcolumn' structure)
-    typedef unsigned int QBWord;                            // one word of storage containing multiple bits
-    static const size_t qbwordbits = 8 * sizeof (QBWord);   // number of bits in a qbword (32)
-        
-    // options for handling the mean for 1-bit quantization
-    
-    // force 1-bit quant to threshold against 0 rather than the midpoint between lower and upper, but use 
+    template <typename ElemType> 
+    class QuantizedWordHelper;
+
+    template<>
+    class QuantizedWordHelper<float>
+    {
+    public:
+        typedef unsigned int ValueType;
+        typedef int ValueTypeSigned;
+        static_assert(sizeof(float) == sizeof(ValueType), "Quantized word size != size of ElemType=float");
+    };
+
+    template<>
+    class QuantizedWordHelper<double>
+    {
+    public:
+        typedef unsigned long long ValueType;
+        typedef long long ValueTypeSigned;
+        static_assert(sizeof(double) == sizeof(ValueType), "Quantized word size != size of ElemType=double");
+    };
+
+    // option for handling the mean for 1-bit quantization    
+    // force 1-bit quant to threshold against 0 rather than the midpoint between lower and upper
     #define ZERO_THRESHOLD_FOR_1BIT 
+
     // in 1-bit quantization, compute the quantization range boundaries including the residual values
     //#define INCLUDE_RESIDUE_FOR_QUANTIZATION_RANGE 
 
@@ -40,9 +56,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class ValueQuantizer
     {
     public:
+        typedef typename QuantizedWordHelper<ElemType>::ValueType QWord;
+        typedef typename QuantizedWordHelper<ElemType>::ValueType QWordVal;
+        typedef typename QuantizedWordHelper<ElemType>::ValueTypeSigned QWordValSigned;
+        static const size_t QWordNumBits = 8 * sizeof(QWord);
+
+    public:
         cudasharedcode ValueQuantizer(size_t ldNbits, ElemType lower, ElemType upper);
-        cudasharedcode unsigned int Quantize(ElemType u) const;                  
-        cudasharedcode ElemType Unquantize(unsigned int u) const;         
+        cudasharedcode QWordVal Quantize(ElemType u) const;
+        cudasharedcode ElemType Unquantize(QWordVal u) const;
 
         cudasharedcode bool Quantize1(ElemType u) const;
         static cudasharedcode ElemType Unquantize1(bool u, ElemType val0, ElemType val1);
@@ -62,12 +84,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static size_t ld(size_t v);
         
     protected:   
-        cudasharedcode unsigned int Quantize32(ElemType u) const;
+        cudasharedcode QWordVal QuantizeToFullQWord(ElemType u) const;
 
     protected:
         /*const*/ size_t ldNbits;   // must be power of two
         /*const*/ size_t Nbits;     // now we quantized to 4 bits i.e. [0, 16)
-        /*const*/ unsigned int rangeend;
+        /*const*/ QWordVal rangeend;
         
         // quantization range
         /*const*/ ElemType quantimin;

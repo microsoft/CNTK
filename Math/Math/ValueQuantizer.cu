@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // must protect against NaN: interval is 0 -> quantization is futile, just emit 0
         if (((quantimax - quantimin) < 1e-36f) || (rangeend == 0))
         {
-            qfactor = ufactor = 0.0f;
+            qfactor = ufactor = (ElemType)0.0;
         }
         else
         {
@@ -36,15 +36,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
     }
 
-    // quantize for 32-bits case (special case that allows to bypass quantization, for testing/debugging purposes)
+    // quantize for full ElemType size bits case (special case that allows to bypass quantization, for testing/debugging purposes)
     template<class ElemType>
-    cudasharedcode unsigned int
-    ValueQuantizer<ElemType>::Quantize32(ElemType u) const
+    cudasharedcode ValueQuantizer<ElemType>::QWordVal
+    ValueQuantizer<ElemType>::QuantizeToFullQWord(ElemType u) const
     {
-        assert ((Nbits == 32) && (sizeof(unsigned int) == 4));
+        assert(Nbits == QWordNumBits);
         
         // we return the bit pattern that encodes the float value
-        return *(unsigned int*)&u;  
+        return *(QWordVal*)&u;
     }
 
     // quantize one value --special version for 1 bit
@@ -56,20 +56,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #ifndef ZERO_THRESHOLD_FOR_1BIT
         return u >= quantimid;
     #else
-        return u >= 0.0f;
+        return u >= (ElemType)0.0;
     #endif
     }
 
     // quantize one value
-    // TODO: we can optimize for 1 bit here very simply... use a template arg 'isonebit'
+    // TODO: we can optimize for 1 bit here - very simply use a template arg 'isonebit'
     template<class ElemType>
-    cudasharedcode unsigned int
+    cudasharedcode ValueQuantizer<ElemType>::QWordVal
     ValueQuantizer<ElemType>::Quantize(ElemType u) const
     {
-        // 32-bits case for hacking
-        if (Nbits == 32)
+        if (Nbits == QWordNumBits)
         {
-            return Quantize32(u);
+            return QuantizeToFullQWord(u);
         }
         // TODO: we may need to optimize this by a template arg
         else if (ldNbits == 0)
@@ -78,19 +77,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            int result = (int) ((u - quantimin) * qfactor);
-            // (note: '(int)' rounds asymmetrically towards 0, but that's OK since we clip against 0
+            QWordValSigned result = (QWordValSigned)((u - quantimin) * qfactor);
+            // (note: signed integers round asymmetrically towards 0, but that's OK since we clip against 0
             if (result < 0)
             {
                 return 0;
             }
-            else if (((unsigned int)result) >= rangeend)
+            else if (((QWordVal)result) >= rangeend)
             {
                 return rangeend - 1;
             }
             else
             {
-                return (unsigned int)result;
+                return (QWordVal)result;
             }
         }
     }
@@ -98,16 +97,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // unquantize one value
     template<class ElemType>
     cudasharedcode  
-    ElemType ValueQuantizer<ElemType>::Unquantize(unsigned int u) const
+    ElemType ValueQuantizer<ElemType>::Unquantize(QWordVal u) const
     {
-        // 32-bits case for hacking
-        if (Nbits == 32)
+        if (Nbits == QWordNumBits)
         {
-            return *(ElemType *)&u;
+            return *(ElemType*)&u;
         }
         
         // Note: in 1-bit case, we want 0.5 -> mean0, 1.5 -> mean1
-        return (u + 0.5f) * ufactor + quantimin;
+        return (u + (ElemType)0.5) * ufactor + quantimin;
     }
 
     // unquantize one value  --special case for 1 bit

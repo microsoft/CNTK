@@ -8,9 +8,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         : m_numRows(numRows), m_numCols(numCols), m_numBits(nbits), m_allocator(allocator)
     {
         m_qColSize = QuantizedColumn<ElemType>::QuantizedColumnSize(m_numBits, m_numRows);
-        if ((qbwordbits / m_numBits) * m_numBits != qbwordbits)
+        if (((QWordNumBits / m_numBits) * m_numBits) != QWordNumBits)
         {
-            throw std::logic_error("Quantization: 'nbits' must be a divisor of 32");
+            throw std::logic_error("Quantization: 'nbits' must be a divisor of 64");
         }
         
         if (m_allocator == nullptr)
@@ -56,13 +56,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         : m_numRows(numRows), m_numCols(numCols), m_numBits(nbits), m_quantizedData(data), m_allocator(nullptr)
     {
         m_qColSize = QuantizedColumn<ElemType>::QuantizedColumnSize(m_numBits, m_numRows);
-        if ((qbwordbits / m_numBits) * m_numBits != qbwordbits)
+        if (((QWordNumBits / m_numBits) * m_numBits) != QWordNumBits)
         {
-            throw std::logic_error("Quantization: 'nbits' must be a divisor of 32");
+            throw std::logic_error("Quantization: 'nbits' must be a divisor of 64");
         }
 
         // Make sure that the data matrix has enough space
-        assert((m_quantizedData->GetNumRows() >= m_qColSize) && (m_quantizedData->GetNumCols() >= numCols));
+        assert((m_quantizedData->GetNumRows() == m_qColSize) && (m_quantizedData->GetNumCols() >= numCols));
     }
 
     template<class ElemType>
