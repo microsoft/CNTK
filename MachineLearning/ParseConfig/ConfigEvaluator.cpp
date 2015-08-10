@@ -17,6 +17,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     using namespace std;
     using namespace msra::strfun;
 
+    bool trace = true;      // enable to get debug output
+
     static wstring IndentString(wstring s, size_t indent)
     {
         const wstring prefix(indent, L' ');
@@ -471,10 +473,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
 
         // create a lambda that calls Evaluate() on an expr to get or realize its value
-        ConfigValuePtr::Thunk MakeEvaluateThunk(ExpressionPtr expr, ScopePtr scope)
+        ConfigValuePtr::Thunk MakeEvaluateThunk(ExpressionPtr expr, ScopePtr scope, wstring itemStr/*for trace message*/)
         {
-            function<ConfigValuePtr()> f = [this, expr, scope]()   // lambda that computes this value of 'expr'
+            function<ConfigValuePtr()> f = [this, expr, scope, itemStr]()   // lambda that computes this value of 'expr'
             {
+                if (trace)
+                    expr->location.PrintIssue(L"", itemStr.c_str(), L"executing thunk");
                 let value = Evaluate(expr, scope);
                 return value;   // this is a great place to set a breakpoint!
             };
@@ -493,6 +497,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
         ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope)
         {
+            // tracing
+            if (trace)
+                e->location.PrintIssue(L"", L"", L"trace");
             // --- literals
             if (e->op == L"d")       return MakePrimitiveConfigValue(e->d, e->location);    // === double literal
             else if (e->op == L"s")  return MakeStringConfigValue(e->s, e->location);       // === string literal
@@ -569,7 +576,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < args.size(); i++)    // positional arguments
                 {
                     let argValExpr = args[i];               // expression of arg [i]
-                    argVals[i] = MakeBoxedConfigValue(MakeEvaluateThunk(argValExpr, scope), argValExpr->location);  // make it a thunked value
+                    argVals[i] = MakeBoxedConfigValue(MakeEvaluateThunk(argValExpr, scope, wstrprintf(L"arg %d", i)), argValExpr->location);  // make it a thunked value
                 }
                 // deal with namedArgs later
                 let namedArgs = make_shared<ConfigRecord>();
@@ -593,7 +600,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (let & entry : e->namedArgs)
                 {
                     let expr = entry.second.second;                 // expression to compute the entry
-                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, MakeBoxedConfigValue(MakeEvaluateThunk(expr, thisScope), expr->location));
+                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, MakeBoxedConfigValue(MakeEvaluateThunk(expr, thisScope, entry.first/*id for tracing*/), expr->location));
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
                 return ConfigValuePtr(record, e->location);
@@ -639,6 +646,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     // create an expression
                     function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope]()   // lambda that computes this value of 'expr'
                     {
+                        if (trace)
+                            initLambdaExpr->location.PrintIssue(L"", wstrprintf(L"index %d", (int)(double)indexValue).c_str(), L"executing array initializer thunk");
                         // apply initLambdaExpr to indexValue and return the resulting value
                         let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope), initLambdaExpr, L"function");
                         vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
@@ -660,7 +669,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let index = (int)dindex;
                 if (index != dindex)
                     TypeExpected(L"integer", indexExpr);
-                arr->ResolveValue(index, indexExpr->location);      // resolve each element only when it is used, to allow for recursive array access
                 return arr->At(index, indexExpr->location);
             }
             // --- unary operators '+' '-' and '!'

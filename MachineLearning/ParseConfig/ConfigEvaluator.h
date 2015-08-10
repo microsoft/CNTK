@@ -125,7 +125,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             const auto thunkp = dynamic_cast<Thunk*>(get());   // is it a Thunk?
             if (!thunkp)                            // value is not a Thunk: we already got a proper value; done.
                 return;
-            const_cast<ConfigValuePtr&>(*this) = thunkp->ResolveValue();         // completely replace ourselves with the actual result. This also releases the Thunk object
+            const auto value = thunkp->ResolveValue();         // completely replace ourselves with the actual result. This also releases the Thunk object
+            const_cast<ConfigValuePtr&>(*this) = value;
             ResolveValue();                         // allow it to return another Thunk...
         }
     };
@@ -210,13 +211,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr At(int index, TextLocation indexLocation) /*const*/
         {
             auto & elem = GetElem(index, indexLocation);
-            return elem;
-        }
-        // values in arrays are resolved on demand so that we can have one element reference another, like in a truncated recurrent network
-        void ResolveValue(int index, TextLocation indexLocation)
-        {
-            auto & elem = GetElem(index, indexLocation);
             elem.ResolveValue();
+            return elem;
         }
     };
 
