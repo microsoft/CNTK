@@ -17,6 +17,27 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     using namespace std;
     using namespace msra::strfun;
 
+    static wstring IndentString(wstring s, size_t indent)
+    {
+        const wstring prefix(indent, L' ');
+        size_t pos = 0;
+        for (;;)
+        {
+            s.insert(pos, prefix);
+            pos = s.find(L'\n', pos + 2);
+            if (pos == wstring::npos)
+                return s;
+            pos++;
+        }
+    }
+    static wstring NestString(wstring s, wchar_t open, wchar_t close)
+    {
+        wstring result = IndentString(s, 2) + L"  ";
+        result.front() = open;
+        result.back() = close;
+        return result;
+    }
+
     struct HasLateInit { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
 
     // dummy implementation of ComputationNode for experimental purposes
@@ -157,9 +178,26 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else
                 return wstrprintf((L"%" + how + L"f").c_str(), val);
         }
+        else if (arg.Is<ConfigRecord>())
+        {
+            let record = arg.AsPtr<ConfigRecord>();
+            let members = record->GetMembers();
+            wstring result;
+            bool first = true;
+            for (auto iter : members)
+            {
+                if (first)
+                    first = false;
+                else
+                    result.append(L"\n");
+                result.append(iter.first);
+                result.append(L" = ");
+                result.append(FormatConfigValue(iter.second, how));
+            }
+            return NestString(result, L'[', L']');
+        }
         else if (arg.Is<ConfigArray>())
         {
-            // TODO: this is not pretty at all
             let arr = arg.AsPtr<ConfigArray>();
             wstring result;
             let range = arr->GetRange();
@@ -169,7 +207,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     result.append(L"\n");
                 result.append(FormatConfigValue(arr->At(i, TextLocation()), how));
             }
-            return result;
+            return NestString(result, L'(', L')');
         }
         else if (arg.Is<HasToString>())
             return arg.As<HasToString>().ToString();

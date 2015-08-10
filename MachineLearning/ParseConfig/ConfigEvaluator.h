@@ -170,6 +170,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         bool empty() const { return members.empty(); }      // late-init object constructors can test this
         // add a member
         void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = ConfigValuePtr(value, idLocation); }
+        // get members; used for logging only
+        const map<wstring, ConfigValuePtr> & GetMembers() const { return members; }
         // member resolution
         void ResolveAll()   // resolve all members; do this before handing a ConfigRecord to C++ code
         {
