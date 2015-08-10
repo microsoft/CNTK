@@ -282,7 +282,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
     };
 
-    class NDLNetwork : public Network
+    class NDLNetwork : public Network, public HasToString
     {
         map<wstring, ComputationNodePtr> nodes; // nodes in this network
     public:
@@ -296,6 +296,24 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     continue;
                 nodes[iter.first] = (ComputationNodePtr)config[iter.first];
             }
+        }
+        /*implement*/ wstring ToString() const
+        {
+            // hack: remember we were already formatted
+            nodesPrinted.clear();
+            // print all nodes we got
+            wstring args;
+            bool first = true;
+            for (auto & node : nodes)
+            {
+                if (first)
+                    first = false;
+                else
+                    args.append(L"\n");
+                let valueStr = node.second->ToString();
+                args.append(node.first + L" = " + valueStr);
+            }
+            return L"NDLNetwork " + NestString(args, L'[', true, ']');
         }
     };
 
