@@ -270,8 +270,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr, lateInitItem.scope);
             let object = lateInitItem.object;
-            auto & p = object.As<HasLateInit>();
-            p.Init(*config);
+            auto p = object.As<shared_ptr<HasLateInit>>();
+            p->Init(*config);
 //            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
         }
 
@@ -618,8 +618,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 LogicError("unknown magic runtime-object class");
             // form the ConfigRecord
             ConfigRecord config;
-            config.Add(L"left",  left.location,  left);
-            config.Add(L"right", right.location, right);
+            config.Add(L"left",  left.GetLocation(),  left);
+            config.Add(L"right", right.GetLocation(), right);
             // instantiate
             return newIter->second(config, location);
         }

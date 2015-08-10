@@ -25,13 +25,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // To get a value of an expected type T, dynamic-cast that base pointer to BoxOfWrapped<T>.
     // Pointers to type U have the type shared_ptr<U>.
 
-    struct ConfigValuePtr : public shared_ptr<Object>
+    class ConfigValuePtr : public shared_ptr<Object>
     {
         TextLocation location;      // in source code
-        template<typename T> BoxOfWrapped<T> * DynamicCastBoxOfWrapped() const {
-            const auto p = get(); p;
-            const auto r = dynamic_cast<BoxOfWrapped<T>*>(get());
-            return r;
+        template<typename T> T * DynamicCast() const
+        {
+            ResolveValue();
+            return dynamic_cast<T*>(get());
+        }    // this casts the raw pointer that's inside the shared_ptr
+        template<typename T> BoxOfWrapped<T> * DynamicCastBoxOfWrapped() const
+        {
+            //return Dyn
+            ResolveValue();
+            return dynamic_cast<BoxOfWrapped<T>*>(get());
         }    // this casts the raw pointer that's inside the shared_ptr
     public:
         // construction     ---TODO: no template here
@@ -40,6 +46,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
         // One accesses when values are constant, so we can just return values as const &.
+        template<typename T> operator shared_ptr<T>() { return AsPtr<T>(); }
         template<typename T> operator T() const { return As<T>(); }
         // TODO: we cannot cast to e.g. ConfigRecord, only to shared_ptr<ConfigRecord). E.g. can't write  'ComputationNodePtr x = config[L"arg"]', as that will deref.
         //       Maybe make cast to shared_ptr the default, and have special ones for double, bool, and wstring that also dereference?
@@ -65,16 +72,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 throw EvaluationError(L"config member has wrong type", location);
             return *p;                    // this unwraps the value out from its BoxOfWrapped wrapper
         }
-        // TODO: clean this up; get rid of specalization
         template<class C>
         bool Is() const
         {
+            ResolveValue();
             const auto p = dynamic_cast<C*>(get());
             return p != nullptr;
         }
         template<class C>
-        C & As() const     // returns reference to what the 'value' member
+        const C & As() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
+            ResolveValue();
             const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
@@ -83,6 +91,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<class C>
         shared_ptr<C> AsPtr() const     // returns a shared_ptr cast to the 'value' member
         {
+            ResolveValue();
             const auto p = dynamic_pointer_cast<C>(*this);
             if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type", location);
@@ -108,14 +117,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // no need to reset currentlyResolving because this object gets replaced anyway
             }
         };
-        void ResolveValue()
+        void ResolveValue() const   // (this is const but mutates the value if it resolves)
         {
             // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
             // get() is a pointer to a Thunk in that case, that is, a function object that yields the value
             const auto thunkp = dynamic_cast<Thunk*>(get());   // is it a Thunk?
             if (!thunkp)                            // value is not a Thunk: we already got a proper value; done.
                 return;
-            *this = thunkp->ResolveValue();         // completely replace ourselves with the actual result. This also releases the Thunk object
+            const_cast<ConfigValuePtr&>(*this) = thunkp->ResolveValue();         // completely replace ourselves with the actual result. This also releases the Thunk object
             ResolveValue();                         // allow it to return another Thunk...
         }
     };
