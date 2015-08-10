@@ -23,43 +23,67 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
 
-    struct ComputationNode : public Object
+    struct ComputationNode : public Object, public HasToString
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
 
         // inputs and output
-        vector<MatrixPtr> children;     // these are the inputs
-        MatrixPtr functionValue;        // this is the result
+        vector<ComputationNodePtr> m_children;  // these are the inputs
+        MatrixPtr m_functionValue;              // this is the result
 
         // other
-        wstring nodeName;               // node name in the graph
+        wstring m_nodeName;                     // node name in the graph
+
+        virtual const wchar_t * TypeName() const = 0;
+
+        virtual void AttachInputs(ComputationNodePtr leftNode, ComputationNodePtr rightNode)
+        {
+            m_children.resize(2);
+            m_children[0] = leftNode;
+            m_children[1] = rightNode;
+        }
+
+        /*implement*/ wstring ToString() const
+        {
+            return wstrprintf(L"%ls (%d inputs)", TypeName(), (int)m_children.size());
+        }
     };
     typedef ComputationNode::ComputationNodePtr ComputationNodePtr;
     class BinaryComputationNode : public ComputationNode
     {
     public:
-        BinaryComputationNode(const ConfigRecord & config)
+        BinaryComputationNode(ComputationNodePtr left, ComputationNodePtr right)
         {
-            let left = (ComputationNodePtr) config[L"left"];
-            let right = (ComputationNodePtr) config[L"right"];
-            left; right;
+            AttachInputs(left, right);
         }
-    };
-    class TimesNode : public BinaryComputationNode
-    {
-    public:
-        TimesNode(const ConfigRecord & config) : BinaryComputationNode(config) { }
     };
     class PlusNode : public BinaryComputationNode
     {
     public:
-        PlusNode(const ConfigRecord & config) : BinaryComputationNode(config) { }
+        PlusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
+        /*implement*/ const wchar_t * TypeName() const { return L"PlusNode"; }
     };
     class MinusNode : public BinaryComputationNode
     {
     public:
-        MinusNode(const ConfigRecord & config) : BinaryComputationNode(config) { }
+        MinusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
+        /*implement*/ const wchar_t * TypeName() const { return L"MinusNode"; }
     };
+    class TimesNode : public BinaryComputationNode
+    {
+    public:
+        TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
+        /*implement*/ const wchar_t * TypeName() const { return L"TimesNode"; }
+    };
+#if 0   // ScaleNode is something more complex it seems
+    class ScaleNode : public ComputationNode
+    {
+        double factor;
+    public:
+        TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
+        /*implement*/ const wchar_t * TypeName() const { return L"ScaleNode"; }
+    };
+#endif
     class DelayNode : public ComputationNode, public HasLateInit
     {
     public:
@@ -74,6 +98,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             in;
             // dim?
         }
+        /*implement*/ const wchar_t * TypeName() const { return L"DelayNode"; }
     };
     class InputValue : public ComputationNode
     {
@@ -82,17 +107,37 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             config;
         }
+        /*implement*/ const wchar_t * TypeName() const { return L"InputValue"; }
     };
     class LearnableParameter : public ComputationNode
     {
     public:
-        LearnableParameter(const ConfigRecord & config)
+        LearnableParameter(size_t inDim, size_t outDim)
         {
-            let outDim = (size_t)config[L"outDim"];
-            let inDim = (size_t)config[L"inDim"];
             outDim; inDim;
         }
+        /*implement*/ const wchar_t * TypeName() const { return L"LearnableParameter"; }
     };
+    // factory function for ComputationNodes
+    template<>
+    shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const ConfigRecord & config)
+    {
+        let classIdParam = config[L"class"];
+        wstring classId = classIdParam;
+        if (classId == L"LearnableParameter")
+            return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"]);
+        else if (classId == L"PlusNode")
+            return make_shared<PlusNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+        else if (classId == L"MinusNode")
+            return make_shared<MinusNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+        else if (classId == L"TimesNode")
+            return make_shared<TimesNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+#if 0
+        else if (classId == L"ScaleNode")
+            return make_shared<ScaleNode>((double)config[L"left"], (ComputationNodePtr)config[L"right"]);
+#endif
+        throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
+    }
 
     // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
     static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how)
@@ -126,6 +171,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             }
             return result;
         }
+        else if (arg.Is<HasToString>())
+            return arg.As<HasToString>().ToString();
         else
             return msra::strfun::utf16(arg.TypeName());             // cannot print this type
     }
@@ -230,7 +277,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 #endif
                 return [this](const ConfigRecord & config, TextLocation location)
                 {
-                    return ConfigValuePtr(make_shared<C>(config), location);
+                    return ConfigValuePtr(MakeRuntimeObject<C>(config), location);
                 };
         }
 
@@ -569,11 +616,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
                     return functions.BoolOp(e, leftValPtr, rightValPtr);
                 // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
-                else if (leftValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>() && rightValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>())
+                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
                     return functions.ComputeNodeOp(e, leftValPtr, rightValPtr);
-                else if (leftValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>() && rightValPtr.Is<Double>())
+                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
                     return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr);
-                else if (leftValPtr.Is<Double>() && rightValPtr.IsBoxOfWrapped<shared_ptr<ComputationNode>>())
+                else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
                     return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr);
                 // TODO: DictOp
                 else
@@ -613,11 +660,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr MakeMagicComputationNode(const wstring & classId, TextLocation location, const ConfigValuePtr & left, const ConfigValuePtr & right)
         {
             // find creation lambda
-            let newIter = configurableRuntimeTypes.find(classId);
+            let newIter = configurableRuntimeTypes.find(L"ComputationNode");
             if (newIter == configurableRuntimeTypes.end())
                 LogicError("unknown magic runtime-object class");
             // form the ConfigRecord
             ConfigRecord config;
+            config.Add(L"class", location, ConfigValuePtr(make_shared<String>(classId), location));
             config.Add(L"left",  left.GetLocation(),  left);
             config.Add(L"right", right.GetLocation(), right);
             // instantiate
@@ -634,12 +682,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             configurableRuntimeTypes = decltype(configurableRuntimeTypes)
             {
                 // ComputationNodes
-                DefineRuntimeType(TimesNode),
-                DefineRuntimeType(PlusNode),
-                DefineRuntimeType(MinusNode),
-                DefineRuntimeType(DelayNode),
-                DefineRuntimeType(InputValue),
-                DefineRuntimeType(LearnableParameter),
+                DefineRuntimeType(ComputationNode),
                 // Functions
                 DefineRuntimeType(StringFunction),
                 // Actions
