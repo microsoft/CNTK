@@ -10,6 +10,7 @@
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
     using namespace std;
+    using namespace msra::strfun;   // for wstrprintf()
 
     // error object
 
@@ -21,9 +22,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
 
     // config values
-    // All values in a ConfigRecord derive from Object.
-    // To get a value of an expected type T, dynamic-cast that base pointer to BoxOfWrapped<T>.
-    // Pointers to type U have the type shared_ptr<U>.
+    // A ConfigValuePtr is a shared_ptr to something that derives from Object.
+    // To get a shared_ptr<T> of an expected type T, type-cast the ConfigValuePtr to it.
+    // To get the value of a copyable type like T=double or wstring, type-cast to T directly.
 
     class ConfigValuePtr : public shared_ptr<Object>
     {
@@ -39,27 +40,27 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(p), location(location) {}
         ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
-        // One accesses when values are constant, so we can just return values as const &.
+        // access as a reference, that is, as a shared_ptr<T>   --use this for Objects
         template<typename T> operator shared_ptr<T>() const { return AsPtr<T>(); }
+        // access as a (const & to) value  --use this for primitive types (also works to get a const wstring & from a String)
         template<typename T> operator T() const { return As<T>(); }
-        // TODO: we cannot cast to e.g. ConfigRecord, only to shared_ptr<ConfigRecord). E.g. can't write  'ComputationNodePtr x = config[L"arg"]', as that will deref.
-        //       Maybe make cast to shared_ptr the default, and have special ones for double, bool, and wstring that also dereference?
-        //       E.g. (Double) would return a shared_ptr<Wrapped<double>> whereas (double) would deref it.
-        //       The special case makes sense since all other objects of relevance are accessed through pointers anyway, so make this the default.
-        operator double() const { return (Double)*this; }
-        operator bool() const { return (Bool)*this; }
-        operator size_t() const
+        //operator double() const { return (Double)*this; }
+        //operator bool() const { return (Bool)*this; }
+        operator double() const { return As<Double>(); }
+        operator bool() const { return As<Bool>(); }
+        template<typename INT> INT AsInt() const
         {
-            ResolveValue();
-            const auto p = dynamic_cast<Double*>(get());    // -> Double* which is Wrapped<double>*
-            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type", location);
-            double val = *p;
-            const auto ival = (size_t)val;
+            double val = As<Double>();
+            INT ival = (INT)val;
+            const wchar_t * type = L"size_t";
+            const char * t = typeid(INT).name(); t;
+            // TODO: there is some duplication of type checking; can we unify that?
             if (ival != val)
-                throw EvaluationError(L"numeric value is not an integer", location);
+                throw EvaluationError(wstrprintf(L"expected expression of type %ls instead of floating-point value %f", type, val), location);
             return ival;
         }
+        operator size_t() const { return AsInt<size_t>(); }
+        operator int() const { return AsInt<int>(); }
         // type helpers
         template<class C>
         bool Is() const
@@ -71,6 +72,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<class C>
         const C & As() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
+            // WARNING! This returns a reference, i.e. keep the object you call this on around as long as you use the returned reference!
             ResolveValue();
             const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
@@ -176,6 +178,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         return make_shared<C>(config);
     }
 
+    // -----------------------------------------------------------------------
+    // ConfigArray -- an array of config values
+    // -----------------------------------------------------------------------
+
     // an array is just a vector of config values
     class ConfigArray : public Object
     {
@@ -202,8 +208,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return elem;
         }
     };
+    typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
-    // a lambda
+    // -----------------------------------------------------------------------
+    // ConfigLambda -- a lambda
+    // -----------------------------------------------------------------------
+
     class ConfigLambda : public Object
     {
         // the function itself is a C++ lambda
@@ -222,6 +232,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return f(args, actualNamedArgs);
         }
     };
+    typedef shared_ptr<ConfigLambda> ConfigLambdaPtr;
+
+    // -----------------------------------------------------------------------
+    // functions exposed by this module
+    // -----------------------------------------------------------------------
 
     // understand and execute from the syntactic expression tree
     ConfigValuePtr Evaluate(ExpressionPtr);     // evaluate the expression tree

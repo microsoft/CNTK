@@ -464,27 +464,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // get value
         template<typename T>
-        const T & As(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
-        {
-            let val = dynamic_cast<T*>(value.get());
-            if (!val)
-                TypeExpected(typeForMessage, e);
-            return *val;
-        }
-#if 0
-        // convert a BoxOfWrapped to a specific type
-        // BUGBUG: If this returns a reference, it will crash when retrieving a ConfigRecord. May go away once ConfigRecord is used without Box
-        template<typename T>
-        T /*&*/ AsBoxOfWrapped(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
-        {
-            return As<BoxOfWrapped<T>>(value, e, typeForMessage);
-            //let val = dynamic_cast<BoxOfWrapped<T>*>(value.get());
-            //if (!val)
-            //    TypeExpected(typeForMessage, e);
-            //return *val;
-        }
-#endif
-        template<typename T>
         shared_ptr<T> AsPtr(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
         {
             if (!value.Is<T>())
@@ -492,7 +471,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return value.AsPtr<T>();
         }
 
-        double ToDouble(ConfigValuePtr value, ExpressionPtr e) { return As<Double>(value, e, L"number"); }
+        double ToDouble(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = dynamic_cast<Double*>(value.get());
+            if (!val)
+                TypeExpected(L"number", e);
+            double & dval = *val;
+            return dval;    // great place to set breakpoint
+        }
 
         // get number and return it as an integer (fail if it is fractional)
         int ToInt(ConfigValuePtr value, ExpressionPtr e)
@@ -500,21 +486,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let val = ToDouble(value, e);
             let res = (int)(val);
             if (val != res)
-                TypeExpected(L"integer number", e);
+                TypeExpected(L"integer", e);
             return res;
         }
-
-#if 0
-        // could just return String; e.g. same as To<String>
-        wstring ToString(ConfigValuePtr value, ExpressionPtr e)
-        {
-            // TODO: shouldn't this be <String>?
-            let val = dynamic_cast<String*>(value.get());
-            if (!val)
-                TypeExpected(L"string", e);
-            return *val;
-        }
-#endif
 
         bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
         {
@@ -714,7 +688,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope]()   // lambda that computes this value of 'expr'
                     {
                         if (trace)
-                            initLambdaExpr->location.PrintIssue(L"", wstrprintf(L"index %d", (int)(double)indexValue).c_str(), L"executing array initializer thunk");
+                            initLambdaExpr->location.PrintIssue(L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
                         // apply initLambdaExpr to indexValue and return the resulting value
                         let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope), initLambdaExpr, L"function");
                         vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
@@ -732,10 +706,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let arrValue = Evaluate(e->args[0], scope);
                 let indexExpr = e->args[1];
                 let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
-                let dindex = As<Double>(Evaluate(indexExpr, scope), indexExpr, L"integer");
-                let index = (int)dindex;
-                if (index != dindex)
-                    TypeExpected(L"integer", indexExpr);
+                let index = ToInt(Evaluate(indexExpr, scope), indexExpr);
                 return arr->At(index, indexExpr->location);
             }
             // --- unary operators '+' '-' and '!'
