@@ -20,7 +20,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     bool trace = true;      // enable to get debug output
 
-    static wstring IndentString(wstring s, size_t indent)
+    // =======================================================================
+    // string formatting
+    // =======================================================================
+
+    wstring IndentString(wstring s, size_t indent)
     {
         const wstring prefix(indent, L' ');
         size_t pos = 0;
@@ -33,7 +37,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             pos++;
         }
     }
-    static wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close)
+    wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close)
     {
         wstring result = IndentString(s, 2);
         if (newline)        // have a new line after the open symbol
@@ -45,9 +49,71 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         return result;
     }
 
+    // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
+    static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how)
+    {
+        size_t pos = how.find(L'%');
+        if (pos != wstring::npos)
+            RuntimeError("FormatConfigValue: format string must not contain %");
+        if (arg.Is<String>())
+        {
+            return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());
+        }
+        else if (arg.Is<Double>())
+        {
+            let val = arg.AsRef<Double>();
+            if (val == (int)val)
+                return wstrprintf((L"%" + how + L"d").c_str(), (int)val);
+            else
+                return wstrprintf((L"%" + how + L"f").c_str(), val);
+        }
+        else if (arg.Is<ConfigRecord>())
+        {
+            let record = arg.AsPtr<ConfigRecord>();
+            let members = record->GetMembers();
+            wstring result;
+            bool first = true;
+            for (auto iter : members)
+            {
+                if (first)
+                    first = false;
+                else
+                    result.append(L"\n");
+                result.append(iter.first);
+                result.append(L" = ");
+                result.append(FormatConfigValue(iter.second, how));
+            }
+            return NestString(result, L'[', true, L']');
+        }
+        else if (arg.Is<ConfigArray>())
+        {
+            let arr = arg.AsPtr<ConfigArray>();
+            wstring result;
+            let range = arr->GetRange();
+            for (int i = range.first; i <= range.second; i++)
+            {
+                if (i > range.first)
+                    result.append(L"\n");
+                result.append(FormatConfigValue(arr->At(i, TextLocation()), how));
+            }
+            return NestString(result, L'(', false, L')');
+        }
+        else if (arg.Is<HasToString>())
+            return arg.AsRef<HasToString>().ToString();
+        else
+            return msra::strfun::utf16(arg.TypeName());             // cannot print this type
+    }
+
+    // =======================================================================
+    // support for late init  --currently broken
+    // =======================================================================
+
     struct HasLateInit { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
 
-    // dummy implementation of ComputationNode for experimental purposes
+    // =======================================================================
+    // dummy implementation of several ComputationNode derivates for experimental purposes
+    // =======================================================================
+
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
 
@@ -222,60 +288,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
 
-    // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
-    static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how)
-    {
-        size_t pos = how.find(L'%');
-        if (pos != wstring::npos)
-            RuntimeError("FormatConfigValue: format string must not contain %");
-        if (arg.Is<String>())
-        {
-            return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());
-        }
-        else if (arg.Is<Double>())
-        {
-            let val = arg.AsRef<Double>();
-            if (val == (int)val)
-                return wstrprintf((L"%" + how + L"d").c_str(), (int)val);
-            else
-                return wstrprintf((L"%" + how + L"f").c_str(), val);
-        }
-        else if (arg.Is<ConfigRecord>())
-        {
-            let record = arg.AsPtr<ConfigRecord>();
-            let members = record->GetMembers();
-            wstring result;
-            bool first = true;
-            for (auto iter : members)
-            {
-                if (first)
-                    first = false;
-                else
-                    result.append(L"\n");
-                result.append(iter.first);
-                result.append(L" = ");
-                result.append(FormatConfigValue(iter.second, how));
-            }
-            return NestString(result, L'[', true, L']');
-        }
-        else if (arg.Is<ConfigArray>())
-        {
-            let arr = arg.AsPtr<ConfigArray>();
-            wstring result;
-            let range = arr->GetRange();
-            for (int i = range.first; i <= range.second; i++)
-            {
-                if (i > range.first)
-                    result.append(L"\n");
-                result.append(FormatConfigValue(arr->At(i, TextLocation()), how));
-            }
-            return NestString(result, L'(', false, L')');
-        }
-        else if (arg.Is<HasToString>())
-            return arg.AsRef<HasToString>().ToString();
-        else
-            return msra::strfun::utf16(arg.TypeName());             // cannot print this type
-    }
+    // =======================================================================
+    // dummy implementations of Network derivates
+    // =======================================================================
 
     // Network class
     class Network : public Object
@@ -317,6 +332,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
+    // =======================================================================
+    // built-in functions (implemented as Objects that are also their value)
+    // =======================================================================
+
     // sample objects to implement functions
     class StringFunction : public String
     {
@@ -336,6 +355,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 throw EvaluationError(L"unknown 'what' value to StringFunction: " + what, whatArg.GetLocation());
         }
     };
+
+    // =======================================================================
+    // general-purpose use Actions
+    // =======================================================================
 
     // sample runtime objects for testing
     class PrintAction : public Object, public HasLateInit
@@ -362,6 +385,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         virtual ~AnotherAction(){}
     };
 
+    // =======================================================================
+    // Evaluator -- class for evaluating a syntactic parse tree
+    // Evaluation converts a parse tree from ParseConfigString/File() into a graph of live C++ objects.
+    // TODO: This class has no members except for pre-initialized lookup tables. We could get rid of the class.
+    // =======================================================================
+
 #if 0
     template<typename T> class BoxWithLateInitOf : public BoxOf<T>, public HasLateInit
     {
@@ -379,14 +408,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     class Evaluator
     {
+        // -----------------------------------------------------------------------
         // error handling
+        // -----------------------------------------------------------------------
 
         __declspec(noreturn) void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
 
         __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
         __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown member name " + id, where); }
 
+        // -----------------------------------------------------------------------
         // lexical scope
+        // -----------------------------------------------------------------------
 
         struct Scope
         {
@@ -421,6 +454,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 };
         }
 
+        // -----------------------------------------------------------------------
+        // late initialization   --currently broken
+        // -----------------------------------------------------------------------
+
         // "new!" expressions get queued for execution after all other nodes of tree have been executed
         // TODO: This is totally broken, need to figuree out the deferred process first.
         struct LateInitItem
@@ -431,12 +468,35 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             LateInitItem(ConfigValuePtr object, ScopePtr scope, ExpressionPtr dictExpr) : object(object), scope(scope), dictExpr(dictExpr) { }
         };
 
+        // -----------------------------------------------------------------------
+        // name lookup
+        // -----------------------------------------------------------------------
+
+        // look up a member by id in the search scope
+        // If it is not found, it tries all lexically enclosing scopes inside out.
+        const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ScopePtr scope)
+        {
+            if (!scope)                                         // no scope or went all the way up: not found
+                UnknownIdentifier(id, idLocation);
+            auto p = scope->symbols->Find(id);                  // look up the name
+            if (!p)
+                return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
+            // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
+            p->ResolveValue();          // the entry will know
+            // now the value is available
+            return *p;
+        }
+
         // look up an identifier in an expression that is a ConfigRecord
         ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope)
         {
             let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope), recordExpr, L"record");
             return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
         }
+
+        // -----------------------------------------------------------------------
+        // runtime-object creation
+        // -----------------------------------------------------------------------
 
         // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
         // which is meant to be passed to the constructor or Init() function of a runtime object
@@ -461,6 +521,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             p->Init(*config);
 //            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
         }
+
+        // -----------------------------------------------------------------------
+        // access to ConfigValuePtr content with error messages
+        // -----------------------------------------------------------------------
 
         // get value
         template<typename T>
@@ -498,6 +562,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return *val;
         }
 
+        // -----------------------------------------------------------------------
+        // infix operators
+        // -----------------------------------------------------------------------
+
         typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
         struct InfixFunctions
         {
@@ -518,6 +586,40 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
         }
 
+        // evaluate a Boolean expression (all types)
+        template<typename T>
+        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right)
+        {
+            if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location);
+            else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location);
+            else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left <  right, e->location);
+            else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left >  right, e->location);
+            else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, e->location);
+            else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location);
+            else LogicError("unexpected infix op");
+        }
+        // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
+        ConfigValuePtr MakeMagicComputationNode(const wstring & classId, TextLocation location, const ConfigValuePtr & left, const ConfigValuePtr & right)
+        {
+            // find creation lambda
+            let newIter = configurableRuntimeTypes.find(L"ComputationNode");
+            if (newIter == configurableRuntimeTypes.end())
+                LogicError("unknown magic runtime-object class");
+            // form the ConfigRecord
+            ConfigRecord config;
+            config.Add(L"class", location, ConfigValuePtr(make_shared<String>(classId), location));
+            config.Add(L"left", left.GetLocation(), left);
+            config.Add(L"right", right.GetLocation(), right);
+            // instantiate
+            return newIter->second(config, location);
+        }
+
+        // more infix functions in lambdas in constructor
+
+        // -----------------------------------------------------------------------
+        // thunked (delayed) evaluation
+        // -----------------------------------------------------------------------
+
         // create a lambda that calls Evaluate() on an expr to get or realize its value
         shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, wstring itemStr/*for trace message*/)
         {
@@ -531,13 +633,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
         }
 
+        // -----------------------------------------------------------------------
+        // lookup tables
+        // -----------------------------------------------------------------------
+
         // all infix operators with lambdas for evaluating them
         map<wstring, InfixFunctions> infixOps;
 
         // this table lists all C++ types that can be instantiated from "new" expressions
         map<wstring, function<ConfigValuePtr(const ConfigRecord &, TextLocation)>> configurableRuntimeTypes;
 
+        // -----------------------------------------------------------------------
         // main evaluator function (highly recursive)
+        // -----------------------------------------------------------------------
+
+        // Evaluate()
         //  - input:  expression
         //  - output: ConfigValuePtr that holds the evaluated value of the expression
         // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
@@ -759,52 +869,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             //LogicError("should not get here");
         }
 
-        // look up a member by id in the search scope
-        // If it is not found, it tries all lexically enclosing scopes inside out.
-        const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ScopePtr scope)
-        {
-            if (!scope)                                         // no scope or went all the way up: not found
-                UnknownIdentifier(id, idLocation);
-            auto p = scope->symbols->Find(id);                  // look up the name
-            if (!p)
-                return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
-            // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
-            p->ResolveValue();          // the entry will know
-            // now the value is available
-            return *p;
-        }
-
-        // evaluate a Boolean expression (all types)
-        template<typename T>
-        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right)
-        {
-            if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location);
-            else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location);
-            else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left <  right, e->location);
-            else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left >  right, e->location);
-            else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, e->location);
-            else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location);
-            else LogicError("unexpected infix op");
-        }
-        // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
-        ConfigValuePtr MakeMagicComputationNode(const wstring & classId, TextLocation location, const ConfigValuePtr & left, const ConfigValuePtr & right)
-        {
-            // find creation lambda
-            let newIter = configurableRuntimeTypes.find(L"ComputationNode");
-            if (newIter == configurableRuntimeTypes.end())
-                LogicError("unknown magic runtime-object class");
-            // form the ConfigRecord
-            ConfigRecord config;
-            config.Add(L"class", location, ConfigValuePtr(make_shared<String>(classId), location));
-            config.Add(L"left",  left.GetLocation(),  left);
-            config.Add(L"right", right.GetLocation(), right);
-            // instantiate
-            return newIter->second(config, location);
-        }
-
-        // Traverse through the expression (parse) tree to evaluate a value.
+        // Traverse through the expression (parse) tree to evaluate a value.    --TODO broken
         deque<LateInitItem> deferredInitList;
     public:
+        // -----------------------------------------------------------------------
+        // constructor
+        // -----------------------------------------------------------------------
+
         Evaluator()
         {
 #define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
