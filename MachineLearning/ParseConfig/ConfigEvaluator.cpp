@@ -519,7 +519,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
 
         // create a lambda that calls Evaluate() on an expr to get or realize its value
-        ConfigValuePtr::Thunk MakeEvaluateThunk(ExpressionPtr expr, ScopePtr scope, wstring itemStr/*for trace message*/)
+        shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, wstring itemStr/*for trace message*/)
         {
             function<ConfigValuePtr()> f = [this, expr, scope, itemStr]()   // lambda that computes this value of 'expr'
             {
@@ -528,7 +528,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let value = Evaluate(expr, scope);
                 return value;   // this is a great place to set a breakpoint!
             };
-            return ConfigValuePtr::Thunk(f, expr->location);
+            return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
         }
 
         // all infix operators with lambdas for evaluating them
@@ -547,10 +547,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (trace)
                 e->location.PrintIssue(L"", L"", L"trace");
             // --- literals
-            if (e->op == L"d")       return MakePrimitiveConfigValue(e->d, e->location);    // === double literal
-            else if (e->op == L"s")  return MakeBoxedConfigValue(String(e->s), e->location);// === string literal
-            else if (e->op == L"b")  return MakePrimitiveConfigValue(e->b, e->location);    // === bool literal
-            else if (e->op == L"new" || e->op == L"new!")                                   // === 'new' expression: instantiate C++ runtime object
+            if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location);         // === double literal
+            else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location); // === string literal
+            else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location);         // === bool literal
+            else if (e->op == L"new" || e->op == L"new!")                                           // === 'new' expression: instantiate C++ runtime object
             {
                 // find the constructor lambda
                 let newIter = configurableRuntimeTypes.find(e->id);
@@ -622,7 +622,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < args.size(); i++)    // positional arguments
                 {
                     let argValExpr = args[i];               // expression of arg [i]
-                    argVals[i] = MakeBoxedConfigValue(MakeEvaluateThunk(argValExpr, scope, wstrprintf(L"arg %d", i)), argValExpr->location);  // make it a thunked value
+                    argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, wstrprintf(L"arg %d", i)), argValExpr->location);  // make it a thunked value
                 }
                 // deal with namedArgs later
                 let namedArgs = make_shared<ConfigRecord>();
@@ -641,7 +641,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (let & entry : e->namedArgs)
                 {
                     let expr = entry.second.second;                 // expression to compute the entry
-                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, MakeBoxedConfigValue(MakeEvaluateThunk(expr, thisScope, entry.first/*id for tracing*/), expr->location));
+                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, entry.first/*id for tracing*/), expr->location));
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
                 return ConfigValuePtr(record, e->location);
@@ -683,7 +683,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 vector<ConfigValuePtr> elementThunks;
                 for (int index = firstIndex; index <= lastIndex; index++)
                 {
-                    let indexValue = MakePrimitiveConfigValue((double)index, e->location);      // index as a ConfigValuePtr
+                    let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location);      // index as a ConfigValuePtr
                     // create an expression
                     function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope]()   // lambda that computes this value of 'expr'
                     {
@@ -696,7 +696,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                         let value = initLambda->Apply(argVals, namedArgs);
                         return value;   // this is a great place to set a breakpoint!
                     };
-                    elementThunks.push_back(MakeBoxedConfigValue(ConfigValuePtr::Thunk(f, initLambdaExpr->location), initLambdaExpr->location));
+                    elementThunks.push_back(ConfigValuePtr(make_shared<ConfigValuePtr::Thunk>(f, initLambdaExpr->location), initLambdaExpr->location));
                 }
                 auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
                 return ConfigValuePtr(arr, e->location);
@@ -761,12 +761,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<typename T>
         ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right)
         {
-            if (e->op == L"==")      return MakePrimitiveConfigValue(left == right, e->location);
-            else if (e->op == L"!=") return MakePrimitiveConfigValue(left != right, e->location);
-            else if (e->op == L"<")  return MakePrimitiveConfigValue(left <  right, e->location);
-            else if (e->op == L">")  return MakePrimitiveConfigValue(left >  right, e->location);
-            else if (e->op == L"<=") return MakePrimitiveConfigValue(left <= right, e->location);
-            else if (e->op == L">=") return MakePrimitiveConfigValue(left >= right, e->location);
+            if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location);
+            else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location);
+            else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left <  right, e->location);
+            else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left >  right, e->location);
+            else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, e->location);
+            else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location);
             else LogicError("unexpected infix op");
         }
         // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
@@ -810,28 +810,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 let left  = leftVal.AsRef<Double>();
                 let right = rightVal.AsRef<Double>();
-                if (e->op == L"+")       return MakePrimitiveConfigValue(left + right, e->location);
-                else if (e->op == L"-")  return MakePrimitiveConfigValue(left - right, e->location);
-                else if (e->op == L"*")  return MakePrimitiveConfigValue(left * right, e->location);
-                else if (e->op == L"/")  return MakePrimitiveConfigValue(left / right, e->location);
-                else if (e->op == L"%")  return MakePrimitiveConfigValue(fmod(left, right), e->location);
-                else if (e->op == L"**") return MakePrimitiveConfigValue(pow(left, right), e->location);
+                if (e->op == L"+")       return MakePrimitiveConfigValuePtr(left + right, e->location);
+                else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right, e->location);
+                else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right, e->location);
+                else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right, e->location);
+                else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), e->location);
+                else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right), e->location);
                 else return CompOp<double> (e, left, right);
             };
             InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
                 let left  = leftVal.AsRef<String>();
                 let right = rightVal.AsRef<String>();
-                if (e->op == L"+")  return MakeBoxedConfigValue(String(left + right), e->location);
+                if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location);
                 else return CompOp<wstring>(e, left, right);
             };
             InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
                 let left  = leftVal.AsRef<Bool>();
                 let right = rightVal.AsRef<Bool>();
-                if (e->op == L"||")       return MakePrimitiveConfigValue(left || right, e->location);
-                else if (e->op == L"&&")  return MakePrimitiveConfigValue(left && right, e->location);
-                else if (e->op == L"^")   return MakePrimitiveConfigValue(left ^  right, e->location);
+                if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || right, e->location);
+                else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && right, e->location);
+                else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location);
                 else return CompOp<bool>(e, left, right);
             };
             InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
