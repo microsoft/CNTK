@@ -24,12 +24,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 static const std::string::size_type npos = (std::string::size_type) -1;
 
 // These are the constants associated with the "ResolveVariables" method.
-static const std::string openBraceVar = "$";
-static const std::string closingBraceVar = "$";
-static const std::string forbiddenCharactersInVarName = ",/<>?;':\"[]{}\\|!@#%^&*()+=~` \t\n";
-static const std::string forbiddenCharactersInVarNameEscapeWhitespace = ",/<>?;':\"[]{}\\|!@#%^&*()+=~` \\t\\n";
-static const std::size_t openBraceVarSize = openBraceVar.size();
-static const std::size_t closingBraceVarSize = openBraceVar.size();
+static const char* openBraceVar = "$";
+static const char* closingBraceVar = "$";
+static const char* forbiddenCharactersInVarName = ",/<>?;':\"[]{}\\|!@#%^&*()+=~` \t\n";
+static const char* forbiddenCharactersInVarNameEscapeWhitespace = ",/<>?;':\"[]{}\\|!@#%^&*()+=~` \\t\\n";
+static const std::size_t openBraceVarSize = strlen(openBraceVar);
+static const std::size_t closingBraceVarSize = strlen(closingBraceVar);
 
 // Trim - trim white space off the start and end of the string
 // str - string to trim
@@ -991,7 +991,7 @@ public:
         while (start != std::string::npos)
         {
             // search for whitespace or closing brace.
-            end = newConfigLine.find_first_of(closingBraceVar + forbiddenCharactersInVarName,
+            end = newConfigLine.find_first_of(std::string(closingBraceVar) + forbiddenCharactersInVarName,
                                               start + openBraceVarSize);
 
             // ensure that a closing brace exists for every opening brace.
@@ -999,15 +999,15 @@ public:
             if (end == std::string::npos)
             {
                 RuntimeError("\"%s\" found without corresponding closing \"%s\": %s:%s",
-                             openBraceVar.c_str(), closingBraceVar.c_str(),
+                             openBraceVar, closingBraceVar,
                              m_configName.c_str(), newConfigLine.c_str());
             }
 
             if (newConfigLine[end] != '$')
             {
                 RuntimeError("Forbidden characters found between \"%s\" and \"%s\".  Variable names cannot any of the following characters: %s. %s:%s",
-                             openBraceVar.c_str(), closingBraceVar.c_str(),
-                             forbiddenCharactersInVarNameEscapeWhitespace.c_str(),
+                             openBraceVar, closingBraceVar,
+                             forbiddenCharactersInVarNameEscapeWhitespace,
                              m_configName.c_str(), newConfigLine.c_str());
             }
 

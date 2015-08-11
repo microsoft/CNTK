@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (rc != cudaSuccess)
         {
             char buf[1000];
-            sprintf_s(buf, "%s: %s (cuda error %d)", msg, cudaGetErrorString(rc), rc);
+            sprintf_s(buf, 1000, "%s: %s (cuda error %d)", msg, cudaGetErrorString(rc), rc);
             cudafail(buf);
         }
     }
