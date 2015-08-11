@@ -145,16 +145,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             nodeIndex++;
         }
 
+        virtual void AttachInputs(ComputationNodePtr arg)
+        {
+            m_children.resize(1);
+            m_children[0] = arg;
+        }
         virtual void AttachInputs(ComputationNodePtr leftNode, ComputationNodePtr rightNode)
         {
             m_children.resize(2);
             m_children[0] = leftNode;
             m_children[1] = rightNode;
         }
-        virtual void AttachInputs(ComputationNodePtr arg)
+        virtual void AttachInputs(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3)
         {
-            m_children.resize(1);
-            m_children[0] = arg;
+            m_children.resize(3);
+            m_children[0] = arg1;
+            m_children[1] = arg2;
+            m_children[2] = arg3;
         }
 
         /*implement*/ wstring ToString() const
@@ -201,23 +208,32 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             AttachInputs(left, right);
         }
     };
+    class TernaryComputationNode : public ComputationNode
+    {
+    public:
+        TernaryComputationNode(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3)
+        {
+            AttachInputs(arg1, arg2, arg3);
+        }
+    };
+
     class PlusNode : public BinaryComputationNode
     {
     public:
         PlusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"PlusNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"Plus"; }
     };
     class MinusNode : public BinaryComputationNode
     {
     public:
         MinusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"MinusNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"Minus"; }
     };
     class TimesNode : public BinaryComputationNode
     {
     public:
         TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"TimesNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"Times"; }
     };
 #if 0   // ScaleNode is something more complex it seems
     class ScaleNode : public ComputationNode
@@ -225,9 +241,59 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         double factor;
     public:
         TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"ScaleNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"Scale"; }
     };
 #endif
+    class LogNode : public UnaryComputationNode
+    {
+    public:
+        LogNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"Log"; }
+    };
+    class SigmoidNode : public UnaryComputationNode
+    {
+    public:
+        SigmoidNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"Sigmoid"; }
+    };
+    class MeanNode : public UnaryComputationNode
+    {
+    public:
+        MeanNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"Mean"; }
+    };
+    class InvStdDevNode : public UnaryComputationNode
+    {
+    public:
+        InvStdDevNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"InvStdDev"; }
+    };
+    class PerDimMeanVarNormalizationNode : public TernaryComputationNode
+    {
+    public:
+        PerDimMeanVarNormalizationNode(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3) : TernaryComputationNode(arg1, arg2, arg3) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"PerDimMeanVarNormalization"; }
+    };
+    class RowSliceNode : public UnaryComputationNode
+    {
+        size_t firstRow, numRows;
+    public:
+        RowSliceNode(ComputationNodePtr arg, size_t firstRow, size_t numRows) : UnaryComputationNode(arg), firstRow(firstRow), numRows(numRows) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"RowSlice"; }
+    };
+    class CrossEntropyWithSoftmaxNode : public BinaryComputationNode
+    {
+    public:
+        CrossEntropyWithSoftmaxNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"CrossEntropyWithSoftmax"; }
+    };
+    class ErrorPredictionNode : public BinaryComputationNode
+    {
+    public:
+        ErrorPredictionNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
+        /*implement*/ const wchar_t * OperationName() const { return L"ErrorPrediction"; }
+    };
+    // BROKEN
     class DelayNode : public ComputationNode, public HasLateInit
     {
     public:
@@ -242,12 +308,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             in;
             // dim?
         }
-        /*implement*/ const wchar_t * OperationName() const { return L"DelayNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"Delay"; }
     };
     class InputValue : public ComputationNode
     {
     public:
-        InputValue(const ConfigRecord & config)
+        InputValue(const ConfigRecord & config) // TODO
         {
             config;
         }
@@ -257,9 +323,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
         size_t outDim, inDim;
     public:
-        LearnableParameter(size_t outDim, size_t inDim) : outDim(outDim), inDim(inDim)
-        {
-        }
+        LearnableParameter(size_t outDim, size_t inDim) : outDim(outDim), inDim(inDim) { }
         /*implement*/ const wchar_t * OperationName() const { return L"LearnableParameter"; }
         /*implement*/ wstring ToString() const
         {
@@ -277,7 +341,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
         let classIdParam = config[L"class"];
         wstring classId = classIdParam;
-        if (classId == L"LearnableParameter")
+        if (classId == L"LearnableParameterNode")
             return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"]);
         else if (classId == L"PlusNode")
             return make_shared<PlusNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
@@ -289,6 +353,22 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         else if (classId == L"ScaleNode")
             return make_shared<ScaleNode>((double)config[L"left"], (ComputationNodePtr)config[L"right"]);
 #endif
+        else if (classId == L"LogNode")
+            return make_shared<LogNode>((ComputationNodePtr)config[L"arg"]);
+        else if (classId == L"SigmoidNode")
+            return make_shared<SigmoidNode>((ComputationNodePtr)config[L"arg"]);
+        else if (classId == L"MeanNode")
+            return make_shared<MeanNode>((ComputationNodePtr)config[L"arg"]);
+        else if (classId == L"InvStdDevNode")
+            return make_shared<InvStdDevNode>((ComputationNodePtr)config[L"arg"]);
+        else if (classId == L"PerDimMeanVarNormalizationNode")
+            return make_shared<PerDimMeanVarNormalizationNode>((ComputationNodePtr)config[L"arg1"], (ComputationNodePtr)config[L"arg2"], (ComputationNodePtr)config[L"arg3"]);
+        else if (classId == L"RowSliceNode")
+            return make_shared<RowSliceNode>((ComputationNodePtr)config[L"arg"], (size_t)config[L"first"], (size_t)config[L"num"]);
+        else if (classId == L"CrossEntropyWithSoftmaxNode")
+            return make_shared<CrossEntropyWithSoftmaxNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+        else if (classId == L"ErrorPredictionNode")
+            return make_shared<ErrorPredictionNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
         throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
 
@@ -414,6 +494,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 #endif
+
+    static wstring emptyString;
 
     class Evaluator
     {
@@ -757,7 +839,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         //  - input:  expression
         //  - output: ConfigValuePtr that holds the evaluated value of the expression
         // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
-        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprName = wstring())
+        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, const wstring & exprName = emptyString)
         {
             // tracing
             if (trace)
@@ -911,7 +993,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (int index = firstIndex; index <= lastIndex; index++)
                 {
                     let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location);           // index as a ConfigValuePtr
-                    let fullName = exprName.empty() ? L"" : wstrprintf(L"%ls[%d]", exprName, index);    // expression name
+                    let fullName = exprName.empty() ? L"" : wstrprintf(L"%ls[%d]", exprName.c_str(), index);    // expression name
                     // create an expression
                     function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope, fullName]()   // lambda that computes this value of 'expr'
                     {
