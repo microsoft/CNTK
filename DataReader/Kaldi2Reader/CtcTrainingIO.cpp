@@ -14,49 +14,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
      kCopyData
      } MatrixResizeType;
 
-    struct NumericLimits
-    {
-      static const float log_zero_ = -1e100;
-      static const float exp_limit_ = 709.78271289338397;
-      static const float log_inf_ = 1e100;
-      static const float max_ = 1.7976931348623157e+308;
-    };
-
 
     // a + b, where a and b are assumed to be in the log scale
-    float AddAB(float a, float b)
+    template<class ElemType>
+    ElemType CtcTrainingIO<ElemType>::AddAB(ElemType a, ElemType b)
     {
-      if (a == NumericLimits::log_zero_ || b == NumericLimits::log_zero_)
-        return NumericLimits::log_zero_;
+      if (a == log_zero_ || b == log_zero_)
+        return log_zero_;
       else
         return a + b;
     }
 
     // a - b, where a and b are assumed to be in the log scale
-    float SubAB(float a, float b)
+    template<class ElemType>
+    ElemType CtcTrainingIO<ElemType>::SubAB(ElemType a, ElemType b)
     {
-      if (a == NumericLimits::log_zero_)
-        return NumericLimits::log_zero_;
-      else if (b == NumericLimits::log_zero_)
-        return NumericLimits::log_inf_;
+      if (a == log_zero_)
+        return log_zero_;
+      else if (b == log_zero_)
+        return log_inf_;
       else
         return a - b;
     }
 
     // exp(a)
-    float ExpA(float a)
+    template<class ElemType>
+    ElemType CtcTrainingIO<ElemType>::ExpA(ElemType a)
     {
-      if (a <= NumericLimits::log_zero_)
+      if (a <= log_zero_)
         return 0;
-      else if (a >= NumericLimits::exp_limit_)
-        return NumericLimits::max_;
+      else if (a >= exp_limit_)
+        return max_;
       else
         return exp(a);
     }
 
     // Approximation of  log(a + b) = log(a) + log(1 + b/a), if b < a
     //                              = log(b) + log(1 + a/b), if a < b
-    float LogAPlusB(float a, float b) // x and y are in log scale and so is the result
+    template<class ElemType>
+    ElemType CtcTrainingIO<ElemType>::LogAPlusB(ElemType a, ElemType b) // x and y are in log scale and so is the result
     {
         if (b < a)
           return AddAB(a, log(1 + ExpA(SubAB(b, a))));
@@ -110,13 +106,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (i < 2)
               alpha(row,i) = prob(row, idxProb);
             else
-              alpha(row,i) = NumericLimits::log_zero_;
+              alpha(row,i) = log_zero_;
           } else {
             if (i > 1) {
               if (i % 2 == 0 || labels[i-2] == labels[i]) {
                 alpha(row,i) = AddAB(prob(row, idxProb), LogAPlusB(alpha(row-1, i-1), alpha(row-1, i)));
               } else {
-                float tmp = LogAPlusB(alpha(row-1, i-1), alpha(row-1, i));
+                ElemType tmp = LogAPlusB(alpha(row-1, i-1), alpha(row-1, i));
                 alpha(row,i) = AddAB(prob(row, idxProb), LogAPlusB(alpha(row-1, i-2), tmp));
               }
             } else if (i == 1) {
@@ -146,13 +142,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (i > dim - 3)
               beta(row,i) = prob(row,idxProb);
             else
-              beta(row,i) = NumericLimits::log_zero_;
+              beta(row,i) = log_zero_;
           } else {
            if (i < dim - 2) {
              if (i % 2 == 0 || labels[i+2] == labels[i]) {
                beta(row,i) = AddAB(prob(row,idxProb), LogAPlusB(beta(row+1,i+1), beta(row+1,i)));
              } else {
-               float tmp = LogAPlusB(beta(row+1,i+1), beta(row+1,i));
+               ElemType tmp = LogAPlusB(beta(row+1,i+1), beta(row+1,i));
                beta(row,i) = AddAB(prob(row,idxProb), LogAPlusB(beta(row+1,i+2), tmp));
              }
            } else if (i == dim - 2) {
@@ -171,27 +167,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                              Matrix<ElemType> &beta,
                                              Matrix<ElemType> &log_nnet_out,
                                              std::vector<size_t> &labels,
-                                             float pzx) {
+                                             ElemType pzx) {
       int dim_error_rows = ctc_err.GetNumRows();
       int dim_error_cols = ctc_err.GetNumCols();
       int label_size = labels.size();
 
       for(int i=0; i<dim_error_rows; i++) {
         for(int j=0; j<dim_error_cols; j++) {
-          float err = NumericLimits::log_zero_;
+          ElemType err = log_zero_;
           for(int s = 0; s < label_size; s++) {
-            if (labels[s] == j) {  //
+            if (labels[s] == j) {
               err = LogAPlusB(err, AddAB(alpha(i,s), beta(i,s)));
             }
           }
-          float val = ExpA(SubAB(err, AddAB(pzx, ExpA(log_nnet_out(i,j)) == 0? NumericLimits::log_zero_ : 2*ExpA(log_nnet_out(i,j)))));
+          ElemType val = ExpA(SubAB(err, AddAB(pzx, ExpA(log_nnet_out(i,j)) == 0? log_zero_ : 2*log_nnet_out(i,j))));
           ctc_err(i,j) = -1.0 * val;
         }
       }
     }
 
+#define DEBUG_UTTERANCE (0)
+
     template<class ElemType>
-    bool CtcTrainingIO<ElemType>::ComputeDerivative(const wstring& uttID,
+    bool CtcTrainingIO<ElemType>::ComputeDerivativeActual(const wstring& uttID,
         const Matrix<ElemType>& logLikelihoodIn,
         Matrix<ElemType>* derivative,
         ElemType* objective)
@@ -204,7 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> nnet_out(CPUDEVICE);       // posterior matrix
         nnet_out.Resize(log_nnet_out.GetNumRows(), log_nnet_out.GetNumCols());
         for(int i =0;i<log_nnet_out.GetNumRows();i++) {
-          float row_sum=0;
+          ElemType row_sum=0;
           for(int j=0; j<log_nnet_out.GetNumCols();j++) {
             nnet_out(i,j) = ExpA(log_nnet_out(i,j));
             row_sum = row_sum + nnet_out(i,j);
@@ -217,6 +215,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             log_nnet_out(i,j) = log(nnet_out(i,j));
           }
         }
+
+#if(DEBUG_UTTERANCE)
+        FILE * pFile=0;
+        pFile = fopen ("debug/posterior.mat.txt","w");
+        if (pFile!=NULL)
+        {
+          for(int i =0;i<nnet_out.GetNumRows();i++) {
+            for(int j=0; j<nnet_out.GetNumCols();j++) {
+              fprintf(pFile, "%f ", nnet_out(i,j));
+            }
+            fprintf(pFile, "\n");
+          }
+          fclose (pFile);
+        }
+#endif
 
         std::string uttIDStr = msra::asr::toStr(uttID);
 
@@ -258,49 +271,246 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (int t = (num_frames - 1); t >= 0; t--) {
           ComputeCtcLatticeBackward(beta, log_nnet_out, t, label_expand);
         }
+#if(DEBUG_UTTERANCE)
+        pFile = fopen ("debug/alpha.mat.txt","w");
+        if (pFile!=NULL)
+        {
+          for(int i =0;i<alpha.GetNumRows();i++) {
+            for(int j=0; j<alpha.GetNumCols();j++) {
+              fprintf(pFile, "%f ", alpha(i,j));
+            }
+            fprintf(pFile, "\n");
+          }
+          fclose (pFile);
+        }
+
+        pFile = fopen ("debug/beta.mat.txt","w");
+        if (pFile!=NULL)
+        {
+          for(int i =0;i<beta.GetNumRows();i++) {
+            for(int j=0; j<beta.GetNumCols();j++) {
+              fprintf(pFile, "%f ", beta(i,j));
+            }
+            fprintf(pFile, "\n");
+          }
+          fclose (pFile);
+        }
+#endif
 
         // compute the log-likelihood of the label sequence given the inputs logP(z|x)
-        float tmp1 = alpha(num_frames-1, exp_len_labels-1);
-        float tmp2 = alpha(num_frames-1, exp_len_labels-2);
-        float pzx = tmp1 + log(1 + ExpA(tmp2 - tmp1));
+        ElemType tmp1 = alpha(num_frames-1, exp_len_labels-1);
+        ElemType tmp2 = alpha(num_frames-1, exp_len_labels-2);
+        ElemType pzx = tmp1 + log(1 + ExpA(tmp2 - tmp1));
 
         // compute the errors
         Matrix<ElemType> ctc_err(CPUDEVICE);       // error matrix
         ctc_err.Resize(num_frames, num_classes);
         ComputeCtcError(ctc_err, alpha, beta, log_nnet_out, label_expand, pzx);
+#if(DEBUG_UTTERANCE)
+        printf("\nPzx=%f\n",pzx);
+        pFile = fopen ("debug/ctc_error.mat.txt","w");
+        if (pFile!=NULL)
+        {
+          for(int i =0;i<ctc_err.GetNumRows();i++) {
+            for(int j=0; j<ctc_err.GetNumCols();j++) {
+              fprintf(pFile, "%f ", ctc_err(i,j));
+            }
+            fprintf(pFile, "\n");
+          }
+          fclose (pFile);
+        }
+#endif
+
 
         // back-propagate the errors through the softmax layer
-        /*
-        Matrix<ElemType> nnet_out(log_nnet_out);       // posterior matrix
-        for(int i =0;i<log_nnet_out.GetNumRows();i++) {
-          for(int j=0; j<log_nnet_out.GetNumCols();j++) {
-            nnet_out(i,j) = ExpA(log_nnet_out(i,j));
+        std::vector<ElemType> row_sum;
+        row_sum.resize(num_frames, 0);
+        for(int i =0;i<ctc_err.GetNumRows();i++) {
+          for(int j=0; j<ctc_err.GetNumCols();j++) {
+            ctc_err(i,j) = ctc_err(i,j) * nnet_out(i,j);
+            row_sum[i] = row_sum[i] + ctc_err(i,j);
           }
         }
-        */
-
-        ctc_err.ElementMultiplyWith(nnet_out);
-        Matrix<ElemType> row_sum(CPUDEVICE);
-        row_sum.Resize(1, num_frames);
-        Matrix<ElemType>::VectorSum(ctc_err, row_sum, false);
-
         Matrix<ElemType> net_out_tmp(nnet_out);
-        net_out_tmp.ColumnElementMultiplyWith(row_sum);
+        for(int i =0;i<net_out_tmp.GetNumRows();i++) {
+          ElemType scale = row_sum[i];
+          for(int j=0; j<net_out_tmp.GetNumCols();j++) {
+            net_out_tmp(i,j) = net_out_tmp(i,j) * scale;
+          }
+        }
 
         Matrix<ElemType> diff(ctc_err);
-        diff =  net_out_tmp - diff;
-
-        //TODO: this is not the correct posterior format
-        //Set the correct posterior format
+        diff =  diff - net_out_tmp;
         *derivative = diff.Transpose();
 
+#if(DEBUG_UTTERANCE)
+        pFile = fopen ("debug/gradient.mat.txt","w");
+        if (pFile!=NULL)
+        {
+          for(int i =0;i<diff.GetNumRows();i++) {
+            for(int j=0; j<diff.GetNumCols();j++) {
+              fprintf(pFile, "%f ", diff(i,j));
+            }
+            fprintf(pFile, "\n");
+          }
+          fclose (pFile);
+        }
+#endif
+
         //Set the objective
-        *objective = logLikelihoodIn.GetNumCols() - pzx;
+        *objective = pzx;
 
         assert(derivative->GetNumCols() == logLikelihoodIn.GetNumCols());
 
         m_currentUttID = uttID;
+
         return true;
+    }
+
+    template<class ElemType>
+    bool CtcTrainingIO<ElemType>::ComputeDerivativeNumerical(const wstring& uttID,
+        const Matrix<ElemType>& logLikelihoodIn,
+        Matrix<ElemType>* derivative,
+        ElemType* objective)
+    {
+      ElemType eps = 0.00001;
+        Matrix<ElemType> diff(CPUDEVICE);
+        diff.Resize(logLikelihoodIn.GetNumCols(), logLikelihoodIn.GetNumRows());
+        diff.SetValue(kSetZero);
+
+        for(int m=0;m<logLikelihoodIn.GetNumCols();m++) {
+          for(int n=0; n<logLikelihoodIn.GetNumRows();n++) {
+            ElemType gradElt=0;
+            for(int dir=0; dir<2; dir++) {
+              //transpose the matrix so that it is in kaldi format
+              Matrix<ElemType> log_nnet_out(logLikelihoodIn.Transpose());
+              if (log_nnet_out.GetDeviceId() >= 0)
+                log_nnet_out.TransferFromDeviceToDevice(log_nnet_out.GetDeviceId(), CPUDEVICE, true, false, false);
+
+              log_nnet_out(m,n) = log_nnet_out(m,n) + ((dir*2) - 1) * eps;
+
+              Matrix<ElemType> nnet_out(CPUDEVICE);       // posterior matrix
+              nnet_out.Resize(log_nnet_out.GetNumRows(), log_nnet_out.GetNumCols());
+              for(int i =0;i<log_nnet_out.GetNumRows();i++) {
+                ElemType row_sum=0;
+                for(int j=0; j<log_nnet_out.GetNumCols();j++) {
+                  nnet_out(i,j) = ExpA(log_nnet_out(i,j));
+                  row_sum = row_sum + nnet_out(i,j);
+                }
+                for(int j=0; j<log_nnet_out.GetNumCols();j++) {
+                  nnet_out(i,j) = nnet_out(i,j)/row_sum;
+                }
+                for(int j=0; j<log_nnet_out.GetNumCols();j++) {
+                  assert(nnet_out(i,j) >= 0.0);
+                  log_nnet_out(i,j) = log(nnet_out(i,j));
+                }
+              }
+
+              std::string uttIDStr = msra::asr::toStr(uttID);
+
+              size_t num_frames = log_nnet_out.GetNumRows();
+              size_t num_classes = log_nnet_out.GetNumCols();
+
+              // Check if the label sequence for an utterance is available.
+              // and if so read it
+              if (!m_labRspecifier->HasKey(uttIDStr))
+                  RuntimeError("Label not found for utterance %s\n", uttIDStr.c_str());
+              const std::vector<int32> label = m_labRspecifier->Value(uttIDStr);
+
+              // label expansion by inserting blank (indexed by 0) at the beginning and end,
+              // and between every pair of labels
+              size_t len_labels = label.size();
+              size_t exp_len_labels = 2*len_labels + 1;
+
+              // this code fills up the label vector with 0
+              // Nonspeech phones are assumed to be >= 1
+              std::vector<size_t> label_expand;         // the label vector as a matrix
+              label_expand.resize(0);
+              label_expand.resize(exp_len_labels, 0);
+              for (int l = 0; l < len_labels; l++) {
+                label_expand[2*l+1] = label[l];
+              }
+
+              //define matrices for the forward backward computation
+              Matrix<ElemType> alpha(CPUDEVICE);       // alpha matrix
+
+              alpha.Resize(num_frames, exp_len_labels);
+              alpha.SetValue(kSetZero);
+
+              for (size_t t = 0; t < num_frames; t++) {
+                ComputeCtcLatticeForward(alpha, log_nnet_out, t, label_expand);
+              }
+
+              // compute the log-likelihood of the label sequence given the inputs logP(z|x)
+              ElemType tmp1 = alpha(num_frames-1, exp_len_labels-1);
+              ElemType tmp2 = alpha(num_frames-1, exp_len_labels-2);
+              ElemType pzx = tmp1 + log(1 + ExpA(tmp2 - tmp1));
+
+              gradElt = gradElt + pzx * ((dir*2) - 1);
+
+              m_currentUttID = uttID;
+              //Set the objective
+              *objective = pzx;
+            }
+            diff(m,n) = gradElt/(2*eps);
+          }
+        }
+
+        *derivative = diff.Transpose();
+
+        assert(derivative->GetNumCols() == logLikelihoodIn.GetNumCols());
+
+        return true;
+    }
+
+#define PRINT_GRAD  (0)
+#define ACTUAL_GRAD (1)
+
+    template<class ElemType>
+    bool CtcTrainingIO<ElemType>::ComputeDerivative(const wstring& uttID,
+        const Matrix<ElemType>& logLikelihoodIn,
+        Matrix<ElemType>* derivative,
+        ElemType* objective)
+    {
+
+#if(ACTUAL_GRAD)
+      bool ret = ComputeDerivativeActual(uttID,
+          logLikelihoodIn,
+          derivative,
+          objective);
+#else
+      bool ret = ComputeDerivativeNumerical(uttID,
+          logLikelihoodIn,
+          derivative,
+          objective);
+#endif
+
+#if(PRINT_GRAD)
+      /* BEGIN: print gradients.
+       *
+       */
+      printf("\n\n=====================================================");
+      printf("\nPrint (likelihood, gradients).\n");
+      printf("\nObjective = %f \n", *objective);
+      printf("=====================================================\n");
+      Matrix<ElemType> log_nnet_dup(logLikelihoodIn.Transpose());
+      if (log_nnet_dup.GetDeviceId() >= 0)
+        log_nnet_dup.TransferFromDeviceToDevice(log_nnet_dup.GetDeviceId(), CPUDEVICE, true, false, false);
+
+      for(int i =0;i<derivative->GetNumRows();i++) {
+        for(int j=0; j<derivative->GetNumCols();j++) {
+          printf("(%f, %f)", logLikelihoodIn(i,j), (*derivative)(i,j));
+        }
+        printf("\n");
+      }
+      printf("=====================================================\n\n");
+
+       /*
+       END: print gradients.
+       */
+#endif
+
+      return ret;
     }
 
     template<class ElemType>

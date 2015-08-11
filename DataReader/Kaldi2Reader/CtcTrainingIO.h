@@ -7,8 +7,6 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // This class deals with the CTC training in CNTK.
-//TODO: this code needs to inherit from a parallel fwd/bwd propogation class:
-//    -> but note that fwd/bwd on lattice would still be single threaded.
 template<class ElemType>
 class CtcTrainingIO :
 public UtteranceDerivativeComputationInterface<ElemType>
@@ -51,7 +49,36 @@ protected:
             Matrix<ElemType> &beta,
             Matrix<ElemType> &log_nnet_out,
             std::vector<size_t> &labels,
-            float pzx);
+            ElemType pzx);
+
+    virtual bool ComputeDerivativeActual(const wstring& uttID,
+                                   const Matrix<ElemType>& logLikelihoodIn,
+                                   Matrix<ElemType>* derivative,
+                                   ElemType* objective);
+
+    virtual bool ComputeDerivativeNumerical(const wstring& uttID,
+                                   const Matrix<ElemType>& logLikelihoodIn,
+                                   Matrix<ElemType>* derivative,
+                                   ElemType* objective);
+
+    /*
+    static const ElemType log_zero_ = -1e100;
+    static const ElemType exp_limit_ = 709.78271289338397;
+    static const ElemType log_inf_ = 1e100;
+    static const ElemType max_ = 1.7976931348623157e+308;
+    */
+
+    static const ElemType log_zero_ = -1e30f;
+    static const ElemType exp_limit_ = 88.722839f;
+    static const ElemType log_inf_ = 1e30f;
+    static const ElemType max_ = 3.4028235e+038f;
+
+    ElemType AddAB(ElemType a, ElemType b);
+    ElemType SubAB(ElemType a, ElemType b);
+    ElemType ExpA(ElemType a);
+    ElemType LogAPlusB(ElemType a, ElemType b);
+
+
 };
 
 }}}
