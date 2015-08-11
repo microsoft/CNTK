@@ -500,7 +500,8 @@ public:
         else if (tok.symbol == L"+" || tok.symbol == L"-"               // === unary operators
             || tok.symbol == L"!")
         {
-            operand = OperandFromTokenSymbol(tok);
+            operand = make_shared<Expression>(tok.beginLocation, tok.symbol + L"(");    // encoded as +( -( !(
+            ConsumeToken();
             operand->args.push_back(ParseOperand());
         }
         else if (tok.symbol == L"new")                                  // === new class instance
