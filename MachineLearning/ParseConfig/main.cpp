@@ -27,7 +27,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest2 = L"i2s(i) = new StringFunction [ what = 'format' ; arg = i ; how = '.2' ] ; print(s) = new PrintAction [ what = s ] ; do = print('result=' + i2s((( [ v = (i => i + delta) ].v(5)))+13)) ; delta = 42 ";
         let parserTest3 = L"do = new PrintAction [ what = val ] ; val=1+2*3; text = 'hello'+' world' ";
         let parserTest4 = L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; arg = (13:(fortytwo:1):100) ; how = '' ] ];fortytwo=42 ";
-        let parserTest5 = L"do = new PrintAction [ what = val ] ; val=13:[a='a';b=42]:14; arr = array [1..10] (i => 2*i) ";
+        let parserTest5 = L"do = new PrintAction [ what = val ] ; val=if !false then 42 else -+-++-13:[a='a';b=42]:+14; arr = array [1..10] (i => 2*i) ";
         let parserTest6 = L"do = new PrintAction [ what = arg ] ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr ";
         let parserTest7 = L"do = new PrintAction [ what = val ] ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ";
         let parserTest8 = L"Parameters(O,I) = new ComputationNode [ class = 'LearnableParameter'; outDim=O; inDim=I ] \n"
@@ -38,7 +38,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest9 = L"do = new PrintAction [ what = val ] ; fac(i) = if i > 1 then fac(i-1)*i else i ; val = fac(5) ";
         let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then 1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10;
-        let parserTest = parserTest10;
+        let parserTest = parserTest5;
         let expr = ParseConfigString(parserTest);
         //expr->Dump();
         Do(expr);

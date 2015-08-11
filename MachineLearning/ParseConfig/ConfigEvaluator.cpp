@@ -701,7 +701,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
                 return ConfigValuePtr(arr, e->location);
             }
-            else if (e->op == L"[")                                                 // === access array element by index
+            else if (e->op == L"[")                                         // === access array element by index
             {
                 let arrValue = Evaluate(e->args[0], scope);
                 let indexExpr = e->args[1];
@@ -710,7 +710,24 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 return arr->At(index, indexExpr->location);
             }
             // --- unary operators '+' '-' and '!'
-            // ...
+            else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
+            {
+                let argExpr = e->args[0];
+                let argValPtr = Evaluate(argExpr, scope);
+                if (argValPtr.Is<Double>())
+                    if (e->op == L"+(") return argValPtr;
+                    else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location);
+                else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
+                    if (e->op == L"+(") return argValPtr;
+                    else return MakeMagicComputationNode(L"ScaleNode", e->location, MakePrimitiveConfigValuePtr(-1.0, e->location), argValPtr);
+                else
+                    Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand", e->location);
+            }
+            else if (e->op == L"!(")                                        // === unary operator !
+            {
+                let arg = ToBoolean(Evaluate(e->args[0], scope), e->args[0]);
+                return MakePrimitiveConfigValuePtr(!arg, e->location);
+            }
             // --- regular infix operators such as '+' and '=='
             else
             {
@@ -846,7 +863,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 }
                 else                                // ComputeNode OP ComputeNode
                 {
-                    if (e->op == L"+")       return MakeMagicComputationNode(L"PlusNode",  e->location,  leftVal, rightVal);
+                    if (e->op == L"+")       return MakeMagicComputationNode(L"PlusNode",  e->location, leftVal, rightVal);
                     else if (e->op == L"-")  return MakeMagicComputationNode(L"MinusNode", e->location, leftVal, rightVal);
                     else if (e->op == L"*")  return MakeMagicComputationNode(L"TimesNode", e->location, leftVal, rightVal);
                     else LogicError("unexpected infix op");
