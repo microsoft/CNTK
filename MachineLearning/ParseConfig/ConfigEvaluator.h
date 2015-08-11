@@ -211,7 +211,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     class ConfigLambda : public Object
     {
         // the function itself is a C++ lambda
-        function<ConfigValuePtr(const vector<ConfigValuePtr>&, shared_ptr<ConfigRecord>)> f;
+        function<ConfigValuePtr(const vector<ConfigValuePtr>&, shared_ptr<ConfigRecord>, const wstring & exprName)> f;
         // inputs. This defines the interface to the function. Very simple in our case though.
         size_t numParams;                     // number of position-dependent arguments
         shared_ptr<ConfigRecord> namedParams; // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
@@ -219,11 +219,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         template<typename F>
         ConfigLambda(size_t numParams, shared_ptr<ConfigRecord> namedParams, const F & f) : numParams(numParams), namedParams(namedParams), f(f) { }
         size_t GetNumParams() const { return numParams; }
-        ConfigValuePtr Apply(vector<ConfigValuePtr> args, shared_ptr<ConfigRecord> namedArgs)
+        ConfigValuePtr Apply(vector<ConfigValuePtr> args, shared_ptr<ConfigRecord> namedArgs, const wstring & exprName)
         {
             const auto actualNamedArgs = namedArgs;
             // BUGBUG: need to inject defaults for named args, and remove entries that are not in namedArgs
-            return f(args, actualNamedArgs);
+            return f(args, actualNamedArgs, exprName);
         }
     };
     typedef shared_ptr<ConfigLambda> ConfigLambdaPtr;

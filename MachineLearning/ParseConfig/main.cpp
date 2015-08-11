@@ -31,14 +31,15 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest6 = L"do = new PrintAction [ what = arg ] ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr ";
         let parserTest7 = L"do = new PrintAction [ what = val ] ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ";
         let parserTest8 = L"Parameters(O,I) = new ComputationNode [ class = 'LearnableParameter'; outDim=O; inDim=I ] \n"
-                          L"do = new PrintAction [ what = val ] \n"
-                          L"val = new NDLNetwork [\n"
-                          L"  A = Parameters(13,42) ; B = A*A+A ; outZ = B*B+A-A \n"
+            L"Times(a,b) = new ComputationNode [ class = 'TimesNode'; left=a; right=b ] \n"
+            L"do = new PrintAction [ what = val ] \n"
+            L"val = new NDLNetwork [\n"
+            L"  A = Parameters(13,42) ; B = A*A+A ; outZrec = [ C = Times(A,B) ] ; outZ = outZrec.C \n"
                           L"]\n";
         let parserTest9 = L"do = new PrintAction [ what = val ] ; fac(i) = if i > 1 then fac(i-1)*i else i ; val = fac(5) ";
         let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then 1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10;
-        let parserTest = parserTest9;
+        let parserTest = parserTest8;
         let expr = ParseConfigString(parserTest);
         //expr->Dump();
         Do(expr);

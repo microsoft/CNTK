@@ -117,9 +117,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
 
+    struct HasName { virtual void SetName(const wstring & name) = 0; };
+
     set<wstring> nodesPrinted;      // HACK: ToString only formats nodes not already in here
 
-    struct ComputationNode : public Object, public HasToString
+    struct ComputationNode : public Object, public HasToString, public HasName
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
 
@@ -129,8 +131,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // other
         wstring m_nodeName;                     // node name in the graph
+        const std::wstring & GetName() const { return m_nodeName; }
+        /*implement*/ void SetName(const wstring & name) { m_nodeName = name; }
 
-        virtual const wchar_t * TypeName() const = 0;
+        virtual const wchar_t * OperationName() const = 0;
         const wstring & NodeName() const { return m_nodeName; }
 
         ComputationNode()
@@ -159,9 +163,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let res = nodesPrinted.insert(NodeName());
             let alreadyPrinted = !res.second;
             if (alreadyPrinted)
-                return NodeName() + L"^";
+                return NodeName() + L" ^";
             // we format it like "[TYPE] ( args )"
-            wstring result = NodeName() + L" : " + wstring(TypeName());
+            wstring result = NodeName() + L" : " + wstring(OperationName());
             if (m_children.empty()) result.append(L"()");
             else
             {
@@ -201,19 +205,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
     public:
         PlusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * TypeName() const { return L"PlusNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"PlusNode"; }
     };
     class MinusNode : public BinaryComputationNode
     {
     public:
         MinusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * TypeName() const { return L"MinusNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"MinusNode"; }
     };
     class TimesNode : public BinaryComputationNode
     {
     public:
         TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * TypeName() const { return L"TimesNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"TimesNode"; }
     };
 #if 0   // ScaleNode is something more complex it seems
     class ScaleNode : public ComputationNode
@@ -221,7 +225,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         double factor;
     public:
         TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * TypeName() const { return L"ScaleNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"ScaleNode"; }
     };
 #endif
     class DelayNode : public ComputationNode, public HasLateInit
@@ -238,7 +242,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             in;
             // dim?
         }
-        /*implement*/ const wchar_t * TypeName() const { return L"DelayNode"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"DelayNode"; }
     };
     class InputValue : public ComputationNode
     {
@@ -247,7 +251,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             config;
         }
-        /*implement*/ const wchar_t * TypeName() const { return L"InputValue"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"InputValue"; }
     };
     class LearnableParameter : public ComputationNode
     {
@@ -256,7 +260,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         LearnableParameter(size_t outDim, size_t inDim) : outDim(outDim), inDim(inDim)
         {
         }
-        /*implement*/ const wchar_t * TypeName() const { return L"LearnableParameter"; }
+        /*implement*/ const wchar_t * OperationName() const { return L"LearnableParameter"; }
         /*implement*/ wstring ToString() const
         {
             let res = nodesPrinted.insert(NodeName());
@@ -264,7 +268,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (alreadyPrinted)
                 return NodeName() + L"^";
             else
-                return wstrprintf(L"%ls : %ls (%d, %d)", NodeName().c_str(), TypeName(), (int)outDim, (int)inDim);
+                return wstrprintf(L"%ls : %ls (%d, %d)", NodeName().c_str(), OperationName(), (int)outDim, (int)inDim);
         }
     };
     // factory function for ComputationNodes
@@ -361,7 +365,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // =======================================================================
 
     // sample runtime objects for testing
-    class PrintAction : public Object, public HasLateInit
+    // We are trying all sorts of traits here, even if they make no sense for PrintAction.
+    class PrintAction : public Object, public HasLateInit, public HasName
     {
     public:
         PrintAction(const ConfigRecord & config)
@@ -375,6 +380,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let what = config[L"what"];
             let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
             fprintf(stderr, "%ls\n", str.c_str());
+        }
+        /*implement*/ void SetName(const wstring & name)
+        {
+            name;
         }
     };
 
@@ -508,9 +517,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
 
         // look up an identifier in an expression that is a ConfigRecord
-        ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope)
+        ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope, const wstring & exprName)
         {
-            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope), recordExpr, L"record");
+            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprName), recordExpr, L"record");
             return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
         }
 
@@ -520,12 +529,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
         // which is meant to be passed to the constructor or Init() function of a runtime object
-        shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope)
+        shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope, const wstring & exprName)
         {
             // evaluate the record expression itself
             // This will leave its members unevaluated since we do that on-demand
             // (order and what gets evaluated depends on what is used).
-            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope), recordExpr, L"record");
+            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprName), recordExpr, L"record");
             // resolve all entries, as they need to be passed to the C++ world which knows nothing about this
             record->ResolveAll();
             return record;
@@ -535,7 +544,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // This assumes that the ConfigValuePtr points to a BoxWithLateInitOf. If not, it will fail with a nullptr exception.
         void LateInit(LateInitItem & lateInitItem)
         {
-            let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr, lateInitItem.scope);
+            let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr, lateInitItem.scope, L""/*BROKEN*/);
             let object = lateInitItem.object;
             auto p = object.AsRef<shared_ptr<HasLateInit>>();  // TODO: AsPtr?
             p->Init(*config);
@@ -586,7 +595,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // infix operators
         // -----------------------------------------------------------------------
 
-        typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal)> InfixFunction;
+        typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprName)> InfixFunction;
         struct InfixFunctions
         {
             InfixFunction NumbersOp;            // number OP number -> number
@@ -620,7 +629,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
 
         // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
-        ConfigValuePtr MakeMagicComputationNode(const wstring & classId, TextLocation location, const ConfigValuePtr & left, const ConfigValuePtr & right)
+        ConfigValuePtr MakeMagicComputationNode(const wstring & classId, TextLocation location, const ConfigValuePtr & left, const ConfigValuePtr & right, const wstring & exprName)
         {
             // find creation lambda
             let newIter = configurableRuntimeTypes.find(L"ComputationNode");
@@ -632,7 +641,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             config.Add(L"left", left.GetLocation(), left);
             config.Add(L"right", right.GetLocation(), right);
             // instantiate
-            return newIter->second(config, location);
+            let value = newIter->second(config, location);
+            let valueWithName = dynamic_cast<HasName*>(value.get());
+            if (valueWithName && !exprName.empty())
+                valueWithName->SetName(exprName);
+            return value;
         }
 
         // initialize the infixOps table
@@ -640,7 +653,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             // lookup table for infix operators
             // helper lambdas for evaluating infix operators
-            InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprName*/) -> ConfigValuePtr
             {
                 let left  = leftVal.AsRef<Double>();
                 let right = rightVal.AsRef<Double>();
@@ -652,14 +665,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right), e->location);
                 else return CompOp<double> (e, left, right);
             };
-            InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprName*/) -> ConfigValuePtr
             {
                 let left  = leftVal.AsRef<String>();
                 let right = rightVal.AsRef<String>();
                 if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location);
                 else return CompOp<wstring>(e, left, right);
             };
-            InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprName*/) -> ConfigValuePtr
             {
                 let left  = leftVal.AsRef<Bool>();
                 let right = rightVal.AsRef<Bool>();
@@ -668,25 +681,25 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location);
                 else return CompOp<bool>(e, left, right);
             };
-            InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
+            InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprName) -> ConfigValuePtr
             {
                 // TODO: test this
                 if (rightVal.Is<Double>())     // ComputeNode * scalar
                     swap(leftVal, rightVal);        // -> scalar * ComputeNode
                 if (leftVal.Is<Double>())      // scalar * ComputeNode
                 {
-                    if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal);
+                    if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal, exprName);
                     else LogicError("unexpected infix op");
                 }
                 else                                // ComputeNode OP ComputeNode
                 {
-                    if (e->op == L"+")       return MakeMagicComputationNode(L"PlusNode",  e->location, leftVal, rightVal);
-                    else if (e->op == L"-")  return MakeMagicComputationNode(L"MinusNode", e->location, leftVal, rightVal);
-                    else if (e->op == L"*")  return MakeMagicComputationNode(L"TimesNode", e->location, leftVal, rightVal);
+                    if (e->op == L"+")       return MakeMagicComputationNode(L"PlusNode",  e->location, leftVal, rightVal, exprName);
+                    else if (e->op == L"-")  return MakeMagicComputationNode(L"MinusNode", e->location, leftVal, rightVal, exprName);
+                    else if (e->op == L"*")  return MakeMagicComputationNode(L"TimesNode", e->location, leftVal, rightVal, exprName);
                     else LogicError("unexpected infix op");
                 }
             };
-            InfixFunction BadOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr { FailBinaryOpTypes(e); };
+            InfixFunction BadOp = [this](ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) -> ConfigValuePtr { FailBinaryOpTypes(e); };
             infixOps = decltype(infixOps)
             {
                 // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
@@ -714,13 +727,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // -----------------------------------------------------------------------
 
         // create a lambda that calls Evaluate() on an expr to get or realize its value
-        shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, wstring itemStr/*for trace message*/)
+        shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, wstring exprName)
         {
-            function<ConfigValuePtr()> f = [this, expr, scope, itemStr]()   // lambda that computes this value of 'expr'
+            function<ConfigValuePtr()> f = [this, expr, scope, exprName]()   // lambda that computes this value of 'expr'
             {
                 if (trace)
-                    expr->location.PrintIssue(L"", itemStr.c_str(), L"executing thunk");
-                let value = Evaluate(expr, scope);
+                    expr->location.PrintIssue(L"", exprName.c_str(), L"executing thunk");
+                let value = Evaluate(expr, scope, exprName);
                 return value;   // this is a great place to set a breakpoint!
             };
             return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
@@ -744,7 +757,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         //  - input:  expression
         //  - output: ConfigValuePtr that holds the evaluated value of the expression
         // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
-        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope)
+        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprName = wstring())
         {
             // tracing
             if (trace)
@@ -761,23 +774,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     Fail(L"unknown runtime type " + e->id, e->location);
                 // form the config record
                 let dictExpr = e->args[0];
+                ConfigValuePtr value;
                 if (e->op == L"new")   // evaluate the parameter dictionary into a config record
-                    return newIter->second(*ConfigRecordFromDictExpression(dictExpr, scope), e->location); // this constructs it
+                    value = newIter->second(*ConfigRecordFromDictExpression(dictExpr, scope, exprName), e->location); // this constructs it
                 else                // ...unless it's late init. Then we defer initialization.
                 {
                     // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
+                    // ... exprName broken
                     let value = newIter->second(ConfigRecord(), e->location);
                     deferredInitList.push_back(LateInitItem(value, scope, dictExpr)); // construct empty and remember to Init() later
-                    return value;   // we return the created but not initialized object as the value, so others can reference it
                 }
+                let valueWithName = dynamic_cast<HasName*>(value.get());
+                if (valueWithName && !exprName.empty())
+                    valueWithName->SetName(exprName);
+                return value;   // we return the created but not initialized object as the value, so others can reference it
             }
             else if (e->op == L"if")                                                    // === conditional expression
             {
                 let condition = ToBoolean(Evaluate(e->args[0], scope), e->args[0]);
                 if (condition)
-                    return Evaluate(e->args[1], scope);
+                    return Evaluate(e->args[1], scope, exprName);   // TODO: pass exprName through 'if'?
                 else
-                    return Evaluate(e->args[2], scope);
+                    return Evaluate(e->args[2], scope, exprName);
             }
             // --- functions
             else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
@@ -786,12 +804,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
                 if (argListExpr->op != L"()") LogicError("parameter list expected");
                 let fnExpr = e->args[1];                // [1] = expression of the function itself
-                let f = [this, argListExpr, fnExpr, scope](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs) -> ConfigValuePtr
+                let f = [this, argListExpr, fnExpr, scope](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprName) -> ConfigValuePtr
                 {
+                    // on exprName
+                    //  - 'callerExprName' is the name to which the result of the fn evaluation will be assigned
+                    //  - 'exprName' (outside) is the name of the macro we are defining this lambda under
                     let & argList = argListExpr->args;
                     if (args.size() != argList.size()) LogicError("function application with mismatching number of arguments");
                     // create a ConfigRecord with param names from 'argList' and values from 'args'
-                    // create a dictionary with all arguments
                     let record = make_shared<ConfigRecord>();
                     let thisScope = MakeScope(record, scope);   // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
                     // create an entry for every argument value
@@ -805,12 +825,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                         // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                     }
                     namedArgs;  // TODO: later
-                    return Evaluate(fnExpr, MakeScope(record, scope));  // bring args into scope; keep lex scope of '=>' as upwards chain
+                    // now evaluate the function
+                    return Evaluate(fnExpr, MakeScope(record, scope), callerExprName);  // bring args into scope; keep lex scope of '=>' as upwards chain
                 };
                 let record = make_shared<ConfigRecord>();   // TODO: named args go here
                 return ConfigValuePtr(make_shared<ConfigLambda>(argListExpr->args.size(), record, f), e->location);
             }
-            else if (e->op == L"(")
+            else if (e->op == L"(")                                         // === apply a function to its arguments
             {
                 let lambdaExpr = e->args[0];            // [0] = function
                 let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
@@ -826,11 +847,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 {
                     let argValExpr = args[i];               // expression of arg [i]
                     argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, wstrprintf(L"arg %d", i)), argValExpr->location);  // make it a thunked value
+                    /*this wstrprintf should be gone, this is now the exprName*/
                 }
                 // deal with namedArgs later
                 let namedArgs = make_shared<ConfigRecord>();
                 // call the function!
-                return lambda->Apply(argVals, namedArgs);
+                return lambda->Apply(argVals, namedArgs, exprName);
             }
             // --- variable access
             else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
@@ -843,8 +865,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
                 for (let & entry : e->namedArgs)
                 {
+                    let id = entry.first;
                     let expr = entry.second.second;                 // expression to compute the entry
-                    record->Add(entry.first/*id*/, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, entry.first/*id for tracing*/), expr->location));
+                    let fullName = exprName.empty() ? L"" : exprName + L"/" + id;
+                    record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, fullName), expr->location));
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
                 return ConfigValuePtr(record, e->location);
@@ -853,7 +877,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else if (e->op == L".")                                                 // === variable/macro access in given ConfigRecord element
             {
                 let recordExpr = e->args[0];
-                return RecordLookup(recordExpr, e->id, e->location, scope);
+                return RecordLookup(recordExpr, e->id, e->location, scope, L"");
             }
             // --- arrays
             else if (e->op == L":")                                                 // === array expression (-> ConfigArray)
@@ -886,17 +910,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 vector<ConfigValuePtr> elementThunks;
                 for (int index = firstIndex; index <= lastIndex; index++)
                 {
-                    let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location);      // index as a ConfigValuePtr
+                    let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location);           // index as a ConfigValuePtr
+                    let fullName = exprName.empty() ? L"" : wstrprintf(L"%ls[%d]", exprName, index);    // expression name
                     // create an expression
-                    function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope]()   // lambda that computes this value of 'expr'
+                    function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope, fullName]()   // lambda that computes this value of 'expr'
                     {
                         if (trace)
                             initLambdaExpr->location.PrintIssue(L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
                         // apply initLambdaExpr to indexValue and return the resulting value
-                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope), initLambdaExpr, L"function");
+                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, fullName), initLambdaExpr, L"function");
                         vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
                         let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
-                        let value = initLambda->Apply(argVals, namedArgs);
+                        let value = initLambda->Apply(argVals, namedArgs, fullName);
                         return value;   // this is a great place to set a breakpoint!
                     };
                     elementThunks.push_back(ConfigValuePtr(make_shared<ConfigValuePtr::Thunk>(f, initLambdaExpr->location), initLambdaExpr->location));
@@ -922,7 +947,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location);
                 else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
                     if (e->op == L"+(") return argValPtr;
-                    else return MakeMagicComputationNode(L"ScaleNode", e->location, MakePrimitiveConfigValuePtr(-1.0, e->location), argValPtr);
+                    else return MakeMagicComputationNode(L"ScaleNode", e->location, MakePrimitiveConfigValuePtr(-1.0, e->location), argValPtr, exprName);
                 else
                     Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand", e->location);
             }
@@ -943,18 +968,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let leftValPtr = Evaluate(leftArg, scope);
                 let rightValPtr = Evaluate(rightArg, scope);
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
-                    return functions.NumbersOp(e, leftValPtr, rightValPtr);
+                    return functions.NumbersOp(e, leftValPtr, rightValPtr, exprName);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
-                    return functions.StringsOp(e, leftValPtr, rightValPtr);
+                    return functions.StringsOp(e, leftValPtr, rightValPtr, exprName);
                 else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
-                    return functions.BoolOp(e, leftValPtr, rightValPtr);
+                    return functions.BoolOp(e, leftValPtr, rightValPtr, exprName);
                 // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
                 else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
-                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr);
+                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, exprName);
                 else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
-                    return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr);
+                    return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr, exprName);
                 else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
-                    return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr);
+                    return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr, exprName);
                 // TODO: DictOp
                 else
                     FailBinaryOpTypes(e);
@@ -980,7 +1005,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         //       Need to move this list into Evaluate() directly and figure it out.
         ConfigValuePtr EvaluateParse(ExpressionPtr e)
         {
-            auto result = Evaluate(e, nullptr/*top scope*/);
+            auto result = Evaluate(e, nullptr/*top scope*/, L"$");
             // The deferredInitList contains unresolved Expressions due to "new!". This is specifically needed to support ComputeNodes
             // (or similar classes) that need circular references, while allowing to be initialized late (construct them empty first).
             while (!deferredInitList.empty())
@@ -993,7 +1018,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         void Do(ExpressionPtr e)
         {
-            RecordLookup(e, L"do", e->location, nullptr);  // we evaluate the member 'do'
+            RecordLookup(e, L"do", e->location, nullptr, L"$");  // we evaluate the member 'do'
         }
     };
 
