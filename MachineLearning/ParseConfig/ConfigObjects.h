@@ -55,10 +55,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     typedef BoxOf<wstring> String;
 
     // class to box a primitive C++ type so that it derives from Object
-    template<typename T> class BoxOfWrapped : public BoxOf<Wrapped<T>>
-    {
-    public:
-        BoxOfWrapped(T value) : BoxOf(value) { }
-    };
+    //template<typename T> class BoxOfWrapped : public BoxOf<Wrapped<T>>
+    //{
+    //public:
+    //    BoxOfWrapped(T value) : BoxOf(value) { }
+    //};
 
 }}} // end namespaces

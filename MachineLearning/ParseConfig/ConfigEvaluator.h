@@ -33,12 +33,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             ResolveValue();
             return dynamic_cast<T*>(get());
         }    // this casts the raw pointer that's inside the shared_ptr
-        template<typename T> BoxOfWrapped<T> * DynamicCastBoxOfWrapped() const
-        {
-            //return Dyn
-            ResolveValue();
-            return dynamic_cast<BoxOfWrapped<T>*>(get());
-        }    // this casts the raw pointer that's inside the shared_ptr
     public:
         // construction     ---TODO: no template here
         template<typename T>
@@ -56,22 +50,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         operator bool() const { return (Bool)*this; }
         operator size_t() const
         {
-            const auto val = AsBoxOfWrapped<double>();
+            ResolveValue();
+            const auto p = dynamic_cast<Double*>(get());    // -> Double* which is Wrapped<double>*
+            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
+                throw EvaluationError(L"config member has wrong type", location);
+            double val = *p;
             const auto ival = (size_t)val;
             if (ival != val)
                 throw EvaluationError(L"numeric value is not an integer", location);
-            // TODO: ^^this cannot be done, since we don't have TextLocation here.
             return ival;
         }
         // type helpers
-        template<typename T> bool IsBoxOfWrapped() const { return DynamicCastBoxOfWrapped<T>() != nullptr; }
-        template<typename T> T & AsBoxOfWrapped() const     // returns reference to what the 'value' member
-        {
-            auto * p = DynamicCastBoxOfWrapped<T>();        // -> BoxOfWrapped<T>
-            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type", location);
-            return *p;                    // this unwraps the value out from its BoxOfWrapped wrapper
-        }
         template<class C>
         bool Is() const
         {
@@ -131,22 +120,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    template<typename T> ConfigValuePtr static inline MakeBoxedConfigValue(const T & val, TextLocation location) {
-        const auto r = ConfigValuePtr(make_shared<T>(val), location);
-        return r;
-    }
-    // use this for old-style classes, TO BE REMOVED
-    template<typename T> static inline ConfigValuePtr MakeWrappedAndBoxedConfigValue(const T & val, TextLocation location) {
-        return ConfigValuePtr(make_shared<BoxOfWrapped<T>>(val), location);
+    template<typename T> ConfigValuePtr static inline MakeBoxedConfigValue(const T & val, TextLocation location)
+    {
+        return ConfigValuePtr(make_shared<T>(val), location);
     }
     // use this for primitive values, double and bool
-    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValue(const T & val, TextLocation location) {
-        return MakeWrappedAndBoxedConfigValue(val, location);
+    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValue(const T & val, TextLocation location)
+    {
+        return ConfigValuePtr(make_shared<BoxOf<Wrapped<T>>>(val), location);
     }
-    // strings are stored in a String instead
-    ConfigValuePtr static inline MakeStringConfigValue(const String & val, TextLocation location) {
-        return MakeBoxedConfigValue(val, location);
-    }
+
+    // -----------------------------------------------------------------------
+    // ConfigRecord -- collection of named config values
+    // -----------------------------------------------------------------------
 
     class ConfigRecord : public Object      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
@@ -180,6 +166,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 member.second.ResolveValue();
         }
     };
+    typedef shared_ptr<ConfigRecord> ConfigRecordPtr;
 
     // create a runtime object from its type --general case
     // There can be specializations of this that instantiate objects that do not take ConfigRecords or involve mapping like ComputationNode.
@@ -189,7 +176,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         return make_shared<C>(config);
     }
 
-    // an array is just a vector of config values; like ConfigRecord, it can be wrapped as a value in a BoxOfWrappedWrapped
+    // an array is just a vector of config values
     class ConfigArray : public Object
     {
         vector<ConfigValuePtr> values;
