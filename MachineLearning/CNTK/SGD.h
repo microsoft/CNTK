@@ -2109,6 +2109,8 @@ protected:
                             totalTimeInMBs, totalTimePerSample,
                             static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
 
+                    fflush(stderr);
+
                     // reset statistics
                     totalTimeInMBs = 0;
                     numSamplesLastMBs = 0;
@@ -2184,7 +2186,7 @@ protected:
 
             if (m_gradHeader == nullptr)
             {
-                m_gradHeader = (DistGradHeader<ElemType>*)new char[DistGradHeader<ElemType>::DistGradHeaderSize(numEvalNodes)];
+                m_gradHeader = DistGradHeader<ElemType>::Create(numEvalNodes);
             }
         }
     }
@@ -2201,7 +2203,7 @@ protected:
 
             if (m_gradHeader != nullptr)
             {
-                delete[]((char*)m_gradHeader);
+                DistGradHeader<ElemType>::Destroy(m_gradHeader);
                 m_gradHeader = nullptr;
             }
         }
