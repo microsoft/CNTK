@@ -43,14 +43,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // access as a reference, that is, as a shared_ptr<T>   --use this for Objects
         template<typename T> operator shared_ptr<T>() const { return AsPtr<T>(); }
         // access as a (const & to) value  --use this for primitive types (also works to get a const wstring & from a String)
-        template<typename T> operator T() const { return As<T>(); }
-        //operator double() const { return (Double)*this; }
-        //operator bool() const { return (Bool)*this; }
-        operator double() const { return As<Double>(); }
-        operator bool() const { return As<Bool>(); }
+        template<typename T> operator T() const { return AsRef<T>(); }
+        operator double() const { return AsRef<Double>(); }
+        operator bool() const { return AsRef<Bool>(); }
         template<typename INT> INT AsInt() const
         {
-            double val = As<Double>();
+            double val = AsRef<Double>();
             INT ival = (INT)val;
             const wchar_t * type = L"size_t";
             const char * t = typeid(INT).name(); t;
@@ -70,9 +68,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return p != nullptr;
         }
         template<class C>
-        const C & As() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
+        const C & AsRef() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
-            // WARNING! This returns a reference, i.e. keep the object you call this on around as long as you use the returned reference!
+            // Note: since this returns a reference into 'this', keep the object you call this on around as long as you use the returned reference!
             ResolveValue();
             const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
@@ -120,7 +118,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             const_cast<ConfigValuePtr&>(*this) = value;
             ResolveValue();                         // allow it to return another Thunk...
         }
-    };
+    };  // ConfigValuePtr
 
     template<typename T> ConfigValuePtr static inline MakeBoxedConfigValue(const T & val, TextLocation location)
     {
