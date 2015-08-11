@@ -120,12 +120,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };  // ConfigValuePtr
 
-    template<typename T> ConfigValuePtr static inline MakeBoxedConfigValue(const T & val, TextLocation location)
-    {
-        return ConfigValuePtr(make_shared<T>(val), location);
-    }
     // use this for primitive values, double and bool
-    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValue(const T & val, TextLocation location)
+    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValuePtr(const T & val, TextLocation location)
     {
         return ConfigValuePtr(make_shared<BoxOf<Wrapped<T>>>(val), location);
     }
