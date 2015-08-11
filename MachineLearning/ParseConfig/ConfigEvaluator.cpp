@@ -230,11 +230,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             RuntimeError("FormatConfigValue: format string must not contain %");
         if (arg.Is<String>())
         {
-            return wstrprintf((L"%" + how + L"s").c_str(), arg.As<String>().c_str());
+            return wstrprintf((L"%" + how + L"s").c_str(), arg.AsRef<String>().c_str());
         }
         else if (arg.Is<Double>())
         {
-            let val = arg.As<Double>();
+            let val = arg.AsRef<Double>();
             if (val == (int)val)
                 return wstrprintf((L"%" + how + L"d").c_str(), (int)val);
             else
@@ -272,7 +272,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return NestString(result, L'(', false, L')');
         }
         else if (arg.Is<HasToString>())
-            return arg.As<HasToString>().ToString();
+            return arg.AsRef<HasToString>().ToString();
         else
             return msra::strfun::utf16(arg.TypeName());             // cannot print this type
     }
@@ -457,7 +457,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr, lateInitItem.scope);
             let object = lateInitItem.object;
-            auto p = object.As<shared_ptr<HasLateInit>>();
+            auto p = object.AsRef<shared_ptr<HasLateInit>>();  // TODO: AsPtr?
             p->Init(*config);
 //            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
         }
@@ -661,7 +661,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 {
                     let item = Evaluate(expr, scope);           // result can be an item or a vector
                     if (item.Is<ConfigArray>())
-                        arr->Append(item.As<ConfigArray>());     // append all elements (this flattens it)
+                        arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
                     else
                         arr->Append(item);
                 }
@@ -808,8 +808,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             // helper lambdas for evaluating infix operators
             InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = leftVal.As<Double>();
-                let right = rightVal.As<Double>();
+                let left  = leftVal.AsRef<Double>();
+                let right = rightVal.AsRef<Double>();
                 if (e->op == L"+")       return MakePrimitiveConfigValue(left + right, e->location);
                 else if (e->op == L"-")  return MakePrimitiveConfigValue(left - right, e->location);
                 else if (e->op == L"*")  return MakePrimitiveConfigValue(left * right, e->location);
@@ -820,15 +820,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             };
             InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = leftVal.As<String>();
-                let right = rightVal.As<String>();
+                let left  = leftVal.AsRef<String>();
+                let right = rightVal.AsRef<String>();
                 if (e->op == L"+")  return MakeBoxedConfigValue(String(left + right), e->location);
                 else return CompOp<wstring>(e, left, right);
             };
             InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
             {
-                let left  = leftVal.As<Bool>();
-                let right = rightVal.As<Bool>();
+                let left  = leftVal.AsRef<Bool>();
+                let right = rightVal.AsRef<Bool>();
                 if (e->op == L"||")       return MakePrimitiveConfigValue(left || right, e->location);
                 else if (e->op == L"&&")  return MakePrimitiveConfigValue(left && right, e->location);
                 else if (e->op == L"^")   return MakePrimitiveConfigValue(left ^  right, e->location);
