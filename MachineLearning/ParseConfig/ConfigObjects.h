@@ -37,13 +37,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     typedef Wrapped<double> Double;
     typedef Wrapped<bool> Bool;
 
-    // ...no, define the BoxOfWrapped without Object; call it BoxOfWrapped; then change String to BoxOfWrapped
-
     // a string (STL wstring, to be precise) that can be help in a ConfigValuePtr
     // TODO: templatize this, call it ConfigObject
     // This can dynamic_cast to wstring.
 
-    // BoxOf<T> wrappes a pre-defined type, e.g. std::wstring, to derive from Object.
+    // BoxOf<T> wraps a pre-defined type, e.g. std::wstring, to derive from Object.
     // BoxOf<T> can dynamic_cast to T (e.g. BoxOf<wstring> is a wstring).
     template<class C>
     class BoxOf : public Object, public C
@@ -53,12 +51,5 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         BoxOf(){}
     };
     typedef BoxOf<wstring> String;
-
-    // class to box a primitive C++ type so that it derives from Object
-    //template<typename T> class BoxOfWrapped : public BoxOf<Wrapped<T>>
-    //{
-    //public:
-    //    BoxOfWrapped(T value) : BoxOf(value) { }
-    //};
 
 }}} // end namespaces

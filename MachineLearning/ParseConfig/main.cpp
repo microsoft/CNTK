@@ -36,7 +36,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                           L"  A = Parameters(13,42) ; B = A*A+A ; outZ = B*B+A-A \n"
                           L"]\n";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8;
-        let parserTest = parserTest3;
+        let parserTest = parserTest8;
         let expr = ParseConfigString(parserTest);
         //expr->Dump();
         Do(expr);
