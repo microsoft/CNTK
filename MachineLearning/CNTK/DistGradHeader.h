@@ -6,7 +6,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct DistGradHeader
     {
     public:
-        size_t numSample;
+        size_t numSamples;
+        size_t numSamplesWithLabel;
         ElemType criterion;
 
         // variable-size array
@@ -31,8 +32,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
+                numSamples += other->numSamples;
+                numSamplesWithLabel += other->numSamplesWithLabel;
                 criterion += other->criterion;
-                numSample += other->numSample;
                 for (int i = 0; i < numEvalNode; i++)
                 {
                     evalErrors[i] += other->evalErrors[i];

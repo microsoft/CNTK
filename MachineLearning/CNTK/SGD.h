@@ -270,7 +270,7 @@ public:
 
         if (doGradientCheck && sizeof(ElemType) != sizeof(double))
         {
-            LogicError("Gradient check needs to use type = double");
+            LogicError("Gradient check needs to use precision = double");
         }
         m_doUnitTest = configSGD("unittest", "false");
 
@@ -974,8 +974,8 @@ protected:
                     if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
 #endif
                     {
-                        net.SaveToFile(m_modelPath);
-                    }
+                    net.SaveToFile(m_modelPath);
+                }
                 }
                 break;
             }
@@ -1628,7 +1628,7 @@ protected:
         if (epochNumber < 2 && m_prevChosenMinibatchSize != 0)
         {
             // newly started training: any previous MB size stored in the model is to be ignored
-            fprintf(stderr, "before epoch .2, previous minibatchSize %d is "
+            fprintf(stderr, "before epoch .2, previous minibatchSize %zd is "
                     "considered invalid -> resetting\n", m_prevChosenMinibatchSize);
             m_prevChosenMinibatchSize = 0;
         }
@@ -1639,7 +1639,7 @@ protected:
             (epochNumber + 1) % m_minibatchSizeTuningFrequency != 0)
         {
             fprintf(stderr, "AdaptiveMinibatchSearch: Search for a better minibatchSize "
-                    "in epoch %d skipped, keeping minibatchSize of %d\n",
+                    "in epoch %d skipped, keeping minibatchSize of %zd\n",
                     epochNumber + 1, m_prevChosenMinibatchSize);
             chosenMinibatchSize = m_prevChosenMinibatchSize;
         }
@@ -1664,7 +1664,7 @@ protected:
                 assert(m_prevChosenMinibatchSize >= chosenMinibatchSize);
 
                 fprintf(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to "
-                        "previous minibatchSize %d*2\n", m_prevChosenMinibatchSize);
+                        "previous minibatchSize %zd*2\n", m_prevChosenMinibatchSize);
                 maxMinibatchSize = min(maxMinibatchSize, m_prevChosenMinibatchSize * 2);
             }
 
@@ -1730,7 +1730,7 @@ protected:
             // round mbsize to something meaningful
             trialMinibatchSize = RoundToMultipleOf64(trialMinibatchSizeFloat);
 
-            fprintf(stderr, "\nAdaptiveMinibatchSearch: Evaluating trial minibatchSize=%d out of range %d..%d ...\n\n",
+            fprintf(stderr, "\nAdaptiveMinibatchSearch: Evaluating trial minibatchSize=%zd out of range %zd..%zd ...\n\n",
                     trialMinibatchSize, RoundToMultipleOf64(minMinibatchSize), RoundToMultipleOf64(maxMinibatchSize));
 
             size_t totalSamplesSeen;
@@ -1800,8 +1800,12 @@ protected:
         // Tries to read an utterance and run forward computation on the
         // whole utterance.
         assert(trainSetDataReader != NULL);
-        std::wstring uttID;
-        if (trainSetDataReader->GetForkedUtterance(uttID, *inputMatrices))
+        std::vector<std::vector<std::pair<wstring, size_t>>> uttInfo;
+        Matrix<ElemType> sentenceBoundary;
+        std::vector<MinibatchPackingFlag> minibatchPackingFlag;
+        while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices,
+                                                    sentenceBoundary,
+                                                    minibatchPackingFlag))
         {
             UpdateEvalTimeStamps(FeatureNodes);
 
@@ -1815,7 +1819,10 @@ protected:
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
             net.Evaluate((*outputNodes)[0]);   // Only evaluate the first output
-            trainSetDataReader->ComputeDerivativeFeatures(uttID, (*outputNodes)[0]->FunctionValues());
+            trainSetDataReader->SetNetOutput(uttInfo,
+                                             (*outputNodes)[0]->FunctionValues(),
+                                             sentenceBoundary,
+                                             minibatchPackingFlag);
         }
     }
 
@@ -1951,7 +1958,7 @@ protected:
                 UpdateEvalTimeStamps(FeatureNodes);
                 UpdateEvalTimeStamps(labelNodes);
 
-                actualMBSize = net.GetActualMBSize();
+                    actualMBSize = net.GetActualMBSize();
 
                 if (actualMBSize == 0)
                 {
@@ -1975,9 +1982,9 @@ protected:
                     refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
                     refNet.Evaluate(refNode);
                     Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
-                        refNode->FunctionValues(),
-                        1 - m_adaptationRegWeight,
-                        (*labelNodes)[0]->FunctionValues());
+                                                  refNode->FunctionValues(),
+                                                  1 - m_adaptationRegWeight,
+                                                  (*labelNodes)[0]->FunctionValues());
                 }
 
                 // only compute gradient when learning rate is large enough
@@ -1998,8 +2005,14 @@ protected:
                 }
             }
 
-            // Sum of MBSize across all nodes when using parallel training
-            size_t aggregateMBSizeAllTrainingNodes = actualMBSize;
+            //for now since we share the same label masking flag we call this on the training
+            //criterion node ony. Later, when we apply different labels on different nodes
+            //we need to add code to call this function multiple times, one for each criteria node
+            size_t numSamplesWithLabel = net.GetNumSamplesWithLabel(actualMBSize);
+
+            // Sum of actualMBSize across all nodes when using parallel training
+            size_t aggregateNumSamples = actualMBSize;
+            size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
 
             //distributed gradient aggregation
             if (!useGradientAggregation)
@@ -2016,7 +2029,8 @@ protected:
 
                 //prepare the header
                 m_gradHeader->numEvalNode = numEvalNodes;
-                m_gradHeader->numSample = actualMBSize;
+                m_gradHeader->numSamples = actualMBSize;
+                m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
                 m_gradHeader->criterion = wasDataRead ? (*criterionNodes)[0]->FunctionValues().Get00Element() : 0;
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
@@ -2025,7 +2039,8 @@ protected:
 
                 m_distGradAgg->AggregateGradients(m_gradHeader);
 
-                aggregateMBSizeAllTrainingNodes = m_gradHeader->numSample;
+                aggregateNumSamples = m_gradHeader->numSamples;
+                aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 epochCriterion += m_gradHeader->criterion;
                 for (size_t i = 0; i<numEvalNodes; i++)
                 {
@@ -2043,21 +2058,18 @@ protected:
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
 
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  m_momentumPerSample[epochNumber], aggregateMBSizeAllTrainingNodes,
+                                  m_momentumPerSample[epochNumber], aggregateNumSamples,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier);
                 }
             }
-
-            // Tries to set up derivative features for the next utterance.
-            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
 
             timer.Stop();
             numMBsRun++;
             if (m_traceLevel > 0)
             {
                 totalTimeInMBs += timer.ElapsedSeconds();
-                numSamplesLastMBs += int(aggregateMBSizeAllTrainingNodes);
+                numSamplesLastMBs += int(aggregateNumSamplesWithLabel);
 
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
@@ -2110,8 +2122,8 @@ protected:
             }
 
             timer.Restart();
-            totalEpochSamples += aggregateMBSizeAllTrainingNodes;
-            totalSamplesSeen += aggregateMBSizeAllTrainingNodes;
+            totalEpochSamples += aggregateNumSamplesWithLabel;
+            totalSamplesSeen += aggregateNumSamplesWithLabel;
 
             if (totalEpochSamples >= epochSize)
             {
@@ -2121,6 +2133,9 @@ protected:
             // call DataEnd function
             // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(endDataSentence);
+
+            // Tries to set up derivative features for the next utterance.
+            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
 
             profiler.NextSample();
         }

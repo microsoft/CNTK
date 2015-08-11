@@ -1058,21 +1058,25 @@ public:
 /**
 These macros are used for sentence segmentation information. 
 */
-#define SENTENCE_BEGIN ((int) MinibatchPackingFlag::UtteranceStart)
-#define SENTENCE_MIDDLE ((int) MinibatchPackingFlag::None)
-#define SENTENCE_END ((int) MinibatchPackingFlag::UtteranceEnd)
-#define NO_LABELS ((int) MinibatchPackingFlag::NoLabel)
+#define SEQUENCE_START ((int) MinibatchPackingFlag::SequenceStart)
+#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlag::None)
+#define SEQUENCE_END ((int) MinibatchPackingFlag::SequenceEnd)
+#define NO_INPUT ((int) MinibatchPackingFlag::NoInput)
+#define NO_FEATURE ((int) MinibatchPackingFlag::NoFeature)
+#define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
 
 enum class MinibatchPackingFlag : unsigned char
 {
     None = 0,
-    UtteranceStart = 1 << 0,   //binary 0001
-    UtteranceEnd = 1 << 1,   //binary 0010
-    NoLabel = 1 << 2,      //binary 0100
+    SequenceStart = 1 << 0,   //binary 0001
+    SequenceEnd = 1 << 1,   //binary 0010
+    NoFeature = 1 << 2,      //binary 0100
+    NoLabel = 1 << 3,      //binary 1000
 
-    UtteranceStartOrNoLabel = UtteranceStart | NoLabel,
-    UtteranceEndOrNoLabel = UtteranceEnd | NoLabel,
-    UtteranceStartOrEndOrNoLabel = UtteranceStart | UtteranceEnd | NoLabel,
+    NoInput = NoFeature | NoLabel, //when we refactorize reader, NoInput will no longer needed
+    SequenceStartOrNoFeature = SequenceStart | NoFeature,
+    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
+    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
 };
 
 inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)

@@ -850,13 +850,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
                             m_minibatchPackingFlag.resize(feat.cols());
-                            m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
-                            m_sentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
-                            m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SENTENCE_END);
+                            m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
+                            m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
+                            m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
                                 
                             std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
-                            m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::UtteranceEnd;
+                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
+                            m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
                             first = false;
                         }
 
@@ -1032,12 +1032,12 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                 m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
                 m_minibatchPackingFlag.resize(m_mbSize);
 
-                //mtSentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
+                //mtSentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
                 for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
                 {
                     for (size_t j = 0; j < m_mbSize; j++)
                     {
-                        m_sentenceBegin.SetValue(i,j,(ElemType) SENTENCE_MIDDLE);
+                        m_sentenceBegin.SetValue(i,j,(ElemType) SEQUENCE_MIDDLE);
                     }
                 }
                 std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
@@ -1056,8 +1056,8 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                             m_switchFrame[i] = m_mbSize+1;
                             if (m_processedFrame[i] == 1)
                             {
-                                m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_END);
-                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceEnd;
+                                m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_END);
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceEnd;
                             }
 
                         }
@@ -1065,8 +1065,8 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         {
                             m_switchFrame[i] = 0;
                             m_sentenceEnd[i] = true;
-                            m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                            m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
+                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
 
                         }
                         actualmbsize[i] = m_mbSize;
@@ -1262,13 +1262,13 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         m_switchFrame[i] = actualmbsize[i];
                         if (actualmbsize[i] < m_mbSize)
                         {
-                            m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
-                            m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]] | MinibatchPackingFlag::UtteranceStart;
+                            m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SEQUENCE_START);
+                            m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]] | MinibatchPackingFlag::SequenceStart;
                         }
                         if (actualmbsize[i] == m_mbSize)
                         {
-                            m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SENTENCE_END);
-                            m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]-1] | MinibatchPackingFlag::UtteranceEnd;
+                            m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
+                            m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]-1] | MinibatchPackingFlag::SequenceEnd;
                         }
 
 
@@ -1420,13 +1420,13 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                         m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
                         m_minibatchPackingFlag.resize((size_t)feat.cols());
 
-                        m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-                        m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
-                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SENTENCE_END);
+                        m_sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
+                        m_sentenceBegin.SetValue(0, 0, (ElemType)SEQUENCE_START);
+                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
                                 
                         std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
-                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::UtteranceEnd;
+                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
+                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
                     
                         first = false;
                     }

@@ -45,11 +45,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         m_tempArray = nullptr;
         m_tempArraySize = 0;
+        m_overflowWarningCount = 0;
 
         vector<wstring> scriptpaths;
         vector<wstring> filelist;
         size_t numFiles;
         size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
+
+        
+        m_verbosity = writerConfig("verbosity", "2");
+        m_overflowValue = writerConfig("overflowValue", "50");
+        m_maxNumOverflowWarning = writerConfig("maxNumOverflowWarning", "10");
 
         ConfigArray outputNames = writerConfig("outputNodeNames","");
         if (outputNames.size()<1)
@@ -197,13 +203,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int i=0; i<outputData.GetNumRows(); i++)
                     {
                         nnet_out_host(j,i) = (float)*pValue++;                
-                        if (nnet_out_host(j,i) > 50)
+                        if (nnet_out_host(j,i) > m_overflowValue)
                         {
                             nnet_out_host(j,i)  = -(float)log(1.0/outputData.GetNumCols());
-                            fprintf (stderr, "overflowed!! : %d %d frames of %s\n", i,j, wfea.c_str());
+                            if (m_verbosity > 0 && m_overflowWarningCount < m_maxNumOverflowWarning)
+                            {
+                                fprintf (stderr, "overflowed!! : %d %d frames of %s\n", i,j, wfea.c_str());
+                                m_overflowWarningCount++;
+                            }
                         }
-
-
                     }
                 }
                 
