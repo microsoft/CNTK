@@ -10,6 +10,49 @@ using namespace Microsoft::MSR::CNTK;
 #define let const auto
 #endif
 
+wstring standardFunctions =
+L"Format(value,format) = new StringFunction [ what = 'format' ; arg = value ; how = format ] \n"
+L"Print(value) = new PrintAction [ what = value ] \n"
+L""
+L""
+L""
+L""
+L""
+L""
+L""
+;
+
+wstring computationNodes =
+L"Mean(z) = new ComputationNode [ class = 'MeanNode' ; arg = z ] \n"
+L"InvStdDev(z) = new ComputationNode [ class = 'InvStdDevNode' ; arg = z ] \n"
+L"PerDimMeanVarNormalization(feat,mean,invStdDev) = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; arg1 = feat ; arg2 = mean ; arg3 = invStdDev ] \n"
+L"Parameter(outD, inD) = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD ] \n"
+L"Input(dim) = Parameter(dim,1)   // TODO: for now \n"
+L"RowSlice(firstRow, rows, features) = new ComputationNode [ class = 'RowSliceNode' ; arg = features ; first = firstRow ; num = rows ] \n"
+L"Sigmoid(z) = new ComputationNode [ class = 'SigmoidNode' ; arg = z ] \n"
+L"Log(z) = new ComputationNode [ class = 'LogNode' ; arg = z ] \n"
+L"CrossEntropyWithSoftmax(labels, outZ) = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; left = labels ; right = outZ ] \n"
+L"ErrorPrediction(labels, outZ) = new ComputationNode [ class = 'ErrorPredictionNode' ; left = labels ; right = outZ ] \n"
+L" \n"
+L" \n"
+L" \n"
+L" \n"
+L" \n"
+L" \n"
+L" \n"
+;
+
+wstring commonMacros =  // TODO: rename rows and cols to inDim and outDim or vice versa, whichever it is
+L"BFF(in, rows, cols) = [ B = Parameter(rows, 1/*init = fixedvalue, value = 0*/) ; W = Parameter(rows, cols) ; z = W*in+B ] \n"
+L"SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] \n "
+L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"
+L"LogPrior(labels) = Log(Mean(labels)) \n"
+L""
+L""
+;
+
+
+
 int wmain(int /*argc*/, wchar_t* /*argv*/[])
 {
     // there is record of parameters
@@ -30,17 +73,25 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest5 = L"do = new PrintAction [ what = val ] ; val=if !false then 42 else -+-++-13:[a='a';b=42]:+14; arr = array [1..10] (i => 2*i) ";
         let parserTest6 = L"do = new PrintAction [ what = arg ] ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr ";
         let parserTest7 = L"do = new PrintAction [ what = val ] ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ";
-        let parserTest8 = L"Parameters(O,I) = new ComputationNode [ class = 'LearnableParameter'; outDim=O; inDim=I ] \n"
-            L"Times(a,b) = new ComputationNode [ class = 'TimesNode'; left=a; right=b ] \n"
-            L"do = new PrintAction [ what = val ] \n"
-            L"val = new NDLNetwork [\n"
-            L"  A = Parameters(13,42) ; B = A*A+A ; outZrec = [ C = Times(A,B) ] ; outZ = outZrec.C \n"
+        let parserTest8 = L" \n"
+                          L"do = Print(val) \n"
+                          L"val = new NDLNetwork [\n"
+                          L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 7 \n"
+                          L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
+                          L"  featNorm = MeanVarNorm(myFeatures) \n"
+                          L"  HiddenStack(layer) = if layer > 1 then SBFF(HiddenStack(layer - 1).Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
+                          L"  outLayer = BFF(HiddenStack(numHiddenLayers).Eh, labelDim, hiddenDim) \n"
+                          L"  outZ = outLayer.z \n"
+                          L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
+                          L"  Err = ErrorPrediction(myLabels, outZ) \n"
+                          L"  logPrior = LogPrior(myLabels) \n"
+                          L"  ScaledLogLikelihood = outZ - logPrior \n"
                           L"]\n";
         let parserTest9 = L"do = new PrintAction [ what = val ] ; fac(i) = if i > 1 then fac(i-1)*i else i ; val = fac(5) ";
         let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then 1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10;
         let parserTest = parserTest8;
-        let expr = ParseConfigString(parserTest);
+        let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
         //expr->Dump();
         Do(expr);
         //ParseConfigFile(L"c:/me/test.txt")->Dump();
