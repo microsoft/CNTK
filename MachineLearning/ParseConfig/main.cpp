@@ -38,7 +38,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest9 = L"do = new PrintAction [ what = val ] ; fac(i) = if i > 1 then fac(i-1)*i else i ; val = fac(5) ";
         let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then 1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10;
-        let parserTest = parserTest5;
+        let parserTest = parserTest9;
         let expr = ParseConfigString(parserTest);
         //expr->Dump();
         Do(expr);
