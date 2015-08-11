@@ -25,7 +25,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; how = '.2' ; arg = '13 > 42' ]\" ] ;"
             L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
         let parserTest2 = L"i2s(i) = new StringFunction [ what = 'format' ; arg = i ; how = '.2' ] ; print(s) = new PrintAction [ what = s ] ; do = print('result=' + i2s((( [ v = (i => i + delta) ].v(5)))+13)) ; delta = 42 ";
-        let parserTest3 = L"do = new PrintAction [ what = text ] ; text = 'hello' ";
+        let parserTest3 = L"do = new PrintAction [ what = val ] ; val=1+2*3; text = 'hello'+' world' ";
         let parserTest4 = L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; arg = (13:(fortytwo:1):100) ; how = '' ] ];fortytwo=42 ";
         let parserTest5 = L"do = new PrintAction [ what = val ] ; val=13:[a='a';b=42]:14; arr = array [1..10] (i => 2*i) ";
         let parserTest6 = L"do = new PrintAction [ what = arg ] ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr ";
@@ -36,7 +36,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                           L"  A = Parameters(13,42) ; B = A*A+A ; outZ = B*B+A-A \n"
                           L"]\n";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8;
-        let parserTest = parserTest8;
+        let parserTest = parserTest3;
         let expr = ParseConfigString(parserTest);
         //expr->Dump();
         Do(expr);

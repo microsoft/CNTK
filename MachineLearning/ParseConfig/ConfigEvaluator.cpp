@@ -463,15 +463,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
 
         // get value
-        // TODO: use &; does not currently work with AsBoxOfWrapped<ConfigRecord>
         template<typename T>
-        T /*&*/ As(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
+        const T & As(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
         {
             let val = dynamic_cast<T*>(value.get());
             if (!val)
                 TypeExpected(typeForMessage, e);
             return *val;
         }
+#if 0
         // convert a BoxOfWrapped to a specific type
         // BUGBUG: If this returns a reference, it will crash when retrieving a ConfigRecord. May go away once ConfigRecord is used without Box
         template<typename T>
@@ -483,6 +483,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             //    TypeExpected(typeForMessage, e);
             //return *val;
         }
+#endif
         template<typename T>
         shared_ptr<T> AsPtr(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
         {
@@ -573,7 +574,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 e->location.PrintIssue(L"", L"", L"trace");
             // --- literals
             if (e->op == L"d")       return MakePrimitiveConfigValue(e->d, e->location);    // === double literal
-            else if (e->op == L"s")  return MakeStringConfigValue(e->s, e->location);       // === string literal
+            else if (e->op == L"s")  return MakeBoxedConfigValue(String(e->s), e->location);// === string literal
             else if (e->op == L"b")  return MakePrimitiveConfigValue(e->b, e->location);    // === bool literal
             else if (e->op == L"new" || e->op == L"new!")                                   // === 'new' expression: instantiate C++ runtime object
             {
@@ -651,11 +652,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 }
                 // deal with namedArgs later
                 let namedArgs = make_shared<ConfigRecord>();
-#if 0
-                for (let & entry : e->namedArgs)            // named args   --TODO: check whether arguments are matching and/or duplicate, use defaults
-                    record->Add(entry.first, entry.second.first, MakeWrappedAndBoxedConfigValue(entry.second.second, entry.second.second->location));
-                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
-#endif
                 // call the function!
                 return lambda->Apply(argVals, namedArgs);
             }
@@ -855,7 +851,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 let left  = leftVal.As<String>();
                 let right = rightVal.As<String>();
-                if (e->op == L"+")  return MakeStringConfigValue(left + right, e->location);
+                if (e->op == L"+")  return MakeBoxedConfigValue(String(left + right), e->location);
                 else return CompOp<wstring>(e, left, right);
             };
             InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal) -> ConfigValuePtr
