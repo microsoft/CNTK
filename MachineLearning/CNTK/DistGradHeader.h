@@ -14,9 +14,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int numEvalNode;
         ElemType evalErrors[1];
 
-        static size_t DistGradHeaderSize(size_t nEvalNode)
+        static DistGradHeader<ElemType>* Create(int numEvalNode)
         {
-            return sizeof(DistGradHeader<ElemType>) + (sizeof(ElemType) * (nEvalNode - 1));
+            DistGradHeader<ElemType>* header = (DistGradHeader<ElemType>*)new char[DistGradHeaderSize(numEvalNode)];
+            header->numEvalNode = numEvalNode;
+            return header;
+        }
+
+        static void Destroy(DistGradHeader* header)
+        {
+            delete[]((char*)header);
         }
 
         //aggregate header information
@@ -41,5 +48,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
+
+        size_t Size() const
+        {
+            return DistGradHeaderSize(numEvalNode);
+        }
+
+    private:
+        static size_t DistGradHeaderSize(size_t nEvalNode)
+        {
+            return sizeof(DistGradHeader<ElemType>) + (sizeof(ElemType) * (nEvalNode - 1));
+        }
+
+        // Disallow construction and destruction since this type contains a variable sized array member
+        // and hence must be constructed through the create and destroy functions
+        DistGradHeader() = delete;
+        ~DistGradHeader() = delete;
+
+        // Disallow copy and move construction/assignment
+        DistGradHeader(const DistGradHeader&) = delete;
+        DistGradHeader& operator=(const DistGradHeader&) = delete;
+        DistGradHeader(DistGradHeader&&) = delete;
+        DistGradHeader& operator=(DistGradHeader&&) = delete;
     };
 }}}
