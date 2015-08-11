@@ -6,25 +6,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     using namespace std;
 
-    // objects that can print their content
-
-    struct HasToString { virtual wstring ToString() const = 0; };
+    // -----------------------------------------------------------------------
+    // Object -- common base class for objects that can be used in config files
+    // -----------------------------------------------------------------------
 
     // All values that can be used in config files
     //  - are heap objects
     //     - primitives are wrapped
-    //     - object pointers are ref-counted shared_ptr, wrapped in ConfigValuePtr
+    //     - object pointers are ref-counted shared_ptr, wrapped in ConfigValuePtr (see ConfigEvaluator.h)
     //  - derive from Object (outside classes get wrapped)
     //
     // This code supports three kinds of value types:
     //  - self-defined classes -> derive from Object, e.g. Expression
     //  - classes defined outside -> wrap in a BoxOf object, e.g. String = BoxOf<wstring>
-    //  - C++ primitives like 'double' -> wrap in a Wrapper first then in a BoxOf, e.g. Number = BoxOf<Wrapped<double>> = BoxOfWrapped<double>
+    //  - C++ primitives like 'double' -> wrap in a Wrapper first then in a BoxOf, e.g. Number = BoxOf<Wrapped<double>>
 
     struct Object { virtual ~Object() { } };
 
-    // Wrapped<T> wraps non-class primitive C++ type into a class.
+    // -----------------------------------------------------------------------
+    // Wrapped<T> -- wraps non-class primitive C++ type into a class, like 'double'.
     // (It can also be used for class types, but better use BoxOf<> below directly.)
+    // -----------------------------------------------------------------------
+
     template<typename T> class Wrapped
     {
         T value;    // meant to be a primitive type
@@ -37,12 +40,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     typedef Wrapped<double> Double;
     typedef Wrapped<bool> Bool;
 
-    // a string (STL wstring, to be precise) that can be help in a ConfigValuePtr
-    // TODO: templatize this, call it ConfigObject
-    // This can dynamic_cast to wstring.
-
-    // BoxOf<T> wraps a pre-defined type, e.g. std::wstring, to derive from Object.
+    // -----------------------------------------------------------------------
+    // BoxOf<T> -- wraps a pre-defined type, e.g. std::wstring, to derive from Object.
     // BoxOf<T> can dynamic_cast to T (e.g. BoxOf<wstring> is a wstring).
+    // -----------------------------------------------------------------------
+
     template<class C>
     class BoxOf : public Object, public C
     {
@@ -50,6 +52,22 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         BoxOf(const C & val) : C(val) { }
         BoxOf(){}
     };
+
+    // -----------------------------------------------------------------------
+    // String -- a string in config files
+    // Can cast to wstring (done in a way that ConfigValuePtr can also cast to wstring).
+    // -----------------------------------------------------------------------
+
     typedef BoxOf<wstring> String;
+
+    // -----------------------------------------------------------------------
+    // HasToString -- trait to indicate an object can print their content
+    // Derive from HasToString() and implement ToString() method.
+    // FormatConfigValue() will then return ToString().
+    // -----------------------------------------------------------------------
+
+    struct HasToString { virtual wstring ToString() const = 0; };
+    wstring IndentString(wstring s, size_t indent);
+    wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close);
 
 }}} // end namespaces
