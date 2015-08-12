@@ -1476,7 +1476,8 @@ int wmain(int argc, wchar_t* argv[])
             fcloseOrDie(fp);
         }
         fprintf(stderr, "COMPLETED\n");
-    }
+		fflush(stderr);
+	}
     catch (const std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
