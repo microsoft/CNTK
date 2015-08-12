@@ -15,7 +15,7 @@
 #
 # Each test directory has a following components:
 #    - testcases.yml - main test confuguration file, whcih defines all test cases
-#    - run-test  - (run-test) script
+#    - run-test - (run-test) script
 #    - baseline*.txt - baseline files whith a captured expected output of run-test script
 #
 # ----- testcases.yml format -------
@@ -52,10 +52,14 @@
 # ---- Baseline files ----
 # Order of searching baseline files, depends on the current mode for a given test:
 #
-#   1. baseline.<flavor>.<device>.txt
-#   2. baseline.<flavor>.txt
-#   3. baseline.<device>.txt
-#   4. baseline.txt
+#   1. baseline.<os>.<flavor>.<device>.txt
+#   2. baseline.<os>.<flavor>.txt
+#   3. baseline.<os>.<device>.txt
+#   4. baseline.<os>.txt
+#   5. baseline.<flavor>.<device>.txt
+#   6. baseline.<flavor>.txt
+#   7. baseline.<device>.txt
+#   8. baseline.txt
 #        where <flavor> = { debug | release }
 #              <device> = { cpu | gpu }
 # 
@@ -79,6 +83,7 @@
 import sys, os, argparse, traceback, yaml, subprocess, random, re, time
 
 thisDir = os.path.dirname(os.path.realpath(__file__))
+windows = os.getenv("OS")=="Windows_NT"
 
 # This class encapsulates an instance of the test
 class Test:
@@ -169,6 +174,10 @@ class Test:
     os.environ["TEST_FLAVOR"] = flavor
     os.environ["TEST_DEVICE"] = device
     os.environ["TEST_BUILD_LOCATION"] = args.build_location
+    if windows:
+      os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
+    else:
+      os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "bin", "cntk")
     os.environ["TEST_DIR"] = self.testDir
     os.environ["TEST_DATA_DIR"] = self.dataDir
     os.environ["TEST_RUN_DIR"] = runDir
@@ -237,17 +246,22 @@ class Test:
     return result
 
   # Finds a location of a baseline file by probing different names in the following order:
+  #   baseline.$os.$flavor.$device.txt
+  #   baseline.$os.$flavor.txt
+  #   baseline.$os.$device.txt
+  #   baseline.$os.txt
   #   baseline.$flavor.$device.txt
   #   baseline.$flavor.txt
   #   baseline.$device.txt
   #   baseline.txt
   def findBaselineFile(self, flavor, device):
-    for f in ["." + flavor.lower(), ""]:
-      for d in ["." + device.lower(), ""]:
-        candidateName = "baseline" + f + d + ".txt";
-        fullPath = os.path.join(self.testDir, candidateName)
-        if os.path.isfile(fullPath):
-           return fullPath
+    for o in ["." + ("windows" if windows else "linux"), ""]:
+      for f in ["." + flavor.lower(), ""]:
+        for d in ["." + device.lower(), ""]:
+          candidateName = "baseline" + o + f + d + ".txt"
+          fullPath = os.path.join(self.testDir, candidateName)
+          if os.path.isfile(fullPath):
+            return fullPath
     return None
 
 # This class encapsulates one testcase (in testcases.yml file)
@@ -521,13 +535,13 @@ runSubparser.add_argument("test", nargs="*",
                     help="optional test name(s) to run, specified as Suite/TestName. "
                          "Use list command to list available tests. "
                          "If not specified then all tests will be run.")
-#TODO: port paths to Windows
-defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "..", "bin"))
+defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "..", "x64" if windows else "build"))
+
 runSubparser.add_argument("-b", "--build-location", default=defaultBuildLocation, help="location of the CNTK build to run")
 runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specific device")
 runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specific flavor")
-#TODO: port paths to Windows
-defaultRunDir=os.path.join("/tmp", "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
+tmpDir = os.getenv("TEMP") if windows else "/tmp"
+defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
 runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
 runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
 runSubparser.add_argument("-v", "--verbose", action='store_true', help="verbose output - dump all output of test script")

@@ -911,7 +911,7 @@ namespace Microsoft {
 
                             ComputeTimeInMBs += MBComputeTime;
 
-                            fprintf(stderr, "Sentenes Seen = %d; Samples seen = %d; Total Compute Time = %.8g ; Time Per Sample=%.8g\n", numMBsRun, totalEpochSamples, ComputeTimeInMBs, ComputeTimeInMBs / totalEpochSamples);
+                            fprintf(stderr, "Sentences Seen = %zd; Samples seen = %zd; Total Compute Time = %.8g ; Time Per Sample=%.8g\n", numMBsRun, totalEpochSamples, ComputeTimeInMBs, ComputeTimeInMBs / totalEpochSamples);
                         }
 
                         startReadMBTime = clock();
@@ -1229,7 +1229,7 @@ namespace Microsoft {
                         {
                             ElemType score = result_queue.top().score;
                             best_score = score;
-                            fprintf(stderr, "best[%d] score = %.4e\t", ibest, score);
+                            fprintf(stderr, "best[%zd] score = %.4e\t", ibest, score);
                             if (best_path.size() > 0)
                                 WriteNbest(ibest, best_path, outputNodes, dataWriter);
                         }

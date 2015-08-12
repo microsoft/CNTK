@@ -1515,7 +1515,7 @@ public:
                     ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
                     if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
                     {
-                        fprintf(stderr, "PairNetwork : asked to pair a node with name l%s in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+                        fprintf(stderr, "PairNetwork : asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
                         throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
                     }
                     newNode->AttachInputs(a);
@@ -2441,8 +2441,7 @@ public:
     }
 
     int FindInRecurrentLoop(const ComputationNodePtr startNode,
-                            std::vector<ComputationNodePtr>& recurrentNodes,
-                            bool isForwardComputing = false)
+        std::vector<ComputationNodePtr>& recurrentNodes)
     {
         int iFound = -1;
 
@@ -2451,14 +2450,8 @@ public:
             if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
             {
                 iFound = (*iter).m_loopId;
-                if (isForwardComputing)
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
-                else
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
+                recurrentNodes = (*iter).m_recurrentNodesForForward;
+
                 break;
             }
         }
@@ -2499,7 +2492,7 @@ public:
     void EvaluateLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
     {
         std::vector<ComputationNodePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes, true);
+        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
         if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && 
             m_recurrentInfo[iLoopId].m_completedEvaluate == false)
         {
@@ -3337,7 +3330,7 @@ public:
 
                 bool UnitTest(const ComputationNodePtr rootNode)
                 {
-                    fprintf(stderr, "\n\n Unit test node %ws \n", rootNode->NodeName().c_str());
+                    fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
                     std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
 

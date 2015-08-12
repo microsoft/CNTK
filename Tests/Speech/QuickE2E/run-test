@@ -1,17 +1,28 @@
 #!/bin/bash
-CNTK_BINARY=$TEST_BUILD_LOCATION/x86_64.gpu.$TEST_FLAVOR.acml/cntk
 if [ "$TEST_DEVICE" == "CPU" ]; then
    CNTK_DEVICE_ID=-1
 else
    CNTK_DEVICE_ID=Auto
 fi
-CNTK_ARGS="configFile=$TEST_DIR/cntk.config RunDir=$TEST_RUN_DIR DataDir=$TEST_DATA_DIR DeviceId=$CNTK_DEVICE_ID"
+
+configFile=$TEST_DIR/cntk.config
+RunDir=$TEST_RUN_DIR
+DataDir=$TEST_DATA_DIR
+
+if [ "$OS" == "Windows_NT" ]; then
+  # When running on cygwin translating /cygdrive/xxx paths to proper windows paths:
+  configFile=$(cygpath -aw $configFile)
+  RunDir=$(cygpath -aw $RunDir)
+  DataDir=$(cygpath -aw $DataDir)
+fi
+
+CNTK_ARGS="configFile=$configFile RunDir=$RunDir DataDir=$DataDir DeviceId=$CNTK_DEVICE_ID"
 MODELS_DIR=$TEST_RUN_DIR/models
 [ -d $MODELS_DIR ] && rm -rf $MODELS_DIR
 mkdir -p $MODELS_DIR || exit $?
-echo === Running $CNTK_BINARY $CNTK_ARGS
-$CNTK_BINARY $CNTK_ARGS || exit $?
+echo === Running $TEST_CNTK_BINARY $CNTK_ARGS
+$TEST_CNTK_BINARY $CNTK_ARGS || exit $?
 echo === Deleting last epoch data
 rm $TEST_RUN_DIR/models/*.dnn
 echo ==== Re-running from checkpoint
-$CNTK_BINARY $CNTK_ARGS || exit $?
+$TEST_CNTK_BINARY $CNTK_ARGS || exit $?
