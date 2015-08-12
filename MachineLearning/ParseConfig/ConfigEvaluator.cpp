@@ -50,6 +50,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     }
 
     // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
+    // TODO: change to taking a regular format string and a :: array of args that are checked. Support d,e,f,g,x,c,s (s also for ToString()).
+    // TODO: :: array. Check if that is the right operator for e.g. Haskell.
+    // TODO: turn Print into PrintF; e.g. PrintF provides 'format' arg. Printf('solution to %s is %d', 'question' :: 42)
     static wstring FormatConfigValue(ConfigValuePtr arg, const wstring & how)
     {
         size_t pos = how.find(L'%');
@@ -106,6 +109,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     // =======================================================================
     // support for late init  --currently broken
+    // TODO: late init can be resolved at any assignment, no?
+    //       As soon as the value we defer has a name, it has an object. Or maybe new! can only be assigned right away?
     // =======================================================================
 
     struct HasLateInit { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
@@ -121,6 +126,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     set<wstring> nodesPrinted;      // HACK: ToString only formats nodes not already in here
 
+    // TODO: should this expose a config dict to query the dimension (or only InputValues?)? Expose Children too? As list and by name?
+    // TODO: constructor should take a vector of args in all cases.
     struct ComputationNode : public Object, public HasToString, public HasName
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
@@ -167,6 +174,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         /*implement*/ wstring ToString() const
         {
             // hack: remember we were already formatted
+            // TODO: make nodesPrinted a static threadlocal member.
+            //       Remember if we are first, and clear at end if so. Then it is not a hack anymore. Umm, won't work for Network though.
             let res = nodesPrinted.insert(NodeName());
             let alreadyPrinted = !res.second;
             if (alreadyPrinted)
@@ -195,6 +204,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     class UnaryComputationNode : public ComputationNode
     {
     public:
+        // TODO: how to inherit the base constructor? for derivates of this? constructor = default? using UnaryComputationNode::UnaryComputationNode
         UnaryComputationNode(ComputationNodePtr arg)
         {
             AttachInputs(arg);
@@ -421,6 +431,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // =======================================================================
 
     // sample objects to implement functions
+    // TODO: Chr(), Substr(), Replace(), RegexReplace()     Substr takes negative position to index from end, and length -1
+    // TODO: NumericFunctions: Floor(), Ceil(), Round()     (make Abs, Sign, Min and Max macros; maybe also Ceil=-Floor(-x) and Round=Floor(x+0.5)!)
     class StringFunction : public String
     {
     public:
@@ -550,18 +562,19 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         void InitConfigurableRuntimeTypes()
         {
 #define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
+            // TODO: add a second entry that tests whether T derives from IsConfigRecord. Or MakeRuntimeTypeConstructor could return a std::pair.
             // lookup table for "new" expression
             configurableRuntimeTypes = decltype(configurableRuntimeTypes)
             {
                 // ComputationNodes
                 DefineRuntimeType(ComputationNode),
-                    // other relevant classes
-                    DefineRuntimeType(NDLNetwork),
-                    // Functions
-                    DefineRuntimeType(StringFunction),
-                    // Actions
-                    DefineRuntimeType(PrintAction),
-                    DefineRuntimeType(AnotherAction),
+                // other relevant classes
+                DefineRuntimeType(NDLNetwork),
+                // Functions
+                DefineRuntimeType(StringFunction),
+                // Actions
+                DefineRuntimeType(PrintAction),
+                DefineRuntimeType(AnotherAction),
             };
         }
 
@@ -778,6 +791,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     if (e->op == L"+")       return MakeMagicComputationNode(L"PlusNode",  e->location, leftVal, rightVal, exprName);
                     else if (e->op == L"-")  return MakeMagicComputationNode(L"MinusNode", e->location, leftVal, rightVal, exprName);
                     else if (e->op == L"*")  return MakeMagicComputationNode(L"TimesNode", e->location, leftVal, rightVal, exprName);
+                    // TODO: forgot DiagTimes()
                     else LogicError("unexpected infix op");
                 }
             };
@@ -839,6 +853,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         //  - input:  expression
         //  - output: ConfigValuePtr that holds the evaluated value of the expression
         // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
+        // TODO: always pass in exprName, so that all nodes have a proper name. When coming from a "new" that IsConfigRecord then pass empty string.
         ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, const wstring & exprName = emptyString)
         {
             // tracing
@@ -857,6 +872,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // form the config record
                 let dictExpr = e->args[0];
                 ConfigValuePtr value;
+                // TODO: if target class exposes IsConfigRecord, then reset exprName.
+                //       This will require a second lambda or table entry, or the lambda to call ConfigRecordFrom... itself.
                 if (e->op == L"new")   // evaluate the parameter dictionary into a config record
                     value = newIter->second(*ConfigRecordFromDictExpression(dictExpr, scope, exprName), e->location); // this constructs it
                 else                // ...unless it's late init. Then we defer initialization.
