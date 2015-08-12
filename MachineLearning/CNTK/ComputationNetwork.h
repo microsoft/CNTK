@@ -2434,8 +2434,7 @@ public:
     }
 
     int FindInRecurrentLoop(const ComputationNodePtr startNode,
-                            std::vector<ComputationNodePtr>& recurrentNodes,
-                            bool isForwardComputing = false)
+        std::vector<ComputationNodePtr>& recurrentNodes)
     {
         int iFound = -1;
 
@@ -2444,14 +2443,8 @@ public:
             if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
             {
                 iFound = (*iter).m_loopId;
-                if (isForwardComputing)
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
-                else
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
+                recurrentNodes = (*iter).m_recurrentNodesForForward;
+
                 break;
             }
         }
@@ -2492,7 +2485,7 @@ public:
     void EvaluateLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
     {
         std::vector<ComputationNodePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes, true);
+        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
         if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && 
             m_recurrentInfo[iLoopId].m_completedEvaluate == false)
         {
