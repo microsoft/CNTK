@@ -2122,7 +2122,7 @@ public:
         return newNode;
     }
 
-    ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"")
+    ComputationNodePtr SumElements(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
         ComputationNodePtr newNode(new SumElementsNode<ElemType>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
@@ -2130,6 +2130,13 @@ public:
         return newNode;
     }
 
+    ComputationNodePtr SumColumnElements(const ComputationNodePtr a, const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new SumColumnElementsNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
     ComputationNodePtr Scale(const ComputationNodePtr scalar,
                              const ComputationNodePtr matrix,
                              const std::wstring nodeName = L"")

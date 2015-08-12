@@ -316,7 +316,7 @@ public:
                  cnNodeType == FutureValueNode<ElemType>::TypeName())
         {
             if (parameter.size() <2 || parameter.size() >3)
-                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
+                RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultHiddenActivity=0.1]).");
 
             nodeParamCount = 1;
             nodeParamStart = parameter.size() > 2?2:1;
