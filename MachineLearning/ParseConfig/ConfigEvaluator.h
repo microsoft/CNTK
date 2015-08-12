@@ -130,19 +130,26 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // ConfigRecord -- collection of named config values
     // -----------------------------------------------------------------------
 
-    class ConfigRecord : public Object      // all configuration arguments to class construction, resolved into ConfigValuePtrs
+    struct IsConfigRecord   // any class that exposes config can derive from this
     {
+        virtual const ConfigValuePtr & operator[](const wstring & id) const = 0;    // e.g. confRec[L"message"]
+        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;          // returns nullptr if not found
+    };
+
+    class ConfigRecord : public Object, public IsConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
+    {
+        // change to ContextInsensitiveMap<ConfigValuePtr>
         map<wstring, ConfigValuePtr> members;
     public:
         // regular lookup: just use record[id]
-        const ConfigValuePtr & operator[](const wstring & id) const // e.g. confRec[L"message"]
+        /*implement*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
         {
             const auto memberIter = members.find(id);
             if (memberIter == members.end())
                 RuntimeError("unknown class parameter");
             return memberIter->second;
         }
-        ConfigValuePtr * Find(const wstring & id)                 // returns nullptr if not found
+        /*implement*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
         {
             auto memberIter = members.find(id);
             if (memberIter == members.end())
