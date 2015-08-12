@@ -1496,6 +1496,7 @@ int wmain(int argc, wchar_t* argv[])
             fcloseOrDie(fp);
         }
         fprintf(stderr, "COMPLETED\n");
+		fflush(stderr);
 
         delete g_mpi;
     }
