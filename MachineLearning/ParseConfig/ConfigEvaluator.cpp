@@ -1121,7 +1121,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     if (e->op == L"+(") return argValPtr;
                     else return MakeMagicComputationNode(L"ScaleNode", e->location, MakePrimitiveConfigValuePtr(-1.0, e->location), argValPtr, exprPath);
                 else
-                    Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand", e->location);
+                    Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
             }
             else if (e->op == L"!(")                                        // === unary operator !
             {
