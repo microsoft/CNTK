@@ -187,7 +187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MPI_Comm Communicator() const { return m_currentComm; }
         size_t NumNodesInUse() const { return m_numNodesInUse; }
         size_t CurrentNodeRank() const { return m_myRank; }
-        size_t IsMainNode() const { return m_myRank == 0; }          // we are the chosen one--do extra stuff like saving the model to disk
+        bool IsMainNode() const { return m_myRank == 0; }          // we are the chosen one--do extra stuff like saving the model to disk
         bool IsIdle() const { return CurrentNodeRank() >= NumNodesInUse(); }           // user had requested to not use this many nodes
         bool UsingAllNodes() const { return NumNodesInUse() == m_numMPINodes; }  // all nodes participate (used to check whether we can use MPI_Allreduce directly)
         size_t MainNodeRank() const {return 0;}

@@ -1,0 +1,48 @@
+dataDir: ../../Data
+
+testCases:
+  Must train epochs in exactly same order and parameters for MPI Rank 0:
+    patterns:
+      - ^MPI Rank 0
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Must train epochs in exactly same order and parameters for MPI Rank 1:
+    patterns:
+      - ^MPI Rank 1
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results for MPI Rank 0:
+    patterns:
+      - ^MPI Rank 0
+      - Finished Epoch[{{integer}}]
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErrPerSample = {{float,tolerance=0%}}
+      - Ave LearnRatePerSample = {{float,tolerance=0%}}
+
+  Epochs must be finished with expected results for MPI Rank 1:
+    patterns:
+      - ^MPI Rank 1
+      - Finished Epoch[{{integer}}]
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErrPerSample = {{float,tolerance=0%}}
+      - Ave LearnRatePerSample = {{float,tolerance=0%}}
+
+  Per-minibatch training results must match for MPI Rank 0:
+    patterns:
+      - ^MPI Rank 0
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErr[0]PerSample = {{float,tolerance=0%}}
+
+  Per-minibatch training results must match for MPI Rank 1:
+    patterns:
+      - ^MPI Rank 1
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
+      - SamplesSeen = {{integer}}
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErr[0]PerSample = {{float,tolerance=0%}}

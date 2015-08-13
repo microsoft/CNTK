@@ -176,8 +176,10 @@ class Test:
     os.environ["TEST_BUILD_LOCATION"] = args.build_location
     if windows:
       os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "cntk.exe")
+      os.environ["MPI_BINARY"] = os.path.join(os.environ["MSMPI_BIN"], "mpiexec.exe")
     else:
       os.environ["TEST_CNTK_BINARY"] = os.path.join(args.build_location, flavor, "bin", "cntk")
+      os.environ["MPI_BINARY"] = "mpiexec"
     os.environ["TEST_DIR"] = self.testDir
     os.environ["TEST_DATA_DIR"] = self.dataDir
     os.environ["TEST_RUN_DIR"] = runDir
