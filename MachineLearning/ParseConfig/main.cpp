@@ -11,7 +11,7 @@ using namespace Microsoft::MSR::CNTK;
 #endif
 
 wstring standardFunctions =
-L"Print(value, format='13') = new PrintAction [ what = if format == '13' then 'oops' else value ; how = format ] \n"
+L"Print(value, format='') = new PrintAction [ what = value ; how = format ] \n"
 L"Format(value, format) = new StringFunction [ what = 'format' ; arg = value ; how = format ] \n"
 L"Ceil(x) = -Floor(-x) \n"
 L"Round(x) = Floor(x+0.5) \n"
@@ -28,17 +28,17 @@ L""
 L""
 ;
 
-wstring computationNodes =
-L"Mean(z) = new ComputationNode [ class = 'MeanNode' ; arg = z ] \n"
-L"InvStdDev(z) = new ComputationNode [ class = 'InvStdDevNode' ; arg = z ] \n"
-L"PerDimMeanVarNormalization(feat,mean,invStdDev) = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; arg1 = feat ; arg2 = mean ; arg3 = invStdDev ] \n"
-L"Parameter(outD, inD) = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD ] \n"
-L"Input(dim) = Parameter(dim,1)   // TODO: for now \n"
-L"RowSlice(firstRow, rows, features) = new ComputationNode [ class = 'RowSliceNode' ; arg = features ; first = firstRow ; num = rows ] \n"
-L"Sigmoid(z) = new ComputationNode [ class = 'SigmoidNode' ; arg = z ] \n"
-L"Log(z) = new ComputationNode [ class = 'LogNode' ; arg = z ] \n"
-L"CrossEntropyWithSoftmax(labels, outZ) = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; left = labels ; right = outZ ] \n"
-L"ErrorPrediction(labels, outZ) = new ComputationNode [ class = 'ErrorPredictionNode' ; left = labels ; right = outZ ] \n"
+wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
+L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z ; optionalTag = 'tag' ]\n"
+L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z ; optionalTag = 'tag' ]\n"
+L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev ; optionalTag = 'tag' ]\n"
+L"Parameter(outD, inD/*, tag=''*/) = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; optionalTag = 'tag'*/ ]\n"
+L"Input(dim) = Parameter(dim,1,tag='features')   // TODO: for now \n"
+L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows ; optionalTag = 'tag' ]\n"
+L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z ; optionalTag = 'tag' ]\n"
+L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z ; optionalTag = 'tag' ]\n"
+L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; inputs = labels:outZ ; optionalTag = 'tag' ]\n"
+L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ class = 'ErrorPredictionNode' ; inputs = labels:outZ ; optionalTag = 'tag' ]\n"
 L" \n"
 L" \n"
 L" \n"

@@ -161,6 +161,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         wstring NodeName() const { return m_nodeName; }        // TODO: should really be named GetNodeName()
         /*implement*/ void SetName(const wstring & name) { m_nodeName = name; }
 
+        wstring m_tag;
+        void SetTag(const wstring & tag) { m_tag = tag; }
+        const wstring & GetTag() const { return m_tag; }
+
         virtual const wchar_t * OperationName() const = 0;
 
         ComputationNode()
@@ -188,6 +192,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             m_children[0] = arg1;
             m_children[1] = arg2;
             m_children[2] = arg3;
+        }
+        void AttachInputs(vector<ComputationNodePtr> && inputs, size_t num = 0/*0 means all OK*/)
+        {
+            if (num != 0 && inputs.size() != num)
+                LogicError("AttachInputs: called with incorrect number of arguments");
+            m_children = inputs;
         }
 
         /*implement*/ wstring ToString() const
@@ -220,110 +230,57 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
     typedef ComputationNode::ComputationNodePtr ComputationNodePtr;
-    class UnaryComputationNode : public ComputationNode
+    struct UnaryComputationNode : public ComputationNode
     {
-    public:
-        // TODO: how to inherit the base constructor? for derivates of this? constructor = default? using UnaryComputationNode::UnaryComputationNode
-        UnaryComputationNode(ComputationNodePtr arg)
-        {
-            AttachInputs(arg);
-        }
+        UnaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 1); SetTag(tag); }
     };
-    class BinaryComputationNode : public ComputationNode
+    struct BinaryComputationNode : public ComputationNode
     {
-    public:
-        BinaryComputationNode(ComputationNodePtr left, ComputationNodePtr right)
-        {
-            AttachInputs(left, right);
-        }
+        BinaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 2); SetTag(tag); }
     };
-    class TernaryComputationNode : public ComputationNode
+    struct TernaryComputationNode : public ComputationNode
     {
-    public:
-        TernaryComputationNode(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3)
-        {
-            AttachInputs(arg1, arg2, arg3);
-        }
+        TernaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 3); SetTag(tag);}
     };
 
-    class PlusNode : public BinaryComputationNode
-    {
-    public:
-        PlusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"Plus"; }
+#define DefineComputationNode(T,C) \
+    struct T##Node : public C##ComputationNode \
+    { \
+    T##Node(vector<ComputationNodePtr> && inputs, const wstring & tag) : C##ComputationNode(move(inputs), tag) { } \
+    /*implement*/ const wchar_t * OperationName() const { return L#T; } \
     };
-    class MinusNode : public BinaryComputationNode
-    {
-    public:
-        MinusNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"Minus"; }
-    };
-    class TimesNode : public BinaryComputationNode
-    {
-    public:
-        TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"Times"; }
-    };
+#define DefineUnaryComputationNode(T)   DefineComputationNode(T,Unary)
+#define DefineBinaryComputationNode(T)  DefineComputationNode(T,Binary)
+#define DefineTernaryComputationNode(T) DefineComputationNode(T,Ternary)
+    DefineBinaryComputationNode(Plus);
+    DefineBinaryComputationNode(Minus);
+    DefineBinaryComputationNode(Times);
+    DefineUnaryComputationNode(Log);
+    DefineUnaryComputationNode(Sigmoid);
+    DefineUnaryComputationNode(Mean);
+    DefineUnaryComputationNode(InvStdDev);
+    DefineTernaryComputationNode(PerDimMeanVarNormalization);
+    DefineBinaryComputationNode(CrossEntropyWithSoftmax);
+    DefineBinaryComputationNode(ErrorPrediction);
+
 #if 0   // ScaleNode is something more complex it seems
     class ScaleNode : public ComputationNode
     {
         double factor;
     public:
-        TimesNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
+        PlusNode(vector<ComputationNodePtr> && inputs, const wstring & tag) : BinaryComputationNode(move(inputs), tag) { }
         /*implement*/ const wchar_t * OperationName() const { return L"Scale"; }
     };
 #endif
-    class LogNode : public UnaryComputationNode
-    {
-    public:
-        LogNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"Log"; }
-    };
-    class SigmoidNode : public UnaryComputationNode
-    {
-    public:
-        SigmoidNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"Sigmoid"; }
-    };
-    class MeanNode : public UnaryComputationNode
-    {
-    public:
-        MeanNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"Mean"; }
-    };
-    class InvStdDevNode : public UnaryComputationNode
-    {
-    public:
-        InvStdDevNode(ComputationNodePtr arg) : UnaryComputationNode(arg) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"InvStdDev"; }
-    };
-    class PerDimMeanVarNormalizationNode : public TernaryComputationNode
-    {
-    public:
-        PerDimMeanVarNormalizationNode(ComputationNodePtr arg1, ComputationNodePtr arg2, ComputationNodePtr arg3) : TernaryComputationNode(arg1, arg2, arg3) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"PerDimMeanVarNormalization"; }
-    };
-    class RowSliceNode : public UnaryComputationNode
+    struct RowSliceNode : public UnaryComputationNode
     {
         size_t firstRow, numRows;
     public:
-        RowSliceNode(ComputationNodePtr arg, size_t firstRow, size_t numRows) : UnaryComputationNode(arg), firstRow(firstRow), numRows(numRows) { }
+        RowSliceNode(vector<ComputationNodePtr> && inputs, size_t firstRow, size_t numRows, const wstring & tag) : UnaryComputationNode(move(inputs), tag), firstRow(firstRow), numRows(numRows) { }
         /*implement*/ const wchar_t * OperationName() const { return L"RowSlice"; }
     };
-    class CrossEntropyWithSoftmaxNode : public BinaryComputationNode
-    {
-    public:
-        CrossEntropyWithSoftmaxNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"CrossEntropyWithSoftmax"; }
-    };
-    class ErrorPredictionNode : public BinaryComputationNode
-    {
-    public:
-        ErrorPredictionNode(ComputationNodePtr left, ComputationNodePtr right) : BinaryComputationNode(left, right) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"ErrorPrediction"; }
-    };
     // BROKEN
-    class DelayNode : public ComputationNode, public HasLateInit
+    struct DelayNode : public ComputationNode, public HasLateInit
     {
     public:
         DelayNode(const ConfigRecord & config)
@@ -365,40 +322,60 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
     // factory function for ComputationNodes
+    static vector<ComputationNodePtr> GetInputs(const ConfigRecord & config, size_t expectedNumInputs, const wstring & classId/*for error msg*/)
+    {
+        vector<ComputationNodePtr> inputs;
+        let inputsArg = config[L"inputs"];
+        if (inputsArg.Is<ComputationNode>())  // single arg
+            inputs.push_back(inputsArg);
+        else
+        {
+            let inputsArray = (ConfigArrayPtr)inputsArg;
+            let range = inputsArray->GetRange();
+            for (int i = range.first; i <= range.second; i++)
+                inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
+        }
+        if (inputs.size() != expectedNumInputs)
+            throw EvaluationError(L"unexpected number of inputs to ComputationNode class " + classId, inputsArg.GetLocation());
+        return inputs;
+    }
     template<>
     shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const ConfigRecord & config)
     {
         let classIdParam = config[L"class"];
         wstring classId = classIdParam;
+        let tagp = config.Find(L"optionalTag");
+        wstring tag = tagp ? *tagp : wstring();
         if (classId == L"LearnableParameterNode")
             return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"]);
         else if (classId == L"PlusNode")
-            return make_shared<PlusNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+            return make_shared<PlusNode>(GetInputs(config, 2, L"PlusNode"), tag);
         else if (classId == L"MinusNode")
-            return make_shared<MinusNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+            return make_shared<MinusNode>(GetInputs(config, 2, L"MinusNode"), tag);
         else if (classId == L"TimesNode")
-            return make_shared<TimesNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+            return make_shared<TimesNode>(GetInputs(config, 2, L"TimesNode"), tag);
 #if 0
         else if (classId == L"ScaleNode")
             return make_shared<ScaleNode>((double)config[L"left"], (ComputationNodePtr)config[L"right"]);
 #endif
         else if (classId == L"LogNode")
-            return make_shared<LogNode>((ComputationNodePtr)config[L"arg"]);
+            return make_shared<LogNode>(GetInputs(config, 1, L"LogNode"), tag);
         else if (classId == L"SigmoidNode")
-            return make_shared<SigmoidNode>((ComputationNodePtr)config[L"arg"]);
+            return make_shared<SigmoidNode>(GetInputs(config, 1, L"SigmoidNode"), tag);
         else if (classId == L"MeanNode")
-            return make_shared<MeanNode>((ComputationNodePtr)config[L"arg"]);
+            return make_shared<MeanNode>(GetInputs(config, 1, L"MeanNode"), tag);
         else if (classId == L"InvStdDevNode")
-            return make_shared<InvStdDevNode>((ComputationNodePtr)config[L"arg"]);
+            return make_shared<InvStdDevNode>(GetInputs(config, 1, L"InvStdDevNode"), tag);
         else if (classId == L"PerDimMeanVarNormalizationNode")
-            return make_shared<PerDimMeanVarNormalizationNode>((ComputationNodePtr)config[L"arg1"], (ComputationNodePtr)config[L"arg2"], (ComputationNodePtr)config[L"arg3"]);
+            return make_shared<PerDimMeanVarNormalizationNode>(GetInputs(config, 3, L"PerDimMeanVarNormalizationNode"), tag);
         else if (classId == L"RowSliceNode")
-            return make_shared<RowSliceNode>((ComputationNodePtr)config[L"arg"], (size_t)config[L"first"], (size_t)config[L"num"]);
+            return make_shared<RowSliceNode>(GetInputs(config, 1, L"RowSliceNode"), (size_t)config[L"first"], (size_t)config[L"num"], tag);
         else if (classId == L"CrossEntropyWithSoftmaxNode")
-            return make_shared<CrossEntropyWithSoftmaxNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
+            return make_shared<CrossEntropyWithSoftmaxNode>(GetInputs(config, 2, L"CrossEntropyWithSoftmaxNode"), tag);
         else if (classId == L"ErrorPredictionNode")
-            return make_shared<ErrorPredictionNode>((ComputationNodePtr)config[L"left"], (ComputationNodePtr)config[L"right"]);
-        throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
+            return make_shared<ErrorPredictionNode>(GetInputs(config, 2, L"ErrorPredictionNode"), tag);
+        else
+            throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
 
     // =======================================================================
@@ -762,8 +739,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             // form the ConfigRecord
             ConfigRecord config;
             config.Add(L"class", location, ConfigValuePtr(make_shared<String>(classId), location));
-            config.Add(L"left", left.GetLocation(), left);
-            config.Add(L"right", right.GetLocation(), right);
+            vector<ConfigValuePtr> inputs;
+            inputs.push_back(left);
+            inputs.push_back(right);
+            config.Add(L"inputs", left.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), left.GetLocation()));
             // instantiate
             let value = newIter->second.first(config, location);
             let valueWithName = dynamic_cast<HasName*>(value.get());
