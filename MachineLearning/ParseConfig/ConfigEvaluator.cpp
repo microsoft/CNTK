@@ -435,9 +435,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // built-in functions (implemented as Objects that are also their value)
     // =======================================================================
 
-    // sample objects to implement functions
     // TODO: Chr(), Substr(), Replace(), RegexReplace()     Substr takes negative position to index from end, and length -1
-    // TODO: NumericFunctions: Floor(), Length()
     class StringFunction : public String
     {
     public:
@@ -447,13 +445,43 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let arg = config[L"arg"];
             let whatArg = config[L"what"];
             wstring what = whatArg;
-            if (what == L"format")
+            if (what == L"Format")
             {
                 wstring how = config[L"how"];
                 us = FormatConfigValue(arg, how);
             }
             else
                 throw EvaluationError(L"unknown 'what' value to StringFunction: " + what, whatArg.GetLocation());
+        }
+    };
+
+    // NumericFunctions
+    //  - Floor()
+    //  - Length() (of string or array)
+    class NumericFunction : public BoxOf<Double>
+    {
+    public:
+        NumericFunction(const ConfigRecord & config) : BoxOf<Double>(0.0)
+        {
+            double & us = *this;   // we write to this
+            let arg = config[L"arg"];
+            let whatArg = config[L"what"];
+            wstring what = whatArg;
+            if (what == L"Floor")
+                us = floor((double)arg);
+            else if (what == L"Length")
+            {
+                if (arg.Is<String>())
+                    us = (double)((wstring)arg).size();
+                else        // otherwise expect an array
+                {
+                    let arr = (ConfigArray)arg;
+                    let range = arr.GetRange();
+                    us = (double)(range.second + 1 - range.first);
+                }
+            }
+            else
+                throw EvaluationError(L"unknown 'what' value to NumericFunction: " + what, whatArg.GetLocation());
         }
     };
 
@@ -577,6 +605,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 DefineRuntimeType(NDLNetwork),
                 // Functions
                 DefineRuntimeType(StringFunction),
+                DefineRuntimeType(NumericFunction),
                 // Actions
                 DefineRuntimeType(PrintAction),
                 DefineRuntimeType(AnotherAction),
