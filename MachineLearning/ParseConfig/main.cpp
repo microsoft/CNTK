@@ -89,8 +89,22 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                           L"]\n";
         let parserTest9 = L"do = new PrintAction [ what = val ] ; fac(i) = if i > 1 then fac(i-1)*i else i ; val = fac(5) ";
         let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
-        parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10;
-        let parserTest = parserTest10;
+        let parserTest11 = L" \n"
+                           L"do = Print(val) \n"
+                           L"val = new NDLNetwork [\n"
+                           L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 7 \n"
+                           L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
+                           L"  featNorm = MeanVarNorm(myFeatures) \n"
+                           L"  layers = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
+                           L"  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) \n"
+                           L"  outZ = outLayer.z \n"
+                           L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
+                           L"  Err = ErrorPrediction(myLabels, outZ) \n"
+                           L"  logPrior = LogPrior(myLabels) \n"
+                           L"  ScaledLogLikelihood = outZ - logPrior \n"
+                           L"]\n";
+        parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11;
+        let parserTest = parserTest11;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
         //expr->Dump();
         Do(expr);
