@@ -460,7 +460,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     // sample objects to implement functions
     // TODO: Chr(), Substr(), Replace(), RegexReplace()     Substr takes negative position to index from end, and length -1
-    // TODO: NumericFunctions: Floor(), Ceil(), Round(), Length()     (make Abs, Sign, Min and Max macros; maybe also Ceil=-Floor(-x) and Round=Floor(x+0.5)!)
+    // TODO: NumericFunctions: Floor(), Length()
     class StringFunction : public String
     {
     public:
@@ -544,7 +544,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         __declspec(noreturn) void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
 
         __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
-        __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown member name " + id, where); }
+        __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier " + id, where); }
 
         // -----------------------------------------------------------------------
         // lexical scope
@@ -957,7 +957,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                         record->Add(argName->id, argName->location, argVal);
                         // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                     }
-                    namedArgs;  // TODO: later
+                    // also named arguments
+                    for (let namedArg : namedArgs->GetMembers())
+                    {
+                        let id = namedArg.first;
+                        let & argVal = namedArg.second;
+                        record->Add(id, argVal.GetLocation(), argVal);
+                    }
                     // get the macro name for the exprPath
                     wstring macroId = exprPath;
                     let pos = macroId.find(exprPathSeparator);
@@ -966,7 +972,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     // now evaluate the function
                     return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"_[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
                 };
+                // named args
+                // The nammedArgs in the definition lists optional arguments with their default values
                 let record = make_shared<ConfigRecord>();   // TODO: named args go here
+                for (let namedArg : argListExpr->namedArgs)
+                {
+                    let id = namedArg.first;
+                    let location = namedArg.second.first;   // location of identifier
+                    let expr = namedArg.second.second;      // expression to evaluate to get default value
+                    record->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location));
+                    // the thunk is called if the default value is ever used
+                }
                 return ConfigValuePtr(make_shared<ConfigLambda>(argListExpr->args.size(), record, f), e->location);
             }
             else if (e->op == L"(")                                         // === apply a function to its arguments
@@ -987,10 +1003,20 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, wstrprintf(L"_arg%d", i)), argValExpr->location);  // make it a thunked value
                     /*this wstrprintf should be gone, this is now the exprName*/
                 }
-                // deal with namedArgs later
-                let namedArgs = make_shared<ConfigRecord>();
+                // named args are put into a ConfigRecord
+                // We could check whether the named ars are actually accepted by the lambda, but we leave that to Apply() so that the check also happens for lambda calls from CNTK C++ code.
+                let namedArgs = argsExpr->namedArgs;
+                let namedArgVals = make_shared<ConfigRecord>();
+                for (let namedArg : namedArgs)
+                {
+                    let id = namedArg.first;                // id of passed in named argument
+                    let location = namedArg.second.first;   // location of expression
+                    let expr = namedArg.second.second;      // expression of named argument
+                    namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location));
+                    // the thunk is evaluated when/if the passed actual value is ever used the first time
+                }
                 // call the function!
-                return lambda->Apply(argVals, namedArgs, exprPath);
+                return lambda->Apply(argVals, namedArgVals, exprPath);
             }
             // --- variable access
             else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
