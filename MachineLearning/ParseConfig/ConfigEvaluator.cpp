@@ -435,9 +435,33 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // built-in functions (implemented as Objects that are also their value)
     // =======================================================================
 
-    // TODO: Chr(), Substr(), Replace(), RegexReplace()     Substr takes negative position to index from end, and length -1
+    // StringFunction implements
+    //  - Format
+    //  - Chr(c) -- gives a string of one character with Unicode value 'c'
+    //  - Replace(s,what,withwhat) -- replace all occurences of 'what' with 'withwhat'
+    //  - Substr(s,begin,num) -- get a substring
+    // TODO: Substr(), Replace(), RegexReplace()     Substr takes negative position to index from end, and length -1
     class StringFunction : public String
     {
+        wstring Replace(wstring s, const wstring & what, const wstring & withwhat)
+        {
+            wstring res = s;
+            auto pos = res.find(what);
+            while (pos != wstring::npos)
+            {
+                res = res.substr(0, pos) + withwhat + res.substr(pos + what.size());
+                pos = res.find(what, pos + withwhat.size());
+            }
+            return res;
+        }
+        wstring Substr(const wstring & s, int ibegin, int inum)
+        {
+            // negative index indexes from end; index may exceed
+            let begin = min(ibegin < 0 ? s.size() + ibegin : ibegin, s.size());
+            // 'num' is allowed to exceed
+            let num = min(inum < 0 ? SIZE_MAX : inum, s.size() - begin);
+            return s.substr(begin, num);
+        }
     public:
         StringFunction(const ConfigRecord & config)
         {
@@ -446,10 +470,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let whatArg = config[L"what"];
             wstring what = whatArg;
             if (what == L"Format")
-            {
-                wstring how = config[L"how"];
-                us = FormatConfigValue(arg, how);
-            }
+                us = FormatConfigValue(arg, config[L"how"]);
+            else if (what == L"Chr")
+                us = wstring(1, (wchar_t)(double)arg);
+            else if (what == L"Substr")
+                us = Substr(arg, config[L"pos"], config[L"chars"]);
+            else if (what == L"Replace")
+                us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
             else
                 throw EvaluationError(L"unknown 'what' value to StringFunction: " + what, whatArg.GetLocation());
         }
