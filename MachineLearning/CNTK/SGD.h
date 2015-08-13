@@ -858,7 +858,7 @@ protected:
 #ifdef MPI_SUPPORT
             if (mpiRank == 0)
 #else
-            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
+            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
 #endif
             {
                 // only needs to be done by one process
@@ -971,11 +971,11 @@ protected:
 #ifdef MPI_SUPPORT
                     if (mpiRank == 0)
 #else
-                    if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
+                    if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
 #endif
                     {
-                    net.SaveToFile(m_modelPath);
-                }
+                        net.SaveToFile(m_modelPath);
+                    }
                 }
                 break;
             }
@@ -1071,6 +1071,7 @@ protected:
 
                 fprintf(stderr, "Ave LearnRatePerSample = %.10g; Epoch Time=%.8g\n",
                         learnRatePerSample, epochTime);
+
                 fprintf(stderr, "Finished Epoch[%d]: Criterion Node [%ls] Per Sample = %.8g\n",
                                 i + 1, (*criterionNodes)[0]->NodeName().c_str(), epochCriterion);
 
@@ -1126,7 +1127,7 @@ protected:
 #ifdef MPI_SUPPORT
             if (mpiRank == 0)
 #else
-            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
+            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
 #endif
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
@@ -1208,7 +1209,7 @@ protected:
 #ifdef MPI_SUPPORT
                             if (mpiRank == 0)
 #else
-                            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
+                            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
 #endif
                             {
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
@@ -1268,7 +1269,7 @@ protected:
 #ifdef MPI_SUPPORT
             if (mpiRank == 0)
 #else
-            if ((m_parallelizationMethod == ParallelizationMethod::None) || (g_mpi->CurrentNodeRank() == 0))
+            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
 #endif
             {
                 net.SaveToFile(GetModelNameForEpoch(i));
