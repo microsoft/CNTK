@@ -473,7 +473,7 @@ public:
         ConsumeToken();
         return operand;
     }
-    ExpressionPtr ParseOperand()
+    ExpressionPtr ParseOperand(bool stopAtNewline)
     {
         let & tok = GotToken();
         ExpressionPtr operand;
@@ -500,10 +500,9 @@ public:
         else if (tok.symbol == L"+" || tok.symbol == L"-"               // === unary operators
             || tok.symbol == L"!")
         {
-            // BUGBUG: fails for -F(x); it parses it as (-F)(x) which fails
             operand = make_shared<Expression>(tok.beginLocation, tok.symbol + L"(");    // encoded as +( -( !(
             ConsumeToken();
-            operand->args.push_back(ParseOperand());
+            operand->args.push_back(ParseExpression(100, stopAtNewline));
         }
         else if (tok.symbol == L"new")                                  // === new class instance
         {
@@ -514,7 +513,7 @@ public:
                 ConsumeToken();
             }
             operand->id = ConsumeIdentifier();
-            operand->args.push_back(ParseOperand());
+            operand->args.push_back(ParseOperand(stopAtNewline));
         }
         else if (tok.symbol == L"if")                                   // === conditional expression
         {
@@ -556,7 +555,7 @@ public:
     }
     ExpressionPtr ParseExpression(int requiredPrecedence, bool stopAtNewline)
     {
-        auto left = ParseOperand();                 // get first operand
+        auto left = ParseOperand(stopAtNewline);                 // get first operand
         for (;;)
         {
             let & opTok = GotToken();

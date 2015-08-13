@@ -15,7 +15,7 @@ L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
 L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
 L"Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] \n"
 L"Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] \n"
-L"Ceil(x) = -(Floor(-(x))) \n"
+L"Ceil(x) = -Floor(-x) \n"
 L"Round(x) = Floor(x+0.5) \n"
 L"Abs(x) = if x >= 0 then x else -x \n"
 L"Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 \n"
@@ -113,7 +113,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"  logPrior = LogPrior(myLabels) \n"
                            L"  ScaledLogLikelihood = outZ - logPrior \n"
                            L"]\n";
-        let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5))";
+        let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5)) : Print(Min(13,42))";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12;
         let parserTest = parserTest12;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
