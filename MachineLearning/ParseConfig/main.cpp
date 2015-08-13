@@ -38,7 +38,7 @@ L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z ; opti
 L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z ; optionalTag = 'tag' ]\n"
 L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev ; optionalTag = 'tag' ]\n"
 L"Parameter(outD, inD/*, tag=''*/) = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; optionalTag = 'tag'*/ ]\n"
-L"Input(dim) = Parameter(dim,1,tag='features')   // TODO: for now \n"
+L"Input(dim) = Parameter(dim,1/*,tag='features'*/)   // TODO: for now \n"
 L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows ; optionalTag = 'tag' ]\n"
 L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z ; optionalTag = 'tag' ]\n"
 L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z ; optionalTag = 'tag' ]\n"
@@ -118,7 +118,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"]\n";
         let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5)) : Print(Min(13,42)) : Print('a'+Chr(10)+'b') : Print(Replace('abcuhdnbsbbacb','b','##b')) : Print(Substr('Hello', 0, 4)) : Print(Substr('Hello', -2, 4)) : Print(Substr('Hello', 2, -1))";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12;
-        let parserTest = parserTest12;
+        let parserTest = parserTest11;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
         //expr->Dump();
         Do(expr);

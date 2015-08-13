@@ -128,8 +128,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     set<wstring> nodesPrinted;      // HACK: ToString only formats nodes not already in here
 
-    // TODO: should this expose a config dict to query the dimension (or only InputValues?)? Expose Children too? As list and by name?
-    // TODO: constructor should take a vector of args in all cases.
+    // TODO: implement ConfigRecord should this expose a config dict to query the dimension (or only InputValues?)? Expose Children too? As list and by name?
     struct ComputationNode : public Object, public HasToString, public HasName
     {
         typedef shared_ptr<ComputationNode> ComputationNodePtr;
@@ -255,6 +254,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     DefineBinaryComputationNode(Plus);
     DefineBinaryComputationNode(Minus);
     DefineBinaryComputationNode(Times);
+    DefineBinaryComputationNode(DiagTimes);
     DefineUnaryComputationNode(Log);
     DefineUnaryComputationNode(Sigmoid);
     DefineUnaryComputationNode(Mean);
@@ -354,6 +354,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return make_shared<MinusNode>(GetInputs(config, 2, L"MinusNode"), tag);
         else if (classId == L"TimesNode")
             return make_shared<TimesNode>(GetInputs(config, 2, L"TimesNode"), tag);
+        else if (classId == L"DiagTimesNode")
+            return make_shared<DiagTimesNode>(GetInputs(config, 2, L"DiagTimesNode"), tag);
 #if 0
         else if (classId == L"ScaleNode")
             return make_shared<ScaleNode>((double)config[L"left"], (ComputationNodePtr)config[L"right"]);
@@ -440,7 +442,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     //  - Chr(c) -- gives a string of one character with Unicode value 'c'
     //  - Replace(s,what,withwhat) -- replace all occurences of 'what' with 'withwhat'
     //  - Substr(s,begin,num) -- get a substring
-    // TODO: Substr(), Replace(), RegexReplace()     Substr takes negative position to index from end, and length -1
+    // TODO: RegexReplace()     Substr takes negative position to index from end, and length -1
     class StringFunction : public String
     {
         wstring Replace(wstring s, const wstring & what, const wstring & withwhat)
@@ -622,7 +624,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         void InitConfigurableRuntimeTypes()
         {
 #define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
-            // TODO: add a second entry that tests whether T derives from IsConfigRecord. Or MakeRuntimeTypeConstructor could return a std::pair.
             // lookup table for "new" expression
             configurableRuntimeTypes = decltype(configurableRuntimeTypes)
             {
@@ -842,7 +843,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             };
             InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) -> ConfigValuePtr
             {
-                // TODO: test this
                 if (rightVal.Is<Double>())     // ComputeNode * scalar
                     swap(leftVal, rightVal);        // -> scalar * ComputeNode
                 if (leftVal.Is<Double>())      // scalar * ComputeNode
@@ -852,10 +852,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 }
                 else                                // ComputeNode OP ComputeNode
                 {
-                    if (e->op == L"+")       return MakeMagicComputationNode(L"PlusNode",  e->location, leftVal, rightVal, exprPath);
-                    else if (e->op == L"-")  return MakeMagicComputationNode(L"MinusNode", e->location, leftVal, rightVal, exprPath);
-                    else if (e->op == L"*")  return MakeMagicComputationNode(L"TimesNode", e->location, leftVal, rightVal, exprPath);
-                    // TODO: forgot DiagTimes()
+                    if (e->op == L"+")        return MakeMagicComputationNode(L"PlusNode",      e->location, leftVal, rightVal, exprPath);
+                    else if (e->op == L"-")   return MakeMagicComputationNode(L"MinusNode",     e->location, leftVal, rightVal, exprPath);
+                    else if (e->op == L"*")   return MakeMagicComputationNode(L"TimesNode",     e->location, leftVal, rightVal, exprPath);
+                    else if (e->op == L".*")  return MakeMagicComputationNode(L"DiagTimesNode", e->location, leftVal, rightVal, exprPath);
                     else LogicError("unexpected infix op");
                 }
             };
@@ -865,7 +865,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
                 { L"*",  InfixFunctions(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
                 { L"/",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-                { L".*", InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+                { L".*", InfixFunctions(BadOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
                 { L"**", InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
                 { L"%",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
                 { L"+",  InfixFunctions(NumOp, StrOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
@@ -961,7 +961,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 let condition = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"_if"), e->args[0]);
                 if (condition)
-                    return Evaluate(e->args[1], scope, exprPath, L"_then");   // TODO: pass exprName through 'if'?
+                    return Evaluate(e->args[1], scope, exprPath, L"_then");   // or should we pass exprName through 'if'?
                 else
                     return Evaluate(e->args[2], scope, exprPath, L"_else");
             }
@@ -1009,7 +1009,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 };
                 // named args
                 // The nammedArgs in the definition lists optional arguments with their default values
-                let record = make_shared<ConfigRecord>();   // TODO: named args go here
+                let record = make_shared<ConfigRecord>();
                 for (let namedArg : argListExpr->namedArgs)
                 {
                     let id = namedArg.first;
@@ -1179,7 +1179,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr, exprPath);
                 else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
                     return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
-                // TODO: DictOp
+                // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
                 else
                     FailBinaryOpTypes(e);
             }
@@ -1228,7 +1228,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     // top-level entry
     // A config sequence X=A;Y=B;do=(A,B) is really parsed as [X=A;Y=B].do. That's the tree we get. I.e. we try to compute the 'do' member.
-    // TODO: This is not good--constructors should always be fast to run. Do() should run after late initializations.
+    // TODO: This is wicked--constructors should always be fast to run. Do() should run after late initializations.
     void Do(ExpressionPtr e)
     {
         Evaluator().Do(e);
