@@ -11,9 +11,15 @@ using namespace Microsoft::MSR::CNTK;
 #endif
 
 wstring standardFunctions =
-L"Format(value,format) = new StringFunction [ what = 'format' ; arg = value ; how = format ] \n"
-L"Print(value) = new PrintAction [ what = value ] \n"
-L""
+L"Print(value, format='13') = new PrintAction [ what = if format == '13' then 'oops' else value ; how = format ] \n"
+L"Format(value, format) = new StringFunction [ what = 'format' ; arg = value ; how = format ] \n"
+L"Ceil(x) = -Floor(-x) \n"
+L"Round(x) = Floor(x+0.5) \n"
+L"Abs(x) = if x >= 0 then x else -x \n"
+L"Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 \n"
+L"Min(a,b) = if a < b then a else b \n"
+L"Max(a,b) = if a > b then a else b \n"
+L"Fac(n) = if n > 1 then Fac(n-1) * n else 1 \n"
 L""
 L""
 L""
@@ -47,6 +53,8 @@ L"BFF(in, rows, cols) = [ B = Parameter(rows, 1/*init = fixedvalue, value = 0*/)
 L"SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] \n "
 L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"
 L"LogPrior(labels) = Log(Mean(labels)) \n"
+L""
+L""
 L""
 L""
 ;
@@ -92,7 +100,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest11 = L" \n"
                            L"do = Print(val) \n"
                            L"val = new NDLNetwork [\n"
-                           L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 7 \n"
+                           L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 1 \n"
                            L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
                            L"  featNorm = MeanVarNorm(myFeatures) \n"
                            L"  layers = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"

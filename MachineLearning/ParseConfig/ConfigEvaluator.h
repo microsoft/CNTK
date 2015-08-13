@@ -160,7 +160,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         bool empty() const { return members.empty(); }      // late-init object constructors can test this
         // add a member
         void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = ConfigValuePtr(value, idLocation); }
-        // get members; used for logging only
+        // get members; used for optional argument lookup and logging
         const map<wstring, ConfigValuePtr> & GetMembers() const { return members; }
         // member resolution
         void ResolveAll()   // resolve all members; do this before handing a ConfigRecord to C++ code
@@ -228,8 +228,21 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         size_t GetNumParams() const { return numParams; }
         ConfigValuePtr Apply(vector<ConfigValuePtr> args, shared_ptr<ConfigRecord> namedArgs, const wstring & exprName)
         {
-            const auto actualNamedArgs = namedArgs;
-            // BUGBUG: need to inject defaults for named args, and remove entries that are not in namedArgs
+            auto actualNamedArgs = make_shared<ConfigRecord>();
+            // actualNamedArgs is a filtered version of namedArgs that contains all optional args listed in namedParams,
+            // falling back to their default if not given in namedArgs.
+            // On the other hand, any name in namedArgs that is not found in namedParams should be rejected.
+            for (const auto & namedParam : namedParams->GetMembers())
+            {
+                const auto & id = namedParam.first;                         // id of expected named parameter
+                const auto valuep = namedArgs->Find(id);                    // was such parameter passed?
+                const auto value = valuep ? *valuep : namedParam.second;    // if not given then fall back to default
+                actualNamedArgs->Add(id, value.GetLocation(), value);
+                // BUGBUG: we should pass in the location of the identifier, not that of the expression
+            }
+            for (const auto & namedArg : namedArgs->GetMembers())   // make sure there are no extra named args that the macro does not take
+                if (namedParams->Find(namedArg.first) == nullptr)
+                    throw EvaluationError(L"function does not have an optional argument '" + namedArg.first + L"'", namedArg.second.GetLocation());
             return f(args, actualNamedArgs, exprName);
         }
     };
