@@ -455,7 +455,7 @@ public:
     {
         infixPrecedence = map<wstring, int>
         {
-            { L".", 11 }, { L"[", 11 }, { L"(", 11 },     // also sort-of infix operands...
+            { L".", 100 }, { L"[", 100 }, { L"(", 100 },     // also sort-of infix operands...
             { L"*", 10 }, { L"/", 10 }, { L".*", 10 }, { L"**", 10 }, { L"%", 10 },
             { L"+", 9 }, { L"-", 9 },
             { L"==", 8 }, { L"!=", 8 }, { L"<", 8 }, { L"<=", 8 }, { L">", 8 }, { L">=", 8 },
@@ -500,6 +500,7 @@ public:
         else if (tok.symbol == L"+" || tok.symbol == L"-"               // === unary operators
             || tok.symbol == L"!")
         {
+            // BUGBUG: fails for -F(x); it parses it as (-F)(x) which fails
             operand = make_shared<Expression>(tok.beginLocation, tok.symbol + L"(");    // encoded as +( -( !(
             ConsumeToken();
             operand->args.push_back(ParseOperand());
