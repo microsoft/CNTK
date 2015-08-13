@@ -527,7 +527,7 @@ public:
         else if (tok.symbol == L"(")                                    // === nested parentheses
         {
             ConsumeToken();
-            operand = ParseExpression(0, false/*go across newlines*/);
+            operand = ParseExpression(0, false/*go across newlines*/);  // just return the content of the parens (they do not become part of the expression tree)
             ConsumePunctuation(L")");
         }
         else if (tok.symbol == L"[")                                    // === dictionary constructor
