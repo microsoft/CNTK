@@ -13,6 +13,9 @@ using namespace Microsoft::MSR::CNTK;
 wstring standardFunctions =
 L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
 L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
+L"Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] \n"
+L"Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] \n"
+L"Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] \n"
 L"Floor(x)  = new NumericFunction [ what = 'Floor' ;  arg = x ] \n"
 L"Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] \n"
 L"Ceil(x) = -Floor(-x) \n"
@@ -113,7 +116,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"  logPrior = LogPrior(myLabels) \n"
                            L"  ScaledLogLikelihood = outZ - logPrior \n"
                            L"]\n";
-        let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5)) : Print(Min(13,42))";
+        let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5)) : Print(Min(13,42)) : Print('a'+Chr(10)+'b') : Print(Replace('abcuhdnbsbbacb','b','##b')) : Print(Substr('Hello', 0, 4)) : Print(Substr('Hello', -2, 4)) : Print(Substr('Hello', 2, -1))";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12;
         let parserTest = parserTest12;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
