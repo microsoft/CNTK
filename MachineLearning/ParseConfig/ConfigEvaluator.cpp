@@ -575,10 +575,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // error handling
         // -----------------------------------------------------------------------
 
-        __declspec(noreturn) void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
+        __declspec(noreturn) void Fail(const wstring & msg, TextLocation where) const { throw EvaluationError(msg, where); }
 
-        __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
-        __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier " + id, where); }
+        __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) const { Fail(L"expected expression of type " + what, e->location); }
+        __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) const { Fail(L"unknown identifier " + id, where); }
 
         // -----------------------------------------------------------------------
         // lexical scope
@@ -762,7 +762,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // infix operators
         // -----------------------------------------------------------------------
 
-        typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)> InfixFunction;
+        typedef ConfigValuePtr(Evaluator::*InfixFunction)(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const;
         struct InfixFunctions
         {
             InfixFunction NumbersOp;            // number OP number -> number
@@ -777,14 +777,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         };
 
         __declspec(noreturn)
-        void FailBinaryOpTypes(ExpressionPtr e)
+        void FailBinaryOpTypes(ExpressionPtr e) const
         {
             Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
         }
 
         // evaluate a Boolean expression (all types)
         template<typename T>
-        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right)
+        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right) const
         {
             if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location);
             else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location);
@@ -794,10 +794,58 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location);
             else LogicError("unexpected infix op");
         }
+        // helper lambdas for evaluating infix operators
+        ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprPath*/) const
+        {
+            let left = leftVal.AsRef<Double>();
+            let right = rightVal.AsRef<Double>();
+            if (e->op == L"+")       return MakePrimitiveConfigValuePtr(left + right, e->location);
+            else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right, e->location);
+            else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right, e->location);
+            else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right, e->location);
+            else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), e->location);
+            else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right), e->location);
+            else return CompOp<double>(e, left, right);
+        };
+        ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprPath*/) const
+        {
+            let left = leftVal.AsRef<String>();
+            let right = rightVal.AsRef<String>();
+            if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location);
+            else return CompOp<wstring>(e, left, right);
+        };
+        ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprPath*/) const
+        {
+            let left = leftVal.AsRef<Bool>();
+            let right = rightVal.AsRef<Bool>();
+            if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || right, e->location);
+            else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && right, e->location);
+            else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location);
+            else return CompOp<bool>(e, left, right);
+        };
+        ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const
+        {
+            if (rightVal.Is<Double>())     // ComputeNode * scalar
+                swap(leftVal, rightVal);        // -> scalar * ComputeNode
+            if (leftVal.Is<Double>())      // scalar * ComputeNode
+            {
+                if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal, exprPath);
+                else LogicError("unexpected infix op");
+            }
+            else                                // ComputeNode OP ComputeNode
+            {
+                if (e->op == L"+")        return MakeMagicComputationNode(L"PlusNode", e->location, leftVal, rightVal, exprPath);
+                else if (e->op == L"-")   return MakeMagicComputationNode(L"MinusNode", e->location, leftVal, rightVal, exprPath);
+                else if (e->op == L"*")   return MakeMagicComputationNode(L"TimesNode", e->location, leftVal, rightVal, exprPath);
+                else if (e->op == L".*")  return MakeMagicComputationNode(L"DiagTimesNode", e->location, leftVal, rightVal, exprPath);
+                else LogicError("unexpected infix op");
+            }
+        };
+        ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) const { FailBinaryOpTypes(e); };
 
         // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
         ConfigValuePtr MakeMagicComputationNode(const wstring & classId, TextLocation location, const ConfigValuePtr & left, const ConfigValuePtr & right,
-                                                const wstring & exprPath)
+                                                const wstring & exprPath) const
         {
             // find creation lambda
             let newIter = configurableRuntimeTypes.find(L"ComputationNode");
@@ -822,73 +870,25 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         void InitInfixOps()
         {
             // lookup table for infix operators
-            // helper lambdas for evaluating infix operators
-            InfixFunction NumOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprPath*/) -> ConfigValuePtr
-            {
-                let left  = leftVal.AsRef<Double>();
-                let right = rightVal.AsRef<Double>();
-                if (e->op == L"+")       return MakePrimitiveConfigValuePtr(left + right, e->location);
-                else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right, e->location);
-                else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right, e->location);
-                else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right, e->location);
-                else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), e->location);
-                else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right), e->location);
-                else return CompOp<double> (e, left, right);
-            };
-            InfixFunction StrOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprPath*/) -> ConfigValuePtr
-            {
-                let left  = leftVal.AsRef<String>();
-                let right = rightVal.AsRef<String>();
-                if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location);
-                else return CompOp<wstring>(e, left, right);
-            };
-            InfixFunction BoolOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprPath*/) -> ConfigValuePtr
-            {
-                let left  = leftVal.AsRef<Bool>();
-                let right = rightVal.AsRef<Bool>();
-                if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || right, e->location);
-                else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && right, e->location);
-                else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location);
-                else return CompOp<bool>(e, left, right);
-            };
-            InfixFunction NodeOp = [this](ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) -> ConfigValuePtr
-            {
-                if (rightVal.Is<Double>())     // ComputeNode * scalar
-                    swap(leftVal, rightVal);        // -> scalar * ComputeNode
-                if (leftVal.Is<Double>())      // scalar * ComputeNode
-                {
-                    if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal, exprPath);
-                    else LogicError("unexpected infix op");
-                }
-                else                                // ComputeNode OP ComputeNode
-                {
-                    if (e->op == L"+")        return MakeMagicComputationNode(L"PlusNode",      e->location, leftVal, rightVal, exprPath);
-                    else if (e->op == L"-")   return MakeMagicComputationNode(L"MinusNode",     e->location, leftVal, rightVal, exprPath);
-                    else if (e->op == L"*")   return MakeMagicComputationNode(L"TimesNode",     e->location, leftVal, rightVal, exprPath);
-                    else if (e->op == L".*")  return MakeMagicComputationNode(L"DiagTimesNode", e->location, leftVal, rightVal, exprPath);
-                    else LogicError("unexpected infix op");
-                }
-            };
-            InfixFunction BadOp = [this](ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) -> ConfigValuePtr { FailBinaryOpTypes(e); };
             infixOps = decltype(infixOps)
             {
                 // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-                { L"*",  InfixFunctions(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
-                { L"/",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-                { L".*", InfixFunctions(BadOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-                { L"**", InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"%",  InfixFunctions(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"+",  InfixFunctions(NumOp, StrOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-                { L"-",  InfixFunctions(NumOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-                { L"==", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"!=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"<",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L">",  InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"<=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L">=", InfixFunctions(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"&&", InfixFunctions(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"||", InfixFunctions(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-                { L"^",  InfixFunctions(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) }
+                { L"*",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::BadOp) },
+                { L"/",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L".*", InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"**", InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"%",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"+",  InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"-",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"==", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"!=", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"<",  InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L">",  InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"<=", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L">=", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"&&", InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"||", InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"^",  InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) }
             };
         }
 
@@ -1190,18 +1190,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"_op0");
                 let rightValPtr = Evaluate(rightArg, scope, exprPath, L"_op1");
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
-                    return functions.NumbersOp(e, leftValPtr, rightValPtr, exprPath);
+                    return (this->*functions.NumbersOp)(e, leftValPtr, rightValPtr, exprPath);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
-                    return functions.StringsOp(e, leftValPtr, rightValPtr, exprPath);
+                    return (this->*functions.StringsOp)(e, leftValPtr, rightValPtr, exprPath);
                 else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
-                    return functions.BoolOp(e, leftValPtr, rightValPtr, exprPath);
+                    return (this->*functions.BoolOp)(e, leftValPtr, rightValPtr, exprPath);
                 // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
                 else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
-                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
+                    return (this->*functions.ComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
                 else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
-                    return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr, exprPath);
+                    return (this->*functions.ComputeNodeNumberOp)(e, leftValPtr, rightValPtr, exprPath);
                 else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
-                    return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
+                    return (this->*functions.NumberComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
                 // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
                 else
                     FailBinaryOpTypes(e);
