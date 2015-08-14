@@ -598,27 +598,37 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // -----------------------------------------------------------------------
 
         // helper for configurableRuntimeTypes initializer below
-        // This returns a lambda that is a constructor for a given runtime type, and a bool saying whether T derives from IsConfigRecord.
-        // LateInit currently broken.
+        // This returns a ConfigurableRuntimeType info structure that consists of
+        //  - a lambda that is a constructor for a given runtime type and
+        //  - bools saying whether T derives from IsConfigRecord and HasLateInit.
+        // The pair contains a lambda and a bool indicating whether the class derives from IsConfigRecord (which, if so, would reset exprPath).
+        struct ConfigurableRuntimeType
+        {
+            bool hasLateInit;
+            bool isConfigRecord;
+            function<ConfigValuePtr(const ConfigRecord &, TextLocation)> construct; // lambda to construct an object of this class
+        };
         template<class C>
-        pair<function<ConfigValuePtr(const ConfigRecord &, TextLocation)>,bool> MakeRuntimeTypeConstructor()
+        ConfigurableRuntimeType MakeRuntimeTypeConstructor()
         {
 #if 0
             bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
             if (hasLateInit)
                 return [this](const ConfigRecord & config, TextLocation location)
-                {
-                    return ConfigValuePtr(make_shared<BoxWithLateInitOf<shared_ptr<C>>>(make_shared<C>(config)), location);
-                    return ConfigValuePtr(make_shared<C>(config), location);
+            {
+                return ConfigValuePtr(make_shared<BoxWithLateInitOf<shared_ptr<C>>>(make_shared<C>(config)), location);
+                return ConfigValuePtr(make_shared<C>(config), location);
             };
             else
 #endif
-                let lambda = [this](const ConfigRecord & config, TextLocation location)
-                {
-                    return ConfigValuePtr(MakeRuntimeObject<C>(config), location);
-                };
-            let isConfigRecord = is_base_of<IsConfigRecord, C>::value;
-            return make_pair(lambda, isConfigRecord);
+            ConfigurableRuntimeType info;
+            info.construct = [this](const ConfigRecord & config, TextLocation location) // lambda to construct
+            {
+                return ConfigValuePtr(MakeRuntimeObject<C>(config), location);
+            }
+            info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
+            info.hasLateInit = is_base_of<HasLateInit, C>::value;
+            return info;
         }
         // initialize the lookup table
         void InitConfigurableRuntimeTypes()
@@ -801,7 +811,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             inputs.push_back(right);
             config.Add(L"inputs", left.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), left.GetLocation()));
             // instantiate
-            let value = newIter->second.first(config, location);
+            let value = newIter->second.construct(config, location);
             let valueWithName = dynamic_cast<HasName*>(value.get());
             if (valueWithName && !exprPath.empty())
                 valueWithName->SetName(exprPath);
@@ -906,9 +916,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // all infix operators with lambdas for evaluating them
         map<wstring, InfixFunctions> infixOps;
 
-        // this table lists all C++ types that can be instantiated from "new" expressions
-        // The pair contains a lambda and a bool indicating whether the class derives from IsConfigRecord (which, if so, would reset exprPath).
-        map<wstring, pair<function<ConfigValuePtr(const ConfigRecord &, TextLocation)>,bool>> configurableRuntimeTypes;
+        // this table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags
+        map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes;
 
         // -----------------------------------------------------------------------
         // main evaluator function (highly recursive)
@@ -932,7 +941,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location);         // === double literal
             else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location); // === string literal
             else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location);         // === bool literal
-            else if (e->op == L"new" || e->op == L"new!")                                           // === 'new' expression: instantiate C++ runtime object
+            else if (e->op == L"new")                                                               // === 'new' expression: instantiate C++ runtime object right here
             {
                 // find the constructor lambda
                 let newIter = configurableRuntimeTypes.find(e->id);
@@ -940,18 +949,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     Fail(L"unknown runtime type " + e->id, e->location);
                 // form the config record
                 let dictExpr = e->args[0];
-                ConfigValuePtr value;
-                let argsExprPath = newIter->second.second ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
-                if (e->op == L"new")   // evaluate the parameter dictionary into a config record
-                    value = newIter->second.first(*ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location); // this constructs it
-                else                // ...unless it's late init. Then we defer initialization.
-                {
-                    // TODO: need a check here whether the class allows late init, before we actually try, so that we can give a concise error message
-                    // ... exprName broken
-                    // TODO: allow "new!" only directly after an assignment, and make that assignment delayed
-                    let value = newIter->second.first(ConfigRecord(), e->location);
-                    deferredInitList.push_back(LateInitItem(value, scope, dictExpr)); // construct empty and remember to Init() later
-                }
+                let argsExprPath = newIter->second.isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
+                let value = newIter->second.construct(*ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location); // this constructs it
+                // if object has a name, we set it
                 let valueWithName = dynamic_cast<HasName*>(value.get());
                 if (valueWithName && !exprPath.empty())
                     valueWithName->SetName(exprPath);
@@ -1058,6 +1058,28 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 let record = make_shared<ConfigRecord>();
                 // create an entry for every dictionary entry.
+                // First deal with a special case: the "new!" syntax for delayed initialiation/
+                let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
+                for (let & entry : e->namedArgs)
+                {
+                    let id = entry.first;
+                    let expr = entry.second.second;                 // expression to compute the entry
+                    if (expr->op != L"new!")
+                        continue;
+                    let newIter = configurableRuntimeTypes.find(e->id);
+                    if (newIter == configurableRuntimeTypes.end())
+                        Fail(L"unknown runtime type " + e->id, e->location);
+                    if (!newIter->second.hasLateInit)               // fail if the class does not support late initialization (does not derive from HasLateInit)
+                        Fail(L"runtime type " + e->id + L" cannot be used with 'new!' because it does not derive from class HasLateInit", e->location);
+                    // instantiate the class right away but with empty arguments
+                    let value = newIter->second.construct(ConfigRecord()/*empty*/, e->location); // this constructs it
+                    record->Add(id, entry.second.first/*loc of id*/, value);
+                    // Now the object already has a pointer and can be referenced, but not accessed otherwise.
+                    // I.e. other objects that depend on this one can be instantiated.
+                    // The actual initialization takes place later.
+                    // TODO: When??
+                }
+                // regular case (not "new!"):
                 // We do not evaluate the members at this point.
                 // Instead, as the value, we keep the ExpressionPtr itself.
                 // Members are evaluated on demand when they are used.
@@ -1065,10 +1087,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (let & entry : e->namedArgs)
                 {
                     let id = entry.first;
-                    let expr = entry.second.second;                 // expression to compute the entry
+                    let expr = entry.second.second;             // expression to compute the entry
+                    if (expr->op == L"new!")                    // new! already done above
+                        continue;
                     record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, exprPath, id), expr->location));
                 }
-                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs have no location.
+                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
                 return ConfigValuePtr(record, e->location);
             }
             else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
