@@ -74,8 +74,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             ResolveValue();
             const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
-            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type", location);
+            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
+                throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
             return *p;
         }
         template<class C>
@@ -83,8 +83,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             ResolveValue();
             const auto p = dynamic_pointer_cast<C>(*this);
-            if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigRuntime.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type", location);
+            if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
+                throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
             return p;
         }
         const char * TypeName() const { return typeid(*get()).name(); }

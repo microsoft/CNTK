@@ -67,7 +67,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     struct HasToString { virtual wstring ToString() const = 0; };
+
+    // some useful string helpers
     wstring IndentString(wstring s, size_t indent);
     wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close);
+    template<class C> static wstring TypeId() { return msra::strfun::utf16(typeid(C).name()); }
 
 }}} // end namespaces
