@@ -1,5 +1,11 @@
 // ConfigEvaluator.cpp -- execute what's given in a config file
 
+// main TODO items:
+//  - deferred initialization (must be done on dictionary level, not config value like late evaluation)
+//  - dictionary merging, to allow overwriting from command line
+//     - [ d1 ] + [ d2 ] will install a filter in d1 to first check against d2
+//     - d2 can have fully qualified names on the LHS, and the filter is part of a chain that is passed down to inner dictionaries created
+
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "ConfigEvaluator.h"
