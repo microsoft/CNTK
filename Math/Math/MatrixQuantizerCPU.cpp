@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t nCol = this->m_inMatrix.GetNumCols();
         
         // Verify that the different matrix parameters have matching dimensions
-        assert((outQMatrix.GetNumRows() == nRow) && (outQMatrix.GetNumCols() != nCol));
+        assert((outQMatrix.GetNumRows() == nRow) && (outQMatrix.GetNumCols() == nCol));
         
         const size_t ldNbits = ValueQuantizer<ElemType>::ld (nBits);
     #ifdef QUANTUSEPPL
@@ -34,9 +34,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         {
             auto & qcol = *(outQMatrix.GetQuantizedColumn(j));
+            ColumnQuantizer<ElemType>::ComputeRangeStatColj(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
             ColumnQuantizer<ElemType> q(ldNbits, qcol.lower, qcol.upper);
-            q.ComputeRangeStatColj(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
-            q.Quantize(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow,  j, qcol.bits, this->m_residual->BufferPointer());
+            q.Quantize(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
         }
     #ifdef QUANTUSEPPL
         );

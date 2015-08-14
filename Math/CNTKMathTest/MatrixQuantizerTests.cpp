@@ -5,6 +5,7 @@
 //
 #include "stdafx.h"
 #include "CppUnitTest.h"
+
 #include "..\Math\MatrixQuantizer.h"
 #include "..\Math\CUDAPageLockedMemAllocator.h"
 
@@ -22,10 +23,11 @@ namespace CNTKMathTest
     {
     private:
 
-        static const float RELATIVE_PRECISION;
+        static const float SINGLE_PRECISION_TOLERANCE;
+        static const double DOUBLE_PRECISION_TOLERANCE;
 
         template <typename ElemType>
-        static void ReferenceCPUMatrix_1Bit_Quantizer(
+        static void ReferenceCPU1BitQuantizer(
             size_t numRows,
             size_t numCols,
             const ElemType* inMatrix,
@@ -34,7 +36,7 @@ namespace CNTKMathTest
             ElemType* outMatrix,
             ElemType* outResidualMatrix)
         {
-            for (int j = 0; j < numCols; j++)
+            for (size_t j = 0; j < numCols; j++)
             {
                 ElemType mean = 0.0f;
 
@@ -61,8 +63,8 @@ namespace CNTKMathTest
 
                 if (num0 == 0) num0 = 1;                        // happens for all-zero columns which do exist (mean0 is 0 in that case)
                 if (num1 == 0) num1 = 1;
-                const float mean0 = mean0Sum / num0;
-                const float mean1 = mean1Sum / num1;
+                const ElemType mean0 = mean0Sum / num0;
+                const ElemType mean1 = mean1Sum / num1;
 
                 for (int i = 0; i < numRows; i++)
                 {
@@ -85,7 +87,7 @@ namespace CNTKMathTest
         }
 
         template <typename ElemType>
-        static void TestMatrix_1Bit_Quantizer(
+        static void Test1BitQuantization(
             size_t numRows,
             size_t numCols,
             ElemType rangeLow,
@@ -140,23 +142,24 @@ namespace CNTKMathTest
                 ElemType* gpuNewResidualMatrix = quantizer->GetResidualMatrix().CopyToArray();
                 ElemType* gpuNewOutMatrix = outMatrix.CopyToArray();
 
-                float precision = (rangeHigh - rangeLow) * RELATIVE_PRECISION;
+                ElemType PRECISION_TOLERANCE = (sizeof(ElemType) == sizeof(double)) ? ((ElemType)DOUBLE_PRECISION_TOLERANCE) : SINGLE_PRECISION_TOLERANCE;
+                ElemType tolerance = (rangeHigh - rangeLow) * PRECISION_TOLERANCE;
 
                 // First verify that (cpuInMatrix + cpuPrevResidualMatrix + cpuPrevOutMatrix == gpuNewResidualMatrix + gpuNewOutMatrix)
                 size_t numMatrixElems = inMatrix.GetNumElements();
                 for (size_t i = 0; i < numMatrixElems; ++i)
                 {
-                    Assert::IsTrue(fabsf((gpuInMatrix[i] + gpuPrevResidualMatrix[i] + gpuPrevOutMatrix[i]) - (gpuNewResidualMatrix[i] + gpuNewOutMatrix[i])) < precision);
+                    Assert::IsTrue(fabs((gpuInMatrix[i] + gpuPrevResidualMatrix[i] + gpuPrevOutMatrix[i]) - (gpuNewResidualMatrix[i] + gpuNewOutMatrix[i])) <= tolerance);
                 }
 
                 // Now verify against the reference CPU quantizer
                 ElemType* refNewOutMatrix = new ElemType[numMatrixElems];
                 ElemType* refNewResidualMatrix = new ElemType[numMatrixElems];
-                ReferenceCPUMatrix_1Bit_Quantizer(numRows, numCols, gpuInMatrix, gpuPrevResidualMatrix, gpuPrevOutMatrix, refNewOutMatrix, refNewResidualMatrix);
+                ReferenceCPU1BitQuantizer(numRows, numCols, gpuInMatrix, gpuPrevResidualMatrix, gpuPrevOutMatrix, refNewOutMatrix, refNewResidualMatrix);
                 for (size_t i = 0; i < numMatrixElems; ++i)
                 {
-                    Assert::IsTrue(fabsf(gpuNewOutMatrix[i] - refNewOutMatrix[i]) < precision);
-                    Assert::IsTrue(fabsf(gpuNewResidualMatrix[i] - refNewResidualMatrix[i]) < precision);
+                    Assert::IsTrue(fabs(gpuNewOutMatrix[i] - refNewOutMatrix[i]) <= tolerance);
+                    Assert::IsTrue(fabs(gpuNewResidualMatrix[i] - refNewResidualMatrix[i]) <= tolerance);
                 }
 
                 delete[] gpuInMatrix;
@@ -172,55 +175,99 @@ namespace CNTKMathTest
             delete allocator;
         }
 
-    public:
-        TEST_METHOD(GPUMatrix_1Bit_Quantize)//This test will fail without GPU
+        template <typename ElemType>
+        static void Test1BitQuantization(short deviceId)
         {
-            size_t numRows = 1024;
-            size_t numCols = 1812;
+            size_t numRows = 256;
+            size_t numCols = 135;
             float rangeLow = -1.0f;
             float rangeHigh = 1.0f;
             int seed = 2015;
             int numIterations = 5;
 
             // Test 1-bit quantization on a matrix of size 1024 * 1812 initialized with floating point numbers between -1 and + 1
-            TestMatrix_1Bit_Quantizer<float>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, 0);
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with smaller range of values
             seed += 100;
             rangeLow = -0.005f;
             rangeHigh = 0.005f;
-            TestMatrix_1Bit_Quantizer<float>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, 0);
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with larger range of values
             seed += 100;
             rangeLow = -10.0f;
             rangeHigh = 10.0f;
-            TestMatrix_1Bit_Quantizer<float>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, 0);
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with assymmetric range of values
             seed += 100;
             rangeLow = -1.0f;
             rangeHigh = 2.05f;
-            TestMatrix_1Bit_Quantizer<float>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, 0);
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with a single column
             seed += 100;
             rangeLow = -0.5f;
             rangeHigh = 0.5f;
-            numRows = 2048;
+            numRows = 489;
             numCols = 1;
-            TestMatrix_1Bit_Quantizer<float>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, 0);
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with a single row
             seed += 100;
             rangeLow = -0.5f;
             rangeHigh = 0.5f;
             numRows = 1;
-            numCols = 1812;
-            TestMatrix_1Bit_Quantizer<float>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, 0);
+            numCols = 135;
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+
+            // Test a matrix with a number of rows that is not a multiple of the number of bits in a quantized word
+            seed += 100;
+            rangeLow = -0.5f;
+            rangeHigh = 0.5f;
+            numRows = 89;
+            numCols = 23;
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+
+            // Test a matrix with a number of rows less than number of bits in a quantized word
+            seed += 100;
+            rangeLow = -0.5f;
+            rangeHigh = 0.5f;
+            numRows = 15;
+            numCols = 135;
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+
+            // Test with a large matrix
+            seed += 100;
+            rangeLow = -0.5f;
+            rangeHigh = 0.5f;
+            numRows = 1537;
+            numCols = 973;
+            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+        }
+
+    public:
+        //This test will fail without GPU
+        TEST_METHOD(Matrix1BitQuantize)
+        {
+            // Test single precision 1bit quantization on CPU
+            Test1BitQuantization<float>(CPUDEVICE);
+
+            // Test double precision 1bit quantization on CPU
+            Test1BitQuantization<double>(CPUDEVICE);
+
+            const int GPUDEVICE = 0;
+
+            // Test single precision 1bit quantization on GPU
+            Test1BitQuantization<float>(GPUDEVICE);
+
+            // Test double precision 1bit quantization on GPU
+            Test1BitQuantization<double>(GPUDEVICE);
         }
     };
 
-    /*static*/ const float MatrixQuantizerTests::RELATIVE_PRECISION = 0.00001f;
+    /*static*/ const float MatrixQuantizerTests::SINGLE_PRECISION_TOLERANCE = 0.00001f;
+    /*static*/ const double MatrixQuantizerTests::DOUBLE_PRECISION_TOLERANCE = 0.0000000000001;
 }
 
