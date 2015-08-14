@@ -255,6 +255,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     DefineBinaryComputationNode(Minus);
     DefineBinaryComputationNode(Times);
     DefineBinaryComputationNode(DiagTimes);
+    DefineBinaryComputationNode(Scale);
     DefineUnaryComputationNode(Log);
     DefineUnaryComputationNode(Sigmoid);
     DefineUnaryComputationNode(Mean);
@@ -356,10 +357,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return make_shared<TimesNode>(GetInputs(config, 2, L"TimesNode"), tag);
         else if (classId == L"DiagTimesNode")
             return make_shared<DiagTimesNode>(GetInputs(config, 2, L"DiagTimesNode"), tag);
-#if 0
+        // BUGBUG: ScaleNode is given a BoxOf<Double>, not ComputationNode
         else if (classId == L"ScaleNode")
-            return make_shared<ScaleNode>((double)config[L"left"], (ComputationNodePtr)config[L"right"]);
-#endif
+            return make_shared<ScaleNode>(GetInputs(config, 2, L"ScaleNode"), tag);
         else if (classId == L"LogNode")
             return make_shared<LogNode>(GetInputs(config, 1, L"LogNode"), tag);
         else if (classId == L"SigmoidNode")
@@ -630,25 +630,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             info.hasLateInit = is_base_of<HasLateInit, C>::value;
             return info;
         }
-        // initialize the lookup table
-        void InitConfigurableRuntimeTypes()
-        {
-#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
-            // lookup table for "new" expression
-            configurableRuntimeTypes = decltype(configurableRuntimeTypes)
-            {
-                // ComputationNodes
-                DefineRuntimeType(ComputationNode),
-                // other relevant classes
-                DefineRuntimeType(NDLNetwork),
-                // Functions
-                DefineRuntimeType(StringFunction),
-                DefineRuntimeType(NumericFunction),
-                // Actions
-                DefineRuntimeType(PrintAction),
-                DefineRuntimeType(AnotherAction),
-            };
-        }
 
         // -----------------------------------------------------------------------
         // late initialization   --currently broken
@@ -762,27 +743,27 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // infix operators
         // -----------------------------------------------------------------------
 
-        typedef ConfigValuePtr(Evaluator::*InfixFunction)(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const;
-        struct InfixFunctions
+        // entry for infix-operator lookup table
+        typedef ConfigValuePtr(Evaluator::*InfixOp)(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const;
+        struct InfixOps
         {
-            InfixFunction NumbersOp;            // number OP number -> number
-            InfixFunction StringsOp;            // string OP string -> string
-            InfixFunction BoolOp;               // bool OP bool -> bool
-            InfixFunction ComputeNodeOp;        // ComputeNode OP ComputeNode -> ComputeNode
-            InfixFunction NumberComputeNodeOp;  // number OP ComputeNode -> ComputeNode, e.g. 3 * M
-            InfixFunction ComputeNodeNumberOp;  // ComputeNode OP Number -> ComputeNode, e.g. M * 3
-            InfixFunction DictOp;               // dict OP dict
-            InfixFunctions(InfixFunction NumbersOp, InfixFunction StringsOp, InfixFunction BoolOp, InfixFunction ComputeNodeOp, InfixFunction NumberComputeNodeOp, InfixFunction ComputeNodeNumberOp, InfixFunction DictOp)
+            InfixOp NumbersOp;            // number OP number -> number
+            InfixOp StringsOp;            // string OP string -> string
+            InfixOp BoolOp;               // bool OP bool -> bool
+            InfixOp ComputeNodeOp;        // ComputeNode OP ComputeNode -> ComputeNode
+            InfixOp NumberComputeNodeOp;  // number OP ComputeNode -> ComputeNode, e.g. 3 * M
+            InfixOp ComputeNodeNumberOp;  // ComputeNode OP Number -> ComputeNode, e.g. M * 3
+            InfixOp DictOp;               // dict OP dict
+            InfixOps(InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp NumberComputeNodeOp, InfixOp ComputeNodeNumberOp, InfixOp DictOp)
                 : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), DictOp(DictOp) { }
         };
 
+        // functions that implement infix operations
         __declspec(noreturn)
-        void FailBinaryOpTypes(ExpressionPtr e) const
+        void InvalidInfixOpTypes(ExpressionPtr e) const
         {
             Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
         }
-
-        // evaluate a Boolean expression (all types)
         template<typename T>
         ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right) const
         {
@@ -794,7 +775,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location);
             else LogicError("unexpected infix op");
         }
-        // helper lambdas for evaluating infix operators
         ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & /*exprPath*/) const
         {
             let left = leftVal.AsRef<Double>();
@@ -827,70 +807,40 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             if (rightVal.Is<Double>())     // ComputeNode * scalar
                 swap(leftVal, rightVal);        // -> scalar * ComputeNode
+            wstring classId;
             if (leftVal.Is<Double>())      // scalar * ComputeNode
             {
-                if (e->op == L"*")  return MakeMagicComputationNode(L"ScaleNode", e->location, leftVal, rightVal, exprPath);
+                if (e->op == L"*" || e->op == L"-(") classId = L"ScaleNode";    // "-(" is unary minus, which also calls this function with Double(-1) as leftVal
                 else LogicError("unexpected infix op");
             }
             else                                // ComputeNode OP ComputeNode
             {
-                if (e->op == L"+")        return MakeMagicComputationNode(L"PlusNode", e->location, leftVal, rightVal, exprPath);
-                else if (e->op == L"-")   return MakeMagicComputationNode(L"MinusNode", e->location, leftVal, rightVal, exprPath);
-                else if (e->op == L"*")   return MakeMagicComputationNode(L"TimesNode", e->location, leftVal, rightVal, exprPath);
-                else if (e->op == L".*")  return MakeMagicComputationNode(L"DiagTimesNode", e->location, leftVal, rightVal, exprPath);
+                if (e->op == L"+")       classId = L"PlusNode";
+                else if (e->op == L"-")  classId = L"MinusNode";
+                else if (e->op == L"*")  classId = L"TimesNode";
+                else if (e->op == L".*") classId = L"DiagTimesNode";
                 else LogicError("unexpected infix op");
             }
-        };
-        ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) const { FailBinaryOpTypes(e); };
-
-        // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
-        ConfigValuePtr MakeMagicComputationNode(const wstring & classId, TextLocation location, const ConfigValuePtr & left, const ConfigValuePtr & right,
-                                                const wstring & exprPath) const
-        {
+            // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
             // find creation lambda
             let newIter = configurableRuntimeTypes.find(L"ComputationNode");
             if (newIter == configurableRuntimeTypes.end())
                 LogicError("unknown magic runtime-object class");
             // form the ConfigRecord
             ConfigRecord config;
-            config.Add(L"class", location, ConfigValuePtr(make_shared<String>(classId), location));
+            config.Add(L"class", e->location, ConfigValuePtr(make_shared<String>(classId), e->location));
             vector<ConfigValuePtr> inputs;
-            inputs.push_back(left);
-            inputs.push_back(right);
-            config.Add(L"inputs", left.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), left.GetLocation()));
+            inputs.push_back(leftVal);
+            inputs.push_back(rightVal);
+            config.Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation()));
             // instantiate
-            let value = newIter->second.construct(config, location);
+            let value = newIter->second.construct(config, e->location);
             let valueWithName = dynamic_cast<HasName*>(value.get());
             if (valueWithName && !exprPath.empty())
                 valueWithName->SetName(exprPath);
             return value;
-        }
-
-        // initialize the infixOps table
-        void InitInfixOps()
-        {
-            // lookup table for infix operators
-            infixOps = decltype(infixOps)
-            {
-                // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-                { L"*",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::BadOp) },
-                { L"/",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L".*", InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"**", InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"%",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"+",  InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"-",  InfixFunctions(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"==", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"!=", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"<",  InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L">",  InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"<=", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L">=", InfixFunctions(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"&&", InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"||", InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"^",  InfixFunctions(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) }
-            };
-        }
+        };
+        ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) const { InvalidInfixOpTypes(e); };
 
         // -----------------------------------------------------------------------
         // thunked (delayed) evaluation
@@ -914,7 +864,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // -----------------------------------------------------------------------
 
         // all infix operators with lambdas for evaluating them
-        map<wstring, InfixFunctions> infixOps;
+        map<wstring, InfixOps> infixOps;
 
         // this table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags
         map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes;
@@ -1169,7 +1119,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location);
                 else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
                     if (e->op == L"+(") return argValPtr;
-                    else return MakeMagicComputationNode(L"ScaleNode", e->location, MakePrimitiveConfigValuePtr(-1.0, e->location), argValPtr, exprPath);
+                    else return NodeOp(e, MakePrimitiveConfigValuePtr(-1.0, e->location), argValPtr, exprPath);
+
                 else
                     Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
             }
@@ -1204,13 +1155,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     return (this->*functions.NumberComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
                 // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
                 else
-                    FailBinaryOpTypes(e);
+                    InvalidInfixOpTypes(e);
             }
             //LogicError("should not get here");
         }
 
-        // Traverse through the expression (parse) tree to evaluate a value.    --TODO broken
-        deque<LateInitItem> deferredInitList;
     public:
         // -----------------------------------------------------------------------
         // constructor
@@ -1218,24 +1167,47 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         Evaluator()
         {
-            InitConfigurableRuntimeTypes();
-            InitInfixOps();
+            // lookup table for "new" expression
+            configurableRuntimeTypes = decltype(configurableRuntimeTypes)
+            {
+#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
+                // ComputationNodes
+                DefineRuntimeType(ComputationNode),
+                // other relevant classes
+                DefineRuntimeType(NDLNetwork),
+                // Functions
+                DefineRuntimeType(StringFunction),
+                DefineRuntimeType(NumericFunction),
+                // Actions
+                DefineRuntimeType(PrintAction),
+                DefineRuntimeType(AnotherAction),
+            };
+            // initialize the infixOps table (lookup table for infix operators)
+            infixOps = decltype(infixOps)
+            {
+                // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+                { L"*",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::BadOp) },
+                { L"/",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L".*", InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"**", InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"%",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"+",  InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"-",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"==", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"!=", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"<",  InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L">",  InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"<=", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L">=", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"&&", InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"||", InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
+                { L"^",  InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) }
+            };
         }
 
-        // TODO: deferred list not working at all.
-        //       Do() just calls into EvaluateParse directly.
-        //       Need to move this list into Evaluate() directly and figure it out.
         ConfigValuePtr EvaluateParse(ExpressionPtr e)
         {
-            auto result = Evaluate(e, nullptr/*top scope*/, L"", L"$");
-            // The deferredInitList contains unresolved Expressions due to "new!". This is specifically needed to support ComputeNodes
-            // (or similar classes) that need circular references, while allowing to be initialized late (construct them empty first).
-            while (!deferredInitList.empty())
-            {
-                LateInit(deferredInitList.front());
-                deferredInitList.pop_front();
-            }
-            return result;
+            return Evaluate(e, nullptr/*top scope*/, L"", L"$");
         }
 
         void Do(ExpressionPtr e)
