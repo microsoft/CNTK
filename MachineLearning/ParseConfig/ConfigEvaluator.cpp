@@ -625,7 +625,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             info.construct = [this](const ConfigRecord & config, TextLocation location) // lambda to construct
             {
                 return ConfigValuePtr(MakeRuntimeObject<C>(config), location);
-            }
+            };
             info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
             info.hasLateInit = is_base_of<HasLateInit, C>::value;
             return info;
@@ -1083,7 +1083,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // We do not evaluate the members at this point.
                 // Instead, as the value, we keep the ExpressionPtr itself.
                 // Members are evaluated on demand when they are used.
-                let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
                 for (let & entry : e->namedArgs)
                 {
                     let id = entry.first;
