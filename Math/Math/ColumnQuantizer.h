@@ -201,12 +201,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t subset, size_t subsets,
             F1 allReduceElem, F2 allReduceUint)
         {
-#ifdef WIN32
-#ifndef INCLUDE_RESIDUE_FOR_QUANTIZATION_RANGE
-            UNREFERENCED_PARAMETER(inResidual);
-#endif
-#endif
-
             // quantization range, cut off after how many standard deviations (make this a parameter if we care)
             size_t rows = M;
             // compute mean
@@ -227,10 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = subset; i < rows; i += subsets)
             {
                 size_t ij = ColMIDX(i, j, M);
-                meanacc += inMat[ij];
-#ifdef INCLUDE_RESIDUE_FOR_QUANTIZATION_RANGE
-                meanacc += inResidual[ij];
-#endif
+                meanacc += inMat[ij] + inResidual[ij];
             }
             // multi-subset (CUDA): reduce to one thread
             allReduceElem(meanacc);
@@ -250,10 +241,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = subset; i < rows; i += subsets)
                 {
                     size_t ij = ColMIDX(i, j, M);
-                    ElemType val = inMat[ij];
-#ifdef INCLUDE_RESIDUE_FOR_QUANTIZATION_RANGE
-                    val += inResidual[ij];
-#endif
+                    ElemType val = inMat[ij] + inResidual[ij];
                     if (val < mean)
                     {
                         meanacc0 += val;
@@ -311,10 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = subset; i < rows; i += subsets)
                 {
                     size_t ij = ColMIDX(i, j, M);
-                    ElemType val = inMat[ij];
-#ifdef INCLUDE_RESIDUE_FOR_QUANTIZATION_RANGE
-                    val += inResidual[ij];
-#endif
+                    ElemType val = inMat[ij] + inResidual[ij];
                     varacc += (val - mean) * (val - mean);
                 }
                 // multi-subset (CUDA): reduce to one thread
