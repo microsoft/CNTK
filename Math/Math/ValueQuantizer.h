@@ -49,9 +49,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // force 1-bit quant to threshold against 0 rather than the midpoint between lower and upper
     #define ZERO_THRESHOLD_FOR_1BIT 
 
-    // in 1-bit quantization, compute the quantization range boundaries including the residual values
-    #define INCLUDE_RESIDUE_FOR_QUANTIZATION_RANGE 
-
     template<class ElemType>
     class ValueQuantizer
     {
