@@ -507,11 +507,6 @@ public:
         else if (tok.symbol == L"new")                                  // === new class instance
         {
             operand = OperandFromTokenSymbol(tok);
-            if (GotToken().symbol == L"!")                              // new! class [ ] will initialize the class delayed (this is specifically used for the Delay node to break circular references)
-            {
-                operand->op = L"new!";
-                ConsumeToken();
-            }
             operand->id = ConsumeIdentifier();
             operand->args.push_back(ParseOperand(stopAtNewline));
         }

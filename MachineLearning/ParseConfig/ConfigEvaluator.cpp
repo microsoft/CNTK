@@ -1,11 +1,11 @@
 // ConfigEvaluator.cpp -- execute what's given in a config file
 
 // main TODO items:
-//  - deferred initialization (must be done on dictionary level, not config value like late evaluation)
 //  - dictionary merging, to allow overwriting from command line
 //     - [ d1 ] + [ d2 ] will install a filter in d1 to first check against d2
 //     - d2 can have fully qualified names on the LHS, and the filter is part of a chain that is passed down to inner dictionaries created
 //  - make expression names part of ConfigValuePtr
+//  - fix the problem that ConfigValuePtrs are not really copyable (do this by move semantics instead of copying)
 //  - I get stack overflows...?
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -597,21 +597,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // TODO: This class has no members except for pre-initialized lookup tables. We could get rid of the class.
     // =======================================================================
 
-#if 0
-    template<typename T> class BoxWithLateInitOf : public BoxOf<T>, public MustFinalizeInit
-    {
-    public:
-        BoxWithLateInitOf(T value) : BoxOf(value) { }
-        /*implement*/ void Init(const ConfigRecord & config)
-        {
-            let hasLateInit = dynamic_cast<MustFinalizeInit*>(BoxOf::value.get());
-            if (!hasLateInit)
-                LogicError("Init on class without MustFinalizeInit");
-            hasLateInit->Init(config);
-        }
-    };
-#endif
-
     class Evaluator
     {
         // -----------------------------------------------------------------------
@@ -643,50 +628,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // helper for configurableRuntimeTypes initializer below
         // This returns a ConfigurableRuntimeType info structure that consists of
         //  - a lambda that is a constructor for a given runtime type and
-        //  - bools saying whether T derives from IsConfigRecord and MustFinalizeInit.
-        // The pair contains a lambda and a bool indicating whether the class derives from IsConfigRecord (which, if so, would reset exprPath).
+        //  - a bool saying whether T derives from IsConfigRecord
         struct ConfigurableRuntimeType
         {
-            bool hasLateInit;
             bool isConfigRecord;
             function<ConfigValuePtr(const ConfigRecord &, TextLocation)> construct; // lambda to construct an object of this class
         };
         template<class C>
         ConfigurableRuntimeType MakeRuntimeTypeConstructor()
         {
-#if 0
-            bool hasLateInit = is_base_of<MustFinalizeInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
-            if (hasLateInit)
-                return [this](const ConfigRecord & config, TextLocation location)
-            {
-                return ConfigValuePtr(make_shared<BoxWithLateInitOf<shared_ptr<C>>>(make_shared<C>(config)), location);
-                return ConfigValuePtr(make_shared<C>(config), location);
-            };
-            else
-#endif
             ConfigurableRuntimeType info;
             info.construct = [this](const ConfigRecord & config, TextLocation location) // lambda to construct
             {
                 return ConfigValuePtr(MakeRuntimeObject<C>(config), location);
             };
             info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
-            info.hasLateInit = false;// is_base_of<MustFinalizeInit, C>::value;
             return info;
         }
-
-        // -----------------------------------------------------------------------
-        // late initialization   --currently broken
-        // -----------------------------------------------------------------------
-
-        // "new!" expressions get queued for execution after all other nodes of tree have been executed
-        // TODO: This is totally broken, need to figuree out the deferred process first.
-        struct LateInitItem
-        {
-            ConfigValuePtr object;
-            ScopePtr scope;
-            ExpressionPtr dictExpr;                             // the dictionary expression that now can be fully evaluated
-            LateInitItem(ConfigValuePtr object, ScopePtr scope, ExpressionPtr dictExpr) : object(object), scope(scope), dictExpr(dictExpr) { }
-        };
 
         // -----------------------------------------------------------------------
         // name lookup
@@ -1052,35 +1010,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let record = make_shared<ConfigRecord>();
                 // create an entry for every dictionary entry.
                 let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
-                for (let & entry : e->namedArgs)
-                {
-                    let id = entry.first;
-                    let expr = entry.second.second;                 // expression to compute the entry
-                    if (expr->op != L"new!")
-                        continue;
-                    let newIter = configurableRuntimeTypes.find(e->id);
-                    if (newIter == configurableRuntimeTypes.end())
-                        Fail(L"unknown runtime type " + e->id, e->location);
-                    if (!newIter->second.hasLateInit)               // fail if the class does not support late initialization (does not derive from MustFinalizeInit)
-                        Fail(L"runtime type " + e->id + L" cannot be used with 'new!' because it does not derive from class MustFinalizeInit", e->location);
-                    // instantiate the class right away but with empty arguments
-                    let value = newIter->second.construct(ConfigRecord()/*empty*/, e->location); // this constructs it
-                    record->Add(id, entry.second.first/*loc of id*/, value);
-                    // Now the object already has a pointer and can be referenced, but not accessed otherwise.
-                    // I.e. other objects that depend on this one can be instantiated.
-                    // The actual initialization takes place later.
-                    // TODO: When??
-                }
-                // regular case (not "new!"):
                 // We do not evaluate the members at this point.
-                // Instead, as the value, we keep the ExpressionPtr itself.
+                // Instead, as the value, we keep the ExpressionPtr itself wrapped in a lambda that evaluates that ExpressionPtr to a ConfigValuePtr when called.
                 // Members are evaluated on demand when they are used.
                 for (let & entry : e->namedArgs)
                 {
                     let id = entry.first;
                     let expr = entry.second.second;             // expression to compute the entry
-                    if (expr->op == L"new!")                    // new! already done above
-                        continue;
                     record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, exprPath, id), expr->location));
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
