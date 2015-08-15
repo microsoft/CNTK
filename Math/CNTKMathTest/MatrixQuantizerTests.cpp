@@ -49,6 +49,9 @@ namespace CNTKMathTest
                 {
                     size_t flatIdx = (j * numRows) + i;
                     ElemType val = inMatrix[flatIdx];
+#ifdef INCLUDE_RESIDUE_FOR_QUANTIZATION_RANGE
+                    val += prevResidualMatrix[flatIdx];
+#endif
                     if (val < mean)
                     {
                         mean0Sum += val;
