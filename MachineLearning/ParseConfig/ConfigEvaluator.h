@@ -18,7 +18,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     {
     public:
         EvaluationError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*implement*/ const wchar_t * kind() const { return L"evaluating"; }
+        /*Configerror::*/ const wchar_t * kind() const { return L"evaluating"; }
     };
 
     // config values
@@ -34,6 +34,10 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             ResolveValue();
             return dynamic_cast<T*>(get());
         }    // this casts the raw pointer that's inside the shared_ptr
+        //void operator=(const ConfigValuePtr &);
+        // TODO: copying ConfigValuePtrs if they are not resolved yet, as it may lead to multiple executions of the Thunk.
+        //       Solve by either forbidding assignment (move only) or by resolving upon assignment and deal with the fallout.
+        //       This is a little nasty.
     public:
         // construction     ---TODO: no template here
         template<typename T>
@@ -142,14 +146,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         map<wstring, ConfigValuePtr> members;
     public:
         // regular lookup: just use record[id]
-        /*implement*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
+        /*IsConfigRecord::*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
         {
             const auto memberIter = members.find(id);
             if (memberIter == members.end())
                 RuntimeError("unknown class parameter");
             return memberIter->second;
         }
-        /*implement*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
+        /*IsConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
         {
             auto memberIter = members.find(id);
             if (memberIter == members.end())

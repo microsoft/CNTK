@@ -91,7 +91,7 @@ public:
     {
     public:
         CodeSourceError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*implement*/ const wchar_t * kind() const { return L"reading source"; }
+        /*ConfigError::*/ const wchar_t * kind() const { return L"reading source"; }
     };
 
     void Fail(wstring msg, TextLocation where) { throw CodeSourceError(msg, where); }
@@ -233,7 +233,7 @@ public:
     {
     public:
         LexerError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*implement*/ const wchar_t * kind() const { return L"tokenizing"; }
+        /*ConfigError::*/ const wchar_t * kind() const { return L"tokenizing"; }
     };
 
 private:
@@ -412,7 +412,7 @@ class Parser : public Lexer
     {
     public:
         ParseError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*implement*/ const wchar_t * kind() const { return L"parsing"; }
+        /*ConfigError::*/ const wchar_t * kind() const { return L"parsing"; }
     };
 
     void Fail(const wstring & msg, Token where) { throw ParseError(msg, where.beginLocation); }
