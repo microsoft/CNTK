@@ -121,7 +121,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     //       As soon as the value we defer has a name, it has an object. Or maybe new! can only be assigned right away?
     // =======================================================================
 
-    struct HasLateInit { virtual void Init(const ConfigRecord & config) = 0; }; // derive from this to indicate late initialization
+    struct HasLateInit { virtual void FinalizeInit(/*const ConfigRecord & config*/) = 0; }; // derive from this to indicate late initialization
 
     // =======================================================================
     // dummy implementation of several ComputationNode derivates for experimental purposes
@@ -204,6 +204,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 LogicError("AttachInputs: called with incorrect number of arguments");
             m_children = inputs;
         }
+        const std::vector<ComputationNodePtr> & GetChildren() const { return m_children; }
 
         /*implement*/ wstring ToString() const
         {
@@ -407,18 +408,61 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     class NDLNetwork : public Network, public HasToString
     {
-        set<ComputationNodePtr> nodes;  // root nodes in this network; that is, nodes defined in the dictionary
+        set<ComputationNodePtr> nodes;      // root nodes in this network; that is, nodes defined in the dictionary
+        set<ComputationNodePtr> inputs;     // all input nodes
+        set<ComputationNodePtr> outputs;    // all output nodes
+        set<ComputationNodePtr> parameters; // all parameter nodes
     public:
         NDLNetwork(const ConfigRecord & config)
         {
+            deque<ComputationNodePtr> workList;
+            // flatten the set of all nodes, also call FinalizeInit() on all
             // we collect all ComputationNodes from the config; that's it
-            let members = config.GetMembers();
-            for (auto iter : members)
+            for (auto iter : config.GetMembers())
+                if (iter.second.Is<ComputationNode>())
+                    workList.push_back((ComputationNodePtr)config[iter.first]);
+            // process work list
+            set<ComputationNodePtr> allChildren;    // all nodes that are children of others (those that are not are output nodes)
+            while (!workList.empty())
             {
-                if (!iter.second.Is<ComputationNode>())
+                let n = workList.front();
+                workList.pop_front();
+                // add to set
+                let res = nodes.insert(n);
+                if (!res.second)        // not inserted: we already got this one
                     continue;
-                nodes.insert((ComputationNodePtr)config[iter.first]);
+                // if node has late initialization (unresolved ConfigValuePtrs), we resolve them now
+                // This may generate a whole new load of nodes, including nodes which in turn have late init.
+                // TODO: think this through whether it may generate delays nevertheless
+                let lateInit = dynamic_pointer_cast<HasLateInit>(n);
+                if (lateInit)
+                    lateInit->FinalizeInit();
+                // ...can we do stuff like propagating dimensions here? Or still too early?
+                // get children
+                // traverse children (i.e., append them to the work list)
+                let children = n->GetChildren();
+                for (auto c : children)
+                {
+                    workList.push_back(c);  // (we could check whether c is in 'nodes' here to optimize, but this way it is cleaner)
+                    allChildren.insert(c);  // also keep track of all children, for computing the 'outputs' set below
+                }
             }
+            // build sets of special nodes
+            for (auto n : nodes)
+            {
+                if (n->GetChildren().empty())
+                {
+                    if (dynamic_pointer_cast<InputValue>(n))
+                        inputs.insert(n);
+                    else if (dynamic_pointer_cast<LearnableParameter>(n))
+                        parameters.insert(n);
+                    else
+                        LogicError("Network: found child-less node that is neither InputValue nor LearnableParameter");
+                }
+                if (allChildren.find(n) == allChildren.end())
+                    outputs.insert(n);
+            }
+            nodes;
         }
         /*implement*/ wstring ToString() const
         {
@@ -534,8 +578,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             if (!config.empty())
                 Init(config);
         }
-        // example of late init (makes no real sense for PrintAction, of course)
-        /*implement*/ void Init(const ConfigRecord & config)
+        /*implement*/ void FinalizeInit() { }
+        /*implement*/ void Init(const ConfigRecord & config)    // TODO: broken
         {
             let what = config[L"what"];
             let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
@@ -691,9 +735,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
             // resolve all entries, as they need to be passed to the C++ world which knows nothing about this
             record->ResolveAll();
+            // TODO: NO! Only resolve what is used. Constructor is not required to consume all inputs.
             return record;
         }
 
+#if 0
         // perform late initialization
         // This assumes that the ConfigValuePtr points to a BoxWithLateInitOf. If not, it will fail with a nullptr exception.
         void LateInit(LateInitItem & lateInitItem)
@@ -704,6 +750,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             p->Init(*config);
 //            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
         }
+#endif
 
         // -----------------------------------------------------------------------
         // access to ConfigValuePtr content with error messages
