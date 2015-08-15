@@ -38,10 +38,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // TODO: copying ConfigValuePtrs if they are not resolved yet, as it may lead to multiple executions of the Thunk.
         //       Solve by either forbidding assignment (move only) or by resolving upon assignment and deal with the fallout.
         //       This is a little nasty.
+        wstring expressionName;     // the name reflects the path to reach this expression in the (possibly dynamically macro-expanded) expression tree
     public:
         // construction     ---TODO: no template here
         template<typename T>
-        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location) : shared_ptr<Object>(p), location(location) {}
+        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(p), location(location), expressionName(expressionName) { }
         ConfigValuePtr() {} // (formally needed somehow)
         // methods for retrieving values
         // access as a reference, that is, as a shared_ptr<T>   --use this for Objects
@@ -91,8 +92,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
             return p;
         }
+        // properties
         const char * TypeName() const { return typeid(*get()).name(); }
         TextLocation GetLocation() const { return location; }
+        const wstring & GetExpressionName() const{ return expressionName;  }
+        // TODO: ^^ it seems by saving the name in the ConfigValuePtr itself, we don't gain anything; maybe remove again in the future
         // methods for resolving the value
         // Thunk for resolving a value. This Object represents a function that returns a ConfigValuePtr; call to resolve a deferred value
         class Thunk : public Object
@@ -125,9 +129,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };  // ConfigValuePtr
 
     // use this for primitive values, double and bool
-    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValuePtr(const T & val, TextLocation location)
+    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValuePtr(const T & val, TextLocation location, const wstring & exprPath)
     {
-        return ConfigValuePtr(make_shared<BoxOf<Wrapped<T>>>(val), location);
+        return ConfigValuePtr(make_shared<BoxOf<Wrapped<T>>>(val), location, exprPath);
     }
 
     // -----------------------------------------------------------------------
@@ -163,7 +167,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
         bool empty() const { return members.empty(); }      // late-init object constructors can test this
         // add a member
-        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = ConfigValuePtr(value, idLocation); }
+        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = value; idLocation; }
+        // TODO: ^^ idLocation is meant to hold the text location of the identifier
         // get members; used for optional argument lookup and logging
         const map<wstring, ConfigValuePtr> & GetMembers() const { return members; }
         // member resolution
