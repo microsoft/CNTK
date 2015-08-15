@@ -220,12 +220,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // the function itself is a C++ lambda
         function<ConfigValuePtr(const vector<ConfigValuePtr>&, shared_ptr<ConfigRecord>, const wstring & exprName)> f;
         // inputs. This defines the interface to the function. Very simple in our case though.
-        size_t numParams;                     // number of position-dependent arguments
-        shared_ptr<ConfigRecord> namedParams; // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
+        vector<wstring> paramNames;             // #parameters and parameter names (names are used for naming expressions only)
+        shared_ptr<ConfigRecord> namedParams;   // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
     public:
         template<typename F>
-        ConfigLambda(size_t numParams, shared_ptr<ConfigRecord> namedParams, const F & f) : numParams(numParams), namedParams(namedParams), f(f) { }
-        size_t GetNumParams() const { return numParams; }
+        ConfigLambda(const vector<wstring> & paramNames, shared_ptr<ConfigRecord> namedParams, const F & f) : paramNames(paramNames), namedParams(namedParams), f(f) { }
+        size_t GetNumParams() const { return paramNames.size(); }
+        const vector<wstring> & GetParamNames() const { return paramNames; }    // used for expression naming
         ConfigValuePtr Apply(vector<ConfigValuePtr> args, shared_ptr<ConfigRecord> namedArgs, const wstring & exprName)
         {
             auto actualNamedArgs = make_shared<ConfigRecord>();
