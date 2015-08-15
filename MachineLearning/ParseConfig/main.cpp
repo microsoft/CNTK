@@ -118,8 +118,12 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"  ScaledLogLikelihood = outZ - logPrior \n"
                            L"]\n";
         let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5)) : Print(Min(13,42)) : Print('a'+Chr(10)+'b') : Print(Replace('abcuhdnbsbbacb','b','##b')) : Print(Substr('Hello', 0, 4)) : Print(Substr('Hello', -2, 4)) : Print(Substr('Hello', 2, -1))";
-        parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12;
-        let parserTest = parserTest11;
+        let parserTest13 = L" \n"   // this fails because dict is outside val; expression name is not local to it
+                           L"do = Print(val) \n"
+                           L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
+                           L"]\n";
+        parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12; parserTest13;
+        let parserTest = parserTest13;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
         //expr->Dump();
         Do(expr);
