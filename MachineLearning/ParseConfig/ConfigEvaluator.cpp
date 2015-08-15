@@ -5,6 +5,7 @@
 //  - dictionary merging, to allow overwriting from command line
 //     - [ d1 ] + [ d2 ] will install a filter in d1 to first check against d2
 //     - d2 can have fully qualified names on the LHS, and the filter is part of a chain that is passed down to inner dictionaries created
+//  - make expression names part of ConfigValuePtr
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -132,8 +133,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     struct HasName { virtual void SetName(const wstring & name) = 0; };
 
-    set<wstring> nodesPrinted;      // HACK: ToString only formats nodes not already in here
-
     // TODO: implement ConfigRecord should this expose a config dict to query the dimension (or only InputValues?)? Expose Children too? As list and by name?
     struct ComputationNode : public Object, public HasToString, public HasName
     {
@@ -147,6 +146,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         wstring m_nodeName;                     // node name in the graph
         static wstring TidyName(wstring name)
         {
+#if 0
             // clean out the intermediate name, e.g. A._b.C -> A.C for pretty printing of names, towards dictionary access
             // BUGBUG: anonymous ComputationNodes will get a non-unique name this way
             if (!name.empty())
@@ -161,6 +161,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 else
                     name = left + exprPathSeparator + right;
             }
+#endif
             return name;
         }
         wstring NodeName() const { return m_nodeName; }        // TODO: should really be named GetNodeName()
@@ -208,13 +209,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
         /*implement*/ wstring ToString() const
         {
-            // hack: remember we were already formatted
-            // TODO: make nodesPrinted a static threadlocal member.
-            //       Remember if we are first, and clear at end if so. Then it is not a hack anymore. Umm, won't work for Network though.
-            let res = nodesPrinted.insert(NodeName());
-            let alreadyPrinted = !res.second;
-            if (alreadyPrinted)
-                return TidyName(NodeName()) + L" ^";
             // we format it like "[TYPE] ( args )"
             wstring result = TidyName(NodeName()) + L" : " + wstring(OperationName());
             if (m_children.empty()) result.append(L"()");
@@ -228,7 +222,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                         first = false;
                     else
                         args.append(L"\n");
-                    args.append(child->ToString());
+                    args.append(TidyName(child->NodeName()));
                 }
                 result += L" " + NestString(args, L'(', true, ')');
             }
@@ -321,12 +315,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         /*implement*/ const wchar_t * OperationName() const { return L"LearnableParameter"; }
         /*implement*/ wstring ToString() const
         {
-            let res = nodesPrinted.insert(NodeName());
-            let alreadyPrinted = !res.second;
-            if (alreadyPrinted)
-                return TidyName(NodeName()) + L" ^";
-            else
-                return wstrprintf(L"%ls : %ls (%d, %d)", TidyName(NodeName()).c_str(), OperationName(), (int)outDim, (int)inDim);
+            return wstrprintf(L"%ls : %ls (%d, %d)", TidyName(NodeName()).c_str(), OperationName(), (int)outDim, (int)inDim);
         }
     };
     // factory function for ComputationNodes
@@ -388,12 +377,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     }
 
     // =======================================================================
-    // dummy implementations of Network derivates
+    // dummy implementations of ComputationNetwork derivates
     // =======================================================================
 
-    // Network class
-    class Network : public Object, public IsConfigRecord
+    // ComputationNetwork class
+    class ComputationNetwork : public Object, public IsConfigRecord
     {
+    protected:
+        map<wstring, ComputationNodePtr> m_namesToNodeMap;      // root nodes in this network; that is, nodes defined in the dictionary
     public:
         // pretending to be a ConfigRecord
         /*implement*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
@@ -406,14 +397,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
     };
 
-    class NDLNetwork : public Network, public HasToString
+    class NDLComputationNetwork : public ComputationNetwork, public HasToString
     {
-        set<ComputationNodePtr> nodes;      // root nodes in this network; that is, nodes defined in the dictionary
         set<ComputationNodePtr> inputs;     // all input nodes
         set<ComputationNodePtr> outputs;    // all output nodes
         set<ComputationNodePtr> parameters; // all parameter nodes
     public:
-        NDLNetwork(const ConfigRecord & config)
+        NDLComputationNetwork(const ConfigRecord & config)
         {
             deque<ComputationNodePtr> workList;
             // flatten the set of all nodes, also call FinalizeInit() on all
@@ -428,8 +418,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let n = workList.front();
                 workList.pop_front();
                 // add to set
-                let res = nodes.insert(n);
+                let res = m_namesToNodeMap.insert(make_pair(n->NodeName(), n));
                 if (!res.second)        // not inserted: we already got this one
+                if (res.first->second != n)
+                    LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
+                else
                     continue;
                 // if node has late initialization (unresolved ConfigValuePtrs), we resolve them now
                 // This may generate a whole new load of nodes, including nodes which in turn have late init.
@@ -448,8 +441,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 }
             }
             // build sets of special nodes
-            for (auto n : nodes)
+            for (auto iter : m_namesToNodeMap)
             {
+                let n = iter.second;
                 if (n->GetChildren().empty())
                 {
                     if (dynamic_pointer_cast<InputValue>(n))
@@ -457,29 +451,27 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     else if (dynamic_pointer_cast<LearnableParameter>(n))
                         parameters.insert(n);
                     else
-                        LogicError("Network: found child-less node that is neither InputValue nor LearnableParameter");
+                        LogicError("ComputationNetwork: found child-less node that is neither InputValue nor LearnableParameter");
                 }
                 if (allChildren.find(n) == allChildren.end())
                     outputs.insert(n);
             }
-            nodes;
+            m_namesToNodeMap;
         }
         /*implement*/ wstring ToString() const
         {
-            // hack: remember we were already formatted
-            nodesPrinted.clear();
-            // print all nodes we got
             wstring args;
             bool first = true;
-            for (auto & node : nodes)
+            for (auto & iter : m_namesToNodeMap)
             {
+                let node = iter.second;
                 if (first)
                     first = false;
                 else
                     args.append(L"\n");
                 args.append(node->ToString());
             }
-            return L"NDLNetwork " + NestString(args, L'[', true, ']');
+            return L"NDLComputationNetwork " + NestString(args, L'[', true, ']');
         }
     };
 
@@ -962,11 +954,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             }
             else if (e->op == L"if")                                                    // === conditional expression
             {
-                let condition = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"_if"), e->args[0]);
+                let condition = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"if"), e->args[0]);
                 if (condition)
-                    return Evaluate(e->args[1], scope, exprPath, L"_then");   // or should we pass exprName through 'if'?
+                    return Evaluate(e->args[1], scope, exprPath, L"");      // pass exprName through 'if' since only of the two exists
                 else
-                    return Evaluate(e->args[2], scope, exprPath, L"_else");
+                    return Evaluate(e->args[2], scope, exprPath, L"");
             }
             // --- functions
             else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
@@ -1008,8 +1000,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     if (pos != wstring::npos)
                         macroId.erase(0, pos + 1);
                     // now evaluate the function
-                    return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"_[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
+                    return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
                 };
+                // positional args
+                vector<wstring> paramNames;
+                let & argList = argListExpr->args;
+                for (let arg : argList)
+                {
+                    if (arg->op != L"id") LogicError("function parameter list must consist of identifiers");
+                    paramNames.push_back(arg->id);
+                }
                 // named args
                 // The nammedArgs in the definition lists optional arguments with their default values
                 let record = make_shared<ConfigRecord>();
@@ -1021,7 +1021,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     record->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location));
                     // the thunk is called if the default value is ever used
                 }
-                return ConfigValuePtr(make_shared<ConfigLambda>(argListExpr->args.size(), record, f), e->location);
+                return ConfigValuePtr(make_shared<ConfigLambda>(paramNames, record, f), e->location);
             }
             else if (e->op == L"(")                                         // === apply a function to its arguments
             {
@@ -1038,7 +1038,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < args.size(); i++)    // positional arguments
                 {
                     let argValExpr = args[i];               // expression of arg [i]
-                    argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, wstrprintf(L"_arg%d", i)), argValExpr->location);  // make it a thunked value
+                    let argName = lambda->GetParamNames()[i];
+                    argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location);  // make it a thunked value
                     /*this wstrprintf should be gone, this is now the exprName*/
                 }
                 // named args are put into a ConfigRecord
@@ -1124,8 +1125,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let firstIndexExpr = e->args[0];    // first index
                 let lastIndexExpr  = e->args[1];    // last index
                 let initLambdaExpr = e->args[2];    // lambda to initialize the values
-                let firstIndex = ToInt(Evaluate(firstIndexExpr, scope, exprPath, L"_first"), firstIndexExpr);
-                let lastIndex  = ToInt(Evaluate(lastIndexExpr,  scope, exprPath, L"_last"),  lastIndexExpr);
+                let firstIndex = ToInt(Evaluate(firstIndexExpr, scope, exprPath, L"array_first"), firstIndexExpr);
+                let lastIndex  = ToInt(Evaluate(lastIndexExpr,  scope, exprPath, L"array_last"),  lastIndexExpr);
                 let lambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, exprPath, L"_initializer"), initLambdaExpr, L"function");
                 if (lambda->GetNumParams() != 1)
                     Fail(L"'array' requires an initializer function with one argument (the index)", initLambdaExpr->location);
@@ -1137,13 +1138,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 {
                     let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location);           // index as a ConfigValuePtr
                     let elemExprPath = exprPath.empty() ? L"" : wstrprintf(L"%ls[%d]", exprPath.c_str(), index);    // expression name shows index lookup
+                    let initExprPath = exprPath.empty() ? L"" : wstrprintf(L"_lambda");    // expression name shows initializer with arg
                     // create an expression
-                    function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope, elemExprPath]()   // lambda that computes this value of 'expr'
+                    function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
                     {
                         if (trace)
                             initLambdaExpr->location.PrintIssue(L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
                         // apply initLambdaExpr to indexValue and return the resulting value
-                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, elemExprPath, L""), initLambdaExpr, L"function");
+                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");
                         vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
                         let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
                         let value = initLambda->Apply(argVals, namedArgs, elemExprPath);
@@ -1191,8 +1193,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 let & functions = opIter->second;
                 let leftArg = e->args[0];
                 let rightArg = e->args[1];
-                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"_op0");
-                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"_op1");
+                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
+                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                     return (this->*functions.NumbersOp)(e, leftValPtr, rightValPtr, exprPath);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
@@ -1227,7 +1229,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // ComputationNodes
                 DefineRuntimeType(ComputationNode),
                 // other relevant classes
-                DefineRuntimeType(NDLNetwork),
+                DefineRuntimeType(NDLComputationNetwork),
                 // Functions
                 DefineRuntimeType(StringFunction),
                 DefineRuntimeType(NumericFunction),

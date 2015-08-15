@@ -88,7 +88,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest7 = L"do = new PrintAction [ what = val ] ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ";
         let parserTest8 = L" \n"
                           L"do = Print(val) \n"
-                          L"val = new NDLNetwork [\n"
+                          L"val = new NDLComputationNetwork [\n"
                           L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 7 \n"
                           L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
                           L"  featNorm = MeanVarNorm(myFeatures) \n"
@@ -104,8 +104,8 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
         let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
         let parserTest11 = L" \n"
                            L"do = Print(val) \n"
-                           L"val = new NDLNetwork [\n"
-                           L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 1 \n"
+                           L"val = new NDLComputationNetwork [\n"
+                           L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
                            L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
                            L"  featNorm = MeanVarNorm(myFeatures) \n"
                            L"  layers = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
