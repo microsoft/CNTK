@@ -6,6 +6,7 @@
 //     - [ d1 ] + [ d2 ] will install a filter in d1 to first check against d2
 //     - d2 can have fully qualified names on the LHS, and the filter is part of a chain that is passed down to inner dictionaries created
 //  - make expression names part of ConfigValuePtr
+//  - I get stack overflows...?
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -117,19 +118,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     }
 
     // =======================================================================
-    // support for late init  --currently broken
-    // TODO: late init can be resolved at any assignment, no?
-    //       As soon as the value we defer has a name, it has an object. Or maybe new! can only be assigned right away?
-    // =======================================================================
-
-    struct HasLateInit { virtual void FinalizeInit(/*const ConfigRecord & config*/) = 0; }; // derive from this to indicate late initialization
-
-    // =======================================================================
     // dummy implementation of several ComputationNode derivates for experimental purposes
     // =======================================================================
 
     struct Matrix { size_t rows; size_t cols; Matrix(size_t rows, size_t cols) : rows(rows), cols(cols) { } };
     typedef shared_ptr<Matrix> MatrixPtr;
+
+    // a ComputationNode that derives from MustFinalizeInit does not resolve some args immediately (just keeps ConfigValuePtrs),
+    // assuming they are not ready during construction.
+    // This is specifically meant to be used by DelayNode, see comments there.
+    struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
 
     struct HasName { virtual void SetName(const wstring & name) = 0; };
 
@@ -165,7 +163,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return name;
         }
         wstring NodeName() const { return m_nodeName; }        // TODO: should really be named GetNodeName()
-        /*implement*/ void SetName(const wstring & name) { m_nodeName = name; }
+        /*HasName::*/ void SetName(const wstring & name) { m_nodeName = name; }
 
         wstring m_tag;
         void SetTag(const wstring & tag) { m_tag = tag; }
@@ -207,7 +205,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         }
         const std::vector<ComputationNodePtr> & GetChildren() const { return m_children; }
 
-        /*implement*/ wstring ToString() const
+        /*HasToString::*/ wstring ToString() const
         {
             // we format it like "[TYPE] ( args )"
             wstring result = TidyName(NodeName()) + L" : " + wstring(OperationName());
@@ -247,7 +245,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     struct T##Node : public C##ComputationNode \
     { \
     T##Node(vector<ComputationNodePtr> && inputs, const wstring & tag) : C##ComputationNode(move(inputs), tag) { } \
-    /*implement*/ const wchar_t * OperationName() const { return L#T; } \
+    /*ComputationNode::*/ const wchar_t * OperationName() const { return L#T; } \
     };
 #define DefineUnaryComputationNode(T)   DefineComputationNode(T,Unary)
 #define DefineBinaryComputationNode(T)  DefineComputationNode(T,Binary)
@@ -279,24 +277,31 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         size_t firstRow, numRows;
     public:
         RowSliceNode(vector<ComputationNodePtr> && inputs, size_t firstRow, size_t numRows, const wstring & tag) : UnaryComputationNode(move(inputs), tag), firstRow(firstRow), numRows(numRows) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"RowSlice"; }
+        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"RowSlice"; }
     };
-    // BROKEN
-    struct DelayNode : public ComputationNode, public HasLateInit
+    // DelayNode is special in that it may for cycles.
+    // Specifically, to break circular references, DelayNode does not resolve its input arg (a ComputationNode), but rather keeps the ConfigValuePtr for now.
+    // The ConfigValuePtr is meant to be unresolved, i.e. a lambda that will resolve its arg when accessing the value for the first time.
+    // I.e. after construction, DelayNode can be referenced, but it cannot perform any operation on its argument, since it does not know it yet.
+    // ComputationNetwork knows to call FinalizeInit() to resolve this, at a time when 
+    struct DelayNode : public ComputationNode, public MustFinalizeInit
     {
+        ConfigValuePtr argUnresolved;
+        ComputationNodePtr arg;
+        int deltaT;
     public:
         DelayNode(const ConfigRecord & config)
         {
-            if (!config.empty())
-                Init(config);
+            argUnresolved = config[L"input"];
+            deltaT = config[L"deltaT"];
         }
-        /*override*/ void Init(const ConfigRecord & config)
+        /*MustFinalizeInit::*/ void FinalizeInit()
         {
-            let in = (ComputationNodePtr)config[L"in"];
-            in;
+            arg = (ComputationNodePtr)argUnresolved;
+            argUnresolved = ConfigValuePtr();   // and free any references it may hold
             // dim?
         }
-        /*implement*/ const wchar_t * OperationName() const { return L"Delay"; }
+        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"Delay"; }
     };
     class InputValue : public ComputationNode
     {
@@ -305,15 +310,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             config;
         }
-        /*implement*/ const wchar_t * OperationName() const { return L"InputValue"; }
+        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"InputValue"; }
     };
     class LearnableParameter : public ComputationNode
     {
         size_t outDim, inDim;
     public:
         LearnableParameter(size_t outDim, size_t inDim) : outDim(outDim), inDim(inDim) { }
-        /*implement*/ const wchar_t * OperationName() const { return L"LearnableParameter"; }
-        /*implement*/ wstring ToString() const
+        /*ComputationNode::*/ const wchar_t * OperationName() const { return L"LearnableParameter"; }
+        /*HasToString::*/ wstring ToString() const
         {
             return wstrprintf(L"%ls : %ls (%d, %d)", TidyName(NodeName()).c_str(), OperationName(), (int)outDim, (int)inDim);
         }
@@ -387,11 +392,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         map<wstring, ComputationNodePtr> m_namesToNodeMap;      // root nodes in this network; that is, nodes defined in the dictionary
     public:
         // pretending to be a ConfigRecord
-        /*implement*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
+        /*IsConfigRecord::*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
         {
             id;  RuntimeError("unknown class parameter");    // (for now)
         }
-        /*implement*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
+        /*IsConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
         {
             id;  return nullptr; // (for now)
         }
@@ -406,12 +411,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         NDLComputationNetwork(const ConfigRecord & config)
         {
             deque<ComputationNodePtr> workList;
-            // flatten the set of all nodes, also call FinalizeInit() on all
+            // flatten the set of all nodes
             // we collect all ComputationNodes from the config; that's it
-            for (auto iter : config.GetMembers())
+            for (auto & iter : config.GetMembers())
                 if (iter.second.Is<ComputationNode>())
                     workList.push_back((ComputationNodePtr)config[iter.first]);
             // process work list
+            // Also call FinalizeInit where we must.
             set<ComputationNodePtr> allChildren;    // all nodes that are children of others (those that are not are output nodes)
             while (!workList.empty())
             {
@@ -424,13 +430,13 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
                 else
                     continue;
-                // if node has late initialization (unresolved ConfigValuePtrs), we resolve them now
+                // If node derives from MustFinalizeInit() then it has unresolved ConfigValuePtrs. Resolve them now.
                 // This may generate a whole new load of nodes, including nodes which in turn have late init.
                 // TODO: think this through whether it may generate delays nevertheless
-                let lateInit = dynamic_pointer_cast<HasLateInit>(n);
-                if (lateInit)
-                    lateInit->FinalizeInit();
-                // ...can we do stuff like propagating dimensions here? Or still too early?
+                let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(n);
+                if (mustFinalizeInit)
+                    mustFinalizeInit->FinalizeInit();
+                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
                 // get children
                 // traverse children (i.e., append them to the work list)
                 let children = n->GetChildren();
@@ -458,7 +464,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             }
             m_namesToNodeMap;
         }
-        /*implement*/ wstring ToString() const
+        /*HasToString::*/ wstring ToString() const
         {
             wstring args;
             bool first = true;
@@ -562,22 +568,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
 
     // sample runtime objects for testing
     // We are trying all sorts of traits here, even if they make no sense for PrintAction.
-    class PrintAction : public Object, public HasLateInit, public HasName
+    class PrintAction : public Object, public HasName
     {
     public:
         PrintAction(const ConfigRecord & config)
-        {
-            if (!config.empty())
-                Init(config);
-        }
-        /*implement*/ void FinalizeInit() { }
-        /*implement*/ void Init(const ConfigRecord & config)    // TODO: broken
         {
             let what = config[L"what"];
             let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
             fprintf(stderr, "%ls\n", str.c_str());
         }
-        /*implement*/ void SetName(const wstring & name)
+        /*HasName::*/ void SetName(const wstring & name)
         {
             name;
         }
@@ -597,15 +597,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // =======================================================================
 
 #if 0
-    template<typename T> class BoxWithLateInitOf : public BoxOf<T>, public HasLateInit
+    template<typename T> class BoxWithLateInitOf : public BoxOf<T>, public MustFinalizeInit
     {
     public:
         BoxWithLateInitOf(T value) : BoxOf(value) { }
         /*implement*/ void Init(const ConfigRecord & config)
         {
-            let hasLateInit = dynamic_cast<HasLateInit*>(BoxOf::value.get());
+            let hasLateInit = dynamic_cast<MustFinalizeInit*>(BoxOf::value.get());
             if (!hasLateInit)
-                LogicError("Init on class without HasLateInit");
+                LogicError("Init on class without MustFinalizeInit");
             hasLateInit->Init(config);
         }
     };
@@ -642,7 +642,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         // helper for configurableRuntimeTypes initializer below
         // This returns a ConfigurableRuntimeType info structure that consists of
         //  - a lambda that is a constructor for a given runtime type and
-        //  - bools saying whether T derives from IsConfigRecord and HasLateInit.
+        //  - bools saying whether T derives from IsConfigRecord and MustFinalizeInit.
         // The pair contains a lambda and a bool indicating whether the class derives from IsConfigRecord (which, if so, would reset exprPath).
         struct ConfigurableRuntimeType
         {
@@ -654,7 +654,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         ConfigurableRuntimeType MakeRuntimeTypeConstructor()
         {
 #if 0
-            bool hasLateInit = is_base_of<HasLateInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
+            bool hasLateInit = is_base_of<MustFinalizeInit, C>::value;   // (cannot test directly--C4127: conditional expression is constant)
             if (hasLateInit)
                 return [this](const ConfigRecord & config, TextLocation location)
             {
@@ -669,7 +669,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 return ConfigValuePtr(MakeRuntimeObject<C>(config), location);
             };
             info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
-            info.hasLateInit = is_base_of<HasLateInit, C>::value;
+            info.hasLateInit = false;// is_base_of<MustFinalizeInit, C>::value;
             return info;
         }
 
@@ -726,8 +726,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             // (order and what gets evaluated depends on what is used).
             let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
             // resolve all entries, as they need to be passed to the C++ world which knows nothing about this
-            record->ResolveAll();
+            //record->ResolveAll();
             // TODO: NO! Only resolve what is used. Constructor is not required to consume all inputs.
+            // BUGBUG: but it crashes with circular reference if I comment it out
             return record;
         }
 
@@ -738,9 +739,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr, lateInitItem.scope, L""/*BROKEN*/);
             let object = lateInitItem.object;
-            auto p = object.AsRef<shared_ptr<HasLateInit>>();  // TODO: AsPtr?
+            auto p = object.AsRef<shared_ptr<MustFinalizeInit>>();  // TODO: AsPtr?
             p->Init(*config);
-//            dynamic_cast<HasLateInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
+//            dynamic_cast<MustFinalizeInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
         }
 #endif
 
@@ -1073,8 +1074,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                     let newIter = configurableRuntimeTypes.find(e->id);
                     if (newIter == configurableRuntimeTypes.end())
                         Fail(L"unknown runtime type " + e->id, e->location);
-                    if (!newIter->second.hasLateInit)               // fail if the class does not support late initialization (does not derive from HasLateInit)
-                        Fail(L"runtime type " + e->id + L" cannot be used with 'new!' because it does not derive from class HasLateInit", e->location);
+                    if (!newIter->second.hasLateInit)               // fail if the class does not support late initialization (does not derive from MustFinalizeInit)
+                        Fail(L"runtime type " + e->id + L" cannot be used with 'new!' because it does not derive from class MustFinalizeInit", e->location);
                     // instantiate the class right away but with empty arguments
                     let value = newIter->second.construct(ConfigRecord()/*empty*/, e->location); // this constructs it
                     record->Add(id, entry.second.first/*loc of id*/, value);
