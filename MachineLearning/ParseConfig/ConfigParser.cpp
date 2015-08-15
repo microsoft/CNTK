@@ -679,15 +679,6 @@ public:
         }
         return members;
     }
-    // set the parent pointer in the entire tree (we don't need them inside here, so this is a final step)
-    void SetParents(ExpressionPtr us, ExpressionPtr parent)
-    {
-        us->parent = parent;                // this is our parent
-        for (auto & child : us->args)       // now tell our children about ourselves
-            SetParents(child, us);
-        for (auto & child : us->namedArgs)
-            SetParents(child.second.second, us);
-    }
     // top-level parse function parses dictonary members
     ExpressionPtr Parse()
     {
@@ -696,7 +687,6 @@ public:
             Fail(L"junk at end of source", GetCursor());
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
         topDict->namedArgs = topMembers;
-        SetParents(topDict, nullptr);    // set all parent pointer
         return topDict;
     }
     // simple test function for use during development

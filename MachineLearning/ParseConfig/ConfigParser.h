@@ -83,14 +83,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         vector<ExpressionPtr> args;             // position-dependent expression/function args
         map<wstring, pair<TextLocation,ExpressionPtr>> namedArgs;  // named expression/function args; also dictionary members (loc is of the identifier)
         TextLocation location;      // where in the source code (for downstream error reporting)
-        // parent
-        ExpressionPtr parent;       // used in searching dictionary scope upwards
         // constructors
-        Expression(TextLocation location) : location(location), d(0.0), b(false), parent(nullptr) { }
-        Expression(TextLocation location, wstring op) : location(location), d(0.0), b(false), op(op), parent(nullptr) { }
-        Expression(TextLocation location, wstring op, double d, wstring s, bool b) : location(location), d(d), s(s), b(b), op(op), parent(nullptr) { }
-        Expression(TextLocation location, wstring op, ExpressionPtr arg) : location(location), d(0.0), b(false), op(op), parent(nullptr) { args.push_back(arg); }
-        Expression(TextLocation location, wstring op, ExpressionPtr arg1, ExpressionPtr arg2) : location(location), d(0.0), b(false), op(op), parent(nullptr) { args.push_back(arg1); args.push_back(arg2); }
+        Expression(TextLocation location) : location(location), d(0.0), b(false) { }
+        Expression(TextLocation location, wstring op) : location(location), d(0.0), b(false), op(op) { }
+        Expression(TextLocation location, wstring op, double d, wstring s, bool b) : location(location), d(d), s(s), b(b), op(op) { }
+        Expression(TextLocation location, wstring op, ExpressionPtr arg) : location(location), d(0.0), b(false), op(op) { args.push_back(arg); }
+        Expression(TextLocation location, wstring op, ExpressionPtr arg1, ExpressionPtr arg2) : location(location), d(0.0), b(false), op(op) { args.push_back(arg1); args.push_back(arg2); }
         // diagnostics helper: print the content
         void Dump(int indent = 0) const;
     };
