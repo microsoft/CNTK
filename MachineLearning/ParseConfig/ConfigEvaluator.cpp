@@ -238,7 +238,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     };
     struct TernaryComputationNode : public ComputationNode
     {
-        TernaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 3); SetTag(tag);}
+        TernaryComputationNode(vector<ComputationNodePtr> && inputs, const wstring & tag) { AttachInputs(move(inputs), 3); SetTag(tag); }
     };
 
 #define DefineComputationNode(T,C) \
@@ -283,22 +283,20 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // Specifically, to break circular references, DelayNode does not resolve its input arg (a ComputationNode), but rather keeps the ConfigValuePtr for now.
     // The ConfigValuePtr is meant to be unresolved, i.e. a lambda that will resolve its arg when accessing the value for the first time.
     // I.e. after construction, DelayNode can be referenced, but it cannot perform any operation on its argument, since it does not know it yet.
-    // ComputationNetwork knows to call FinalizeInit() to resolve this, at a time when 
+    // ComputationNetwork knows to call FinalizeInit() to resolve this, at a time when pointers for anythin this may reference
+    // from its or outer scope have been created (if those pointers are to Delay nodes in turn, those would again resolve in their
+    // later FinalizeInit() call, which may yet again create new nodes etc.).
     struct DelayNode : public ComputationNode, public MustFinalizeInit
     {
         ConfigValuePtr argUnresolved;
         ComputationNodePtr arg;
         int deltaT;
     public:
-        DelayNode(const ConfigRecord & config)
-        {
-            argUnresolved = config[L"input"];
-            deltaT = config[L"deltaT"];
-        }
+        DelayNode(ConfigValuePtr argUnresolved, int deltaT, const wstring & tag) : argUnresolved(argUnresolved), deltaT(deltaT) { SetTag(tag); }
         /*MustFinalizeInit::*/ void FinalizeInit()
         {
-            arg = (ComputationNodePtr)argUnresolved;
-            argUnresolved = ConfigValuePtr();   // and free any references it may hold
+            AttachInputs(vector<ComputationNodePtr>(1,argUnresolved));             // the implied type cast resolves it
+            argUnresolved = ConfigValuePtr();       // and free any references it may hold
             // dim?
         }
         /*ComputationNode::*/ const wchar_t * OperationName() const { return L"Delay"; }
@@ -323,7 +321,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return wstrprintf(L"%ls : %ls (%d, %d)", TidyName(NodeName()).c_str(), OperationName(), (int)outDim, (int)inDim);
         }
     };
-    // factory function for ComputationNodes
+    // helper for the factory function for ComputationNodes
     static vector<ComputationNodePtr> GetInputs(const ConfigRecord & config, size_t expectedNumInputs, const wstring & classId/*for error msg*/)
     {
         vector<ComputationNodePtr> inputs;
@@ -341,6 +339,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             throw EvaluationError(L"unexpected number of inputs to ComputationNode class " + classId, inputsArg.GetLocation());
         return inputs;
     }
+    // factory function for ComputationNodes
     template<>
     shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const ConfigRecord & config)
     {
@@ -377,6 +376,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return make_shared<CrossEntropyWithSoftmaxNode>(GetInputs(config, 2, L"CrossEntropyWithSoftmaxNode"), tag);
         else if (classId == L"ErrorPredictionNode")
             return make_shared<ErrorPredictionNode>(GetInputs(config, 2, L"ErrorPredictionNode"), tag);
+        else if (classId == L"DelayNode")
+            return make_shared<DelayNode>(config[L"input"], config[L"deltaT"], tag);
         else
             throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
@@ -732,19 +733,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             return record;
         }
 
-#if 0
-        // perform late initialization
-        // This assumes that the ConfigValuePtr points to a BoxWithLateInitOf. If not, it will fail with a nullptr exception.
-        void LateInit(LateInitItem & lateInitItem)
-        {
-            let config = ConfigRecordFromDictExpression(lateInitItem.dictExpr, lateInitItem.scope, L""/*BROKEN*/);
-            let object = lateInitItem.object;
-            auto p = object.AsRef<shared_ptr<MustFinalizeInit>>();  // TODO: AsPtr?
-            p->Init(*config);
-//            dynamic_cast<MustFinalizeInit*>(lateInitItem.object.get())->Init(*config);  // call BoxWithLateInitOf::Init() which in turn will call HasLateInite::Init() on the actual object
-        }
-#endif
-
         // -----------------------------------------------------------------------
         // access to ConfigValuePtr content with error messages
         // -----------------------------------------------------------------------
@@ -1063,7 +1051,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
             {
                 let record = make_shared<ConfigRecord>();
                 // create an entry for every dictionary entry.
-                // First deal with a special case: the "new!" syntax for delayed initialiation/
                 let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
                 for (let & entry : e->namedArgs)
                 {
