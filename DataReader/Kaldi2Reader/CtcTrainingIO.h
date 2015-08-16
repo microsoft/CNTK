@@ -61,17 +61,12 @@ protected:
                                    Matrix<ElemType>* derivative,
                                    ElemType* objective);
 
-    /*
-    static const ElemType log_zero_ = -1e100;
-    static const ElemType exp_limit_ = 709.78271289338397;
-    static const ElemType log_inf_ = 1e100;
-    static const ElemType max_ = 1.7976931348623157e+308;
-    */
 
     static const ElemType log_zero_ = -1e30f;
     static const ElemType exp_limit_ = 88.722839f;
     static const ElemType log_inf_ = 1e30f;
     static const ElemType max_ = 3.4028235e+038f;
+
 
     ElemType AddAB(ElemType a, ElemType b);
     ElemType SubAB(ElemType a, ElemType b);

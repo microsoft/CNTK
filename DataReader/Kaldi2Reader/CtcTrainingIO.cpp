@@ -359,6 +359,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //Set the objective
         *objective = pzx;
+#if(DEBUG_UTTERANCE)
+        printf("\nProcessing Utterance: %s, %f", uttIDStr.c_str(), pzx);
+#endif
 
         assert(derivative->GetNumCols() == logLikelihoodIn.GetNumCols());
 
