@@ -13,6 +13,9 @@
 //        - pass into new NDLComputationNetwork
 //  - fix the problem that ConfigValuePtrs are not really copyable (do this by move semantics instead of copying)
 //  - I get stack overflows...? What's wrong with stack usage?? Need to use more references? Or only a problem in Debug?
+//  - a way to access a symbol up from the current scope, needed for function parameters of the same name as dict entries created from them, e.g. the optional 'tag'
+//     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
+//     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
