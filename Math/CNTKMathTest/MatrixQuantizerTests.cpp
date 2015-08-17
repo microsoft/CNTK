@@ -5,6 +5,9 @@
 //
 #include "stdafx.h"
 #include "CppUnitTest.h"
+#include "File.h"
+#include <memory>
+#include <io.h>
 
 #include "..\Math\MatrixQuantizer.h"
 #include "..\Math\CUDAPageLockedMemAllocator.h"
@@ -16,6 +19,20 @@ using namespace Microsoft::MSR::CNTK;
 
 using namespace Microsoft::MSR::CNTK;
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+
+//#define DEBUG_OUTPUT_PATH L"E:/temp/MatrixQuantizerTest.out.txt"
+
+#pragma warning (disable: 4996)
+
+void RedirectStdErr(wstring logpath)
+{
+    fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
+    auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
+    if (dup2(fileno(*f), 2) == -1)
+        RuntimeError("unexpected failure to redirect stderr to log file");
+    setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
+    static auto fKept = f;                  // keep it around (until it gets changed)
+}
 
 namespace CNTKMathTest
 {
@@ -130,13 +147,27 @@ namespace CNTKMathTest
                 ElemType* gpuPrevResidualMatrix = quantizer->GetResidualMatrix().CopyToArray();
                 ElemType *gpuPrevOutMatrix = outMatrix.CopyToArray();
 
-                QuantizedMatrix<ElemType> tempCPUQuantizationBuffer(numRows, numCols, 1, CPUDEVICE, allocator);
+#ifdef DEBUG_OUTPUT_PATH
+                inMatrix.Print("Input Matrix", 0, 2, 0, 2);
+                quantizer->GetResidualMatrix().Print("Old Residual Matrix", 0, 2, 0, 2);
+                outMatrix.Print("Old Output Matrix", 0, 2, 0, 2);
+#endif
 
+                QuantizedMatrix<ElemType> tempCPUQuantizationBuffer(numRows, numCols, 1, CPUDEVICE, allocator);
                 quantizer->QuantizeAsync(tempCPUQuantizationBuffer);
                 quantizer->WaitQuantizeAsyncDone();
 
+#ifdef DEBUG_OUTPUT_PATH
+                tempCPUQuantizationBuffer.Print("Quantized Matrix", 0, 2, 0, 2);
+                quantizer->GetResidualMatrix().Print("New residual Matrix", 0, 2, 0, 2);
+#endif
+
                 quantizer->UnquantizeAsync(tempCPUQuantizationBuffer, outMatrix, (iterNum > 0));
                 quantizer->WaitUnquantizeAsyncDone();
+
+#ifdef DEBUG_OUTPUT_PATH
+                outMatrix.Print("Unquantized Output Matrix", 0, 2, 0, 2);
+#endif
 
                 // Now verify the quantization results
                 ElemType* gpuNewResidualMatrix = quantizer->GetResidualMatrix().CopyToArray();
@@ -251,6 +282,10 @@ namespace CNTKMathTest
         //This test will fail without GPU
         TEST_METHOD(Matrix1BitQuantize)
         {
+#ifdef DEBUG_OUTPUT_PATH
+            RedirectStdErr(DEBUG_OUTPUT_PATH);
+#endif
+
             // Test single precision 1bit quantization on CPU
             Test1BitQuantization<float>(CPUDEVICE);
 

@@ -51,6 +51,7 @@ public:
 template<class ElemType>
 class MATH_API QuantizedMatrix
 {
+    typedef typename ValueQuantizer<ElemType>::QWord QWord;
     static const size_t QWordNumBits = ValueQuantizer<ElemType>::QWordNumBits;
 
 public:       
@@ -93,6 +94,8 @@ public:
     }
     
     QuantizedMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+
+    void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd);
 
 private:
     // Private constructor for creating quantized matrix column slices

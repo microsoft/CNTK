@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "QuantizedMatrix.h"
+#include "ColumnQuantizer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     
@@ -107,6 +108,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return QuantizedMatrix<ElemType>(this->GetNumRows(), numCols, this->GetNumBits(), matrixSliceData);
     }
     
+    template<class ElemType>
+    void QuantizedMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd)
+    {
+        if ((GetNumRows() == 0) || (GetNumCols() == 0))
+        {
+            throw std::logic_error("Print: QuantizedMatrix is empty.");
+        }
+
+        if (rowEnd >= GetNumRows() || colEnd >= GetNumCols())
+        {
+            throw std::invalid_argument("Index out of range.");
+        }
+
+        if (this->GetNumBits() != 1)
+        {
+            throw std::logic_error("QuantizedMatrix::Print is currently only supported for 1 bit.");
+        }
+
+        DEVICEID_TYPE orgdevice = this->GetDeviceId();
+        CurrentDataLocation curLocation = m_quantizedData->GetCurrentMatrixLocation();
+        if (curLocation == CurrentDataLocation::GPU)
+        {
+            m_quantizedData->_transferToDevice(CPUDEVICE, false, false);
+        }
+
+        if (matrixName != nullptr)
+            fprintf(stderr, "\n###### %s (%lu, %lu) ######\n", matrixName, GetNumRows(), GetNumCols());
+        else
+            fprintf(stderr, "\n###### Unnamed Matrix (%lu, %lu) ######\n", GetNumRows(), GetNumCols());
+
+        fprintf(stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowStart, rowEnd, colStart, colEnd);
+
+        for (size_t j = colStart; j <= colEnd; j++)
+        {
+            QuantizedColumn<ElemType>* qCol = this->GetQuantizedColumn(j);
+            fprintf(stderr, "Lower=%.10f,Upper=%.10f\t", qCol->lower, qCol->upper);
+        }
+        fprintf(stderr, "\n");
+
+        const size_t ldNbits = ValueQuantizer<ElemType>::ld(this->GetNumBits());
+        size_t numQWordsPerCol = ColumnQuantizer<ElemType>::QWordsPerCol(this->GetNumRows(), this->GetNumBits());
+        for (size_t i = rowStart; i <= rowEnd; i++)
+        {
+            size_t qWordIdx = i % numQWordsPerCol;
+            size_t offsetInQWord = i / numQWordsPerCol;
+            for (size_t j = colStart; j <= colEnd; j++)
+            {
+                QuantizedColumn<ElemType>* qCol = this->GetQuantizedColumn(j);
+                ColumnQuantizer<ElemType> q(ldNbits, qCol->lower, qCol->upper);
+                ElemType val0 = q.valQ.Unquantize(0);
+                ElemType val1 = q.valQ.Unquantize(1);
+
+                QWord qWord = qCol->bits[qWordIdx];
+                bool qVal = ((qWord >> offsetInQWord) & 1) != 0;
+                ElemType val = ValueQuantizer<ElemType>::Unquantize1(qVal, val0, val1);
+                fprintf(stderr, "%1d (%.10f)                   \t", qVal ? 1 : 0, val);
+            }
+            fprintf(stderr, "\n");
+        }
+
+        if (curLocation == CurrentDataLocation::GPU)
+        {
+            m_quantizedData->_transferToDevice(orgdevice, false, false);
+        }
+    }
+
     // Explicit instantiation
     template class QuantizedMatrix<float>;
     template class QuantizedMatrix<double>;    

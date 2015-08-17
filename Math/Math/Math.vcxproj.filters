@@ -25,7 +25,7 @@
     <ClCompile Include="MatrixQuantizer.cpp" />
     <ClCompile Include="QuantizedMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp">
-      <Filter>CPU\1bitSGD</Filter>
+      <Filter>GPU\1bitSGD</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -57,13 +57,9 @@
     </ClInclude>
     <ClInclude Include="MatrixQuantizer.h" />
     <ClInclude Include="QuantizedMatrix.h" />
-      <Filter>CPU\1bitSGD</Filter>
-    </ClInclude>
-    <ClInclude Include="MemAllocator.h">
-      <Filter>CPU\1bitSGD</Filter>
-    </ClInclude>
+    <ClInclude Include="MemAllocator.h" />
     <ClInclude Include="CUDAPageLockedMemAllocator.h">
-      <Filter>CPU\1bitSGD</Filter>
+      <Filter>GPU\1bitSGD</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
