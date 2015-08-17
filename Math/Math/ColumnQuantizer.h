@@ -316,6 +316,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         ValueQuantizer<ElemType> valQ;
+
+        template<typename T>
+        friend class QuantizedMatrix;
     };
 
 }}}

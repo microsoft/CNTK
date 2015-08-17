@@ -472,6 +472,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         template<typename T>
         friend class MatrixQuantizer;
+
+        template<typename T>
+        friend class QuantizedMatrix;
     };
 
     typedef Matrix<float> SingleMatrix;
