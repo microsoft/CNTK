@@ -95,10 +95,10 @@ public:
     // Default implementation does not support subsetting and throws an exception on 
     // calling this overload with a numsubsets value other than 1.
     virtual bool getbatch(const size_t globalts,
-        const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced, 
-        std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
-        std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-        std::vector<shared_ptr<const latticesource::latticepair>> & lattices)
+                          const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced, 
+                          std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+                          std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
+                          std::vector<shared_ptr<const latticesource::latticepair>> & lattices)
     {
         assert((subsetnum == 0) && (numsubsets == 1) && !supportsbatchsubsetting()); subsetnum; numsubsets;
         bool retVal = getbatch(globalts, framesrequested, feat, uids, transcripts, lattices);
@@ -138,7 +138,10 @@ class minibatchiterator
     const size_t datapasses;                // we return the data this many times; caller must sub-sample with 'datapass'
 
     msra::dbn::minibatchsource & source;    // feature source to read from
-    size_t subsetnum, numsubsets;               // subset to read during distributed data-parallel training (no subsetting: (0,1))
+
+    // subset to read during distributed data-parallel training (no subsetting: (0,1))
+    size_t subsetnum;
+    size_t numsubsets;
 
     std::vector<msra::dbn::matrix> featbuf;              // buffer for holding curernt minibatch's frames
     std::vector<std::vector<size_t>> uids;               // buffer for storing current minibatch's frame-level label sequence
@@ -225,7 +228,7 @@ public:
     {
         firstvalidepochstartframe = source.firstvalidglobalts (epochstartframe); // epochstartframe may fall between utterance boundaries; this gets us the first valid boundary
         fprintf (stderr, "minibatchiterator: epoch %d: frames [%d..%d] (first utterance at frame %d), data subset %d of %d, with %d datapasses\n",
-            epoch, epochstartframe, epochendframe, firstvalidepochstartframe, subsetnum, numsubsets, datapasses);
+                 epoch, epochstartframe, epochendframe, firstvalidepochstartframe, subsetnum, numsubsets, datapasses);
         mbstartframe = firstvalidepochstartframe;
         datapass = 0;
         fillorclear(); // get the first batch

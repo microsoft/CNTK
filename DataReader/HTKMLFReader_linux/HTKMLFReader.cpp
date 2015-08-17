@@ -644,9 +644,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (m_trainOrTest)
         {
+            // For distributed reading under truncated BPTT of LSTMs, we distribute the utterances per minibatch among all the subsets
             if (m_truncated)
             {
-                // For distributed reading under BPTT, we will divide the utterances per minibatch among all the subsets
                 if ((numSubsets > 1) && (m_numberOfuttsPerMinibatch < numSubsets))
                 {
                     LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", m_numberOfuttsPerMinibatch, numSubsets);
@@ -874,24 +874,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                 (m_featuresBufferAllocatedMultiIO[id] < (feat.rows() * feat.cols())) /*buffer size changed. can be partial minibatch*/)
                             {
-                                if (data.GetDeviceId() >= 0)
-                                {
-                                    // Use pinned memory for GPU devices for better copy performance
-                                    int deviceID = data.GetDeviceId();
-                                    size_t totalSize = sizeof(ElemType) * feat.rows() * feat.cols();
-
-                                    // Note: I ask for '0' but cudaHostGetFlags() shows that it is allocated as 'cudaHostAllocMapped'
-                                    m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                        this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                    });
-                                }
-                                else
-                                {
-                                    m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[feat.rows()*feat.cols()], [](ElemType* p) {
-                                        delete[] p;
-                                    });
-                                }
-
+                                m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), feat.rows() * feat.cols());
                                 m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
                             }
 
@@ -944,23 +927,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                 (m_labelsBufferAllocatedMultiIO[id] < (dim * uids.size())))
                             {
-                                if (data.GetDeviceId() >= 0)
-                                {
-                                    // Use pinned memory for GPU devices for better copy performance
-                                    int deviceID = data.GetDeviceId();
-                                    size_t totalSize = sizeof(ElemType) * dim * uids.size();
-
-                                    m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                        this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                    });
-                                }
-                                else
-                                {
-                                    m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * uids.size()], [](ElemType* p) {
-                                        delete[] p;
-                                    });
-                                }
-
+                                m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * uids.size());
                                 m_labelsBufferAllocatedMultiIO[id] = dim*uids.size();
                             }
                             memset(m_labelsBufferMultiIO[id].get(), 0, sizeof(ElemType)*dim*uids.size());
@@ -1086,23 +1053,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                                 if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                     (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)) /*buffer size changed. can be partial minibatch*/)
                                 {
-                                    if (data.GetDeviceId() >= 0)
-                                    {
-                                        // Use pinned memory for GPU devices for better copy performance
-                                        int deviceID = data.GetDeviceId();
-                                        size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                        m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                            this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                        });
-                                    }
-                                    else
-                                    {
-                                        m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                            delete[] p;
-                                        });
-                                    }
-
+                                    m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
                                     m_featuresBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
                                 }
 
@@ -1132,23 +1083,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                                 if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                     (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)))
                                 {
-                                    if (data.GetDeviceId() >= 0)
-                                    {
-                                        // Use pinned memory for GPU devices for better copy performance
-                                        int deviceID = data.GetDeviceId();
-                                        size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                        m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                            this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                        });
-                                    }
-                                    else
-                                    {
-                                        m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                            delete[] p;
-                                        });
-                                    }
-
+                                    m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
                                     m_labelsBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
                                 }
 
@@ -1183,23 +1118,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                                 if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                     (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)) /*buffer size changed. can be partial minibatch*/)
                                 {
-                                    if (data.GetDeviceId() >= 0)
-                                    {
-                                        // Use pinned memory for GPU devices for better copy performance
-                                        int deviceID = data.GetDeviceId();
-                                        size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                        m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                            this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                        });
-                                    }
-                                    else
-                                    {
-                                        m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                            delete[] p;
-                                        });
-                                    }
-
+                                    m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
                                     m_featuresBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
                                 }
 
@@ -1229,23 +1148,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                                 if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                     (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)))
                                 {
-                                    if (data.GetDeviceId() >= 0)
-                                    {
-                                        // Use pinned memory for GPU devices for better copy performance
-                                        int deviceID = data.GetDeviceId();
-                                        size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                        m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                            this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                        });
-                                    }
-                                    else
-                                    {
-                                        m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                            delete[] p;
-                                        });
-                                    }
-
+                                    m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
                                     m_labelsBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
                                 }
 
@@ -1438,23 +1341,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                     if ((m_featuresBufferMultiIO[id] == nullptr) ||
                         (m_featuresBufferAllocatedMultiIO[id] < (feat.rows() * feat.cols())) /*buffer size changed. can be partial minibatch*/)
                     {
-                        if (data.GetDeviceId() >= 0)
-                        {
-                            // Use pinned memory for GPU devices for better copy performance
-                            int deviceID = data.GetDeviceId();
-                            size_t totalSize = sizeof(ElemType) * feat.rows() * feat.cols();
-
-                            m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                            });
-                        }
-                        else
-                        {
-                            m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[feat.rows() * feat.cols()], [](ElemType* p) {
-                                delete[] p;
-                            });
-                        }
-
+                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), feat.rows() * feat.cols());
                         m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
                     }
 

@@ -121,6 +121,24 @@ private:
         return m_cudaAllocator;
     }
 
+    std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceID, size_t numElements)
+    {
+        if (deviceID >= 0)
+        {
+            // Use pinned memory for GPU devices for better copy performance
+            size_t totalSize = sizeof(ElemType) * numElements;
+            return std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
+                this->GetCUDAAllocator(deviceID)->Free((char*)p);
+            });
+        }
+        else
+        {
+            return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
+                delete[] p;
+            });
+        }
+    }
+
 public:
     /// a matrix of n_stream x n_length
     /// n_stream is the number of streams

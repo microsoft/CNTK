@@ -1088,10 +1088,10 @@ public:
     //  - skip frames/utterances in not-loaded blocks in the returned data
     //  - 'framesadvanced' will still return the logical #frames; that is, by how much the global time index is advanced
     /*implement*/ bool getbatch(const size_t globalts, const size_t framesrequested,
-                                 const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced,
-                                 std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
-                                 std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
-                                 std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs) override
+                                const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced,
+                                std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+                                std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
+                                std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs) override
     {
         bool readfromdisk = false;  // return value: shall be 'true' if we paged in anything
 
@@ -1386,9 +1386,9 @@ public:
     }
 
     bool getbatch(const size_t globalts,
-        const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
-        std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-        std::vector<shared_ptr<const latticesource::latticepair>> & lattices)
+                  const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+                  std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
+                  std::vector<shared_ptr<const latticesource::latticepair>> & lattices)
     {
         size_t dummy;
         return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices);
@@ -1398,9 +1398,9 @@ public:
 
     // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
     /*implement*/ bool getbatch (const size_t /*globalts*/,
-                           const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
-                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
-                           std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
+                                 const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
+                                 std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
+                                 std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {
            // should never get here
             throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");

@@ -52,6 +52,8 @@
 #endif
 int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
 int mpiRank;            // and this is who we are amonghst these processes
+
+// TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 using namespace std;
@@ -1405,7 +1407,9 @@ int wmain(int argc, wchar_t* argv[])
         g_mpi = nullptr;
         bool paralleltrain = config("parallelTrain", "false");
         if (paralleltrain)
+        {
             g_mpi = new MPIWrapper();
+        }
 
         if (logpath != L"")
         {
