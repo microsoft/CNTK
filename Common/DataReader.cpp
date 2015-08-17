@@ -137,6 +137,7 @@ void DataReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
         m_dataReader[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
 }
 
+//SupportsDistributedMBRead - Tells if the reader supports distributed minibatch reading for parallel training
 template<class ElemType>
 bool DataReader<ElemType>::SupportsDistributedMBRead() const
 {
@@ -152,6 +153,12 @@ bool DataReader<ElemType>::SupportsDistributedMBRead() const
     return supportsDistributedMBRead;
 }
 
+//StartDistributedMinibatchLoop - Startup a distributed minibatch loop for parallel training
+// mbSize - [in] size of the minibatch (number of frames, etc.)
+// epoch - [in] epoch number for this loop
+// subsetNum - [in] the subset number of the current node in a group of parallel training nodes
+// numSubsets - [in] total number of nodes participating in the parallel training
+// requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
 template<class ElemType>
 void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
 {

@@ -84,24 +84,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudasharedcode QWordVal QuantizeToFullQWord(ElemType u) const;
 
     protected:
-        /*const*/ size_t ldNbits;   // must be power of two
-        /*const*/ size_t Nbits;     // now we quantized to 4 bits i.e. [0, 16)
-        /*const*/ QWordVal rangeend;
+        size_t ldNbits;   // must be power of two
+        size_t Nbits;     // now we quantized to 4 bits i.e. [0, 16)
+
+        QWordVal rangeend;
         
         // quantization range
-        /*const*/ ElemType quantimin;
-        /*const*/ ElemType quantimax;
+        ElemType quantimin;
+        ElemType quantimax;
         
     #ifndef ZERO_THRESHOLD_FOR_1BIT
         // quantization threshold for 1-bit case
-        /*const*/ ElemType quantimid;              
+        ElemType quantimid;              
     #endif
     
         // precomputed factor for quantizating
-        /*const*/ ElemType qfactor;    
+        ElemType qfactor;    
         
         // and for unquantizing
-        /*const*/ ElemType ufactor;    
+        ElemType ufactor;    
     };
 }}}
 #endif 

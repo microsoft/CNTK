@@ -7,8 +7,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #define ColMIDX(i,j,numRow) (((j)*(numRow))+(i)) // 0 based indexing for column major
 
     // ---------------------------------------------------------------------------
-    // quantization of one column
-    // ---------------------------------------------------------------------------    
+    // Class to perform columnwise quantization/unquantization
+    // 
+    // The quantization of a column is performed in 2 steps
+    // a) Compute the values used for unquantizing/reconstructing the quantized values. This is done by computing a pair of 
+    //    values that specify the range of reconstructed unquantized values, such that the aggregate qunatization error is minimized.
+    // b) Perform the actual quantization by quantizing each value in the column to an integer of the size of
+    //    the specified number of bits and then packing these integer bits into the quantized matrix storage
+    // ---------------------------------------------------------------------------
 
     template<class ElemType>
     class ColumnQuantizer
@@ -19,7 +25,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         cudacode ColumnQuantizer(size_t logNbits, ElemType lower, ElemType upper) 
-        : valQ(logNbits, lower, upper)
+            : valQ(logNbits, lower, upper)
         {        
         }
         

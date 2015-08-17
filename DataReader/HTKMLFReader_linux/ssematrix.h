@@ -1361,7 +1361,7 @@ public:
     }
 
     // non-destructive resize() to a smaller size
-    void shrink (size_t newrows/*rows*/, size_t newcols/*cols*/)
+    void shrink(size_t newrows, size_t newcols)
     {
         if (newrows > this->numrows || newcols > this->numcols)
             throw std::logic_error ("shrink: attempted to grow the matrix");

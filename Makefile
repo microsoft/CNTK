@@ -46,6 +46,8 @@ endif
 
 #### Configure based on options above
 
+# The mpic++ wrapper only adds MPI specific flags to the g++ command line.
+# The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
 INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK

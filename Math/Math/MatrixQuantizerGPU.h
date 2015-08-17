@@ -31,11 +31,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void WaitUnquantizeAsyncDone() override;            
 
     private:        
-        //helper functions
+        // Helper function to get a temporary intermediate matrix on the GPU to store quantization results
         QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t nBits, bool& newlyAllocated);
         
+        // Record a event to flag the completion of quantization/unquantization kernel on the compute stream
         void RecordQuantizeCompleteEvent(cudaStream_t computestream) const;
+
+        // Synchronize the fetch stream to the quantization completion event and record an event on the fetch
+        // stream to flag the completion of fetching the quantization results from the GPU
         void SyncQuantizeCompleEventAndFetchAndRecordFetchCompleteEvent(char *cpuBuffer, char*gpuBuffer, size_t size) const;
+
+        // Synchronize the compute stream to the assign completion event to ensure that subsequent compute stream operations
+        // wait for the assign stream operations, scheduled so far, to finish
         void SyncAssignCompleteEvent(cudaStream_t computestream)const;
 
         //for concurrent computation and memcpy

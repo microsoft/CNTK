@@ -601,9 +601,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_trainOrTest)
             {
+                // For distributed reading under truncated BPTT of LSTMs, we distribute the utterances per minibatch among all the subsets
                 if (m_truncated)
                 {
-                    // For distributed reading under BPTT, we will divide the utterances per minibatch among all the subsets
                     if ((numSubsets > 1) && (m_numberOfuttsPerMinibatch < numSubsets))
                     {
                         LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", m_numberOfuttsPerMinibatch, numSubsets);
@@ -822,39 +822,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             // check to see if we got the number of frames we requested
                             if (!skip)
                             {
-                                // copy the features over to our array type
                                 assert(feat.rows()==dim); // check feature dimension matches what's expected
 
                                 if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                     (m_featuresBufferAllocatedMultiIO[id] < (feat.rows() * feat.cols())) /*buffer size changed. can be partial minibatch*/)
                                 {
-                                    if (data.GetDeviceId() >= 0)
-                                    {
-                                        // Use pinned memory for GPU devices for better copy performance
-                                        int deviceID = data.GetDeviceId();
-                                        size_t totalSize = sizeof(ElemType) * feat.rows() * feat.cols();
-
-                                        // Note: I ask for '0' but cudaHostGetFlags() shows that it is allocated as 'cudaHostAllocMapped'
-                                        m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                            this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                        });
-                                    }
-                                    else
-                                    {
-                                        m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[feat.rows()*feat.cols()], [](ElemType* p) {
-                                            delete[] p;
-                                        });
-                                    }
-                            
-                                    m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
+                                    m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), feat.rows() * feat.cols());
+                                    m_featuresBufferAllocatedMultiIO[id] = feat.rows() * feat.cols();
                                 }
 
+                                // copy the features over to our array type
                                 if (sizeof(ElemType) == sizeof(float))
                                 {
                                     for (int j=0; j < feat.cols(); j++) // column major, so iterate columns
                                     {
                                         // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                        memcpy_s(&m_featuresBufferMultiIO[id].get()[j*feat.rows()],sizeof(ElemType)*feat.rows(),&feat(0,j),sizeof(ElemType)*feat.rows());
+                                        memcpy_s(&m_featuresBufferMultiIO[id].get()[j * feat.rows()], sizeof(ElemType) * feat.rows(), &feat(0, j), sizeof(ElemType) * feat.rows());
                                     }
                                 }
                                 else
@@ -863,7 +846,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     {
                                         for (int i = 0; i < feat.rows(); i++)
                                         {
-                                            m_featuresBufferMultiIO[id].get()[j*feat.rows()+i] = feat(i,j);
+                                            m_featuresBufferMultiIO[id].get()[j * feat.rows() + i] = feat(i, j);
                                         }
                                     }
                                 }
@@ -898,27 +881,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                     (m_labelsBufferAllocatedMultiIO[id] < (dim * uids.size())))
                                 {
-                                    if (data.GetDeviceId() >= 0)
-                                    {
-                                        // Use pinned memory for GPU devices for better copy performance
-                                        int deviceID = data.GetDeviceId();
-                                        size_t totalSize = sizeof(ElemType) * dim * uids.size();
-
-                                        m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                            this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                        });
-                                    }
-                                    else
-                                    {
-                                        m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * uids.size()], [](ElemType* p) {
-                                            delete[] p;
-                                        });
-                                    }
-
-                                    m_labelsBufferAllocatedMultiIO[id] = dim*uids.size();
+                                    m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * uids.size());
+                                    m_labelsBufferAllocatedMultiIO[id] = dim * uids.size();
                                 }
-                                memset(m_labelsBufferMultiIO[id].get(),0,sizeof(ElemType)*dim*uids.size());                
-
 
                                 if (m_convertLabelsToTargetsMultiIO[id])
                                 {
@@ -929,7 +894,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         size_t labelId = uids[i];
                                         for (int j = 0; j < dim; j++)
                                         {
-                                            m_labelsBufferMultiIO[id].get()[i*dim + j] = m_labelToTargetMapMultiIO[id][labelId][j];
+                                            m_labelsBufferMultiIO[id].get()[i * dim + j] = m_labelToTargetMapMultiIO[id][labelId][j];
                                         }
                                     }
                                 }
@@ -941,7 +906,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     {
                                         assert(uids[i] < dim);
                                         //labels(uids[i], i) = (ElemType)1;
-                                        m_labelsBufferMultiIO[id].get()[i*dim + uids[i]] = (ElemType)1;
+                                        m_labelsBufferMultiIO[id].get()[i * dim + uids[i]] = (ElemType)1;
                                     }
                                 }
 
@@ -1028,24 +993,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                         (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)) /*buffer size changed. can be partial minibatch*/)
                                     {
-                                        if (data.GetDeviceId() >= 0)
-                                        {
-                                            // Use pinned memory for GPU devices for better copy performance
-                                            int deviceID = data.GetDeviceId();
-                                            size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                            m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                                this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                            });
-                                        }
-                                        else
-                                        {
-                                            m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                                delete[] p;
-                                            });
-                                        }
-
-                                        m_featuresBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
+                                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
+                                        m_featuresBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
                                     }
 
                                     if (sizeof(ElemType) == sizeof(float))
@@ -1053,7 +1002,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + i)*dim], sizeof(ElemType)*dim, &m_featuresBufferMultiUtt[i][j*dim + m_featuresStartIndexMultiUtt[id + i*numOfFea]], sizeof(ElemType)*dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i][j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1062,7 +1011,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         {
                                             for (int d = 0; d < dim; d++)
                                             {
-                                                m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + i)*dim + d] = m_featuresBufferMultiUtt[i][j*dim + d + m_featuresStartIndexMultiUtt[id + i*numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                             }
                                         }
                                     }
@@ -1074,31 +1023,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                         (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)))
                                     {
-                                        if (data.GetDeviceId() >= 0)
-                                        {
-                                            // Use pinned memory for GPU devices for better copy performance
-                                            int deviceID = data.GetDeviceId();
-                                            size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                            m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                                this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                            });
-                                        }
-                                        else
-                                        {
-                                            m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                                delete[] p;
-                                            });
-                                        }
-
-                                        m_labelsBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
+                                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
+                                        m_labelsBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
                                     }
 
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
                                         {
-                                            m_labelsBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + i)*dim + d] = m_labelsBufferMultiUtt[i][j*dim + d + m_labelsStartIndexMultiUtt[id + i*numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                         }
                                     }
                                 }
@@ -1125,24 +1058,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                         (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)) /*buffer size changed. can be partial minibatch*/)
                                     {
-                                        if (data.GetDeviceId() >= 0)
-                                        {
-                                            // Use pinned memory for GPU devices for better copy performance
-                                            int deviceID = data.GetDeviceId();
-                                            size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                            m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                                this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                            });
-                                        }
-                                        else
-                                        {
-                                            m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                                delete[] p;
-                                            });
-                                        }
-
-                                        m_featuresBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
+                                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
+                                        m_featuresBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
                                     }
 
                                     if (sizeof(ElemType) == sizeof(float))
@@ -1150,7 +1067,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + i)*dim], sizeof(ElemType)*dim, &m_featuresBufferMultiUtt[i][j*dim + m_featuresStartIndexMultiUtt[id + i*numOfFea]], sizeof(ElemType)*dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i][j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1159,7 +1076,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         {
                                             for (int d = 0; d < dim; d++)
                                             {
-                                                m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + i)*dim + d] = m_featuresBufferMultiUtt[i][j*dim + d + m_featuresStartIndexMultiUtt[id + i*numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                             }
                                         }
                                     }
@@ -1171,30 +1088,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                         (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)))
                                     {
-                                        if (data.GetDeviceId() >= 0)
-                                        {
-                                            // Use pinned memory for GPU devices for better copy performance
-                                            int deviceID = data.GetDeviceId();
-                                            size_t totalSize = sizeof(ElemType) * dim * m_mbSize * m_numberOfuttsPerMinibatch;
-
-                                            m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                                this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                            });
-                                        }
-                                        else
-                                        {
-                                            m_labelsBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[dim * m_mbSize * m_numberOfuttsPerMinibatch], [](ElemType* p) {
-                                                delete[] p;
-                                            });
-                                        }
-
-                                        m_labelsBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
+                                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
+                                        m_labelsBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
                                     }
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
                                         {
-                                            m_labelsBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + i)*dim + d] = m_labelsBufferMultiUtt[i][j*dim + d + m_labelsStartIndexMultiUtt[id + i*numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                         }
                                     }
                                 }
@@ -1224,7 +1125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(j*m_numberOfuttsPerMinibatch + i)*dim], sizeof(ElemType)*dim, &m_featuresBufferMultiUtt[i][k*dim + m_featuresStartIndexMultiUtt[id + i*numOfFea]], sizeof(ElemType)*dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i][k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1233,7 +1134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         {
                                             for (int d = 0; d < dim; d++)
                                             {
-                                                m_featuresBufferMultiIO[id].get()[(j*m_numberOfuttsPerMinibatch + i)*dim + d] = m_featuresBufferMultiUtt[i][k*dim + d + m_featuresStartIndexMultiUtt[id + i*numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                             }
                                         }
                                     }
@@ -1246,7 +1147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     {
                                         for (int d = 0; d < dim; d++)
                                         {
-                                            m_labelsBufferMultiIO[id].get()[(j*m_numberOfuttsPerMinibatch + i)*dim + d] = m_labelsBufferMultiUtt[i][k*dim + d + m_labelsStartIndexMultiUtt[id + i*numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                         }
                                     }
                                 }
@@ -1366,24 +1267,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if ((m_featuresBufferMultiIO[id] == nullptr) ||
                             (m_featuresBufferAllocatedMultiIO[id] < (feat.rows() * feat.cols())) /*buffer size changed. can be partial minibatch*/)
                         {
-                            if (data.GetDeviceId() >= 0)
-                            {
-                                // Use pinned memory for GPU devices for better copy performance
-                                int deviceID = data.GetDeviceId();
-                                size_t totalSize = sizeof(ElemType) * feat.rows() * feat.cols();
-
-                                m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                                    this->GetCUDAAllocator(deviceID)->Free((char*)p);
-                                });
-                            }
-                            else
-                            {
-                                m_featuresBufferMultiIO[id] = std::shared_ptr<ElemType>(new ElemType[feat.rows() * feat.cols()], [](ElemType* p) {
-                                    delete[] p;
-                                });
-                            }
-
-                            m_featuresBufferAllocatedMultiIO[id] = feat.rows()*feat.cols();
+                            m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), feat.rows() * feat.cols());
+                            m_featuresBufferAllocatedMultiIO[id] = feat.rows() * feat.cols();
                         }
 
                         if (sizeof(ElemType) == sizeof(float))
@@ -1391,7 +1276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             for (int j=0; j < feat.cols(); j++) // column major, so iterate columns
                             {
                                 // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                memcpy_s(&m_featuresBufferMultiIO[id].get()[j*feat.rows()], sizeof(ElemType)*feat.rows(), &feat(0, j), sizeof(ElemType)*feat.rows());
+                                memcpy_s(&m_featuresBufferMultiIO[id].get()[j * feat.rows()], sizeof(ElemType) * feat.rows(), &feat(0, j), sizeof(ElemType) * feat.rows());
                             }
                         }
                         else
@@ -1400,7 +1285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 for (int i = 0; i < feat.rows(); i++)
                                 {
-                                    m_featuresBufferMultiIO[id].get()[j*feat.rows() + i] = feat(i, j);
+                                    m_featuresBufferMultiIO[id].get()[j * feat.rows() + i] = feat(i, j);
                                 }
                             }
                         }
