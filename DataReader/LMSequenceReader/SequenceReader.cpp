@@ -1822,7 +1822,8 @@ size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-
+    fprintf(stderr, "LMSeq::GetMinibatch ...\n");
+    system("sleep 0.1");
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
         return false;
@@ -1836,7 +1837,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     // figure out the size of the next sequence
     actualmbsize = m_labelIdData.size() ; 
-    if (actualmbsize > m_mbSize * mToProcess.size()){
+    if (actualmbsize > m_mbSize * mToProcess.size()) {
         RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
     }
 
@@ -1905,7 +1906,13 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     else
         return false; 
 
-
+    fprintf(stderr, "LMSeq/SequenceReader.cpp debughtx matrices->find(L\"labels\") row:%d col:%d\n", matrices.find(L"labels")->second->GetNumRows(), matrices.find(L"labels")->second->GetNumCols());
+    for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
+        for (int j = 0; j < 4; j++)
+            fprintf(stderr, "%lf ", (*(matrices.find(L"labels")->second))(j, i));
+        fprintf(stderr, "\n");
+    }
+    system("sleep 1");
 
     // now transfer to the GPU as needed
     try{
