@@ -978,7 +978,11 @@ protected:
 
             fprintf(stderr,
                     "Finished Epoch[%d]: [Training Set] TrainLossPerSample = %.8g; ",
-                    i + 1, epochCriterion);
+                    i + 1, epochCriterion); 
+
+            fprintf(stderr,
+                "PPL-exp(TrainLossPerSample) = %.8g; ", std::exp(epochCriterion));
+
             if (epochEvalErrors.size() == 1)
             {
                 fprintf(stderr,
@@ -1057,8 +1061,8 @@ protected:
                     cvSetTrainAndEvalNodes.push_back((*evaluationNodes)[0]->NodeName());
 
                     vector<ElemType> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                    fprintf(stderr, "Finished Epoch[%d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
-                            i + 1, vScore[0], vScore[1]);
+                    fprintf(stderr, "Finished Epoch[%d]: [Validation Set] TrainLossPerSample = %.8g; PPL-exp(TrainLossPerSample) = %.8g; EvalErrPerSample = %.8g\n",
+                            i + 1, vScore[0], std::exp(vScore[0]), vScore[1]);
 
                     if (m_useCVSetControlLRIfCVExists)
                     {
