@@ -1348,8 +1348,6 @@ template class SequenceReader<float>;
 template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
-    fprintf(stderr, "LMSequenceReader Init...\n");
-    system("sleep 2");
     // See if the user wants caching
     m_cachingReader = NULL;
     m_cachingWriter = NULL;

@@ -1704,7 +1704,6 @@ protected:
         Timer timer;
         timer.Start();
 
-        int kkk = 0;
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
 #ifdef MPI_SUPPORT
