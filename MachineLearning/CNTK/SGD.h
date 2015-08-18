@@ -1711,15 +1711,6 @@ protected:
             DecimateMinibatch(inputMatrices);
 #endif
                         
-            fprintf(stderr, "debughtx SGD.h kkk:%d row:%d col:%d\n", kkk, inputMatrices->find(L"labels")->second->GetNumRows(), inputMatrices->find(L"labels")->second->GetNumCols());
-            for (int i = 0; i < inputMatrices->find(L"labels")->second->GetNumCols(); i++) {
-                for (int j = 0; j < 4; j++)
-                    fprintf(stderr, "%lf ", (*(inputMatrices->find(L"labels")->second))(j, i));
-                fprintf(stderr, "\n");
-            }
-            kkk++;
-            system("sleep 1");
-
             UpdateEvalTimeStamps(FeatureNodes);
             UpdateEvalTimeStamps(labelNodes);
 
