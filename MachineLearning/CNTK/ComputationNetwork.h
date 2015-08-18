@@ -2524,7 +2524,14 @@ public:
 
                         (*nodeIter)->UpdateEvalTimeStamp();
                     }
-                } 
+                }
+				for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+				{
+					if ((*nodeIter)->OperationName() == PastValueNode<ElemType>::TypeName())
+					{
+						(*nodeIter)->SetHistoryInformation();
+					}
+				}
             }
             else
             {

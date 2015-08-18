@@ -251,10 +251,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
 
-            if (timeIdxInSeq == 0 && m_historyAlreadySet == false)
-            {
-                m_pastActivity = Inputs(0)->FunctionValues();
-            }
             
             Matrix<ElemType>  colBegin = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
             EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
@@ -359,7 +355,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
         }
-
+		void SetHistoryInformation()
+		{
+			m_pastActivity = Inputs(0)->FunctionValues();
+		}
         virtual void AttachInputs(const ComputationNodePtr inputNode)
         {
             m_children.resize(1);
