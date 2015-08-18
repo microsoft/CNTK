@@ -96,10 +96,11 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
         exit 1
     fi
 elif [[ $OSTYPE == "linux-gnu" ]]; then
-    DEBUG_DIR=x86_64.gpu.debug.acml
-    RELEASE_DIR=x86_64.gpu.release.acml
-    PREFIX_DIR=bin
-    BIN_NAME=cntk
+    DEBUG_DIR=build/debug
+    RELEASE_DIR=build/release
+    PREFIX_DIR=
+    # Make sure no dependencies on current directory
+    BIN_NAME=bin/cntk
     MAKEFILE=Makefile
     BUILD_OS="linux"
 else
@@ -179,12 +180,16 @@ if [[ $BUILD == 1 ]]; then
             fi
             msbuild.exe /property:Configuration=$FLAVOR /m 1>&6 2>&7 || exit $?
         else
+            BUILD_DIR=build/$FLAVOR
+            ./configure --with-build-top=$BUILD_DIR --with-acml=$ACML_PATH --with-buildtype=$FLAVOR
             if [[ $CLEAN_BEFORE == 1 ]]; then
-                make BUILDTYPE=$FLAVOR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
+                make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
             fi
-            make BUILDTYPE=$FLAVOR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
+            make -C $BUILD_DIR -j -f $MAKEFILE 1>&6 2>&7 || exit $?
         fi
-        chmod a+r $BUILD_FILE.*
+        if [[ $QUIET_BUILD == 1 ]]; then
+          chmod a+r $BUILD_FILE.*
+        fi
     done
 fi
 
@@ -212,18 +217,21 @@ if [[ $RUN == 1 ]]; then
             fi
             OUT_FILE="$RUN_FILE.$FLAVOR.$TARGET.out"
 
-            if ! [[ -f "./$FLAVOR_DIR/$BIN_NAME" ]]; then
+            BIN_PATH=$CNTK_ROOT/$FLAVOR_DIR/$BIN_NAME 
+            if ! [[ -f $BIN_PATH ]]; then
                 echo "============ ERROR: CNTK did not build properly for flavor ($FLAVOR)  ============"
+                echo "Missing file: $BIN_PATH"
                 exit 1
             fi
 
             echo "============ Running CNTK for ($FLAVOR) ($TARGET), output in ($RUN_FILE.*) ============"
+            cd $CNTK_ROOT/Demos
             rm -rf models
             if [[ $OS == "Windows_NT" ]]; then
                 # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.
-                time ./$FLAVOR_DIR/$BIN_NAME configFile="`cygpath -w $CONF_FILE`" &>$OUT_FILE || exit $?
+                time $BIN_PATH configFile="`cygpath -w $CONF_FILE`" &>$OUT_FILE || exit $?
             else
-                time ./$FLAVOR_DIR/$BIN_NAME configFile=$CONF_FILE &>$OUT_FILE || exit $?
+                time $BIN_PATH configFile=$CONF_FILE &>$OUT_FILE || exit $?
             fi
             chmod a+r $RUN_FILE.*
 
