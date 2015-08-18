@@ -207,7 +207,98 @@ namespace CNTKMathTest
         }
 
         template <typename ElemType>
-        static void Test1BitQuantization(short deviceId)
+        static void TestFullQWordQuantization(
+            size_t numRows,
+            size_t numCols,
+            ElemType rangeLow,
+            ElemType rangeHigh,
+            int seed,
+            int numIterations,
+            short deviceId)
+        {
+            auto verifyAllZerosFunc = [](Matrix<ElemType>& matrix) {
+                ElemType* cpuMatrix = matrix.CopyToArray();
+                size_t numMatrixElems = matrix.GetNumElements();
+                for (size_t i = 0; i < numMatrixElems; ++i)
+                {
+                    Assert::IsTrue(cpuMatrix[i] == ((ElemType)0));
+                }
+
+                delete[] cpuMatrix;
+            };
+
+            MemAllocator* allocator = nullptr;
+            if (deviceId != CPUDEVICE)
+            {
+                allocator = new CUDAPageLockedMemAllocator(deviceId);
+            }
+
+            Matrix<ElemType> inMatrix(numRows, numCols, deviceId);
+            auto quantizer = MatrixQuantizer<ElemType>::CreateMatrixQuantizer(inMatrix);
+
+            // Verify that the initial residue is comprised of all zeros
+            verifyAllZerosFunc(quantizer->GetResidualMatrix());
+
+            Matrix<ElemType> outMatrix(numRows, numCols, deviceId);
+            // Verify that the outMatrix is initialized with all zeros
+            verifyAllZerosFunc(outMatrix);
+
+            for (int iterNum = 0; iterNum < numIterations; ++iterNum)
+            {
+                inMatrix = Matrix<ElemType>::RandomUniform(numRows, numCols, rangeLow, rangeHigh, seed + iterNum, deviceId);
+
+                ElemType* gpuInMatrix = inMatrix.CopyToArray();
+                ElemType *gpuPrevOutMatrix = outMatrix.CopyToArray();
+
+#ifdef DEBUG_OUTPUT_PATH
+                inMatrix.Print("Input Matrix", 0, 2, 0, 2);
+                quantizer->GetResidualMatrix().Print("Old Residual Matrix", 0, 2, 0, 2);
+                outMatrix.Print("Old Output Matrix", 0, 2, 0, 2);
+#endif
+
+                QuantizedMatrix<ElemType> tempCPUQuantizationBuffer(numRows, numCols, 8 * sizeof(ElemType), CPUDEVICE, allocator);
+                quantizer->QuantizeAsync(tempCPUQuantizationBuffer);
+                quantizer->WaitQuantizeAsyncDone();
+
+                // Verify that the residue is comprised of all zeros
+                verifyAllZerosFunc(quantizer->GetResidualMatrix());
+
+#ifdef DEBUG_OUTPUT_PATH
+                tempCPUQuantizationBuffer.Print("Quantized Matrix", 0, 2, 0, 2);
+                quantizer->GetResidualMatrix().Print("New residual Matrix", 0, 2, 0, 2);
+#endif
+
+                quantizer->UnquantizeAsync(tempCPUQuantizationBuffer, outMatrix, (iterNum > 0));
+                quantizer->WaitUnquantizeAsyncDone();
+
+#ifdef DEBUG_OUTPUT_PATH
+                outMatrix.Print("Unquantized Output Matrix", 0, 2, 0, 2);
+#endif
+
+                // Now verify the quantization results
+                ElemType* gpuNewOutMatrix = outMatrix.CopyToArray();
+
+                ElemType PRECISION_TOLERANCE = (sizeof(ElemType) == sizeof(double)) ? ((ElemType)DOUBLE_PRECISION_TOLERANCE) : SINGLE_PRECISION_TOLERANCE;
+                ElemType tolerance = (rangeHigh - rangeLow) * PRECISION_TOLERANCE;
+
+                // Verify that (cpuInMatrix + cpuPrevOutMatrix == gpuNewOutMatrix)
+                size_t numMatrixElems = inMatrix.GetNumElements();
+                for (size_t i = 0; i < numMatrixElems; ++i)
+                {
+                    Assert::IsTrue(fabs((gpuInMatrix[i] + gpuPrevOutMatrix[i]) - gpuNewOutMatrix[i]) <= tolerance);
+                }
+
+                delete[] gpuInMatrix;
+                delete[] gpuPrevOutMatrix;
+                delete[] gpuNewOutMatrix;
+            }
+
+            delete quantizer;
+            delete allocator;
+        }
+
+        template <typename ElemType>
+        static void TestQuantization(short deviceId)
         {
             size_t numRows = 256;
             size_t numCols = 135;
@@ -216,26 +307,30 @@ namespace CNTKMathTest
             int seed = 2015;
             int numIterations = 5;
 
-            // Test 1-bit quantization on a matrix of size 1024 * 1812 initialized with floating point numbers between -1 and + 1
+            // Test quantization on a matrix of size 1024 * 1812 initialized with floating point numbers between -1 and + 1
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with smaller range of values
             seed += 100;
             rangeLow = -0.005f;
             rangeHigh = 0.005f;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with larger range of values
             seed += 100;
             rangeLow = -10.0f;
             rangeHigh = 10.0f;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with assymmetric range of values
             seed += 100;
             rangeLow = -1.0f;
             rangeHigh = 2.05f;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with a single column
             seed += 100;
@@ -244,6 +339,7 @@ namespace CNTKMathTest
             numRows = 489;
             numCols = 1;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with a single row
             seed += 100;
@@ -252,6 +348,7 @@ namespace CNTKMathTest
             numRows = 1;
             numCols = 135;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with a number of rows that is not a multiple of the number of bits in a quantized word
             seed += 100;
@@ -260,6 +357,7 @@ namespace CNTKMathTest
             numRows = 89;
             numCols = 23;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test a matrix with a number of rows less than number of bits in a quantized word
             seed += 100;
@@ -268,14 +366,16 @@ namespace CNTKMathTest
             numRows = 15;
             numCols = 135;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
 
             // Test with a large matrix
             seed += 100;
             rangeLow = -0.5f;
             rangeHigh = 0.5f;
-            numRows = 1537;
-            numCols = 973;
+            numRows = 737;
+            numCols = 373;
             Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
         }
 
     public:
@@ -287,18 +387,18 @@ namespace CNTKMathTest
 #endif
 
             // Test single precision 1bit quantization on CPU
-            Test1BitQuantization<float>(CPUDEVICE);
+            TestQuantization<float>(CPUDEVICE);
 
             // Test double precision 1bit quantization on CPU
-            Test1BitQuantization<double>(CPUDEVICE);
+            TestQuantization<double>(CPUDEVICE);
 
             const int GPUDEVICE = 0;
 
             // Test single precision 1bit quantization on GPU
-            Test1BitQuantization<float>(GPUDEVICE);
+            TestQuantization<float>(GPUDEVICE);
 
             // Test double precision 1bit quantization on GPU
-            Test1BitQuantization<double>(GPUDEVICE);
+            TestQuantization<double>(GPUDEVICE);
         }
     };
 
