@@ -1043,7 +1043,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SetHistory(const Matrix<ElemType>& )
         {
         }
-
+		virtual void SetHistoryInformation()
+		{
+		}
         /// these two are used to pass gradients from future minibatch
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
