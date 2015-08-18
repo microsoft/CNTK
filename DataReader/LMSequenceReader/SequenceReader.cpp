@@ -1348,6 +1348,8 @@ template class SequenceReader<float>;
 template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
+    fprintf(stderr, "LMSequenceReader Init...\n");
+    system("sleep 2");
     // See if the user wants caching
     m_cachingReader = NULL;
     m_cachingWriter = NULL;
@@ -1902,6 +1904,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     } 
     else
         return false; 
+
+
 
     // now transfer to the GPU as needed
     try{
