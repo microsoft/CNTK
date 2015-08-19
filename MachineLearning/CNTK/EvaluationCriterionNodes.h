@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, this);
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, ComputationNodePtr(this));
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -160,7 +160,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            ErrorPredictionNode<ElemType>* node = (ErrorPredictionNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -174,14 +174,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ErrorPredictionNode(const ErrorPredictionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
             : ComputationNode<ElemType>(node->m_deviceId), m_maxIndexes0(node->m_deviceId), m_maxIndexes1(node->m_deviceId), m_maxValues(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new ErrorPredictionNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ErrorPredictionNode<ElemType>>(this, name, flags);
             return node;
         }
 

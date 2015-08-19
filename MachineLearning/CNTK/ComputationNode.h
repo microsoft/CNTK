@@ -52,11 +52,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region base computation class
     template<class ElemType>
-    class ComputationNode //Abstract Class that cannot be instantiated
+    class ComputationNode : public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
+        // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
-        typedef ComputationNode<ElemType>* ComputationNodePtr;
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
 
     public:
@@ -731,33 +732,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //  [1/13/2015 erw] add to enumerate all the edges 
-        void EnumerateArcs(std::unordered_set<ComputationNodePtr>& vistied, std::list<ComputationArc>& arcs)
+        void EnumerateArcs(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationArc>& arcs)
             //  enumerate arcs that can be reached starting from the current node's children
             //  [in/out] visited record already visited nodes 
         {
             std::list<ComputationNodePtr>	tovisit;
 
-            if (vistied.find(this) == vistied.end()) // only do when this node has not been visited before
+            if (visited.find(ComputationNodePtr(this)) == visited.end()) // only do when this node has not been visited before
             {
-                tovisit.push_back(this);
+                tovisit.push_back(ComputationNodePtr(this));
 
                 while (!tovisit.empty())
                 {
                     ComputationNodePtr curNode = tovisit.front();
                     tovisit.pop_front();
 
-                    if (vistied.find(curNode) == vistied.end())
+                    if (visited.find(curNode) == visited.end())
                     {
                         for (size_t i = 0; i < curNode->m_children.size(); i++)
                         {
                             arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));
 
-                            if (vistied.find(curNode->m_children[i]) == vistied.end()) // this children has not been visited before 
+                            if (visited.find(curNode->m_children[i]) == visited.end()) // this children has not been visited before 
                             {
                                 tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
                             }
                         }
-                        vistied.insert(curNode);
+                        visited.insert(curNode);
                     }
                 }
             }
@@ -911,9 +912,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
         std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode) 
         {
-            if (visited.find(this) == visited.end())  //not visited
+            if (visited.find(ComputationNodePtr(this)) == visited.end())  //not visited
             {   
-                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(ComputationNodePtr(this));   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -938,16 +939,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 if (!IsLeaf() && isFromPastOrFutureValueNode)
-                    sourceRecurrentNodePtr.push_back(this) ;
+                    sourceRecurrentNodePtr.push_back(ComputationNodePtr(this)) ;
             }
         }
 
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodePtr>& visited, std::map<int, std::list<ComputationNodePtr>>& recurrentResult, 
             std::list<ComputationNodePtr>& noRecurrentResult) 
         {
-            if (visited.find(this) == visited.end())  //not visited
+            if (visited.find(ComputationNodePtr(this)) == visited.end())  //not visited
             {   
-                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(ComputationNodePtr(this));   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -976,9 +977,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result) 
         {
-            if (visited.find(this) == visited.end())  //not visited
+            if (visited.find(ComputationNodePtr(this)) == visited.end())  //not visited
             {   
-                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(ComputationNodePtr(this));   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -1094,7 +1095,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers    \
         typedef ComputationNode<ElemType> B; \
 protected:  \
-        typedef ComputationNode<ElemType>* ComputationNodePtr;  \
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
 public: \
         using B::AttachInputs; using B::ChildrenNeedGradient; using B::ChildrenSize; using B::ClearGradientForChildren; \
         using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::InferImageDimsFromInput; \

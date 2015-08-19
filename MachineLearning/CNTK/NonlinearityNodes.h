@@ -140,7 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            RectifiedLinearNode<ElemType>* node = (RectifiedLinearNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<RectifiedLinearNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -152,14 +152,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RectifiedLinearNode(const RectifiedLinearNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfRectifiedLinear(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new RectifiedLinearNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<RectifiedLinearNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -277,7 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            SigmoidNode<ElemType>* node = (SigmoidNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<SigmoidNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -289,14 +289,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SigmoidNode(const SigmoidNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfSigmoid(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new SigmoidNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<SigmoidNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -417,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            TanhNode<ElemType>* node = (TanhNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<TanhNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -429,14 +429,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TanhNode(const TanhNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfTanh(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new TanhNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<TanhNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -556,7 +556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            LogNode<ElemType>* node = (LogNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<LogNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -568,14 +568,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LogNode(const LogNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfLog(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new LogNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<LogNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -696,7 +696,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            ExpNode<ElemType>* node = (ExpNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<ExpNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -708,14 +708,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ExpNode(const ExpNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfExp(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new ExpNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ExpNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -834,7 +834,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            CosineNode<ElemType>* node = (CosineNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<CosineNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -846,14 +846,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CosineNode(const CosineNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfCosine(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new CosineNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<CosineNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -982,7 +982,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            SoftmaxNode<ElemType>* node = (SoftmaxNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<SoftmaxNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -995,14 +995,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SoftmaxNode(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_diff(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new SoftmaxNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<SoftmaxNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1124,7 +1124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            LogSoftmaxNode<ElemType>* node = (LogSoftmaxNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<LogSoftmaxNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -1137,14 +1137,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LogSoftmaxNode(const LogSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientDotValue(node->m_deviceId), m_softmax(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new LogSoftmaxNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<LogSoftmaxNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1184,14 +1184,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ComputationNode<ElemType>(node->m_deviceId), m_prior(node->m_deviceId), m_normedDeviation(node->m_deviceId), m_normedDeviationVectors(node->m_deviceId),
             m_stddev(node->m_deviceId), m_posterior(node->m_deviceId), m_temp(m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new GMMLogLikelihoodNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<GMMLogLikelihoodNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1598,7 +1598,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            GMMLogLikelihoodNode<ElemType>* node = (GMMLogLikelihoodNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<GMMLogLikelihoodNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -1795,7 +1795,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            DropoutNode<ElemType>* node = (DropoutNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -1809,14 +1809,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DropoutNode(const DropoutNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_maskOfDropout(node->m_deviceId)
         {
-                node->CopyTo(this, newName, flags);
-            }
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
+        }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new DropoutNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<DropoutNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1863,7 +1863,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ReshapeNode(const ReshapeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         ReshapeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -1876,14 +1876,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            ComputationNodePtr node = new ReshapeNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ReshapeNode<ElemType>>(this, name, flags);
             return node;
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            ReshapeNode<ElemType>* node = (ReshapeNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -2188,8 +2188,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RowRepeatNode(const RowRepeatNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId)
         {
-                node->CopyTo(this, newName, flags);
-            }
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
+        }
 
         RowRepeatNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId)
@@ -2201,14 +2201,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            ComputationNodePtr node = new RowRepeatNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<RowRepeatNode<ElemType>>(this, name, flags);
             return node;
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            RowRepeatNode<ElemType>* node = (RowRepeatNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<RowRepeatNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {

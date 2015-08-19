@@ -86,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            ConvolutionNode<ElemType>* node = (ConvolutionNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -108,14 +108,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConvolutionNode(const ConvolutionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
             : ComputationNode<ElemType>(node->m_deviceId), m_tempMatrix(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new ConvolutionNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ConvolutionNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -511,7 +511,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            MaxPoolingNode<ElemType>* node = (MaxPoolingNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<MaxPoolingNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -536,14 +536,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         MaxPoolingNode(const MaxPoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new MaxPoolingNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<MaxPoolingNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -749,7 +749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            AveragePoolingNode<ElemType>* node = (AveragePoolingNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<AveragePoolingNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -775,14 +775,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         AveragePoolingNode(const AveragePoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new AveragePoolingNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<AveragePoolingNode<ElemType>>(this, name, flags);
             return node;
         }
 

@@ -233,14 +233,14 @@ namespace Microsoft {
                 SequenceDecoderNode(const SequenceDecoderNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
                     : ComputationNode<ElemType>(node->m_deviceId)
                 {
-                    node->CopyTo(this, newName, flags);
+                    node->CopyTo(ComputationNodePtr(this), newName, flags);
                 }
 
                 virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
                 {
                     const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-                    ComputationNodePtr node = new SequenceDecoderNode<ElemType>(this, name, flags);
+                    ComputationNodePtr node = make_shared<SequenceDecoderNode<ElemType>>(this, name, flags);
                     return node;
                 }
 

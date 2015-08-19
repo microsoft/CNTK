@@ -20,113 +20,111 @@
 
 #pragma warning (disable: 4189)     // (we have lots of unused variables to show how variables can be set up)
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildSimpleRNN(size_t mbSize)
+    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildSimpleRNN(size_t mbSize)
     {
-            if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        {
+            unsigned long randomSeed = 1;
+
+            size_t numHiddenLayers = m_layerSizes.size() - 2;
+
+            size_t numRecurrentLayers = m_recurrentLayers.size();
+
+            ComputationNodePtr input, w, b, u, pastValue, output, label, prior;
+
+            input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
+            m_net->FeatureNodes().push_back(input);
+
+            if (m_applyMeanVarNorm)
             {
-                unsigned long randomSeed = 1;
+                w = m_net->Mean(input);
+                b = m_net->InvStdDev(input);
+                output = m_net->PerDimMeanVarNormalization(input, w, b);
 
-                size_t numHiddenLayers = m_layerSizes.size() - 2;
+                input = output;
+            }
 
-                size_t numRecurrentLayers = m_recurrentLayers.size();
+            int recur_idx = 0; 
+            if (numHiddenLayers > 0)
+            {
+                //TODO: to figure out sparse matrix size
+                u = m_net->CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
+                m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
-                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-
-                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
-
-                if (m_applyMeanVarNorm)
+                if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
                 {
-                    w = m_net->Mean(input);
-                    b = m_net->InvStdDev(input);
-                    output = m_net->PerDimMeanVarNormalization(input, w, b);
+                    w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
+                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                    input = output;
+                    pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                    /// unless there is a good algorithm to detect loops, use this explicit setup
+                    output = ApplyNonlinearFunction(
+                        m_net->Plus(
+                            m_net->Times(u, input), m_net->Times(w, pastValue)), 0);
+                    pastValue->AttachInputs(output);
+                    static_pointer_cast<PastValueNode<ElemType>>(pastValue)->SetTimeStep(1);
+                    recur_idx ++;
+                }
+                else
+                {
+                    output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
+                    //output = m_net->Times(u, input);
                 }
 
-                int recur_idx = 0; 
-                if (numHiddenLayers > 0)
+                if (m_addDropoutNodes)
+                    input = m_net->Dropout(output);
+                else
+                    input = output;
+
+                for (int i=1; i<numHiddenLayers; i++)
                 {
                     //TODO: to figure out sparse matrix size
-                    u = m_net->CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
+                    u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
                     m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
 
-                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
+                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
                     {
-                        w = m_net->CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
+                        w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                        pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
                         /// unless there is a good algorithm to detect loops, use this explicit setup
                         output = ApplyNonlinearFunction(
                             m_net->Plus(
                                 m_net->Times(u, input), m_net->Times(w, pastValue)), 0);
                         pastValue->AttachInputs(output);
-                        ((PastValueNode<ElemType>*) pastValue)->SetTimeStep(1);
-                        recur_idx ++;
+                        recur_idx++;
                     }
                     else
                     {
-                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
-                        //output = m_net->Times(u, input);
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
                     }
 
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output);
                     else
                         input = output;
-
-                    for (int i=1; i<numHiddenLayers; i++)
-                    {
-                        //TODO: to figure out sparse matrix size
-                        u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
-                        m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-
-                        if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
-                        {
-                            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
-                            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-
-                            pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
-                            /// unless there is a good algorithm to detect loops, use this explicit setup
-                            output = ApplyNonlinearFunction(
-                                m_net->Plus(
-                                    m_net->Times(u, input), m_net->Times(w, pastValue)), 0);
-                            pastValue->AttachInputs(output);
-                            recur_idx++;
-                        }
-                        else
-                        {
-                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-                        }
-
-                        if (m_addDropoutNodes)
-                            input = m_net->Dropout(output);
-                        else
-                            input = output;
-                    }
                 }
+            }
 
-                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                /*m_net->MatrixL2Reg(w , L"L1w");*/
+            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
+            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+            /*m_net->MatrixL2Reg(w , L"L1w");*/
 
-                label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
-                AddTrainAndEvalCriterionNodes(input, label, w, L"criterion", L"eval");
+            label = m_net->CreateInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
+            AddTrainAndEvalCriterionNodes(input, label, w, L"criterion", L"eval");
 
-                output = m_net->Times(w, input, L"outputs");   
+            output = m_net->Times(w, input, L"outputs");   
                 
-                    m_net->OutputNodes()->push_back(output);
+                m_net->OutputNodes().push_back(output);
 
-                if (m_needPrior)
-                {
-                    prior = m_net->Mean(label);
-                }
+            if (m_needPrior)
+            {
+                prior = m_net->Mean(label);
+            }
 
             }
 
@@ -146,14 +144,14 @@ namespace Microsoft {
 
                 size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-                ComputationNodePtr wrd2cls = nullptr, cls2idx = nullptr, clslogpostprob = nullptr, clsweight = nullptr;
+                ComputationNodePtr input, w, b, u, pastValue, output, label, prior;
+                ComputationNodePtr wrd2cls, cls2idx, clslogpostprob, clsweight;
 
                 if (m_vocabSize != m_layerSizes[numHiddenLayers + 1])
                     RuntimeError("BuildClassEntropyNetwork : vocabulary size should be the same as the output layer size");
 
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
+                m_net->FeatureNodes().push_back(input);
 
                 if (m_applyMeanVarNorm)
                 {
@@ -240,7 +238,7 @@ namespace Microsoft {
                 output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy", 
                     clslogpostprob);
                 
-                    m_net->OutputNodes()->push_back(output);
+                m_net->OutputNodes().push_back(output);
 
                 if (m_needPrior)
                 {
@@ -265,13 +263,13 @@ namespace Microsoft {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-            ComputationNodePtr gt = nullptr;
-            ComputationNodePtr clslogpostprob = nullptr;
-            ComputationNodePtr clsweight = nullptr;
+            ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
+            ComputationNodePtr gt;
+            ComputationNodePtr clslogpostprob;
+            ComputationNodePtr clsweight;
 
             input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
+            m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
             {
@@ -320,7 +318,7 @@ namespace Microsoft {
 
             /// serve as a global bias term
             gt = m_net->CreateInputNode(L"binaryFeature", m_auxFeatDim, 1);
-                    m_net->FeatureNodes()->push_back(gt);
+            m_net->FeatureNodes().push_back(gt);
             e = m_net->CreateLearnableParameter(msra::strfun::wstrprintf(L"AuxTrans%d", 0),
                 m_layerSizes[numHiddenLayers], m_auxFeatDim);
             m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
@@ -346,7 +344,7 @@ namespace Microsoft {
 
             output = m_net->Times(m_net->Transpose(w), input, L"outputs");
 
-                    m_net->OutputNodes()->push_back(output);
+            m_net->OutputNodes().push_back(output);
 
             //add softmax layer (if prob is needed or KL reg adaptation is needed)
             output = m_net->Softmax(output, L"PosteriorProb");
@@ -354,7 +352,7 @@ namespace Microsoft {
 
         m_net->ResetEvalTimeStamp();
 
-                return m_net;
+        return m_net;
             }
 
             /**
@@ -373,14 +371,14 @@ namespace Microsoft {
 
                     size_t numRecurrentLayers = m_recurrentLayers.size();
 
-                    ComputationNodePtr input = nullptr, encoderOutput = nullptr, e = nullptr,
-                        b = nullptr, w = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, alignoutput = nullptr;
-                    ComputationNodePtr clslogpostprob = nullptr;
-                    ComputationNodePtr clsweight = nullptr;
-                    ComputationNodePtr columnStride = nullptr, rowStride = nullptr;
+                    ComputationNodePtr input, encoderOutput, e,
+                        b, w, u, pastValue, output, label, alignoutput;
+                    ComputationNodePtr clslogpostprob;
+                    ComputationNodePtr clsweight;
+                    ComputationNodePtr columnStride, rowStride;
 
                     input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
+                    m_net->FeatureNodes().push_back(input);
 
                     if (m_lookupTableOrder > 0)
                     {
@@ -402,15 +400,15 @@ namespace Microsoft {
                     int offset = m_lookupTableOrder > 0 ? 1 : 0;
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr> * encoderPairNodes = encoderNet->PairNodes();
-                    if (encoderPairNodes->size() != 1)
+                    std::vector<ComputationNodePtr>& encoderPairNodes = encoderNet->PairNodes();
+                    if (encoderPairNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one pairoutput node as source node for the decoder network: ");
 
-                    encoderOutput = m_net->PairNetwork((*encoderPairNodes)[0], L"pairNetwork");
+                    encoderOutput = m_net->PairNetwork(encoderPairNodes[0], L"pairNetwork");
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr> * encoderEvaluationNodes = encoderNet->OutputNodes();
-                    if (encoderEvaluationNodes->size() != 1)
+                    std::vector<ComputationNodePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
+                    if (encoderEvaluationNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one output node as source node for the decoder network: ");
 
                     if (numHiddenLayers > 0)
@@ -477,9 +475,9 @@ namespace Microsoft {
 
                     output = m_net->Times(m_net->Transpose(w), input, L"outputs");
 
-                    m_net->PairNodes()->push_back(input);
+                    m_net->PairNodes().push_back(input);
 
-                    m_net->OutputNodes()->push_back(output);
+                    m_net->OutputNodes().push_back(output);
 
                     //add softmax layer (if prob is needed or KL reg adaptation is needed)
                     output = m_net->Softmax(output, L"PosteriorProb");
@@ -502,14 +500,14 @@ namespace Microsoft {
 
                     size_t numRecurrentLayers = m_recurrentLayers.size();
 
-                    ComputationNodePtr input = nullptr, encoderOutput = nullptr, e = nullptr,
-                        b = nullptr, w = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, alignoutput = nullptr;
-                    ComputationNodePtr clslogpostprob = nullptr;
-                    ComputationNodePtr clsweight = nullptr;
-                    ComputationNodePtr columnStride = nullptr, rowStride = nullptr;
+                    ComputationNodePtr input, encoderOutput, e,
+                        b, w, u, pastValue, output, label, alignoutput;
+                    ComputationNodePtr clslogpostprob;
+                    ComputationNodePtr clsweight;
+                    ComputationNodePtr columnStride, rowStride;
 
                     input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
+                    m_net->FeatureNodes().push_back(input);
 
                     if (m_lookupTableOrder > 0)
                     {
@@ -531,15 +529,15 @@ namespace Microsoft {
                     int offset = m_lookupTableOrder > 0 ? 1 : 0;
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr> * encoderPairNodes = encoderNet->PairNodes();
-                    if (encoderPairNodes->size() != 1)
+                    std::vector<ComputationNodePtr>& encoderPairNodes = encoderNet->PairNodes();
+                    if (encoderPairNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one pairoutput node as source node for the decoder network: ");
 
-                    encoderOutput = m_net->PairNetwork((*encoderPairNodes)[0], L"pairNetwork");
+                    encoderOutput = m_net->PairNetwork(encoderPairNodes[0], L"pairNetwork");
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr> * encoderEvaluationNodes = encoderNet->OutputNodes();
-                    if (encoderEvaluationNodes->size() != 1)
+                    std::vector<ComputationNodePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
+                    if (encoderEvaluationNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one output node as source node for the decoder network: ");
 
                     if (numHiddenLayers > 0)
@@ -609,9 +607,9 @@ namespace Microsoft {
 
                     output = m_net->Times(m_net->Transpose(w), input, L"outputs");
 
-                    m_net->PairNodes()->push_back(input);
+                    m_net->PairNodes().push_back(input);
 
-                    m_net->OutputNodes()->push_back(output);
+                    m_net->OutputNodes().push_back(output);
 
                     //add softmax layer (if prob is needed or KL reg adaptation is needed)
                     output = m_net->Softmax(output, L"PosteriorProb");
@@ -623,7 +621,7 @@ namespace Microsoft {
     }
 
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFromDescription(size_t mbSize)
+    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFromDescription(size_t mbSize)
     {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
@@ -633,17 +631,17 @@ namespace Microsoft {
 
                 size_t numRecurrentLayers = m_recurrentLayers.size();
 
-                ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr, featin = nullptr, e = nullptr;
+                ComputationNodePtr input, w, b, u, pastValue, output, label, prior, featin, e;
                 ComputationNodePtr bi=nullptr;
                 ComputationNodePtr Wxi1=nullptr, Wxi=nullptr;
                 ComputationNodePtr Wxi2=nullptr, Wxi3=nullptr, Wxi4=nullptr;
                 ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, gt=nullptr, ct=nullptr, ht=nullptr;
-                ComputationNodePtr pastValueXI = nullptr, pastValueXII = nullptr, pastValueXIII = nullptr, pastValueXIV = nullptr;
+                ComputationNodePtr pastValueXI, pastValueXII, pastValueXIII, pastValueXIV;
 
 //                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
                 input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
                 featin = input;
-                    m_net->FeatureNodes()->push_back(input);
+                m_net->FeatureNodes().push_back(input);
 
                 if (m_applyMeanVarNorm)
                 {
@@ -678,7 +676,7 @@ namespace Microsoft {
                         msra::strfun::wstrprintf(L"pastValue%d", ik)); 
                     pastValueXI->NeedGradient() = false; 
                     pastValueXI->AttachInputs(input);
-                    ((PastValueNode<ElemType>*) pastValueXI)->SetTimeStep(ik);
+                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXI)->SetTimeStep(ik);
                     //TODO: to figure out sparse matrix size
                     Wxi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
                     m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
@@ -729,7 +727,7 @@ namespace Microsoft {
                 
                 output = m_net->Times(w, input, L"outputs");   
                 
-                    m_net->OutputNodes()->push_back(output);
+                m_net->OutputNodes().push_back(output);
 
                 if (m_needPrior)
                 {
@@ -743,155 +741,155 @@ namespace Microsoft {
     }
 
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFromDescription(size_t mbSize)
+    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFromDescription(size_t mbSize)
     {
-            if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
+        {
+            unsigned long randomSeed = 1;
+
+            size_t numHiddenLayers = m_layerSizes.size() - 2;
+
+            size_t numRecurrentLayers = m_recurrentLayers.size();
+
+            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, pastValue, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr bi = nullptr;
+            ComputationNodePtr Wxi1 = nullptr, Wxi = nullptr;
+            ComputationNodePtr Wxi2 = nullptr, Wxi3 = nullptr, Wxi4 = nullptr;
+            ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, gt = nullptr, ct = nullptr, ht = nullptr;
+            ComputationNodePtr pastValueXI, pastValueXII, pastValueXIII, pastValueXIV;
+
+            input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
+            m_net->FeatureNodes().push_back(input);
+
+            if (m_applyMeanVarNorm)
             {
-                unsigned long randomSeed = 1;
+                w = m_net->Mean(input);
+                b = m_net->InvStdDev(input);
+                output = m_net->PerDimMeanVarNormalization(input, w, b);
 
-                size_t numHiddenLayers = m_layerSizes.size()-2;
+                input = output;
+            }
 
-                size_t numRecurrentLayers = m_recurrentLayers.size(); 
+            int recur_idx = 0;
+            if (numHiddenLayers > 0)
+            {
+                bi = m_net->CreateLearnableParameter(L"bi0", m_layerSizes[1], 1);
 
-                ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, pastValue = nullptr, output=nullptr, label=nullptr, prior=nullptr;
-                ComputationNodePtr bi=nullptr;
-                ComputationNodePtr Wxi1=nullptr, Wxi=nullptr;
-                ComputationNodePtr Wxi2=nullptr, Wxi3=nullptr, Wxi4=nullptr;
-                ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, gt=nullptr, ct=nullptr, ht=nullptr;
-                ComputationNodePtr pastValueXI = nullptr, pastValueXII = nullptr, pastValueXIII = nullptr, pastValueXIV = nullptr;
+                pastValueXI = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
+                pastValueXII = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
+                pastValueXIII = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
+                pastValueXIV = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
+                pastValueXI->AttachInputs(input);
+                pastValueXII->AttachInputs(input);
+                pastValueXIII->AttachInputs(input);
+                pastValueXIV->AttachInputs(input);
 
-                input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
-
-                if (m_applyMeanVarNorm)
+                if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
                 {
-                    w = m_net->Mean(input);
-                    b = m_net->InvStdDev(input);
-                    output = m_net->PerDimMeanVarNormalization(input, w, b);
+                    //TODO: to figure out sparse matrix size
+                    Wxi2 = m_net->CreateLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0]);
+                    m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
+                    //TODO: to figure out sparse matrix size
+                    Wxi3 = m_net->CreateLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0]);
+                    m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
+                    //TODO: to figure out sparse matrix size
+                    Wxi4 = m_net->CreateLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0]);
+                    m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
+                    //TODO: to figure out sparse matrix size
+                    Wxi1 = m_net->CreateLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0]);
+                    m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
+                    //TODO: to figure out sparse matrix size
+                    Wxi = m_net->CreateLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0]);
+                    m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
 
-                    input = output;
+                    /// unless there is a good algorithm to detect loops, use this explicit setup
+                    it = m_net->Plus(
+                        m_net->Tanh(
+                        m_net->Plus(
+                        m_net->Times(Wxi4, pastValueXIV),
+                        m_net->Plus(
+                        m_net->Times(Wxi3, pastValueXIII),
+                        m_net->Plus(
+                        m_net->Times(Wxi2, pastValueXII),
+                        m_net->Plus(
+                        m_net->Times(Wxi1, pastValueXI),
+                        m_net->Times(Wxi, input))
+                        )
+                        )
+                        )),
+                        bi);
+                    output = it;
+                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXII)->SetTimeStep(2);
+                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXIII)->SetTimeStep(3);
+                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXIV)->SetTimeStep(4);
+                    pastValueXI->NeedGradient() = false;
+                    pastValueXII->NeedGradient() = false;
+                    pastValueXIII->NeedGradient() = false;
+                    pastValueXIV->NeedGradient() = false;
+                    recur_idx++;
+                }
+                else
+                {
+                    output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
                 }
 
-                int recur_idx = 0; 
-                if (numHiddenLayers > 0)
+                if (m_addDropoutNodes)
+                    input = m_net->Dropout(output);
+                else
+                    input = output;
+
+                for (int i=1; i<numHiddenLayers; i++)
                 {
-                    bi = m_net->CreateLearnableParameter(L"bi0", m_layerSizes[1], 1);
-
-                    pastValueXI = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    pastValueXII = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    pastValueXIII = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    pastValueXIV = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize); 
-                    pastValueXI->AttachInputs(input);
-                    pastValueXII->AttachInputs(input);
-                    pastValueXIII->AttachInputs(input);
-                    pastValueXIV->AttachInputs(input);
-
-                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
+                    u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
+                    m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+                    if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
                     {
-                        //TODO: to figure out sparse matrix size
-                        Wxi2 = m_net->CreateLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0]);
-                        m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
-                        //TODO: to figure out sparse matrix size
-                        Wxi3 = m_net->CreateLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0]);
-                        m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
-                        //TODO: to figure out sparse matrix size
-                        Wxi4 = m_net->CreateLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0]);
-                        m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
-                        //TODO: to figure out sparse matrix size
-                        Wxi1 = m_net->CreateLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0]);
-                        m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
-                        //TODO: to figure out sparse matrix size
-                        Wxi = m_net->CreateLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0]);
-                        m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
-
-                        /// unless there is a good algorithm to detect loops, use this explicit setup
-                        it = m_net->Plus(
-                                m_net->Tanh(
-                                m_net->Plus(
-                                m_net->Times(Wxi4, pastValueXIV),
-                                m_net->Plus(
-                                m_net->Times(Wxi3, pastValueXIII),
-                                m_net->Plus(
-                                    m_net->Times(Wxi2, pastValueXII),
-                                    m_net->Plus(
-                                        m_net->Times(Wxi1, pastValueXI),
-                                        m_net->Times(Wxi, input))
-                                        )
-                                    )
-                                )),
-                                bi);
-                        output = it;
-                        ((PastValueNode<ElemType>*) pastValueXII)->SetTimeStep(2);
-                        ((PastValueNode<ElemType>*) pastValueXIII)->SetTimeStep(3);
-                        ((PastValueNode<ElemType>*) pastValueXIV)->SetTimeStep(4);
-                        pastValueXI->NeedGradient() = false;
-                        pastValueXII->NeedGradient() = false;
-                        pastValueXIII->NeedGradient() = false;
-                        pastValueXIV->NeedGradient() = false;
-                        recur_idx ++;
+                        w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
+                        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                        std::list<ComputationNodePtr> recurrent_loop;
+                        pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, pastValue)), i);
+                        pastValue->AttachInputs(output);
+                        recur_idx++;
                     }
                     else
                     {
-                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), 0);
+                        output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
                     }
 
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output);
                     else
                         input = output;
-
-                    for (int i=1; i<numHiddenLayers; i++)
-                    {
-                        u = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"U%d", i), m_layerSizes[i+1], m_layerSizes[i]);
-                        m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
-                        if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i+1)
-                        {
-                            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
-                            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                            std::list<ComputationNodePtr> recurrent_loop;
-                            pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
-                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, pastValue)), i);
-                            pastValue->AttachInputs(output);
-                            recur_idx++;
-                        }
-                        else
-                        {
-                            output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), b), i);
-                        }
-
-                        if (m_addDropoutNodes)
-                            input = m_net->Dropout(output);
-                        else
-                            input = output;
-                    }
-                }
-
-                //TODO: to figure out sparse matrix size
-                w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-//                b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
-                label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
-                AddTrainAndEvalCriterionNodes(input, label, w);
-                
-                output = m_net->Times(w, input);   
-                
-                    m_net->OutputNodes()->push_back(output);
-
-                if (m_needPrior)
-                {
-                    prior = m_net->Mean(label);
                 }
             }
 
-            m_net->ResetEvalTimeStamp();
+            //TODO: to figure out sparse matrix size
+            w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], m_layerSizes[numHiddenLayers]);
+            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+            //                b = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
+            label = m_net->CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers+1], mbSize);
+            AddTrainAndEvalCriterionNodes(input, label, w);
 
-                return m_net;
+            output = m_net->Times(w, input);
+
+            m_net->OutputNodes().push_back(output);
+
+            if (m_needPrior)
+            {
+                prior = m_net->Mean(label);
+            }
+        }
+
+        m_net->ResetEvalTimeStamp();
+
+        return m_net;
     }
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildDirectConnect(unsigned long &randomSeed, size_t /*mbSize*/, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
+    shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildDirectConnect(unsigned long &randomSeed, size_t /*mbSize*/, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr input, ComputationNodePtr toNode)
     {
-        ComputationNodePtr directOutput = nullptr, mergedNode = nullptr;
+        ComputationNodePtr directOutput, mergedNode;
 
         for (size_t i = 0; i < m_directConnect.size(); i++)
         {
@@ -914,18 +912,18 @@ namespace Microsoft {
 
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
+    shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMComponent(unsigned long &randomSeed, size_t mbSize, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
     {
 
         size_t numHiddenLayers = m_layerSizes.size()-2;
 
-        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-        ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
-        ComputationNodePtr Wxf=nullptr, Whf=nullptr, Wcf=nullptr, bf=nullptr, Wxc=nullptr, Whc=nullptr, bc=nullptr;
-        ComputationNodePtr ot=nullptr, it=nullptr, ft=nullptr, ct=nullptr, ht=nullptr;
-        ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC=nullptr, pastValueCF=nullptr, pastValueCC=nullptr;
-        ComputationNodePtr directWIO = nullptr, directInput=nullptr, directOutput=nullptr;
-        ComputationNodePtr bit=nullptr, bft=nullptr, bct=nullptr;
+        ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
+        ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
+        ComputationNodePtr Wxf, Whf, Wcf, bf, Wxc, Whc, bc;
+        ComputationNodePtr ot, it, ft, ct, ht;
+        ComputationNodePtr pastValueHI, pastValueCI, pastValueHO, pastValueHF, pastValueHC, pastValueCF, pastValueCC;
+        ComputationNodePtr directWIO, directInput, directOutput;
+        ComputationNodePtr bit, bft, bct;
 
         input = inputObs;
         Wxo = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WXO%d", iLayer), outputDim, inputDim);        
@@ -943,11 +941,11 @@ namespace Microsoft {
         bi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"bi%d", iLayer), outputDim, 1);
         bf = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"bf%d", iLayer), outputDim, 1);
         //if (m_forgetGateInitVal > 0)
-            bf->FunctionValues().SetValue(m_forgetGateInitVal);
+        bf->FunctionValues().SetValue(m_forgetGateInitVal);
         //if (m_inputGateInitVal > 0)
-            bi->FunctionValues().SetValue(m_inputGateInitVal);
+        bi->FunctionValues().SetValue(m_inputGateInitVal);
         //if (m_outputGateInitVal > 0)
-            bo->FunctionValues().SetValue(m_outputGateInitVal);
+        bo->FunctionValues().SetValue(m_outputGateInitVal);
 
         Whi = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"WHI%d", iLayer), outputDim, outputDim);
         m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
@@ -1085,7 +1083,7 @@ namespace Microsoft {
             input = output;
         output = input;
 
-        return (ComputationNode<ElemType>*) output; 
+        return output; 
     }
 
     template<class ElemType>
@@ -1099,17 +1097,17 @@ namespace Microsoft {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-            ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
-            ComputationNodePtr Wxf = nullptr, Whf = nullptr, Wcf = nullptr, bf = nullptr, Wxc = nullptr, Whc = nullptr, bc = nullptr;
-            ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, ct = nullptr, ht = nullptr;
-            ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC = nullptr, pastValueCF = nullptr, pastValueCC = nullptr;
-            ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
+            ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
+            ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
+            ComputationNodePtr Wxf, Whf, Wcf, bf, Wxc, Whc, bc;
+            ComputationNodePtr ot, it, ft, ct, ht;
+            ComputationNodePtr pastValueHI, pastValueCI, pastValueHO, pastValueHF, pastValueHC, pastValueCF, pastValueCC;
+            ComputationNodePtr directWIO, directInput, directOutput;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
-            ComputationNodePtr trans = nullptr;
+            ComputationNodePtr trans;
 
             input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
+            m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
             {
@@ -1178,7 +1176,7 @@ namespace Microsoft {
 
             input = output;
             output = m_net->SequenceDecoder(label, input, trans, L"outputs");
-                    m_net->OutputNodes()->push_back(output);
+            m_net->OutputNodes().push_back(output);
 
             output = m_net->Softmax(input, L"PosteriorProb");
 
@@ -1200,13 +1198,13 @@ namespace Microsoft {
 
             size_t numRecurrentLayers = m_recurrentLayers.size(); 
 
-            ComputationNodePtr input=nullptr, w=nullptr, b=nullptr, u=nullptr, e=nullptr, pastValue = nullptr, output=nullptr, label=nullptr, prior=nullptr;
-            ComputationNodePtr Wxo = nullptr, Who=nullptr, Wco=nullptr, bo = nullptr, Wxi=nullptr, Whi=nullptr, Wci=nullptr, bi=nullptr;
-            ComputationNodePtr clslogpostprob = nullptr;
-            ComputationNodePtr clsweight = nullptr;
+            ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
+            ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
+            ComputationNodePtr clslogpostprob;
+            ComputationNodePtr clsweight;
 
             input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
+            m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
             {
@@ -1271,7 +1269,7 @@ namespace Microsoft {
 
             output = m_net->Times(m_net->Transpose(w), input, L"outputs");
 
-                    m_net->OutputNodes()->push_back(output);
+            m_net->OutputNodes().push_back(output);
 
             //add softmax layer (if prob is needed or KL reg adaptation is needed)
             output = m_net->Softmax(output, L"PosteriorProb");
@@ -1283,13 +1281,13 @@ namespace Microsoft {
     }
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
+    shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMNodeComponent(ULONG &randomSeed, size_t iLayer, size_t inputDim, size_t outputDim, ComputationNodePtr inputObs)
     {
 
         size_t numHiddenLayers = m_layerSizes.size() - 2;
 
-        ComputationNodePtr input = nullptr, output = nullptr;
-        ComputationNodePtr wInputGate = nullptr, wForgetGate = nullptr, wOutputGate = nullptr, wMemoryCellMatrix = nullptr;
+        ComputationNodePtr input, output;
+        ComputationNodePtr wInputGate, wForgetGate, wOutputGate, wMemoryCellMatrix;
 
         input = inputObs;
         size_t nDim = inputDim + outputDim + 2;
@@ -1321,7 +1319,7 @@ namespace Microsoft {
             input = output;
         output = input;
 
-        return (ComputationNode<ElemType>*) output;
+        return output;
     }
 
     template<class ElemType>
@@ -1335,12 +1333,12 @@ namespace Microsoft {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-            ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
-            ComputationNodePtr Wxf = nullptr, Whf = nullptr, Wcf = nullptr, bf = nullptr, Wxc = nullptr, Whc = nullptr, bc = nullptr;
-            ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, ct = nullptr, ht = nullptr;
-            ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC = nullptr, pastValueCF = nullptr, pastValueCC = nullptr;
-            ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
+            ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
+            ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
+            ComputationNodePtr Wxf, Whf, Wcf, bf, Wxc, Whc, bc;
+            ComputationNodePtr ot, it, ft, ct, ht;
+            ComputationNodePtr pastValueHI, pastValueCI, pastValueHO, pastValueHF, pastValueHC, pastValueCF, pastValueCC;
+            ComputationNodePtr directWIO, directInput, directOutput;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
 
             if (m_sparse_input)
@@ -1348,7 +1346,7 @@ namespace Microsoft {
             else
                 input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
 
-                    m_net->FeatureNodes()->push_back(input);
+            m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
             {
@@ -1433,10 +1431,10 @@ namespace Microsoft {
                 input = m_net->Log(prior, L"LogOfPrior");
                 ComputationNodePtr
                     scaledLogLikelihood = m_net->Minus(output, input, L"ScaledLogLikelihood");
-                        m_net->OutputNodes()->push_back(scaledLogLikelihood);
+                m_net->OutputNodes().push_back(scaledLogLikelihood);
             }
             else
-                        m_net->OutputNodes()->push_back(output);
+                m_net->OutputNodes().push_back(output);
 
             //add softmax layer (if prob is needed or KL reg adaptation is needed)
             output = m_net->Softmax(output, L"PosteriorProb");
@@ -1445,7 +1443,7 @@ namespace Microsoft {
 
         m_net->ResetEvalTimeStamp();
 
-                return m_net;
+        return m_net;
     }
 
     /**
@@ -1471,14 +1469,14 @@ namespace Microsoft {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
 
             if (m_sparse_input)
                 input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
             else
                 input = m_net->CreateInputNode(L"features", m_layerSizes[0], mbSize);
 
-                    m_net->FeatureNodes()->push_back(input);
+            m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
             {
@@ -1511,15 +1509,15 @@ namespace Microsoft {
             int offset = m_lookupTableOrder > 0 ? 1 : 0;
             if (numHiddenLayers > 0)
             {
-                        //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
-                        output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
+                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                 input = output;
                 i++;
 
                 for (; i<numHiddenLayers; i++)
                 {
-                            //                    output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
-                            output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                    //output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, i, m_layerSizes[i], m_layerSizes[i + 1], input);
+                    output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, i, m_layerSizes[i], m_layerSizes[i + 1], input);
 
                     if (m_addDropoutNodes)
                         input = m_net->Dropout(output);
@@ -1528,9 +1526,9 @@ namespace Microsoft {
                 }
             }
 
-                    m_net->OutputNodes()->push_back(output);
-                    m_net->PairNodes()->push_back(output);  /// need to provide pairnodes so that the next layer of network can connect to this network
-                    m_net->EvaluationNodes()->push_back(output);
+            m_net->OutputNodes().push_back(output);
+            m_net->PairNodes().push_back(output);  /// need to provide pairnodes so that the next layer of network can connect to this network
+            m_net->EvaluationNodes().push_back(output);
 
         }
 
@@ -1560,28 +1558,27 @@ namespace Microsoft {
             size_t numRecurrentLayers = m_recurrentLayers.size();
             size_t dims = 0;
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, Wxo = nullptr, output = nullptr, label = nullptr, prior = nullptr;
+            ComputationNodePtr input, w, b, u, e, Wxo, output, label, prior;
             vector<ComputationNodePtr> streams;
             vector<size_t> streamdims;
-            ComputationNodePtr inputforward = nullptr, inputbackward = nullptr, inputletter = nullptr;
-            ComputationNodePtr transcription_prediction = nullptr;
+            ComputationNodePtr inputforward, inputbackward, inputletter;
+            ComputationNodePtr transcription_prediction;
 
             map<wstring, size_t> featDim;
 
             assert(m_streamSizes.size() > 0);
             inputbackward = m_net->CreateInputNode(L"featurepastValueedTarget", m_streamSizes[0], mbSize);
-            m_net->FeatureNodes()->push_back(inputbackward);
+            m_net->FeatureNodes().push_back(inputbackward);
             featDim[L"featurepastValueedTarget"] = m_streamSizes[0];
 
             inputletter = m_net->CreateInputNode(L"ltrForward", m_streamSizes[1], mbSize);
-                    m_net->FeatureNodes()->push_back(inputletter);
+            m_net->FeatureNodes().push_back(inputletter);
             featDim[L"ltrForward"] = m_streamSizes[1];
 
             size_t layerIdx = 0;
             size_t idx = 0;
             int recur_idx = 0;
-                    for (typename vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes()->begin();
-                        p != m_net->FeatureNodes()->end(); p++, idx++)
+            for (auto p = m_net->FeatureNodes().begin(); p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
                 input = *p;
@@ -1651,34 +1648,32 @@ namespace Microsoft {
             {
                 prior = m_net->Mean(label);
                 input = m_net->Log(prior, L"LogOfPrior");
-                ComputationNodePtr
-                    scaledLogLikelihood = m_net->Minus(output, input, L"ScaledLogLikelihood");
-                        m_net->OutputNodes()->push_back(scaledLogLikelihood);
+                ComputationNodePtr scaledLogLikelihood = m_net->Minus(output, input, L"ScaledLogLikelihood");
+                m_net->OutputNodes().push_back(scaledLogLikelihood);
             }
             else
-                        m_net->OutputNodes()->push_back(output);
-
+                m_net->OutputNodes().push_back(output);
         }
 
         m_net->ResetEvalTimeStamp();
 
-                return m_net;
+        return m_net;
     }
 
     template<class ElemType>
-    ComputationNode<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse)
+    shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilder<ElemType>::BuildLSTMComponentWithMultiInputs(ULONG &randomSeed, size_t mbSize, size_t iLayer, const vector<size_t>& inputDim, size_t outputDim, const vector<ComputationNodePtr>& inputObs, bool inputWeightSparse)
     {
 
         size_t numHiddenLayers = m_layerSizes.size() - 2;
 
-        ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-        ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
-        ComputationNodePtr Wxf = nullptr, Whf = nullptr, Wcf = nullptr, bf = nullptr, Wxc = nullptr, Whc = nullptr, bc = nullptr;
-        ComputationNodePtr ot = nullptr, it = nullptr, ft = nullptr, ct = nullptr, ht = nullptr;
-        ComputationNodePtr pastValueHI = nullptr, pastValueCI = nullptr, pastValueHO = nullptr, pastValueHF = nullptr, pastValueHC = nullptr, pastValueCF = nullptr, pastValueCC = nullptr;
-        ComputationNodePtr directWIO = nullptr, directInput = nullptr, directOutput = nullptr;
-        ComputationNodePtr bit = nullptr, bft = nullptr, bct = nullptr;
-        ComputationNodePtr streamsxi = nullptr, streamsxo = nullptr, streamsxf = nullptr, streamsxc = nullptr;
+        ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
+        ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
+        ComputationNodePtr Wxf, Whf, Wcf, bf, Wxc, Whc, bc;
+        ComputationNodePtr ot, it, ft, ct, ht;
+        ComputationNodePtr pastValueHI, pastValueCI, pastValueHO, pastValueHF, pastValueHC, pastValueCF, pastValueCC;
+        ComputationNodePtr directWIO, directInput, directOutput;
+        ComputationNodePtr bit, bft, bct;
+        ComputationNodePtr streamsxi, streamsxo, streamsxf, streamsxc;
 
         for (size_t sidx = 0; sidx < inputObs.size(); sidx++)
         {
@@ -1856,7 +1851,7 @@ namespace Microsoft {
             input = output;
         output = input;
 
-        return (ComputationNode<ElemType>*) output;
+        return output;
     }
 
     /**
@@ -1880,12 +1875,12 @@ namespace Microsoft {
 
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr, Wxo;
-            ComputationNodePtr forwardInput = nullptr, forwardOutput = nullptr, backwardInput = nullptr, backwardOutput = nullptr;
+            ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior, Wxo;
+            ComputationNodePtr forwardInput, forwardOutput, backwardInput, backwardOutput;
             vector<ComputationNodePtr> streams;
             vector<size_t> streamdims;
-            ComputationNodePtr inputprediction = nullptr, inputletter = nullptr, ngram = nullptr;
-            ComputationNodePtr ltrSource = nullptr;
+            ComputationNodePtr inputprediction, inputletter, ngram;
+            ComputationNodePtr ltrSource;
             size_t ltrDim = 0;
 
             map<wstring, size_t> featDim;
@@ -1893,17 +1888,16 @@ namespace Microsoft {
             size_t ltrSrcIdx = 1;
             /// create projections to use pastValue predictions
             inputprediction = m_net->CreateInputNode(L"featurepastValueedTarget", m_streamSizes[0], mbSize);
-            m_net->FeatureNodes()->push_back(inputprediction);
+            m_net->FeatureNodes().push_back(inputprediction);
 
             inputletter = m_net->CreateInputNode(L"ltrForward", m_streamSizes[1], mbSize);
-                    m_net->FeatureNodes()->push_back(inputletter);
+            m_net->FeatureNodes().push_back(inputletter);
             featDim[L"ltrForward"] = m_streamSizes[1];
 
             size_t layerIdx = 0;
             size_t idx = 0;
             int recur_idx = 0;
-                    for (typename vector<ComputationNodePtr>::iterator p = m_net->FeatureNodes()->begin();
-                        p != m_net->FeatureNodes()->end(); p++, idx++)
+            for (auto p = m_net->FeatureNodes().begin(); p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
                 input = *p;
@@ -1943,25 +1937,25 @@ namespace Microsoft {
             if (numHiddenLayers > 0)
             {
                 /// forward direction
-//                        forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 100, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
-                        forwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 100, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
+                //forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 100, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
+                forwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 100, streamdims[0] + streamdims[1], m_layerSizes[layerIdx + 1], forwardInput);
                 forwardInput = forwardOutput;
 
                 backwardInput = (ComputationNodePtr)m_net->TimeReverse(ltrSource);
-//                        backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 200, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
-                        backwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 200, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
+                //backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 200, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
+                backwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 200, ltrDim, m_layerSizes[layerIdx + 1], backwardInput);
                 backwardInput = backwardOutput;
 
                 layerIdx++;
 
                 while (layerIdx < numHiddenLayers - 1)
                 {
-//                            forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 100, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], forwardInput);
-                            forwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 100, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], forwardInput);
+                    //forwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 100, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], forwardInput);
+                    forwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 100, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], forwardInput);
                     forwardInput = forwardOutput;
 
-//                            backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 200, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], backwardInput);
-                            backwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 200, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], backwardInput);
+                    //backwardOutput = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, layerIdx + 200, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], backwardInput);
+                    backwardOutput = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, layerIdx + 200, m_layerSizes[layerIdx], m_layerSizes[layerIdx + 1], backwardInput);
                     backwardInput = backwardOutput;
 
                     layerIdx++;
@@ -2007,10 +2001,10 @@ namespace Microsoft {
                 input = m_net->Log(prior, L"LogOfPrior");
                 ComputationNodePtr
                     scaledLogLikelihood = m_net->Minus(output, input, L"ScaledLogLikelihood");
-                        m_net->OutputNodes()->push_back(scaledLogLikelihood);
+                m_net->OutputNodes().push_back(scaledLogLikelihood);
             }
             else
-                        m_net->OutputNodes()->push_back(output);
+                m_net->OutputNodes().push_back(output);
 
         }
 
@@ -2028,14 +2022,14 @@ namespace Microsoft {
             size_t numHiddenLayers = m_layerSizes.size() - 2;
             size_t numRecurrentLayers = m_recurrentLayers.size();
 
-            ComputationNodePtr input = nullptr, w = nullptr, b = nullptr, u = nullptr, e = nullptr, pastValue = nullptr, output = nullptr, label = nullptr, prior = nullptr;
-            ComputationNodePtr Wxo = nullptr, Who = nullptr, Wco = nullptr, bo = nullptr, Wxi = nullptr, Whi = nullptr, Wci = nullptr, bi = nullptr;
-            ComputationNodePtr clslogpostprob = nullptr;
-            ComputationNodePtr bias = nullptr;
+            ComputationNodePtr input, w, b, u, e, pastValue, output, label, prior;
+            ComputationNodePtr Wxo, Who, Wco, bo, Wxi, Whi, Wci, bi;
+            ComputationNodePtr clslogpostprob;
+            ComputationNodePtr bias;
             ComputationNodePtr outputFromEachLayer[MAX_DEPTH] = { nullptr };
 
             input = m_net->CreateSparseInputNode(L"features", m_layerSizes[0], mbSize);
-                    m_net->FeatureNodes()->push_back(input);
+            m_net->FeatureNodes().push_back(input);
 
             if (m_applyMeanVarNorm)
             {
@@ -2119,7 +2113,7 @@ namespace Microsoft {
 
             output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeNCEBasedCrossEntropy", L"EvalNodeNCEBasedCrossEntrpy", bias);
 
-                    m_net->OutputNodes()->push_back(output);
+            m_net->OutputNodes().push_back(output);
 
             if (m_needPrior)
             {
@@ -2135,6 +2129,4 @@ namespace Microsoft {
     template class SimpleNetworkBuilder<float>;
     template class SimpleNetworkBuilder<double>;
 
-        }
-    }
-}
+}}}
