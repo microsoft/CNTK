@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight, ComputationNodePtr(this));
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight, shared_from_this());
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -171,7 +171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SquareErrorNode(const SquareErrorNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_leftMinusRight(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -274,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, ComputationNodePtr(this));
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, shared_from_this());
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -393,7 +393,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CrossEntropyWithSoftmaxNode(const CrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmaxOfRight(node->m_deviceId), m_softmaxOfRight(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -453,7 +453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), ComputationNodePtr(this));
+                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), shared_from_this());
             }
         }
 
@@ -479,7 +479,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(right_i))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, ComputationNodePtr(this));
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, shared_from_this());
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -592,7 +592,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CrossEntropyNode(const CrossEntropyNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
                     : ComputationNode<ElemType>(node->m_deviceId), m_logOfRight(node->m_deviceId), m_leftDivRight(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -736,7 +736,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixL1RegNode(const MatrixL1RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfL1Norm(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -854,7 +854,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixL2RegNode(const MatrixL2RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_temp(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1096,7 +1096,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         NoiseContrastiveEstimationNode(const NoiseContrastiveEstimationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
         {
-                node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1509,7 +1509,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ClassBasedCrossEntropyWithSoftmaxNode(const ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1874,7 +1874,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CRFNode(const CRFNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), mAlpha(node->m_deviceId), mBeta(node->m_deviceId), mPostProb(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -2029,7 +2029,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DummyCriterionNode(const DummyCriterionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const

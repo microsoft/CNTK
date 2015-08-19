@@ -166,8 +166,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i=0; i<nodes.size(); i++)
                 {
-                    // get the computation node 
-                    auto cnNode = ComputationNodePtr((ComputationNode<ElemType>*)nodes[i]->GetEvalValue());
+                    // get the computation node
+                    auto cnNode = ComputationNode<ElemType>::FromVoidPtr(nodes[i]->GetEvalValue());
 
                     // if no evaluation value exists throw an error
                     if (cnNode == nullptr)

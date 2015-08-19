@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, ComputationNodePtr(this));
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, shared_from_this());
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -174,7 +174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ErrorPredictionNode(const ErrorPredictionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
             : ComputationNode<ElemType>(node->m_deviceId), m_maxIndexes0(node->m_deviceId), m_maxIndexes1(node->m_deviceId), m_maxValues(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const

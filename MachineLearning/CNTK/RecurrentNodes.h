@@ -405,7 +405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PastValueNode(const PastValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_pastActivity(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -765,7 +765,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FutureValueNode(const FutureValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_futureActivity(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -853,7 +853,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_state_error_from_future_minibatch(node->m_deviceId), mLastState(node->m_deviceId), mLastOutput(node->m_deviceId)
         {
             m_use_errors_from_future_minibatch = false;
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
             m_DefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
         }
 
