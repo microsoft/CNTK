@@ -108,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ConvolutionNode(const ConvolutionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
             : ComputationNode<ElemType>(node->m_deviceId), m_tempMatrix(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -536,7 +536,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         MaxPoolingNode(const MaxPoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -775,7 +775,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         AveragePoolingNode(const AveragePoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(ComputationNodePtr(this), newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const

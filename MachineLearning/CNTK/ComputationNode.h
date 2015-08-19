@@ -51,6 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
 #pragma region base computation class
+
     template<class ElemType>
     class ComputationNode : public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
@@ -83,6 +84,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef DISPLAY_DEBUG
             fprintf (stderr, "Called Destructor NodeName: %s\n",(msra::strfun::utf8 (NodeName())).c_str());
 #endif
+        }
+
+        // recover a ComputationNodePtr (which is a shared_ptr) from a naked pointer stored as a void* (old NDL parser does that)
+        static ComputationNodePtr ComputationNode<ElemType>::FromVoidPtr(void * vp)
+        {
+            auto p = (ComputationNode<ElemType>*)vp;
+            return p->shared_from_this();
         }
 
         virtual const std::wstring OperationName() const = 0;
@@ -381,32 +389,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop = index;
         }
 
-		void clearCache()
-		{
-			m_loopId = -1;
-			m_visitedOrder = -1;
-			m_index = -1;
-			m_lowlink = -1;
-			m_indexInLoop = 0;
-			m_visited = false;
-			m_inStack = false;
-		}
-        size_t GetIndex()
+        void clearCache()
+        {
+            m_loopId = -1;
+            m_visitedOrder = -1;
+            m_index = -1;
+            m_lowlink = -1;
+            m_indexInLoop = 0;
+            m_visited = false;
+            m_inStack = false;
+        }
+
+        size_t GetIndex() const
         {
             return m_index;
         }
 
-        size_t GetVisitedOrder()
+        size_t GetVisitedOrder() const
         {
             return m_visitedOrder;
         }
 
-        size_t Getlowlink ()
+        size_t Getlowlink() const
         {
             return m_lowlink;
         }
 
-        size_t GetIndexInLoop()
+        size_t GetIndexInLoop() const
         {
             return m_indexInLoop;
         }
@@ -421,16 +430,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_children;
         }
 
-        bool isVisisted()
+        bool isVisisted() const
         {
             return m_visited;
         }
 
-        bool isInStack()
+        bool isInStack() const
         {
             return m_inStack;
         }
-        int LoopId()
+        int LoopId() const
         {
             return m_loopId;
         }
@@ -440,7 +449,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_samplesInRecurrentStep = bsz;
         }
 
-        size_t GetNbrSlicesInEachRecurrentIteration()
+        size_t GetNbrSlicesInEachRecurrentIteration() const
         {
             return m_samplesInRecurrentStep;
         }
@@ -501,7 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetLoop(0);     // TODO: SetLoop() takes a bool, not an int?
         }
 
-        bool HasLoop() const { return m_hasloop ; }
+        bool HasLoop() const { return m_hasloop; }
         void SetLoop(const bool bl)
         {
             m_hasloop = bl; 
@@ -738,9 +747,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             std::list<ComputationNodePtr>	tovisit;
 
-            if (visited.find(ComputationNodePtr(this)) == visited.end()) // only do when this node has not been visited before
+            if (visited.find(shared_from_this()) == visited.end()) // only do when this node has not been visited before
             {
-                tovisit.push_back(ComputationNodePtr(this));
+                tovisit.push_back(shared_from_this());
 
                 while (!tovisit.empty())
                 {
@@ -912,9 +921,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
         std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode) 
         {
-            if (visited.find(ComputationNodePtr(this)) == visited.end())  //not visited
+            if (visited.find(shared_from_this()) == visited.end())  //not visited
             {   
-                visited.insert(ComputationNodePtr(this));   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -933,22 +942,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_needGradient = false;
                 }
                 
-                result.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 this->m_visitedOrder = result.size();
             }
             else
             {
                 if (!IsLeaf() && isFromPastOrFutureValueNode)
-                    sourceRecurrentNodePtr.push_back(ComputationNodePtr(this)) ;
+                    sourceRecurrentNodePtr.push_back(shared_from_this()) ;
             }
         }
 
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodePtr>& visited, std::map<int, std::list<ComputationNodePtr>>& recurrentResult, 
             std::list<ComputationNodePtr>& noRecurrentResult) 
         {
-            if (visited.find(ComputationNodePtr(this)) == visited.end())  //not visited
+            if (visited.find(shared_from_this()) == visited.end())  //not visited
             {   
-                visited.insert(ComputationNodePtr(this));   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -966,20 +975,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
                 if (LoopId() >= 0)
                 {
-                    recurrentResult[LoopId()].push_back(ComputationNodePtr(this));
+                    recurrentResult[LoopId()].push_back(shared_from_this());
                 }
                 else
                 {
-                    noRecurrentResult.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                    noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 }
             }
         }
 
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result) 
         {
-            if (visited.find(ComputationNodePtr(this)) == visited.end())  //not visited
+            if (visited.find(shared_from_this()) == visited.end())  //not visited
             {   
-                visited.insert(ComputationNodePtr(this));   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -995,7 +1004,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_needGradient = false;
                 }
                 
-                result.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
         }
 

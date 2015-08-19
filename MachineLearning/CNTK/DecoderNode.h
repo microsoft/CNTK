@@ -233,7 +233,7 @@ namespace Microsoft {
                 SequenceDecoderNode(const SequenceDecoderNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
                     : ComputationNode<ElemType>(node->m_deviceId)
                 {
-                    node->CopyTo(ComputationNodePtr(this), newName, flags);
+                    node->CopyTo(shared_from_this(), newName, flags);
                 }
 
                 virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const

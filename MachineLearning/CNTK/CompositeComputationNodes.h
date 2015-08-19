@@ -52,7 +52,7 @@ public:
     // copy constructor
     ParallelNode(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(ComputationNodePtr(this), newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -413,7 +413,7 @@ public:
     MeanNode(const MeanNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         : PreComputedNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(ComputationNodePtr(this), newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -632,7 +632,7 @@ public:
     InvStdDevNode(const InvStdDevNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         : PreComputedNode<ElemType>(node->m_deviceId), m_mean(node->m_deviceId), m_var(node->m_deviceId),  m_temp(node->m_deviceId)
     {
-        node->CopyTo(ComputationNodePtr(this), newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -679,7 +679,7 @@ public:
                                    const std::wstring& newName, const CopyNodeFlags flags)
          : ComputationNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(ComputationNodePtr(this), newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -864,7 +864,7 @@ public:
                                      const std::wstring& newName, const CopyNodeFlags flags)
         : ComputationNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(ComputationNodePtr(this), newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1149,7 +1149,7 @@ public:
     TimeReverseNode(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         : BatchModeNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(ComputationNodePtr(this), newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

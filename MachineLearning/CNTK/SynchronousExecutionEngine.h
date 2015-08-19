@@ -57,7 +57,7 @@ public:
         // get the node pointer for the node, should be stored in the EvalValue;
         if (pass > ndlPassInitial) 
         {
-            nodePtr = ComputationNodePtr((ComputationNode<ElemType>*)node->GetEvalValue());
+            nodePtr = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
             if (!nodePtr)
             {
                 nodePtr = m_net.GetNodeFromName(name);
@@ -470,7 +470,7 @@ public:
                 std::vector<ComputationNodePtr> inputNodes;
                 inputNodes.resize(inputs.size());
                 for (int i = 0; i < inputs.size(); i++)
-                    inputNodes[i] = ComputationNodePtr((ComputationNode<ElemType>*)inputs[i]);
+                    inputNodes[i] = ComputationNode<ElemType>::FromVoidPtr(inputs[i]);
 
                 nodePtr->AttachInputs(inputNodes);
             }
@@ -480,22 +480,22 @@ public:
                 {
                     // TODO: just use a vector attach
                 case 1:
-                    nodePtr->AttachInputs(ComputationNodePtr((ComputationNode<ElemType>*)inputs[0]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]));
                     break;
                 case 2:
-                    nodePtr->AttachInputs(ComputationNodePtr((ComputationNode<ElemType>*)inputs[0]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[1]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]));
                     break;
                 case 3:
-                    nodePtr->AttachInputs(ComputationNodePtr((ComputationNode<ElemType>*)inputs[0]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[1]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[2]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]));
                     break;
                 case 4:
-                    nodePtr->AttachInputs(ComputationNodePtr((ComputationNode<ElemType>*)inputs[0]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[1]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[2]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[3]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]), ComputationNode<ElemType>::FromVoidPtr(inputs[3]));
                     break;
                 case 5:
-                    nodePtr->AttachInputs(ComputationNodePtr((ComputationNode<ElemType>*)inputs[0]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[1]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[2]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[3]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[4]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]), ComputationNode<ElemType>::FromVoidPtr(inputs[3]), ComputationNode<ElemType>::FromVoidPtr(inputs[4]));
                     break;
                 case 6:
-                    nodePtr->AttachInputs(ComputationNodePtr((ComputationNode<ElemType>*)inputs[0]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[1]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[2]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[3]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[4]), ComputationNodePtr((ComputationNode<ElemType>*)inputs[5]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]), ComputationNode<ElemType>::FromVoidPtr(inputs[3]), ComputationNode<ElemType>::FromVoidPtr(inputs[4]), ComputationNode<ElemType>::FromVoidPtr(inputs[5]));
                     break;
                 default:
                     if (nodeParamCount > 0)
@@ -744,7 +744,7 @@ public:
     virtual void ProcessOptionalParameters(NDLNode<ElemType>* node)
     {
         vector<NDLNode<ElemType>*> params = node->GetParameters(true); // get all the optional parameters only
-        auto compNode = ComputationNodePtr((ComputationNode<ElemType>*)node->GetEvalValue());
+        auto compNode = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
         std::string empty;
 
         // loop through all the optional parameters processing them as necessary

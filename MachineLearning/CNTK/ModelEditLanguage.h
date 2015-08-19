@@ -155,10 +155,10 @@ public:
             NDLNode<ElemType>* ndlNode = netNdl->ndl->FindSymbol(search);
             if (ndlNode != nullptr)
             {
-                ComputationNodePtr value = ComputationNodePtr((ComputationNode<ElemType>*)ndlNode->GetEvalValue());
+                ComputationNodePtr value = ComputationNode<ElemType>::FromVoidPtr(ndlNode->GetEvalValue());
                 if (value != nullptr)
                 {
-                    nodes.push_back(ComputationNodePtr((ComputationNode<ElemType>*)ndlNode->GetEvalValue()));
+                    nodes.push_back(ComputationNode<ElemType>::FromVoidPtr(ndlNode->GetEvalValue()));
                 }
                 else
                 {
