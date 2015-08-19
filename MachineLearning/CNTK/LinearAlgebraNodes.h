@@ -46,14 +46,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         NegateNode(const NegateNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new NegateNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<NegateNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -150,14 +150,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         SumElementsNode(const SumElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new SumElementsNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<SumElementsNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -266,14 +266,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SumColumnElementsNode(const SumColumnElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_sumValue(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new SumColumnElementsNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<SumColumnElementsNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -356,7 +356,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            SumColumnElementsNode<ElemType>* node = (SumColumnElementsNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<SumColumnElementsNode<ElemType>> (nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -395,7 +395,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         RowSliceNode(const RowSliceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
         
         RowSliceNode(const DEVICEID_TYPE deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
@@ -414,14 +414,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new RowSliceNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<RowSliceNode<ElemType>>(this, name, flags);
             return node;
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            RowSliceNode<ElemType>* node = (RowSliceNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
 
             node->m_startIndex = m_startIndex;
             node->m_numRows = m_numRows;
@@ -553,21 +553,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         RowStackNode(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new RowStackNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<RowStackNode<ElemType>>(this, name, flags);
             return node;
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            RowStackNode<ElemType>* node = (RowStackNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
@@ -712,14 +712,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         ScaleNode(const ScaleNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new ScaleNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ScaleNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -852,14 +852,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         TimesNode(const TimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new TimesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<TimesNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1042,14 +1042,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         TransposeTimesNode(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new TransposeTimesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<TransposeTimesNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1229,14 +1229,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         ElementTimesNode(const ElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new ElementTimesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ElementTimesNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1370,14 +1370,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         RowElementTimesNode(const RowElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId), m_tempMatrix(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new RowElementTimesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<RowElementTimesNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1544,14 +1544,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         ColumnElementTimesNode(const ColumnElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId), m_tempMatrix(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new ColumnElementTimesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ColumnElementTimesNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1728,14 +1728,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         PlusNode(const PlusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new PlusNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<PlusNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1998,14 +1998,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         MinusNode(const MinusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new MinusNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<MinusNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -2436,7 +2436,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            DiagTimesNode<ElemType>* node = (DiagTimesNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -2449,14 +2449,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DiagTimesNode(const DiagTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_innerproduct(node->m_deviceId), m_rightGradient(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new DiagTimesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<DiagTimesNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -2683,7 +2683,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            CosDistanceNode<ElemType>* node = (CosDistanceNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -2699,14 +2699,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CosDistanceNode(const CosDistanceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new CosDistanceNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<CosDistanceNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -2746,14 +2746,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         KhatriRaoProductNode(const KhatriRaoProductNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new KhatriRaoProductNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<KhatriRaoProductNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -2889,7 +2889,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
     {
-        //typedef ComputationNode<ElemType>* ComputationNodePtr;
         UsingComputationNodeMembers;
 
     public:
@@ -3157,7 +3156,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            CosDistanceWithNegativeSamplesNode<ElemType>* node = (CosDistanceWithNegativeSamplesNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -3174,14 +3173,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CosDistanceWithNegativeSamplesNode(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new CosDistanceWithNegativeSamplesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<CosDistanceWithNegativeSamplesNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -3223,14 +3222,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         TransposeNode(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId), mOnes(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new TransposeNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<TransposeNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -3371,14 +3370,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         StrideTimesNode(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
             m_Stride = 1;
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new StrideTimesNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<StrideTimesNode<ElemType>>(this, name, flags);
             return node;
         }
 

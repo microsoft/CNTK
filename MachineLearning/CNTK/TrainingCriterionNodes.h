@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight,this);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight, ComputationNodePtr(this));
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -159,7 +159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            SquareErrorNode<ElemType>* node = (SquareErrorNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -171,14 +171,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SquareErrorNode(const SquareErrorNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_leftMinusRight(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new SquareErrorNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<SquareErrorNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -274,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, ComputationNodePtr(this));
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -380,7 +380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            CrossEntropyWithSoftmaxNode<ElemType>* node = (CrossEntropyWithSoftmaxNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -393,14 +393,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CrossEntropyWithSoftmaxNode(const CrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmaxOfRight(node->m_deviceId), m_softmaxOfRight(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new CrossEntropyWithSoftmaxNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<CrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -453,7 +453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), this);
+                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), ComputationNodePtr(this));
             }
         }
 
@@ -479,7 +479,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(right_i))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, this);
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, ComputationNodePtr(this));
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
@@ -579,7 +579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            CrossEntropyNode<ElemType>* node = (CrossEntropyNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -592,14 +592,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CrossEntropyNode(const CrossEntropyNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
                     : ComputationNode<ElemType>(node->m_deviceId), m_logOfRight(node->m_deviceId), m_leftDivRight(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new CrossEntropyNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<CrossEntropyNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -724,7 +724,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            MatrixL1RegNode<ElemType>* node = (MatrixL1RegNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -736,14 +736,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixL1RegNode(const MatrixL1RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_gradientOfL1Norm(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new MatrixL1RegNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<MatrixL1RegNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -854,14 +854,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixL2RegNode(const MatrixL2RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_temp(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new MatrixL2RegNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<MatrixL2RegNode<ElemType>>(this, name, flags);
             return node;
         }
                 
@@ -1096,14 +1096,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         NoiseContrastiveEstimationNode(const NoiseContrastiveEstimationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
         {
-                node->CopyTo(this, newName, flags);
+                node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new NoiseContrastiveEstimationNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<NoiseContrastiveEstimationNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1509,14 +1509,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ClassBasedCrossEntropyWithSoftmaxNode(const ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -1856,7 +1856,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            CRFNode<ElemType>* node = (CRFNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<CRFNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -1874,14 +1874,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CRFNode(const CRFNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), mAlpha(node->m_deviceId), mBeta(node->m_deviceId), mPostProb(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new CRFNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<CRFNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -2029,14 +2029,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DummyCriterionNode(const DummyCriterionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(ComputationNodePtr(this), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
                 
-            ComputationNodePtr node = new DummyCriterionNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<DummyCriterionNode<ElemType>>(this, name, flags);
             return node;
         }
 
