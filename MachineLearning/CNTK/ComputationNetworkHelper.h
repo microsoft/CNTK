@@ -24,14 +24,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ComputationNetworkHelper
     {
-        typedef ComputationNode<ElemType>* ComputationNodePtr;
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
     protected:
-        void UpdateEvalTimeStamps(const std::vector<ComputationNodePtr> * nodes)
+        void UpdateEvalTimeStamps(const std::vector<ComputationNodePtr> & nodes)
         {
-            for (size_t i=0; i<nodes->size(); i++)
+            for (size_t i=0; i<nodes.size(); i++)
             {
-                (*nodes)[i]->UpdateEvalTimeStamp();
+                nodes[i]->UpdateEvalTimeStamp();
             }
         }
 
@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     for (auto nodeIter=dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
                     {
-                        DropoutNode<ElemType>* node = static_cast<DropoutNode<ElemType>*>(*nodeIter);
+                        auto node = static_pointer_cast<DropoutNode<ElemType>>(*nodeIter);
                         node->SetDropoutRate(dropoutRate);
                         node->SetRandomSeed(dropOutSeed++);
                     }
@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (auto nodeIter=convolutionNodes.begin(); nodeIter != convolutionNodes.end(); nodeIter++)
                 {
-                    ConvolutionNode<ElemType>* node = static_cast<ConvolutionNode<ElemType>*>(*nodeIter);
+                    auto node = static_pointer_cast<ConvolutionNode<ElemType>>(*nodeIter);
                     node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
                 }
             }
