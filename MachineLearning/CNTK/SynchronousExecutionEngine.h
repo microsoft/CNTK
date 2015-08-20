@@ -813,7 +813,6 @@ public:
 
 private:
     ComputationNetwork<ElemType>& m_net;
-    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     void operator=(const SynchronousNodeEvaluator&);
 };
 

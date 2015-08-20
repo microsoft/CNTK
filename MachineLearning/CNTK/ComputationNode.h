@@ -87,7 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // recover a ComputationNodePtr (which is a shared_ptr) from a naked pointer stored as a void* (old NDL parser does that)
-        static ComputationNodePtr ComputationNode<ElemType>::FromVoidPtr(void * vp)
+        static ComputationNodePtr FromVoidPtr(void * vp)
         {
             auto p = (ComputationNode<ElemType>*)vp;
             return p->shared_from_this();
