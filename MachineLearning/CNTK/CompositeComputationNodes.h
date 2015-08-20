@@ -589,9 +589,9 @@ public:
     virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
     {
         ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-        m_mean.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId);
-        m_var.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId);
-        m_temp.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId);
+        m_mean.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+        m_var.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+        m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

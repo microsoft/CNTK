@@ -127,12 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_gradientOfRectifiedLinear.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_gradientOfRectifiedLinear.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         static const std::wstring TypeName() {return L"RectifiedLinear";} 
@@ -266,12 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_gradientOfSigmoid.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_gradientOfSigmoid.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -406,12 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_gradientOfTanh.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_gradientOfTanh.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -545,9 +530,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-                m_gradientOfLog.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId);
+            m_gradientOfLog.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -682,9 +665,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-                    m_gradientOfExp.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+            m_gradientOfExp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -817,12 +798,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_gradientOfCosine.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_gradientOfCosine.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -963,14 +939,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_gradientDotValue.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_diff.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_gradientDotValue.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_diff.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1105,14 +1075,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_gradientDotValue.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_softmax.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_gradientDotValue.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_softmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1563,30 +1527,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                {
-                    m_prior.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-                }
-                
-                {
-                    m_normedDeviation.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-                }
-                
-                {
-                    m_normedDeviationVectors.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-                }
-                
-                {
-                    m_stddev.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-                }
-                
-                {
-                    m_posterior.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-                }
-            }
+            m_prior.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_normedDeviation.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_normedDeviationVectors.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_stddev.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_posterior.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1776,12 +1721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_maskOfDropout.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-            }
+            m_maskOfDropout.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         static const std::wstring TypeName() { return L"Dropout"; }

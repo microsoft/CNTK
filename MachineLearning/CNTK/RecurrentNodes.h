@@ -372,14 +372,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_boundaryInfo.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_pastActivity.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-            }
+            m_boundaryInfo.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_pastActivity.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         static const std::wstring TypeName() {return L"PastValue";} 
@@ -734,14 +728,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_boundaryInfo.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_futureActivity.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
-            }
+            m_boundaryInfo.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_futureActivity.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1793,67 +1781,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const short deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                {
-                    bool fEmpty = m_functionValues.HasNoElements();
-                    m_functionValues.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true, fEmpty);
-                }
-
-                
-                {
-                    bool fEmpty = m_gradientValues.HasNoElements();
-                    m_gradientValues.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true, fEmpty);
-                }
-
-                
-                    grdToObs.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdToInputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdToForgetGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdToOutputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdToCellWgt.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-
-                
-                    m_State.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_PastState.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_PastOutput.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_Gi.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_Gf.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_Go.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-
-                
-                    tanhState.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    tanhObs.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-
-                
-                    mSlicePrevState.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    mSlicePrevOutput.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdBeforeInputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdBeforeForget.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdBeforeGo.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdToCell.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    grdBeforeTanhInputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
+            m_gradientValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
+            grdToObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToForgetGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToOutputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToCellWgt.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_State.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_PastState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_PastOutput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_Gi.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_Gf.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_Go.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            tanhState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            tanhObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            mSlicePrevState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            mSlicePrevOutput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeForget.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeGo.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToCell.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeTanhInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const

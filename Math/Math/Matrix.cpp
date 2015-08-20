@@ -3526,7 +3526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             TransferFromDeviceToDevice(id_to, ismoved, emptyTransfer, updatePreferredDevice);
     }
     template<class ElemType>
-    void Matrix<ElemType>::TransferToDeviceIfNotTherAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const
+    void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const
     {
         if (id_to != AUTOPLACEMATRIX)
             TransferToDeviceIfNotThere(id_to, ismoved, emptyTransfer, updatePreferredDevice);
