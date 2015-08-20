@@ -20,6 +20,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "ConfigObjects.h"
 
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
@@ -53,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region base computation class
 
     template<class ElemType>
-    class ComputationNode : public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
+    class ComputationNode : public Config::Object, public Config::HasName, public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
         // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:
@@ -227,7 +228,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void SetFunctionAndGradientSize(const int numSamples) 
+        // TODO: similar to DumpInfo; used by ExperimentalNetworkBuilder test implementation
+        /*HasToString::*/ wstring ToString() const
+        {
+            // we format it like "[TYPE] ( args )"
+            wstring result = /*TidyName*/(NodeName()) + L" : " + OperationName();
+            if (m_children.empty()) result.append(L"()");
+            else
+            {
+                wstring args;
+                bool first = true;
+                for (auto & child : m_children)
+                {
+                    if (first)
+                        first = false;
+                    else
+                        args.append(L"\n");
+                    args.append(/*TidyName*/(child->NodeName()));
+                }
+                result += L" "    + (L"(" + args + L")");// NestString(args, L'(', true, ')');    // TODO: move NestStrings to Basics?
+            }
+            return result;
+        }
+
+        /*HasName::*/void SetName(const std::wstring & newName) // also for use by ExperimentalNetworkBuilder
+        {
+            m_nodeName = newName;
+        }
+
+        virtual void SetFunctionAndGradientSize(const int numSamples)
         {
             size_t numRows = m_functionValues.GetNumRows();
             if (numRows > 0 && numSamples > 0)

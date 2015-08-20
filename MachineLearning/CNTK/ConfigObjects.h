@@ -23,6 +23,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
 
     struct Object { virtual ~Object() { } };
 
+    // indicates that the object has a name should be set from the expression path
+
+    struct HasName { virtual void SetName(const wstring & name) = 0; };
+
     // -----------------------------------------------------------------------
     // Wrapped<T> -- wraps non-class primitive C++ type into a class, like 'double'.
     // (It can also be used for class types, but better use BoxOf<> below directly.)
