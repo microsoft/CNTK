@@ -143,13 +143,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                m_maxIndexes0.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true);
-                m_maxIndexes1.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true);
-                m_maxValues.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true);
-            }
+            m_maxIndexes0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maxIndexes1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maxValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

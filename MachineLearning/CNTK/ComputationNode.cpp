@@ -16,11 +16,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<typename ElemType>
     /*virtual*/ void ComputationNode<ElemType>::MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
     {
-        if (deviceId != AUTOPLACEMATRIX)
-        {
-            m_functionValues.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
-            m_gradientValues.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
-        }
+        m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
+        m_gradientValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
     }
 
     template<typename ElemType>

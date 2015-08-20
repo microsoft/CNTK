@@ -97,7 +97,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
         //Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
         void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
-        void TransferToDeviceIfNotTherAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+        void TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
         void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues); //sets matrix type between dense and sparse
         size_t GetNumRows() const;

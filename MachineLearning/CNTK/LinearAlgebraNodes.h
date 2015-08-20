@@ -1504,12 +1504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         private:
@@ -1688,12 +1683,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
     private:
@@ -2420,14 +2410,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_innerproduct.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_rightGradient.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_innerproduct.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_rightGradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -2661,20 +2645,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_invNorm0.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_invNorm1.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_leftTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_rightTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_temp.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_invNorm0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNorm1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_leftTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_rightTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -3132,22 +3107,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const short deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                
-                    m_invNorm0.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_invNorm1.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_invNormSquare.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_leftTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_rightTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-                
-                    m_temp.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
-            }
+            m_invNorm0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNorm1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNormSquare.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_leftTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_rightTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

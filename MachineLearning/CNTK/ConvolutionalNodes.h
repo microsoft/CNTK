@@ -324,9 +324,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-                m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
