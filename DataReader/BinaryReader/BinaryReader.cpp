@@ -138,7 +138,7 @@ void BinaryReader<ElemType>::DisplayProperties()
     for (auto pair : m_sections)
     {
         Section* section = pair.second;
-        fprintf(stderr,"Section: %ls, Elements: %lld, ElementsPerRecord: %lld, ElementSize: %lld\n", pair.first.c_str(), section->GetElementCount(), section->GetElementsPerRecord(), section->GetElementSize());
+        fprintf(stderr,"Section: %ls, Elements: %zd, ElementsPerRecord: %zd, ElementSize: %zd\n", pair.first.c_str(), section->GetElementCount(), section->GetElementsPerRecord(), section->GetElementSize());
         if (section->GetSectionType() == sectionTypeStats)
         {
             vector<NumericStatistics> stats;

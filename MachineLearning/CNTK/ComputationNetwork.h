@@ -483,6 +483,16 @@ public:
 
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
     {
+       // Saving into temporary file and then renaming it to the requested fileName
+       // This is a standard trick to avoid havign corrupted model files if process dies during writing
+       wstring tmpFileName = fileName + L".tmp";
+       SaveToFileImpl(tmpFileName, fileFormat);
+       renameOrDie(tmpFileName, fileName);
+    }
+
+private:
+    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const
+    {
         File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
@@ -589,8 +599,11 @@ public:
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECN");
+       
+        fstream.Flush();
     }
 
+public:
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary)
     {
@@ -851,6 +864,45 @@ public:
                     node->NeedGradient() = needGradient;
                 }
             }
+        }
+    }
+
+    //this is a temp solution since some nodes such as plus can be just aggregate of two scalar values 
+    //in which case the packing info is not available (and not meaningful) for them
+    size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+    {
+        if (!m_SentenceBoundary.IsEmpty() &&
+            !m_minibatchPackingFlag.size() == 0)
+        {
+            size_t numTimeSteps = m_SentenceBoundary.GetNumCols();
+            size_t numSequences = m_SentenceBoundary.GetNumRows();
+
+            if (m_minibatchPackingFlag.size() != numTimeSteps)
+            {
+                LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+            }
+
+            size_t numSamplesWithoutLabel = 0;
+
+            for (size_t j = 0; j < numTimeSteps; j++)
+            {
+                if (m_minibatchPackingFlag[j] & MinibatchPackingFlag::NoLabel)
+                {
+                    for (int i = 0; i < numSequences; i++)
+                    {
+                        if ((int)(m_SentenceBoundary(i, j)) & NO_LABEL)
+                        {
+                            numSamplesWithoutLabel++;
+                        }
+                    }
+                }
+            }
+
+            return numTimeSteps*numSequences - numSamplesWithoutLabel;
+        }
+        else
+        {
+            return numAllSamples;
         }
     }
 
@@ -1268,13 +1320,21 @@ public:
         {
             newNode = new TransposeTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-                    }
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+        {
+            newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new RowElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new ColumnElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
@@ -1455,7 +1515,7 @@ public:
                     ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
                     if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
                     {
-                        fprintf(stderr, "PairNetwork : asked to pair a node with name l%s in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+                        fprintf(stderr, "PairNetwork : asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
                         throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
                     }
                     newNode->AttachInputs(a);
@@ -1606,13 +1666,21 @@ public:
         {
             newNode = new TransposeTimesNode<ElemType>(m_deviceId, nodeName);
         }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
-                    }
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())
+        {
+            newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
+        }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
             newNode = new ElementTimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new RowElementTimesNode<ElemType>(m_deviceId, nodeName);
+        }
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
+        {
+            newNode = new ColumnElementTimesNode<ElemType>(m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
@@ -2110,7 +2178,26 @@ public:
         return newNode;
     }
 
-                ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
+    ComputationNodePtr RowElementTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new RowElementTimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr ColumnElementTimes(const ComputationNodePtr a,
+        const ComputationNodePtr b,
+        const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new ColumnElementTimesNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+    ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
                 {
                     ComputationNodePtr newNode(new StrideTimesNode<ElemType>(m_deviceId, nodeName));
                     newNode->AttachInputs(a, b, c);
@@ -2347,8 +2434,7 @@ public:
     }
 
     int FindInRecurrentLoop(const ComputationNodePtr startNode,
-                            std::vector<ComputationNodePtr>& recurrentNodes,
-                            bool isForwardComputing = false)
+        std::vector<ComputationNodePtr>& recurrentNodes)
     {
         int iFound = -1;
 
@@ -2357,14 +2443,8 @@ public:
             if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
             {
                 iFound = (*iter).m_loopId;
-                if (isForwardComputing)
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
-                else
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
+                recurrentNodes = (*iter).m_recurrentNodesForForward;
+
                 break;
             }
         }
@@ -2405,7 +2485,7 @@ public:
     void EvaluateLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
     {
         std::vector<ComputationNodePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes, true);
+        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
         if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && 
             m_recurrentInfo[iLoopId].m_completedEvaluate == false)
         {
@@ -3243,7 +3323,7 @@ public:
 
                 bool UnitTest(const ComputationNodePtr rootNode)
                 {
-                    fprintf(stderr, "\n\n Unit test node %ws \n", rootNode->NodeName().c_str());
+                    fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
                     std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
 

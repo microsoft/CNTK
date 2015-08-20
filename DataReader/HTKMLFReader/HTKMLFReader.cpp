@@ -790,11 +790,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
                                 m_minibatchPackingFlag.resize(feat.cols());
 
-                                m_sentenceBegin.SetValue((ElemType) SENTENCE_MIDDLE);
-                                m_sentenceBegin.SetValue(0, 0, (ElemType) SENTENCE_BEGIN);
+                                m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
+                                m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
 
                                 std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
                                 first = false;
                             }
 
@@ -946,7 +946,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (size_t j = 0; j < m_mbSize; j++)
                         {
-                            m_sentenceBegin.SetValue(i,j,(ElemType) SENTENCE_MIDDLE);
+                            m_sentenceBegin.SetValue(i,j,(ElemType) SEQUENCE_MIDDLE);
                         }
                     }
                     std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
@@ -969,8 +969,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
-                                m_sentenceBegin.SetValue(i, 0, (ElemType)SENTENCE_BEGIN);
-                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                                m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
@@ -1121,8 +1121,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_switchFrame[i] = actualmbsize[i];
                             if (actualmbsize[i] < m_mbSize)
                             {
-                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SENTENCE_BEGIN);
-                                m_minibatchPackingFlag[actualmbsize[i]] |= MinibatchPackingFlag::UtteranceStart;
+                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SEQUENCE_START);
+                                m_minibatchPackingFlag[actualmbsize[i]] |= MinibatchPackingFlag::SequenceStart;
                             }
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
@@ -1270,11 +1270,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
                             m_minibatchPackingFlag.resize((size_t)feat.cols());
-                            m_sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
-                            m_sentenceBegin.SetValue(0, 0, (ElemType)SENTENCE_BEGIN);
+                            m_sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
+                            m_sentenceBegin.SetValue(0, 0, (ElemType)SEQUENCE_START);
 
                             std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::UtteranceStart;
+                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
                             first = false;
                         }
 
