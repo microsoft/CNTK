@@ -2379,8 +2379,8 @@ public:
         return (iter != m_nameToNodeMap.end());
     }
 
-                ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr,
-                    bool bPanic = true)  const
+    ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr,
+                                       bool bPanic = true)  const
     {
         auto iter = m_nameToNodeMap.find(name);
         if (iter != m_nameToNodeMap.end())
@@ -2389,13 +2389,13 @@ public:
             return iter->second;
         }
 
-                    if (anotherNetwork != nullptr)
-                        return anotherNetwork->GetNodeFromName(name);
+        if (anotherNetwork != nullptr)
+            return anotherNetwork->GetNodeFromName(name);
 
-                    if (bPanic)
-                        RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
+        if (bPanic)
+            RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
         else
-                        return nullptr;
+            return nullptr;
     }
 
     // GetNodesFromName - Get all the nodes from a name that may match a wildcard '*' pattern
@@ -2864,6 +2864,11 @@ public:
     inline std::vector<RecurrentInfo> & RecurrentNodes()
     {
         return m_recurrentInfo;
+    }
+
+    std::map<const std::wstring, ComputationNodePtr, nocase_compare> & GetNameToNodeMap()    // specially for ExperimentalNetworkBuilder; don't use this otherwise
+    {
+        return m_nameToNodeMap;
     }
 
     size_t GetTotalNumberOfNodes() const

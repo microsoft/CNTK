@@ -141,8 +141,6 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // This is specifically meant to be used by DelayNode, see comments there.
     struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
 
-    struct HasName { virtual void SetName(const wstring & name) = 0; };
-
     // TODO: implement ConfigRecord should this expose a config dict to query the dimension (or only InputValues?)? Expose Children too? As list and by name?
     struct ComputationNode : public Object, public HasToString, public HasName
     {
@@ -604,6 +602,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     };
 
     shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecord &);
+    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecord &);
 
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
@@ -667,6 +666,16 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 return ConfigValuePtr(MakeExperimentalComputationNetwork(config), location, exprPath);
             };
             info.isConfigRecord = true;
+            return info;
+        }
+        ConfigurableRuntimeType MakeExperimentalComputationNodeConstructor()
+        {
+            ConfigurableRuntimeType info;
+            info.construct = [this](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+            {
+                return ConfigValuePtr(MakeExperimentalComputationNode(config), location, exprPath);
+            };
+            info.isConfigRecord = false;
             return info;
         }
 
@@ -1175,7 +1184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             {
 #define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
                 // ComputationNodes
-                DefineRuntimeType(ComputationNode),
+                //DefineRuntimeType(ComputationNode),
                 // other relevant classes
                 DefineRuntimeType(NDLComputationNetwork),           // currently our fake
                 // Functions
@@ -1185,7 +1194,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 DefineRuntimeType(PrintAction),
                 DefineRuntimeType(AnotherAction),
                 // glue to experimental integration
-                { L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() }
+                { L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
+                { L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
             };
             // initialize the infixOps table (lookup table for infix operators)
             infixOps = decltype(infixOps)
