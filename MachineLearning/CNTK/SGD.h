@@ -1775,6 +1775,8 @@ protected:
                          /*out*/ size_t& totalSamplesSeen,
                          std::string prefixMsg = "")
     {
+        fprintf(stderr, "debughtx SGD.h:trainOneEpoch called...\n");
+        system("sleep 0.1");
         // Since we are getting timing resolution of under microsecond we use double precision
         // to ensure that we have enough digits to represent small time measurements.
         double totalTimeInMBs = 0;
@@ -1809,11 +1811,23 @@ protected:
         Timer timer;
         timer.Start();
 
+        int kkk = 0;
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
 #ifdef MPI_SUPPORT
             DecimateMinibatch(inputMatrices);
 #endif
+            
+            if (kkk < 4) {
+                fprintf(stderr, "debughtx SGD.h kkk:%d row:%d col:%d\n", kkk, inputMatrices->find(L"labels")->second->GetNumRows(), inputMatrices->find(L"labels")->second->GetNumCols());
+                for (int i = 0; i < inputMatrices->find(L"labels")->second->GetNumCols(); i++) {
+                    for (int j = 0; j < 4; j++)
+                        fprintf(stderr, "%lf ", (*(inputMatrices->find(L"labels")->second))(j, i));
+                    fprintf(stderr, "\n");
+                }
+                system("sleep 1");
+            }
+            kkk++;
                         
             UpdateEvalTimeStamps(FeatureNodes);
             UpdateEvalTimeStamps(labelNodes);

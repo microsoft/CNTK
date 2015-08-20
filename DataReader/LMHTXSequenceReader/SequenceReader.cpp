@@ -795,7 +795,7 @@ void SequenceReader<ElemType>::SetupEpoch()
         if (m_totalSamples == 0)
         {
             if (m_traceLevel > 0)
-                fprintf(stderr, "starting at epoch %d parsing all data to determine record count\n", m_epoch);
+                fprintf(stderr, "starting at epoch %zd parsing all data to determine record count\n", m_epoch);
             // choose a large number to read
             m_parser.SetFilePosition(0);
             m_mbStartSample = 0;
@@ -805,7 +805,7 @@ void SequenceReader<ElemType>::SetupEpoch()
                 m_seqIndex = m_sequence.size();
             }
             if (m_traceLevel > 0)
-                fprintf(stderr, "\n %lld records found\n", m_totalSamples);
+                fprintf(stderr, "\n %zd records found\n", m_totalSamples);
         }
         m_seqIndex = 0;
 
@@ -1137,6 +1137,7 @@ void SequenceReader<ElemType>::GetClassInfo()
 template<class ElemType>
 bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
+
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
         return false;
@@ -1210,6 +1211,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
                 features.Reset();
             }
         }
+
         for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
         {
             // pick the right sample with randomization if desired
@@ -1287,6 +1289,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     {
         RuntimeError("cannot find matrices for %s", m_labelsName[labelInfoOut].c_str());
     }
+
     // we read some records, so process them
     return true;
 }
@@ -1348,7 +1351,7 @@ template class SequenceReader<float>;
 template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
-    fprintf(stderr, "debughtx HTXSequenceReader Init...\n");
+    fprintf(stderr, "debughtx LMHTXSequenceReader Init...\n");
     system("sleep 1");
     // See if the user wants caching
     m_cachingReader = NULL;
@@ -1857,7 +1860,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         size_t nT = actualmbsize / mToProcess.size();
         mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
         mtSentenceBegin.Resize(mToProcess.size(), nT);
-        mtSentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+        mtSentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
         m_minibatchPackingFlag.resize(nT);
         std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
@@ -1963,8 +1966,8 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         if (wrd == (int)index)
         {
             mSentenceBegin = true;
-            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SENTENCE_BEGIN);
-            m_minibatchPackingFlag[timePos] = MinibatchPackingFlag::UtteranceStart;
+            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SEQUENCE_START);
+            m_minibatchPackingFlag[timePos] = MinibatchPackingFlag::SequenceStart;
         }
     }
 }

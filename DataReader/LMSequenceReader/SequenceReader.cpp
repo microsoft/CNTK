@@ -1351,6 +1351,8 @@ template class SequenceReader<float>;
 template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
+    fprintf(stderr, "debughtx LMSequenceReader Init...\n");
+    system("sleep 1");
     // See if the user wants caching
     m_cachingReader = NULL;
     m_cachingWriter = NULL;
@@ -1742,8 +1744,8 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
         mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
         if (mNumRead == 0) return false;
 
-        //if (mDoRandomize)
-        std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
+        if (mDoRandomize) //debughtx I don't want it to randomize
+            std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
 
         m_readNextSampleLine += mNumRead;
         sLn = FindNextSentences(mNumRead);
@@ -1905,6 +1907,20 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     } 
     else
         return false; 
+
+    fprintf(stderr, "debughtx LMSequenceReader::SequenceReader.cpp debughtx row:%d col:%d\n", matrices.find(L"labels")->second->GetNumRows(), matrices.find(L"labels")->second->GetNumCols());
+    for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
+        for (int j = 0; j < 4; j++) {
+            fprintf(stderr, "%lf", (*(matrices.find(L"labels")->second))(j, i));
+            if (j == 0)
+                fprintf(stderr, "[%s] ", idx4word[int((*(matrices.find(L"labels")->second))(j, i))].c_str());
+            else
+                fprintf(stderr, " ");
+            if (j == 3)
+                fprintf(stderr, "\n");
+        }
+    }
+    system("sleep 1");
 
     // now transfer to the GPU as needed
     try{
