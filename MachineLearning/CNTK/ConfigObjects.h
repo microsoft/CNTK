@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace Microsoft{ namespace MSR { namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
 
     using namespace std;
 
@@ -73,4 +73,4 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close);
     template<class C> static wstring TypeId() { return msra::strfun::utf16(typeid(C).name()); }
 
-}}} // end namespaces
+}}}} // end namespaces

@@ -2,13 +2,15 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include "ConfigEvaluator.h"
+#include "../CNTK/ConfigEvaluator.h"
 
-using namespace Microsoft::MSR::CNTK;
+using namespace Microsoft::MSR::CNTK::Config;
 
 #ifndef let
 #define let const auto
 #endif
+
+// OUTDATED--moved to CNTK project
 
 wstring standardFunctions =
 L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"

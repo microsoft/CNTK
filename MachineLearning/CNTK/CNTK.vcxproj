@@ -146,6 +146,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <Text Include="ConfigSpec.txt" />
     <Text Include="DefaultMacros.txt" />
     <Text Include="modelEditor.txt" />
     <Text Include="modelEditorFromScratch.txt" />
@@ -168,9 +169,13 @@
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkHelper.h" />
     <ClInclude Include="ComputationNode.h" />
+    <ClInclude Include="ConfigEvaluator.h" />
+    <ClInclude Include="ConfigObjects.h" />
+    <ClInclude Include="ConfigParser.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DecoderNode.h" />
     <ClInclude Include="EvaluationCriterionNodes.h" />
+    <ClInclude Include="ExperimentalNetworkBuilder.h" />
     <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="InputAndParamNodes.h" />
@@ -205,6 +210,9 @@
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
+    <ClCompile Include="ConfigEvaluator.cpp" />
+    <ClCompile Include="ConfigParser.cpp" />
+    <ClCompile Include="ExperimentalNetworkBuilder.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="NetworkDescriptionLanguage.cpp" />
     <ClCompile Include="SimpleNetworkBuilder.cpp" />
@@ -213,6 +221,7 @@
     <ClCompile Include="tests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\ParseConfig\test.config" />
     <None Include="prebuild.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
