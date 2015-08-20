@@ -39,8 +39,8 @@ public:
     {
         m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
         m_deviceId = deviceId;
-        MoveMatricesToDevice(deviceId);
-        InitRecurrentNode();
+        //MoveMatricesToDevice(deviceId);
+        //InitRecurrentNode(); // done by baseline constructor
     }
 
     ParallelNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -181,8 +181,7 @@ public:
             !ISCLOSE(FunctionValues()(3, 1), 5, EPSILON) ||
             !ISCLOSE(FunctionValues()(3, 2), 6, EPSILON))
             return false;
-        if (FunctionValues().GetDeviceId() != m_deviceId)
-            FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+        FunctionValues().TransferToDeviceIfNotThere(m_deviceId, true);
 
         GradientValues().Resize(nInput0 + nInput1, nT);
         GradientValues().SetValue(0);
@@ -209,10 +208,8 @@ public:
             || !ISCLOSE(Inputs(1)->GradientValues()(0, 2), 6, EPSILON))
             return false;
 
-        if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
-            Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
-        if (Inputs(1)->GradientValues().GetDeviceId() != m_deviceId)
-            Inputs(1)->GradientValues().TransferFromDeviceToDevice(Inputs(1)->GradientValues().GetDeviceId(), m_deviceId, true);
+        Inputs(0)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
+        Inputs(1)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
         return true;
     }
@@ -284,10 +281,10 @@ public:
     {
         m_nodeName = (name == L""? CreateUniqNodeName() : name);
         m_deviceId = deviceId;
-        MoveMatricesToDevice(deviceId);
+        //MoveMatricesToDevice(deviceId);
         m_hasComputed = false;
         m_numSamples = 0;
-        InitRecurrentNode();
+        //InitRecurrentNode(); // done by baseline constructor
     }
 
     MeanNode(File& fstream, const size_t modelVersion,
@@ -383,7 +380,7 @@ public:
             throw std::logic_error("Mean operation should have one input.");
         }
 
-        if (Inputs(0)->FunctionValues().GetNumElements() == 0) {
+        if (Inputs(0)->FunctionValues().HasNoElements()) {
             throw std::logic_error("Mean operation: the input node has 0 element.");
         }
 
@@ -441,10 +438,10 @@ public:
     {
         m_nodeName = (name == L""? CreateUniqNodeName() : name);
         m_deviceId = deviceId;
-        MoveMatricesToDevice(deviceId);
+        MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         m_hasComputed = false;
         m_numSamples = 0;
-        InitRecurrentNode();
+        //InitRecurrentNode(); // done by baseline constructor
     }
 
     InvStdDevNode(File& fstream, const size_t modelVersion,
@@ -569,7 +566,7 @@ public:
             throw std::logic_error("InvStdDev operation should have one input.");
         }
 
-        if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+        if (Inputs(0)->FunctionValues().HasNoElements())
         {
             throw std::logic_error(
                 "InvStdDev operation: the input node has 0 element.");
@@ -592,24 +589,9 @@ public:
     virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
     {
         ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-        if (deviceId != AUTOPLACEMATRIX)
-        {
-            if (m_mean.GetDeviceId() != deviceId)
-            {
-                m_mean.TransferFromDeviceToDevice(m_mean.GetDeviceId(), deviceId);
-            }
-
-            if (m_var.GetDeviceId() != deviceId)
-            {
-                m_var.TransferFromDeviceToDevice(m_var.GetDeviceId(), deviceId);
-            }
-
-            if (m_temp.GetDeviceId() != deviceId)
-            {
-                m_temp.TransferFromDeviceToDevice(m_temp.GetDeviceId(), deviceId);
-            }
-        }
+        m_mean.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId);
+        m_var.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId);
+        m_temp.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -662,8 +644,8 @@ public:
     {
         m_nodeName = (name == L""? CreateUniqNodeName() : name);
         m_deviceId = deviceId;
-        MoveMatricesToDevice(deviceId);
-        InitRecurrentNode();
+        //MoveMatricesToDevice(deviceId);
+        //InitRecurrentNode(); // done by baseline constructor
     }
 
     PerDimMeanVarNormalizationNode(File& fstream, const size_t modelVersion,
@@ -794,9 +776,9 @@ public:
             Inputs(2)->FunctionValues().Resize(rows, 1);
         }
 
-        if (Inputs(0)->FunctionValues().GetNumElements() == 0 ||
-            Inputs(1)->FunctionValues().GetNumElements() == 0 ||
-            Inputs(2)->FunctionValues().GetNumElements() == 0)
+        if (Inputs(0)->FunctionValues().HasNoElements() ||
+            Inputs(1)->FunctionValues().HasNoElements() ||
+            Inputs(2)->FunctionValues().HasNoElements())
         {
             throw std::logic_error(
                 "PerDimMeanVarNormalizationNode operation: one of the operants has 0 element.");
@@ -847,8 +829,8 @@ public:
     {
         m_nodeName = (name == L""? CreateUniqNodeName() : name);
         m_deviceId = deviceId;
-        MoveMatricesToDevice(deviceId);
-        InitRecurrentNode();
+        //MoveMatricesToDevice(deviceId);
+        //InitRecurrentNode(); // done by baseline constructor
     }
 
     PerDimMeanVarDeNormalizationNode(File& fstream, const size_t modelVersion,
@@ -983,9 +965,9 @@ public:
             Inputs(2)->FunctionValues().Resize(rows, 1);
         }
 
-        if (Inputs(0)->FunctionValues().GetNumElements() == 0 ||
-            Inputs(1)->FunctionValues().GetNumElements() == 0 ||
-            Inputs(2)->FunctionValues().GetNumElements() == 0)
+        if (Inputs(0)->FunctionValues().HasNoElements() ||
+            Inputs(1)->FunctionValues().HasNoElements() ||
+            Inputs(2)->FunctionValues().HasNoElements())
         {
             throw std::logic_error("PerDimMeanVarDeNormalizationNode operation: one of the operants has 0 element.");
         }
@@ -1134,8 +1116,8 @@ public:
     {
         m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
         m_deviceId = deviceId;
-        MoveMatricesToDevice(deviceId);
-        InitRecurrentNode();
+        MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+        //InitRecurrentNode(); // done by baseline constructor
     }
 
     TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -1204,12 +1186,7 @@ public:
     virtual void MoveMatricesToDevice(const short deviceId)
     {
         ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-        if (mMemory.GetDeviceId() != deviceId)
-        {
-            bool fEmpty = mMemory.GetNumElements() == 0;
-            mMemory.TransferFromDeviceToDevice(mMemory.GetDeviceId(), deviceId, true, fEmpty);
-        }
+        mMemory.TransferToDeviceIfNotThere(deviceId, true, mMemory.HasNoElements());
     }
 
     virtual void ComputeInputPartial(const size_t inputIndex)
@@ -1318,10 +1295,7 @@ public:
         Inputs(0)->FunctionValues()(0, 1) = 2;
         Inputs(0)->FunctionValues()(0, 2) = 3;
         FunctionValues().Resize(nOutput, nT);
-        if (Inputs(0)->FunctionValues().GetDeviceId() != m_deviceId)
-        {
-            Inputs(0)->FunctionValues().TransferFromDeviceToDevice(Inputs(0)->FunctionValues().GetDeviceId(), m_deviceId, true);
-        }
+        Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
         EvaluateThisNode();
 
         /// check with expected values
@@ -1332,10 +1306,7 @@ public:
             return false;
         }
 
-        if (FunctionValues().GetDeviceId() != m_deviceId)
-        {
-            FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
-        }
+        FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
         Inputs(0)->GradientValues().Resize(nOutput, nT);
         Inputs(0)->GradientValues().SetValue(1.0);
@@ -1344,8 +1315,7 @@ public:
         GradientValues()(0, 0) = 1;
         GradientValues()(0, 1) = 2;
         GradientValues()(0, 2) = 3;
-        if (GradientValues().GetDeviceId() != m_deviceId)
-            GradientValues().TransferFromDeviceToDevice(GradientValues().GetDeviceId(), m_deviceId, true);
+        GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
         ComputeInputPartial(0);
 
@@ -1357,15 +1327,8 @@ public:
             return false;
         }
 
-        if (Inputs(0)->GradientValues().GetDeviceId() != m_deviceId)
-        {
-            Inputs(0)->GradientValues().TransferFromDeviceToDevice(Inputs(0)->GradientValues().GetDeviceId(), m_deviceId, true);
-        }
-
-        if (GradientValues().GetDeviceId() != m_deviceId)
-        {
-            GradientValues().TransferFromDeviceToDevice(GradientValues().GetDeviceId(), m_deviceId, true);
-        }
+        Inputs(0)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
+        GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
 
         return true;
     }

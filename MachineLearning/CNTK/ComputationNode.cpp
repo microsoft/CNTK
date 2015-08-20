@@ -11,6 +11,37 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // code
+
+    template<typename ElemType>
+    /*virtual*/ void ComputationNode<ElemType>::MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+    {
+        if (deviceId != AUTOPLACEMATRIX)
+        {
+            m_functionValues.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
+            m_gradientValues.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
+        }
+    }
+
+    template<typename ElemType>
+    /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
+    {
+        fstream << L"\n" + NodeName() + L"=" + OperationName();
+
+        if (!IsLeaf())
+        {
+            fstream << wstring(L"(");
+            for (size_t i = 0; i<ChildrenSize(); i++)
+            {
+                if (i > 0)
+                    fstream << wstring(L",");
+                fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
+            }
+            fstream << wstring(L")");
+        }
+    }
+
+
     // instantiate the core class templates
 
     typedef Matrix<float> FloatMatrix;

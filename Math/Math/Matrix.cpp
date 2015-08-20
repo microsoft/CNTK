@@ -3272,7 +3272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //other wise GPU>CPU and if both are GPU move to a's preferred device
     template<class ElemType>
     void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType> &a, const Matrix<ElemType> &b, const Matrix<ElemType> &c)
-        {
+    {
         int deviceIdA = a.GetDeviceId(), deviceIdB = b.GetDeviceId(), deviceIdC = c.GetDeviceId();
         if (deviceIdA == deviceIdB && deviceIdA == deviceIdC)
             return;
@@ -3293,7 +3293,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             b._transferToDevice(deviceIdA);
             c._transferToDevice(deviceIdA);
-    }
+        }
         else if(deviceIdB != CPUDEVICE)
         {
             a._transferToDevice(deviceIdB);
@@ -3518,6 +3518,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _transferFromDeviceToDevice(from_id,to_id,ismoved,emptyTransfer);
         if (updatePreferredDevice && m_preferredDeviceId != MANAGEDEXTERN)
             m_preferredDeviceId=GetDeviceId();
+    }
+    template<class ElemType>
+    void Matrix<ElemType>::TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const
+    {
+        if (GetDeviceId() != id_to)
+            TransferFromDeviceToDevice(id_to, ismoved, emptyTransfer, updatePreferredDevice);
+    }
+    template<class ElemType>
+    void Matrix<ElemType>::TransferToDeviceIfNotTherAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const
+    {
+        if (id_to != AUTOPLACEMATRIX)
+            TransferToDeviceIfNotThere(id_to, ismoved, emptyTransfer, updatePreferredDevice);
     }
 
     template<class ElemType>

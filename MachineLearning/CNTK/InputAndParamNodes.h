@@ -39,14 +39,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_needGradient = true;
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            //MoveMatricesToDevice(deviceId);
             m_functionValues.Resize(rows, cols);
 
             m_outputWidth = 1;
             m_outputHeight = rows;
             m_outputChannels = 1;
 
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         LearnableParameter(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -190,7 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            //MoveMatricesToDevice(deviceId);
 
             m_isSparse = isSparse;
             if (isSparse)
@@ -200,7 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_functionValues.Resize(rows, cols);
             m_needGradient = false;
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }
         
         InputValue(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId)
@@ -217,7 +217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            //MoveMatricesToDevice(deviceId);
 
             m_isSparse = isSparse;
             if (isSparse)
@@ -227,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_functionValues.Resize(rows, cols);
             m_needGradient = false;
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }        
 
         InputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId)
@@ -329,8 +329,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         LookupTableNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -516,8 +516,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     !ISCLOSE(FunctionValues()(1, 1), 2.0, EPSILON) )
                     throw("LSTMNode forward computation error");
 
-                if (FunctionValues().GetDeviceId() != m_deviceId)
-                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+                
+                    FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
                 GradientValues().Resize(nInput, nOutput);
                 GradientValues().SetValue(1.0);
@@ -539,8 +539,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < 2; i++)
                 {
-                    if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
-                        Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
+                    
+                        Inputs(i)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
                 }
 
             }
@@ -572,10 +572,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            //MoveMatricesToDevice(deviceId);
             m_reqMultiSeqHandling = true;
             m_functionValues.Resize(1, 1);
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         PairNetworkNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -593,7 +593,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            //MoveMatricesToDevice(deviceId);
             m_reqMultiSeqHandling = true;
 
             m_functionValues.Resize(row_size, col_size);
@@ -601,7 +601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
 
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }

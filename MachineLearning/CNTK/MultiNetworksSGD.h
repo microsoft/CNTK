@@ -1065,15 +1065,13 @@ namespace Microsoft {
 
                                 node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                                 ElemType eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
-                                if (node->FunctionValues().GetDeviceId() != deviceId)
-                                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+                                node->FunctionValues().TransferToDeviceIfNotThere( deviceId, true);
 
                                 /// perturb parameter
                                 ElemType ePos = eOrg + (ElemType)EPSILON;
                                 node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                                 node->FunctionValues().SetValue(irow, icol, ePos);
-                                if (node->FunctionValues().GetDeviceId() != deviceId)
-                                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+                                node->FunctionValues().TransferToDeviceIfNotThere( deviceId, true);
 
                                 node->UpdateEvalTimeStamp();
                                 localEpochCriterion.SetValue(0);
@@ -1089,8 +1087,7 @@ namespace Microsoft {
                                 ElemType eNeg = eOrg - (ElemType)EPSILON;
                                 node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                                 node->FunctionValues().SetValue(irow, icol, eNeg);
-                                if (node->FunctionValues().GetDeviceId() != deviceId)
-                                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+                                node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
                                 node->UpdateEvalTimeStamp();
                                 localEpochCriterion.SetValue(0);
                                 localEpochEvalErrors.SetValue(0);
@@ -1106,8 +1103,7 @@ namespace Microsoft {
 
                                 node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                                 node->FunctionValues().SetValue(irow, icol, eOrg);
-                                if (node->FunctionValues().GetDeviceId() != deviceId)
-                                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(), deviceId, true);
+                                node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
                                 node->UpdateEvalTimeStamp();
                                 localEpochCriterion.SetValue(0);
                                 localEpochEvalErrors.SetValue(0);
@@ -1121,8 +1117,7 @@ namespace Microsoft {
 
                                 node->GradientValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
                                 ElemType grdErr = node->GradientValues()(irow, icol);
-                                if (node->GradientValues().GetDeviceId() != deviceId)
-                                    node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(), deviceId, true);
+                                node->GradientValues().TransferToDeviceIfNotThere(deviceId, true);
 
                                 // check if they are consistent
                                 ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
