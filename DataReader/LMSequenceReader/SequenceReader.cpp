@@ -1352,7 +1352,7 @@ template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
     fprintf(stderr, "debughtx LMSequenceReader Init...\n");
-    system("sleep 1");
+    system("sleep 0.1");
     // See if the user wants caching
     m_cachingReader = NULL;
     m_cachingWriter = NULL;
@@ -1361,7 +1361,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     // initialize the cache
     //InitCache(readerConfig);
-    //m_readerConfig = readerConfig;
+    m_readerConfig = readerConfig;
 
     //// if we have a cache, no need to parse the test files...
     //if (m_cachingReader)
@@ -1825,6 +1825,9 @@ size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
+    fprintf(stderr, "debughtx LMSequenceReader::GetMinibatch called\n");
+    fprintf(stderr, "debughtx readerConfig-nbruttsineachrecurrentiter:%s\n", m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());
+    int sequence_number = atoi(m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());//debughtx
 
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
@@ -1887,7 +1890,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
             features.SetValue(idx, j, (ElemType)1);
             SetSentenceBegin(idx, uttIdx, timeIdx);
-
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
@@ -1909,14 +1911,13 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         return false; 
 
     fprintf(stderr, "debughtx LMSequenceReader::SequenceReader.cpp debughtx row:%d col:%d\n", matrices.find(L"labels")->second->GetNumRows(), matrices.find(L"labels")->second->GetNumCols());
+    fprintf(stderr, "debughtx readerConfig-RANDOMIZE:%s\n", m_readerConfig(L"randomize", "WRONG").c_str());
     for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
         for (int j = 0; j < 4; j++) {
-            fprintf(stderr, "%lf", (*(matrices.find(L"labels")->second))(j, i));
+            fprintf(stderr, " %lf", (*(matrices.find(L"labels")->second))(j, i));
             if (j == 0)
                 fprintf(stderr, "[%s] ", idx4word[int((*(matrices.find(L"labels")->second))(j, i))].c_str());
-            else
-                fprintf(stderr, " ");
-            if (j == 3)
+            if ((j == 3) && ((i + 1) % sequence_number == 0))
                 fprintf(stderr, "\n");
         }
     }
