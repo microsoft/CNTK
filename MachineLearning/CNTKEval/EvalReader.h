@@ -177,17 +177,17 @@ public:
         assert(m_switchFrame.size() == 1);        
         sentenceBegin.Resize(1, m_mbSize);
         minibatchPackingFlag.resize(m_mbSize);
-        sentenceBegin.SetValue((ElemType)SENTENCE_MIDDLE);
+        sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
         std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None); 
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {
-            sentenceBegin.SetValue(0, m_switchFrame[0], (ElemType)SENTENCE_BEGIN); 
-            minibatchPackingFlag[m_switchFrame[0]] = MinibatchPackingFlag::UtteranceStart; 
+            sentenceBegin.SetValue(0, m_switchFrame[0], (ElemType)SEQUENCE_START); 
+            minibatchPackingFlag[m_switchFrame[0]] = MinibatchPackingFlag::SequenceStart; 
             if (m_switchFrame[0] > 0)
             {
-                sentenceBegin.SetValue(0, m_switchFrame[0] - 1, (ElemType)SENTENCE_END); 
-                minibatchPackingFlag[m_switchFrame[0] - 1] = MinibatchPackingFlag::UtteranceEnd;
+                sentenceBegin.SetValue(0, m_switchFrame[0] - 1, (ElemType)SEQUENCE_END); 
+                minibatchPackingFlag[m_switchFrame[0] - 1] = MinibatchPackingFlag::SequenceEnd;
             }
         }
     }

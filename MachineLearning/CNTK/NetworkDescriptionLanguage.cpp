@@ -164,7 +164,13 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, TransposeTimesNode<ElemType>::TypeName()))
         ret = true;
+    else if (EqualInsensitive(nodeType, StrideTimesNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, ElementTimesNode<ElemType>::TypeName()))
+        ret = true;
+    else if (EqualInsensitive(nodeType, RowElementTimesNode<ElemType>::TypeName()))
+        ret = true;
+    else if (EqualInsensitive(nodeType, ColumnElementTimesNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, DiagTimesNode<ElemType>::TypeName()))
         ret = true;
