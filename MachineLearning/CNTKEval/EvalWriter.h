@@ -35,6 +35,12 @@ public:
             // figure out the dimension of the data
             const std::wstring& val = iter->first;
             size_t count = (*outputs)[val]->size();
+
+            if (dimensions->find(val) == dimensions->end())
+            {
+                RuntimeError("Output %ls not found in CNTK model.", val.c_str());
+            }
+
             size_t rows = (*dimensions)[val];
             size_t recordCount = count/rows;
 
