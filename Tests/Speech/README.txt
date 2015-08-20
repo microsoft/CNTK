@@ -12,4 +12,4 @@ Simple command line for debugging
 ---------------------------------
 
 WORKING DIR: $(SolutionDir)\Tests\Speech\Data
-COMMAND:     configFile=$(SolutionDir)\Tests\Speech\QuickE2E\cntk.config RunDir=$(SolutionDir)\Tests\Speech\RunDir DataDir=$(SolutionDir)\Tests\Speech\Data DeviceId=Auto
+COMMAND:     configFile=$(SolutionDir)\Tests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)\Tests\Speech\RunDir\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)\Tests\Speech\RunDir  DataDir=$(SolutionDir)\Tests\Speech\Data  DeviceId=Auto
