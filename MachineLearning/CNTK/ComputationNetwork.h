@@ -126,7 +126,7 @@ public:
 
     //if node name is not found, dump all nodes
     //otherwise dump just that node
-    void DumpNodeInfoToFile(const std::wstring nodeName, const bool printValues, const std::wstring outputFile)
+    void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile)
     {
         if (NodeNameExist(nodeName))
         {
@@ -1012,7 +1012,7 @@ public:
         }
     }
 
-    void DeleteNode(const std::wstring nodeName)
+    void DeleteNode(const std::wstring & nodeName)
     {
         //so that deleted node will not be referenced
         ClearCaches();
@@ -1112,7 +1112,7 @@ public:
 
     }
 
-    ComputationNodePtr SetNodeValue(const std::wstring nodeName, const ElemType value)
+    ComputationNodePtr SetNodeValue(const std::wstring & nodeName, const ElemType value)
     {
         ComputationNodePtr pNode = GetNodeFromName(nodeName);
 
@@ -1224,256 +1224,343 @@ public:
 
 #pragma endregion Network Modification
 
-    ComputationNodePtr CreateNodeFromFile(const std::wstring nodeType,
-                                                  const std::wstring nodeName,
+    // create a new node of a type given as a string, with var args so that this can be used at multiple places
+    // This function only creates nodes that accept (m_deviceId, nodeName).
+    template<class... _Types>
+    ComputationNodePtr NewStandardNode(const std::wstring & nodeType, _Types&&... _Args)
+    {
+        if (nodeType == CRFNode<ElemType>::TypeName())	return New<CRFNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())	return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())	return New<ColumnElementTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == CosDistanceNode<ElemType>::TypeName())	return New<CosDistanceNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())	return New<CosDistanceWithNegativeSamplesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == CosineNode<ElemType>::TypeName())	return New<CosineNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == CrossEntropyNode<ElemType>::TypeName())	return New<CrossEntropyNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())	return New<CrossEntropyWithSoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == DiagTimesNode<ElemType>::TypeName())	return New<DiagTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == DropoutNode<ElemType>::TypeName())	return New<DropoutNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == DummyCriterionNode<ElemType>::TypeName())	return New<DummyCriterionNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ElementTimesNode<ElemType>::TypeName())	return New<ElementTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())	return New<ErrorPredictionNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ExpNode<ElemType>::TypeName())	return New<ExpNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == FutureValueNode<ElemType>::TypeName())	return New<FutureValueNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())	return New<GMMLogLikelihoodNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == InvStdDevNode<ElemType>::TypeName())	return New<InvStdDevNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())	return New<KhatriRaoProductNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == LSTMNode<ElemType>::TypeName())	return New<LSTMNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == LogNode<ElemType>::TypeName())	return New<LogNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())	return New<LogSoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == LookupTableNode<ElemType>::TypeName())	return New<LookupTableNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())	return New<MatrixL1RegNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())	return New<MatrixL2RegNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == MeanNode<ElemType>::TypeName())	return New<MeanNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == MinusNode<ElemType>::TypeName())	return New<MinusNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == NegateNode<ElemType>::TypeName())	return New<NegateNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == NoiseContrastiveEstimationNode<ElemType>::TypeName())	return New<NoiseContrastiveEstimationNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == PairNetworkNode<ElemType>::TypeName())	return New<PairNetworkNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ParallelNode<ElemType>::TypeName())	return New<ParallelNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")	return New<PastValueNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarDeNormalizationNode")	return New<PerDimMeanVarDeNormalizationNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarNormalizationNode")	return New<PerDimMeanVarNormalizationNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == PlusNode<ElemType>::TypeName())	return New<PlusNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())	return New<RectifiedLinearNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ReshapeNode<ElemType>::TypeName())	return New<ReshapeNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())	return New<RowElementTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == RowRepeatNode<ElemType>::TypeName())	return New<RowRepeatNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == RowSliceNode<ElemType>::TypeName())	return New<RowSliceNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == RowStackNode<ElemType>::TypeName())	return New<RowStackNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ScaleNode<ElemType>::TypeName())	return New<ScaleNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())	return New<SequenceDecoderNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == SigmoidNode<ElemType>::TypeName())	return New<SigmoidNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == SoftmaxNode<ElemType>::TypeName())	return New<SoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == SquareErrorNode<ElemType>::TypeName())	return New<SquareErrorNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())	return New<StrideTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())	return New<SumColumnElementsNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == SumElementsNode<ElemType>::TypeName())	return New<SumElementsNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == TanhNode<ElemType>::TypeName())	return New<TanhNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == TimeReverseNode<ElemType>::TypeName())	return New<TimeReverseNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == TimesNode<ElemType>::TypeName())	return New<TimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == TransposeNode<ElemType>::TypeName())	return New<TransposeNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())	return New<TransposeTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else return nullptr;
+    }
+    // create a new node of a type given as a string, with var args so that this can be used at multiple places
+    template<class... _Types>
+    ComputationNodePtr NewNode(const std::wstring & nodeType, _Types&&... _Args)
+    {
+        // try first those that accept the standard two constructor arguments
+        ComputationNodePtr newNode = NewStandardNode(nodeType, std::forward<_Types>(_Args)...);
+        if (newNode) return newNode;
+        // check more types
+        if (nodeType == AveragePoolingNode<ElemType>::TypeName())	     return New<AveragePoolingNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == ConvolutionNode<ElemType>::TypeName())	     return New<ConvolutionNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == InputValue<ElemType>::SparseTypeName())	     return New<InputValue<ElemType>>(std::forward<_Types>(_Args)..., true);
+        else if (nodeType == InputValue<ElemType>::TypeName())	             return New<InputValue<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == LearnableParameter<ElemType>::TypeName())	     return New<LearnableParameter<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == MaxPoolingNode<ElemType>::TypeName())	     return New<MaxPoolingNode<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == SparseLearnableParameter<ElemType>::TypeName()) return New<SparseLearnableParameter<ElemType>>(std::forward<_Types>(_Args)...);
+        else return nullptr;
+    }
+
+    ComputationNodePtr CreateNodeFromFile(const std::wstring& nodeType,
+                                                  const std::wstring & nodeName,
                                                   File& fstream,
                                                   size_t modelVersion)
     {
+#if 1
+        ComputationNodePtr newNode = NewNode(nodeType, fstream, modelVersion, m_deviceId, nodeName);
+        if (!newNode)
+        {
+            fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", nodeType.c_str(), nodeName.c_str());
+            throw std::invalid_argument("Invalid node type.");
+        }
+        AddNodeToNet(newNode);
+        return newNode;
+#else
         ComputationNodePtr newNode;
-
         if (nodeType == LearnableParameter<ElemType>::TypeName())
         {
-            newNode = make_shared<LearnableParameter<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<LearnableParameter<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == InputValue<ElemType>::TypeName())
         {
-            newNode = make_shared<InputValue<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<InputValue<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SparseLearnableParameter<ElemType>::TypeName())
         {
-            newNode = make_shared<SparseLearnableParameter<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<SparseLearnableParameter<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == InputValue<ElemType>::SparseTypeName())
         {
-            newNode = make_shared<InputValue<ElemType>>(fstream, modelVersion, m_deviceId, nodeName, true);
+            newNode = New<InputValue<ElemType>>(fstream, modelVersion, m_deviceId, nodeName, true);
         }
         else if (nodeType == ConvolutionNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ConvolutionNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ConvolutionNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == MaxPoolingNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MaxPoolingNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<MaxPoolingNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == AveragePoolingNode<ElemType>::TypeName())
         {
-            newNode = make_shared<AveragePoolingNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<AveragePoolingNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == NegateNode<ElemType>::TypeName())
         {
-            newNode = make_shared<NegateNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<NegateNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RectifiedLinearNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<RectifiedLinearNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SigmoidNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SigmoidNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<SigmoidNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == TanhNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TanhNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<TanhNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ExpNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ExpNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ExpNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == LogNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LogNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<LogNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == CosineNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CosineNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<CosineNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<SoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LogSoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<LogSoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SumElementsNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SumElementsNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<SumElementsNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SumColumnElementsNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<SumColumnElementsNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ScaleNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ScaleNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ScaleNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == TransposeNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TransposeNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<TransposeNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == TimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<TimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TransposeTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<TransposeTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == StrideTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<StrideTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<StrideTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ElementTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ElementTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RowElementTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<RowElementTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ColumnElementTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ColumnElementTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<DiagTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<DiagTimesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == CosDistanceNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CosDistanceNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<CosDistanceNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())
         {
-            newNode = make_shared<KhatriRaoProductNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<KhatriRaoProductNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == PlusNode<ElemType>::TypeName())
         {
-            newNode = make_shared<PlusNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<PlusNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == MinusNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MinusNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<MinusNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SquareErrorNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SquareErrorNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<SquareErrorNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CrossEntropyWithSoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<CrossEntropyWithSoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == NoiseContrastiveEstimationNode<ElemType>::TypeName())
         {
-            newNode = make_shared<NoiseContrastiveEstimationNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<NoiseContrastiveEstimationNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == CRFNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CRFNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<CRFNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == DummyCriterionNode<ElemType>::TypeName())
         {
-            newNode = make_shared<DummyCriterionNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<DummyCriterionNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == LSTMNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LSTMNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<LSTMNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CrossEntropyNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<CrossEntropyNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MatrixL1RegNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<MatrixL1RegNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MatrixL2RegNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<MatrixL2RegNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName() ||
                  nodeType == L"PerDimMeanVarNormalizationNode")
         {
             // mseltzer - hack b/c this changed (Dong?) and old models didn't load...
-            newNode = make_shared<PerDimMeanVarNormalizationNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<PerDimMeanVarNormalizationNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() ||
                  nodeType == L"PerDimMeanVarDeNormalizationNode")
         {
             // mseltzer - hack b/c this changed (Dong?) and old models didn't load...
-            newNode = make_shared<PerDimMeanVarDeNormalizationNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<PerDimMeanVarDeNormalizationNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ErrorPredictionNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ErrorPredictionNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == DropoutNode<ElemType>::TypeName())
         {
-            newNode = make_shared<DropoutNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<DropoutNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ReshapeNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ReshapeNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ReshapeNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == RowRepeatNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RowRepeatNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<RowRepeatNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == MeanNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MeanNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<MeanNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == InvStdDevNode<ElemType>::TypeName())
         {
-            newNode = make_shared<InvStdDevNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<InvStdDevNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")
         {
-            newNode = make_shared<PastValueNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<PastValueNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == FutureValueNode<ElemType>::TypeName())
         {
-            newNode = make_shared<FutureValueNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<FutureValueNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == LookupTableNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LookupTableNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<LookupTableNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == RowSliceNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RowSliceNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<RowSliceNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == RowStackNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RowStackNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<RowStackNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
         {
-            newNode = make_shared<GMMLogLikelihoodNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<GMMLogLikelihoodNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SequenceDecoderNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<SequenceDecoderNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CosDistanceWithNegativeSamplesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<CosDistanceWithNegativeSamplesNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == TimeReverseNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TimeReverseNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<TimeReverseNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == ParallelNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ParallelNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<ParallelNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else if (nodeType == PairNetworkNode<ElemType>::TypeName())
         {
-            newNode = make_shared<PairNetworkNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
+            newNode = New<PairNetworkNode<ElemType>>(fstream, modelVersion, m_deviceId, nodeName);
         }
         else
         {
@@ -1484,6 +1571,7 @@ public:
 
         AddNodeToNet(newNode);
         return newNode;
+#endif
     }
 
     ComputationNodePtr CreateLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols)
@@ -1558,7 +1646,7 @@ public:
         return newNode;
     }
 
-    ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName,
+    ComputationNodePtr CreateConvolutionNode(const std::wstring & nodeName,
                                              const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                                              const size_t horizontalSubsample, const size_t verticalSubsample,
                                              const bool zeroPadding = false,
@@ -1574,7 +1662,7 @@ public:
         return newNode;
     }
 
-    ComputationNodePtr CreateMaxPoolingNode(const std::wstring nodeName,
+    ComputationNodePtr CreateMaxPoolingNode(const std::wstring & nodeName,
                                             const size_t windowWidth,
                                             const size_t windowHeight,
                                             const size_t horizontalSubsample,
@@ -1588,7 +1676,7 @@ public:
         return newNode;
     }
 
-    ComputationNodePtr CreateAveragePoolingNode(const std::wstring nodeName, const size_t windowWidth,
+    ComputationNodePtr CreateAveragePoolingNode(const std::wstring & nodeName, const size_t windowWidth,
                                                 const size_t windowHeight, const size_t horizontalSubsample,
                                                 const size_t verticalSubsample)
     {
@@ -1600,213 +1688,218 @@ public:
         return newNode;
     }
 
-    ComputationNodePtr CreateComputationNode(const std::wstring nodeType, const std::wstring nodeName)
+    // this is the catch-all for all cases not covered as special cases above
+    ComputationNodePtr CreateComputationNode(const std::wstring & nodeType, const std::wstring & nodeName)
     {
+#if 1
+        ComputationNodePtr newNode = NewStandardNode(nodeType, m_deviceId, nodeName);
+        AddNodeToNet(newNode);
+        return newNode;
+#else
         ComputationNodePtr newNode;
-
         if (nodeType == NegateNode<ElemType>::TypeName())
         {
-            newNode = make_shared<NegateNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<NegateNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RectifiedLinearNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<RectifiedLinearNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == SigmoidNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SigmoidNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<SigmoidNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == TanhNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TanhNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<TanhNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ExpNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ExpNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ExpNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == LogNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LogNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<LogNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == CosineNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CosineNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<CosineNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == SoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SoftmaxNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<SoftmaxNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LogSoftmaxNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<LogSoftmaxNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == SumElementsNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SumElementsNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<SumElementsNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SumColumnElementsNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<SumColumnElementsNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ScaleNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ScaleNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ScaleNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == TransposeNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TransposeNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<TransposeNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == TimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TimesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<TimesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TransposeTimesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<TransposeTimesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == StrideTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<StrideTimesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<StrideTimesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ElementTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ElementTimesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ElementTimesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == RowElementTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RowElementTimesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<RowElementTimesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ColumnElementTimesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ColumnElementTimesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == DiagTimesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<DiagTimesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<DiagTimesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == CosDistanceNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CosDistanceNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<CosDistanceNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())
         {
-            newNode = make_shared<KhatriRaoProductNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<KhatriRaoProductNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == PlusNode<ElemType>::TypeName())
         {
-            newNode = make_shared<PlusNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<PlusNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == MinusNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MinusNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<MinusNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == SquareErrorNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SquareErrorNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<SquareErrorNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<CrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CrossEntropyNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<CrossEntropyNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == CRFNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CRFNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<CRFNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == DummyCriterionNode<ElemType>::TypeName())
         {
-            newNode = make_shared<DummyCriterionNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<DummyCriterionNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == LSTMNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LSTMNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<LSTMNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MatrixL1RegNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<MatrixL1RegNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MatrixL2RegNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<MatrixL2RegNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName())
         {
-            newNode = make_shared<PerDimMeanVarNormalizationNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<PerDimMeanVarNormalizationNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName())
         {
-            newNode = make_shared<PerDimMeanVarDeNormalizationNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<PerDimMeanVarDeNormalizationNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ErrorPredictionNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ErrorPredictionNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == DropoutNode<ElemType>::TypeName())
         {
-            newNode = make_shared<DropoutNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<DropoutNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ReshapeNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ReshapeNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ReshapeNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == RowRepeatNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RowRepeatNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<RowRepeatNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == MeanNode<ElemType>::TypeName())
         {
-            newNode = make_shared<MeanNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<MeanNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == InvStdDevNode<ElemType>::TypeName())
         {
-            newNode = make_shared<InvStdDevNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<InvStdDevNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")
         {
-            newNode = make_shared<PastValueNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<PastValueNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == FutureValueNode<ElemType>::TypeName())
         {
-            newNode = make_shared<FutureValueNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<FutureValueNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == LookupTableNode<ElemType>::TypeName())
         {
-            newNode = make_shared<LookupTableNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<LookupTableNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
         {
-            newNode = make_shared<GMMLogLikelihoodNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<GMMLogLikelihoodNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
         {
-            newNode = make_shared<SequenceDecoderNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<SequenceDecoderNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == TimeReverseNode<ElemType>::TypeName())
         {
-            newNode = make_shared<TimeReverseNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<TimeReverseNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
         {
-            newNode = make_shared<CosDistanceWithNegativeSamplesNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<CosDistanceWithNegativeSamplesNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == ParallelNode<ElemType>::TypeName())
         {
-            newNode = make_shared<ParallelNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<ParallelNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == RowStackNode<ElemType>::TypeName())
         {
-            newNode = make_shared<RowStackNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<RowStackNode<ElemType>>(m_deviceId, nodeName);
         }
         else if (nodeType == PairNetworkNode<ElemType>::TypeName())
         {
-            newNode = make_shared<PairNetworkNode<ElemType>>(m_deviceId, nodeName);
+            newNode = New<PairNetworkNode<ElemType>>(m_deviceId, nodeName);
         }
         else
         {
@@ -1817,6 +1910,7 @@ public:
 
         AddNodeToNet(newNode);
         return newNode;
+#endif
     }
 
     ComputationNodePtr Parameter(const size_t rows, size_t cols, const std::wstring nodeName = L"")
