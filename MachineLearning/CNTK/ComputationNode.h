@@ -62,7 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
 
         // basic init code shared by constructors
-        void Init(DEVICEID_TYPE deviceId)
+        void Init(DEVICEID_TYPE deviceId, const wstring & name)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -78,13 +78,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_reqMultiSeqHandling = false;
 
+            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             MoveMatricesToDevice(deviceId);
             InitRecurrentNode();
         }
     public:
-        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
+        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) : m_functionValues(deviceId), m_gradientValues(deviceId) 
         {
-            Init(deviceId);
+            Init(deviceId, name);
         }
 
         virtual ~ComputationNode()

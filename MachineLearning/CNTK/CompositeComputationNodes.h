@@ -35,22 +35,19 @@ class ParallelNode : public ComputationNode<ElemType>
     UsingComputationNodeMembers;
 
 public:
-    ParallelNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-    {
-        m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-        m_deviceId = deviceId;
-        //MoveMatricesToDevice(deviceId);
-        //InitRecurrentNode(); // done by baseline constructor
-    }
+    ParallelNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        : ComputationNode<ElemType>(deviceId, name)
+    { }
 
-    ParallelNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+    ParallelNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        : ComputationNode<ElemType>(deviceId, name)
     {
-        m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
         LoadFromFile(fstream, modelVersion, deviceId);
     }
 
     // copy constructor
-    ParallelNode(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+    ParallelNode(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+        : ComputationNode<ElemType>(node->m_deviceId, newName)
     {
         node->CopyTo(shared_from_this(), newName, flags);
     }
@@ -226,7 +223,10 @@ class PreComputedNode : public ComputationNode<ElemType>
     UsingComputationNodeMembers;
 
 public:
-    PreComputedNode<ElemType>(DEVICEID_TYPE deviceId) : ComputationNode<ElemType>(deviceId) {}
+    PreComputedNode<ElemType>(DEVICEID_TYPE deviceId, const wstring& name)
+        : ComputationNode<ElemType>(deviceId, name)
+    {}
+
     virtual bool HasComputed() const = 0;
     virtual void MarkComputed(const bool hasComputed) = 0;
 
@@ -277,22 +277,16 @@ class MeanNode : public PreComputedNode<ElemType>
     UsingPreComputedNodeMembers;
 
 public:
-    MeanNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : PreComputedNode<ElemType>(deviceId)
+    MeanNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        : PreComputedNode<ElemType>(deviceId, name)
     {
-        m_nodeName = (name == L""? CreateUniqNodeName() : name);
-        m_deviceId = deviceId;
-        //MoveMatricesToDevice(deviceId);
         m_hasComputed = false;
         m_numSamples = 0;
-        //InitRecurrentNode(); // done by baseline constructor
     }
 
-    MeanNode(File& fstream, const size_t modelVersion,
-             const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX,
-             const std::wstring name = L"")
-        : PreComputedNode<ElemType>(deviceId)
+    MeanNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        : PreComputedNode<ElemType>(deviceId, name)
     {
-        m_nodeName = (name == L""? CreateUniqNodeName() : name);
         LoadFromFile(fstream, modelVersion, deviceId);
     }
 
@@ -408,7 +402,7 @@ public:
 
     // copy constructor
     MeanNode(const MeanNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        : PreComputedNode<ElemType>(node->m_deviceId)
+        : PreComputedNode<ElemType>(node->m_deviceId, newName)
     {
         node->CopyTo(shared_from_this(), newName, flags);
     }
@@ -434,21 +428,17 @@ class InvStdDevNode : public PreComputedNode<ElemType>
     UsingPreComputedNodeMembers;
 public:
     InvStdDevNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        : PreComputedNode<ElemType>(deviceId), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
+        : PreComputedNode<ElemType>(deviceId, name), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
     {
-        m_nodeName = (name == L""? CreateUniqNodeName() : name);
-        m_deviceId = deviceId;
         MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         m_hasComputed = false;
         m_numSamples = 0;
-        //InitRecurrentNode(); // done by baseline constructor
     }
 
     InvStdDevNode(File& fstream, const size_t modelVersion,
                   const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        : PreComputedNode<ElemType>(deviceId), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
+        : PreComputedNode<ElemType>(deviceId, name), m_mean(deviceId), m_var(deviceId),  m_temp(deviceId)
     {
-        m_nodeName = (name == L""? CreateUniqNodeName() : name);
         LoadFromFile(fstream, modelVersion, deviceId);
     }
 
@@ -612,7 +602,7 @@ public:
 
     // copy constructor
     InvStdDevNode(const InvStdDevNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        : PreComputedNode<ElemType>(node->m_deviceId), m_mean(node->m_deviceId), m_var(node->m_deviceId),  m_temp(node->m_deviceId)
+        : PreComputedNode<ElemType>(node->m_deviceId, newName), m_mean(node->m_deviceId), m_var(node->m_deviceId), m_temp(node->m_deviceId)
     {
         node->CopyTo(shared_from_this(), newName, flags);
     }
@@ -640,26 +630,17 @@ class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>
 {
     UsingComputationNodeMembers;
 public:
-    PerDimMeanVarNormalizationNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-    {
-        m_nodeName = (name == L""? CreateUniqNodeName() : name);
-        m_deviceId = deviceId;
-        //MoveMatricesToDevice(deviceId);
-        //InitRecurrentNode(); // done by baseline constructor
-    }
+    PerDimMeanVarNormalizationNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name) { }
 
-    PerDimMeanVarNormalizationNode(File& fstream, const size_t modelVersion,
-                                   const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-         : ComputationNode<ElemType>(deviceId)
+    PerDimMeanVarNormalizationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
     {
-        m_nodeName = (name == L"") ? CreateUniqNodeName() : name;
         LoadFromFile(fstream, modelVersion, deviceId);
     }
 
     // copy constructor
     PerDimMeanVarNormalizationNode(const PerDimMeanVarNormalizationNode<ElemType>* node,
                                    const std::wstring& newName, const CopyNodeFlags flags)
-         : ComputationNode<ElemType>(node->m_deviceId)
+         : ComputationNode<ElemType>(node->m_deviceId, newName)
     {
         node->CopyTo(shared_from_this(), newName, flags);
     }
@@ -824,27 +805,19 @@ class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
     UsingComputationNodeMembers;
 
 public:
-    PerDimMeanVarDeNormalizationNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        : ComputationNode<ElemType>(deviceId)
+    PerDimMeanVarDeNormalizationNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
     {
-        m_nodeName = (name == L""? CreateUniqNodeName() : name);
-        m_deviceId = deviceId;
-        //MoveMatricesToDevice(deviceId);
-        //InitRecurrentNode(); // done by baseline constructor
     }
 
-    PerDimMeanVarDeNormalizationNode(File& fstream, const size_t modelVersion,
-                                     const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        : ComputationNode<ElemType>(deviceId)
+    PerDimMeanVarDeNormalizationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
     {
-        m_nodeName = name == L""? CreateUniqNodeName() : name;
         LoadFromFile(fstream, modelVersion, deviceId);
     }
 
     // copy constructor
     PerDimMeanVarDeNormalizationNode(const PerDimMeanVarDeNormalizationNode<ElemType>* node,
                                      const std::wstring& newName, const CopyNodeFlags flags)
-        : ComputationNode<ElemType>(node->m_deviceId)
+        : ComputationNode<ElemType>(node->m_deviceId, newName)
     {
         node->CopyTo(shared_from_this(), newName, flags);
     }
@@ -1026,8 +999,8 @@ protected:
     Matrix<ElemType> mMemory;
 
 public:
-    BatchModeNode(DEVICEID_TYPE deviceId)
-        : ComputationNode<ElemType>(deviceId), mMemory(deviceId)
+    BatchModeNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : ComputationNode<ElemType>(deviceId, name), mMemory(deviceId)
     {
     }
 
@@ -1111,25 +1084,19 @@ class TimeReverseNode : public BatchModeNode<ElemType>
     UsingBatchModeNodeMembers;
 
 public:
-    TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        : BatchModeNode<ElemType>(deviceId)
+    TimeReverseNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId, name)
     {
-        m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-        m_deviceId = deviceId;
         MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        //InitRecurrentNode(); // done by baseline constructor
     }
 
-    TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        : BatchModeNode<ElemType>(deviceId)
+    TimeReverseNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : BatchModeNode<ElemType>(deviceId, name)
     {
-        m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
         LoadFromFile(fstream, modelVersion, deviceId);
     }
 
     // copy constructor
     TimeReverseNode(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        : BatchModeNode<ElemType>(node->m_deviceId)
+        : BatchModeNode<ElemType>(node->m_deviceId, newName)
     {
         node->CopyTo(shared_from_this(), newName, flags);
     }

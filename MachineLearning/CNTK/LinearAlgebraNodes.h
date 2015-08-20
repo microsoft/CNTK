@@ -29,22 +29,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        NegateNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        NegateNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        NegateNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        NegateNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        NegateNode(const NegateNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        NegateNode(const NegateNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -133,22 +131,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        SumElementsNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        SumElementsNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        SumElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        SumElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        SumElementsNode(const SumElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        SumElementsNode(const SumElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -247,24 +243,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingComputationNodeMembers;
     public:
         SumColumnElementsNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_sumValue(deviceId)
+            : ComputationNode<ElemType>(deviceId, name), m_sumValue(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
         SumColumnElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_sumValue(deviceId)
+            : ComputationNode<ElemType>(deviceId, name), m_sumValue(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         SumColumnElementsNode(const SumColumnElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_sumValue(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_sumValue(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -378,34 +369,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        RowSliceNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_startIndex(0), m_numRows (0) 
+        RowSliceNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), m_startIndex(0), m_numRows (0) 
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        RowSliceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        RowSliceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        RowSliceNode(const RowSliceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        RowSliceNode(const RowSliceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
         
-        RowSliceNode(const DEVICEID_TYPE deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        RowSliceNode(const DEVICEID_TYPE deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             m_startIndex = start_index;
             m_numRows = num_rows;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -534,22 +519,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        RowStackNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        RowStackNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        RowStackNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        RowStackNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        RowStackNode(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        RowStackNode(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -693,22 +676,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ScaleNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        ScaleNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        ScaleNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        ScaleNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        ScaleNode(const ScaleNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        ScaleNode(const ScaleNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -833,22 +814,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        TimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        TimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        TimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        TimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        TimesNode(const TimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        TimesNode(const TimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -1023,22 +1002,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        TransposeTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        TransposeTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        TransposeTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        TransposeTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        TransposeTimesNode(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        TransposeTimesNode(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -1210,22 +1187,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ElementTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        ElementTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        ElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        ElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        ElementTimesNode(const ElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        ElementTimesNode(const ElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -1350,22 +1325,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        RowElementTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
+        RowElementTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        RowElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
+        RowElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        RowElementTimesNode(const RowElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId), m_tempMatrix(node->m_deviceId)
+        RowElementTimesNode(const RowElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_tempMatrix(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -1519,22 +1493,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ColumnElementTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
+        ColumnElementTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        ColumnElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
+        ColumnElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        ColumnElementTimesNode(const ColumnElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId), m_tempMatrix(node->m_deviceId)
+        ColumnElementTimesNode(const ColumnElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_tempMatrix(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -1698,22 +1671,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        PlusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        PlusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        PlusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        PlusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        PlusNode(const PlusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        PlusNode(const PlusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -1968,22 +1939,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        MinusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        MinusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        MinusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        MinusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        MinusNode(const MinusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        MinusNode(const MinusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -2274,19 +2243,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        DiagTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_innerproduct(deviceId), m_rightGradient(deviceId)
+        DiagTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), m_innerproduct(deviceId), m_rightGradient(deviceId)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
         DiagTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_innerproduct(deviceId), m_rightGradient(deviceId)
+            : ComputationNode<ElemType>(deviceId, name), m_innerproduct(deviceId), m_rightGradient(deviceId)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -2428,7 +2393,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         DiagTimesNode(const DiagTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_innerproduct(node->m_deviceId), m_rightGradient(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_innerproduct(node->m_deviceId), m_rightGradient(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -2436,7 +2401,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
             ComputationNodePtr node = make_shared<DiagTimesNode<ElemType>>(this, name, flags);
             return node;
         }
@@ -2456,18 +2420,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingComputationNodeMembers;
     public:
         CosDistanceNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
         CosDistanceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -2669,7 +2629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         CosDistanceNode(const CosDistanceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -2677,7 +2637,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
             ComputationNodePtr node = make_shared<CosDistanceNode<ElemType>>(this, name, flags);
             return node;
         }
@@ -2701,22 +2660,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        KhatriRaoProductNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        KhatriRaoProductNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        KhatriRaoProductNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        KhatriRaoProductNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        KhatriRaoProductNode(const KhatriRaoProductNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        KhatriRaoProductNode(const KhatriRaoProductNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -2865,20 +2822,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         CosDistanceWithNegativeSamplesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
+            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
             m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
         CosDistanceWithNegativeSamplesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
+            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
             m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -3133,7 +3086,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         CosDistanceWithNegativeSamplesNode(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -3167,22 +3120,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> mOnes; 
     public:
-        TransposeNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), mOnes(deviceId)
+        TransposeNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), mOnes(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        TransposeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), mOnes(deviceId)
+        TransposeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId, name), mOnes(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        TransposeNode(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId), mOnes(node->m_deviceId)
+        TransposeNode(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), mOnes(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -3310,28 +3261,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_Stride = input1.GetNumCols();
         }
-
-    public:
-        StrideTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        void Init()
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            //MoveMatricesToDevice(deviceId);
             m_Stride = 1;
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
-        StrideTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+    public:
+        StrideTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_Stride = 1;
+            Init();
+        }
+
+        StrideTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        {
+            Init();
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        StrideTimesNode(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
+        StrideTimesNode(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId, newName)
         {
-            m_Stride = 1;
+            Init();
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
