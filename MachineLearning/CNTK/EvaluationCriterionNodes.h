@@ -26,8 +26,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         ErrorPredictionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_maxValues.Resize(1,cols);
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("ErrorPrediction operation: one of the operants has 0 element.");
 
             if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
@@ -146,14 +146,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_maxIndexes0.GetDeviceId() != deviceId)
-                    m_maxIndexes0.TransferFromDeviceToDevice(m_maxIndexes0.GetDeviceId(), deviceId,true);
-
-                if (m_maxIndexes1.GetDeviceId() != deviceId)
-                    m_maxIndexes1.TransferFromDeviceToDevice(m_maxIndexes1.GetDeviceId(), deviceId,true);
-
-                if (m_maxValues.GetDeviceId() != deviceId)
-                    m_maxValues.TransferFromDeviceToDevice(m_maxValues.GetDeviceId(), deviceId,true);
+                m_maxIndexes0.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true);
+                m_maxIndexes1.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true);
+                m_maxValues.TransferToDeviceIfNotTherAndNotAutoPlace(deviceId, true);
             }
         }
 

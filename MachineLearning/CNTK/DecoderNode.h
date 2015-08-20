@@ -21,7 +21,7 @@ namespace Microsoft {
         * it corresponds to a decoder
         */
             template<class ElemType>
-            class SequenceDecoderNode : public ComputationNode < ElemType >
+            class SequenceDecoderNode : public ComputationNode <ElemType>
             {
             private:
                 Matrix<ElemType> mAlpha;
@@ -39,8 +39,8 @@ namespace Microsoft {
                 {
                     m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
                     m_deviceId = deviceId;
-                    MoveMatricesToDevice(deviceId);
-                    InitRecurrentNode();
+                    //MoveMatricesToDevice(deviceId);
+                    //InitRecurrentNode(); // done by baseline constructor
                     mStartLab = -1;
                     mEndLab = -1;
                 }
@@ -222,12 +222,6 @@ namespace Microsoft {
                     m_children[1] = position_dependent_score;
                     m_children[2] = transition_score;
                 }
-
-                virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-                {
-                    ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-                }
-
 
                 // copy constructor
                 SequenceDecoderNode(const SequenceDecoderNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)

@@ -61,8 +61,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
 
-    public:
-        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
+        // basic init code shared by constructors
+        void Init(DEVICEID_TYPE deviceId)
         {
             m_deviceId = deviceId;
             m_loopId = -1;
@@ -77,6 +77,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceSeg = nullptr;
 
             m_reqMultiSeqHandling = false;
+
+            MoveMatricesToDevice(deviceId);
+            InitRecurrentNode();
+        }
+    public:
+        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
+        {
+            Init(deviceId);
         }
 
         virtual ~ComputationNode()
@@ -140,6 +148,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Validate() = 0;
         virtual bool UnitTest() { return true; }
 
+        virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs, size_t numExpected = SIZE_MAX)
+        {
+            if (numExpected != SIZE_MAX && numExpected != inputs.size())
+                RuntimeError(msra::strfun::strprintf("AttachInputs: unexpected number of arguments: %d, expected: %d", (int) inputs.size(), (int) numExpected));
+            m_children = inputs;
+        }
+
         virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
             throw std::logic_error("This operation does not support single input.");
@@ -161,44 +176,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
-            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
+                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
             throw std::logic_error("This operation does not support five inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
-            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
+                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
         {
             throw std::logic_error("This operation does not support six inputs.");
         }
 
-        virtual void AttachInputs(const std::vector<ComputationNodePtr>& /*inputs*/)
-        {
-            throw std::logic_error("This operation does not support variable-length inputs.");
-        }
+        virtual void DetachInputs() { m_children.clear(); }
 
-        virtual void DetachInputs()
-        {
-            m_children.resize(0);
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_functionValues.GetDeviceId() != deviceId)
-                {
-                    bool fEmpty = m_functionValues.GetNumElements() == 0;
-                    m_functionValues.TransferFromDeviceToDevice(m_functionValues.GetDeviceId(), deviceId,true, fEmpty);
-                }
-
-                if (m_gradientValues.GetDeviceId() != deviceId)
-                {
-                    bool fEmpty = m_gradientValues.GetNumElements() == 0;
-                    m_gradientValues.TransferFromDeviceToDevice(m_gradientValues.GetDeviceId(), deviceId,true, fEmpty);
-                }
-            }
-        }
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId);
 
         //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
         virtual const Matrix<ElemType>& FunctionValues() const {return m_functionValues;}
@@ -210,22 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
         virtual bool RequireBatchMode() const { return false; }
 
-        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
-        {
-            fstream << L"\n" + NodeName() + L"=" + OperationName();
-
-            if (!IsLeaf())
-            {
-                fstream << wstring(L"(");
-                for (size_t i=0; i<ChildrenSize(); i++)
-                {
-                    if (i > 0)
-                        fstream << wstring(L",");
-                    fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
-                }
-                fstream << wstring(L")");
-            }
-        }
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
 
         virtual void SetFunctionAndGradientSize(const int numSamples) 
         {
@@ -505,15 +481,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetReqMultiSeqHandlingTo(const bool v) { m_reqMultiSeqHandling = v; }
         bool ReqMultiSeqHandling() const { return m_reqMultiSeqHandling; }
 
-        void InitRecurrentNode() 
+        void InitRecurrentNode()
         {
-            SetLoop(0);     // TODO: SetLoop() takes a bool, not an int?
+            SetLoop(false);
         }
 
         bool HasLoop() const { return m_hasloop; }
-        void SetLoop(const bool bl)
+        void SetLoop(bool hasLoop)
         {
-            m_hasloop = bl; 
+            m_hasloop = hasLoop;
         }
 
         virtual ComputationNodePtr FindChildInASet(const std::list<ComputationNodePtr>& loop) const

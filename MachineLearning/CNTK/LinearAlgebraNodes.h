@@ -33,8 +33,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         NegateNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 1) 
                 throw std::logic_error("Negate operation should have one input.");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("Negate operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
@@ -137,8 +137,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         SumElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -215,7 +215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 1) 
                 throw std::logic_error("SumElements operation should have one input.");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("SumElements operation: the input node has 0 element.");
 
             FunctionValues().Resize(1, 1);
@@ -251,8 +251,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         SumColumnElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -331,7 +331,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 1)
                 throw std::logic_error("SumColumnElements operation should have one input.");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("SumColumnElements operation: the input node has 0 element.");
 
             FunctionValues().Resize(1, Inputs(0)->FunctionValues().GetNumCols());
@@ -382,8 +382,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         RowSliceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -404,10 +404,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_deviceId = deviceId;
             m_startIndex = start_index;
             m_numRows = num_rows;
-            
-
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -496,7 +494,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 1) 
                 throw std::logic_error("RowSlice operation should have one input.");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("RowSlice operation: the input node has 0 element.");
 
             if (Inputs(0)->FunctionValues().GetNumRows() < m_startIndex + m_numRows)
@@ -540,8 +538,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         RowStackNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -699,8 +697,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         ScaleNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -802,7 +800,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2) 
                 throw std::logic_error("Scale operation requires two inputs.");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("Scale operation: one of the operands has 0 element.");
 
             if (Inputs(0)->FunctionValues().GetNumRows() != 1 || Inputs(0)->FunctionValues().GetNumCols() != 1)
@@ -839,8 +837,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         TimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -987,7 +985,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName() && cols0 != 0 && rows1 == 0)
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)&& this->LoopId() < 0)
+            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())&& this->LoopId() < 0)
                 throw std::logic_error("Times operation: One of the operants has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
@@ -1029,8 +1027,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         TransposeTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -1173,7 +1171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName() && cols0 != 0 && rows1 == 0)
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0) && this->LoopId() < 0)
+            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
                 throw std::logic_error("TransposeTimes operation: One of the operants has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
@@ -1216,8 +1214,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         ElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -1276,7 +1274,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
@@ -1318,7 +1315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("ElementTimes operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
@@ -1357,8 +1354,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         RowElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
@@ -1478,7 +1475,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2)
                 throw std::logic_error("RowElementTimes operation requires two inputs.");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("RowElementTimes operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -1510,8 +1507,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_tempMatrix.GetDeviceId() != deviceId)
-                    m_tempMatrix.TransferFromDeviceToDevice(m_tempMatrix.GetDeviceId(), deviceId);
+                
+                    m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
             }
         }
 
@@ -1531,8 +1528,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         ColumnElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
@@ -1662,7 +1659,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("ColumnElementTimes operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -1694,8 +1691,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_tempMatrix.GetDeviceId() != deviceId)
-                    m_tempMatrix.TransferFromDeviceToDevice(m_tempMatrix.GetDeviceId(), deviceId);
+                
+                    m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
             }
         }
 
@@ -1715,8 +1712,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         PlusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -1928,7 +1925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(index)->FunctionValues().Resize(rows, cols);
             }
 
-            if ((Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0) && this->LoopId() < 0)
+            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
                 throw std::logic_error("Plus operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -1985,8 +1982,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         MinusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -2235,7 +2232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(index)->FunctionValues().Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("Minus operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -2292,8 +2289,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         DiagTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -2392,7 +2389,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("DiagTimes operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows())
@@ -2426,10 +2423,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_innerproduct.GetDeviceId() != deviceId)
-                    m_innerproduct.TransferFromDeviceToDevice(m_innerproduct.GetDeviceId(), deviceId);
-                if (m_rightGradient.GetDeviceId() != deviceId)
-                    m_rightGradient.TransferFromDeviceToDevice(m_rightGradient.GetDeviceId(), deviceId);
+                
+                    m_innerproduct.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_rightGradient.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
             }
         }
 
@@ -2479,8 +2476,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         CosDistanceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -2633,7 +2630,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(index)->FunctionValues().Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("CosDistance operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() || 
@@ -2667,16 +2664,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_invNorm0.GetDeviceId() != deviceId)
-                    m_invNorm0.TransferFromDeviceToDevice(m_invNorm0.GetDeviceId(), deviceId);
-                if (m_invNorm1.GetDeviceId() != deviceId)
-                    m_invNorm1.TransferFromDeviceToDevice(m_invNorm1.GetDeviceId(), deviceId);
-                if (m_leftTerm.GetDeviceId() != deviceId)
-                    m_leftTerm.TransferFromDeviceToDevice(m_leftTerm.GetDeviceId(), deviceId);
-                if (m_rightTerm.GetDeviceId() != deviceId)
-                    m_rightTerm.TransferFromDeviceToDevice(m_rightTerm.GetDeviceId(), deviceId);
-                if (m_temp.GetDeviceId() != deviceId)
-                    m_temp.TransferFromDeviceToDevice(m_temp.GetDeviceId(), deviceId);
+                
+                    m_invNorm0.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_invNorm1.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_leftTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_rightTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_temp.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
             }
         }
 
@@ -2733,8 +2730,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         KhatriRaoProductNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -2851,7 +2848,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().Resize(rows1, cols0);
 
             //cols may be changed before this line and so cannot use cached cols values below
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("KhatriRaoProduct operation: One of the operants has 0 elements.");
 
             if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
@@ -2898,8 +2895,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         CosDistanceWithNegativeSamplesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -3099,7 +3096,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(index)->FunctionValues().Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("CosDistanceWithNegativeSamples operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
@@ -3138,18 +3135,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_invNorm0.GetDeviceId() != deviceId)
-                    m_invNorm0.TransferFromDeviceToDevice(m_invNorm0.GetDeviceId(), deviceId);
-                if (m_invNorm1.GetDeviceId() != deviceId)
-                    m_invNorm1.TransferFromDeviceToDevice(m_invNorm1.GetDeviceId(), deviceId);
-                if (m_invNormSquare.GetDeviceId() != deviceId)
-                    m_invNormSquare.TransferFromDeviceToDevice(m_invNormSquare.GetDeviceId(), deviceId);
-                if (m_leftTerm.GetDeviceId() != deviceId)
-                    m_leftTerm.TransferFromDeviceToDevice(m_leftTerm.GetDeviceId(), deviceId);
-                if (m_rightTerm.GetDeviceId() != deviceId)
-                    m_rightTerm.TransferFromDeviceToDevice(m_rightTerm.GetDeviceId(), deviceId);
-                if (m_temp.GetDeviceId() != deviceId)
-                    m_temp.TransferFromDeviceToDevice(m_temp.GetDeviceId(), deviceId);
+                
+                    m_invNorm0.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_invNorm1.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_invNormSquare.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_leftTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_rightTerm.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_temp.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
             }
         }
 
@@ -3209,8 +3206,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         TransposeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId), mOnes(deviceId)
@@ -3354,9 +3351,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            //MoveMatricesToDevice(deviceId);
             m_Stride = 1;
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         StrideTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)

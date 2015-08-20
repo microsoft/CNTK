@@ -94,12 +94,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId){ if (m_preferredDeviceId != preferredDeviceId) m_preferredDeviceId = preferredDeviceId; }
         //Moves matrix from device id_from to device with id_to. 
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
-        void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
+        void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+        //Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
+        void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+        void TransferToDeviceIfNotTherAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
         void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;
+        bool HasNoElements() const { return GetNumElements() == 0; }
         wchar_t* GetMatrixName() const;
         void SetMatrixName(const wchar_t* s);
         bool IsEmpty() const;  

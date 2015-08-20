@@ -30,35 +30,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
 
+        void Init()
+        {
+            m_reqMultiSeqHandling = true;
+            m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
+            m_timeStep = 1;
+            m_functionValues.Resize(1, 1);
+            m_pastActivity.Resize(1, 1);
+            m_historyAlreadySet = false;
+        }
     public:
         PastValueNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
             : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_reqMultiSeqHandling = true;
-            m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-            m_timeStep = 1;
-            m_functionValues.Resize(1,1);
-            m_pastActivity.Resize(1,1);
-            m_historyAlreadySet = false;
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            Init();
+            //InitRecurrentNode(); // done by baseline constructor
         }
                 
         PastValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
-
-            m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-            m_timeStep = 1;
-            m_functionValues.Resize(1,1);
-            m_pastActivity.Resize(1,1);
-            m_reqMultiSeqHandling = true;
-
-            m_historyAlreadySet = false; 
-
+            Init();
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -90,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
             m_reqMultiSeqHandling = true;
             m_default_activity = initHiddenActivity;
             m_timeStep = 1;
@@ -106,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_historyAlreadySet = false;
 
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -379,10 +375,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_boundaryInfo.GetDeviceId() != deviceId)
-                    m_boundaryInfo.TransferFromDeviceToDevice(m_boundaryInfo.GetDeviceId(), deviceId);
-                if (m_pastActivity.GetDeviceId() != deviceId)
-                    m_pastActivity.TransferFromDeviceToDevice(m_pastActivity.GetDeviceId(), deviceId, true);
+                
+                    m_boundaryInfo.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_pastActivity.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
             }
         }
 
@@ -449,7 +445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_timeStep = 1;
                 m_functionValues.Resize(1, 1);
                 m_futureActivity.Resize(1, 1);
-                InitRecurrentNode();
+                //InitRecurrentNode(); // done by baseline constructor
             }
 
         FutureValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -494,7 +490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
             m_reqMultiSeqHandling = true;
             m_default_activity = initHiddenActivity;
             m_timeStep = 1;
@@ -508,7 +504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
 
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -741,10 +737,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_boundaryInfo.GetDeviceId() != deviceId)
-                    m_boundaryInfo.TransferFromDeviceToDevice(m_boundaryInfo.GetDeviceId(), deviceId);
-                if (m_futureActivity.GetDeviceId() != deviceId)
-                    m_futureActivity.TransferFromDeviceToDevice(m_futureActivity.GetDeviceId(), deviceId, true);
+                
+                    m_boundaryInfo.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_futureActivity.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true);
             }
         }
 
@@ -819,9 +815,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
             m_reqMultiSeqHandling = true;
-            InitRecurrentNode();
+            //InitRecurrentNode(); // done by baseline constructor
             m_inputDim = 0;
             m_outputDim = 0;
             m_use_errors_from_future_minibatch = false;
@@ -1032,7 +1028,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)  //derivative with regard to the observation
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToObs);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToObs;
@@ -1040,7 +1036,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 1)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToInputGate);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToInputGate;
@@ -1048,7 +1044,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 2)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToForgetGate);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToForgetGate;
@@ -1056,7 +1052,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 3)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToOutputGate);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToOutputGate;
@@ -1064,7 +1060,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 4)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToCellWgt);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToCellWgt;
@@ -1627,13 +1623,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(4)->OperationName() != LearnableParameter<ElemType>::TypeName())
                 throw std::logic_error("LSTM validation: need to have learnable parameters ");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("LSTM validation: input size is zero!");
 
-            if (Inputs(1)->FunctionValues().GetNumElements() == 0 ||
-                Inputs(2)->FunctionValues().GetNumElements() == 0 ||
-                Inputs(3)->FunctionValues().GetNumElements() == 0 ||
-                Inputs(4)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(1)->FunctionValues().HasNoElements() ||
+                Inputs(2)->FunctionValues().HasNoElements() ||
+                Inputs(3)->FunctionValues().HasNoElements() ||
+                Inputs(4)->FunctionValues().HasNoElements())
                 throw std::logic_error("LSTM validation : parameter size is zero!");
 
 
@@ -1723,8 +1719,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     !(FunctionValues()(0, 0) == FunctionValues()(1, 0)))
                     throw("LSTMNode forward computation error");
 
-                if (FunctionValues().GetDeviceId() != m_deviceId)
-                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+                
+                    FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
                 GradientValues().Resize(nOutput, nT);
                 GradientValues().SetValue(1.0);
@@ -1763,8 +1759,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < 5; i++)
                 {
-                    if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
-                        Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
+                    
+                        Inputs(i)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
                 }
                 m_DefaultState = initStateValue;
             }
@@ -1800,63 +1796,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (deviceId != AUTOPLACEMATRIX)
             {
-                if (m_functionValues.GetDeviceId() != deviceId)
+                
                 {
-                    bool fEmpty = m_functionValues.GetNumElements() == 0;
-                    m_functionValues.TransferFromDeviceToDevice(m_functionValues.GetDeviceId(), deviceId, true, fEmpty);
+                    bool fEmpty = m_functionValues.HasNoElements();
+                    m_functionValues.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true, fEmpty);
                 }
 
-                if (m_gradientValues.GetDeviceId() != deviceId)
+                
                 {
-                    bool fEmpty = m_gradientValues.GetNumElements() == 0;
-                    m_gradientValues.TransferFromDeviceToDevice(m_gradientValues.GetDeviceId(), deviceId, true, fEmpty);
+                    bool fEmpty = m_gradientValues.HasNoElements();
+                    m_gradientValues.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId, true, fEmpty);
                 }
 
-                if (grdToObs.GetDeviceId() != deviceId)
-                    grdToObs.TransferFromDeviceToDevice(grdToObs.GetDeviceId(), deviceId);
-                if (grdToInputGate.GetDeviceId() != deviceId)
-                    grdToInputGate.TransferFromDeviceToDevice(grdToInputGate.GetDeviceId(), deviceId);
-                if (grdToForgetGate.GetDeviceId() != deviceId)
-                    grdToForgetGate.TransferFromDeviceToDevice(grdToForgetGate.GetDeviceId(), deviceId);
-                if (grdToOutputGate.GetDeviceId() != deviceId)
-                    grdToOutputGate.TransferFromDeviceToDevice(grdToOutputGate.GetDeviceId(), deviceId);
-                if (grdToCellWgt.GetDeviceId() != deviceId)
-                    grdToCellWgt.TransferFromDeviceToDevice(grdToCellWgt.GetDeviceId(), deviceId);
+                
+                    grdToObs.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdToInputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdToForgetGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdToOutputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdToCellWgt.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
 
-                if (m_State.GetDeviceId() != deviceId)
-                    m_State.TransferFromDeviceToDevice(m_State.GetDeviceId(), deviceId);
-                if (m_PastState.GetDeviceId() != deviceId)
-                    m_PastState.TransferFromDeviceToDevice(m_PastState.GetDeviceId(), deviceId);
-                if (m_PastOutput.GetDeviceId() != deviceId)
-                    m_PastOutput.TransferFromDeviceToDevice(m_PastOutput.GetDeviceId(), deviceId);
-                if (m_Gi.GetDeviceId() != deviceId)
-                    m_Gi.TransferFromDeviceToDevice(m_Gi.GetDeviceId(), deviceId);
-                if (m_Gf.GetDeviceId() != deviceId)
-                    m_Gf.TransferFromDeviceToDevice(m_Gf.GetDeviceId(), deviceId);
-                if (m_Go.GetDeviceId() != deviceId)
-                    m_Go.TransferFromDeviceToDevice(m_Go.GetDeviceId(), deviceId);
+                
+                    m_State.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_PastState.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_PastOutput.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_Gi.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_Gf.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_Go.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
 
-                if (tanhState.GetDeviceId() != deviceId)
-                    tanhState.TransferFromDeviceToDevice(tanhState.GetDeviceId(), deviceId);
-                if (tanhObs.GetDeviceId() != deviceId)
-                    tanhObs.TransferFromDeviceToDevice(tanhObs.GetDeviceId(), deviceId);
-                if (m_tempMatrix.GetDeviceId() != deviceId)
-                    m_tempMatrix.TransferFromDeviceToDevice(m_tempMatrix.GetDeviceId(), deviceId);
+                
+                    tanhState.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    tanhObs.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
 
-                if (mSlicePrevState.GetDeviceId() != deviceId)
-                    mSlicePrevState.TransferFromDeviceToDevice(mSlicePrevState.GetDeviceId(), deviceId);
-                if (mSlicePrevOutput.GetDeviceId() != deviceId)
-                    mSlicePrevOutput.TransferFromDeviceToDevice(mSlicePrevOutput.GetDeviceId(), deviceId);
-                if (grdBeforeInputGate.GetDeviceId() != deviceId)
-                    grdBeforeInputGate.TransferFromDeviceToDevice(grdBeforeInputGate.GetDeviceId(), deviceId);
-                if (grdBeforeForget.GetDeviceId() != deviceId)
-                    grdBeforeForget.TransferFromDeviceToDevice(grdBeforeForget.GetDeviceId(), deviceId);
-                if (grdBeforeGo.GetDeviceId() != deviceId)
-                    grdBeforeGo.TransferFromDeviceToDevice(grdBeforeGo.GetDeviceId(), deviceId);
-                if (grdToCell.GetDeviceId() != deviceId)
-                    grdToCell.TransferFromDeviceToDevice(grdToCell.GetDeviceId(), deviceId);
-                if (grdBeforeTanhInputGate.GetDeviceId() != deviceId)
-                    grdBeforeTanhInputGate.TransferFromDeviceToDevice(grdBeforeTanhInputGate.GetDeviceId(), deviceId);
+                
+                    mSlicePrevState.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    mSlicePrevOutput.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdBeforeInputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdBeforeForget.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdBeforeGo.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdToCell.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
+                
+                    grdBeforeTanhInputGate.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
             }
         }
 

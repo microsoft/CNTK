@@ -2345,8 +2345,7 @@ public:
                 ElemType eOrg = node->FunctionValues()(irow, icol);
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
-                                                                      net.GetDeviceID(), true);
+                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
                 }
 
                 node->UpdateEvalTimeStamp();
@@ -2365,8 +2364,7 @@ public:
                 ElemType eGradErr = node->GradientValues()(irow, icol);
                 if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(),
-                                                                      net.GetDeviceID(), true);
+                    node->GradientValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
                 }
 
                 ElemType ePos = eOrg + ElemType(EPSILON);
@@ -2375,7 +2373,7 @@ public:
                 node->FunctionValues()(irow, icol) = ePos;
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
+                    node->FunctionValues().TransferToDeviceIfNotThere(
                                                                       net.GetDeviceID(), true);
                 }
 
@@ -2388,7 +2386,7 @@ public:
                 node->FunctionValues()(irow, icol) = eNeg;
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
+                    node->FunctionValues().TransferToDeviceIfNotThere(
                                                                       net.GetDeviceID(), true);
                 }
 
@@ -2402,7 +2400,7 @@ public:
                 node->FunctionValues()(irow, icol) = eOrg;
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
+                    node->FunctionValues().TransferToDeviceIfNotThere(
                                                                       net.GetDeviceID(), true);
                 }
 

@@ -56,8 +56,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = outputChannels;
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         ConvolutionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
@@ -261,7 +261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
 
-            if (Inputs(0)->OperationName() == LearnableParameter<ElemType>::TypeName() && Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->OperationName() == LearnableParameter<ElemType>::TypeName() && Inputs(0)->FunctionValues().HasNoElements())
             {
                 Inputs(0)->FunctionValues().Resize(m_outputChannels, weightCols);
             }
@@ -286,7 +286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error(msg.c_str());            
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0 )
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() )
                 throw std::logic_error("Convolution operation: one of the operants has 0 element.");
             
             size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
@@ -326,10 +326,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
 
             if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_tempMatrix.GetDeviceId() != deviceId)
-                    m_tempMatrix.TransferFromDeviceToDevice(m_tempMatrix.GetDeviceId(), deviceId);
-            }
+                m_tempMatrix.TransferToDeviceIfNotTherAndNotAutoPlace( deviceId);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
@@ -484,8 +481,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
                 
         MaxPoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -659,7 +656,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error(msg.c_str());            
             }
             
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("MaxPoolingNode operation: the input node has 0 element.");
 
             m_functionValues.Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
@@ -722,8 +719,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            //MoveMatricesToDevice(deviceId);
+            //InitRecurrentNode(); // done by baseline constructor
         }
 
         AveragePoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
@@ -894,7 +891,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error(msg.c_str());            
             }
                         
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("AveragePoolingNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
