@@ -54,7 +54,7 @@ typedef void* HANDLE;
 #define __forceinline inline
 //string and io conversion
 #define strtok_s strtok_r
-#define sprintf_s sprintf
+#define sprintf_s snprintf
 #define sscanf_s sscanf
 #define _strdup strdup
 

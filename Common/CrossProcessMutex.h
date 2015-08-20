@@ -52,6 +52,7 @@ public:
     void Release()
     {
         assert(m_handle != NULL);
+        ::ReleaseMutex(m_handle);
         ::CloseHandle(m_handle);
         m_handle = NULL;
     }
