@@ -2121,6 +2121,11 @@ protected:
                     {
                         epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
                     }
+
+                    if (std::isnan(epochCriterion))
+                    {
+                        RuntimeError("The training criterion is not a number (NAN). Stop\n");
+                    }
                 }
             }
 
