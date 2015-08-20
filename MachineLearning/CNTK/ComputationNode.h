@@ -60,7 +60,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
-
+        ComputationNode() { }
+    private:
         // basic init code shared by constructors
         void Init(DEVICEID_TYPE deviceId, const wstring & name)
         {
@@ -82,10 +83,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             MoveMatricesToDevice(deviceId);
             InitRecurrentNode();
         }
+
     public:
-        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) : m_functionValues(deviceId), m_gradientValues(deviceId) 
+        typedef float OurElemType;
+        // call as new ComputationNode()->Construct(args)
+        void Construct(DEVICEID_TYPE deviceId, const wstring & name)
         {
+            m_functionValues = Matrix<ElemType>(deviceId);
+            m_gradientValues = Matrix<ElemType>(deviceId);
             Init(deviceId, name);
+        }
+
+        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name)
+        {
+            Construct(deviceId, name);
         }
 
         virtual ~ComputationNode()
@@ -1075,6 +1086,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // for loop nodes
         bool m_hasloop; 
     };
+
+    // factory functions
+    // Call these instead of new for any ComputationNode derivatives.  TODO: complete this
+    //template<class C, class... _Types> inline C * New1(_Types&&... _Args) { return auto p = new C(); p->Construct(std::forward<_Types>(_Args)...); return p; }
+    template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { return make_shared<C>(std::forward<_Types>(_Args)...); }
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
     // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it

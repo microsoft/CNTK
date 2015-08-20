@@ -560,7 +560,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        PairNetworkNode(const DEVICEID_TYPE deviceId, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        PairNetworkNode(size_t row_size, size_t col_size, const DEVICEID_TYPE deviceId, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
         {
             Init(row_size, col_size);
             m_gradientValues.Resize(row_size, col_size);

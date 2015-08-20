@@ -1486,9 +1486,9 @@ public:
         return newNode;
     }
 
-                ComputationNodePtr CreateLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols)
+    ComputationNodePtr CreateLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols)
     {
-        ComputationNodePtr newNode(new LearnableParameter<ElemType>(rows, cols, m_deviceId, paramName));
+        ComputationNodePtr newNode(New<LearnableParameter<ElemType>>(rows, cols, m_deviceId, paramName));
         AddNodeToNet(newNode);
         return newNode;
     }
@@ -1496,7 +1496,7 @@ public:
     //sparse matrix size is optionally specified
     ComputationNodePtr CreateSparseLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols, const size_t size = 0)
     {
-        ComputationNodePtr newNode(new SparseLearnableParameter<ElemType>(rows, cols, size, m_deviceId, paramName));
+        ComputationNodePtr newNode(New<SparseLearnableParameter<ElemType>>(rows, cols, size, m_deviceId, paramName));
         AddNodeToNet(newNode);
         return newNode;
     }
@@ -1504,28 +1504,27 @@ public:
     ComputationNodePtr CreateInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
     {
         ComputationNodePtr newNode(
-                new InputValue<ElemType>(rows, cols, m_deviceId, inputName));
+                New<InputValue<ElemType>>(rows, cols, m_deviceId, inputName));
         AddNodeToNet(newNode);
         return newNode;
     }
 
-                ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
-                {
-                    ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
-                    if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
-                    {
-                        fprintf(stderr, "PairNetwork : asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
-                        throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
-                    }
-                    newNode->AttachInputs(a);
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
+    ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(New<PairNetworkNode<ElemType>>(m_deviceId, nodeName));
+        if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
+        {
+            fprintf(stderr, "PairNetwork : asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+            RuntimeError("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
+        }
+        newNode->AttachInputs(a);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
 
     ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
     {
-        ComputationNodePtr newNode(
-                new InputValue<ElemType>(rows, cols, m_deviceId, inputName, true));
+        ComputationNodePtr newNode(New<InputValue<ElemType>>(rows, cols, m_deviceId, inputName, true));
         AddNodeToNet(newNode);
         return newNode;
     }
@@ -1536,7 +1535,7 @@ public:
                                        const size_t imageChannels,
                                        const size_t numImages)
     {
-        ComputationNodePtr newNode(new InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName));
+        ComputationNodePtr newNode(New<InputValue<ElemType>>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName));
         AddNodeToNet(newNode);
         return newNode;
     }
@@ -1547,25 +1546,25 @@ public:
                                              const size_t imageChannels,
                                              const size_t numImages)
     {
-        ComputationNodePtr newNode(new InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName, true));
+        ComputationNodePtr newNode(New<InputValue<ElemType>>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName, true));
         AddNodeToNet(newNode);
         return newNode;
     }
 
-                ComputationNodePtr CreatePairNetworkNode(const std::wstring inputName, const size_t rows, const size_t cols)
-                {
-                    ComputationNodePtr newNode(new PairNetworkNode<ElemType>(rows, cols, m_deviceId, inputName));
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
+    ComputationNodePtr CreatePairNetworkNode(const std::wstring inputName, const size_t rows, const size_t cols)
+    {
+        ComputationNodePtr newNode(New<PairNetworkNode<ElemType>>(rows, cols, m_deviceId, inputName));
+        AddNodeToNet(newNode);
+        return newNode;
+    }
 
-                ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName,
-                    const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+    ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName,
+                                             const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                                              const size_t horizontalSubsample, const size_t verticalSubsample,
                                              const bool zeroPadding = false,
                                              const size_t maxTempMemSizeInSamples = 0)
     {
-        ComputationNodePtr newNode(new ConvolutionNode<ElemType>(kernelWidth, kernelHeight,
+        ComputationNodePtr newNode(New<ConvolutionNode<ElemType>>(kernelWidth, kernelHeight,
                                                                  outputChannels,
                                                                  horizontalSubsample,
                                                                  verticalSubsample, zeroPadding,
@@ -1581,7 +1580,7 @@ public:
                                             const size_t horizontalSubsample,
                                             const size_t verticalSubsample)
     {
-        ComputationNodePtr newNode(new MaxPoolingNode<ElemType>(windowWidth, windowHeight,
+        ComputationNodePtr newNode(New<MaxPoolingNode<ElemType>>(windowWidth, windowHeight,
                                                                 horizontalSubsample,
                                                                 verticalSubsample, m_deviceId,
                                                                 nodeName));
@@ -1593,7 +1592,7 @@ public:
                                                 const size_t windowHeight, const size_t horizontalSubsample,
                                                 const size_t verticalSubsample)
     {
-        ComputationNodePtr newNode(new AveragePoolingNode<ElemType>(windowWidth, windowHeight,
+        ComputationNodePtr newNode(New<AveragePoolingNode<ElemType>>(windowWidth, windowHeight,
                                                                     horizontalSubsample,
                                                                     verticalSubsample, m_deviceId,
                                                                     nodeName));
@@ -1807,7 +1806,7 @@ public:
         }
         else if (nodeType == PairNetworkNode<ElemType>::TypeName())
         {
-            newNode = make_shared < PairNetworkNode<ElemType>>(m_deviceId, nodeName);
+            newNode = make_shared<PairNetworkNode<ElemType>>(m_deviceId, nodeName);
         }
         else
         {
@@ -1848,7 +1847,7 @@ public:
                                    const std::wstring nodeName = L"",
                                    const size_t maxTempMemSizeInSamples = 0)
     {
-        ComputationNodePtr newNode(new ConvolutionNode<ElemType>(kernelWidth, kernelHeight,
+        ComputationNodePtr newNode(New<ConvolutionNode<ElemType>>(kernelWidth, kernelHeight,
                                                                  outputChannels,
                                                                  horizontalSubsample,
                                                                  verticalSubsample, zeroPadding,
@@ -1866,7 +1865,7 @@ public:
                                   const size_t verticalSubsample,
                                   const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MaxPoolingNode<ElemType>(windowWidth, windowHeight,
+        ComputationNodePtr newNode(New<MaxPoolingNode<ElemType>>(windowWidth, windowHeight,
                                                                 horizontalSubsample,
                                                                 verticalSubsample, m_deviceId,
                                                                 nodeName));
@@ -1882,7 +1881,7 @@ public:
                                       const size_t verticalSubsample,
                                       const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new AveragePoolingNode<ElemType>(windowWidth, windowHeight,
+        ComputationNodePtr newNode(New<AveragePoolingNode<ElemType>>(windowWidth, windowHeight,
                                                                     horizontalSubsample,
                                                                     verticalSubsample, m_deviceId,
                                                                     nodeName));
@@ -1895,7 +1894,7 @@ public:
                                        const ComputationNodePtr b,
                                        const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ErrorPredictionNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<ErrorPredictionNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -1904,7 +1903,7 @@ public:
     ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean,
                                                   const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PerDimMeanVarNormalizationNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<PerDimMeanVarNormalizationNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(feature, mean, InvStdDev);
         AddNodeToNet(newNode);
         return newNode;
@@ -1913,7 +1912,7 @@ public:
     ComputationNodePtr PerDimMeanVarDeNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean,
                                                     const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PerDimMeanVarDeNormalizationNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<PerDimMeanVarDeNormalizationNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(feature, mean, InvStdDev);
         AddNodeToNet(newNode);
         return newNode;
@@ -1923,7 +1922,7 @@ public:
                                    const ComputationNodePtr b,
                                    const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SquareErrorNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<SquareErrorNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -1935,7 +1934,7 @@ public:
                                         const ComputationNodePtr pairscore, 
                                         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SequenceDecoderNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<SequenceDecoderNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(label, prediction, pairscore);
         AddNodeToNet(newNode);
         return newNode;
@@ -1946,7 +1945,7 @@ public:
                                                const std::wstring nodeName = L"")
 
     {
-        ComputationNodePtr newNode(new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<CrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(label, prediction);
         AddNodeToNet(newNode);
         return newNode;
@@ -1957,7 +1956,7 @@ public:
                                                   const ComputationNodePtr input_bias, const std::wstring nodeName = L"",
                                                   NCEEvalMode mode = NCEEvalMode::None)
     {
-        ComputationNodePtr newNode(new NoiseContrastiveEstimationNode<ElemType>(m_deviceId, nodeName, mode));
+        ComputationNodePtr newNode(New<NoiseContrastiveEstimationNode<ElemType>>(m_deviceId, nodeName, mode));
         newNode->AttachInputs(label, prediction, input_weight, input_bias);
         AddNodeToNet(newNode);
         return newNode;
@@ -1968,7 +1967,7 @@ public:
                                                     const ComputationNodePtr cls_log_post_prob,
                                                     const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(label, prediction, input_weight, cls_log_post_prob);
         AddNodeToNet(newNode);
         return newNode;
@@ -1979,7 +1978,7 @@ public:
                            const ComputationNodePtr transition_score,
                            const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CRFNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<CRFNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(label, postDepScore, transition_score);
         AddNodeToNet(newNode);
         return newNode;
@@ -1988,7 +1987,7 @@ public:
     ComputationNodePtr DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives,
         const ComputationNodePtr prediction, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DummyCriterionNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<DummyCriterionNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(objectives, derivatives, prediction);
         AddNodeToNet(newNode);
         return newNode;
@@ -2001,7 +2000,7 @@ public:
                             const ComputationNodePtr memoryCellWgt, 
                             const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LSTMNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<LSTMNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(obs, inputGate, forgetGate, outputGate, memoryCellWgt);
         AddNodeToNet(newNode);
         return newNode;
@@ -2011,7 +2010,7 @@ public:
                                     const ComputationNodePtr prediction,
                                     const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CrossEntropyNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<CrossEntropyNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(label, prediction);
         AddNodeToNet(newNode);
         return newNode;
@@ -2019,7 +2018,7 @@ public:
 
     ComputationNodePtr MatrixL1Reg(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MatrixL1RegNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<MatrixL1RegNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2027,7 +2026,7 @@ public:
 
     ComputationNodePtr MatrixL2Reg(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MatrixL2RegNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<MatrixL2RegNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2035,7 +2034,7 @@ public:
 
     ComputationNodePtr Mean(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MeanNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<MeanNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2043,7 +2042,7 @@ public:
 
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new InvStdDevNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<InvStdDevNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2051,7 +2050,7 @@ public:
 
     ComputationNodePtr Negate(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new NegateNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<NegateNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2059,7 +2058,7 @@ public:
 
     ComputationNodePtr RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RectifiedLinearNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<RectifiedLinearNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2067,7 +2066,7 @@ public:
 
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SigmoidNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<SigmoidNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2075,7 +2074,7 @@ public:
 
     ComputationNodePtr Tanh(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TanhNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<TanhNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2083,7 +2082,7 @@ public:
 
     ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ExpNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<ExpNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2091,7 +2090,7 @@ public:
 
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LogNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<LogNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2099,7 +2098,7 @@ public:
 
     ComputationNodePtr Cos(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CosineNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<CosineNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2107,7 +2106,7 @@ public:
 
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SoftmaxNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<SoftmaxNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2115,7 +2114,7 @@ public:
 
     ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LogSoftmaxNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<LogSoftmaxNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2123,7 +2122,7 @@ public:
 
     ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SumElementsNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<SumElementsNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2133,7 +2132,7 @@ public:
                              const ComputationNodePtr matrix,
                              const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ScaleNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<ScaleNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(scalar, matrix);
         AddNodeToNet(newNode);
         return newNode;
@@ -2141,7 +2140,7 @@ public:
 
     ComputationNodePtr Transpose(const ComputationNodePtr matrix, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TransposeNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<TransposeNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(matrix);
         AddNodeToNet(newNode);
         return newNode;
@@ -2151,7 +2150,7 @@ public:
                              const ComputationNodePtr b,
                              const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TimesNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<TimesNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2161,7 +2160,7 @@ public:
         const ComputationNodePtr b,
         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TransposeTimesNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<TransposeTimesNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2171,7 +2170,7 @@ public:
                                     const ComputationNodePtr b,
                                     const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ElementTimesNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<ElementTimesNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2181,7 +2180,7 @@ public:
         const ComputationNodePtr b,
         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RowElementTimesNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<RowElementTimesNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2191,24 +2190,24 @@ public:
         const ComputationNodePtr b,
         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ColumnElementTimesNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<ColumnElementTimesNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
     }
     ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
-                {
-                    ComputationNodePtr newNode(new StrideTimesNode<ElemType>(m_deviceId, nodeName));
-                    newNode->AttachInputs(a, b, c);
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
+    {
+        ComputationNodePtr newNode(New<StrideTimesNode<ElemType>>(m_deviceId, nodeName));
+        newNode->AttachInputs(a, b, c);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
 
     ComputationNodePtr DiagTimes(const ComputationNodePtr a,
                                  const ComputationNodePtr b,
                                  const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DiagTimesNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<DiagTimesNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2218,7 +2217,7 @@ public:
                                    const ComputationNodePtr b,
                                    const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CosDistanceNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<CosDistanceNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2228,7 +2227,7 @@ public:
                                         const ComputationNodePtr b,
                                         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new KhatriRaoProductNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<KhatriRaoProductNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2238,7 +2237,7 @@ public:
                             const ComputationNodePtr b,
                             const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PlusNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<PlusNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2248,7 +2247,7 @@ public:
                              const ComputationNodePtr b,
                              const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MinusNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<MinusNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
         return newNode;
@@ -2256,7 +2255,7 @@ public:
 
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DropoutNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<DropoutNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2269,7 +2268,7 @@ public:
                                const size_t img_channels,
                                const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ReshapeNode<ElemType>(m_deviceId, num_rows, img_width, img_height, img_channels, nodeName));
+        ComputationNodePtr newNode(New<ReshapeNode<ElemType>>(m_deviceId, num_rows, img_width, img_height, img_channels, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2279,7 +2278,7 @@ public:
                                  const size_t num_repeat,
                                  const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RowRepeatNode<ElemType>(m_deviceId, num_repeat, nodeName));
+        ComputationNodePtr newNode(New<RowRepeatNode<ElemType>>(m_deviceId, num_repeat, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
         return newNode;
@@ -2290,7 +2289,7 @@ public:
                              const size_t row_size, const size_t col_size,
                              const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PastValueNode<ElemType>(m_deviceId, initHiddenActivity,
+        ComputationNodePtr newNode(New<PastValueNode<ElemType>>(m_deviceId, initHiddenActivity,
                                                            row_size, col_size, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
@@ -2303,7 +2302,7 @@ public:
         const size_t row_size, const size_t col_size,
         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new FutureValueNode<ElemType>(m_deviceId, initHiddenActivity,
+        ComputationNodePtr newNode(New<FutureValueNode<ElemType>>(m_deviceId, initHiddenActivity,
             row_size, col_size, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
@@ -2315,7 +2314,7 @@ public:
                                 const ComputationNodePtr b, 
                                 const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ParallelNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<ParallelNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(a, b);
         AddNodeToNet(newNode);
 
@@ -2326,7 +2325,7 @@ public:
                                 const size_t start_index, const size_t num_rows,
                                 const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RowSliceNode<ElemType>(m_deviceId, start_index, num_rows, nodeName));
+        ComputationNodePtr newNode(New<RowSliceNode<ElemType>>(m_deviceId, start_index, num_rows, nodeName));
         newNode->AttachInputs(a);
         AddNodeToNet(newNode);
 
@@ -2335,7 +2334,7 @@ public:
 
     ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> inputs, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RowStackNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<RowStackNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(inputs);
         AddNodeToNet(newNode);
 
@@ -2348,7 +2347,7 @@ public:
                                         const ComputationNodePtr feature,
                                         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<GMMLogLikelihoodNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(unnormedPrior, mean, logStddev, feature);
         AddNodeToNet(newNode);
         return newNode;
@@ -2356,7 +2355,7 @@ public:
 
     ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TimeReverseNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<TimeReverseNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(input);
         AddNodeToNet(newNode);
         return newNode;
@@ -2366,7 +2365,7 @@ public:
                                    const ComputationNodePtr input,
                                    const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
+        ComputationNodePtr newNode(New<LookupTableNode<ElemType>>(m_deviceId, nodeName));
         newNode->AttachInputs(dictionary, input);
         AddNodeToNet(newNode);
         return newNode;
