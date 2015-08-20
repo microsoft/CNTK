@@ -30,10 +30,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
 
-        void Init()
+        void Init(ElemType initHiddenActivity = (ElemType)DEFAULT_HIDDEN_ACTIVITY)
         {
             m_reqMultiSeqHandling = true;
-            m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
+            m_default_activity = initHiddenActivity;
             m_timeStep = 1;
             m_functionValues.Resize(1, 1);
             m_pastActivity.Resize(1, 1);
@@ -41,19 +41,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
         PastValueNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
+            : ComputationNode<ElemType>(deviceId, name), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
             Init();
-            //InitRecurrentNode(); // done by baseline constructor
         }
                 
         PastValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
+            : ComputationNode<ElemType>(deviceId, name), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             Init();
             LoadFromFile(fstream, modelVersion, deviceId);
         }
@@ -82,14 +78,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fstream >> m_default_activity;
         }
 
-        PastValueNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
+        PastValueNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)  
         {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            m_reqMultiSeqHandling = true;
-            m_default_activity = initHiddenActivity;
-            m_timeStep = 1;
+            Init(initHiddenActivity);
 
             m_functionValues.Resize(row_size, col_size);
             m_functionValues.SetValue(m_default_activity);
@@ -393,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         PastValueNode(const PastValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_pastActivity(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_pastActivity(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -427,34 +419,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
 
+        void Init(size_t row_size, size_t col_size, ElemType initHiddenActivity = (ElemType)DEFAULT_HIDDEN_ACTIVITY)
+        {
+            m_reqMultiSeqHandling = true;
+            m_default_activity = initHiddenActivity;
+            m_timeStep = 1;
+            m_functionValues.Resize(row_size, col_size);
+            m_futureActivity.Resize(row_size, col_size);
+        }
     public:
         FutureValueNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId),m_boundaryInfo(CPUDEVICE)
+            : ComputationNode<ElemType>(deviceId, name), m_futureActivity(deviceId),m_boundaryInfo(CPUDEVICE)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                m_deviceId = deviceId;
-                MoveMatricesToDevice(deviceId);
-                m_reqMultiSeqHandling = true;
-                m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-                m_timeStep = 1;
-                m_functionValues.Resize(1, 1);
-                m_futureActivity.Resize(1, 1);
-                //InitRecurrentNode(); // done by baseline constructor
-            }
+            MoveMatricesToDevice(deviceId);
+            Init(1, 1);
+        }
 
         FutureValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId), m_boundaryInfo(CPUDEVICE)
+            : ComputationNode<ElemType>(deviceId, name), m_futureActivity(deviceId), m_boundaryInfo(CPUDEVICE)
         {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+            Init(1, 1);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
 
-                m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-                m_timeStep = 1;
-                m_functionValues.Resize(1, 1);
-                m_futureActivity.Resize(1, 1);
-                m_reqMultiSeqHandling = true;
+        FutureValueNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        {
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+            Init(row_size, col_size, initHiddenActivity);
 
-                LoadFromFile(fstream, modelVersion, deviceId);
-            }
+            m_functionValues.SetValue(m_default_activity);
+            m_futureActivity.SetValue(m_default_activity);
+
+            m_gradientValues.Resize(row_size, col_size);
+            m_gradientValues.SetValue(0.0f);
+        }
 
         void SaveToFile(File& fstream) const
         {
@@ -478,27 +476,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (modelVersion >= CNTK_MODEL_VERSION_2)
                 fstream >> m_default_activity;
-        }
-
-        FutureValueNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            m_reqMultiSeqHandling = true;
-            m_default_activity = initHiddenActivity;
-            m_timeStep = 1;
-
-            m_functionValues.Resize(row_size, col_size);
-            m_functionValues.SetValue(m_default_activity);
-
-            m_futureActivity.Resize(row_size, col_size);
-            m_futureActivity.SetValue(m_default_activity);
-
-            m_gradientValues.Resize(row_size, col_size);
-            m_gradientValues.SetValue(0.0f);
-
-            //InitRecurrentNode(); // done by baseline constructor
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -747,7 +724,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // copy constructor
         FutureValueNode(const FutureValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_futureActivity(node->m_deviceId)
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_futureActivity(node->m_deviceId)
         {
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -789,9 +766,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
 
+        void Init()
+        {
+            m_reqMultiSeqHandling = true;
+            m_inputDim = 0;
+            m_outputDim = 0;
+            m_use_errors_from_future_minibatch = false;
+            m_DefaultState = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
+        }
     public:
         LSTMNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_State(deviceId), m_PastState(deviceId),
+            : ComputationNode<ElemType>(deviceId, name), m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
             grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId),
             tanhState(deviceId), m_tempMatrix(deviceId),
@@ -801,36 +786,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             grdBeforeTanhInputGate(deviceId), m_obs_error_from_future_minibatch(deviceId),
             m_state_error_from_future_minibatch(deviceId), mLastState(deviceId), mLastOutput(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            m_reqMultiSeqHandling = true;
-            //InitRecurrentNode(); // done by baseline constructor
-            m_inputDim = 0;
-            m_outputDim = 0;
-            m_use_errors_from_future_minibatch = false;
-            m_DefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
+            Init();
         }
 
         LSTMNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_State(deviceId), m_PastState(deviceId), m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId), grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId), tanhState(deviceId), m_tempMatrix(deviceId), mSlicePrevState(deviceId), mSlicePrevOutput(deviceId),
+            : ComputationNode<ElemType>(deviceId, name), m_State(deviceId), m_PastState(deviceId), m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId), grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId), tanhState(deviceId), m_tempMatrix(deviceId), mSlicePrevState(deviceId), mSlicePrevOutput(deviceId),
             grdBeforeInputGate(deviceId),
             grdBeforeForget(deviceId), grdBeforeGo(deviceId), grdToCell(deviceId),
             grdBeforeTanhInputGate(deviceId), m_obs_error_from_future_minibatch(deviceId),
             m_state_error_from_future_minibatch(deviceId), mLastState(deviceId), mLastOutput(deviceId)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_inputDim = 0;
-            m_outputDim = 0;
-            m_reqMultiSeqHandling = true;
-            m_use_errors_from_future_minibatch = false;
-            m_DefaultState = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
+            Init();
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         LSTMNode(const LSTMNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_State(node->m_deviceId), m_PastState(node->m_deviceId), m_PastOutput(node->m_deviceId), m_Gi(node->m_deviceId), m_Gf(node->m_deviceId), m_Go(node->m_deviceId), grdToObs(node->m_deviceId), grdToInputGate(node->m_deviceId), grdToForgetGate(node->m_deviceId), grdToOutputGate(node->m_deviceId), grdToCellWgt(node->m_deviceId), tanhObs(node->m_deviceId), tanhState(node->m_deviceId), m_tempMatrix(node->m_deviceId), mSlicePrevState(node->m_deviceId), mSlicePrevOutput(node->m_deviceId),
+            : ComputationNode<ElemType>(node->m_deviceId, newName), m_State(node->m_deviceId), m_PastState(node->m_deviceId), m_PastOutput(node->m_deviceId), m_Gi(node->m_deviceId), m_Gf(node->m_deviceId), m_Go(node->m_deviceId), grdToObs(node->m_deviceId), grdToInputGate(node->m_deviceId), grdToForgetGate(node->m_deviceId), grdToOutputGate(node->m_deviceId), grdToCellWgt(node->m_deviceId), tanhObs(node->m_deviceId), tanhState(node->m_deviceId), m_tempMatrix(node->m_deviceId), mSlicePrevState(node->m_deviceId), mSlicePrevOutput(node->m_deviceId),
             grdBeforeInputGate(node->m_deviceId),
             grdBeforeForget(node->m_deviceId), grdBeforeGo(node->m_deviceId), grdToCell(node->m_deviceId),
             grdBeforeTanhInputGate(node->m_deviceId), m_obs_error_from_future_minibatch(node->m_deviceId),
