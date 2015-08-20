@@ -147,17 +147,17 @@
   <ItemGroup>
     <ClCompile Include="..\..\Common\File.cpp" />
     <ClCompile Include="..\..\Common\fileutil.cpp" />
-    <ClCompile Include="ConfigEvaluator.cpp" />
-    <ClCompile Include="ConfigParser.cpp" />
+    <ClCompile Include="..\CNTK\ConfigEvaluator.cpp" />
+    <ClCompile Include="..\CNTK\ConfigParser.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ConfigSpec.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConfigObjects.h" />
-    <ClInclude Include="ConfigEvaluator.h" />
-    <ClInclude Include="ConfigParser.h" />
+    <ClInclude Include="..\CNTK\ConfigObjects.h" />
+    <ClInclude Include="..\CNTK\ConfigEvaluator.h" />
+    <ClInclude Include="..\CNTK\ConfigParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

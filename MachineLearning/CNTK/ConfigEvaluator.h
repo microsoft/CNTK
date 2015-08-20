@@ -7,7 +7,7 @@
 #include "ConfigObjects.h"
 #include <memory>   // for shared_ptr
 
-namespace Microsoft{ namespace MSR { namespace CNTK {
+namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
 
     using namespace std;
     using namespace msra::strfun;   // for wstrprintf()
@@ -265,5 +265,6 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
     // understand and execute from the syntactic expression tree
     ConfigValuePtr Evaluate(ExpressionPtr);     // evaluate the expression tree
     void Do(ExpressionPtr e);                   // evaluate e.do
+    shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id);  // for experimental CNTK integration
 
-}}} // end namespaces
+}}}} // end namespaces

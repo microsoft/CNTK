@@ -19,6 +19,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
+#include "Basics.h"
 #include "ConfigEvaluator.h"
 #include <deque>
 #include <set>
@@ -30,7 +31,9 @@
 #define let const auto
 #endif
 
-namespace Microsoft{ namespace MSR { namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK { class ComputationNetwork; }}}
+
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
 
     using namespace std;
     using namespace msra::strfun;
@@ -600,6 +603,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         virtual ~AnotherAction(){}
     };
 
+    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecord &);
+
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
     // Evaluation converts a parse tree from ParseConfigString/File() into a graph of live C++ objects.
@@ -652,6 +657,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 return ConfigValuePtr(MakeRuntimeObject<C>(config), location, exprPath);
             };
             info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
+            return info;
+        }
+        ConfigurableRuntimeType MakeExperimentalComputationNetworkConstructor()
+        {
+            ConfigurableRuntimeType info;
+            info.construct = [this](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+            {
+                return ConfigValuePtr(MakeExperimentalComputationNetwork(config), location, exprPath);
+            };
+            info.isConfigRecord = true;
             return info;
         }
 
@@ -1162,13 +1177,15 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
                 // ComputationNodes
                 DefineRuntimeType(ComputationNode),
                 // other relevant classes
-                DefineRuntimeType(NDLComputationNetwork),
+                DefineRuntimeType(NDLComputationNetwork),           // currently our fake
                 // Functions
                 DefineRuntimeType(StringFunction),
                 DefineRuntimeType(NumericFunction),
                 // Actions
                 DefineRuntimeType(PrintAction),
                 DefineRuntimeType(AnotherAction),
+                // glue to experimental integration
+                { L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() }
             };
             // initialize the infixOps table (lookup table for infix operators)
             infixOps = decltype(infixOps)
@@ -1202,6 +1219,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         {
             RecordLookup(e, L"do", e->location, nullptr, L"$");  // we evaluate the member 'do'
         }
+
+        shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
+        {
+
+
+            //let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
+            //return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
+
+
+            return RecordLookup(e, id, e->location, nullptr, L"$");  // we evaluate the member 'do'
+        }
     };
 
     ConfigValuePtr Evaluate(ExpressionPtr e)
@@ -1217,4 +1245,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK {
         Evaluator().Do(e);
     }
 
-}}}     // namespaces
+    shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
+    {
+        return Evaluator().EvaluateField(e, id);
+    }
+
+}}}}     // namespaces

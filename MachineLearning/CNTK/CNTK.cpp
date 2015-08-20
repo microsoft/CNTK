@@ -32,6 +32,7 @@
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"
 #include "NDLNetworkBuilder.h"
+#include "ExperimentalNetworkBuilder.h"
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
 #include "SGD.h"
@@ -733,13 +734,19 @@ void DoTrain(const ConfigParameters& config)
 
     if (config.Exists("NDLNetworkBuilder"))
     {
-        ConfigParameters configNDL(config("NDLNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >( static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(configNDL)));
+        ConfigParameters config(config("NDLNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(config)));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
-        ConfigParameters configSNB(config("SimpleNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >{ static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(configSNB)) };
+        ConfigParameters config(config("SimpleNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(config)));
+    }
+    else if (config.Exists("ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
+    {
+        DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+        string config(config("ExperimentalNetworkBuilder"));
+        netBuilder = make_unique<ExperimentalNetworkBuilder<ElemType>>(msra::strfun::utf16(config), deviceId);
     }
     else
     {

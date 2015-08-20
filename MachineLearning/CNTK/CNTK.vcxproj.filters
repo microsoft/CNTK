@@ -42,6 +42,15 @@
       <Filter>GPU Interfacing</Filter>
     </ClCompile>
     <ClCompile Include="Profiler.cpp" />
+    <ClCompile Include="ExperimentalNetworkBuilder.cpp">
+      <Filter>Experimental</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigEvaluator.cpp">
+      <Filter>Experimental</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigParser.cpp">
+      <Filter>Experimental</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -161,6 +170,18 @@
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="ExperimentalNetworkBuilder.h">
+      <Filter>Experimental</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigEvaluator.h">
+      <Filter>Experimental</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigObjects.h">
+      <Filter>Experimental</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigParser.h">
+      <Filter>Experimental</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -171,6 +192,9 @@
     </Text>
     <Text Include="DefaultMacros.txt">
       <Filter>Misc</Filter>
+    </Text>
+    <Text Include="ConfigSpec.txt">
+      <Filter>Experimental</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -198,10 +222,16 @@
     <Filter Include="GPU Interfacing">
       <UniqueIdentifier>{8d99b2cc-5209-40e4-8b4b-a7616973ae3b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Experimental">
+      <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="prebuild.bat">
       <Filter>Misc</Filter>
+    </None>
+    <None Include="..\ParseConfig\test.config">
+      <Filter>Experimental</Filter>
     </None>
   </ItemGroup>
 </Project>
