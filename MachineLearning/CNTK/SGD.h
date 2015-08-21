@@ -283,6 +283,7 @@ public:
         m_distGradAgg = nullptr;
         m_gradHeader = nullptr;
         m_numGradientBits = 32;
+        m_zeroThresholdFor1Bit = true;
         m_enableDistributedMBReading = false;
         m_parallelizationStartEpochNum = 0;
         if ((g_mpi != nullptr) && configSGD.ExistsCurrent("ParallelTrain"))
@@ -296,6 +297,7 @@ public:
                 ConfigParameters configDataParallelSGD(configParallelTrain("DataParallelSGD", ""));
                 const char* defaultGradientBitsStr = (sizeof(ElemType) == sizeof(float)) ? "32" : "64";
                 m_numGradientBits = configDataParallelSGD("gradientBits", defaultGradientBitsStr);
+                m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", "true");
                 if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
                 {
                     throw std::invalid_argument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
@@ -2187,7 +2189,7 @@ protected:
                     learnParamsGradients.push_back(&(node->GradientValues()));
                 }
 
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, true /*useQuantizationForSelfStripe*/);
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/);
             }
 
             if (m_gradHeader == nullptr)
@@ -2780,6 +2782,7 @@ protected:
     IDistGradAggregator<ElemType>* m_distGradAgg;
     DistGradHeader<ElemType>* m_gradHeader;
     int m_numGradientBits;
+    bool m_zeroThresholdFor1Bit;
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
 

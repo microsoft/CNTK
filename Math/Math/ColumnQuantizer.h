@@ -2,6 +2,8 @@
 #define __COLUMN_QUANTIZER_H__
 #include "ValueQuantizer.h"
 
+#pragma warning (disable: 4127) // conditional expression is constant
+
 namespace Microsoft { namespace MSR { namespace CNTK {
     
     #define ColMIDX(i,j,numRow) (((j)*(numRow))+(i)) // 0 based indexing for column major
@@ -44,6 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // quantize a matrix column into qcoldata
         //  The current value of 'inResidual' is added to the matrix, and 'outResidual' gets updated with the new residual;
         //  inResidual = outResidual is allowed (intended)
+        template<bool ZeroThresholdFor1Bit>
         cudacode void Quantize(const ElemType* inMat, const ElemType* inResidual, long M, size_t j, QWord* qColBits, ElemType* outResidual) const
         {
             // we loop over QWord values
@@ -56,7 +59,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t numQWordsPerCol = QWordsPerCol(M);
             for (size_t iQWord = 0; iQWord < numQWordsPerCol; iQWord++)
             {
-                qColBits[iQWord] = QuantizeOneQWord(inMat, inResidual, M, iQWord, M, numQWordsPerCol, j, outResidual);
+                qColBits[iQWord] = QuantizeOneQWord<ZeroThresholdFor1Bit>(inMat, inResidual, M, iQWord, M, numQWordsPerCol, j, outResidual);
             }
         }
 
@@ -73,16 +76,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // workaround for not being able to declare a default argument for lambda parameters
+        template<bool ZeroThresholdFor1Bit>
         static cudacode void ComputeRangeStatColj(const ElemType* inMat, const ElemType* inResidual, long M, size_t j, size_t bits, ElemType& lower, ElemType& upper)
         {
             /*dummy reducers do nothing in linear CPU version*/
-            ComputeRangeStatColjSubset(inMat, inResidual, M, j, bits, lower, upper, 0, 1, [](ElemType&){}, [](unsigned int&){});
+            ComputeRangeStatColjSubset<ZeroThresholdFor1Bit>(inMat, inResidual, M, j, bits, lower, upper, 0, 1, [](ElemType&){}, [](unsigned int&){});
         }
 
     public:
         
         // quantize the value in  inMat[rowStart,colIdx],  inMat[rowStart + rowStride,colIdx],inMat[rowStart + rowStride*,colIdx]  ... and pack them into a QWord
         // Question: note that it is somewhat un-intuitional, but this memory access pattern is efficient for GPU?
+        template<bool ZeroThresholdFor1Bit>
         cudacode QWord QuantizeOneQWord(
             const ElemType* inMat, const ElemType* inResidual,
             long M, 
@@ -105,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // quantize   --we access element (i,j) through the three increasing pointers
                     ElemType val = *usibj + *resibj;
-                    bool qval = valQ.Quantize1(val);
+                    bool qval = valQ.Quantize1<ZeroThresholdFor1Bit>(val);
                     if (qval)
                     {
                         bitBuf |= bitmask;
@@ -125,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // quantize
                     size_t ij = ColMIDX(i, colIdx, M);
                     ElemType val = inMat[ij] + inResidual[ij];
-                    QWordVal qval = valQ.Quantize(val);
+                    QWordVal qval = valQ.Quantize<ZeroThresholdFor1Bit>(val);
 
                     // compute residual
                     ElemType uval = valQ.Unquantize(qval);
@@ -197,7 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This code is written so that it can run in parallel threads on CUDA for collated memory access;
         // set 'subsets' to >1 and pass cross-thread reducer functions for 'float' and 'size_t' (which would reduce through using CUDA __shared__ memory).
         // TODO: further opportunity for speed-up: use 'mean' from last round for 1-bit and stddev calc
-        template<class F1, class F2>
+        template<bool ZeroThresholdFor1Bit, class F1, class F2>
         static cudacode void ComputeRangeStatColjSubset(
             const ElemType* inMat,
             const ElemType* inResidual, long M,
@@ -209,9 +214,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // quantization range, cut off after how many standard deviations (make this a parameter if we care)
             size_t rows = M;
+
             // compute mean
             // computing the mean is expensive; we assume there is no reason for asymmetry and thus a zero mean
-#if defined (ZERO_THRESHOLD_FOR_1BIT)   
             // an initial experiment showed that this is significantly worse (36.0 vs. 37.7% frame acc) at the start, but seems to recover nearly (minor gap)
             // thought:
             //  - we could set the threshold at 0
@@ -221,18 +226,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - but hard-code the quantization threshold to be 0 instead of the mean of the two bounds
             // This should give us the best of all--fast operation yet ability to be asymmetric within a column
             ElemType mean = 0.0f;
-#else
-            ElemType meanacc = 0.0f;
-            // (subset: compute subset sum)
-            for (size_t i = subset; i < rows; i += subsets)
+            if (!ZeroThresholdFor1Bit || (bits != 1))
             {
-                size_t ij = ColMIDX(i, j, M);
-                meanacc += inMat[ij] + inResidual[ij];
+                ElemType meanacc = 0.0f;
+                // (subset: compute subset sum)
+                for (size_t i = subset; i < rows; i += subsets)
+                {
+                    size_t ij = ColMIDX(i, j, M);
+                    meanacc += inMat[ij] + inResidual[ij];
+                }
+                // multi-subset (CUDA): reduce to one thread
+                allReduceElem(meanacc);
+                mean = meanacc / rows;
             }
-            // multi-subset (CUDA): reduce to one thread
-            allReduceElem(meanacc);
-            ElemType mean = meanacc / rows;
-#endif
 
             if (bits == 1)
             {
@@ -265,30 +271,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 allReduceElem(meanacc1);
                 allReduceUint(num0);
                 allReduceUint(num1);
-#ifndef ZERO_THRESHOLD_FOR_1BIT    
-                // we minimize the error jointly across positive and negative numbers to make things symmetrical around the mean (which may be non-zero)
-                // tying the two sides
-                ElemType devacc0 = num0 * mean - meanacc0;
-                ElemType devacc1 = meanacc1 - num1 * mean;
 
-                // both deviations tied, to ensure consistent mean
-                ElemType dev = (devacc0 + devacc1) / rows;
-                ElemType radius = 2.0f * dev;
-                ElemType newmean = mean;
-#else       
-                // we keep two separate reconstruction values to allow for asymmetries--but we instead hard-code that the threshold is 0
+                ElemType radius;
+                ElemType newmean;
+                if (!ZeroThresholdFor1Bit)
+                {
+                    // we minimize the error jointly across positive and negative numbers to make things
+                    // symmetrical around the mean (which may be non-zero) tying the two sides
+                    ElemType devacc0 = (num0 * mean) - meanacc0;
+                    ElemType devacc1 = meanacc1 - (num1 * mean);
 
-                // happens for all-zero columns which do exist (mean0 is 0 in that case)
-                if (num0 == 0) num0 = 1;
-                if (num1 == 0) num1 = 1;
-                ElemType mean0 = meanacc0 / num0;
-                ElemType mean1 = meanacc1 / num1;
+                    // both deviations tied, to ensure consistent mean
+                    ElemType dev = (devacc0 + devacc1) / rows;
+                    radius = 2.0f * dev;
+                    newmean = mean;
+                }
+                else
+                {
+                    // we keep two separate reconstruction values to allow for asymmetries--but we
+                    // instead hard-code that the threshold is 0
 
-                // approximate by using their average as the threshold between 0 and 1
-                // with these values, bits (0,1) which mean values (0.5,1.5) will reconstruct to mean0/1
-                ElemType newmean = 0.5f * (mean0 + mean1);
-                ElemType radius = 2.0f * (mean1 - newmean);
-#endif
+                    // happens for all-zero columns which do exist (mean0 is 0 in that case)
+                    if (num0 == 0) num0 = 1;
+                    if (num1 == 0) num1 = 1;
+                    ElemType mean0 = meanacc0 / num0;
+                    ElemType mean1 = meanacc1 / num1;
+
+                    // approximate by using their average as the threshold between 0 and 1
+                    // with these values, bits (0,1) which mean values (0.5,1.5) will reconstruct to mean0/1
+                    newmean = 0.5f * (mean0 + mean1);
+                    radius = 2.0f * (mean1 - newmean);
+                }
+
                 if (subset == 0)
                 {
                     lower = newmean - radius;
@@ -314,8 +328,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (subset == 0)
                 {
                     // stddevs = how many stddevs from the mean until outside of quantization range
-                    lower = mean - stddevs * stddev;
-                    upper = mean + stddevs * stddev;
+                    lower = mean - (stddevs * stddev);
+                    upper = mean + (stddevs * stddev);
                 }
             }
         }

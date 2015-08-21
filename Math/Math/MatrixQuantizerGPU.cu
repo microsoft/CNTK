@@ -211,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix)
+    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
     {
         // Verify various input matrix parameter's dimensions
         assert((this->m_inMatrix.GetNumRows() == outQMatrix.GetNumRows()) && (this->m_inMatrix.GetNumCols() == outQMatrix.GetNumCols()));
@@ -231,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _QuantizeMatrix<ElemType>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(),
                                   this->m_inMatrix.GetNumRows(), this->m_inMatrix.GetNumCols(),
                                   outQMatrixGPU.GetArray(), nBits, GetComputeStream(),
-                                  this->m_residual->BufferPointer());
+                                  this->m_residual->BufferPointer(), zeroThresholdFor1Bit);
         
         RecordQuantizeCompleteEvent(GetComputeStream());
 

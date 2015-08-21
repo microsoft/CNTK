@@ -45,10 +45,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static_assert(sizeof(double) == sizeof(ValueType), "Quantized word size != size of ElemType=double");
     };
 
-    // option for handling the mean for 1-bit quantization    
-    // force 1-bit quant to threshold against 0 rather than the midpoint between lower and upper
-    #define ZERO_THRESHOLD_FOR_1BIT 
-
     template<class ElemType>
     class ValueQuantizer
     {
@@ -60,10 +56,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         cudasharedcode ValueQuantizer(size_t ldNbits, ElemType lower, ElemType upper);
+
+        template<bool ZeroThresholdFor1Bit>
         cudasharedcode QWordVal Quantize(ElemType u) const;
+
         cudasharedcode ElemType Unquantize(QWordVal u) const;
 
+        template<bool ZeroThresholdFor1Bit>
         cudasharedcode bool Quantize1(ElemType u) const;
+
         static cudasharedcode ElemType Unquantize1(bool u, ElemType val0, ElemType val1);
 
         //how many bits we are quanatizing to
@@ -93,10 +94,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType quantimin;
         ElemType quantimax;
         
-    #ifndef ZERO_THRESHOLD_FOR_1BIT
         // quantization threshold for 1-bit case
         ElemType quantimid;              
-    #endif
     
         // precomputed factor for quantizating
         ElemType qfactor;    

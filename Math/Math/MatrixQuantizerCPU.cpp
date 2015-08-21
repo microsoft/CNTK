@@ -12,7 +12,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void  MatrixQuantizerCPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix)
+    void  MatrixQuantizerCPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
     {
         // The outQMatrix should be on the CPU
         // TODO: Support transferring the quantization output to a quantized matrix on the GPU 
@@ -34,9 +34,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         {
             auto & qcol = *(outQMatrix.GetQuantizedColumn(j));
-            ColumnQuantizer<ElemType>::ComputeRangeStatColj(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
+            if (zeroThresholdFor1Bit)
+            {
+                ColumnQuantizer<ElemType>::ComputeRangeStatColj<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
+            }
+            else
+            {
+                ColumnQuantizer<ElemType>::ComputeRangeStatColj<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
+            }
+
             ColumnQuantizer<ElemType> q(ldNbits, qcol.lower, qcol.upper);
-            q.Quantize(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
+            if (zeroThresholdFor1Bit)
+            {
+                q.Quantize<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
+            }
+            else
+            {
+                q.Quantize<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
+            }
         }
     #ifdef QUANTUSEPPL
         );
