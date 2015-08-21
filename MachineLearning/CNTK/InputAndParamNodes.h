@@ -30,12 +30,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        LearnableParameter(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
-            //intentionally comment out so that we may support automatic dimention inference
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
+            //the following is intentionally commented out so that we may support automatic dimension inference
             //if (rows * cols == 0) 
-            //    throw std::logic_error("This LearnableParameter dimension is 0.");
+            //    LogicError("This LearnableParameter dimension is 0.");
 
             m_needGradient = true;
             m_functionValues.Resize(rows, cols);
@@ -45,9 +46,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        LearnableParameter(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -79,8 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = rows;
             m_outputChannels = 1;
         }
-
-
+        
         virtual const std::wstring OperationName() const {return TypeName();}
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
@@ -107,18 +107,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        LearnableParameter(const LearnableParameter<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const LearnableParameter<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<LearnableParameter<ElemType>>(this, name, flags);
-            return node;
+            return New<LearnableParameter<ElemType>>(this, name, flags);
         }
     };
 
@@ -129,18 +127,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        SparseLearnableParameter(size_t rows, size_t cols, const size_t size, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : LearnableParameter<ElemType>(rows, cols, deviceId, name)
+        void Construct(size_t rows, size_t cols, const size_t size, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            LearnableParameter<ElemType>::Construct(rows, cols, deviceId, name);
+            // further initializations
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(rows, cols, size);
         }
 
-        SparseLearnableParameter (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : LearnableParameter<ElemType>(fstream, modelVersion, deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") 
         {
+            LearnableParameter<ElemType>::Construct(fstream, modelVersion, deviceId, name);
+            // further initializations
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+        }
+
+        // copy constructor
+        void Construct(const SparseLearnableParameter <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+        {
+            LearnableParameter<ElemType>::Construct(node, newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<SparseLearnableParameter<ElemType>>(this, name, flags);
         }
 
         virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
@@ -152,20 +164,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"SparseLearnableParameter";} 
-
-        // copy constructor
-        SparseLearnableParameter (const SparseLearnableParameter <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : LearnableParameter<ElemType>( node, newName, flags)
-        {
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<SparseLearnableParameter<ElemType>>(this, name, flags);
-            return node;
-        }
     };
 
     template class SparseLearnableParameter<float>; 
@@ -188,8 +186,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needGradient = false;
         }
     public:
-        InputValue(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId, name) 
+        void Construct(size_t rows, size_t cols, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false)
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             m_outputWidth = 1;
             m_outputHeight = rows;
             m_outputChannels = 1;
@@ -197,8 +197,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(rows, cols, isSparse);
         }
         
-        InputValue(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId, name)
+        void Construct(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false)
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             size_t rows = imageWidth * imageHeight * imageChannels;
             size_t cols = numImages;
 
@@ -209,10 +211,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(rows, cols, isSparse);
         }
 
-        InputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false)
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             m_isSparse = isSparse;
             LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        // copy constructor
+        void Construct(const InputValue<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+        {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            node->CopyTo(shared_from_this(), newName, flags);
+        }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<InputValue<ElemType>>(this, name, flags);
         }
 
         virtual void SaveToFile(File& fstream) const
@@ -267,22 +284,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << string(str);        
         }
-
-        // copy constructor
-        InputValue(const InputValue<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
-        {
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<InputValue<ElemType>>(this, name, flags);
-            return node;
-        }
-
     private:
         bool m_isSparse = false;
         void ConvertToSparseMatrix()
@@ -304,14 +305,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        LookupTableNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        LookupTableNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -455,19 +457,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-            ComputationNodePtr node = make_shared<LookupTableNode<ElemType>>(this, name, flags);
+            ComputationNodePtr node(New<LookupTableNode<ElemType>>(this, name, flags));
             return node;
         }
 
-        LookupTableNode(const LookupTableNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const LookupTableNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
         
         bool UnitTest()
         {
-            try{
+            try
+            {
                 size_t nInput = 2;
                 size_t nHidden = 3;
                 size_t nOutput = 3;
@@ -493,8 +496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     !ISCLOSE(FunctionValues()(1, 1), 2.0, EPSILON) )
                     throw("LSTMNode forward computation error");
 
-                
-                    FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
+                FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
                 GradientValues().Resize(nInput, nOutput);
                 GradientValues().SetValue(1.0);
@@ -515,11 +517,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     throw("LSTMNode gradient error on input gates");
 
                 for (size_t i = 0; i < 2; i++)
-                {
-                    
-                        Inputs(i)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
-                }
-
+                    Inputs(i)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
             }
             catch (...)
             {
@@ -549,19 +547,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.Resize(row_size, col_size);
         }
     public:
-        PairNetworkNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             Init(1, 1);
         }
 
-        PairNetworkNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             Init(1, 1);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
-        PairNetworkNode(size_t row_size, size_t col_size, const DEVICEID_TYPE deviceId, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        void Construct(size_t row_size, size_t col_size, const DEVICEID_TYPE deviceId, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             Init(row_size, col_size);
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
@@ -652,18 +656,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"PairNetwork"; }
 
         // copy constructor
-        PairNetworkNode(const PairNetworkNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const PairNetworkNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<PairNetworkNode<ElemType>>(this, name, flags);
-            return node;
+            return New<PairNetworkNode<ElemType>>(this, name, flags);
         }
 
     protected:

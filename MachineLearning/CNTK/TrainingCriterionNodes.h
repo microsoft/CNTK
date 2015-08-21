@@ -21,15 +21,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        SquareErrorNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId, name), m_leftMinusRight(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
+            m_leftMinusRight = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        SquareErrorNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_leftMinusRight(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_leftMinusRight = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -159,18 +163,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        SquareErrorNode(const SquareErrorNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_leftMinusRight(node->m_deviceId)
+        void Construct(const SquareErrorNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_leftMinusRight = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<SquareErrorNode<ElemType>>(this, name, flags);
-            return node;
+            return New<SquareErrorNode<ElemType>>(this, name, flags);
         }
 
     protected:
@@ -189,15 +193,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        CrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId, name), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
+            m_logSoftmaxOfRight = Matrix<ElemType>(deviceId), m_softmaxOfRight = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        CrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_logSoftmaxOfRight = Matrix<ElemType>(deviceId), m_softmaxOfRight = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -367,18 +375,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        CrossEntropyWithSoftmaxNode(const CrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_logSoftmaxOfRight(node->m_deviceId), m_softmaxOfRight(node->m_deviceId)
+        void Construct(const CrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_logSoftmaxOfRight = Matrix<ElemType>(node->m_deviceId), m_softmaxOfRight = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<CrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
-            return node;
+            return New<CrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
         }
 
     protected:
@@ -399,15 +407,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        CrossEntropyNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId, name), m_logOfRight(deviceId), m_leftDivRight(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
+            m_logOfRight = Matrix<ElemType>(deviceId), m_leftDivRight = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        CrossEntropyNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_logOfRight(deviceId), m_leftDivRight(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_logOfRight = Matrix<ElemType>(deviceId), m_leftDivRight = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -552,18 +564,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        CrossEntropyNode(const CrossEntropyNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_logOfRight(node->m_deviceId), m_leftDivRight(node->m_deviceId)
+        void Construct(const CrossEntropyNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_logOfRight = Matrix<ElemType>(node->m_deviceId), m_leftDivRight = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<CrossEntropyNode<ElemType>>(this, name, flags);
-            return node;
+            return New<CrossEntropyNode<ElemType>>(this, name, flags);
         }
 
     protected:
@@ -584,15 +596,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        MatrixL1RegNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId, name), m_gradientOfL1Norm(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
+            m_gradientOfL1Norm = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        MatrixL1RegNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_gradientOfL1Norm(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_gradientOfL1Norm = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -687,18 +703,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        MatrixL1RegNode(const MatrixL1RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_gradientOfL1Norm(node->m_deviceId)
+        void Construct(const MatrixL1RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_gradientOfL1Norm = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<MatrixL1RegNode<ElemType>>(this, name, flags);
-            return node;
+            return New<MatrixL1RegNode<ElemType>>(this, name, flags);
         }
 
     protected:
@@ -717,15 +733,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        MatrixL2RegNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId, name), m_temp(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
+            m_temp = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        MatrixL2RegNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_temp(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_temp = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -801,18 +821,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        MatrixL2RegNode(const MatrixL2RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_temp(node->m_deviceId)
+        void Construct(const MatrixL2RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_temp = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<MatrixL2RegNode<ElemType>>(this, name, flags);
-            return node;
+            return New<MatrixL2RegNode<ElemType>>(this, name, flags);
         }
                 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -841,10 +861,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        NoiseContrastiveEstimationNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", NCEEvalMode xm_evalMode = NCEEvalMode::None)
-            : ComputationNode<ElemType>(deviceId, name), m_logSoftmax(deviceId),
-            m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", NCEEvalMode xm_evalMode = NCEEvalMode::None)
         {
+            m_logSoftmax = Matrix<ElemType>(deviceId);
+            m_softMax = Matrix<ElemType>(deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(deviceId), m_ncePrediction = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
             m_evalMode = xm_evalMode;
         }
@@ -872,10 +894,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_evalMode = xevMode;
         }
 
-        NoiseContrastiveEstimationNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_logSoftmax(deviceId),
-            m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_logSoftmax = Matrix<ElemType>(deviceId);
+            m_softMax = Matrix<ElemType>(deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(deviceId), m_ncePrediction = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
              LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -1026,18 +1050,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        NoiseContrastiveEstimationNode(const NoiseContrastiveEstimationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
+        void Construct(const NoiseContrastiveEstimationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_logSoftmax = Matrix<ElemType>(node->m_deviceId), m_softMax = Matrix<ElemType>(node->m_deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<NoiseContrastiveEstimationNode<ElemType>>(this, name, flags);
-            return node;
+            return New<NoiseContrastiveEstimationNode<ElemType>>(this, name, flags);
         }
 
     protected:
@@ -1070,14 +1094,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ClassBasedCrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_logSoftmax = Matrix<ElemType>(deviceId), m_softMax = Matrix<ElemType>(deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(deviceId), m_clsLogSoftmax = Matrix<ElemType>(deviceId), m_clsSoftmax = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        ClassBasedCrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_logSoftmax = Matrix<ElemType>(deviceId), m_softMax = Matrix<ElemType>(deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(deviceId), m_clsLogSoftmax = Matrix<ElemType>(deviceId), m_clsSoftmax = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -1208,12 +1236,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
             if (Inputs(0)->FunctionValues().GetDeviceId() != CPUDEVICE)
-            {
                 LogicError("ClassBasedCrossEntropyWithSoftmax: evaluatethisnode. the label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
-            }
 
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(),
-                Inputs(3)->FunctionValues(), m_logSoftmax, m_softMax, m_clsLogSoftmax, m_clsSoftmax, m_totalNbrWords, this);
+                              Inputs(3)->FunctionValues(), m_logSoftmax, m_softMax, m_clsLogSoftmax, m_clsSoftmax, m_totalNbrWords, this);
             m_needRecomputeGradientToSoftmaxInput = true;
         }
 
@@ -1425,18 +1451,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        ClassBasedCrossEntropyWithSoftmaxNode(const ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_logSoftmax(node->m_deviceId), m_softMax(node->m_deviceId), m_grdToSoftMaxInput(node->m_deviceId)
+        void Construct(const ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_logSoftmax = Matrix<ElemType>(node->m_deviceId), m_softMax = Matrix<ElemType>(node->m_deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
-            return node;
+            return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
         }
 
     protected:
@@ -1494,14 +1520,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     public:
-        CRFNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            mAlpha = Matrix<ElemType>(deviceId); mBeta = Matrix<ElemType>(deviceId); mPostProb = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        CRFNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            mAlpha = Matrix<ElemType>(deviceId); mBeta = Matrix<ElemType>(deviceId); mPostProb = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -1549,8 +1579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("CRFNode only takes with respect to input and weight.");
 
             if (inputIndex == 1)
-                ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(),
-                mPostProb, Inputs(inputIndex)->GradientValues());
+                ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(), mPostProb, Inputs(inputIndex)->GradientValues());
             else if (inputIndex == 2)
             {
                 size_t ncol = mAlpha.GetNumCols();
@@ -1776,22 +1805,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->mStartLbl = mStartLbl;
                 node->mEndLbl = mEndLbl;
             }
-
         }
 
         // copy constructor
-        CRFNode(const CRFNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), mAlpha(node->m_deviceId), mBeta(node->m_deviceId), mPostProb(node->m_deviceId)
+        void Construct(const CRFNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            mAlpha = Matrix<ElemType>(node->m_deviceId), mBeta = Matrix<ElemType>(node->m_deviceId), mPostProb = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<CRFNode<ElemType>>(this, name, flags);
-            return node;
+            return New<CRFNode<ElemType>>(this, name, flags);
         }
 
     };
@@ -1811,14 +1839,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        DummyCriterionNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        DummyCriterionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -1829,19 +1859,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (inputIndex > 2)
                 throw std::invalid_argument("DummyCriterionNode only takes three inputs.");
-
-            if (inputIndex == 0)
-            {
-                throw std::logic_error("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
-            }
+            else if (inputIndex == 0)
+                LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)
-            {
-                throw std::logic_error("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
-            }
+                LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else
-            {
                 ComputeInputPartialThree(Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-            }
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
@@ -1868,9 +1891,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0)  
         {
             if (inputFunctionValues0.GetNumRows() != 1 || inputFunctionValues0.GetNumCols() != 1)
-            {
                 throw std::logic_error("DummyCriterionNode expects first input has dimension (1, 1).\n");
-            }
             functionValues.Resize(1, 1);
             functionValues.SetValue(inputFunctionValues0.Get00Element());
 #if NANCHECK
@@ -1930,27 +1951,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        DummyCriterionNode(const DummyCriterionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const DummyCriterionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-                
-            ComputationNodePtr node = make_shared<DummyCriterionNode<ElemType>>(this, name, flags);
-            return node;
+            return New<DummyCriterionNode<ElemType>>(this, name, flags);
         }
 
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     };
 
     template class DummyCriterionNode<float>; 
     template class DummyCriterionNode<double>;
-
 
 }}}

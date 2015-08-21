@@ -29,30 +29,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        NegateNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)  
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        NegateNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        NegateNode(const NegateNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const NegateNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<NegateNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<NegateNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -131,30 +131,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        SumElementsNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)  
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        SumElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        SumElementsNode(const SumElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const SumElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<SumElementsNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<SumElementsNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -242,30 +241,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        SumColumnElementsNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_sumValue(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_sumValue = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        SumColumnElementsNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_sumValue(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_sumValue = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        SumColumnElementsNode(const SumColumnElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_sumValue(node->m_deviceId)
+        void Construct(const SumColumnElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_sumValue = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<SumColumnElementsNode<ElemType>>(this, name, flags);
-            return node;
+            return New<SumColumnElementsNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -369,36 +372,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        RowSliceNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_startIndex(0), m_numRows (0) 
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
+            m_startIndex = 0; m_numRows = 0;
         }
 
-        RowSliceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        RowSliceNode(const RowSliceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const RowSliceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
         
-        RowSliceNode(const DEVICEID_TYPE deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)  
+        void Construct(const DEVICEID_TYPE deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             m_startIndex = start_index;
             m_numRows = num_rows;
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<RowSliceNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<RowSliceNode<ElemType>>(this, name, flags);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -519,30 +526,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        RowStackNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        RowStackNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        RowStackNode(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<RowStackNode<ElemType>>(this, name, flags);
-            return node;
+            return New<RowStackNode<ElemType>>(this, name, flags);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -676,30 +684,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ScaleNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)  
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        ScaleNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        ScaleNode(const ScaleNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const ScaleNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<ScaleNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<ScaleNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -814,30 +823,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        TimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        TimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        TimesNode(const TimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const TimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<TimesNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<TimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -1002,30 +1012,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        TransposeTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        TransposeTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        TransposeTimesNode(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<TransposeTimesNode<ElemType>>(this, name, flags);
-            return node;
+            return New<TransposeTimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1187,30 +1198,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ElementTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        ElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        ElementTimesNode(const ElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const ElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<ElementTimesNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<ElementTimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -1325,31 +1337,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        RowElementTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_tempMatrix = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        RowElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_tempMatrix = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        RowElementTimesNode(const RowElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_tempMatrix(node->m_deviceId)
+        void Construct(const RowElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_tempMatrix = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<RowElementTimesNode<ElemType>>(this, name, flags);
-            return node;
+            return New<RowElementTimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1493,31 +1509,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ColumnElementTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_tempMatrix = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        ColumnElementTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_tempMatrix = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        ColumnElementTimesNode(const ColumnElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_tempMatrix(node->m_deviceId)
+        void Construct(const ColumnElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_tempMatrix = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<ColumnElementTimesNode<ElemType>>(this, name, flags);
-            return node;
+            return New<ColumnElementTimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1671,30 +1691,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        PlusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)  
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        PlusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        PlusNode(const PlusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const PlusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<PlusNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<PlusNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -1939,30 +1961,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        MinusNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)  
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        MinusNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        MinusNode(const MinusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const MinusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<MinusNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<MinusNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2243,15 +2267,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        DiagTimesNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_innerproduct(deviceId), m_rightGradient(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_innerproduct = Matrix<ElemType>(deviceId), m_rightGradient = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        DiagTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_innerproduct(deviceId), m_rightGradient(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_innerproduct = Matrix<ElemType>(deviceId), m_rightGradient = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -2392,17 +2420,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        DiagTimesNode(const DiagTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_innerproduct(node->m_deviceId), m_rightGradient(node->m_deviceId)
+        void Construct(const DiagTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_innerproduct = Matrix<ElemType>(node->m_deviceId), m_rightGradient = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            ComputationNodePtr node = make_shared<DiagTimesNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<DiagTimesNode<ElemType>>(this, name, flags);
         }
 
     private:
@@ -2419,15 +2448,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        CosDistanceNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
+            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        CosDistanceNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -2628,17 +2661,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        CosDistanceNode(const CosDistanceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
+        void Construct(const CosDistanceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_invNorm0 = Matrix<ElemType>(node->m_deviceId), m_invNorm1 = Matrix<ElemType>(node->m_deviceId), m_leftTerm = Matrix<ElemType>(node->m_deviceId), m_rightTerm = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            ComputationNodePtr node = make_shared<CosDistanceNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<CosDistanceNode<ElemType>>(this, name, flags);
         }
 
     private:
@@ -2660,30 +2694,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        KhatriRaoProductNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)  
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        KhatriRaoProductNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        KhatriRaoProductNode(const KhatriRaoProductNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const KhatriRaoProductNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<KhatriRaoProductNode<ElemType>>(this, name, flags);
-            return node;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            return New<KhatriRaoProductNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2821,17 +2857,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingComputationNodeMembers;
 
     public:
-        CosDistanceWithNegativeSamplesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
-            m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_invNormSquare = Matrix<ElemType>(deviceId); 
+            m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        CosDistanceWithNegativeSamplesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
-            m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_invNormSquare = Matrix<ElemType>(deviceId); 
+            m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -3085,18 +3125,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        CosDistanceWithNegativeSamplesNode(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_invNorm0(node->m_deviceId), m_invNorm1(node->m_deviceId), m_leftTerm(node->m_deviceId), m_rightTerm(node->m_deviceId), m_temp(node->m_deviceId)
+        void Construct(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_invNorm0 = Matrix<ElemType>(node->m_deviceId), m_invNorm1 = Matrix<ElemType>(node->m_deviceId), m_leftTerm = Matrix<ElemType>(node->m_deviceId), m_rightTerm = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<CosDistanceWithNegativeSamplesNode<ElemType>>(this, name, flags);
-            return node;
+            return New<CosDistanceWithNegativeSamplesNode<ElemType>>(this, name, flags);
         }
 
     private:
@@ -3110,8 +3150,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_temp;
     };
 
-	template class CosDistanceWithNegativeSamplesNode<float>;
-	template class CosDistanceWithNegativeSamplesNode<double>;
+    template class CosDistanceWithNegativeSamplesNode<float>;
+    template class CosDistanceWithNegativeSamplesNode<double>;
 
     template<class ElemType>
     class TransposeNode : public ComputationNode<ElemType>
@@ -3120,30 +3160,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> mOnes; 
     public:
-        TransposeNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), mOnes(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            mOnes = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
         }
 
-        TransposeNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), mOnes(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            mOnes = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        TransposeNode(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName), mOnes(node->m_deviceId)
+        void Construct(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            mOnes = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<TransposeNode<ElemType>>(this, name, flags);
-            return node;
+            return New<TransposeNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -3267,21 +3311,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
-        StrideTimesNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             Init();
         }
 
-        StrideTimesNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             Init();
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
-        StrideTimesNode(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             Init();
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -3289,9 +3338,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<StrideTimesNode<ElemType>>(this, name, flags);
-            return node;
+            return New<StrideTimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }

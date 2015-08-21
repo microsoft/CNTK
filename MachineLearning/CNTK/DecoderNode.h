@@ -22,30 +22,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SequenceDecoderNode : public ComputationNode <ElemType>
     {
+        UsingComputationNodeMembers;
     private:
         Matrix<ElemType> mAlpha;
         Matrix<ElemType> mBacktrace;
 
         int mStartLab; /// the starting output label
         int mEndLab;   /// the ending output label, if avaliable
-        ElemType  m_default_activity; 
-        UsingComputationNodeMembers;
-
+        ElemType  m_default_activity;
 
     public:
-        SequenceDecoderNode(const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), mAlpha(deviceId), mBacktrace(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            mAlpha = Matrix<ElemType>(deviceId); mBacktrace = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             mStartLab = -1;
             mEndLab = -1;
         }
 
-        SequenceDecoderNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE  deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), mAlpha(deviceId), mBacktrace(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            this->Construct(deviceId, name);
             LoadFromFile(fstream, modelVersion, deviceId);
-            mStartLab = -1;
-            mEndLab = -1;
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -218,18 +217,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        SequenceDecoderNode(const SequenceDecoderNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const SequenceDecoderNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<SequenceDecoderNode<ElemType>>(this, name, flags);
-            return node;
+            return New<SequenceDecoderNode<ElemType>>(this, name, flags);
         }
 
     };
