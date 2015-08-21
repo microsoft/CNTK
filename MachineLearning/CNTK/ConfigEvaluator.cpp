@@ -608,667 +608,630 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
     // Evaluation converts a parse tree from ParseConfigString/File() into a graph of live C++ objects.
-    // TODO: This class has no members except for pre-initialized lookup tables. We could get rid of the class.
     // =======================================================================
 
-    //class Evaluator
-    //{
-        // -----------------------------------------------------------------------
-        // error handling
-        // -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // error handling
+    // -----------------------------------------------------------------------
 
-        __declspec(noreturn) void Fail(const wstring & msg, TextLocation where) /*const*/ { throw EvaluationError(msg, where); }
+    __declspec(noreturn) static void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
+    __declspec(noreturn) static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
+    __declspec(noreturn) static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier " + id, where); }
 
-        __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) /*const*/ { Fail(L"expected expression of type " + what, e->location); }
-        __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) /*const*/ { Fail(L"unknown identifier " + id, where); }
+    // -----------------------------------------------------------------------
+    // access to ConfigValuePtr content with error messages
+    // -----------------------------------------------------------------------
 
-        // -----------------------------------------------------------------------
-        // access to ConfigValuePtr content with error messages
-        // -----------------------------------------------------------------------
+    // get value
+    template<typename T>
+    static shared_ptr<T> AsPtr(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
+    {
+        if (!value.Is<T>())
+            TypeExpected(typeForMessage, e);
+        return value.AsPtr<T>();
+    }
 
-        // get value
-        template<typename T>
-        shared_ptr<T> AsPtr(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
+    static double ToDouble(ConfigValuePtr value, ExpressionPtr e)
+    {
+        let val = dynamic_cast<Double*>(value.get());
+        if (!val)
+            TypeExpected(L"number", e);
+        double & dval = *val;
+        return dval;    // great place to set breakpoint
+    }
+
+    // get number and return it as an integer (fail if it is fractional)
+    static int ToInt(ConfigValuePtr value, ExpressionPtr e)
+    {
+        let val = ToDouble(value, e);
+        let res = (int)(val);
+        if (val != res)
+            TypeExpected(L"integer", e);
+        return res;
+    }
+
+    static bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
+    {
+        let val = dynamic_cast<Bool*>(value.get());            // TODO: factor out this expression
+        if (!val)
+            TypeExpected(L"boolean", e);
+        return *val;
+    }
+
+    // -----------------------------------------------------------------------
+    // configurable runtime types ("new" expression)
+    // -----------------------------------------------------------------------
+
+    // helper for configurableRuntimeTypes initializer below
+    // This returns a ConfigurableRuntimeType info structure that consists of
+    //  - a lambda that is a constructor for a given runtime type and
+    //  - a bool saying whether T derives from IsConfigRecord
+    struct ConfigurableRuntimeType
+    {
+        bool isConfigRecord;
+        function<ConfigValuePtr(const ConfigRecord &, TextLocation, const wstring &)> construct; // lambda to construct an object of this class
+    };
+
+    template<class C>
+    static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
+    {
+        ConfigurableRuntimeType info;
+        info.construct = [](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
         {
-            if (!value.Is<T>())
-                TypeExpected(typeForMessage, e);
-            return value.AsPtr<T>();
-        }
-
-        double ToDouble(ConfigValuePtr value, ExpressionPtr e)
-        {
-            let val = dynamic_cast<Double*>(value.get());
-            if (!val)
-                TypeExpected(L"number", e);
-            double & dval = *val;
-            return dval;    // great place to set breakpoint
-        }
-
-        // get number and return it as an integer (fail if it is fractional)
-        int ToInt(ConfigValuePtr value, ExpressionPtr e)
-        {
-            let val = ToDouble(value, e);
-            let res = (int)(val);
-            if (val != res)
-                TypeExpected(L"integer", e);
-            return res;
-        }
-
-        bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
-        {
-            let val = dynamic_cast<Bool*>(value.get());            // TODO: factor out this expression
-            if (!val)
-                TypeExpected(L"boolean", e);
-            return *val;
-        }
-
-        // -----------------------------------------------------------------------
-        // configurable runtime types ("new" expression)
-        // -----------------------------------------------------------------------
-
-        // helper for configurableRuntimeTypes initializer below
-        // This returns a ConfigurableRuntimeType info structure that consists of
-        //  - a lambda that is a constructor for a given runtime type and
-        //  - a bool saying whether T derives from IsConfigRecord
-        struct ConfigurableRuntimeType
-        {
-            bool isConfigRecord;
-            function<ConfigValuePtr(const ConfigRecord &, TextLocation, const wstring &)> construct; // lambda to construct an object of this class
+            return ConfigValuePtr(MakeRuntimeObject<C>(config), location, exprPath);
         };
+        info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
+        return info;
+    }
+#if 0
+    static ConfigurableRuntimeType MakeExperimentalComputationNetworkConstructor()
+    {
+        ConfigurableRuntimeType info;
+        info.construct = [](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+        {
+            return ConfigValuePtr(MakeExperimentalComputationNetwork(config), location, exprPath);
+        };
+        info.isConfigRecord = true;
+        return info;
+    }
+    static ConfigurableRuntimeType MakeExperimentalComputationNodeConstructor()
+    {
+        ConfigurableRuntimeType info;
+        info.construct = [](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+        {
+            return ConfigValuePtr(MakeExperimentalComputationNode(config), location, exprPath);
+        };
+        info.isConfigRecord = false;
+        return info;
+    }
+#endif
 
-        template<class C>
-        ConfigurableRuntimeType MakeRuntimeTypeConstructor()
-        {
-            ConfigurableRuntimeType info;
-            info.construct = [/*this*/](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
-            {
-                return ConfigValuePtr(MakeRuntimeObject<C>(config), location, exprPath);
-            };
-            info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
-            return info;
-        }
-        ConfigurableRuntimeType MakeExperimentalComputationNetworkConstructor()
-        {
-            ConfigurableRuntimeType info;
-            info.construct = [/*this*/](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
-            {
-                return ConfigValuePtr(MakeExperimentalComputationNetwork(config), location, exprPath);
-            };
-            info.isConfigRecord = true;
-            return info;
-        }
-        ConfigurableRuntimeType MakeExperimentalComputationNodeConstructor()
-        {
-            ConfigurableRuntimeType info;
-            info.construct = [/*this*/](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
-            {
-                return ConfigValuePtr(MakeExperimentalComputationNode(config), location, exprPath);
-            };
-            info.isConfigRecord = false;
-            return info;
-        }
-
-        // lookup table for "new" expression
-        map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
-        {
+    // lookup table for "new" expression
+    // This table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags.
+    static map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
+    {
 #define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
-            // ComputationNodes
-            DefineRuntimeType(ComputationNode),
-            // other relevant classes
-            DefineRuntimeType(NDLComputationNetwork),           // currently our fake
-            // Functions
-            DefineRuntimeType(StringFunction),
-            DefineRuntimeType(NumericFunction),
-            // Actions
-            DefineRuntimeType(PrintAction),
-            DefineRuntimeType(AnotherAction),
-            // glue to experimental integration
-            //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
-            //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
-        };
+        // ComputationNodes
+        DefineRuntimeType(ComputationNode),
+        // other relevant classes
+        DefineRuntimeType(NDLComputationNetwork),           // currently our fake
+        // Functions
+        DefineRuntimeType(StringFunction),
+        DefineRuntimeType(NumericFunction),
+        // Actions
+        DefineRuntimeType(PrintAction),
+        DefineRuntimeType(AnotherAction),
+        // glue to experimental integration
+        //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
+        //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
+    };
 
-        // -----------------------------------------------------------------------
-        // name lookup
-        // -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // name lookup
+    // -----------------------------------------------------------------------
 
-        struct Scope
+    struct Scope
+    {
+        shared_ptr<ConfigRecord> symbols;   // symbols in this scope
+        shared_ptr<Scope> up;               // one scope up
+        Scope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) : symbols(symbols), up(up) { }
+    };
+    typedef shared_ptr<Scope> ScopePtr;
+    ScopePtr MakeScope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) { return make_shared<Scope>(symbols, up); }
+
+    static ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId); // forward declare
+
+    // look up a member by id in the search scope
+    // If it is not found, it tries all lexically enclosing scopes inside out.
+    static const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ScopePtr scope)
+    {
+        if (!scope)                                         // no scope or went all the way up: not found
+            UnknownIdentifier(id, idLocation);
+        auto p = scope->symbols->Find(id);                  // look up the name
+        if (!p)
+            return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
+        // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
+        p->ResolveValue();          // the entry will know
+        // now the value is available
+        return *p;
+    }
+
+    // look up an identifier in an expression that is a ConfigRecord
+    static ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope, const wstring & exprPath)
+    {
+        let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
+        return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
+    }
+
+    // -----------------------------------------------------------------------
+    // runtime-object creation
+    // -----------------------------------------------------------------------
+
+    // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
+    // which is meant to be passed to the constructor or Init() function of a runtime object
+    static shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope, const wstring & exprPath)
+    {
+        // evaluate the record expression itself
+        // This will leave its members unevaluated since we do that on-demand
+        // (order and what gets evaluated depends on what is used).
+        let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
+        // resolve all entries, as they need to be passed to the C++ world which knows nothing about this
+        return record;
+    }
+
+    // -----------------------------------------------------------------------
+    // infix operators
+    // -----------------------------------------------------------------------
+
+    // entry for infix-operator lookup table
+    typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)> InfixOp /*const*/;
+    struct InfixOps
+    {
+        InfixOp NumbersOp;            // number OP number -> number
+        InfixOp StringsOp;            // string OP string -> string
+        InfixOp BoolOp;               // bool OP bool -> bool
+        InfixOp ComputeNodeOp;        // ComputeNode OP ComputeNode -> ComputeNode
+        InfixOp NumberComputeNodeOp;  // number OP ComputeNode -> ComputeNode, e.g. 3 * M
+        InfixOp ComputeNodeNumberOp;  // ComputeNode OP Number -> ComputeNode, e.g. M * 3
+        InfixOp DictOp;               // dict OP dict
+        InfixOps(InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp NumberComputeNodeOp, InfixOp ComputeNodeNumberOp, InfixOp DictOp)
+            : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), DictOp(DictOp) { }
+    };
+
+    // functions that implement infix operations
+    __declspec(noreturn)
+    static void InvalidInfixOpTypes(ExpressionPtr e) { Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location); }
+    template<typename T>
+    static ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right, const wstring & exprPath)
+    {
+        if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location, exprPath);
+        else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location, exprPath);
+        else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left <  right, e->location, exprPath);
+        else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left >  right, e->location, exprPath);
+        else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, e->location, exprPath);
+        else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location, exprPath);
+        else LogicError("unexpected infix op");
+    }
+    static ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    {
+        let left = leftVal.AsRef<Double>();
+        let right = rightVal.AsRef<Double>();
+        if (e->op == L"+")       return MakePrimitiveConfigValuePtr(left + right,      e->location, exprPath);
+        else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right,      e->location, exprPath);
+        else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right,      e->location, exprPath);
+        else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right,      e->location, exprPath);
+        else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), e->location, exprPath);
+        else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right),  e->location, exprPath);
+        else return CompOp<double>(e, left, right, exprPath);
+    };
+    static ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    {
+        let left = leftVal.AsRef<String>();
+        let right = rightVal.AsRef<String>();
+        if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location, exprPath);
+        else return CompOp<wstring>(e, left, right, exprPath);
+    };
+    static ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    {
+        let left = leftVal.AsRef<Bool>();
+        let right = rightVal.AsRef<Bool>();
+        if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || right, e->location, exprPath);
+        else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && right, e->location, exprPath);
+        else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location, exprPath);
+        else return CompOp<bool>(e, left, right, exprPath);
+    };
+    static ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    {
+        if (rightVal.Is<Double>())          // ComputeNode * scalar
+            swap(leftVal, rightVal);        // -> scalar * ComputeNode
+        wstring classId;
+        if (leftVal.Is<Double>())           // scalar * ComputeNode
         {
-            shared_ptr<ConfigRecord> symbols;   // symbols in this scope
-            shared_ptr<Scope> up;               // one scope up
-            Scope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) : symbols(symbols), up(up) { }
-        };
-        typedef shared_ptr<Scope> ScopePtr;
-        ScopePtr MakeScope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) { return make_shared<Scope>(symbols, up); }
-
-        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId); // forward declare
-
-        // look up a member by id in the search scope
-        // If it is not found, it tries all lexically enclosing scopes inside out.
-        const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ScopePtr scope)
-        {
-            if (!scope)                                         // no scope or went all the way up: not found
-                UnknownIdentifier(id, idLocation);
-            auto p = scope->symbols->Find(id);                  // look up the name
-            if (!p)
-                return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
-            // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
-            p->ResolveValue();          // the entry will know
-            // now the value is available
-            return *p;
-        }
-
-        // look up an identifier in an expression that is a ConfigRecord
-        ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope, const wstring & exprPath)
-        {
-            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
-            return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
-        }
-
-        // -----------------------------------------------------------------------
-        // runtime-object creation
-        // -----------------------------------------------------------------------
-
-        // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
-        // which is meant to be passed to the constructor or Init() function of a runtime object
-        shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope, const wstring & exprPath)
-        {
-            // evaluate the record expression itself
-            // This will leave its members unevaluated since we do that on-demand
-            // (order and what gets evaluated depends on what is used).
-            let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
-            // resolve all entries, as they need to be passed to the C++ world which knows nothing about this
-            //record->ResolveAll();
-            // TODO: NO! Only resolve what is used. Constructor is not required to consume all inputs.
-            // BUGBUG: but it crashes with circular reference if I comment it out
-            return record;
-        }
-
-        // -----------------------------------------------------------------------
-        // infix operators
-        // -----------------------------------------------------------------------
-
-        // entry for infix-operator lookup table
-        typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)> InfixOp /*const*/;
-        struct InfixOps
-        {
-            InfixOp NumbersOp;            // number OP number -> number
-            InfixOp StringsOp;            // string OP string -> string
-            InfixOp BoolOp;               // bool OP bool -> bool
-            InfixOp ComputeNodeOp;        // ComputeNode OP ComputeNode -> ComputeNode
-            InfixOp NumberComputeNodeOp;  // number OP ComputeNode -> ComputeNode, e.g. 3 * M
-            InfixOp ComputeNodeNumberOp;  // ComputeNode OP Number -> ComputeNode, e.g. M * 3
-            InfixOp DictOp;               // dict OP dict
-            InfixOps(InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp NumberComputeNodeOp, InfixOp ComputeNodeNumberOp, InfixOp DictOp)
-                : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), DictOp(DictOp) { }
-        };
-
-        // functions that implement infix operations
-        __declspec(noreturn)
-        void InvalidInfixOpTypes(ExpressionPtr e) //const
-        {
-            Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
-        }
-        template<typename T>
-        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right, const wstring & exprPath) //const
-        {
-            if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location, exprPath);
-            else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location, exprPath);
-            else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left <  right, e->location, exprPath);
-            else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left >  right, e->location, exprPath);
-            else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, e->location, exprPath);
-            else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location, exprPath);
+            if (e->op == L"*" || e->op == L"-(") classId = L"ScaleNode";    // "-(" is unary minus, which also calls this function with Double(-1) as leftVal
             else LogicError("unexpected infix op");
         }
-        ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
+        else                                // ComputeNode OP ComputeNode
         {
-            let left = leftVal.AsRef<Double>();
-            let right = rightVal.AsRef<Double>();
-            if (e->op == L"+")       return MakePrimitiveConfigValuePtr(left + right,      e->location, exprPath);
-            else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right,      e->location, exprPath);
-            else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right,      e->location, exprPath);
-            else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right,      e->location, exprPath);
-            else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), e->location, exprPath);
-            else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right),  e->location, exprPath);
-            else return CompOp<double>(e, left, right, exprPath);
-        };
-        ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
-        {
-            let left = leftVal.AsRef<String>();
-            let right = rightVal.AsRef<String>();
-            if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location, exprPath);
-            else return CompOp<wstring>(e, left, right, exprPath);
-        };
-        ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
-        {
-            let left = leftVal.AsRef<Bool>();
-            let right = rightVal.AsRef<Bool>();
-            if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || right, e->location, exprPath);
-            else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && right, e->location, exprPath);
-            else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location, exprPath);
-            else return CompOp<bool>(e, left, right, exprPath);
-        };
-        ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
-        {
-            if (rightVal.Is<Double>())     // ComputeNode * scalar
-                swap(leftVal, rightVal);        // -> scalar * ComputeNode
-            wstring classId;
-            if (leftVal.Is<Double>())      // scalar * ComputeNode
-            {
-                if (e->op == L"*" || e->op == L"-(") classId = L"ScaleNode";    // "-(" is unary minus, which also calls this function with Double(-1) as leftVal
-                else LogicError("unexpected infix op");
-            }
-            else                                // ComputeNode OP ComputeNode
-            {
-                if (e->op == L"+")       classId = L"PlusNode";
-                else if (e->op == L"-")  classId = L"MinusNode";
-                else if (e->op == L"*")  classId = L"TimesNode";
-                else if (e->op == L".*") classId = L"DiagTimesNode";
-                else LogicError("unexpected infix op");
-            }
-            // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
-            // find creation lambda
-            let newIter = configurableRuntimeTypes.find(L"ComputationNode");
-            if (newIter == configurableRuntimeTypes.end())
-                LogicError("unknown magic runtime-object class");
-            // form the ConfigRecord
-            ConfigRecord config;
-            config.Add(L"class", e->location, ConfigValuePtr(make_shared<String>(classId), e->location, exprPath));
-            vector<ConfigValuePtr> inputs;
-            inputs.push_back(leftVal);
-            inputs.push_back(rightVal);
-            config.Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation(), exprPath));
-            // instantiate
-            let value = newIter->second.construct(config, e->location, exprPath);
-            let valueWithName = dynamic_cast<HasName*>(value.get());
-            if (valueWithName)
-                valueWithName->SetName(value.GetExpressionName());
-            return value;
-        };
-        ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) /*const*/ { InvalidInfixOpTypes(e); };
-
-        map<wstring, InfixOps> infixOps =// decltype(infixOps)
-        {
-            // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-            { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
-            { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-            { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-            { L"**", InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"%",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"+",  InfixOps(NumOp, StrOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-            { L"-",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-            { L"==", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"!=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"<",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L">",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"<=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L">=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"&&", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"||", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-            { L"^",  InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) }
-        };
-
-        // -----------------------------------------------------------------------
-        // lookup tables
-        // -----------------------------------------------------------------------
-
-        // all infix operators with lambdas for evaluating them
-        //map<wstring, InfixOps> infixOps;
-
-        // this table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags
-        //map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes;
-
-        // -----------------------------------------------------------------------
-        // thunked (delayed) evaluation
-        // -----------------------------------------------------------------------
-
-        // create a lambda that calls Evaluate() on an expr to get or realize its value
-        shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, const wstring & exprPath, const wstring & exprId)
-        {
-            function<ConfigValuePtr()> f = [/*this, */expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
-            {
-                if (trace)
-                    TextLocation::PrintIssue(vector<TextLocation>(1, expr->location), L"", exprPath.c_str(), L"executing thunk");
-                let value = Evaluate(expr, scope, exprPath, exprId);
-                return value;   // this is a great place to set a breakpoint!
-            };
-            return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
+            if (e->op == L"+")       classId = L"PlusNode";
+            else if (e->op == L"-")  classId = L"MinusNode";
+            else if (e->op == L"*")  classId = L"TimesNode";
+            else if (e->op == L".*") classId = L"DiagTimesNode";
+            else LogicError("unexpected infix op");
         }
+        // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
+        // find creation lambda
+        let newIter = configurableRuntimeTypes.find(L"ComputationNode");
+        if (newIter == configurableRuntimeTypes.end())
+            LogicError("unknown magic runtime-object class");
+        // form the ConfigRecord
+        ConfigRecord config;
+        config.Add(L"class", e->location, ConfigValuePtr(make_shared<String>(classId), e->location, exprPath));
+        vector<ConfigValuePtr> inputs;
+        inputs.push_back(leftVal);
+        inputs.push_back(rightVal);
+        config.Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation(), exprPath));
+        // instantiate
+        let value = newIter->second.construct(config, e->location, exprPath);
+        let valueWithName = dynamic_cast<HasName*>(value.get());
+        if (valueWithName)
+            valueWithName->SetName(value.GetExpressionName());
+        return value;
+    };
+    static ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) { InvalidInfixOpTypes(e); };
 
-        // -----------------------------------------------------------------------
-        // main evaluator function (highly recursive)
-        // -----------------------------------------------------------------------
+    // lookup table for infix operators
+    // This lists all infix operators with lambdas for evaluating them.
+    static map<wstring, InfixOps> infixOps =
+    {
+        // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+        { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
+        { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+        { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+        { L"**", InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"%",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"+",  InfixOps(NumOp, StrOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+        { L"-",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+        { L"==", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"!=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"<",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L">",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"<=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L">=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"&&", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"||", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+        { L"^",  InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) }
+    };
 
-        // Evaluate()
-        //  - input:  expression
-        //  - output: ConfigValuePtr that holds the evaluated value of the expression
-        // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
-        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId)
+    // -----------------------------------------------------------------------
+    // thunked (delayed) evaluation
+    // -----------------------------------------------------------------------
+
+    // create a lambda that calls Evaluate() on an expr to get or realize its value
+    static shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, const wstring & exprPath, const wstring & exprId)
+    {
+        function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
-            try
+            if (trace)
+                TextLocation::PrintIssue(vector<TextLocation>(1, expr->location), L"", exprPath.c_str(), L"executing thunk");
+            let value = Evaluate(expr, scope, exprPath, exprId);
+            return value;   // this is a great place to set a breakpoint!
+        };
+        return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
+    }
+
+    // -----------------------------------------------------------------------
+    // main evaluator function (highly recursive)
+    // -----------------------------------------------------------------------
+
+    // Evaluate()
+    //  - input:  expression
+    //  - output: ConfigValuePtr that holds the evaluated value of the expression
+    // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
+    static ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId)
+    {
+        try // catch clause for this will catch error, inject this tree node's TextLocation, and rethrow
+        {
+            // expression names
+            // Merge exprPath and exprId into one unless one is empty
+            if (!exprPath.empty() && !exprId.empty())
+                exprPath.append(exprPathSeparator);
+            exprPath.append(exprId);
+            // tracing
+            if (trace)
+                TextLocation::PrintIssue(vector<TextLocation>(1, e->location), L"", L"", L"trace");
+            // --- literals
+            if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
+            else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
+            else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location, exprPath);         // === bool literal
+            else if (e->op == L"new")                                                               // === 'new' expression: instantiate C++ runtime object right here
             {
-                // expression names
-                // Merge exprPath and exprId into one unless one is empty
-                if (!exprPath.empty() && !exprId.empty())
-                    exprPath.append(exprPathSeparator);
-                exprPath.append(exprId);
-                // tracing
-                if (trace)
-                    TextLocation::PrintIssue(vector<TextLocation>(1, e->location), L"", L"", L"trace");
-                // --- literals
-                if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
-                else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
-                else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location, exprPath);         // === bool literal
-                else if (e->op == L"new")                                                               // === 'new' expression: instantiate C++ runtime object right here
+                // find the constructor lambda
+                let newIter = configurableRuntimeTypes.find(e->id);
+                if (newIter == configurableRuntimeTypes.end())
+                    Fail(L"unknown runtime type " + e->id, e->location);
+                // form the config record
+                let dictExpr = e->args[0];
+                let argsExprPath = newIter->second.isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
+                let value = newIter->second.construct(*ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location, exprPath); // this constructs it
+                // if object has a name, we set it
+                let valueWithName = dynamic_cast<HasName*>(value.get());
+                if (valueWithName)
+                    valueWithName->SetName(value.GetExpressionName());
+                return value;   // we return the created but not initialized object as the value, so others can reference it
+            }
+            else if (e->op == L"if")                                                    // === conditional expression
+            {
+                let condition = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"if"), e->args[0]);
+                if (condition)
+                    return Evaluate(e->args[1], scope, exprPath, L"");      // pass exprName through 'if' since only of the two exists
+                else
+                    return Evaluate(e->args[2], scope, exprPath, L"");
+            }
+            // --- functions
+            else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
+            {
+                // on scope: The lambda expression remembers the lexical scope of the '=>'; this is how it captures its context.
+                let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
+                if (argListExpr->op != L"()") LogicError("parameter list expected");
+                let fnExpr = e->args[1];                // [1] = expression of the function itself
+                let f = [argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
                 {
-                    // find the constructor lambda
-                    let newIter = configurableRuntimeTypes.find(e->id);
-                    if (newIter == configurableRuntimeTypes.end())
-                        Fail(L"unknown runtime type " + e->id, e->location);
-                    // form the config record
-                    let dictExpr = e->args[0];
-                    let argsExprPath = newIter->second.isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
-                    let value = newIter->second.construct(*ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location, exprPath); // this constructs it
-                    // if object has a name, we set it
-                    let valueWithName = dynamic_cast<HasName*>(value.get());
-                    if (valueWithName)
-                        valueWithName->SetName(value.GetExpressionName());
-                    return value;   // we return the created but not initialized object as the value, so others can reference it
-                }
-                else if (e->op == L"if")                                                    // === conditional expression
-                {
-                    let condition = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"if"), e->args[0]);
-                    if (condition)
-                        return Evaluate(e->args[1], scope, exprPath, L"");      // pass exprName through 'if' since only of the two exists
-                    else
-                        return Evaluate(e->args[2], scope, exprPath, L"");
-                }
-                // --- functions
-                else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
-                {
-                    // on scope: The lambda expression remembers the lexical scope of the '=>'; this is how it captures its context.
-                    let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
-                    if (argListExpr->op != L"()") LogicError("parameter list expected");
-                    let fnExpr = e->args[1];                // [1] = expression of the function itself
-                    let f = [/*this, */argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
-                    {
-                        // on exprName
-                        //  - 'callerExprPath' is the name to which the result of the fn evaluation will be assigned
-                        //  - 'exprPath' (outside) is the name of the macro we are defining this lambda under
-                        let & argList = argListExpr->args;
-                        if (args.size() != argList.size()) LogicError("function application with mismatching number of arguments");
-                        // create a ConfigRecord with param names from 'argList' and values from 'args'
-                        let record = make_shared<ConfigRecord>();
-                        let thisScope = MakeScope(record, scope);   // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
-                        // create an entry for every argument value
-                        // Note that these values should normally be thunks since we only want to evaluate what's used.
-                        for (size_t i = 0; i < args.size(); i++)    // positional arguments
-                        {
-                            let argName = argList[i];       // parameter name
-                            if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
-                            let & argVal = args[i];         // value of the parameter
-                            record->Add(argName->id, argName->location, argVal);
-                            // note: these are expressions for the parameter values; so they must be evaluated in the current scope
-                        }
-                        // also named arguments
-                        for (let namedArg : namedArgs->GetMembers())
-                        {
-                            let id = namedArg.first;
-                            let & argVal = namedArg.second;
-                            record->Add(id, argVal.GetLocation(), argVal);
-                        }
-                        // get the macro name for the exprPath
-                        wstring macroId = exprPath;
-                        let pos = macroId.find(exprPathSeparator);
-                        if (pos != wstring::npos)
-                            macroId.erase(0, pos + 1);
-                        // now evaluate the function
-                        return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
-                    };
-                    // positional args
-                    vector<wstring> paramNames;
+                    // on exprName
+                    //  - 'callerExprPath' is the name to which the result of the fn evaluation will be assigned
+                    //  - 'exprPath' (outside) is the name of the macro we are defining this lambda under
                     let & argList = argListExpr->args;
-                    for (let arg : argList)
-                    {
-                        if (arg->op != L"id") LogicError("function parameter list must consist of identifiers");
-                        paramNames.push_back(arg->id);
-                    }
-                    // named args
-                    // The nammedArgs in the definition lists optional arguments with their default values
+                    if (args.size() != argList.size()) LogicError("function application with mismatching number of arguments");
+                    // create a ConfigRecord with param names from 'argList' and values from 'args'
                     let record = make_shared<ConfigRecord>();
-                    for (let namedArg : argListExpr->namedArgs)
-                    {
-                        let id = namedArg.first;
-                        let location = namedArg.second.first;   // location of identifier
-                        let expr = namedArg.second.second;      // expression to evaluate to get default value
-                        record->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
-                        // the thunk is called if the default value is ever used
-                    }
-                    return ConfigValuePtr(make_shared<ConfigLambda>(paramNames, record, f), e->location, exprPath);
-                }
-                else if (e->op == L"(")                                         // === apply a function to its arguments
-                {
-                    let lambdaExpr = e->args[0];            // [0] = function
-                    let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
-                    let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"_lambda"), lambdaExpr, L"function");
-                    if (argsExpr->op != L"()") LogicError("argument list expected");
-                    // put all args into a vector of values
-                    // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
-                    let args = argsExpr->args;
-                    if (args.size() != lambda->GetNumParams())
-                        Fail(L"function parameter list must consist of identifiers", argsExpr->location);
-                    vector<ConfigValuePtr> argVals(args.size());
+                    let thisScope = MakeScope(record, scope);   // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
+                    // create an entry for every argument value
+                    // Note that these values should normally be thunks since we only want to evaluate what's used.
                     for (size_t i = 0; i < args.size(); i++)    // positional arguments
                     {
-                        let argValExpr = args[i];               // expression of arg [i]
-                        let argName = lambda->GetParamNames()[i];
-                        argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location, exprPath/*TODO??*/);  // make it a thunked value
-                        /*this wstrprintf should be gone, this is now the exprName*/
+                        let argName = argList[i];       // parameter name
+                        if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
+                        let & argVal = args[i];         // value of the parameter
+                        record->Add(argName->id, argName->location, argVal);
+                        // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                     }
-                    // named args are put into a ConfigRecord
-                    // We could check whether the named ars are actually accepted by the lambda, but we leave that to Apply() so that the check also happens for lambda calls from CNTK C++ code.
-                    let namedArgs = argsExpr->namedArgs;
-                    let namedArgVals = make_shared<ConfigRecord>();
-                    for (let namedArg : namedArgs)
+                    // also named arguments
+                    for (let namedArg : namedArgs->GetMembers())
                     {
-                        let id = namedArg.first;                // id of passed in named argument
-                        let location = namedArg.second.first;   // location of expression
-                        let expr = namedArg.second.second;      // expression of named argument
-                        namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
-                        // the thunk is evaluated when/if the passed actual value is ever used the first time
+                        let id = namedArg.first;
+                        let & argVal = namedArg.second;
+                        record->Add(id, argVal.GetLocation(), argVal);
                     }
-                    // call the function!
-                    return lambda->Apply(argVals, namedArgVals, exprPath);
-                }
-                // --- variable access
-                else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
+                    // get the macro name for the exprPath
+                    wstring macroId = exprPath;
+                    let pos = macroId.find(exprPathSeparator);
+                    if (pos != wstring::npos)
+                        macroId.erase(0, pos + 1);
+                    // now evaluate the function
+                    return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
+                };
+                // positional args
+                vector<wstring> paramNames;
+                let & argList = argListExpr->args;
+                for (let arg : argList)
                 {
-                    let record = make_shared<ConfigRecord>();
-                    // create an entry for every dictionary entry.
-                    let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
-                    // We do not evaluate the members at this point.
-                    // Instead, as the value, we keep the ExpressionPtr itself wrapped in a lambda that evaluates that ExpressionPtr to a ConfigValuePtr when called.
-                    // Members are evaluated on demand when they are used.
-                    for (let & entry : e->namedArgs)
-                    {
-                        let id = entry.first;
-                        let expr = entry.second.second;             // expression to compute the entry
-                        record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, exprPath, id), expr->location, exprPath/*TODO??*/));
-                    }
-                    // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
-                    return ConfigValuePtr(record, e->location, exprPath);
+                    if (arg->op != L"id") LogicError("function parameter list must consist of identifiers");
+                    paramNames.push_back(arg->id);
                 }
-                else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
-                else if (e->op == L".")                                                 // === variable/macro access in given ConfigRecord element
+                // named args
+                // The nammedArgs in the definition lists optional arguments with their default values
+                let record = make_shared<ConfigRecord>();
+                for (let namedArg : argListExpr->namedArgs)
                 {
-                    let recordExpr = e->args[0];
-                    return RecordLookup(recordExpr, e->id, e->location, scope, exprPath);
+                    let id = namedArg.first;
+                    let location = namedArg.second.first;   // location of identifier
+                    let expr = namedArg.second.second;      // expression to evaluate to get default value
+                    record->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    // the thunk is called if the default value is ever used
                 }
-                // --- arrays
-                else if (e->op == L":")                                                 // === array expression (-> ConfigArray)
-                {
-                    // this returns a flattened list of all members as a ConfigArray type
-                    let arr = make_shared<ConfigArray>();       // note: we could speed this up by keeping the left arg and appending to it
-                    for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
-                    {
-                        let expr = e->args[i];
-                        let item = Evaluate(expr, scope, exprPath, wstrprintf(L"_vecelem%d", i));           // result can be an item or a vector
-                        if (item.Is<ConfigArray>())
-                            arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
-                        else
-                            arr->Append(item);
-                    }
-                    return ConfigValuePtr(arr, e->location, exprPath);  // location will be that of the first ':', not sure if that is best way
-                }
-                else if (e->op == L"array")                                             // === array constructor from lambda function
-                {
-                    let firstIndexExpr = e->args[0];    // first index
-                    let lastIndexExpr  = e->args[1];    // last index
-                    let initLambdaExpr = e->args[2];    // lambda to initialize the values
-                    let firstIndex = ToInt(Evaluate(firstIndexExpr, scope, exprPath, L"array_first"), firstIndexExpr);
-                    let lastIndex  = ToInt(Evaluate(lastIndexExpr,  scope, exprPath, L"array_last"),  lastIndexExpr);
-                    let lambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, exprPath, L"_initializer"), initLambdaExpr, L"function");
-                    if (lambda->GetNumParams() != 1)
-                        Fail(L"'array' requires an initializer function with one argument (the index)", initLambdaExpr->location);
-                    // At this point, we must know the dimensions and the initializer lambda, but we don't need to know all array elements.
-                    // Resolving array members on demand allows recursive access to the array variable, e.g. h[t] <- f(h[t-1]).
-                    // create a vector of Thunks to initialize each value
-                    vector<ConfigValuePtr> elementThunks;
-                    for (int index = firstIndex; index <= lastIndex; index++)
-                    {
-                        let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location, exprPath/*never needed*/);           // index as a ConfigValuePtr
-                        let elemExprPath = exprPath.empty() ? L"" : wstrprintf(L"%ls[%d]", exprPath.c_str(), index);    // expression name shows index lookup
-                        let initExprPath = exprPath.empty() ? L"" : wstrprintf(L"_lambda");    // expression name shows initializer with arg
-                        // create an expression
-                        function<ConfigValuePtr()> f = [/*this, */indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
-                        {
-                            if (trace)
-                                TextLocation::PrintIssue(vector<TextLocation>(1, initLambdaExpr->location), L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
-                            // apply initLambdaExpr to indexValue and return the resulting value
-                            let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");
-                            vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
-                            let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
-                            let value = initLambda->Apply(argVals, namedArgs, elemExprPath);
-                            return value;   // this is a great place to set a breakpoint!
-                        };
-                        elementThunks.push_back(ConfigValuePtr(make_shared<ConfigValuePtr::Thunk>(f, initLambdaExpr->location), initLambdaExpr->location, elemExprPath/*TODO??*/));
-                    }
-                    auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
-                    return ConfigValuePtr(arr, e->location, exprPath);
-                }
-                else if (e->op == L"[")                                         // === access array element by index
-                {
-                    let arrValue = Evaluate(e->args[0], scope, exprPath, L"_vector");
-                    let indexExpr = e->args[1];
-                    let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
-                    let index = ToInt(Evaluate(indexExpr, scope, exprPath, L"_index"), indexExpr);
-                    return arr->At(index, indexExpr->location);
-                }
-                // --- unary operators '+' '-' and '!'
-                else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
-                {
-                    let argExpr = e->args[0];
-                    let argValPtr = Evaluate(argExpr, scope, exprPath, e->op == L"+(" ? L"" : L"_negate");
-                    // note on exprPath: since - has only one argument, we do not include it in the expessionPath
-                    if (argValPtr.Is<Double>())
-                        if (e->op == L"+(") return argValPtr;
-                        else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location, exprPath);
-                    else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
-                        if (e->op == L"+(") return argValPtr;
-                        else return NodeOp(e, MakePrimitiveConfigValuePtr(-1.0, e->location, exprPath), argValPtr, exprPath);
-                    else
-                        Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
-                }
-                else if (e->op == L"!(")                                        // === unary operator !
-                {
-                    let arg = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"_not"), e->args[0]);
-                    return MakePrimitiveConfigValuePtr(!arg, e->location, exprPath);
-                }
-                // --- regular infix operators such as '+' and '=='
-                else
-                {
-                    let opIter = infixOps.find(e->op);
-                    if (opIter == infixOps.end())
-                        LogicError("e->op " + utf8(e->op) + " not implemented");
-                    let & functions = opIter->second;
-                    let leftArg = e->args[0];
-                    let rightArg = e->args[1];
-                    let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
-                    let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
-                    if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
-                        return functions.NumbersOp(e, leftValPtr, rightValPtr, exprPath);
-                    else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
-                        return functions.StringsOp(e, leftValPtr, rightValPtr, exprPath);
-                    else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
-                        return functions.BoolOp(e, leftValPtr, rightValPtr, exprPath);
-                    // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
-                    else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
-                        return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
-                    else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
-                        return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr, exprPath);
-                    else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
-                        return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
-                    // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
-                    else
-                        InvalidInfixOpTypes(e);
-                }
-                //LogicError("should not get here");
+                return ConfigValuePtr(make_shared<ConfigLambda>(paramNames, record, f), e->location, exprPath);
             }
-            catch (ConfigError & err)
+            else if (e->op == L"(")                                         // === apply a function to its arguments
             {
-                // in case of an error, we keep track of all parent locations in the parse as well, to make it easier for the user to spot the error
-                err.AddLocation(e->location);
-                throw;
+                let lambdaExpr = e->args[0];            // [0] = function
+                let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
+                let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"_lambda"), lambdaExpr, L"function");
+                if (argsExpr->op != L"()") LogicError("argument list expected");
+                // put all args into a vector of values
+                // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
+                let args = argsExpr->args;
+                if (args.size() != lambda->GetNumParams())
+                    Fail(L"function parameter list must consist of identifiers", argsExpr->location);
+                vector<ConfigValuePtr> argVals(args.size());
+                for (size_t i = 0; i < args.size(); i++)    // positional arguments
+                {
+                    let argValExpr = args[i];               // expression of arg [i]
+                    let argName = lambda->GetParamNames()[i];
+                    argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location, exprPath/*TODO??*/);  // make it a thunked value
+                    /*this wstrprintf should be gone, this is now the exprName*/
+                }
+                // named args are put into a ConfigRecord
+                // We could check whether the named ars are actually accepted by the lambda, but we leave that to Apply() so that the check also happens for lambda calls from CNTK C++ code.
+                let namedArgs = argsExpr->namedArgs;
+                let namedArgVals = make_shared<ConfigRecord>();
+                for (let namedArg : namedArgs)
+                {
+                    let id = namedArg.first;                // id of passed in named argument
+                    let location = namedArg.second.first;   // location of expression
+                    let expr = namedArg.second.second;      // expression of named argument
+                    namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    // the thunk is evaluated when/if the passed actual value is ever used the first time
+                }
+                // call the function!
+                return lambda->Apply(argVals, namedArgVals, exprPath);
             }
+            // --- variable access
+            else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
+            {
+                let record = make_shared<ConfigRecord>();
+                // create an entry for every dictionary entry.
+                let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
+                // We do not evaluate the members at this point.
+                // Instead, as the value, we keep the ExpressionPtr itself wrapped in a lambda that evaluates that ExpressionPtr to a ConfigValuePtr when called.
+                // Members are evaluated on demand when they are used.
+                for (let & entry : e->namedArgs)
+                {
+                    let id = entry.first;
+                    let expr = entry.second.second;             // expression to compute the entry
+                    record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, exprPath, id), expr->location, exprPath/*TODO??*/));
+                }
+                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
+                return ConfigValuePtr(record, e->location, exprPath);
+            }
+            else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
+            else if (e->op == L".")                                                         // === variable/macro access in given ConfigRecord element
+            {
+                let recordExpr = e->args[0];
+                return RecordLookup(recordExpr, e->id, e->location, scope, exprPath);
+            }
+            // --- arrays
+            else if (e->op == L":")                                                         // === array expression (-> ConfigArray)
+            {
+                // this returns a flattened list of all members as a ConfigArray type
+                let arr = make_shared<ConfigArray>();       // note: we could speed this up by keeping the left arg and appending to it
+                for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
+                {
+                    let expr = e->args[i];
+                    let item = Evaluate(expr, scope, exprPath, wstrprintf(L"_vecelem%d", i));           // result can be an item or a vector
+                    if (item.Is<ConfigArray>())
+                        arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
+                    else
+                        arr->Append(item);
+                }
+                return ConfigValuePtr(arr, e->location, exprPath);  // location will be that of the first ':', not sure if that is best way
+            }
+            else if (e->op == L"array")                                                     // === array constructor from lambda function
+            {
+                let firstIndexExpr = e->args[0];    // first index
+                let lastIndexExpr  = e->args[1];    // last index
+                let initLambdaExpr = e->args[2];    // lambda to initialize the values
+                let firstIndex = ToInt(Evaluate(firstIndexExpr, scope, exprPath, L"array_first"), firstIndexExpr);
+                let lastIndex  = ToInt(Evaluate(lastIndexExpr,  scope, exprPath, L"array_last"),  lastIndexExpr);
+                let lambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, exprPath, L"_initializer"), initLambdaExpr, L"function");
+                if (lambda->GetNumParams() != 1)
+                    Fail(L"'array' requires an initializer function with one argument (the index)", initLambdaExpr->location);
+                // At this point, we must know the dimensions and the initializer lambda, but we don't need to know all array elements.
+                // Resolving array members on demand allows recursive access to the array variable, e.g. h[t] <- f(h[t-1]).
+                // create a vector of Thunks to initialize each value
+                vector<ConfigValuePtr> elementThunks;
+                for (int index = firstIndex; index <= lastIndex; index++)
+                {
+                    let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location, exprPath/*never needed*/);           // index as a ConfigValuePtr
+                    let elemExprPath = exprPath.empty() ? L"" : wstrprintf(L"%ls[%d]", exprPath.c_str(), index);    // expression name shows index lookup
+                    let initExprPath = exprPath.empty() ? L"" : wstrprintf(L"_lambda");    // expression name shows initializer with arg
+                    // create an expression
+                    function<ConfigValuePtr()> f = [indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
+                    {
+                        if (trace)
+                            TextLocation::PrintIssue(vector<TextLocation>(1, initLambdaExpr->location), L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
+                        // apply initLambdaExpr to indexValue and return the resulting value
+                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");
+                        vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
+                        let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
+                        let value = initLambda->Apply(argVals, namedArgs, elemExprPath);
+                        return value;   // this is a great place to set a breakpoint!
+                    };
+                    elementThunks.push_back(ConfigValuePtr(make_shared<ConfigValuePtr::Thunk>(f, initLambdaExpr->location), initLambdaExpr->location, elemExprPath/*TODO??*/));
+                }
+                auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
+                return ConfigValuePtr(arr, e->location, exprPath);
+            }
+            else if (e->op == L"[")                                         // === access array element by index
+            {
+                let arrValue = Evaluate(e->args[0], scope, exprPath, L"_vector");
+                let indexExpr = e->args[1];
+                let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
+                let index = ToInt(Evaluate(indexExpr, scope, exprPath, L"_index"), indexExpr);
+                return arr->At(index, indexExpr->location);
+            }
+            // --- unary operators '+' '-' and '!'
+            else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
+            {
+                let argExpr = e->args[0];
+                let argValPtr = Evaluate(argExpr, scope, exprPath, e->op == L"+(" ? L"" : L"_negate");
+                // note on exprPath: since - has only one argument, we do not include it in the expessionPath
+                if (argValPtr.Is<Double>())
+                    if (e->op == L"+(") return argValPtr;
+                    else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location, exprPath);
+                else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
+                    if (e->op == L"+(") return argValPtr;
+                    else return NodeOp(e, MakePrimitiveConfigValuePtr(-1.0, e->location, exprPath), argValPtr, exprPath);
+                else
+                    Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
+            }
+            else if (e->op == L"!(")                                        // === unary operator !
+            {
+                let arg = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"_not"), e->args[0]);
+                return MakePrimitiveConfigValuePtr(!arg, e->location, exprPath);
+            }
+            // --- regular infix operators such as '+' and '=='
+            else
+            {
+                let opIter = infixOps.find(e->op);
+                if (opIter == infixOps.end())
+                    LogicError("e->op " + utf8(e->op) + " not implemented");
+                let & functions = opIter->second;
+                let leftArg = e->args[0];
+                let rightArg = e->args[1];
+                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
+                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
+                if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
+                    return functions.NumbersOp(e, leftValPtr, rightValPtr, exprPath);
+                else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
+                    return functions.StringsOp(e, leftValPtr, rightValPtr, exprPath);
+                else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
+                    return functions.BoolOp(e, leftValPtr, rightValPtr, exprPath);
+                // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
+                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
+                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
+                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
+                    return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr, exprPath);
+                else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
+                    return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
+                // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
+                else
+                    InvalidInfixOpTypes(e);
+            }
+            //LogicError("should not get here");
         }
-
-    //public:
-        // -----------------------------------------------------------------------
-        // constructor
-        // -----------------------------------------------------------------------
-
-        //Evaluator()
-        //{
-            // initialize the infixOps table (lookup table for infix operators)
-        //}
-
-        ConfigValuePtr EvaluateParse(ExpressionPtr e)
+        catch (ConfigError & err)
         {
-            return Evaluate(e, nullptr/*top scope*/, L"", L"$");
+            // in case of an error, we keep track of all parent locations in the parse as well, to make it easier for the user to spot the error
+            err.AddLocation(e->location);
+            throw;
         }
+    }
 
-        void Do(ExpressionPtr e)
-        {
-            RecordLookup(e, L"do", e->location, nullptr, L"$");  // we evaluate the member 'do'
-        }
+    static ConfigValuePtr EvaluateParse(ExpressionPtr e)
+    {
+        return Evaluate(e, nullptr/*top scope*/, L"", L"$");
+    }
 
-        shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
-        {
+    // -----------------------------------------------------------------------
+    // external entry points
+    // -----------------------------------------------------------------------
 
+    // top-level entry
+    // A config sequence X=A;Y=B;do=(A,B) is really parsed as [X=A;Y=B].do. That's the tree we get. I.e. we try to compute the 'do' member.
+    void Do(ExpressionPtr e)
+    {
+        RecordLookup(e, L"do", e->location, nullptr, L"$");  // we evaluate the member 'do'
+    }
 
-            //let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
-            //return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
-
-
-            return RecordLookup(e, id, e->location, nullptr, L"$");  // we evaluate the member 'do'
-        }
-    //};
+    shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
+    {
+        //let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
+        //return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
+        return RecordLookup(e, id, e->location, nullptr, L"$");  // we evaluate the member 'do'
+    }
 
     ConfigValuePtr Evaluate(ExpressionPtr e)
     {
         return /*Evaluator().*/EvaluateParse(e);
     }
-
-    // top-level entry
-    // A config sequence X=A;Y=B;do=(A,B) is really parsed as [X=A;Y=B].do. That's the tree we get. I.e. we try to compute the 'do' member.
-    // TODO: This is wicked--constructors should always be fast to run. Do() should run after late initializations.
-    //void Do(ExpressionPtr e)
-    //{
-    //    Evaluator().Do(e);
-    //}
-
-    //shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
-    //{
-    //    return /*Evaluator().*/EvaluateField(e, id);
-    //}
 
 }}}}     // namespaces
