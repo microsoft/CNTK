@@ -52,14 +52,14 @@ public:
     // copy constructor
     ParallelNode(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(this, newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
     {
         const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-        ComputationNodePtr node = new ParallelNode<ElemType>(this, name, flags);
+        ComputationNodePtr node = make_shared<ParallelNode<ElemType>>(this, name, flags);
         return node;
     }
 
@@ -400,7 +400,7 @@ public:
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
         ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-        MeanNode<ElemType>* node = (MeanNode<ElemType>*) nodeP;
+        auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
 
         if (flags & CopyNodeFlags::copyNodeValue)
         {
@@ -413,14 +413,14 @@ public:
     MeanNode(const MeanNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         : PreComputedNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(this, newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
     {
         const std::wstring& name = (newName == L"")?NodeName():newName;
 
-        ComputationNodePtr node = new MeanNode<ElemType>(this, name, flags);
+        ComputationNodePtr node = make_shared<MeanNode<ElemType>>(this, name, flags);
         return node;
     }
 
@@ -615,7 +615,7 @@ public:
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
         ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-        InvStdDevNode<ElemType>* node = (InvStdDevNode<ElemType>*) nodeP;
+        auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
 
         if (flags & CopyNodeFlags::copyNodeValue)
         {
@@ -632,14 +632,14 @@ public:
     InvStdDevNode(const InvStdDevNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         : PreComputedNode<ElemType>(node->m_deviceId), m_mean(node->m_deviceId), m_var(node->m_deviceId),  m_temp(node->m_deviceId)
     {
-        node->CopyTo(this, newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
     {
         const std::wstring& name = (newName == L"")?NodeName():newName;
 
-        ComputationNodePtr node = new InvStdDevNode<ElemType>(this, name, flags);
+        ComputationNodePtr node = make_shared<InvStdDevNode<ElemType>>(this, name, flags);
         return node;
     }
 
@@ -679,14 +679,14 @@ public:
                                    const std::wstring& newName, const CopyNodeFlags flags)
          : ComputationNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(this, newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
     {
         const std::wstring& name = (newName == L"")?NodeName():newName;
 
-        ComputationNodePtr node = new PerDimMeanVarNormalizationNode<ElemType>(this, name, flags);
+        ComputationNodePtr node = make_shared<PerDimMeanVarNormalizationNode<ElemType>>(this, name, flags);
         return node;
     }
 
@@ -864,14 +864,14 @@ public:
                                      const std::wstring& newName, const CopyNodeFlags flags)
         : ComputationNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(this, newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
     {
         const std::wstring& name = (newName == L"")?NodeName():newName;
 
-        ComputationNodePtr node = new PerDimMeanVarDeNormalizationNode<ElemType>(this, name, flags);
+        ComputationNodePtr node = make_shared<PerDimMeanVarDeNormalizationNode<ElemType>>(this, name, flags);
         return node;
     }
 
@@ -1149,13 +1149,13 @@ public:
     TimeReverseNode(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         : BatchModeNode<ElemType>(node->m_deviceId)
     {
-        node->CopyTo(this, newName, flags);
+        node->CopyTo(shared_from_this(), newName, flags);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
         ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-        TimeReverseNode<ElemType>* node = (TimeReverseNode<ElemType>*) nodeP;
+        auto node = dynamic_pointer_cast<TimeReverseNode<ElemType>>(nodeP);
 
         if (flags & CopyNodeFlags::copyNodeValue)
         {
@@ -1187,7 +1187,7 @@ public:
     {
         const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-        ComputationNodePtr node = new TimeReverseNode<ElemType>(this, name, flags);
+        ComputationNodePtr node = make_shared<TimeReverseNode<ElemType>>(this, name, flags);
         return node;
     }
 

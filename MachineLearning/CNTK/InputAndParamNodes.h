@@ -113,14 +113,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         LearnableParameter(const LearnableParameter<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new LearnableParameter<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<LearnableParameter<ElemType>>(this, name, flags);
             return node;
         }
     };
@@ -166,7 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new SparseLearnableParameter<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<SparseLearnableParameter<ElemType>>(this, name, flags);
             return node;
         }
     };
@@ -293,14 +293,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         InputValue(const InputValue<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new InputValue<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<InputValue<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -479,13 +479,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-            ComputationNodePtr node = new LookupTableNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<LookupTableNode<ElemType>>(this, name, flags);
             return node;
         }
 
         LookupTableNode(const LookupTableNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
         
         bool UnitTest()
@@ -663,9 +663,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
             std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
         {
-            if (visited.find(this) == visited.end())  //not visited
+            if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
-                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 //children first for function evaluation
                 if (!IsLeaf())
@@ -676,13 +676,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_needGradient = false;
                 }
 
-                result.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 this->m_visitedOrder = result.size();
             }
             else
             {
                 if (!IsLeaf() && bFromDelayNode)
-                    sourceRecurrentNodePtr.push_back(this);
+                    sourceRecurrentNodePtr.push_back(shared_from_this());
             }
         }
 
@@ -692,14 +692,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PairNetworkNode(const PairNetworkNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new PairNetworkNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<PairNetworkNode<ElemType>>(this, name, flags);
             return node;
         }
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMath", "Math\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -21,6 +21,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "MachineLearning\CNT
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D45DF403-6781-444E-B654-A96868C5BE68}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\TestDriver.py = Tests\TestDriver.py
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMathTest", "Math\CNTKMathTest\CNTKMathTest.vcxproj", "{6CEE834A-8104-46A8-8902-64C81BD7928F}"
 EndProject
@@ -167,6 +170,31 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CheckInSuites", "CheckInSui
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SparsePCReader", "DataReader\SparsePCReader\SparsePCReader.vcxproj", "{CE429AA2-3778-4619-8FD1-49BA3B81197B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\README.txt = Tests\Speech\README.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "QuickE2E", "QuickE2E", "{4BBF2950-3DBD-469A-AD57-6CACBEBAF541}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\QuickE2E\baseline.cpu.txt = Tests\Speech\QuickE2E\baseline.cpu.txt
+		Tests\Speech\QuickE2E\baseline.gpu.txt = Tests\Speech\QuickE2E\baseline.gpu.txt
+		Tests\Speech\QuickE2E\baseline.windows.cpu.txt = Tests\Speech\QuickE2E\baseline.windows.cpu.txt
+		Tests\Speech\QuickE2E\baseline.windows.gpu.txt = Tests\Speech\QuickE2E\baseline.windows.gpu.txt
+		Tests\Speech\QuickE2E\cntk.config = Tests\Speech\QuickE2E\cntk.config
+		Tests\Speech\QuickE2E\run-test = Tests\Speech\QuickE2E\run-test
+		Tests\Speech\QuickE2E\testcases.yml = Tests\Speech\QuickE2E\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{5F733BBA-FE83-4668-8F83-8B0E78A36619}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\Data\AN4.LICENSE.html = Tests\Speech\Data\AN4.LICENSE.html
+		Tests\Speech\Data\glob_0000.mlf = Tests\Speech\Data\glob_0000.mlf
+		Tests\Speech\Data\glob_0000.scp = Tests\Speech\Data\glob_0000.scp
+		Tests\Speech\Data\README.txt = Tests\Speech\Data\README.txt
+		Tests\Speech\Data\state.list = Tests\Speech\Data\state.list
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -245,6 +273,7 @@ Global
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{DBB3C106-B0B4-4059-8477-C89528CEC1B0} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6} = {33EBFE78-A1A8-4961-8938-92A271941F94}
@@ -253,13 +282,15 @@ Global
 		{014DA766-B37B-4581-BC26-963EA5507931} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{D667AF32-028A-4A5D-BE19-F46776F0F6B2} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{CE429AA2-3778-4619-8FD1-49BA3B81197B} = {33EBFE78-A1A8-4961-8938-92A271941F94}
-		{3ED0465D-23E7-4855-9694-F788717B6533} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 		{065AF55D-AF02-448B-BFCD-52619FDA4BD0} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{3ED0465D-23E7-4855-9694-F788717B6533} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 		{98D2C32B-0C1F-4E19-A626-65F7BA4600CF} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{EA67F51F-1FE8-462D-9F3E-01161685AD59} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{DE1A06BA-EC5C-4E0D-BCA8-3EA555310C58} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{63024704-A2D7-497E-AD4B-5C10C6AA1374} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{F9BEB27E-8AF5-464E-8D45-0000D5AFA2D3} = {EA67F51F-1FE8-462D-9F3E-01161685AD59}
 		{889C1CCF-92B3-450B-B00D-FC9A9D5BE464} = {EA67F51F-1FE8-462D-9F3E-01161685AD59}
+		{4BBF2950-3DBD-469A-AD57-6CACBEBAF541} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{5F733BBA-FE83-4668-8F83-8B0E78A36619} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 	EndGlobalSection
 EndGlobal
