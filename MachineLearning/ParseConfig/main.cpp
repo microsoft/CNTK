@@ -158,7 +158,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
                            L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
                            L"  featNorm = MeanVarNorm(myFeatures) \n"
-                           L"  layers = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
+                           L"  layers/*[layer=1..numHiddenLayers]*/ = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
                            L"  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) \n"
                            L"  outZ = outLayer.z + Delay(outZ, 1) \n"
                            L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
@@ -166,6 +166,8 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"  logPrior = LogPrior(myLabels) \n"
                            L"  ScaledLogLikelihood = outZ - logPrior \n"
                            L"]\n";
+        // alternative syntax?
+        // layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)
         let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5)) : Print(Min(13,42)) : Print('a'+Chr(10)+'b') : Print(Replace('abcuhdnbsbbacb','b','##b')) : Print(Substr('Hello', 0, 4)) : Print(Substr('Hello', -2, 4)) : Print(Substr('Hello', 2, -1))";
         let parserTest13 = L" \n"   // this fails because dict is outside val; expression name is not local to it
                            L"do = Print(val) \n"

@@ -611,29 +611,56 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // TODO: This class has no members except for pre-initialized lookup tables. We could get rid of the class.
     // =======================================================================
 
-    class Evaluator
-    {
+    //class Evaluator
+    //{
         // -----------------------------------------------------------------------
         // error handling
         // -----------------------------------------------------------------------
 
-        __declspec(noreturn) void Fail(const wstring & msg, TextLocation where) const { throw EvaluationError(msg, where); }
+        __declspec(noreturn) void Fail(const wstring & msg, TextLocation where) /*const*/ { throw EvaluationError(msg, where); }
 
-        __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) const { Fail(L"expected expression of type " + what, e->location); }
-        __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) const { Fail(L"unknown identifier " + id, where); }
+        __declspec(noreturn) void TypeExpected(const wstring & what, ExpressionPtr e) /*const*/ { Fail(L"expected expression of type " + what, e->location); }
+        __declspec(noreturn) void UnknownIdentifier(const wstring & id, TextLocation where) /*const*/ { Fail(L"unknown identifier " + id, where); }
 
         // -----------------------------------------------------------------------
-        // lexical scope
+        // access to ConfigValuePtr content with error messages
         // -----------------------------------------------------------------------
 
-        struct Scope
+        // get value
+        template<typename T>
+        shared_ptr<T> AsPtr(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
         {
-            shared_ptr<ConfigRecord> symbols;   // symbols in this scope
-            shared_ptr<Scope> up;               // one scope up
-            Scope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) : symbols(symbols), up(up) { }
-        };
-        typedef shared_ptr<Scope> ScopePtr;
-        ScopePtr MakeScope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) { return make_shared<Scope>(symbols, up); }
+            if (!value.Is<T>())
+                TypeExpected(typeForMessage, e);
+            return value.AsPtr<T>();
+        }
+
+        double ToDouble(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = dynamic_cast<Double*>(value.get());
+            if (!val)
+                TypeExpected(L"number", e);
+            double & dval = *val;
+            return dval;    // great place to set breakpoint
+        }
+
+        // get number and return it as an integer (fail if it is fractional)
+        int ToInt(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = ToDouble(value, e);
+            let res = (int)(val);
+            if (val != res)
+                TypeExpected(L"integer", e);
+            return res;
+        }
+
+        bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
+        {
+            let val = dynamic_cast<Bool*>(value.get());            // TODO: factor out this expression
+            if (!val)
+                TypeExpected(L"boolean", e);
+            return *val;
+        }
 
         // -----------------------------------------------------------------------
         // configurable runtime types ("new" expression)
@@ -648,11 +675,12 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             bool isConfigRecord;
             function<ConfigValuePtr(const ConfigRecord &, TextLocation, const wstring &)> construct; // lambda to construct an object of this class
         };
+
         template<class C>
         ConfigurableRuntimeType MakeRuntimeTypeConstructor()
         {
             ConfigurableRuntimeType info;
-            info.construct = [this](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+            info.construct = [/*this*/](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
             {
                 return ConfigValuePtr(MakeRuntimeObject<C>(config), location, exprPath);
             };
@@ -662,7 +690,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         ConfigurableRuntimeType MakeExperimentalComputationNetworkConstructor()
         {
             ConfigurableRuntimeType info;
-            info.construct = [this](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+            info.construct = [/*this*/](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
             {
                 return ConfigValuePtr(MakeExperimentalComputationNetwork(config), location, exprPath);
             };
@@ -672,7 +700,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         ConfigurableRuntimeType MakeExperimentalComputationNodeConstructor()
         {
             ConfigurableRuntimeType info;
-            info.construct = [this](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+            info.construct = [/*this*/](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
             {
                 return ConfigValuePtr(MakeExperimentalComputationNode(config), location, exprPath);
             };
@@ -680,9 +708,39 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             return info;
         }
 
+        // lookup table for "new" expression
+        map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
+        {
+#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
+            // ComputationNodes
+            DefineRuntimeType(ComputationNode),
+            // other relevant classes
+            DefineRuntimeType(NDLComputationNetwork),           // currently our fake
+            // Functions
+            DefineRuntimeType(StringFunction),
+            DefineRuntimeType(NumericFunction),
+            // Actions
+            DefineRuntimeType(PrintAction),
+            DefineRuntimeType(AnotherAction),
+            // glue to experimental integration
+            //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
+            //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
+        };
+
         // -----------------------------------------------------------------------
         // name lookup
         // -----------------------------------------------------------------------
+
+        struct Scope
+        {
+            shared_ptr<ConfigRecord> symbols;   // symbols in this scope
+            shared_ptr<Scope> up;               // one scope up
+            Scope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) : symbols(symbols), up(up) { }
+        };
+        typedef shared_ptr<Scope> ScopePtr;
+        ScopePtr MakeScope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) { return make_shared<Scope>(symbols, up); }
+
+        ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId); // forward declare
 
         // look up a member by id in the search scope
         // If it is not found, it tries all lexically enclosing scopes inside out.
@@ -726,51 +784,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         }
 
         // -----------------------------------------------------------------------
-        // access to ConfigValuePtr content with error messages
-        // -----------------------------------------------------------------------
-
-        // get value
-        template<typename T>
-        shared_ptr<T> AsPtr(ConfigValuePtr value, ExpressionPtr e, const wchar_t * typeForMessage)
-        {
-            if (!value.Is<T>())
-                TypeExpected(typeForMessage, e);
-            return value.AsPtr<T>();
-        }
-
-        double ToDouble(ConfigValuePtr value, ExpressionPtr e)
-        {
-            let val = dynamic_cast<Double*>(value.get());
-            if (!val)
-                TypeExpected(L"number", e);
-            double & dval = *val;
-            return dval;    // great place to set breakpoint
-        }
-
-        // get number and return it as an integer (fail if it is fractional)
-        int ToInt(ConfigValuePtr value, ExpressionPtr e)
-        {
-            let val = ToDouble(value, e);
-            let res = (int)(val);
-            if (val != res)
-                TypeExpected(L"integer", e);
-            return res;
-        }
-
-        bool ToBoolean(ConfigValuePtr value, ExpressionPtr e)
-        {
-            let val = dynamic_cast<Bool*>(value.get());            // TODO: factor out this expression
-            if (!val)
-                TypeExpected(L"boolean", e);
-            return *val;
-        }
-
-        // -----------------------------------------------------------------------
         // infix operators
         // -----------------------------------------------------------------------
 
         // entry for infix-operator lookup table
-        typedef ConfigValuePtr(Evaluator::*InfixOp)(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const;
+        typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)> InfixOp /*const*/;
         struct InfixOps
         {
             InfixOp NumbersOp;            // number OP number -> number
@@ -786,12 +804,12 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
 
         // functions that implement infix operations
         __declspec(noreturn)
-        void InvalidInfixOpTypes(ExpressionPtr e) const
+        void InvalidInfixOpTypes(ExpressionPtr e) //const
         {
             Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location);
         }
         template<typename T>
-        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right, const wstring & exprPath) const
+        ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right, const wstring & exprPath) //const
         {
             if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location, exprPath);
             else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location, exprPath);
@@ -801,7 +819,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location, exprPath);
             else LogicError("unexpected infix op");
         }
-        ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const
+        ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
         {
             let left = leftVal.AsRef<Double>();
             let right = rightVal.AsRef<Double>();
@@ -813,14 +831,14 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right),  e->location, exprPath);
             else return CompOp<double>(e, left, right, exprPath);
         };
-        ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const
+        ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
         {
             let left = leftVal.AsRef<String>();
             let right = rightVal.AsRef<String>();
             if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location, exprPath);
             else return CompOp<wstring>(e, left, right, exprPath);
         };
-        ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const
+        ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
         {
             let left = leftVal.AsRef<Bool>();
             let right = rightVal.AsRef<Bool>();
@@ -829,7 +847,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location, exprPath);
             else return CompOp<bool>(e, left, right, exprPath);
         };
-        ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) const
+        ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath) //const
         {
             if (rightVal.Is<Double>())     // ComputeNode * scalar
                 swap(leftVal, rightVal);        // -> scalar * ComputeNode
@@ -866,7 +884,38 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 valueWithName->SetName(value.GetExpressionName());
             return value;
         };
-        ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) const { InvalidInfixOpTypes(e); };
+        ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) /*const*/ { InvalidInfixOpTypes(e); };
+
+        map<wstring, InfixOps> infixOps =// decltype(infixOps)
+        {
+            // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+            { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
+            { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+            { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+            { L"**", InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"%",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"+",  InfixOps(NumOp, StrOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+            { L"-",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
+            { L"==", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"!=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"<",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L">",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"<=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L">=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"&&", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"||", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
+            { L"^",  InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) }
+        };
+
+        // -----------------------------------------------------------------------
+        // lookup tables
+        // -----------------------------------------------------------------------
+
+        // all infix operators with lambdas for evaluating them
+        //map<wstring, InfixOps> infixOps;
+
+        // this table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags
+        //map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes;
 
         // -----------------------------------------------------------------------
         // thunked (delayed) evaluation
@@ -875,7 +924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         // create a lambda that calls Evaluate() on an expr to get or realize its value
         shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, const wstring & exprPath, const wstring & exprId)
         {
-            function<ConfigValuePtr()> f = [this, expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
+            function<ConfigValuePtr()> f = [/*this, */expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
             {
                 if (trace)
                     TextLocation::PrintIssue(vector<TextLocation>(1, expr->location), L"", exprPath.c_str(), L"executing thunk");
@@ -884,16 +933,6 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             };
             return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
         }
-
-        // -----------------------------------------------------------------------
-        // lookup tables
-        // -----------------------------------------------------------------------
-
-        // all infix operators with lambdas for evaluating them
-        map<wstring, InfixOps> infixOps;
-
-        // this table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags
-        map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes;
 
         // -----------------------------------------------------------------------
         // main evaluator function (highly recursive)
@@ -950,7 +989,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
                     if (argListExpr->op != L"()") LogicError("parameter list expected");
                     let fnExpr = e->args[1];                // [1] = expression of the function itself
-                    let f = [this, argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
+                    let f = [/*this, */argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
                     {
                         // on exprName
                         //  - 'callerExprPath' is the name to which the result of the fn evaluation will be assigned
@@ -1100,7 +1139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                         let elemExprPath = exprPath.empty() ? L"" : wstrprintf(L"%ls[%d]", exprPath.c_str(), index);    // expression name shows index lookup
                         let initExprPath = exprPath.empty() ? L"" : wstrprintf(L"_lambda");    // expression name shows initializer with arg
                         // create an expression
-                        function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
+                        function<ConfigValuePtr()> f = [/*this, */indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
                         {
                             if (trace)
                                 TextLocation::PrintIssue(vector<TextLocation>(1, initLambdaExpr->location), L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
@@ -1156,18 +1195,18 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
                     let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
                     if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
-                        return (this->*functions.NumbersOp)(e, leftValPtr, rightValPtr, exprPath);
+                        return functions.NumbersOp(e, leftValPtr, rightValPtr, exprPath);
                     else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
-                        return (this->*functions.StringsOp)(e, leftValPtr, rightValPtr, exprPath);
+                        return functions.StringsOp(e, leftValPtr, rightValPtr, exprPath);
                     else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
-                        return (this->*functions.BoolOp)(e, leftValPtr, rightValPtr, exprPath);
+                        return functions.BoolOp(e, leftValPtr, rightValPtr, exprPath);
                     // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
                     else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
-                        return (this->*functions.ComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
+                        return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
                     else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
-                        return (this->*functions.ComputeNodeNumberOp)(e, leftValPtr, rightValPtr, exprPath);
+                        return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr, exprPath);
                     else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
-                        return (this->*functions.NumberComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
+                        return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
                     // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
                     else
                         InvalidInfixOpTypes(e);
@@ -1182,53 +1221,15 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             }
         }
 
-    public:
+    //public:
         // -----------------------------------------------------------------------
         // constructor
         // -----------------------------------------------------------------------
 
-        Evaluator()
-        {
-            // lookup table for "new" expression
-            configurableRuntimeTypes = decltype(configurableRuntimeTypes)
-            {
-#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
-                // ComputationNodes
-                DefineRuntimeType(ComputationNode),
-                // other relevant classes
-                DefineRuntimeType(NDLComputationNetwork),           // currently our fake
-                // Functions
-                DefineRuntimeType(StringFunction),
-                DefineRuntimeType(NumericFunction),
-                // Actions
-                DefineRuntimeType(PrintAction),
-                DefineRuntimeType(AnotherAction),
-                // glue to experimental integration
-                //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
-                //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
-            };
+        //Evaluator()
+        //{
             // initialize the infixOps table (lookup table for infix operators)
-            infixOps = decltype(infixOps)
-            {
-                // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
-                { L"*",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::NodeOp, &Evaluator::BadOp) },
-                { L"/",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L".*", InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"**", InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"%",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"+",  InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"-",  InfixOps(&Evaluator::NumOp, &Evaluator::BadOp, &Evaluator::BadOp,  &Evaluator::NodeOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"==", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"!=", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"<",  InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L">",  InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"<=", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L">=", InfixOps(&Evaluator::NumOp, &Evaluator::StrOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"&&", InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"||", InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) },
-                { L"^",  InfixOps(&Evaluator::BadOp, &Evaluator::BadOp, &Evaluator::BoolOp, &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp,  &Evaluator::BadOp) }
-            };
-        }
+        //}
 
         ConfigValuePtr EvaluateParse(ExpressionPtr e)
         {
@@ -1250,24 +1251,24 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
 
             return RecordLookup(e, id, e->location, nullptr, L"$");  // we evaluate the member 'do'
         }
-    };
+    //};
 
     ConfigValuePtr Evaluate(ExpressionPtr e)
     {
-        return Evaluator().EvaluateParse(e);
+        return /*Evaluator().*/EvaluateParse(e);
     }
 
     // top-level entry
     // A config sequence X=A;Y=B;do=(A,B) is really parsed as [X=A;Y=B].do. That's the tree we get. I.e. we try to compute the 'do' member.
     // TODO: This is wicked--constructors should always be fast to run. Do() should run after late initializations.
-    void Do(ExpressionPtr e)
-    {
-        Evaluator().Do(e);
-    }
+    //void Do(ExpressionPtr e)
+    //{
+    //    Evaluator().Do(e);
+    //}
 
-    shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
-    {
-        return Evaluator().EvaluateField(e, id);
-    }
+    //shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id)
+    //{
+    //    return /*Evaluator().*/EvaluateField(e, id);
+    //}
 
 }}}}     // namespaces
