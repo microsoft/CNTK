@@ -884,6 +884,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * uids.size());
                                     m_labelsBufferAllocatedMultiIO[id] = dim * uids.size();
                                 }
+                                memset(m_labelsBufferMultiIO[id].get(), 0, sizeof(ElemType) * dim * uids.size());
 
                                 if (m_convertLabelsToTargetsMultiIO[id])
                                 {
