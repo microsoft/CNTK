@@ -1184,7 +1184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             {
 #define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
                 // ComputationNodes
-                //DefineRuntimeType(ComputationNode),
+                DefineRuntimeType(ComputationNode),
                 // other relevant classes
                 DefineRuntimeType(NDLComputationNetwork),           // currently our fake
                 // Functions
@@ -1194,8 +1194,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 DefineRuntimeType(PrintAction),
                 DefineRuntimeType(AnotherAction),
                 // glue to experimental integration
-                { L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
-                { L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
+                //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
+                //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
             };
             // initialize the infixOps table (lookup table for infix operators)
             infixOps = decltype(infixOps)
