@@ -110,7 +110,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     // quantize   --we access element (i,j) through the three increasing pointers
                     ElemType val = *usibj + *resibj;
-                    bool qval = valQ.Quantize1<ZeroThresholdFor1Bit>(val);
+
+                    // Explicit use of 'template' keyword is needed to compile with GCC
+                    bool qval = valQ.template Quantize1<ZeroThresholdFor1Bit>(val);
                     if (qval)
                     {
                         bitBuf |= bitmask;
