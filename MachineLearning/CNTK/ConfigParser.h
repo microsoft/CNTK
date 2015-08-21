@@ -34,7 +34,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
 
         // helpesr for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
         wstring FormatErroneousLine() const;
-        void PrintIssue(const wchar_t * errorKind, const wchar_t * kind, const wchar_t * what) const;
+        static void PrintIssue(const vector<TextLocation> & locations, const wchar_t * errorKind, const wchar_t * kind, const wchar_t * what);
 
         // construction
         TextLocation();
@@ -54,17 +54,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
 
     class ConfigError : public runtime_error
     {
-        TextLocation location;
+        vector<TextLocation> locations;  // error location (front()) and evaluation parents (upper)
     public:
         // Note: All our Error objects use wide strings, which we round-trip through runtime_error as utf8.
-        ConfigError(const wstring & msg, TextLocation where) : location(where), runtime_error(msra::strfun::utf8(msg)) { }
+        ConfigError(const wstring & msg, TextLocation where) : runtime_error(msra::strfun::utf8(msg)) { locations.push_back(where); }
 
         // these are used in pretty-printing
-        TextLocation where() const { return location; } // where the error happened
-        virtual const wchar_t * kind() const = 0;          // e.g. "warning" or "error"
+        TextLocation where() const { return locations.front(); }    // where the error happened
+        virtual const wchar_t * kind() const = 0;                   // e.g. "warning" or "error"
 
         // pretty-print this as an error message
-        void PrintError() const { location.PrintIssue(L"error", kind(), msra::strfun::utf16(what()).c_str()); }
+        void PrintError() const { TextLocation::PrintIssue(locations, L"error", kind(), msra::strfun::utf16(what()).c_str()); }
+        void AddLocation(TextLocation where) { locations.push_back(where); }
     };
 
     // ---------------------------------------------------------------------------
