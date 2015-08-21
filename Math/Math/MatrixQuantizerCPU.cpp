@@ -36,21 +36,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & qcol = *(outQMatrix.GetQuantizedColumn(j));
             if (zeroThresholdFor1Bit)
             {
-                ColumnQuantizer<ElemType>::ComputeRangeStatColj<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
+                // Explicit use of 'template' keyword is needed to compile with GCC
+                ColumnQuantizer<ElemType>::template ComputeRangeStatColj<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
             }
             else
             {
-                ColumnQuantizer<ElemType>::ComputeRangeStatColj<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
+                // Explicit use of 'template' keyword is needed to compile with GCC
+                ColumnQuantizer<ElemType>::template ComputeRangeStatColj<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
             }
 
             ColumnQuantizer<ElemType> q(ldNbits, qcol.lower, qcol.upper);
             if (zeroThresholdFor1Bit)
             {
-                q.Quantize<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
+                // Explicit use of 'template' keyword is needed to compile with GCC
+                q.template Quantize<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
             }
             else
             {
-                q.Quantize<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
+                // Explicit use of 'template' keyword is needed to compile with GCC
+                q.template Quantize<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
             }
         }
     #ifdef QUANTUSEPPL
