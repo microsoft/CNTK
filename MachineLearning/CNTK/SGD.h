@@ -1811,13 +1811,13 @@ protected:
         Timer timer;
         timer.Start();
 
-        int kkk = 0;
+        //int kkk = 0; //debughtx
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
 #ifdef MPI_SUPPORT
             DecimateMinibatch(inputMatrices);
 #endif
-            
+            /*
             if (kkk < 4) {
                 fprintf(stderr, "debughtx SGD.h kkk:%d row:%d col:%d\n", kkk, inputMatrices->find(L"labels")->second->GetNumRows(), inputMatrices->find(L"labels")->second->GetNumCols());
                 for (int i = 0; i < inputMatrices->find(L"labels")->second->GetNumCols(); i++) {
@@ -1828,7 +1828,8 @@ protected:
                 system("sleep 1");
             }
             kkk++;
-                        
+            */
+
             UpdateEvalTimeStamps(FeatureNodes);
             UpdateEvalTimeStamps(labelNodes);
 

@@ -1825,7 +1825,12 @@ size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    fprintf(stderr, "debughtx LMSequenceReader::GetMinibatch called\n");
+    fprintf(stderr, "debughtx ---LMSequenceReader::GetMinibatch called---\n");
+    fprintf(stderr, "debughtx keys of the matrices: "); //features idx2cls labels
+    for (std::map<std::wstring, Matrix<ElemType>*>::iterator it = matrices.begin(); it != matrices.end(); ++it) {
+        fprintf(stderr, "%ws ", (it->first).c_str());
+    }
+    fprintf(stderr, "\n");
     fprintf(stderr, "debughtx readerConfig-nbruttsineachrecurrentiter:%s\n", m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());
     int sequence_number = atoi(m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());//debughtx
 
@@ -1854,7 +1859,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
         //loop through all the samples
         Matrix<ElemType>& features = *matrices[m_featuresName];
-      
+        
         // copy m_featureData to matrix
         // we always copy it to cpu first and then convert to gpu if gpu is desired.
         DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
@@ -1864,7 +1869,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
         mtSentenceBegin.Resize(mToProcess.size(), nT);
         mtSentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        m_minibatchPackingFlag.resize(nT);
+        m_minibatchPackingFlag.resize(nT); //
         std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
         if (features.GetMatrixType() == MatrixType::DENSE)
@@ -1878,6 +1883,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             features.Reset();
         }
 
+        fprintf(stderr, "debughtx (before) features non-zero number: %lf\n", features.SumOfElements());
         size_t timeIdx = 0;
         for (size_t j = 0; j < actualmbsize; ++j)
         {
@@ -1889,10 +1895,15 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             size_t uttIdx = (size_t)fmod(j, mToProcess.size());
 
             features.SetValue(idx, j, (ElemType)1);
+            fprintf(stderr, "%d[%s] ", idx, idx4word[(int)idx].c_str());
+            if ((j + 1) % sequence_number == 0)
+                fprintf(stderr, "\n");
+
             SetSentenceBegin(idx, uttIdx, timeIdx);
         }
-        
-        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
+        fprintf(stderr, "debughtx (after) features non-zero number: %lf\n", features.SumOfElements());
+
+        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false); //features: m_matrixType SPARSE(2)
 //        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 //        m_minibatchPackingFlag.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
@@ -1910,11 +1921,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     else
         return false; 
 
-    fprintf(stderr, "debughtx LMSequenceReader::SequenceReader.cpp debughtx row:%d col:%d\n", matrices.find(L"labels")->second->GetNumRows(), matrices.find(L"labels")->second->GetNumCols());
-    fprintf(stderr, "debughtx readerConfig-RANDOMIZE:%s\n", m_readerConfig(L"randomize", "WRONG").c_str());
+    fprintf(stderr, "debughtx LMSequenceReader::SequenceReader.cpp debughtx matrix(label) row:%d col:%d\n", matrices.find(L"labels")->second->GetNumRows(), matrices.find(L"labels")->second->GetNumCols());
     for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
         for (int j = 0; j < 4; j++) {
-            fprintf(stderr, " %lf", (*(matrices.find(L"labels")->second))(j, i));
+            fprintf(stderr, " %.2lf", (*(matrices.find(L"labels")->second))(j, i));
             if (j == 0)
                 fprintf(stderr, "[%s] ", idx4word[int((*(matrices.find(L"labels")->second))(j, i))].c_str());
             if ((j == 3) && ((i + 1) % sequence_number == 0))
@@ -1928,6 +1938,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         // get the features array
         if (matrices.find(m_featuresName) == matrices.end())
         {
+            fprintf(stderr, "debughtx ---this block is never reached!---\n");
+            system("sleep 5");
             Matrix<ElemType>& nbs = *matrices[L"numberobs"];
             int curDevId = nbs.GetDeviceId();
             nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
@@ -1946,6 +1958,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     }
 
     // we read some records, so process them
+    fprintf(stderr, "debughtx ---LMSequenceReader::GetMinibatch call ended---\n");
     return true;
 }
 
