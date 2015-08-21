@@ -21,15 +21,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ErrorPredictionNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : ComputationNode<ElemType>(deviceId, name), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
+        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
         {
+            m_maxIndexes0 = Matrix<ElemType>(deviceId), m_maxIndexes1 = Matrix<ElemType>(deviceId), m_maxValues = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        ErrorPredictionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId, name), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_maxIndexes0 = Matrix<ElemType>(deviceId), m_maxIndexes1 = Matrix<ElemType>(deviceId), m_maxValues = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -158,18 +161,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        ErrorPredictionNode(const ErrorPredictionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_maxIndexes0(node->m_deviceId), m_maxIndexes1(node->m_deviceId), m_maxValues(node->m_deviceId)
+        void Construct(const ErrorPredictionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            m_maxIndexes0 = Matrix<ElemType>(node->m_deviceId), m_maxIndexes1 = Matrix<ElemType>(node->m_deviceId), m_maxValues = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<ErrorPredictionNode<ElemType>>(this, name, flags);
-            return node;
+            return New<ErrorPredictionNode<ElemType>>(this, name, flags);
         }
 
     protected:

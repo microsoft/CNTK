@@ -43,22 +43,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        ConvolutionNode(const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
+        void Construct(const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                         const size_t horizontalSubsample, const size_t verticalSubsample, 
                         const bool zeroPadding = false, 
                         const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"",
                         const size_t maxTempMemSizeInSamples = 0)
-                        : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId),
-                          m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight), 
-                          m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
-                          m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
+            m_tempMatrix = Matrix<ElemType>(deviceId);
+            m_kernelWidth = kernelWidth, m_kernelHeight = kernelHeight;
+            m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
+            m_zeroPadding = zeroPadding, m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
             m_outputChannels = outputChannels;
+            ComputationNode<ElemType>::Construct(deviceId, name);
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        ConvolutionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name), m_tempMatrix(deviceId)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_tempMatrix = Matrix<ElemType>(deviceId);
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
                 
@@ -100,18 +104,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        ConvolutionNode(const ConvolutionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : ComputationNode<ElemType>(node->m_deviceId, newName), m_tempMatrix(node->m_deviceId)
+        void Construct(const ConvolutionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
         {
+            m_tempMatrix = Matrix<ElemType>(node->m_deviceId);
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<ConvolutionNode<ElemType>>(this, name, flags);
-            return node;
+            return New<ConvolutionNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -466,16 +470,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        MaxPoolingNode( const size_t windowWidth, const size_t windowHeight, 
-                        const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name),
-                          m_windowWidth(windowWidth), m_windowHeight(windowHeight),
-                          m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)                       
+        void Construct(const size_t windowWidth, const size_t windowHeight, 
+                       const size_t horizontalSubsample, const size_t verticalSubsample, 
+                       const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_windowWidth = windowWidth, m_windowHeight = windowHeight;
+            m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
+            ComputationNode<ElemType>::Construct(deviceId, name);
         }
                 
-        MaxPoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
                 
@@ -519,18 +526,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // copy constructor
-        MaxPoolingNode(const MaxPoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const MaxPoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<MaxPoolingNode<ElemType>>(this, name, flags);
-            return node;
+            return New<MaxPoolingNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -700,15 +705,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        AveragePoolingNode(const size_t windowWidth, const size_t windowHeight, 
-                        const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-                        : ComputationNode<ElemType>(deviceId, name),
-                        m_windowWidth(windowWidth), m_windowHeight(windowHeight),
-                        m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample) { }
-
-        AveragePoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId, name)
+        void Construct(const size_t windowWidth, const size_t windowHeight,
+                       const size_t horizontalSubsample, const size_t verticalSubsample, 
+                       const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
+            m_windowWidth = windowWidth, m_windowHeight = windowHeight;
+            m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
+            ComputationNode<ElemType>::Construct(deviceId, name);
+        }
+
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        {
+            ComputationNode<ElemType>::Construct(deviceId, name);
+            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
 
@@ -753,18 +762,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        AveragePoolingNode(const AveragePoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId, newName)
+        void Construct(const AveragePoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
+            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<AveragePoolingNode<ElemType>>(this, name, flags);
-            return node;
+            return New<AveragePoolingNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}

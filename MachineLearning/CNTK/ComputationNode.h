@@ -1089,8 +1089,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // factory functions
     // Call these instead of new for any ComputationNode derivatives.  TODO: complete this
-    //template<class C, class... _Types> inline C * New1(_Types&&... _Args) { return auto p = new C(); p->Construct(std::forward<_Types>(_Args)...); return p; }
-    template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { return make_shared<C>(std::forward<_Types>(_Args)...); }
+    template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
     // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
