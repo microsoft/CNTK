@@ -16,6 +16,7 @@
 //  - a way to access a symbol up from the current scope, needed for function parameters of the same name as dict entries created from them, e.g. the optional 'tag'
 //     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
 //     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
+//  - config[".."] should search symbols the entire stack up, not only the current dictionary
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -38,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     using namespace std;
     using namespace msra::strfun;
 
-    bool trace = true;      // enable to get debug output
+    bool trace = false;// true;      // enable to get debug output
 
 #define exprPathSeparator L"."
 
@@ -877,7 +878,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             function<ConfigValuePtr()> f = [this, expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
             {
                 if (trace)
-                    expr->location.PrintIssue(L"", exprPath.c_str(), L"executing thunk");
+                    TextLocation::PrintIssue(vector<TextLocation>(1, expr->location), L"", exprPath.c_str(), L"executing thunk");
                 let value = Evaluate(expr, scope, exprPath, exprId);
                 return value;   // this is a great place to set a breakpoint!
             };
@@ -904,272 +905,281 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
         ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId)
         {
-            // expression names
-            // Merge exprPath and exprId into one unless one is empty
-            if (!exprPath.empty() && !exprId.empty())
-                exprPath.append(exprPathSeparator);
-            exprPath.append(exprId);
-            // tracing
-            if (trace)
-                e->location.PrintIssue(L"", L"", L"trace");
-            // --- literals
-            if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
-            else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
-            else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location, exprPath);         // === bool literal
-            else if (e->op == L"new")                                                               // === 'new' expression: instantiate C++ runtime object right here
+            try
             {
-                // find the constructor lambda
-                let newIter = configurableRuntimeTypes.find(e->id);
-                if (newIter == configurableRuntimeTypes.end())
-                    Fail(L"unknown runtime type " + e->id, e->location);
-                // form the config record
-                let dictExpr = e->args[0];
-                let argsExprPath = newIter->second.isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
-                let value = newIter->second.construct(*ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location, exprPath); // this constructs it
-                // if object has a name, we set it
-                let valueWithName = dynamic_cast<HasName*>(value.get());
-                if (valueWithName)
-                    valueWithName->SetName(value.GetExpressionName());
-                return value;   // we return the created but not initialized object as the value, so others can reference it
-            }
-            else if (e->op == L"if")                                                    // === conditional expression
-            {
-                let condition = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"if"), e->args[0]);
-                if (condition)
-                    return Evaluate(e->args[1], scope, exprPath, L"");      // pass exprName through 'if' since only of the two exists
-                else
-                    return Evaluate(e->args[2], scope, exprPath, L"");
-            }
-            // --- functions
-            else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
-            {
-                // on scope: The lambda expression remembers the lexical scope of the '=>'; this is how it captures its context.
-                let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
-                if (argListExpr->op != L"()") LogicError("parameter list expected");
-                let fnExpr = e->args[1];                // [1] = expression of the function itself
-                let f = [this, argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
+                // expression names
+                // Merge exprPath and exprId into one unless one is empty
+                if (!exprPath.empty() && !exprId.empty())
+                    exprPath.append(exprPathSeparator);
+                exprPath.append(exprId);
+                // tracing
+                if (trace)
+                    TextLocation::PrintIssue(vector<TextLocation>(1, e->location), L"", L"", L"trace");
+                // --- literals
+                if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
+                else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
+                else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location, exprPath);         // === bool literal
+                else if (e->op == L"new")                                                               // === 'new' expression: instantiate C++ runtime object right here
                 {
-                    // on exprName
-                    //  - 'callerExprPath' is the name to which the result of the fn evaluation will be assigned
-                    //  - 'exprPath' (outside) is the name of the macro we are defining this lambda under
-                    let & argList = argListExpr->args;
-                    if (args.size() != argList.size()) LogicError("function application with mismatching number of arguments");
-                    // create a ConfigRecord with param names from 'argList' and values from 'args'
-                    let record = make_shared<ConfigRecord>();
-                    let thisScope = MakeScope(record, scope);   // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
-                    // create an entry for every argument value
-                    // Note that these values should normally be thunks since we only want to evaluate what's used.
-                    for (size_t i = 0; i < args.size(); i++)    // positional arguments
+                    // find the constructor lambda
+                    let newIter = configurableRuntimeTypes.find(e->id);
+                    if (newIter == configurableRuntimeTypes.end())
+                        Fail(L"unknown runtime type " + e->id, e->location);
+                    // form the config record
+                    let dictExpr = e->args[0];
+                    let argsExprPath = newIter->second.isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
+                    let value = newIter->second.construct(*ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location, exprPath); // this constructs it
+                    // if object has a name, we set it
+                    let valueWithName = dynamic_cast<HasName*>(value.get());
+                    if (valueWithName)
+                        valueWithName->SetName(value.GetExpressionName());
+                    return value;   // we return the created but not initialized object as the value, so others can reference it
+                }
+                else if (e->op == L"if")                                                    // === conditional expression
+                {
+                    let condition = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"if"), e->args[0]);
+                    if (condition)
+                        return Evaluate(e->args[1], scope, exprPath, L"");      // pass exprName through 'if' since only of the two exists
+                    else
+                        return Evaluate(e->args[2], scope, exprPath, L"");
+                }
+                // --- functions
+                else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
+                {
+                    // on scope: The lambda expression remembers the lexical scope of the '=>'; this is how it captures its context.
+                    let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
+                    if (argListExpr->op != L"()") LogicError("parameter list expected");
+                    let fnExpr = e->args[1];                // [1] = expression of the function itself
+                    let f = [this, argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
                     {
-                        let argName = argList[i];       // parameter name
-                        if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
-                        let & argVal = args[i];         // value of the parameter
-                        record->Add(argName->id, argName->location, argVal);
-                        // note: these are expressions for the parameter values; so they must be evaluated in the current scope
+                        // on exprName
+                        //  - 'callerExprPath' is the name to which the result of the fn evaluation will be assigned
+                        //  - 'exprPath' (outside) is the name of the macro we are defining this lambda under
+                        let & argList = argListExpr->args;
+                        if (args.size() != argList.size()) LogicError("function application with mismatching number of arguments");
+                        // create a ConfigRecord with param names from 'argList' and values from 'args'
+                        let record = make_shared<ConfigRecord>();
+                        let thisScope = MakeScope(record, scope);   // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
+                        // create an entry for every argument value
+                        // Note that these values should normally be thunks since we only want to evaluate what's used.
+                        for (size_t i = 0; i < args.size(); i++)    // positional arguments
+                        {
+                            let argName = argList[i];       // parameter name
+                            if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
+                            let & argVal = args[i];         // value of the parameter
+                            record->Add(argName->id, argName->location, argVal);
+                            // note: these are expressions for the parameter values; so they must be evaluated in the current scope
+                        }
+                        // also named arguments
+                        for (let namedArg : namedArgs->GetMembers())
+                        {
+                            let id = namedArg.first;
+                            let & argVal = namedArg.second;
+                            record->Add(id, argVal.GetLocation(), argVal);
+                        }
+                        // get the macro name for the exprPath
+                        wstring macroId = exprPath;
+                        let pos = macroId.find(exprPathSeparator);
+                        if (pos != wstring::npos)
+                            macroId.erase(0, pos + 1);
+                        // now evaluate the function
+                        return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
+                    };
+                    // positional args
+                    vector<wstring> paramNames;
+                    let & argList = argListExpr->args;
+                    for (let arg : argList)
+                    {
+                        if (arg->op != L"id") LogicError("function parameter list must consist of identifiers");
+                        paramNames.push_back(arg->id);
                     }
-                    // also named arguments
-                    for (let namedArg : namedArgs->GetMembers())
+                    // named args
+                    // The nammedArgs in the definition lists optional arguments with their default values
+                    let record = make_shared<ConfigRecord>();
+                    for (let namedArg : argListExpr->namedArgs)
                     {
                         let id = namedArg.first;
-                        let & argVal = namedArg.second;
-                        record->Add(id, argVal.GetLocation(), argVal);
+                        let location = namedArg.second.first;   // location of identifier
+                        let expr = namedArg.second.second;      // expression to evaluate to get default value
+                        record->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                        // the thunk is called if the default value is ever used
                     }
-                    // get the macro name for the exprPath
-                    wstring macroId = exprPath;
-                    let pos = macroId.find(exprPathSeparator);
-                    if (pos != wstring::npos)
-                        macroId.erase(0, pos + 1);
-                    // now evaluate the function
-                    return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
-                };
-                // positional args
-                vector<wstring> paramNames;
-                let & argList = argListExpr->args;
-                for (let arg : argList)
-                {
-                    if (arg->op != L"id") LogicError("function parameter list must consist of identifiers");
-                    paramNames.push_back(arg->id);
+                    return ConfigValuePtr(make_shared<ConfigLambda>(paramNames, record, f), e->location, exprPath);
                 }
-                // named args
-                // The nammedArgs in the definition lists optional arguments with their default values
-                let record = make_shared<ConfigRecord>();
-                for (let namedArg : argListExpr->namedArgs)
+                else if (e->op == L"(")                                         // === apply a function to its arguments
                 {
-                    let id = namedArg.first;
-                    let location = namedArg.second.first;   // location of identifier
-                    let expr = namedArg.second.second;      // expression to evaluate to get default value
-                    record->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
-                    // the thunk is called if the default value is ever used
-                }
-                return ConfigValuePtr(make_shared<ConfigLambda>(paramNames, record, f), e->location, exprPath);
-            }
-            else if (e->op == L"(")                                         // === apply a function to its arguments
-            {
-                let lambdaExpr = e->args[0];            // [0] = function
-                let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
-                let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"_lambda"), lambdaExpr, L"function");
-                if (argsExpr->op != L"()") LogicError("argument list expected");
-                // put all args into a vector of values
-                // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
-                let args = argsExpr->args;
-                if (args.size() != lambda->GetNumParams())
-                    Fail(L"function parameter list must consist of identifiers", argsExpr->location);
-                vector<ConfigValuePtr> argVals(args.size());
-                for (size_t i = 0; i < args.size(); i++)    // positional arguments
-                {
-                    let argValExpr = args[i];               // expression of arg [i]
-                    let argName = lambda->GetParamNames()[i];
-                    argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location, exprPath/*TODO??*/);  // make it a thunked value
-                    /*this wstrprintf should be gone, this is now the exprName*/
-                }
-                // named args are put into a ConfigRecord
-                // We could check whether the named ars are actually accepted by the lambda, but we leave that to Apply() so that the check also happens for lambda calls from CNTK C++ code.
-                let namedArgs = argsExpr->namedArgs;
-                let namedArgVals = make_shared<ConfigRecord>();
-                for (let namedArg : namedArgs)
-                {
-                    let id = namedArg.first;                // id of passed in named argument
-                    let location = namedArg.second.first;   // location of expression
-                    let expr = namedArg.second.second;      // expression of named argument
-                    namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
-                    // the thunk is evaluated when/if the passed actual value is ever used the first time
-                }
-                // call the function!
-                return lambda->Apply(argVals, namedArgVals, exprPath);
-            }
-            // --- variable access
-            else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
-            {
-                let record = make_shared<ConfigRecord>();
-                // create an entry for every dictionary entry.
-                let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
-                // We do not evaluate the members at this point.
-                // Instead, as the value, we keep the ExpressionPtr itself wrapped in a lambda that evaluates that ExpressionPtr to a ConfigValuePtr when called.
-                // Members are evaluated on demand when they are used.
-                for (let & entry : e->namedArgs)
-                {
-                    let id = entry.first;
-                    let expr = entry.second.second;             // expression to compute the entry
-                    record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, exprPath, id), expr->location, exprPath/*TODO??*/));
-                }
-                // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
-                return ConfigValuePtr(record, e->location, exprPath);
-            }
-            else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
-            else if (e->op == L".")                                                 // === variable/macro access in given ConfigRecord element
-            {
-                let recordExpr = e->args[0];
-                return RecordLookup(recordExpr, e->id, e->location, scope, exprPath);
-            }
-            // --- arrays
-            else if (e->op == L":")                                                 // === array expression (-> ConfigArray)
-            {
-                // this returns a flattened list of all members as a ConfigArray type
-                let arr = make_shared<ConfigArray>();       // note: we could speed this up by keeping the left arg and appending to it
-                for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
-                {
-                    let expr = e->args[i];
-                    let item = Evaluate(expr, scope, exprPath, wstrprintf(L"_vecelem%d", i));           // result can be an item or a vector
-                    if (item.Is<ConfigArray>())
-                        arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
-                    else
-                        arr->Append(item);
-                }
-                return ConfigValuePtr(arr, e->location, exprPath);  // location will be that of the first ':', not sure if that is best way
-            }
-            else if (e->op == L"array")                                             // === array constructor from lambda function
-            {
-                let firstIndexExpr = e->args[0];    // first index
-                let lastIndexExpr  = e->args[1];    // last index
-                let initLambdaExpr = e->args[2];    // lambda to initialize the values
-                let firstIndex = ToInt(Evaluate(firstIndexExpr, scope, exprPath, L"array_first"), firstIndexExpr);
-                let lastIndex  = ToInt(Evaluate(lastIndexExpr,  scope, exprPath, L"array_last"),  lastIndexExpr);
-                let lambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, exprPath, L"_initializer"), initLambdaExpr, L"function");
-                if (lambda->GetNumParams() != 1)
-                    Fail(L"'array' requires an initializer function with one argument (the index)", initLambdaExpr->location);
-                // At this point, we must know the dimensions and the initializer lambda, but we don't need to know all array elements.
-                // Resolving array members on demand allows recursive access to the array variable, e.g. h[t] <- f(h[t-1]).
-                // create a vector of Thunks to initialize each value
-                vector<ConfigValuePtr> elementThunks;
-                for (int index = firstIndex; index <= lastIndex; index++)
-                {
-                    let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location, exprPath/*never needed*/);           // index as a ConfigValuePtr
-                    let elemExprPath = exprPath.empty() ? L"" : wstrprintf(L"%ls[%d]", exprPath.c_str(), index);    // expression name shows index lookup
-                    let initExprPath = exprPath.empty() ? L"" : wstrprintf(L"_lambda");    // expression name shows initializer with arg
-                    // create an expression
-                    function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
+                    let lambdaExpr = e->args[0];            // [0] = function
+                    let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
+                    let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"_lambda"), lambdaExpr, L"function");
+                    if (argsExpr->op != L"()") LogicError("argument list expected");
+                    // put all args into a vector of values
+                    // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
+                    let args = argsExpr->args;
+                    if (args.size() != lambda->GetNumParams())
+                        Fail(L"function parameter list must consist of identifiers", argsExpr->location);
+                    vector<ConfigValuePtr> argVals(args.size());
+                    for (size_t i = 0; i < args.size(); i++)    // positional arguments
                     {
-                        if (trace)
-                            initLambdaExpr->location.PrintIssue(L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
-                        // apply initLambdaExpr to indexValue and return the resulting value
-                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");
-                        vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
-                        let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
-                        let value = initLambda->Apply(argVals, namedArgs, elemExprPath);
-                        return value;   // this is a great place to set a breakpoint!
-                    };
-                    elementThunks.push_back(ConfigValuePtr(make_shared<ConfigValuePtr::Thunk>(f, initLambdaExpr->location), initLambdaExpr->location, elemExprPath/*TODO??*/));
+                        let argValExpr = args[i];               // expression of arg [i]
+                        let argName = lambda->GetParamNames()[i];
+                        argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location, exprPath/*TODO??*/);  // make it a thunked value
+                        /*this wstrprintf should be gone, this is now the exprName*/
+                    }
+                    // named args are put into a ConfigRecord
+                    // We could check whether the named ars are actually accepted by the lambda, but we leave that to Apply() so that the check also happens for lambda calls from CNTK C++ code.
+                    let namedArgs = argsExpr->namedArgs;
+                    let namedArgVals = make_shared<ConfigRecord>();
+                    for (let namedArg : namedArgs)
+                    {
+                        let id = namedArg.first;                // id of passed in named argument
+                        let location = namedArg.second.first;   // location of expression
+                        let expr = namedArg.second.second;      // expression of named argument
+                        namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                        // the thunk is evaluated when/if the passed actual value is ever used the first time
+                    }
+                    // call the function!
+                    return lambda->Apply(argVals, namedArgVals, exprPath);
                 }
-                auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
-                return ConfigValuePtr(arr, e->location, exprPath);
-            }
-            else if (e->op == L"[")                                         // === access array element by index
-            {
-                let arrValue = Evaluate(e->args[0], scope, exprPath, L"_vector");
-                let indexExpr = e->args[1];
-                let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
-                let index = ToInt(Evaluate(indexExpr, scope, exprPath, L"_index"), indexExpr);
-                return arr->At(index, indexExpr->location);
-            }
-            // --- unary operators '+' '-' and '!'
-            else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
-            {
-                let argExpr = e->args[0];
-                let argValPtr = Evaluate(argExpr, scope, exprPath, e->op == L"+(" ? L"" : L"_negate");
-                // note on exprPath: since - has only one argument, we do not include it in the expessionPath
-                if (argValPtr.Is<Double>())
-                    if (e->op == L"+(") return argValPtr;
-                    else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location, exprPath);
-                else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
-                    if (e->op == L"+(") return argValPtr;
-                    else return NodeOp(e, MakePrimitiveConfigValuePtr(-1.0, e->location, exprPath), argValPtr, exprPath);
+                // --- variable access
+                else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
+                {
+                    let record = make_shared<ConfigRecord>();
+                    // create an entry for every dictionary entry.
+                    let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
+                    // We do not evaluate the members at this point.
+                    // Instead, as the value, we keep the ExpressionPtr itself wrapped in a lambda that evaluates that ExpressionPtr to a ConfigValuePtr when called.
+                    // Members are evaluated on demand when they are used.
+                    for (let & entry : e->namedArgs)
+                    {
+                        let id = entry.first;
+                        let expr = entry.second.second;             // expression to compute the entry
+                        record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    }
+                    // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
+                    return ConfigValuePtr(record, e->location, exprPath);
+                }
+                else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
+                else if (e->op == L".")                                                 // === variable/macro access in given ConfigRecord element
+                {
+                    let recordExpr = e->args[0];
+                    return RecordLookup(recordExpr, e->id, e->location, scope, exprPath);
+                }
+                // --- arrays
+                else if (e->op == L":")                                                 // === array expression (-> ConfigArray)
+                {
+                    // this returns a flattened list of all members as a ConfigArray type
+                    let arr = make_shared<ConfigArray>();       // note: we could speed this up by keeping the left arg and appending to it
+                    for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
+                    {
+                        let expr = e->args[i];
+                        let item = Evaluate(expr, scope, exprPath, wstrprintf(L"_vecelem%d", i));           // result can be an item or a vector
+                        if (item.Is<ConfigArray>())
+                            arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
+                        else
+                            arr->Append(item);
+                    }
+                    return ConfigValuePtr(arr, e->location, exprPath);  // location will be that of the first ':', not sure if that is best way
+                }
+                else if (e->op == L"array")                                             // === array constructor from lambda function
+                {
+                    let firstIndexExpr = e->args[0];    // first index
+                    let lastIndexExpr  = e->args[1];    // last index
+                    let initLambdaExpr = e->args[2];    // lambda to initialize the values
+                    let firstIndex = ToInt(Evaluate(firstIndexExpr, scope, exprPath, L"array_first"), firstIndexExpr);
+                    let lastIndex  = ToInt(Evaluate(lastIndexExpr,  scope, exprPath, L"array_last"),  lastIndexExpr);
+                    let lambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, exprPath, L"_initializer"), initLambdaExpr, L"function");
+                    if (lambda->GetNumParams() != 1)
+                        Fail(L"'array' requires an initializer function with one argument (the index)", initLambdaExpr->location);
+                    // At this point, we must know the dimensions and the initializer lambda, but we don't need to know all array elements.
+                    // Resolving array members on demand allows recursive access to the array variable, e.g. h[t] <- f(h[t-1]).
+                    // create a vector of Thunks to initialize each value
+                    vector<ConfigValuePtr> elementThunks;
+                    for (int index = firstIndex; index <= lastIndex; index++)
+                    {
+                        let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location, exprPath/*never needed*/);           // index as a ConfigValuePtr
+                        let elemExprPath = exprPath.empty() ? L"" : wstrprintf(L"%ls[%d]", exprPath.c_str(), index);    // expression name shows index lookup
+                        let initExprPath = exprPath.empty() ? L"" : wstrprintf(L"_lambda");    // expression name shows initializer with arg
+                        // create an expression
+                        function<ConfigValuePtr()> f = [this, indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
+                        {
+                            if (trace)
+                                TextLocation::PrintIssue(vector<TextLocation>(1, initLambdaExpr->location), L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
+                            // apply initLambdaExpr to indexValue and return the resulting value
+                            let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");
+                            vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
+                            let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
+                            let value = initLambda->Apply(argVals, namedArgs, elemExprPath);
+                            return value;   // this is a great place to set a breakpoint!
+                        };
+                        elementThunks.push_back(ConfigValuePtr(make_shared<ConfigValuePtr::Thunk>(f, initLambdaExpr->location), initLambdaExpr->location, elemExprPath/*TODO??*/));
+                    }
+                    auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
+                    return ConfigValuePtr(arr, e->location, exprPath);
+                }
+                else if (e->op == L"[")                                         // === access array element by index
+                {
+                    let arrValue = Evaluate(e->args[0], scope, exprPath, L"_vector");
+                    let indexExpr = e->args[1];
+                    let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
+                    let index = ToInt(Evaluate(indexExpr, scope, exprPath, L"_index"), indexExpr);
+                    return arr->At(index, indexExpr->location);
+                }
+                // --- unary operators '+' '-' and '!'
+                else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
+                {
+                    let argExpr = e->args[0];
+                    let argValPtr = Evaluate(argExpr, scope, exprPath, e->op == L"+(" ? L"" : L"_negate");
+                    // note on exprPath: since - has only one argument, we do not include it in the expessionPath
+                    if (argValPtr.Is<Double>())
+                        if (e->op == L"+(") return argValPtr;
+                        else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location, exprPath);
+                    else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
+                        if (e->op == L"+(") return argValPtr;
+                        else return NodeOp(e, MakePrimitiveConfigValuePtr(-1.0, e->location, exprPath), argValPtr, exprPath);
+                    else
+                        Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
+                }
+                else if (e->op == L"!(")                                        // === unary operator !
+                {
+                    let arg = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"_not"), e->args[0]);
+                    return MakePrimitiveConfigValuePtr(!arg, e->location, exprPath);
+                }
+                // --- regular infix operators such as '+' and '=='
                 else
-                    Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
+                {
+                    let opIter = infixOps.find(e->op);
+                    if (opIter == infixOps.end())
+                        LogicError("e->op " + utf8(e->op) + " not implemented");
+                    let & functions = opIter->second;
+                    let leftArg = e->args[0];
+                    let rightArg = e->args[1];
+                    let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
+                    let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
+                    if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
+                        return (this->*functions.NumbersOp)(e, leftValPtr, rightValPtr, exprPath);
+                    else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
+                        return (this->*functions.StringsOp)(e, leftValPtr, rightValPtr, exprPath);
+                    else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
+                        return (this->*functions.BoolOp)(e, leftValPtr, rightValPtr, exprPath);
+                    // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
+                    else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
+                        return (this->*functions.ComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
+                    else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
+                        return (this->*functions.ComputeNodeNumberOp)(e, leftValPtr, rightValPtr, exprPath);
+                    else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
+                        return (this->*functions.NumberComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
+                    // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
+                    else
+                        InvalidInfixOpTypes(e);
+                }
+                //LogicError("should not get here");
             }
-            else if (e->op == L"!(")                                        // === unary operator !
+            catch (ConfigError & err)
             {
-                let arg = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"_not"), e->args[0]);
-                return MakePrimitiveConfigValuePtr(!arg, e->location, exprPath);
+                // in case of an error, we keep track of all parent locations in the parse as well, to make it easier for the user to spot the error
+                err.AddLocation(e->location);
+                throw;
             }
-            // --- regular infix operators such as '+' and '=='
-            else
-            {
-                let opIter = infixOps.find(e->op);
-                if (opIter == infixOps.end())
-                    LogicError("e->op " + utf8(e->op) + " not implemented");
-                let & functions = opIter->second;
-                let leftArg = e->args[0];
-                let rightArg = e->args[1];
-                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
-                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
-                if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
-                    return (this->*functions.NumbersOp)(e, leftValPtr, rightValPtr, exprPath);
-                else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
-                    return (this->*functions.StringsOp)(e, leftValPtr, rightValPtr, exprPath);
-                else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
-                    return (this->*functions.BoolOp)(e, leftValPtr, rightValPtr, exprPath);
-                // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
-                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
-                    return (this->*functions.ComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
-                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
-                    return (this->*functions.ComputeNodeNumberOp)(e, leftValPtr, rightValPtr, exprPath);
-                else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
-                    return (this->*functions.NumberComputeNodeOp)(e, leftValPtr, rightValPtr, exprPath);
-                // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
-                else
-                    InvalidInfixOpTypes(e);
-            }
-            //LogicError("should not get here");
         }
 
     public:

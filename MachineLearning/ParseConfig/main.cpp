@@ -172,7 +172,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
                            L"]\n";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12; parserTest13;
-        let parserTest = parserTest8;
+        let parserTest = parserTest11;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
         //expr->Dump();
         Do(expr);
