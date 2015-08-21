@@ -130,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define REDUCTION_BLOCK_SIZE 128    // 256 is much worse; 64 is somewhat worse
 
     // version optimized for collated memory access
-    template<class ElemType>
+    template<class ElemType, bool ZeroThresholdFor1Bit>
     __global__ void _ComputeQuantiStatParj(const ElemType *us, const ElemType* inResidual, long M, long N, size_t ldNbits, char* qpackage)
     {
         size_t subset = threadIdx.x;        // first thread computes 0, 64, 128; second thread 1, 65, 129 etc.
@@ -141,14 +141,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t colSizeByte = Microsoft::MSR::CNTK::QuantizedColumn<ElemType>::QuantizedColumnSize(bits, rows);
         auto & qcol = *(Microsoft::MSR::CNTK::QuantizedColumn<ElemType>*)&qpackage[colSizeByte * j];
 
-        Microsoft::MSR::CNTK::ColumnQuantizer<ElemType>::ComputeRangeStatColjSubset(us, inResidual, M, j, bits, qcol.lower, qcol.upper,
+        Microsoft::MSR::CNTK::ColumnQuantizer<ElemType>::ComputeRangeStatColjSubset<ZeroThresholdFor1Bit>(us, inResidual, M, j, bits, qcol.lower, qcol.upper,
             subset, REDUCTION_BLOCK_SIZE, allreduce<ElemType, REDUCTION_BLOCK_SIZE>, allreduce<unsigned int, REDUCTION_BLOCK_SIZE>);
     }
 
     //caller: griddim and blockdim should be both 1d
     //total thread number is: totalNumQWordsAlMatrix = numCols() * numQWordsPerCol
     //called to quantize a GPU matrix
-    template<class ElemType>
+    template<class ElemType, bool ZeroThresholdFor1Bit>
     __global__ void _QuantizeStripjOneQWord(
         const ElemType* us,
         ElemType* curResidual,
@@ -176,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const  Microsoft::MSR::CNTK::ColumnQuantizer<ElemType> q(ldNbits, qCol.lower, qCol.upper);
 
         // quantize one QWord to qCol[iQWord]
-        qCol.bits[iQWord] = q.QuantizeOneQWord(us, curResidual, M, iQWord, M, numQWordsPerCol, j, newResidual);
+        qCol.bits[iQWord] = q.QuantizeOneQWord<ZeroThresholdFor1Bit>(us, curResidual, M, iQWord, M, numQWordsPerCol, j, newResidual);
     }
 
     template<class ElemType>
@@ -213,7 +213,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         char *qPackage,
         size_t Nbits,
         cudaStream_t stream,
-        ElemType*  newResidual)
+        ElemType*  newResidual,
+        bool zeroThresholdFor1Bit)
     {
 
         /* verify buffer allocation size
@@ -235,7 +236,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // each thread column computes 'warpsize' elements
         mvgriddim = nCol; //column number
         mvblockdim = REDUCTION_BLOCK_SIZE;
-        _ComputeQuantiStatParj<ElemType> << < mvgriddim, mvblockdim, 0, stream >> >(us, curResidual, M, N, ldNbits, qPackage);
+
+        if (zeroThresholdFor1Bit)
+        {
+            _ComputeQuantiStatParj<ElemType, true> << < mvgriddim, mvblockdim, 0, stream >> >(us, curResidual, M, N, ldNbits, qPackage);
+        }
+        else
+        {
+            _ComputeQuantiStatParj<ElemType, false> << < mvgriddim, mvblockdim, 0, stream >> >(us, curResidual, M, N, ldNbits, qPackage);
+        }
 
         // quantize data (also computing the residual at once)
         // optimizing for collated memory access:
@@ -256,7 +265,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         dim3 griddim, blockdim;
         ParallelizeOverRangeDim(totalQWords, griddim, blockdim, 256);
-        _QuantizeStripjOneQWord<ElemType> << < griddim, blockdim, 0, stream >> >(us, curResidual, M, N, qPackage, colsizebyte, numQWordsPerCol, ldNbits, newResidual);
+        if (zeroThresholdFor1Bit)
+        {
+            _QuantizeStripjOneQWord<ElemType, true> << < griddim, blockdim, 0, stream >> >(us, curResidual, M, N, qPackage, colsizebyte, numQWordsPerCol, ldNbits, newResidual);
+        }
+        else
+        {
+            _QuantizeStripjOneQWord<ElemType, false> << < griddim, blockdim, 0, stream >> >(us, curResidual, M, N, qPackage, colsizebyte, numQWordsPerCol, ldNbits, newResidual);
+        }
     }
 
     // unquantize

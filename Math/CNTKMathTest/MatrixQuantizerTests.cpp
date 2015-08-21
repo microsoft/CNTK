@@ -24,10 +24,12 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 #pragma warning (disable: 4996)
 
-void RedirectStdErr(wstring logpath)
+void RedirectStdErrAndStdOut(wstring logpath)
 {
     fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
     auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
+    if (dup2(fileno(*f), 1) == -1)
+        RuntimeError("unexpected failure to redirect stdout to log file");
     if (dup2(fileno(*f), 2) == -1)
         RuntimeError("unexpected failure to redirect stderr to log file");
     setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
@@ -51,11 +53,22 @@ namespace CNTKMathTest
             const ElemType* prevResidualMatrix,
             const ElemType* prevOutMatrix,
             ElemType* outMatrix,
-            ElemType* outResidualMatrix)
+            ElemType* outResidualMatrix,
+            bool zeroThresholdFor1Bit)
         {
             for (size_t j = 0; j < numCols; j++)
             {
                 ElemType mean = 0.0f;
+                if (!zeroThresholdFor1Bit)
+                {
+                    ElemType sum = (ElemType)0.0;
+                    for (int i = 0; i < numRows; i++)
+                    {
+                        size_t flatIdx = (j * numRows) + i;
+                        sum += inMatrix[flatIdx] + prevResidualMatrix[flatIdx];
+                    }
+                    mean = sum / numRows;
+                }
 
                 // Calculate the mean0 and mean1 for each column
                 ElemType mean0Sum = 0.0f;
@@ -78,10 +91,30 @@ namespace CNTKMathTest
                     }
                 }
 
-                if (num0 == 0) num0 = 1;                        // happens for all-zero columns which do exist (mean0 is 0 in that case)
-                if (num1 == 0) num1 = 1;
-                const ElemType mean0 = mean0Sum / num0;
-                const ElemType mean1 = mean1Sum / num1;
+                ElemType radius;
+                ElemType newmean;
+                if (!zeroThresholdFor1Bit)
+                {
+                    // we minimize the error jointly across positive and negative numbers to make things symmetrical around the mean (which may be non-zero)
+                    // tying the two sides
+                    ElemType devacc0 = (num0 * mean) - mean0Sum;
+                    ElemType devacc1 = mean1Sum - (num1 * mean);
+
+                    // both deviations tied, to ensure consistent mean
+                    ElemType dev = (devacc0 + devacc1) / numRows;
+                    radius = (ElemType)2.0 * dev;
+                    newmean = mean;
+                }
+                else
+                {
+                    if (num0 == 0) num0 = 1;                        // happens for all-zero columns which do exist (mean0 is 0 in that case)
+                    if (num1 == 0) num1 = 1;
+                    const ElemType mean0 = mean0Sum / num0;
+                    const ElemType mean1 = mean1Sum / num1;
+
+                    newmean = (ElemType)0.5 * (mean0 + mean1);
+                    radius = (ElemType)2.0 * (mean1 - newmean);
+                }
 
                 for (int i = 0; i < numRows; i++)
                 {
@@ -90,11 +123,11 @@ namespace CNTKMathTest
                     ElemType qVal;
                     if (val < mean)
                     {
-                        qVal = mean0;
+                        qVal = newmean - ((ElemType)0.5 * radius);
                     }
                     else
                     {
-                        qVal = mean1;
+                        qVal = newmean + ((ElemType)0.5 * radius);
                     }
 
                     outMatrix[flatIdx] = prevOutMatrix[flatIdx] + qVal;
@@ -111,7 +144,8 @@ namespace CNTKMathTest
             ElemType rangeHigh,
             int seed,
             int numIterations,
-            short deviceId)
+            short deviceId,
+            bool zeroThresholdFor1Bit)
         {
             auto verifyAllZerosFunc = [](Matrix<ElemType>& matrix) {
                 ElemType* cpuMatrix = matrix.CopyToArray();
@@ -148,25 +182,27 @@ namespace CNTKMathTest
                 ElemType *gpuPrevOutMatrix = outMatrix.CopyToArray();
 
 #ifdef DEBUG_OUTPUT_PATH
-                inMatrix.Print("Input Matrix", 0, 2, 0, 2);
-                quantizer->GetResidualMatrix().Print("Old Residual Matrix", 0, 2, 0, 2);
-                outMatrix.Print("Old Output Matrix", 0, 2, 0, 2);
+                const size_t numRowsToPrint = 3;
+                const size_t numColsToPrint = 3;
+                inMatrix.Print("Input Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
+                quantizer->GetResidualMatrix().Print("Old Residual Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
+                outMatrix.Print("Old Output Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
 #endif
 
                 QuantizedMatrix<ElemType> tempCPUQuantizationBuffer(numRows, numCols, 1, CPUDEVICE, allocator);
-                quantizer->QuantizeAsync(tempCPUQuantizationBuffer);
+                quantizer->QuantizeAsync(tempCPUQuantizationBuffer, zeroThresholdFor1Bit);
                 quantizer->WaitQuantizeAsyncDone();
 
 #ifdef DEBUG_OUTPUT_PATH
-                tempCPUQuantizationBuffer.Print("Quantized Matrix", 0, 2, 0, 2);
-                quantizer->GetResidualMatrix().Print("New residual Matrix", 0, 2, 0, 2);
+                tempCPUQuantizationBuffer.Print("Quantized Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
+                quantizer->GetResidualMatrix().Print("New residual Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
 #endif
 
                 quantizer->UnquantizeAsync(tempCPUQuantizationBuffer, outMatrix, (iterNum > 0));
                 quantizer->WaitUnquantizeAsyncDone();
 
 #ifdef DEBUG_OUTPUT_PATH
-                outMatrix.Print("Unquantized Output Matrix", 0, 2, 0, 2);
+                outMatrix.Print("Unquantized Output Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
 #endif
 
                 // Now verify the quantization results
@@ -186,7 +222,7 @@ namespace CNTKMathTest
                 // Now verify against the reference CPU quantizer
                 ElemType* refNewOutMatrix = new ElemType[numMatrixElems];
                 ElemType* refNewResidualMatrix = new ElemType[numMatrixElems];
-                ReferenceCPU1BitQuantizer(numRows, numCols, gpuInMatrix, gpuPrevResidualMatrix, gpuPrevOutMatrix, refNewOutMatrix, refNewResidualMatrix);
+                ReferenceCPU1BitQuantizer(numRows, numCols, gpuInMatrix, gpuPrevResidualMatrix, gpuPrevOutMatrix, refNewOutMatrix, refNewResidualMatrix, zeroThresholdFor1Bit);
                 for (size_t i = 0; i < numMatrixElems; ++i)
                 {
                     Assert::IsTrue(fabs(gpuNewOutMatrix[i] - refNewOutMatrix[i]) <= tolerance);
@@ -257,7 +293,7 @@ namespace CNTKMathTest
 #endif
 
                 QuantizedMatrix<ElemType> tempCPUQuantizationBuffer(numRows, numCols, 8 * sizeof(ElemType), CPUDEVICE, allocator);
-                quantizer->QuantizeAsync(tempCPUQuantizationBuffer);
+                quantizer->QuantizeAsync(tempCPUQuantizationBuffer, false);
                 quantizer->WaitQuantizeAsyncDone();
 
                 // Verify that the residue is comprised of all zeros
@@ -300,82 +336,114 @@ namespace CNTKMathTest
         template <typename ElemType>
         static void TestQuantization(short deviceId)
         {
-            size_t numRows = 256;
-            size_t numCols = 135;
-            float rangeLow = -1.0f;
-            float rangeHigh = 1.0f;
-            int seed = 2015;
-            int numIterations = 5;
+            for (int i = 0; i < 2; ++i)
+            {
+                bool zeroThresholdFor1Bit = (i == 1);
 
-            // Test quantization on a matrix of size 1024 * 1812 initialized with floating point numbers between -1 and + 1
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                size_t numRows = 256;
+                size_t numCols = 135;
+                float rangeLow = -1.0f;
+                float rangeHigh = 1.0f;
+                int seed = 2015;
+                int numIterations = 5;
 
-            // Test a matrix with smaller range of values
-            seed += 100;
-            rangeLow = -0.005f;
-            rangeHigh = 0.005f;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test quantization on a matrix of size 1024 * 1812 initialized with floating point numbers between -1 and + 1
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
 
-            // Test a matrix with larger range of values
-            seed += 100;
-            rangeLow = -10.0f;
-            rangeHigh = 10.0f;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test a matrix with smaller range of values
+                seed += 100;
+                rangeLow = -0.005f;
+                rangeHigh = 0.005f;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
 
-            // Test a matrix with assymmetric range of values
-            seed += 100;
-            rangeLow = -1.0f;
-            rangeHigh = 2.05f;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test a matrix with larger range of values
+                seed += 100;
+                rangeLow = -10.0f;
+                rangeHigh = 10.0f;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
 
-            // Test a matrix with a single column
-            seed += 100;
-            rangeLow = -0.5f;
-            rangeHigh = 0.5f;
-            numRows = 489;
-            numCols = 1;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test a matrix with assymmetric range of values
+                seed += 100;
+                rangeLow = -1.0f;
+                rangeHigh = 2.05f;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
 
-            // Test a matrix with a single row
-            seed += 100;
-            rangeLow = -0.5f;
-            rangeHigh = 0.5f;
-            numRows = 1;
-            numCols = 135;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test a matrix with a single column
+                seed += 100;
+                rangeLow = -0.5f;
+                rangeHigh = 0.5f;
+                numRows = 489;
+                numCols = 1;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
 
-            // Test a matrix with a number of rows that is not a multiple of the number of bits in a quantized word
-            seed += 100;
-            rangeLow = -0.5f;
-            rangeHigh = 0.5f;
-            numRows = 89;
-            numCols = 23;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test a matrix with a single row
+                seed += 100;
+                rangeLow = -0.5f;
+                rangeHigh = 0.5f;
+                numRows = 1;
+                numCols = 135;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
 
-            // Test a matrix with a number of rows less than number of bits in a quantized word
-            seed += 100;
-            rangeLow = -0.5f;
-            rangeHigh = 0.5f;
-            numRows = 15;
-            numCols = 135;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test a matrix with a number of rows that is not a multiple of the number of bits in a quantized word
+                seed += 100;
+                rangeLow = -0.5f;
+                rangeHigh = 0.5f;
+                numRows = 89;
+                numCols = 23;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
 
-            // Test with a large matrix
-            seed += 100;
-            rangeLow = -0.5f;
-            rangeHigh = 0.5f;
-            numRows = 737;
-            numCols = 373;
-            Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
-            TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                // Test a matrix with a number of rows less than number of bits in a quantized word
+                seed += 100;
+                rangeLow = -0.5f;
+                rangeHigh = 0.5f;
+                numRows = 15;
+                numCols = 135;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
+
+                // Test with a large matrix
+                seed += 100;
+                rangeLow = -0.5f;
+                rangeHigh = 0.5f;
+                numRows = 737;
+                numCols = 373;
+                Test1BitQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+                if (!zeroThresholdFor1Bit)
+                {
+                    TestFullQWordQuantization<ElemType>(numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId);
+                }
+            }
         }
 
     public:
@@ -383,22 +451,21 @@ namespace CNTKMathTest
         TEST_METHOD(Matrix1BitQuantize)
         {
 #ifdef DEBUG_OUTPUT_PATH
-            RedirectStdErr(DEBUG_OUTPUT_PATH);
+            RedirectStdErrAndStdOut(DEBUG_OUTPUT_PATH);
 #endif
-
-            // Test single precision 1bit quantization on CPU
-            TestQuantization<float>(CPUDEVICE);
-
-            // Test double precision 1bit quantization on CPU
-            TestQuantization<double>(CPUDEVICE);
-
             const int GPUDEVICE = 0;
+
+            // Test double precision 1bit quantization on GPU
+            TestQuantization<double>(GPUDEVICE);
 
             // Test single precision 1bit quantization on GPU
             TestQuantization<float>(GPUDEVICE);
 
-            // Test double precision 1bit quantization on GPU
-            TestQuantization<double>(GPUDEVICE);
+            // Test double precision 1bit quantization on CPU
+            TestQuantization<double>(CPUDEVICE);
+
+            // Test single precision 1bit quantization on CPU
+            TestQuantization<float>(CPUDEVICE);
         }
     };
 

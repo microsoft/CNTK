@@ -8,8 +8,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     cudasharedcode
-    ValueQuantizer<ElemType>::ValueQuantizer(size_t ldNbits, ElemType lower, ElemType upper)
-        : ldNbits(ldNbits), Nbits(1 << ldNbits), rangeend(1 << Nbits), quantimin(lower), quantimax(upper)
+    ValueQuantizer<ElemType>::ValueQuantizer(size_t ldNbits, ElemType lower, ElemType upper) 
+    : ldNbits(ldNbits), Nbits(1 << ldNbits), rangeend(1 << Nbits), quantimin(lower), quantimax(upper)
     {
         // post-fix for incorrect shift for no-quant hack (Nbits=32): << arg is taken mod 32!
         // in this case, it's only used as (rangeend-1) which is now correct (before it was 0!)
@@ -30,10 +30,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // and for unquantize()
             ufactor = (quantimax - quantimin) / rangeend;   
         }
-    #ifndef ZERO_THRESHOLD_FOR_1BIT
+
         // set the quantization threshold for the special case of 1-bit
         quantimid = 0.5f * (quantimax + quantimin);
-    #endif
     }
 
     // quantize for full ElemType size bits case (special case that allows to bypass quantization, for testing/debugging purposes)
@@ -49,20 +48,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // quantize one value --special version for 1 bit
     template<class ElemType>
+    template<bool ZeroThresholdFor1Bit>
     cudasharedcode bool
     ValueQuantizer<ElemType>::Quantize1(ElemType u) const
     {
         assert (Nbits == 1);
-    #ifndef ZERO_THRESHOLD_FOR_1BIT
-        return u >= quantimid;
-    #else
-        return u >= (ElemType)0.0;
-    #endif
+        if (!ZeroThresholdFor1Bit)
+        {
+            return u >= quantimid;
+        }
+        else
+        {
+            return u >= (ElemType)0.0;
+        }
     }
 
     // quantize one value
     // TODO: we can optimize for 1 bit here - very simply use a template arg 'isonebit'
     template<class ElemType>
+    template<bool ZeroThresholdFor1Bit>
     cudasharedcode ValueQuantizer<ElemType>::QWordVal
     ValueQuantizer<ElemType>::Quantize(ElemType u) const
     {
@@ -73,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: we may need to optimize this by a template arg
         else if (ldNbits == 0)
         {
-            return Quantize1(u) ? 1 : 0;
+            return Quantize1<ZeroThresholdFor1Bit>(u) ? 1 : 0;
         }
         else
         {
@@ -105,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         // Note: in 1-bit case, we want 0.5 -> mean0, 1.5 -> mean1
-        return (u + (ElemType)0.5) * ufactor + quantimin;
+        return ((u + (ElemType)0.5) * ufactor) + quantimin;
     }
 
     // unquantize one value  --special case for 1 bit
@@ -137,5 +141,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Explicit instantiation
     template class ValueQuantizer<float>;
     template class ValueQuantizer<double>;
+    template ValueQuantizer<float>::QWordVal ValueQuantizer<float>::Quantize<true>(float u) const;
+    template ValueQuantizer<float>::QWordVal ValueQuantizer<float>::Quantize<false>(float u) const;
+    template ValueQuantizer<double>::QWordVal ValueQuantizer<double>::Quantize<true>(double u) const;
+    template ValueQuantizer<double>::QWordVal ValueQuantizer<double>::Quantize<false>(double u) const;
+    template bool ValueQuantizer<float>::Quantize1<true>(float u) const;
+    template bool ValueQuantizer<float>::Quantize1<false>(float u) const;
+    template bool ValueQuantizer<double>::Quantize1<true>(double u) const;
+    template bool ValueQuantizer<double>::Quantize1<false>(double u) const;
 }}}
 #endif

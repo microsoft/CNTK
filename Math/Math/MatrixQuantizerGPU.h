@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixQuantizerGPU(MatrixQuantizerGPU&&) = delete;
         MatrixQuantizerGPU& operator=(MatrixQuantizerGPU&&) = delete;
 
-        void QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix) override;
+        void QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit) override;
         void WaitQuantizeAsyncDone() override;
     
         void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
