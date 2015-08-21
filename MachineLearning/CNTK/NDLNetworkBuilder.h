@@ -25,7 +25,7 @@ namespace Microsoft {
             template<class ElemType>
             class NDLBuilder : public IComputationNetBuilder<ElemType>
             {
-                typedef ComputationNode<ElemType>* ComputationNodePtr;
+                typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
                 NDLScript<ElemType> m_script;
                 const ConfigParameters* m_baseConfig; // NOTE: the lifetime of the parent MUST exist from the call to Init to the BuildNetworkFromDescription() call for stringize

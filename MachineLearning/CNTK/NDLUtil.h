@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class NDLUtil
     {
-        typedef ComputationNode<ElemType>* ComputationNodePtr;
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     private:
         ComputationNetwork<ElemType>* m_net;
 
@@ -144,10 +144,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // CheckOutputNodes - check output nodes
         // symbolName - name of the computation nodes we are collecting
         // compNodes - array of computation nodes
-        void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodePtr>* compNodes)
+        void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodePtr> & compNodes)
         {
             NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
-            bool valid = m_net->FeatureNodes()->size() > 0; // see if it's already valid
+            bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
             if (!valid && nodeArray) //otherwise, see if we found a symbol
             {
                 NDLType outputType = nodeArray->GetType();
@@ -166,8 +166,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i=0; i<nodes.size(); i++)
                 {
-                    // get the computation node 
-                    ComputationNodePtr cnNode = (ComputationNodePtr)nodes[i]->GetEvalValue();
+                    // get the computation node
+                    auto cnNode = ComputationNode<ElemType>::FromVoidPtr(nodes[i]->GetEvalValue());
 
                     // if no evaluation value exists throw an error
                     if (cnNode == nullptr)
@@ -177,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // see if it's already in the collection
                     bool found = false;
-                    for (ComputationNodePtr compNode : *compNodes)
+                    for (ComputationNodePtr compNode : compNodes)
                     {
                         if (cnNode == compNode)
                         {
@@ -188,7 +188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // add it if it's not already there
                     if (!found)
-                        compNodes->push_back(cnNode);
+                        compNodes.push_back(cnNode);
                 }
             }
         }
