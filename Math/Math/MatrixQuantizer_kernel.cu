@@ -119,7 +119,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if ((BLOCKSIZE >= 2) && (threadIdx.x == 0))
         {
             var = var + vBuf[1];
+            vBuf[0] = var;
         }
+
+        __syncthreads();
+
+        var = buf[0];
     }
             
 #define REDUCTION_BLOCK_SIZE 128    // 256 is much worse; 64 is somewhat worse
