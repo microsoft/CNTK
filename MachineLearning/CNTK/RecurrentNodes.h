@@ -774,7 +774,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", in Interspeech 2015
     */
     template<class ElemType>
-    class LSTMNode : public ComputationNode<ElemType>
+    class LSTMNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
     {
         UsingComputationNodeMembers;
 

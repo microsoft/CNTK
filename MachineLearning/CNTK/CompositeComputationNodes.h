@@ -30,7 +30,7 @@ input(1) : [nDim1 X T]
 output   : [[nDim0 + nDim1] X T]
 */
 template<class ElemType>
-class ParallelNode : public ComputationNode<ElemType>
+class ParallelNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
 {
     UsingComputationNodeMembers;
 
@@ -995,7 +995,7 @@ This is done before forward computation of all nodes.
 This node is similar to the PreComputeNode, but is an abstract of it.
 */
 template<class ElemType>
-class BatchModeNode : public ComputationNode<ElemType>
+class BatchModeNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
 {
     // all nodes require precomputation should derive from it
     UsingComputationNodeMembers;

@@ -129,17 +129,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
-        {
-            NOT_IMPLEMENTED;
-        }
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/) = 0;
+        //{
+        //    NOT_IMPLEMENTED;
+        //}
         
         virtual void EvaluateThisNode() = 0;
-        // evaluate only at time index timeIdxInSeq
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
-        {
-            NOT_IMPLEMENTED;
-        }
+        // evaluate only N frames at time index timeIdxInSeq
+        // Normally, N is 1 or it spans the entire minibatch.
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/) = 0;
+        //{
+        //    NOT_IMPLEMENTED;
+        //}
 
         void EvaluateThisNodeGivenInputs()
         {
@@ -1090,6 +1091,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // factory functions
     // Call these instead of new for any ComputationNode derivatives.  TODO: complete this
     template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
+
+    // helper class for now
+    // Any class that currently does not implement the recurrent version, namely
+    //  CRFNode, LSTMNode, ParallelNode, SequenceDecoderNode, TimeReverseNode (BatchModeNode), TransposeNode,
+    // must inherit from ComputationNodeWholeMBOnly.
+    // Will go away once I made sure everything works.
+    template<typename ElemType>
+    struct ComputationNodeWholeMBOnly : public ComputationNode<ElemType>
+    {
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/)
+        {
+            NOT_IMPLEMENTED;
+        }
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/)
+        {
+            NOT_IMPLEMENTED;
+        }
+    };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
     // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
