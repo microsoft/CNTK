@@ -46,6 +46,7 @@ namespace CNTKMathTest
 
         static const float SINGLE_PRECISION_TOLERANCE;
         static const double DOUBLE_PRECISION_TOLERANCE;
+        static const float SINGLE_PRECISION_GPU_QUANTIZATION_TOLERANCE;
 
         template <typename ElemType>
         static void ReferenceCPUQuantizer(
@@ -122,8 +123,8 @@ namespace CNTKMathTest
 
                     if (!zeroThresholdFor1Bit)
                     {
-                        // we minimize the error jointly across positive and negative numbers to make things symmetrical around the mean (which may be non-zero)
-                        // tying the two sides
+                        // we minimize the error jointly across positive and negative numbers to make things
+                        // symmetrical around the mean (which may be non-zero) tying the two sides
                         ElemType devacc0 = (num0 * mean) - mean0Sum;
                         ElemType devacc1 = mean1Sum - (num1 * mean);
 
@@ -134,8 +135,10 @@ namespace CNTKMathTest
                     }
                     else
                     {
-                        if (num0 == 0) num0 = 1;                        // happens for all-zero columns which do exist (mean0 is 0 in that case)
+                        // happens for all-zero columns which do exist (mean0 is 0 in that case)
+                        if (num0 == 0) num0 = 1;
                         if (num1 == 0) num1 = 1;
+
                         const ElemType mean0 = mean0Sum / num0;
                         const ElemType mean1 = mean1Sum / num1;
 
@@ -166,7 +169,7 @@ namespace CNTKMathTest
 
                 ElemType qFactor;
                 ElemType uFactor;
-                QWordVal rangeSize = 1 << numBits;
+                QWordVal rangeSize = ((QWordVal)1) << numBits;
 
                 // must protect against NaN: interval is 0 -> quantization is futile, just emit 0
                 if (((quantiMax - quantiMin) < 1e-36f) || (rangeSize == 0))
@@ -269,8 +272,22 @@ namespace CNTKMathTest
                 ElemType *gpuPrevOutMatrix = outMatrix.CopyToArray();
 
 #ifdef DEBUG_OUTPUT_PATH
-                const size_t numRowsToPrint = 3;
-                const size_t numColsToPrint = 3;
+                bool peekOnly = true;
+                const size_t numRowsToPeek = 3;
+                const size_t numColsToPeek = 3;
+                size_t numRowsToPrint;
+                size_t numColsToPrint;
+                if (peekOnly)
+                {
+                    numRowsToPrint = (std::min)(numRowsToPeek, numRows);
+                    numColsToPrint = (std::min)(numColsToPeek, numCols);
+                }
+                else
+                {
+                    numRowsToPrint = numRows;
+                    numColsToPrint = numCols;
+                }
+
                 inMatrix.Print("Input Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
                 quantizer->GetResidualMatrix().Print("Old Residual Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
                 outMatrix.Print("Old Output Matrix", 0, numRowsToPrint - 1, 0, numColsToPrint - 1);
@@ -302,7 +319,6 @@ namespace CNTKMathTest
                 {
                     tolerance = (rangeHigh - rangeLow) * PRECISION_TOLERANCE;
                 }
-
                 // First verify that (cpuInMatrix + cpuPrevResidualMatrix + cpuPrevOutMatrix == gpuNewResidualMatrix + gpuNewOutMatrix)
                 size_t numMatrixElems = inMatrix.GetNumElements();
                 for (size_t i = 0; i < numMatrixElems; ++i)
@@ -310,14 +326,41 @@ namespace CNTKMathTest
                     Assert::IsTrue(fabs((gpuInMatrix[i] + gpuPrevResidualMatrix[i] + gpuPrevOutMatrix[i]) - (gpuNewResidualMatrix[i] + gpuNewOutMatrix[i])) <= tolerance);
                 }
 
+                size_t numIncorrectAllowed = 0;
+                if (std::is_same<ElemType, float>::value && (deviceId >= 0))
+                {
+                    // We allow a small number of incorrect results when computing on the GPU
+                    // for single precision since, in rare cases, the value of the CPU and GPU
+                    // may quantize to different integers resulting in difference larger than 
+                    // what is allowed by tolerance
+                    numIncorrectAllowed = (std::max)((size_t)1, (size_t)(numMatrixElems * SINGLE_PRECISION_GPU_QUANTIZATION_TOLERANCE));
+                }
+
                 // Now verify against the reference CPU quantizer
+                size_t numIncorrectOutValue = 0;
+                size_t numIncorrectResidualValue = 0;
                 ElemType* refNewOutMatrix = new ElemType[numMatrixElems];
                 ElemType* refNewResidualMatrix = new ElemType[numMatrixElems];
                 ReferenceCPUQuantizer(numBits, numRows, numCols, gpuInMatrix, gpuPrevResidualMatrix, gpuPrevOutMatrix, refNewOutMatrix, refNewResidualMatrix, zeroThresholdFor1Bit);
                 for (size_t i = 0; i < numMatrixElems; ++i)
                 {
-                    Assert::IsTrue(fabs(gpuNewOutMatrix[i] - refNewOutMatrix[i]) <= tolerance);
-                    Assert::IsTrue(fabs(gpuNewResidualMatrix[i] - refNewResidualMatrix[i]) <= tolerance);
+                    if (fabs(gpuNewOutMatrix[i] - refNewOutMatrix[i]) > tolerance)
+                    {
+                        numIncorrectOutValue++;
+                        if (numIncorrectOutValue > numIncorrectAllowed)
+                        {
+                            Assert::IsTrue(fabs(gpuNewOutMatrix[i] - refNewOutMatrix[i]) <= tolerance);
+                        }
+                    }
+
+                    if (fabs(gpuNewResidualMatrix[i] - refNewResidualMatrix[i]) > tolerance)
+                    {
+                        numIncorrectResidualValue++;
+                        if (numIncorrectResidualValue > numIncorrectAllowed)
+                        {
+                            Assert::IsTrue(fabs(gpuNewResidualMatrix[i] - refNewResidualMatrix[i]) <= tolerance);
+                        }
+                    }
                 }
 
                 delete[] gpuInMatrix;
@@ -430,20 +473,21 @@ namespace CNTKMathTest
 #endif
             const int GPUDEVICE = 0;
 
-            // Test double precision 1bit quantization on GPU
-            TestQuantization<double>(GPUDEVICE);
-
             // Test single precision 1bit quantization on GPU
             TestQuantization<float>(GPUDEVICE);
 
-            // Test double precision 1bit quantization on CPU
-            TestQuantization<double>(CPUDEVICE);
+            // Test double precision 1bit quantization on GPU
+            TestQuantization<double>(GPUDEVICE);
 
             // Test single precision 1bit quantization on CPU
             TestQuantization<float>(CPUDEVICE);
+
+            // Test double precision 1bit quantization on CPU
+            TestQuantization<double>(CPUDEVICE);
         }
     };
 
-    /*static*/ const float MatrixQuantizerTests::SINGLE_PRECISION_TOLERANCE = 0.00001f;
-    /*static*/ const double MatrixQuantizerTests::DOUBLE_PRECISION_TOLERANCE = 0.0000000000001;
+    /*static*/ const float MatrixQuantizerTests::SINGLE_PRECISION_TOLERANCE = 0.00005f;
+    /*static*/ const double MatrixQuantizerTests::DOUBLE_PRECISION_TOLERANCE = 0.000000001;
+    /*static*/ const float MatrixQuantizerTests::SINGLE_PRECISION_GPU_QUANTIZATION_TOLERANCE = 0.0001f;
 }

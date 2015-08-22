@@ -9,8 +9,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     cudasharedcode
     ValueQuantizer<ElemType>::ValueQuantizer(size_t ldNbits, ElemType lower, ElemType upper) 
-    : ldNbits(ldNbits), Nbits(1 << ldNbits), rangeend(1 << Nbits), quantimin(lower), quantimax(upper)
+    : ldNbits(ldNbits), Nbits(1 << ldNbits), quantimin(lower), quantimax(upper)
     {
+        rangeend = ((QWordVal)1) << Nbits;
+
         // post-fix for incorrect shift for no-quant hack (Nbits=32): << arg is taken mod 32!
         // in this case, it's only used as (rangeend-1) which is now correct (before it was 0!)
         if (Nbits >= (8 * sizeof(rangeend)))
