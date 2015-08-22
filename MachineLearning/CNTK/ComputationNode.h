@@ -1171,6 +1171,4 @@ protected:  \
 
 #pragma endregion base computation class
 
-
-
 }}}

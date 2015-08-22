@@ -63,6 +63,7 @@ protected:
             m_loopClosed = false;
         }
 
+        // TODO: why is this not a copy constructor or assignment operator?
         void Copy(const stRecurrentInfo& src)
         {
             m_recurrentNodes = src.m_recurrentNodes;
