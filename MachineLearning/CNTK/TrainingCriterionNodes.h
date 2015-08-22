@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 1)
-                throw std::invalid_argument("SquareError criteria only takes two inputs.");
+                InvalidArgument("SquareError criteria only takes two inputs.");
 
             if (inputIndex == 0)  //left derivative
             {
@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 1)
-                throw std::invalid_argument("CrossEntropyWithSoftmaxNode criterion only takes two inputs.");
+                InvalidArgument("CrossEntropyWithSoftmaxNode criterion only takes two inputs.");
 
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
@@ -408,7 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 1)
-                throw std::invalid_argument("CrossEntropy criterion only takes two inputs.");
+                InvalidArgument("CrossEntropy criterion only takes two inputs.");
 
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
@@ -587,7 +587,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
             if (inputIndex != 0)
-                throw std::invalid_argument("MatrixL1RegNode only has one input.");
+                InvalidArgument("MatrixL1RegNode only has one input.");
 
             ComputeInputPartialS(m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
         }
@@ -714,7 +714,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
             if (inputIndex != 0)
-                throw std::invalid_argument("MatrixL2RegNode only has one input.");
+                InvalidArgument("MatrixL2RegNode only has one input.");
 
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
         }
@@ -866,7 +866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_evalMode != NCEEvalMode::None)
                 throw std::logic_error("ComputeInputPartial should only be called in training mode");
             if (inputIndex == 0)
-                throw std::invalid_argument("ComputeInput partial should not be called for label");
+                InvalidArgument("ComputeInput partial should not be called for label");
             //                                                                              samples+probs                   hidden                  embedding
             Inputs(inputIndex)->GradientValues().AssignNCEDerivative(m_ncePrediction, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), inputIndex);
         }
@@ -1057,7 +1057,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
-                throw std::invalid_argument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
+                InvalidArgument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
 
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
             Matrix<ElemType> grd_t;
@@ -1505,7 +1505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
             if (inputIndex != 1 && inputIndex != 2)
-                throw std::invalid_argument("CRFNode only takes with respect to input and weight.");
+                InvalidArgument("CRFNode only takes with respect to input and weight.");
 
             if (inputIndex == 1)
                 ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(), mPostProb, Inputs(inputIndex)->GradientValues());
@@ -1787,7 +1787,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 2)
-                throw std::invalid_argument("DummyCriterionNode only takes three inputs.");
+                InvalidArgument("DummyCriterionNode only takes three inputs.");
             else if (inputIndex == 0)
                 LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)

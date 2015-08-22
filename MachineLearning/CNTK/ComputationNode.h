@@ -132,19 +132,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
+        // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
+        // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
+        struct FrameRange
+        {
+            const size_t timeIdxInSeq;  // start frame
+            const size_t numFrames;     // number of frames; currently only 1 or SIZE_MAX. SIZE_MAX means entire MB, or all input assuming ot is no time sequence
+            // can construct from a single size_t -> a single-frame range
+            FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), numFrames(1) { }
+            // or without arguments -> entire minibatch / no frame-range
+            FrameRange() : timeIdxInSeq(0), numFrames(SIZE_MAX) { }
+            // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
+            size_t t() const
+            {
+                if (numFrames != 1)
+                    LogicError("FrameRange::t() called for a frame range > 1 frame");
+                else
+                    return timeIdxInSeq;
+            }
+        private:
+            FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
+            void operator=(const FrameRange &);
+        };
+
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            ComputeInputPartial(inputIndex, 0, SIZE_MAX);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+            FrameRange fr;
+            ComputeInputPartial(inputIndex, fr);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1) = 0;
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
 
         virtual void EvaluateThisNode()
         {
-            EvaluateThisNode(0, SIZE_MAX);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+            EvaluateThisNode(FrameRange());      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1) = 0;
+        virtual void EvaluateThisNode(const FrameRange &) = 0;
 
         void EvaluateThisNodeGivenInputs()
         {
@@ -541,7 +565,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #ifdef DEBUG  // profile shows this is range check very expensive in release mode, skip it  
             if (childIndex >= m_children.size())
-                throw std::invalid_argument ("childIndex is out of range.");
+                InvalidArgument ("childIndex is out of range.");
 #endif
             return m_children[childIndex];
         }
@@ -550,7 +574,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
             if (childIndex >= m_children.size())
-                throw std::invalid_argument ("childIndex is out of range.");
+                InvalidArgument ("childIndex is out of range.");
 #endif
             return m_children[childIndex];
         }
@@ -1104,11 +1128,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<typename ElemType>
     struct ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
         {
             LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1)
+        virtual void EvaluateThisNode(const FrameRange &)
         {
             LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
