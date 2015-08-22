@@ -1055,6 +1055,7 @@ public:
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
+// why are the following in basetypes.h?
 /**
 These macros are used for sentence segmentation information. 
 */
