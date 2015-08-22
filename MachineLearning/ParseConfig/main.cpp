@@ -160,7 +160,8 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
                            L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
                            L"  featNorm = MeanVarNorm(myFeatures) \n"
-                           L"  layers/*[layer=1..numHiddenLayers]*/ = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
+                           //L"  layers/*[layer=1..numHiddenLayers]*/ = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
+                           L"  layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
                            L"  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) \n"
                            L"  outZ = outLayer.z + Delay(outZ, 1) \n"
                            L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
@@ -176,7 +177,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
                            L"]\n";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12; parserTest13;
-        let parserTest = parserTest9;
+        let parserTest = parserTest11;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
         //expr->Dump();
         Do(expr);
