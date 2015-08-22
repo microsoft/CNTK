@@ -100,13 +100,9 @@ public:
 
     void ClearNet()
     {
-        m_features.clear();
-        m_labels.clear();
-        m_finalCriteria.clear();
-        m_nodesReqMultiSeqHandling.clear();
-        m_evalNodes.clear();
-        m_outputNodes.clear();
-                    m_pairNodes.clear();
+        for (auto groupIter : GetAllNodeGroups())
+            (groupIter)->clear();
+
         m_recurrentInfo.clear();
 
         m_built.clear();
@@ -286,29 +282,21 @@ public:
         fstream << L"// special nodes \n";
 
         // learnable parameters:
-        fstream << FormSpecialNodes(dotcfg.m_LearnableParameterStyle,
-                                    learnableParameters);
+        fstream << FormSpecialNodes(dotcfg.m_LearnableParameterStyle, learnableParameters);
         // features
         fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_features);
-
         // labels
         fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
-
         // critera
         fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
-
         // nodes that requires multi sequence handling 
         fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_nodesReqMultiSeqHandling);            
-        
         // pre-compute nodes
-        fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle,
-                                    PreComputedNodes);
+        fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
         // PastValue nodes
         fstream << FormSpecialNodes(dotcfg.m_pastValueNodeStyle, pastValueNodes);
-
         // FutureValue nodes
         fstream << FormSpecialNodes(dotcfg.m_futureValueNodeStyle, futureValueNodes);
-
         // normal nodes
         fstream << dotcfg.m_normalNodeStyle << L"\n";
 
@@ -345,29 +333,15 @@ public:
         fstream << L"\t\t rank=sink ; ";
         line.clear();
         for (auto x : m_finalCriteria)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
-
         for (auto x : m_nodesReqMultiSeqHandling)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
-        
         for (auto x : m_outputNodes)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
-
-                    for (auto x : m_pairNodes)
-                    {
-                        line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-                    }
-
+        for (auto x : m_pairNodes)
+            line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (auto x : m_evalNodes)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
 
         fstream << line << L"\n}\n";
 
@@ -426,60 +400,32 @@ public:
         std::unordered_set<ComputationNodePtr> visited;
         std::list<ComputationArc> arcs;
 
-        for (size_t i = 0; i < m_finalCriteria.size(); i++)
+        for (auto groupIter : GetAllNodeGroups())
         {
-            m_finalCriteria[i]->EnumerateArcs(visited, arcs);
-        }
-
-        for (size_t i = 0; i < m_nodesReqMultiSeqHandling.size(); i++)
-        {
-            m_nodesReqMultiSeqHandling[i]->EnumerateArcs(visited, arcs);
-        }
-        
-        for (size_t i = 0; i < m_outputNodes.size(); i++)
-        {
-            m_outputNodes[i]->EnumerateArcs(visited, arcs);
-        }
-
-                    for (size_t i = 0; i < m_pairNodes.size(); i++)
-                    {
-                        m_pairNodes[i]->EnumerateArcs(visited, arcs);
-                    }
-
-        for (size_t i = 0; i < m_evalNodes.size(); i++)
-        {
-            m_evalNodes[i]->EnumerateArcs(visited, arcs);
+            // note: this will also loop over m_features and m_labels, which will do nothing since they have no inputs
+            // TODO: test whether that is true
+            const auto & group = *groupIter;
+            for (size_t i = 0; i < group.size(); i++)
+                group[i]->EnumerateArcs(visited, arcs);
         }
 
         //////////////////////////////////////////////////////////////////////////
         //	step 2.		output dot description
         //////////////////////////////////////////////////////////////////////////
         DescribeNetworkUsingDot(arcs, outputFile);
-
     }
 
     void SetDeviceID(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
     {
         m_deviceId = deviceId;
-        if (m_deviceId == AUTOPLACEMATRIX) {
+        if (m_deviceId == AUTOPLACEMATRIX)
             m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-        }
     }
 
-    DEVICEID_TYPE GetDeviceID()
-    {
-        return m_deviceId;
-    }
+    DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
 
-    unsigned long GetRandomSeedOffset()
-    {
-        return m_randomSeedOffset;
-    }
-
-    void SetRandomSeedOffset(unsigned long value)
-    {
-        m_randomSeedOffset = value;
-    }
+    unsigned long GetRandomSeedOffset() { return m_randomSeedOffset; }
+    void SetRandomSeedOffset(unsigned long value) { m_randomSeedOffset = value; }
 
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
     {
@@ -726,7 +672,7 @@ public:
                             break;
 
                         default:
-                            throw std::logic_error("Invalid number of children.");
+                            LogicError("Invalid number of children.");
                     }
                 }
             }
@@ -861,9 +807,7 @@ public:
             size_t numSequences = m_SentenceBoundary.GetNumRows();
 
             if (m_minibatchPackingFlag.size() != numTimeSteps)
-            {
                 LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
-            }
 
             size_t numSamplesWithoutLabel = 0;
 
@@ -874,9 +818,7 @@ public:
                     for (int i = 0; i < numSequences; i++)
                     {
                         if ((int)(m_SentenceBoundary(i, j)) & NO_LABEL)
-                        {
                             numSamplesWithoutLabel++;
-                        }
                     }
                 }
             }
@@ -884,9 +826,7 @@ public:
             return numTimeSteps*numSequences - numSamplesWithoutLabel;
         }
         else
-        {
             return numAllSamples;
-        }
     }
 
     // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
@@ -1021,55 +961,20 @@ public:
         }
 
         //nodeToDelete is a parent
-        nodeToDelete->DetachInputs();
+        nodeToDelete->DetachInputs();       // deref all its inputs; if we don't do that, we might end up with a mem leak due to a circular reference
 
-        auto search = std::find(m_labels.begin(), m_labels.end(), nodeToDelete);
-        if (search != m_labels.end())
+        // unlink from all node-group sets
+        for (auto groupIter : GetAllNodeGroups())
         {
-            m_labels.erase(search);
+            auto search = std::find(groupIter->begin(), groupIter->end(), nodeToDelete);
+            if (search != groupIter->end())
+                groupIter->erase(search);
         }
-
-        search = std::find(m_features.begin(), m_features.end(), nodeToDelete);
-        if (search != m_features.end())
-        {
-            m_features.erase(search);
-        }
-
-        search = std::find(m_finalCriteria.begin(), m_finalCriteria.end(), nodeToDelete);
-        if (search != m_finalCriteria.end())
-        {
-            m_finalCriteria.erase(search);
-        }
-
-        search = std::find(m_nodesReqMultiSeqHandling.begin(), m_nodesReqMultiSeqHandling.end(), nodeToDelete);
-        if (search != m_nodesReqMultiSeqHandling.end())
-        {
-            m_nodesReqMultiSeqHandling.erase(search);
-        }
-        
-        search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
-        if (search != m_evalNodes.end())
-        {
-            m_evalNodes.erase(search);
-        }
-
-        search = std::find(m_outputNodes.begin(), m_outputNodes.end(), nodeToDelete);
-        if (search != m_outputNodes.end())
-        {
-            m_outputNodes.erase(search);
-        }
-
-                    search = std::find(m_pairNodes.begin(), m_pairNodes.end(), nodeToDelete);
-                    if (search != m_pairNodes.end())
-                    {
-                        m_pairNodes.erase(search);
-                    }
-
 
         // ? how to deal with m_recurrentInfo, when we delete a node.
 
         //delete the node itself
-        m_nameToNodeMap.erase(nodeName);    // this will deref the node
+        m_nameToNodeMap.erase(nodeName);    // this will deref the node and possibly deallocate it
     }
 
     // RenameNode - Rename a node to another name
@@ -1110,10 +1015,7 @@ public:
             preComputedNode->MarkComputed(true);
         }
         else
-        {
-            throw std::logic_error(
-                "Only values of learnable parameters and precomputed nodes can be set.");
-        }
+            LogicError("Only values of learnable parameters and precomputed nodes can be set.");
 
         return pNode;
     }
@@ -1134,8 +1036,7 @@ public:
         if ((flags & CopyNodeFlags::copyNodeChildren) &&
             this != &fromNet && !(flags & CopyNodeFlags::copyNodeChildrenCrossNetwork))
         {
-            throw std::logic_error(
-                "CopyNode: Copy node children across network is invalid.");
+            LogicError("CopyNode: Copy node children across network is invalid.");
         }
 
         if (!NodeNameExist(toName))
@@ -1151,14 +1052,9 @@ public:
 
             //same node. no copy needed
             if (pFromNode == pToNode)
-            {
-                throw std::logic_error(
-                    "CopyNode: You are copying the node to the same network with same node name.");
-            }
+                LogicError("CopyNode: You are copying the node to the same network with same node name.");
             else
-            {
                 pFromNode->CopyTo(pToNode, toName, flags);
-            }
         }
         return pToNode;
     }
@@ -1170,10 +1066,7 @@ public:
                      const CopyNodeFlags flags = copyNodeAll)
     {
         if (!(flags & CopyNodeFlags::copyNodeValue))
-        {
-            throw std::logic_error(
-                "CopySubTree: you cannot copy a tree without copying the node values.");
-        }
+            LogicError("CopySubTree: you cannot copy a tree without copying the node values.");
 
         ComputationNodePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
@@ -1192,9 +1085,7 @@ public:
             {
                 //copy the children structure but use the new nodes generated
                 for (int i = 0; i < fromNode->ChildrenSize(); i++)
-                {
                     toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->Inputs(i)->NodeName()));
-                }
             }
         }
     }
@@ -1295,7 +1186,7 @@ public:
         if (!newNode)
         {
             fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", nodeType.c_str(), nodeName.c_str());
-            throw std::invalid_argument("Invalid node type.");
+            InvalidArgument("Invalid node type.");
         }
         return AddNodeToNet(newNode);
     }
@@ -2149,7 +2040,7 @@ public:
         ComputationNodePtr node = this->GetNodeFromName(criterionNodeName);
         this->ValidateNetwork(node);
         if (node->FunctionValues().GetNumElements() != 1)
-            throw invalid_argument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
+            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
         m_tmpTrainCriterion.clear();
         m_tmpTrainCriterion.push_back(node);
         return m_tmpTrainCriterion;
@@ -2160,7 +2051,7 @@ public:
         ComputationNodePtr node = this->GetNodeFromName(criterionNodeName);
         this->ValidateNetwork(node);
         if (node->FunctionValues().GetNumElements() != 1)
-            throw invalid_argument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
+            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
         m_tmpEvalulationCriterion.clear();
         m_tmpEvalulationCriterion.push_back(node);
         return m_tmpEvalulationCriterion;
@@ -2187,19 +2078,15 @@ public:
     {
         ComputationNodePtr oldNode = GetNodeFromName(nodeName);
         if (oldNode->OperationName() != newNode->OperationName())
-            throw invalid_argument("newNode must have the same type as the old node.");
+            InvalidArgument("newNode must have the same type as the old node.");
 
         //change children
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodePtr node = nodeIter->second;
             for (int i = 0; i < node->ChildrenSize(); i++)
-            {
                 if (node->Inputs(i) == oldNode)
-                {
                     node->SetInput(i, newNode);
-                }
-            }
         }
 
         //change name map
@@ -2208,34 +2095,13 @@ public:
             newNode->SetInput(i, oldNode->Inputs(i));
 
         //change other maps
-        // TODO: can we use some form of loop here?
-        for (int i = 0; i < m_features.size(); i++)
-            if (m_features[i] == oldNode)
-                m_features[i] = newNode;
-
-        for (int i = 0; i < m_labels.size(); i++)
-            if (m_labels[i] == oldNode)
-                m_labels[i] = newNode;
-
-        for (int i = 0; i < m_finalCriteria.size(); i++)
-            if (m_finalCriteria[i] == oldNode)
-                m_finalCriteria[i] = newNode;
-
-        for (int i = 0; i < m_nodesReqMultiSeqHandling.size(); i++)
-            if (m_nodesReqMultiSeqHandling[i] == oldNode)
-                m_nodesReqMultiSeqHandling[i] = newNode;
-
-        for (int i = 0; i < m_evalNodes.size(); i++)
-            if (m_evalNodes[i] == oldNode)
-                m_evalNodes[i] = newNode;
-
-        for (int i = 0; i < m_outputNodes.size(); i++)
-            if (m_outputNodes[i] == oldNode)
-                m_outputNodes[i] = newNode;
-
-        for (int i = 0; i < m_pairNodes.size(); i++)
-            if (m_pairNodes[i] == oldNode)
-                m_pairNodes[i] = newNode;
+        for (auto groupIter : GetAllNodeGroups())
+        {
+            auto & group = *groupIter;
+            for (int i = 0; i < group.size(); i++)
+                if (group[i] == oldNode)
+                    group[i] = newNode;
+        }
     }
 
     // replace the old node with the current node, assuming the old node is a leaf node
@@ -2949,10 +2815,7 @@ protected:
         else
         {
             if (!(recStack.find(cur) == recStack.end()))
-            {
-                throw std::logic_error("There is infinite Loop which cannot be unrolled!!");
-            }
-
+                LogicError("There is infinite Loop which cannot be unrolled!!");
         }
     }
             
@@ -3255,7 +3118,7 @@ public:
     std::list<ComputationNodePtr>& GetEvalOrder(const ComputationNodePtr rootNode)
     {
         if (!rootNode)
-            throw std::logic_error("rootNode is pointing to a nullptr.");
+            LogicError("rootNode is pointing to a nullptr.");
 
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true);
     }
@@ -3264,7 +3127,7 @@ public:
                                                 std::vector<ComputationNodePtr>& recurrentNodes)
     {
         if (!rootNode)
-            throw std::logic_error("rootNode is pointing to a nullptr.");
+            LogicError("rootNode is pointing to a nullptr.");
 
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true, recurrentNodes);
     }
@@ -3272,7 +3135,7 @@ public:
     std::list<ComputationNodePtr>& GetGradientCalcOrder(const ComputationNodePtr rootNode)
     {
         if (!rootNode)
-            throw std::logic_error("rootNode is pointing to a nullptr.");
+            LogicError("rootNode is pointing to a nullptr.");
 
         return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
     }
@@ -3315,6 +3178,7 @@ protected:
     DEVICEID_TYPE m_deviceId;
     unsigned long m_randomSeedOffset;
 
+    // node groups
     std::vector<ComputationNodePtr> m_features;
     std::vector<ComputationNodePtr> m_labels;
     std::vector<ComputationNodePtr> m_finalCriteria;
@@ -3322,6 +3186,11 @@ protected:
     std::vector<ComputationNodePtr> m_outputNodes;
     std::vector<ComputationNodePtr> m_pairNodes; /// nodes for the children network to pair
     std::vector<ComputationNodePtr> m_nodesReqMultiSeqHandling;
+    vector<std::vector<ComputationNodePtr>*> GetAllNodeGroups()    // get all groups to allow to iterate over all of them ...continue
+    {
+        return vector<std::vector<ComputationNodePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_nodesReqMultiSeqHandling };
+    }
+
     std::vector<RecurrentInfo> m_recurrentInfo;
 
     /** temporary space
