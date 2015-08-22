@@ -33,11 +33,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         const SourceFile & GetSourceFile() const { return sourceFileMap[sourceFileAsIndex]; }    // get the corresponding source-code line
 
         // helpesr for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
-        wstring FormatErroneousLine() const;
         static void PrintIssue(const vector<TextLocation> & locations, const wchar_t * errorKind, const wchar_t * kind, const wchar_t * what);
 
         // construction
         TextLocation();
+        bool IsValid() const;
 
         // register a new source file and return a TextPosition that points to its start
         static TextLocation NewSourceFile(SourceFile && sourceFile);

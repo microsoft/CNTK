@@ -17,6 +17,8 @@
 //     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
 //     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
 //  - config[".."] should search symbols the entire stack up, not only the current dictionary
+//  - a Fail object
+//  - name lookup should inject TextLocation into error stack
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -602,6 +604,20 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         virtual ~AnotherAction(){}
     };
 
+    // FailAction just throw a config error
+    class FailAction : public Object
+    {
+    public:
+        FailAction(const ConfigRecord & config)
+        {
+            // note: not quite optimal yet in terms of how the error is shown; e.g. ^ not showing under offending variable
+            wstring message = config[L"what"];
+            bool fail = true;
+            if (fail)   // this will trick the VS compiler into not issuing warning 4702: unreachable code
+                throw EvaluationError(message, TextLocation()/*no location means it will show the parent's location*/);
+        }
+    };
+
     shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecord &);
     shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecord &);
 
@@ -720,6 +736,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         DefineRuntimeType(NumericFunction),
         // Actions
         DefineRuntimeType(PrintAction),
+        DefineRuntimeType(FailAction),
         DefineRuntimeType(AnotherAction),
         // glue to experimental integration
         //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
