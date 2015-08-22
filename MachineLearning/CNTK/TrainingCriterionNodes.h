@@ -1504,7 +1504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     */
     template<class ElemType>
-    class CRFNode : public ComputationNode<ElemType>
+    class CRFNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
     {
         UsingComputationNodeMembers;
     

@@ -3154,7 +3154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CosDistanceWithNegativeSamplesNode<double>;
 
     template<class ElemType>
-    class TransposeNode : public ComputationNode<ElemType>
+    class TransposeNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
     {
         UsingComputationNodeMembers;
 

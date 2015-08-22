@@ -63,16 +63,16 @@ protected:
             m_loopClosed = false;
         }
 
-                    void Copy(const stRecurrentInfo& src)
-                    {
-                        m_recurrentNodes = src.m_recurrentNodes;
-                        m_recurrentNodesForForward = src.m_recurrentNodesForForward;
-                        m_sourceNode = src.m_sourceNode;
-                        m_loopId = src.m_loopId; 
-                        m_completedGradient = src.m_completedGradient;
-                        m_completedEvaluate = src.m_completedEvaluate;
-                        m_loopClosed = src.m_loopClosed;
-                    }
+        void Copy(const stRecurrentInfo& src)
+        {
+            m_recurrentNodes = src.m_recurrentNodes;
+            m_recurrentNodesForForward = src.m_recurrentNodesForForward;
+            m_sourceNode = src.m_sourceNode;
+            m_loopId = src.m_loopId;
+            m_completedGradient = src.m_completedGradient;
+            m_completedEvaluate = src.m_completedEvaluate;
+            m_loopClosed = src.m_loopClosed;
+        }
     } RecurrentInfo;
 
 public:

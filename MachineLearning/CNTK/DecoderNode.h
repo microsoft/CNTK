@@ -20,7 +20,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     * it corresponds to a decoder
     */
     template<class ElemType>
-    class SequenceDecoderNode : public ComputationNode <ElemType>
+    class SequenceDecoderNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
     {
         UsingComputationNodeMembers;
     private:
@@ -230,6 +230,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     };
-    template class SequenceDecoderNode < float > ;
-    template class SequenceDecoderNode < double > ;
+    template class SequenceDecoderNode<float>;
+    template class SequenceDecoderNode<double>;
 }}}
