@@ -83,9 +83,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         virtual const std::wstring OperationName() const {return TypeName();}
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/) {}
         virtual void EvaluateThisNode()  {}
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
+        virtual void /*ComputationNode::*/EvaluateThisNode(const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/) {}
         virtual void Validate() 
         {
             PrintSelfBeforeValidation();
@@ -265,10 +265,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring SparseTypeName() {return L"SparseInputValue";}
 
         virtual void EvaluateThisNode()  {} 
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
-        
+        virtual void /*ComputationNode::*/EvaluateThisNode(const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/) {}
+
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/) {}
 
         virtual void Validate() 
         {
@@ -340,13 +340,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq, const size_t /*numFrames*/)
         {
             if (inputIndex > 1)
                 throw std::invalid_argument("LookupTable operation only takes two inputs.");
 
             if (inputIndex == 0)  //left derivative
-        {
+            {
                 Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                 Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
@@ -399,7 +399,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
         {
             Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -582,7 +582,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Inputs(inputIndex)->GradientValues());
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq, const size_t /*numFrames*/)
         {
             if (inputIndex > 0)
                 throw std::invalid_argument("Delay operation only takes one input.");
@@ -599,7 +599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.SetValue(Inputs(0)->FunctionValues());
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
         {
             Matrix<ElemType> mTmp = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             mTmp.SetValue(Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep));

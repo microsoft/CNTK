@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
 
     template<class ElemType>
-    class ErrorPredictionNode : public ComputationNode<ElemType>
+    class ErrorPredictionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
         UsingComputationNodeMembers;
     public:
@@ -48,19 +48,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("ErrorPrediction is used for evaluation only.");
         }
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
-        {
-            throw std::logic_error("ErrorPrediction is used for evaluation only.");
-        }
-
         virtual void EvaluateThisNode()  
         {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, shared_from_this());
-        }
-
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
-        {
-            throw std::logic_error("ErrorPrediction node should never be in a loop.");
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues, ComputationNodePtr curNode)

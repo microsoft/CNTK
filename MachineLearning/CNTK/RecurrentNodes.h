@@ -177,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq, const size_t /*numFrames*/)
         {
             if (inputIndex > 0)
                 throw std::invalid_argument("PastValue operation only takes one input.");
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pastActivity = Inputs(0)->FunctionValues();
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)  
         {
             /// reset past activity as it reached to the begining of a minibatch
             /// the node pointed hasn't yet updated, so it is the past activity 
@@ -563,7 +563,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq, const size_t /*numFrames*/)
         {
             if (inputIndex > 0)
                 throw std::invalid_argument("FutureValue operation only takes one input.");
@@ -622,7 +622,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_futureActivity = Inputs(0)->FunctionValues();
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
         {
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
@@ -774,7 +774,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", in Interspeech 2015
     */
     template<class ElemType>
-    class LSTMNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
+    class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
         UsingComputationNodeMembers;
 

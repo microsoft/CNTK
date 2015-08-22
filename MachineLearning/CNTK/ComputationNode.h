@@ -52,6 +52,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region base computation class
 
+    // =======================================================================
+    // ComputationNode -- abstract base class for all computation nodes
+    // =======================================================================
+
     template<class ElemType>
     class ComputationNode : public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
@@ -129,18 +133,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/) = 0;
-        //{
-        //    NOT_IMPLEMENTED;
-        //}
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1) = 0;
         
         virtual void EvaluateThisNode() = 0;
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/) = 0;
-        //{
-        //    NOT_IMPLEMENTED;
-        //}
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1) = 0;
 
         void EvaluateThisNodeGivenInputs()
         {
@@ -598,7 +596,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
             }
-            
         }
 
         void ComputeGradientForChildren(const size_t timeIdxInSeq)
@@ -1092,21 +1089,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Call these instead of new for any ComputationNode derivatives.  TODO: complete this
     template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
 
-    // helper class for now
-    // Any class that currently does not implement the recurrent version, namely
-    //  CRFNode, LSTMNode, ParallelNode, SequenceDecoderNode, TimeReverseNode (BatchModeNode), TransposeNode,
-    // must inherit from ComputationNodeWholeMBOnly.
-    // Will go away once I made sure everything works.
+    // =======================================================================
+    // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
+    // Such as CRFNode, LSTMNode, ParallelNode, SequenceDecoderNode, TimeReverseNode (BatchModeNode), and TransposeNode.
+    // =======================================================================
+
+    // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
     template<typename ElemType>
-    struct ComputationNodeWholeMBOnly : public ComputationNode<ElemType>
+    struct ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1)
         {
-            NOT_IMPLEMENTED;
+            LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*//*, const size_t /*numFrames* / = 1*/)
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1)
         {
-            NOT_IMPLEMENTED;
+            LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
     };
 
