@@ -132,10 +132,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InitRecurrentNode();
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            ComputeInputPartial(inputIndex, 0, SIZE_MAX);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+        }
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1) = 0;
-        
-        virtual void EvaluateThisNode() = 0;
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNode(0, SIZE_MAX);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+        }
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/ = 1) = 0;
@@ -1106,6 +1112,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
+        // classes that derive from this must implement the non-range version
+        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
+        virtual void EvaluateThisNode() = 0;
     };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
