@@ -81,19 +81,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            QWordValSigned result = (QWordValSigned)((u - quantimin) * qfactor);
-            // (note: signed integers round asymmetrically towards 0, but that's OK since we clip against 0
-            if (result < 0)
+            if (u <= quantimin)
             {
                 return 0;
             }
-            else if (((QWordVal)result) >= rangeend)
+            else if (u >= quantimax)
             {
-                return rangeend - 1;
+                return (rangeend - 1);
             }
             else
             {
-                return (QWordVal)result;
+                return (QWordVal)((QWordValSigned)((u - quantimin) * qfactor));
             }
         }
     }
