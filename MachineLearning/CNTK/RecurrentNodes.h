@@ -353,7 +353,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // copy constructor
-        void Construct(const ComputationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+        void Construct(const DelayedValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_delayedActivation = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
