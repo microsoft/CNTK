@@ -583,7 +583,7 @@ public:
         {
             operand = make_shared<Expression>(tok.beginLocation, L"[]");
             ConsumeToken();
-            operand->namedArgs = ParseDictMembers();
+            operand->namedArgs = ParseRecordMembers();
             ConsumePunctuation(L"]");
         }
         else if (tok.symbol == L"array")                                // === array constructor
@@ -695,7 +695,7 @@ public:
         ConsumePunctuation(L")");
         return macroArgs;
     }
-    map<wstring, pair<TextLocation,ExpressionPtr>> ParseDictMembers()
+    map<wstring, pair<TextLocation,ExpressionPtr>> ParseRecordMembers()
     {
         // A dictionary is a map
         //  member identifier -> expression
@@ -707,18 +707,51 @@ public:
         //  op="=>"
         //  args[0] = parameter list (op="()", with args (all of op="id") and namedArgs)
         //  args[1] = expression with unbound arguments
+        // An array constructor of the form
+        //  V[i:from..to] = expression of i
+        // gets mapped to the explicit array operator
+        //  V = array[from..to] (i => expression of i)
         map<wstring, pair<TextLocation,ExpressionPtr>> members;
         auto idTok = GotToken();
         while (idTok.kind == identifier)
         {
             let location = idTok.beginLocation; // for error message
-            let id = ConsumeIdentifier();       // the member's name    --TODO: do we need to keep its location?
+            let id = ConsumeIdentifier();       // the member's name
+            // optional array constructor
+            ExpressionPtr arrayIndexExpr, fromExpr, toExpr;
+            if (GotToken().symbol == L"[")
+            {
+                // X[i:from..to]
+                ConsumeToken();
+                arrayIndexExpr = ParseOperand(false);       // 'i' name of index variable
+                if (arrayIndexExpr->op != L"id")
+                    Expected(L"identifier");
+                ConsumePunctuation(L":");
+                fromExpr = ParseExpression(0, false);       // 'from' start index
+                ConsumePunctuation(L"..");
+                toExpr = ParseExpression(0, false);         // 'to' end index
+                ConsumePunctuation(L"]");
+            }
+            // optional macro args
             let parameters = (GotToken().symbol == L"(") ? ParseMacroArgs(true/*defining*/) : ExpressionPtr();  // optionally, macro arguments
             ConsumePunctuation(L"=");
-            let rhs = ParseExpression(0, true/*can end at newline*/);   // and the right-hand side
-            let val = parameters ? make_shared<Expression>(parameters->location, L"=>", parameters, rhs) : rhs;  // rewrite to lambda if it's a macro
+            auto rhs = ParseExpression(0, true/*can end at newline*/);   // and the right-hand side
+            // if macro then rewrite it as an assignment of a lambda expression
+            if (parameters)
+                rhs = make_shared<Expression>(parameters->location, L"=>", parameters, rhs);
+            // if array then rewrite it as an assignment of a array-constructor expression
+            if (arrayIndexExpr)
+            {
+                // create a lambda expression over the index variable
+                let macroArgs = make_shared<Expression>(arrayIndexExpr->location, L"()", arrayIndexExpr); // wrap identifier in a '()' macro-args expression
+                let initLambdaExpr = make_shared<Expression>(arrayIndexExpr->location, L"=>", macroArgs, rhs);    // [0] is id, [1] is body
+                rhs = make_shared<Expression>(location, L"array");
+                rhs->args.push_back(fromExpr);              // [0] first index
+                rhs->args.push_back(toExpr);                // [1] last index
+                rhs->args.push_back(initLambdaExpr);        // [2] one-argument lambda to initialize
+            }
             // insert
-            let res = members.insert(make_pair(id, make_pair(location, val)));
+            let res = members.insert(make_pair(id, make_pair(location, rhs)));
             if (!res.second)
                 Fail(L"duplicate member definition '" + id + L"'", location);
             // advance
@@ -731,7 +764,7 @@ public:
     // top-level parse function parses dictonary members
     ExpressionPtr Parse()
     {
-        let topMembers = ParseDictMembers();
+        let topMembers = ParseRecordMembers();
         if (GotToken().kind != eof)
             Fail(L"junk at end of source", GetCursor());
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
