@@ -67,7 +67,7 @@ public:
     virtual void ComputeInputPartial(const size_t inputIndex)
     {
         if (inputIndex > 1)
-            throw std::invalid_argument("Parallel operation only takes two input.");
+            InvalidArgument("Parallel operation only takes two input.");
         ComputationNodePtr child = Inputs(inputIndex);
         size_t startidx = (inputIndex == 0) ? 0 : Inputs(0)->FunctionValues().GetNumRows();
         size_t nrows = child->FunctionValues().GetNumRows();
@@ -644,7 +644,7 @@ public:
         InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
     }
 
-    virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/)
+    virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
     {
         InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
     }
@@ -656,12 +656,12 @@ public:
                           Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
     }
 
-    virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
+    virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
     {
         //only feature (input0) and output needs to be sliced
-        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep,
+        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep,
                                                                                     m_samplesInRecurrentStep);
-        Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep,
+        Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep,
                                                                          m_samplesInRecurrentStep);
 
         EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
@@ -818,10 +818,10 @@ public:
 
     virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
     {
-        throw std::invalid_argument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
+        InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
     }
 
-    virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/)
+    virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
     {
         InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
     }
@@ -833,11 +833,11 @@ public:
                           Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
     }
 
-    virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
+    virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
     {
         //only feature (input0) and output needs to be sliced
-        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-        Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+        Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
         EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
     }
@@ -986,16 +986,14 @@ public:
 
     virtual bool RequireBatchMode() const { return true; }
 
-    virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
+    virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
     {
         assert(mMemory.GetNumCols() > 0);
 
         FunctionValues().Resize(mMemory.GetNumRows(), m_samplesInRecurrentStep);
-        if (timeIdxInSeq == 0)
-        {
+        if (frameRange.t() == 0)
             assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == mMemory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
-        }
-        FunctionValues().SetValue(mMemory.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+        FunctionValues().SetValue(mMemory.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
         assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
     }
 
@@ -1137,7 +1135,7 @@ public:
     {
         if (inputIndex > 0)
         {
-            throw std::invalid_argument("TimeReverse operation only takes one input.");
+            InvalidArgument("TimeReverse operation only takes one input.");
         }
         ComputationNodePtr child = Inputs(inputIndex);
         ComputeInputPartialS(GradientValues(), child->GradientValues(), m_samplesInRecurrentStep);
