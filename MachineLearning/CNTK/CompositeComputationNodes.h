@@ -30,7 +30,7 @@ input(1) : [nDim1 X T]
 output   : [[nDim0 + nDim1] X T]
 */
 template<class ElemType>
-class ParallelNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
+class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
     UsingComputationNodeMembers;
 
@@ -219,7 +219,7 @@ template class ParallelNode<double>;
 
 //this is a noninstantiable virtual class, all nodes require precomputation should derive from it
 template<class ElemType>
-class PreComputedNode : public ComputationNode<ElemType>
+class PreComputedNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
     UsingComputationNodeMembers;
 
@@ -335,11 +335,6 @@ public:
         throw std::logic_error("Mean operation should not be involved in the gradient calculation.");
     }
 
-    virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
-    {
-        throw std::logic_error("Mean operation should not be involved in the gradient calculation.");
-    }
-
     virtual void EvaluateThisNode()
     {
         if (!m_hasComputed)
@@ -362,11 +357,6 @@ public:
 
             m_numSamples += numNewSamples;
         }
-    }
-
-    virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
-    {
-        throw std::logic_error("Mean operation should not be involved in a recurrent loop.");
     }
 
     virtual void Validate()
@@ -506,12 +496,6 @@ public:
         throw std::logic_error("InvStdDev operation should not be involved in the gradient calculation.");
     }
 
-    virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
-    {
-        throw std::logic_error(
-            "InvStdDev operation should not be involved in the gradient calculation.");
-    }
-
     virtual void EvaluateThisNode()
     {
         if (!m_hasComputed)
@@ -543,12 +527,6 @@ public:
 
             m_numSamples += samples.GetNumCols();
         }
-    }
-
-    virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
-    {
-        throw std::logic_error(
-            "InvStdDev operation should not be involved in a recurrent loop.");
     }
 
     virtual void Validate()
@@ -658,25 +636,17 @@ public:
         return New<PerDimMeanVarNormalizationNode<ElemType>>(this, name, flags);
     }
 
-    virtual const std::wstring OperationName() const
-    {
-        return TypeName();
-    }
-
-    static const std::wstring TypeName()
-    {
-        return L"PerDimMeanVarNormalization";
-    }
+    virtual const std::wstring OperationName() const { return TypeName(); }
+    static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
 
     virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
     {
-        throw std::invalid_argument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
+        InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
     }
 
-    virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
+    virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/)
     {
-        throw std::invalid_argument(
-            "PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
+        InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
     }
 
     //(feature-mean).*InvStdDev
@@ -686,7 +656,7 @@ public:
                           Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
     }
 
-    virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+    virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
     {
         //only feature (input0) and output needs to be sliced
         Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep,
@@ -727,12 +697,12 @@ public:
 
         if (m_children.size() != 3)
         {
-            throw std::logic_error("PerDimMeanVarNormalizationNode criterion requires three inputs.");
+            LogicError("PerDimMeanVarNormalizationNode criterion requires three inputs.");
         }
 
         if (Inputs(0)->RequirePreCompute())
         {
-            throw std::logic_error(
+            LogicError(
                 "PerDimMeanVarNormalizationNode criterion forbids first input from being a pre-compute node. "
                 "The first input should be the node whose output should be normalized, and the second and third inputs "
                 "should be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
@@ -743,7 +713,7 @@ public:
             !(Inputs(1)->OperationName() == MeanNode<ElemType>::TypeName() &&
               Inputs(2)->OperationName() == InvStdDevNode<ElemType>::TypeName()))
         {
-            throw std::logic_error(
+            LogicError(
                 "PerDimMeanVarNormalizationNode criterion requires the last two inputs to be LearnableParameter "
                 "type or (Mean, InvStdDev) so that the values will be saved.");
         }
@@ -851,10 +821,9 @@ public:
         throw std::invalid_argument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
     }
 
-    virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
+    virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/, const size_t /*numFrames*/)
     {
-        throw std::invalid_argument(
-            "PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
+        InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
     }
 
     //(feature-mean).*InvStdDev
@@ -864,7 +833,7 @@ public:
                           Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
     }
 
-    virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+    virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
     {
         //only feature (input0) and output needs to be sliced
         Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -995,7 +964,7 @@ This is done before forward computation of all nodes.
 This node is similar to the PreComputeNode, but is an abstract of it.
 */
 template<class ElemType>
-class BatchModeNode : public ComputationNodeWholeMBOnly/*ComputationNode*/<ElemType>
+class BatchModeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
     // all nodes require precomputation should derive from it
     UsingComputationNodeMembers;
@@ -1017,7 +986,7 @@ public:
 
     virtual bool RequireBatchMode() const { return true; }
 
-    virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+    virtual void /*ComputationNode::*/EvaluateThisNode(const size_t timeIdxInSeq, const size_t /*numFrames*/)
     {
         assert(mMemory.GetNumCols() > 0);
 
