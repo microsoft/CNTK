@@ -17,7 +17,6 @@
 //     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
 //     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
 //  - config[".."] should search symbols the entire stack up, not only the current dictionary
-//  - a Fail object
 //  - name lookup should inject TextLocation into error stack
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -406,13 +405,13 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         map<wstring, ComputationNodePtr> m_namesToNodeMap;      // root nodes in this network; that is, nodes defined in the dictionary
     public:
         // pretending to be a ConfigRecord
-        /*IsConfigRecord::*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
+        /*IsConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"message", helpString)
         {
-            id;  RuntimeError("unknown class parameter");    // (for now)
+            id; message; RuntimeError("unknown class parameter");    // (for now)
         }
         /*IsConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
         {
-            id;  return nullptr; // (for now)
+            id; return nullptr; // (for now)
         }
     };
 
@@ -587,7 +586,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     public:
         PrintAction(const ConfigRecord & config)
         {
-            let what = config[L"what"];
+            let what = config(L"what", L"This specifies the object to print.");
             let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
             fprintf(stderr, "%ls\n", str.c_str());
         }

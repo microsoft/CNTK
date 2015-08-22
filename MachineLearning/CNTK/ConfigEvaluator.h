@@ -140,28 +140,43 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
 
     struct IsConfigRecord   // any class that exposes config can derive from this
     {
-        virtual const ConfigValuePtr & operator[](const wstring & id) const = 0;    // e.g. confRec[L"message"]
-        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;          // returns nullptr if not found
+        virtual const ConfigValuePtr & operator()(const wstring & id, wstring message = L"") const = 0; // e.g. config(L"arg", L"arg is the argument to this function")
+        virtual const ConfigValuePtr & operator[](const wstring & id) const { return operator()(id); }  // e.g. confRec[L"message"]
+        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;                              // returns nullptr if not found
     };
 
     class ConfigRecord : public Object, public IsConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
+    public:
+        typedef shared_ptr<ConfigRecord> ConfigRecordPtr;
+    private:
         // change to ContextInsensitiveMap<ConfigValuePtr>
         map<wstring, ConfigValuePtr> members;
+        ConfigRecordPtr parentRecord;           // we look up the chain
     public:
+
         // regular lookup: just use record[id]
-        /*IsConfigRecord::*/ const ConfigValuePtr & operator[](const wstring & id) const   // e.g. confRec[L"message"]
+        /*IsConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"name", L"This specifies the object's internal name.")
         {
             const auto memberIter = members.find(id);
-            if (memberIter == members.end())
-                RuntimeError("unknown class parameter");
-            return memberIter->second;
+            if (memberIter != members.end())
+                return memberIter->second;          // found
+            if (parentRecord)
+                return (*parentRecord)[id];         // not found but have parent: look it up there
+            // failed: shown an error
+            if (message.empty())
+                throw EvaluationError(L"required parameter '" + id + L"' not found", TextLocation());
+            else
+                throw EvaluationError(L"required parameter '" + id + L"' not found. " + message, TextLocation());
         }
         /*IsConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
         {
             auto memberIter = members.find(id);
             if (memberIter == members.end())
-                return nullptr;
+                if (parentRecord)
+                    return parentRecord->Find(id);
+                else
+                    return nullptr;
             else
                 return &memberIter->second;
         }
@@ -178,7 +193,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
                 member.second.ResolveValue();
         }
     };
-    typedef shared_ptr<ConfigRecord> ConfigRecordPtr;
+    typedef ConfigRecord::ConfigRecordPtr ConfigRecordPtr;
 
     // create a runtime object from its type --general case
     // There can be specializations of this that instantiate objects that do not take ConfigRecords or involve mapping like ComputationNode.
