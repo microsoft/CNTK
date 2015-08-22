@@ -1031,7 +1031,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingComputationNodeMembers; using ComputationNodeNonLooping::ComputeInputPartial; using ComputationNodeNonLooping::EvaluateThisNode;
     public:
         void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
