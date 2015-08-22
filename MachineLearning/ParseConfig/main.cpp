@@ -61,6 +61,8 @@ ComputationNetwork<ElemType>* net = startEpoch < 0 ? netBuilder->BuildNetworkFro
 
 wstring standardFunctions =
 L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
+L"Fail(msg) = new FailAction [ what = msg ] \n"
+L"RequiredParameter(message) = Fail('RequiredParameter: ' + message) \n"
 L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
 L"Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] \n"
 L"Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] \n"
@@ -150,7 +152,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                           L"  logPrior = LogPrior(myLabels) \n"
                           L"  ScaledLogLikelihood = outZ - logPrior \n"
                           L"]\n";
-        let parserTest9 = L"do = new PrintAction [ what = val ] ; fac(i) = if i > 1 then fac(i-1)*i else i ; val = fac(5) ";
+        let parserTest9 = L"do = Print(fac(5)) ; val = RequiredParameter('need to specify val') ; fac(i) = if i > 1 then fac(i-1)*i else i ";
         let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
         let parserTest11 = L" \n"
                            L"do = Print(val) \n"
@@ -174,7 +176,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                            L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
                            L"]\n";
         parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12; parserTest13;
-        let parserTest = parserTest11;
+        let parserTest = parserTest9;
         let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
         //expr->Dump();
         Do(expr);

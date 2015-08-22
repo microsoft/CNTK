@@ -36,6 +36,8 @@ SourceFile::SourceFile(wstring path) : path(path)       // from file
 // default constructor constructs an unmissably invalid object
 TextLocation::TextLocation() : lineNo(SIZE_MAX), charPos(SIZE_MAX), sourceFileAsIndex(SIZE_MAX) { }
 
+bool TextLocation::IsValid() const { return sourceFileAsIndex != SIZE_MAX; }
+
 // register a new source file and return a TextPosition that points to its start
 /*static*/ TextLocation TextLocation::NewSourceFile(SourceFile && sourceFile)
 {
@@ -48,16 +50,9 @@ TextLocation::TextLocation() : lineNo(SIZE_MAX), charPos(SIZE_MAX), sourceFileAs
 }
 
 // helper for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
-wstring TextLocation::FormatErroneousLine() const
-{
-    const auto & lines = GetSourceFile().lines;
-    const auto line = (lineNo == lines.size()) ? L"(end)" : lines[lineNo].c_str();
-    return wstring(line) + L"\n" + wstring(charPos, L'.') + L"^";
-}
-
 struct Issue
 {
-    TextLocation location;  // using lineno and source file, but not char position
+    TextLocation location;  // using lineno and source file; char position only for printing the overall error loc
     wstring markup;         // string with markup symbols at char positions and dots inbetween
     void AddMarkup(wchar_t symbol, size_t charPos)
     {
@@ -71,39 +66,49 @@ struct Issue
 // report an error
 // The source line is shown, and the position is marked as '^'.
 // Because it is often hard to recognize an issue only from the point where it occurred, we also report the history in compact visual form.
+// Since often multiple contexts are on the same source line, we only print each source line once in a consecutive row of contexts.
 /*static*/ void TextLocation::PrintIssue(const vector<TextLocation> & locations, const wchar_t * errorKind, const wchar_t * kind, const wchar_t * what)
 {
     vector<Issue> issues;   // tracing the error backwards
+    size_t symbolIndex = 0;
     for (size_t n = 0; n < locations.size(); n++)
     {
-        // get the symbol to indicate how many steps back, in this sequence: ^ 0..9 a..z A..Z (we don't go further than this)
-        wchar_t symbol;
-        if (n == 0) symbol = '^';
-        else if (n < 1 + 10) symbol = '0' + (wchar_t)n - 1;
-        else if (n < 1 + 10 + 26) symbol = 'a' + (wchar_t)n - (1 + 10);
-        else if (n < 1 + 10 + 26 + 26) symbol = 'A' + (wchar_t)n - (1 + 10 + 26);
-        else break;
-        // build the array
         let & location = locations[n];
-        if (n == 0 || location.lineNo != issues.back().location.lineNo || location.sourceFileAsIndex != issues.back().location.sourceFileAsIndex)
+        if (!location.IsValid())    // means thrower has no location, go up one context
+            continue;
+        // build the array
+        if (symbolIndex == 0 || location.lineNo != issues.back().location.lineNo || location.sourceFileAsIndex != issues.back().location.sourceFileAsIndex)
+        {
             if (issues.size() == 10)
                 break;
             else
                 issues.push_back(location);
+        }
+        // get the symbol to indicate how many steps back, in this sequence: ^ 0..9 a..z A..Z (we don't go further than this)
+        wchar_t symbol;
+        if (symbolIndex == 0) symbol = '^';
+        else if (symbolIndex < 1 + 10) symbol = '0' + (wchar_t)symbolIndex - 1;
+        else if (symbolIndex < 1 + 10 + 26) symbol = 'a' + (wchar_t)symbolIndex - (1 + 10);
+        else if (symbolIndex < 1 + 10 + 26 + 26) symbol = 'A' + (wchar_t)symbolIndex - (1 + 10 + 26);
+        else break;
+        symbolIndex++;
         // insert the markup
         issues.back().AddMarkup(symbol, location.charPos);
     }
     // print it backwards
-    let & firstLoc = locations.front();
-    fprintf(stderr, "\n%ls while %ls line %d char %d of %ls\n", errorKind, kind, firstLoc.lineNo + 1/*report 1-based*/, firstLoc.charPos + 1, firstLoc.GetSourceFile().path.c_str());
-    fprintf(stderr, "see location marked ^ and parent contexts marked 0..9, a..z, A..Z:\n\n", errorKind, kind);
-    for (auto i = issues.rbegin(); i != issues.rend(); i++)
+    if (!locations.empty())     // (be resilient to some throwers not having a TextrLocation; to be avoided)
     {
-        let & issue = *i;
-        auto & where = issue.location;
-        const auto & lines = where.GetSourceFile().lines;
-        const auto line = (where.lineNo == lines.size()) ? L"(end)" : lines[where.lineNo].c_str();
-        fprintf(stderr, "  %ls\n  %ls\n", line, issue.markup.c_str());
+        let & firstLoc = issues.front().location;
+        fprintf(stderr, "\n%ls while %ls line %d char %d of %ls\n", errorKind, kind, firstLoc.lineNo + 1/*report 1-based*/, firstLoc.charPos + 1, firstLoc.GetSourceFile().path.c_str());
+        fprintf(stderr, "see location marked ^ and parent contexts marked 0..9, a..z, A..Z:\n\n", errorKind, kind);
+        for (auto i = issues.rbegin(); i != issues.rend(); i++)
+        {
+            let & issue = *i;
+            auto & where = issue.location;
+            const auto & lines = where.GetSourceFile().lines;
+            const auto line = (where.lineNo == lines.size()) ? L"(end)" : lines[where.lineNo].c_str();
+            fprintf(stderr, "  %ls\n  %ls\n", line, issue.markup.c_str());
+        }
     }
     fprintf(stderr, "%ls: %ls\n", errorKind, what);
     fflush(stderr);
