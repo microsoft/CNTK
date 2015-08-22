@@ -24,14 +24,26 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // =======================================================================
+    // NonlinearityNode -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
+    // =======================================================================
+
+    // NOTE:
+    // This represents a partially failed attempt to unify this.
+    // The idea is that the shared class manages everything, and the derived classes only implement two virtual functions,
+    // one for Eval and one for Partial.
+    // However, it turned out that all those functions have slightly different signatures. Grmpf.
+    // So we will either have to fix the virtual function to be the superset, or abstract on a different level.
+
+    // shared base for all elemen-twise non-linearities
     template<class ElemType>
-    class RectifiedLinearNode : public ComputationNode<ElemType>
+    class NonlinearityNode : public ComputationNode<ElemType>
     {
         UsingComputationNodeMembers;
     public:
         void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
-            m_gradientOfRectifiedLinear = Matrix<ElemType>(deviceId);
+            m_gradient = Matrix<ElemType>(deviceId);
             ComputationNode<ElemType>::Construct(deviceId, name);
             // further initializations
             MoveMatricesToDevice(deviceId); // TODO: does more than constructor
@@ -39,49 +51,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
         {
-            m_gradientOfRectifiedLinear = Matrix<ElemType>(deviceId);
+            m_gradient = Matrix<ElemType>(deviceId);
             ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
             LoadFromFile(fstream, modelVersion, deviceId);
         }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
-                throw std::invalid_argument("RectifiedLinear only has one input.");
-            ComputeInputPartialS(m_gradientOfRectifiedLinear, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
+                throw std::invalid_argument("Nonlinearities only have one input.");
+            ComputeInputPartialV(m_gradient, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
         {
             if (inputIndex != 0)
-                throw std::invalid_argument("RectifiedLinear only has one input.");
+                throw std::invalid_argument("Nonlinearities only have one input.");
 
+            // TODO: this seems always the same pattern. This belongs into a base slice-extractor function.
+            //       We should also unify these two functions into one that decides 1 frame or all frames at runtime... through the slice-extractor function itself.
+            //       For now we could define ALL_SAMPLES e.g. as SIZE_MAX.
+            //       GetGradientSlice(), GetInputSlice() or something.
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            // why GradientValues() but m_functionValues below and not FunctionValues()?
 
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientOfRectifiedLinear, sliceInputValue, sliceInputGrad, sliceOutputGrad);
+            ComputeInputPartialV(m_gradient, sliceInputValue, sliceInputGrad, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfRectifiedLinear, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
-        {
-            gradientOfRectifiedLinear.AssignLinearRectifierDerivativeOf(inputFunctionValues);
-#if DUMPOUTPUT
-            inputGradientValues.Print("RecitifiedLinearNode-Partial-in");
-#endif
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfRectifiedLinear); 
-#if DUMPOUTPUT
-            inputGradientValues.Print("RecitifiedLinearNode-Partial-out");
-#endif
-        }
+        virtual void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) = 0;
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
+            EvaluateThisNodeV(m_functionValues, Inputs(0)->FunctionValues());   // actual work is done in derived class depending on what non-linearity it is
         }
 
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)
@@ -89,10 +93,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
+            EvaluateThisNodeV(sliceOutputValue, sliceInputValue);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        virtual void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) = 0;
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 1) 
+                throw std::logic_error("Nonlinearity operations should have one input.");
+
+            if (Inputs(0)->FunctionValues().HasNoElements())
+                throw std::logic_error("Nonlinearity operation: the input node has 0 element.");
+
+            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_gradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            InferImageDimsFromInputs(); 
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+        }
+
+    protected:
+        Matrix<ElemType> m_gradient;
+    };
+
+#define UsingNonlinearityNodeMembers UsingComputationNodeMembers; typedef NonlinearityNode<ElemType> BB; \
+public:  \
+    using BB::Construct; using BB::EvaluateThisNode
+
+    // =======================================================================
+    // RectifiedLinearNode -- ReLU non-linearity
+    // =======================================================================
+
+    template<class ElemType>
+    class RectifiedLinearNode : public NonlinearityNode<ElemType>
+    {
+        UsingNonlinearityNodeMembers;
+    public:
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() {return L"RectifiedLinear";} 
+
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+            gradient.AssignLinearRectifierDerivativeOf(inputFunctionValues);
+#if DUMPOUTPUT
+            inputGradientValues.Print("RecitifiedLinearNode-Partial-in");
+#endif
+            inputGradientValues.AddElementProductOf(gradientValues, gradient); 
+#if DUMPOUTPUT
+            inputGradientValues.Print("RecitifiedLinearNode-Partial-out");
+#endif
+        }
+
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             functionValues.AssignTruncateBottomOf(inputFunctionValues, 0);
 #if NANCHECK
@@ -103,50 +168,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1) 
-                throw std::logic_error("RectifiedLinear operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("RectifiedLinear operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradientOfRectifiedLinear.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientOfRectifiedLinear.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        static const std::wstring TypeName() {return L"RectifiedLinear";} 
-
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<RectifiedLinearNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_gradientOfRectifiedLinear = m_gradientOfRectifiedLinear;
-            }
+                node->m_gradient = m_gradient;
         }
 
         // copy constructor
         void Construct(const RectifiedLinearNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientOfRectifiedLinear = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -157,43 +191,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::wstring& name = (newName == L"")?NodeName():newName;
             return New<RectifiedLinearNode<ElemType>>(this, name, flags);
         }
-
-    private:
-        Matrix<ElemType> m_gradientOfRectifiedLinear;
     };
 
     template class RectifiedLinearNode<float>; 
     template class RectifiedLinearNode<double>;
 
+    // =======================================================================
+    // SigmoidNode -- sigmoid non-linearity
+    // =======================================================================
+
     template<class ElemType>
-    class SigmoidNode : public ComputationNode<ElemType>
+    class SigmoidNode : public NonlinearityNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingNonlinearityNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-        {
-            m_gradientOfSigmoid = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientOfSigmoid = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Sigmoid";} 
 
+        // we should get rid of this code dup, need to unify the -V functions
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
                 throw std::invalid_argument("Sigmoid only has one input.");
-            ComputeInputPartialS(m_gradientOfSigmoid, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());  
+            ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -206,62 +226,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientOfSigmoid, sliceInputGrad, sliceOutputGrad, sliceOutputValue);  
+            ComputeInputPartialS(m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfSigmoid, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)  
+        // should be:
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
+        // but is:
+        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
-            gradientOfSigmoid.AssignSigmoidDerivativeOf(functionValues);
-
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfSigmoid);
+            gradient.AssignSigmoidDerivativeOf(functionValues);
+            inputGradientValues.AddElementProductOf(gradientValues, gradient);
         }
 
-        virtual void EvaluateThisNode()  
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
-
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
-        {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
-        }
-
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             functionValues.AssignSigmoidOf(inputFunctionValues);
 #if NANCHECK
             functionValues.HasNan("Sigmoid");
 #endif
-        }
-
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1) 
-                throw std::logic_error("Sigmoid operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Sigmoid operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradientOfSigmoid.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientOfSigmoid.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -270,15 +252,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = dynamic_pointer_cast<SigmoidNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_gradientOfSigmoid = m_gradientOfSigmoid;
-            }
+                node->m_gradient = m_gradient;
         }
 
         // copy constructor
         void Construct(const SigmoidNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientOfSigmoid = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -289,43 +269,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::wstring& name = (newName == L"")?NodeName():newName;
             return New<SigmoidNode<ElemType>>(this, name, flags);
         }
-
-    private:
-        Matrix<ElemType> m_gradientOfSigmoid;
     };
 
     template class SigmoidNode<float>; 
     template class SigmoidNode<double>;
 
+    // =======================================================================
+    // TanhNode -- tanh non-linearity
+    // =======================================================================
 
     template<class ElemType>
-    class TanhNode : public ComputationNode<ElemType>
+    class TanhNode : public NonlinearityNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingNonlinearityNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-        {
-            m_gradientOfTanh = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientOfTanh = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
         virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Tanh";} 
+        static const std::wstring TypeName() {return L"Tanh";}
 
+        // TODO: unify signature & get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
                 throw std::invalid_argument("Tanh only has one input.");
-            ComputeInputPartialS(m_gradientOfTanh, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
+            ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -338,64 +304,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientOfTanh, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            ComputeInputPartialS(m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfTanh, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)  
+        // should be:
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
+        // but is:
+        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
-            gradientOfTanh.AssignElementProductOf(functionValues, functionValues); // v .* v
-            gradientOfTanh.AssignDifferenceOf(1, gradientOfTanh); // 1-v^2
+            gradient.AssignElementProductOf(functionValues, functionValues); // v .* v
+            gradient.AssignDifferenceOf(1, gradient); // 1-v^2
 
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfTanh); // += d .* ((1-v) .* v))
+            inputGradientValues.AddElementProductOf(gradientValues, gradient); // += d .* ((1-v) .* v))
         }
 
-
-        virtual void EvaluateThisNode()  
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
-
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
-        {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
-        }
-
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             functionValues.AssignTanhOf(inputFunctionValues);
 #if NANCHECK
             functionValues.HasNan("Tanh");
 #endif
-        }
-
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1) 
-                throw std::logic_error("Tanh operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Tanh operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradientOfTanh.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientOfTanh.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -404,15 +332,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = dynamic_pointer_cast<TanhNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_gradientOfTanh = m_gradientOfTanh;
-            }
+                node->m_gradient = m_gradient;
         }
 
         // copy constructor
         void Construct(const TanhNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientOfTanh = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -423,45 +349,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::wstring& name = (newName == L"")?NodeName():newName;
             return New<TanhNode<ElemType>>(this, name, flags);
         }
-
-    private:
-        Matrix<ElemType> m_gradientOfTanh;
     };
 
     template class TanhNode<float>; 
     template class TanhNode<double>;
 
+    // =======================================================================
+    // LogNode -- component-wise log() of input
+    // =======================================================================
 
     template<class ElemType>
-    class LogNode : public ComputationNode<ElemType>
+    class LogNode : public NonlinearityNode<ElemType>
     {
-                UsingComputationNodeMembers;
-        public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientOfLog = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientOfLog = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
+        UsingNonlinearityNodeMembers;
+     public:
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"Log"; }
 
-
+        // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
                 throw std::invalid_argument("Log only has one input.");
-            ComputeInputPartialS(m_gradientOfLog, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
+            ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -474,30 +384,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientOfLog, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            ComputeInputPartialS(m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfLog, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
+        // should be:
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
+        // but is:
+        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
         {
-            gradientOfLog.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
+            gradient.AssignElementInverseOf(inputFunctionValues); // 1/x (x is input to log(x))
 
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfLog);
+            inputGradientValues.AddElementProductOf(gradientValues, gradient);
         }
 
-        virtual void EvaluateThisNode()
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
-
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
-        {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
-        }
-
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignLogOf(inputFunctionValues);
 #if NANCHECK
@@ -505,31 +405,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1)
-                throw std::logic_error("Log operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Log operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradientOfLog.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            InferImageDimsFromInputs();
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
-
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientOfLog.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -538,15 +417,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = dynamic_pointer_cast<LogNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_gradientOfLog = m_gradientOfLog;
-            }
+                node->m_gradient = m_gradient;
         }
 
         // copy constructor
         void Construct(const LogNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientOfLog = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -557,46 +434,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
             return New<LogNode<ElemType>>(this, name, flags);
         }
-
-    private:
-        Matrix<ElemType> m_gradientOfLog;
     };
 
     template class LogNode<float>;
     template class LogNode<double>;
 
-
+    // =======================================================================
+    // ExpNode -- component-wise exp() of input
+    // =======================================================================
 
     template<class ElemType>
-    class ExpNode : public ComputationNode<ElemType>
+    class ExpNode : public NonlinearityNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingNonlinearityNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientOfExp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientOfExp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"Exp"; }
 
-
+        // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
                 throw std::invalid_argument("Exp only has one input.");
-            ComputeInputPartialS(m_gradientOfExp, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
+            ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -609,30 +469,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientOfExp, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            ComputeInputPartialS(m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfExp, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
+        // should be:
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
+        // but is:
+        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
         {
-            gradientOfExp.AssignExpOf(inputFunctionValues); // Exp(x) is its own partial
-
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfExp);
+            gradient.AssignExpOf(inputFunctionValues); // Exp(x) is its own partial
+            inputGradientValues.AddElementProductOf(gradientValues, gradient);
         }
 
-        virtual void EvaluateThisNode()
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
-
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
-        {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
-        }
-
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignExpOf(inputFunctionValues);
 #if NANCHECK
@@ -640,31 +489,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1)
-                throw std::logic_error("Exp operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Exp operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradientOfExp.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            InferImageDimsFromInputs();
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
-
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientOfExp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -673,15 +501,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = dynamic_pointer_cast<ExpNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_gradientOfExp = m_gradientOfExp;
-            }
+                node->m_gradient = m_gradient;
         }
 
         // copy constructor
         void Construct(const ExpNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientOfExp = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -692,44 +518,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
             return New<ExpNode<ElemType>>(this, name, flags);
         }
-
-    private:
-        Matrix<ElemType> m_gradientOfExp;
     };
 
     template class ExpNode<float>;
     template class ExpNode<double>;
 
+    // =======================================================================
+    // CosineNode -- component-wise cos() of input
+    // =======================================================================
 
     template<class ElemType>
-    class CosineNode : public ComputationNode<ElemType>
+    class CosineNode : public NonlinearityNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingNonlinearityNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-        {
-            m_gradientOfCosine = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientOfCosine = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
         virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Cosine";} 
+        static const std::wstring TypeName() {return L"Cosine";}
 
+        // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
                 throw std::invalid_argument("Cosine only has one input.");
-            ComputeInputPartialS(m_gradientOfCosine, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
+            ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -742,29 +553,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientOfCosine, sliceInputGrad, sliceInputValue, sliceOutputGrad);
+            ComputeInputPartialS(m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfCosine, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)  
+
+        // should be:
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
+        // but is:
+        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& gradientValues)
         {
-            gradientOfCosine.AssignNegativeSineOf(inputFunctionValues); // -sin(x) (x is input to Cosine(x))
-            inputGradientValues.AddElementProductOf(gradientValues, gradientOfCosine);
+            gradient.AssignNegativeSineOf(inputFunctionValues); // -sin(x) (x is input to Cosine(x))
+            inputGradientValues.AddElementProductOf(gradientValues, gradient);
         }
 
-        virtual void EvaluateThisNode()  
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
-
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
-        {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
-        }
-
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             functionValues.AssignCosineOf(inputFunctionValues);
 #if NANCHECK
@@ -772,32 +574,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1) 
-                throw std::logic_error("Cosine operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Cosine operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradientOfCosine.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            InferImageDimsFromInputs(); 
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
-
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientOfCosine.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -806,15 +586,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = dynamic_pointer_cast<CosineNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_gradientOfCosine = m_gradientOfCosine;
-            }
+                node->m_gradient = m_gradient;
         }
 
         // copy constructor
         void Construct(const CosineNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientOfCosine = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -825,46 +603,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::wstring& name = (newName == L"")?NodeName():newName;
             return New<CosineNode<ElemType>>(this, name, flags);
         }
-
-    private:
-        Matrix<ElemType> m_gradientOfCosine;
     };
 
     template class CosineNode<float>; 
     template class CosineNode<double>;
 
+    // =======================================================================
+    // SoftmaxNode -- soft-max over input vector(s)
+    // =======================================================================
 
     //we assume it's  column-wise by default
     //the derivative will increase the Matrix<ElemType> size to the power of column size and should not be used.
     template<class ElemType>
-    class SoftmaxNode : public ComputationNode<ElemType>
+    class SoftmaxNode : public NonlinearityNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingNonlinearityNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientDotValue = Matrix<ElemType>(deviceId), m_diff = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientDotValue = Matrix<ElemType>(deviceId), m_diff = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
         virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Softmax";} 
+        static const std::wstring TypeName() {return L"Softmax";}
 
+        // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
                 throw std::invalid_argument("Softmax only has one input.");
-            ComputeInputPartialS(m_gradientDotValue, m_diff, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
+            ComputeInputPartialS(m_gradient, m_diff, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
@@ -877,36 +640,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientDotValue, m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            ComputeInputPartialS(m_gradient, m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues,
+        // should be:
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
+        // but is:
+        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& diff, Matrix<ElemType>& inputGradientValues,
             const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
-            gradientDotValue.AssignInnerProductOf(gradientValues, functionValues, true);
-            diff.AssignDifferenceOf(gradientValues, gradientDotValue);
+            gradient.AssignInnerProductOf(gradientValues, functionValues, true);
+            diff.AssignDifferenceOf(gradientValues, gradient);
 
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        virtual void EvaluateThisNode()
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
-
         virtual void EvaluateThisNode(const size_t timeIdxInSeq)
         {
+            // need to resize
             size_t r = Inputs(0)->FunctionValues().GetNumRows(), c = Inputs(0)->FunctionValues().GetNumCols();
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            // note: I moved this test before sliceInputValue=..., assuming it will not be affected by the assignment
             if (m_functionValues.GetNumCols() != c ||
                 m_functionValues.GetNumRows() != r)
                 m_functionValues.Resize(r, c);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
+	    NonlinearityNode::EvaluateThisNode(timeIdxInSeq);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
             functionValues.InplaceExp();
@@ -926,19 +686,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("SoftmaxNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            // TODO: differs from base in that it does not resize the gradient--why?
             InferImageDimsFromInputs(); 
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientDotValue.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_diff.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
@@ -949,7 +704,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                node->m_gradientDotValue = m_gradientDotValue;
+                node->m_gradient = m_gradient;
                 node->m_diff = m_diff;
             }
         }
@@ -957,7 +712,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         void Construct(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientDotValue = Matrix<ElemType>(node->m_deviceId), m_diff = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId), m_diff = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -970,43 +725,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        Matrix<ElemType> m_gradientDotValue;
         Matrix<ElemType> m_diff;
     };
 
     template class SoftmaxNode<float>; 
     template class SoftmaxNode<double>;
 
+    // =======================================================================
+    // LogSoftmaxNode -- log of soft-max over input vector(s)
+    // =======================================================================
+
     template<class ElemType>
-    class LogSoftmaxNode : public ComputationNode<ElemType>
+    class LogSoftmaxNode : public NonlinearityNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingNonlinearityNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientDotValue = Matrix<ElemType>(deviceId), m_softmax = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradientDotValue = Matrix<ElemType>(deviceId), m_softmax = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"LogSoftmax"; }
 
+        // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 0)
                 throw std::invalid_argument("Softmax only has one input.");
-            ComputeInputPartialS(m_gradientDotValue, m_softmax, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
+            ComputeInputPartialS(m_gradient, m_softmax, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
+
 
         virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
         {
@@ -1018,32 +762,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            ComputeInputPartialS(m_gradientDotValue, m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
+            ComputeInputPartialS(m_gradient, m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientDotValue, Matrix<ElemType>& softmax, Matrix<ElemType>& inputGradientValues,
+        // should be:
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) { gradient; inputFunctionValues;  inputGradientValues;  gradientValues;  LogicError("wrong signature :( need to unify code more"); }
+        // but is:
+        /*virtual*/ void ComputeInputPartialS(Matrix<ElemType>& gradient, Matrix<ElemType>& softmax, Matrix<ElemType>& inputGradientValues,
             const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
         {
             softmax.AssignExpOf(functionValues);
-            Matrix<ElemType>::VectorSum(gradientValues, gradientDotValue, true);
-            softmax.RowElementMultiplyWith(gradientDotValue);
+            Matrix<ElemType>::VectorSum(gradientValues, gradient, true);
+            softmax.RowElementMultiplyWith(gradient);
             Matrix<ElemType>::AddScaledDifference(1.0, gradientValues, softmax, inputGradientValues);
         }
 
-        virtual void EvaluateThisNode()
-        {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues());
-        }
-
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
-        {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
-        }
-
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
 #if NANCHECK
@@ -1062,19 +796,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("LogSoftmaxNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            // differs from base in that it does not resize the gradient
             InferImageDimsFromInputs();
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradientDotValue.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_softmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
@@ -1085,7 +814,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                node->m_gradientDotValue = m_gradientDotValue;
+                node->m_gradient = m_gradient;
                 node->m_softmax = m_softmax;
             }
         }
@@ -1093,7 +822,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         void Construct(const LogSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradientDotValue = Matrix<ElemType>(node->m_deviceId), m_softmax = Matrix<ElemType>(node->m_deviceId);
+            m_gradient = Matrix<ElemType>(node->m_deviceId), m_softmax = Matrix<ElemType>(node->m_deviceId);
             ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
@@ -1106,13 +835,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        Matrix<ElemType> m_gradientDotValue;
         Matrix<ElemType> m_softmax;
     };
 
     template class LogSoftmaxNode<float>;
     template class LogSoftmaxNode<double>;
 
+    // =======================================================================
+    // GMMLogLikelihoodNode -- GMM log LL over input vector(s)
+    // BUGBUG: This seems to just to a single Gaussian?
+    // =======================================================================
 
     //calculates: the log likelihood of a feature given GMM parameters
     template<class ElemType>
@@ -1560,6 +1292,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
 
+    // =======================================================================
+    // DropoutNode -- perform drop-out
+    // Output is scaled such that no post-scaling is necessary.
+    // =======================================================================
+
     template<class ElemType>
     class DropoutNode : public ComputationNode<ElemType>
     {
@@ -1763,6 +1500,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class DropoutNode<float>;
     template class DropoutNode<double>;
+
+    // =======================================================================
+    // ReshapeNode -- reshape input matrix
+    // =======================================================================
 
     template<class ElemType>
     class ReshapeNode : public ComputationNode<ElemType>
@@ -2013,20 +1754,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_imageChannels > 0)
                     {
                         if (m_imageWidth * m_imageHeight * m_imageChannels != m_numRows)
-                        {
                             throw runtime_error("Image dimensions do not match row size.");
-                        }
                     }
                     else
                     {
                         if (m_numRows % (m_imageWidth * m_imageHeight) > 0)
-                        {
                             throw runtime_error("Image row size is not a multiple of specified image dimensions.");
-                        }
                         else
-                        {
                             m_imageChannels = m_numRows / (m_imageWidth * m_imageHeight);
-                        }
                     }
                 }
                 else
@@ -2034,13 +1769,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_imageChannels > 0)
                     {
                         if (m_numRows % (m_imageWidth * m_imageChannels) > 0)
-                        {
                             throw runtime_error("Image row size is not a multiple of specified image dimensions.");
-                        }
                         else
-                        {
                             m_imageHeight = m_numRows / (m_imageWidth * m_imageChannels);
-                        }
                     }
                     else
                     {
@@ -2055,23 +1786,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_imageChannels > 0)
                     {
                         if (m_numRows % (m_imageHeight * m_imageChannels) > 0)
-                        {
                             throw runtime_error("Image row size is not a multiple of specified image dimensions.");
-                        }
                         else
-                        {
                             m_imageWidth = m_numRows / (m_imageHeight * m_imageChannels);
-                        }
                     }
                     else
-                    {
                         throw runtime_error("At least two image dimensions must be specified.");
-                    }
                 }
                 else if (m_imageChannels > 0)
-                {
                     throw runtime_error("At least two image dimensions must be specified.");
-                }
             }
         }
     };
@@ -2079,6 +1802,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
+    // =======================================================================
+    // RowRepeatNode -- duplicate row(s) of a matrix multiple times
+    // =======================================================================
 
     template<class ElemType>
     class RowRepeatNode : public ComputationNode<ElemType>

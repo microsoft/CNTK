@@ -53,8 +53,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vsprintf(buffer, format, args);
         throw std::logic_error(buffer);
     };
-    static inline void LogicError(const string & message) { RuntimeError("%s", message.c_str()); }
+    static inline void LogicError(const string & message) { LogicError("%s", message.c_str()); }
 
+    // InvalidArgument - throw a std::logic_error with a formatted error string
+#ifdef _MSC_VER
+    __declspec(noreturn)
+#endif
+        static inline void InvalidArgument(const char * format, ...)
+    {
+            va_list args;
+            char buffer[1024];
+
+            va_start(args, format);
+            vsprintf(buffer, format, args);
+            throw std::invalid_argument(buffer);
+        };
+    static inline void InvalidArgument(const string & message) { InvalidArgument("%s", message.c_str());
     // Warning - warn with a formatted error string
     static inline void Warning(const char * format, ...)
     {
