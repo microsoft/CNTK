@@ -121,11 +121,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::invalid_argument("Index out of range.");
         }
 
-        if (this->GetNumBits() != 1)
-        {
-            throw std::logic_error("QuantizedMatrix::Print is currently only supported for 1 bit.");
-        }
-
         DEVICEID_TYPE orgdevice = this->GetDeviceId();
         CurrentDataLocation curLocation = m_quantizedData->GetCurrentMatrixLocation();
         if (curLocation == CurrentDataLocation::GPU)
@@ -157,13 +152,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 QuantizedColumn<ElemType>* qCol = this->GetQuantizedColumn(j);
                 ColumnQuantizer<ElemType> q(ldNbits, qCol->lower, qCol->upper);
-                ElemType val0 = q.valQ.Unquantize(0);
-                ElemType val1 = q.valQ.Unquantize(1);
-
                 QWord qWord = qCol->bits[qWordIdx];
-                bool qVal = ((qWord >> offsetInQWord) & 1) != 0;
-                ElemType val = ValueQuantizer<ElemType>::Unquantize1(qVal, val0, val1);
-                fprintf(stderr, "%1d (%.10f)                   \t", qVal ? 1 : 0, val);
+
+                QWordVal qVal;
+                ElemType val;
+                if (this->GetNumBits() == 1)
+                {
+                    ElemType val0 = q.valQ.Unquantize(0);
+                    ElemType val1 = q.valQ.Unquantize(1);
+                    qVal = (qWord >> offsetInQWord) & 1;
+                    val = ValueQuantizer<ElemType>::Unquantize1(qVal != 0, val0, val1);
+                }
+                else
+                {
+                    const QWordVal bitmask = q.valQ.QuanRangeEnd() - 1;
+                    qVal = (qWord >> (offsetInQWord * this->GetNumBits())) & bitmask;
+                    val = q.valQ.Unquantize(qVal);
+                }
+
+                fprintf(stderr, "%10d (%.10f)          \t", qVal, val);
             }
             fprintf(stderr, "\n");
         }

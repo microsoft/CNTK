@@ -52,6 +52,7 @@ template<class ElemType>
 class MATH_API QuantizedMatrix
 {
     typedef typename ValueQuantizer<ElemType>::QWord QWord;
+    typedef typename ValueQuantizer<ElemType>::QWordVal QWordVal;
     static const size_t QWordNumBits = ValueQuantizer<ElemType>::QWordNumBits;
 
 public:       

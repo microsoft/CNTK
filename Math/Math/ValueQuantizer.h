@@ -74,9 +74,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         //max value of quantize value; 2^Nbits
-        cudasharedcode size_t QuanRangeEnd() const
+        cudasharedcode QWordVal QuanRangeEnd() const
         {
-            return rangeend;         
+            return rangeend;
         } 
         
         static size_t ld(size_t v);
@@ -85,8 +85,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudasharedcode QWordVal QuantizeToFullQWord(ElemType u) const;
 
     protected:
-        size_t ldNbits;   // must be power of two
-        size_t Nbits;     // now we quantized to 4 bits i.e. [0, 16)
+        // NBits must be power of two
+        size_t ldNbits;
+        size_t Nbits;
 
         QWordVal rangeend;
         
@@ -95,13 +96,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType quantimax;
         
         // quantization threshold for 1-bit case
-        ElemType quantimid;              
+        ElemType quantimid;
     
-        // precomputed factor for quantizating
-        ElemType qfactor;    
+        // precomputed factor for quantizing
+        ElemType qfactor;
         
         // and for unquantizing
-        ElemType ufactor;    
+        ElemType ufactor;
     };
 }}}
 #endif 

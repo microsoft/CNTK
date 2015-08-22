@@ -180,7 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 // (rangeend MUST be a power of two; ensured by constructing off ldNbits)
-                const size_t bitmask = valQ.QuanRangeEnd() - 1;
+                const QWordVal bitmask = valQ.QuanRangeEnd() - 1;
                 size_t i = rowStart;
                 for (size_t k = 0; (k < QWordNumBits) && (i < rowEnd); k += valQ.NBits(), i += rowStride)
                 {
