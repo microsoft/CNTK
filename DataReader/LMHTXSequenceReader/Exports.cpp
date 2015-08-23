@@ -9,7 +9,7 @@
 #include "stdafx.h"
 #define DATAREADER_EXPORTS
 #include "DataReader.h"
-#include "SequenceReader.h"
+#include "HTXSequenceReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

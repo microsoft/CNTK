@@ -14,7 +14,7 @@
 
 #define DATAWRITER_EXPORTS  // creating the exports here
 #include "DataWriter.h"
-#include "SequenceReader.h"
+#include "HTXSequenceReader.h"
 #include "SequenceWriter.h"
 #include "commandArgUtil.h"
 #ifdef LEAKDETECT

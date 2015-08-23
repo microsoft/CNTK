@@ -10,7 +10,7 @@
 #include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
-#include "SequenceReader.h"
+#include "HTXSequenceReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
@@ -1349,314 +1349,110 @@ template class SequenceReader<double>;
 template class SequenceReader<float>;
 
 template<class ElemType>
+void BatchSequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& class_size,
+    map<string, int>& word4idx,
+    map<int, string>& idx4word,
+    map<int, int>& idx4class,
+    map<int, size_t> & idx4cnt,
+    int nwords,
+    string mUnk,
+    noiseSampler<long>& m_noiseSampler,
+    bool /*flatten*/)
+{
+    string tmp_vocfile(vocfile.begin(), vocfile.end()); // convert from wstring to string
+    string strtmp;
+    size_t cnt;
+    int clsidx, b;
+    class_size = 0;
+
+    string line;
+    vector<string> tokens;
+    ifstream fin;
+    fin.open(tmp_vocfile.c_str());
+    if (!fin)
+    {
+        RuntimeError("cannot open word class file");
+    }
+
+    while (getline(fin, line))
+    {
+        line = trim(line);
+        tokens = msra::strfun::split(line, "\t ");
+        assert(tokens.size() == 4);
+
+        b = stoi(tokens[0]);
+        cnt = (size_t)stof(tokens[1]);
+        strtmp = tokens[2];
+        clsidx = stoi(tokens[3]);
+
+        idx4cnt[b] = cnt;
+        word4idx[strtmp] = b;
+        idx4word[b] = strtmp;
+
+        idx4class[b] = clsidx;
+        class_size = max(class_size, clsidx);
+    }
+    fin.close();
+    class_size++;
+
+    if (idx4class.size() < nwords)
+    {
+        LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", idx4class.size(), nwords);
+    }
+    std::vector<double> counts(idx4cnt.size());
+    for (auto p : idx4cnt)
+        counts[p.first] = (double)p.second;
+    m_noiseSampler = noiseSampler<long>(counts);
+
+    /// check if unk is the same used in vocabulary file
+    if (word4idx.find(mUnk.c_str()) == word4idx.end())
+    {
+        LogicError("SequenceReader::ReadClassInfo unk symbol %s is not in vocabulary file", mUnk.c_str());
+    }
+}
+
+template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
-    fprintf(stderr, "debughtx LMHTXSequenceReader Init...\n");
-    system("sleep 1");
-    // See if the user wants caching
-    m_cachingReader = NULL;
-    m_cachingWriter = NULL;
-
-    // NOTE: probably want to re-enable at some point
-
-    // initialize the cache
-    //InitCache(readerConfig);
-    //m_readerConfig = readerConfig;
-
-    //// if we have a cache, no need to parse the test files...
-    //if (m_cachingReader)
-    //    return;
-
-    std::vector<std::wstring> features;
-    std::vector<std::wstring> labels;
-    GetFileConfigNames(readerConfig, features, labels);
-    if (features.size() > 0)
-    {
-        m_featuresName = features[0];
-    }
-
-    if (labels.size() == 2)
-    {
-        for (int index = labelInfoMin; index < labelInfoMax; ++index)
-        {
-            m_labelsName[index] = labels[index];
-        }
-    }
-    else
-        RuntimeError("two label definitions (in and out) required for Sequence Reader");
-
-    ConfigParameters featureConfig = readerConfig(m_featuresName,"");
-    ConfigParameters labelConfig[2] = {readerConfig(m_labelsName[0],""),readerConfig(m_labelsName[1],"")};
-    string mode = featureConfig("mode","class");//class, softmax, nce
-    std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
-
-    if (mode == "nce")
-    {
-        readerMode = ReaderMode::NCE;
-    
-        this->noise_sample_size = featureConfig("noise_number", "0");
-    }
-    else if (mode == "softmax")
-        readerMode = ReaderMode::Softmax;
-    else if (mode == "class")
-        readerMode = ReaderMode::Class;
-    else 
-        LogicError("unsupported format %s", mode.c_str()); 
-
-    /// read unk sybol
-    this->mUnk = readerConfig("unk", "<unk>");
-
-    class_size = 0;
-    m_featureDim = featureConfig("dim");
-    for (int index = labelInfoMin; index < labelInfoMax; ++index)
-    {
-        m_labelInfo[index].idMax = 0; 
-        m_labelInfo[index].beginSequence = labelConfig[index]("beginSequence", "");
-        m_labelInfo[index].endSequence = labelConfig[index]("endSequence", "");
-
-        // determine label type desired
-        std::string labelType(labelConfig[index]("labelType","Category"));
-        if (labelType == "Category")
-        {
-            m_labelInfo[index].type = labelCategory;
-        }
-        else if (labelType == "NextWord")
-        {
-            // in this case, it's all identical to the Input labels, except the data type
-            m_labelInfo[index].type = labelNextWord;
-            m_labelInfo[index].dim = m_labelInfo[labelInfoIn].dim;
-        }
-        else if (labelType == "None")
-        {
-            m_labelInfo[index].type = labelNone;
-            m_labelInfo[index].dim = 0;   // override for no labels
-        }
-        
-        // if we have labels, we need a label Mapping file, it will be a file with one label per line
-        if (m_labelInfo[index].type != labelNone)
-        {
-            std::wstring wClassFile = readerConfig("wordclass", "");
-            nwords = labelConfig[index]("labelDim");
-            if (wClassFile != L""){
-                ReadClassInfo(wClassFile, class_size,
-                    word4idx,
-                    idx4word,
-                    idx4class,
-                    idx4cnt,
-                    nwords,
-                    mUnk, m_noiseSampler,
-                    false);
-            }
-
-            std::vector<string> arrayLabels;
-            std::wstring labelPath = labelConfig[index]("labelMappingFile");
-            if (fexists(labelPath))
-            {
-                LoadLabelFile(labelPath, arrayLabels);
-                for (int i=0; i < arrayLabels.size(); ++i)
-                {
-                    LabelType label = arrayLabels[i];
-                    m_labelInfo[index].mapIdToLabel[i] = label;
-                    m_labelInfo[index].mapLabelToId[label] = i;
-                }
-                m_labelInfo[index].idMax = (LabelIdType)arrayLabels.size();
-                m_labelInfo[index].mapName = labelPath;
-            }
-            else
-            {
-                if (wClassFile != L""){
-                    ReadClassInfo(wClassFile, class_size,
-                        word4idx,
-                        idx4word,
-                        idx4class,
-                        idx4cnt,
-                        nwords,
-                        mUnk, m_noiseSampler,
-                        false);
-                    if (word4idx.size() != nwords)
-                    {
-                        LogicError("BatchSequenceReader::Init : vocabulary size %d from setup file and %d from that in word class file L%s is not consistent", nwords, word4idx.size(), wClassFile.c_str());
-                    }
-                    int iMax = -1, i; 
-                    for (auto ptr = word4idx.begin(); ptr != word4idx.end(); ptr++)
-                    {
-                        LabelType label = ptr->first; 
-                        i = ptr->second; 
-                        iMax = max(i, iMax);
-                        m_labelInfo[index].mapIdToLabel[i] = label;
-                        m_labelInfo[index].mapLabelToId[label] = i;
-                    }
-                    m_labelInfo[index].idMax = (LabelIdType)(iMax+1);
-
-                }
-                m_labelInfo[index].mapName = labelPath;
-
-                m_labelInfo[index].fileToWrite = labelPath;
-            }
-        }
-
-        m_labelInfo[index].dim = labelConfig[index]("labelDim");
-
-        // update dimension if the file says it's bigger
-        if (m_labelInfo[index].dim < m_labelInfo[index].idMax)
-        {
-            m_labelInfo[index].dim = m_labelInfo[index].idMax;
-        }
-    }
-
-    // initialize all the variables
-    m_mbStartSample = m_epoch = m_totalSamples = m_epochStartSample = m_seqIndex = 0;
-    m_endReached = false;
-    m_readNextSampleLine = 0;
-    m_readNextSample = 0;
-    m_traceLevel = readerConfig("traceLevel","0");
-    m_parser.SetTraceLevel(m_traceLevel);
-
-    if (readerConfig.Exists("randomize"))
-    {
-        string randomizeString = readerConfig("randomize");
-        if (randomizeString == "None")
-        {
-            ;
-        }
-        else if (randomizeString == "Auto")
-        {
-            ;
-        }
-        else
-        {
-            ;//readerConfig("randomize");
-        }
-    }
-    else
-    {
-        ; //randomizeAuto;
-    }
-
-    // The input data is a combination of the label Data and extra feature dims together
-//    m_featureCount = m_featureDim + m_labelInfo[labelInfoIn].dim;
-    m_featureCount = 1; 
-
-    std::wstring m_file = readerConfig("file", "");
-    if (m_traceLevel > 0)
-    {
-        fwprintf(stderr, L"reading sequence file %s\n", m_file.c_str());
-        //std::wcerr << "reading sequence file " << m_file.c_str() << endl;
-    }
-
-    const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-    const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
-    m_parser.ParseInit(m_file.c_str(), m_featureDim, labelIn.dim, labelOut.dim, labelIn.beginSequence, labelIn.endSequence, labelOut.beginSequence, labelOut.endSequence);
+    fprintf(stderr, "debughtx ---LMHTXSequenceReader Init---\n");
+    system("sleep 0.1");
 
     mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+    nwords = readerConfig("vocabsize", "0");
+    if (nwords == 0) {
+        RuntimeError("[LMHTXSequenceReader] vocabsize option not set.");
+    }
+    
+    mUnk = readerConfig("unk", "<unk>");
+    std::wstring wClassFile = readerConfig("wordclass", "");
+    if (wClassFile.compare(L"") == 0) {
+        RuntimeError("[LMHTXSequenceReader] wordclass option not set.");
+    }
+
+    ReadClassInfo(wClassFile, class_size,
+        word4idx,
+        idx4word,
+        idx4class,
+        idx4cnt,
+        nwords,
+        mUnk, m_noiseSampler,
+        false);
+    fprintf(stderr, "debughtx ---LMHTXSequenceReader end---\n");
 }
 
 template<class ElemType>
 void BatchSequenceReader<ElemType>::Reset()
 {
-    mProcessed.clear();
-    mToProcess.clear();
-    mLastProcssedSentenceId = 0;
-    mPosInSentence = 0;
-    mLastPosInSentence = 0;
-    mNumRead = 0;
-
-    if (m_labelTemp.size() > 0)
-        m_labelTemp.clear();
-    if (m_featureTemp.size() > 0)
-        m_featureTemp.clear();
-    m_parser.mSentenceIndex2SentenceInfo.clear();
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::Reset() called---");
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::Reset() ended---");
 }
 
 template<class ElemType>
 void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
-    // if we aren't currently caching, see if we can use a cache
-    if (!m_cachingReader && !m_cachingWriter)
-    {
-        InitCache(m_readerConfig);
-        if (m_cachingReader)
-            ReleaseMemory();    // free the memory used by the SequenceReader
-    }
-
-    // if we are reading from the cache, do so now and return
-    if (m_cachingReader)
-    {
-        m_cachingReader->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
-        return;
-    } 
-
-    if (m_featuresBuffer==NULL)
-    {
-        const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
-        m_featuresBuffer = new ElemType[mbSize*labelInfo.dim];
-        memset(m_featuresBuffer,0,sizeof(ElemType)*mbSize*labelInfo.dim);
-    }
-
-    if (m_labelsBuffer==NULL)
-    {
-        const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
-        if (labelInfo.type == labelCategory)
-        {
-            m_labelsBuffer = new ElemType[labelInfo.dim*mbSize];
-            memset(m_labelsBuffer,0,sizeof(ElemType)*labelInfo.dim*mbSize);
-            m_labelsIdBuffer = new typename IDataReader<ElemType>::LabelIdType[mbSize];
-            memset(m_labelsIdBuffer,0,sizeof(typename IDataReader<ElemType>::LabelIdType)*mbSize);
-        }
-        else if (labelInfo.type != labelNone)
-        {
-            m_labelsBuffer = new ElemType[mbSize];
-            memset(m_labelsBuffer,0,sizeof(ElemType)*mbSize);
-            m_labelsIdBuffer = NULL;
-        }
-    }      
-
-    m_featuresBufferRow = new size_t[mbSize];
-    m_featuresBufferRowIdx = new size_t[mbSize];
-
-    m_labelsIdBufferRow = new CPUSPARSE_INDEX_TYPE[2 * mbSize];
-    m_labelsBlock2Id = new size_t[2*mbSize];
-    m_labelsBlock2UniqId = new size_t[2*mbSize];
-
-    m_id2classLocal = new Matrix<ElemType>(CPUDEVICE);
-    m_classInfoLocal = new Matrix<ElemType>(CPUDEVICE);
-        
-    m_mbSize = mbSize;
-    if (requestedEpochSamples == requestDataSize)
-    {
-        if (!m_endReached)
-        {
-            m_epochSize = requestDataSize;
-        }
-    }
-    else
-    {
-        m_epochSize = requestedEpochSamples;
-    }
-    
-    // we use epochSize, which might not be set yet, so use a default value for allocations if not yet set
-    size_t epochSize = m_epochSize == requestDataSize?1000:m_epochSize;
-    m_epoch = epoch;
-    m_mbStartSample = epoch*m_epochSize;
-
-    // allocate room for the data
-    m_featureData.reserve(m_featureCount*epochSize);
-    if (m_labelInfo[labelInfoOut].type == labelCategory)
-        m_labelIdData.reserve(epochSize); 
-    else if (m_labelInfo[labelInfoOut].type != labelNone)
-        m_labelData.reserve(epochSize);
-    m_sequence.reserve(m_seqIndex); // clear out the sequence array
-    /// this is too complicated for LM 
-    // SetupEpoch(); 
-    /// use the LMSetupEpoch() instead
-    LMSetupEpoch();
-
-    m_clsinfoRead = false; 
-    m_idx2clsRead = false; 
-
-    m_parser.ParseReset(); 
-
-    Reset();
+    fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop called---\n");
+    fprintf(stderr, "mbSize:%d epoch:%d requestedEpochSamples:%d\n", mbSize, epoch, requestedEpochSamples); //requestedEpochSamples will be -1 when epochSize=0
+    fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
 }
 
 template<class ElemType>

@@ -111,7 +111,7 @@
     <ClInclude Include="SequenceWriter.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="SequenceReader.h" />
+    <ClInclude Include="HTXSequenceReader.h" />
     <ClInclude Include="SequenceParser.h" />
   </ItemGroup>
   <ItemGroup>
@@ -143,7 +143,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="SequenceReader.cpp" />
+    <ClCompile Include="HTXSequenceReader.cpp" />
     <ClCompile Include="SequenceParser.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -284,7 +284,7 @@ public:
 	using SequenceReader<ElemType>::m_labelInfo;
 	using SequenceReader<ElemType>::labelInfoIn;
 	using SequenceReader<ElemType>::nwords;
-	using SequenceReader<ElemType>::ReadClassInfo;
+	//using SequenceReader<ElemType>::ReadClassInfo; //debughtx
 	using SequenceReader<ElemType>::LoadLabelFile;
 	using SequenceReader<ElemType>::word4idx;
     using SequenceReader<ElemType>::idx4word;
@@ -359,6 +359,15 @@ private:
 public:
     vector<bool> mProcessed; 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
+    static void ReadClassInfo(const wstring & vocfile, int& class_size,
+        map<string, int>& word4idx,
+        map<int, string>& idx4word,
+        map<int, int>& idx4class,
+        map<int, size_t> & idx4cnt,
+        int nwords,
+        string mUnk,
+        noiseSampler<long>& m_noiseSampler,
+        bool flatten);
     BatchSequenceReader() : mtSentenceBegin(CPUDEVICE)
     {
         mLastProcssedSentenceId  = 0;

@@ -1832,7 +1832,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     }
     fprintf(stderr, "\n");
     fprintf(stderr, "debughtx readerConfig-nbruttsineachrecurrentiter:%s\n", m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());
-    int sequence_number = atoi(m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());//debughtx
+
 
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
@@ -1841,6 +1841,9 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     bool moreData = EnsureDataAvailable(m_mbStartSample);
     if (moreData == false)
         return false; 
+
+    int sequence_number = (int)NumberSlicesInEachRecurrentIter(); //atoi(m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());//debughtx
+    fprintf(stderr, "debughtx NumberSlicesInEachRecurrentIter() gives %d\n", sequence_number);
 
     // actual size is the size of the next seqence
     size_t actualmbsize = 0;
@@ -2001,8 +2004,10 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd) 
 {
+    //Obselete
+    fprintf(stderr, "debughtx ---SetSentenceSegBatch(vector<size_t> &sentenceEnd) should not be called.---\n");
     sentenceEnd.resize(mToProcess.size());
     if (mSentenceBegin)
     {
@@ -2133,12 +2138,26 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
+    fprintf(stderr, "debughtx LMSequenceReader ---SetSentenceSegBatch called---.\n");
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
     sentenceBegin.SetValue(mtSentenceBegin);
     mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
-
     minibatchPackingFlag = m_minibatchPackingFlag;
+
+    fprintf(stderr, "debughtx matrix sentenceBegin row:%d col:%d\n", sentenceBegin.GetNumRows(), sentenceBegin.GetNumCols());
+    for (int i = 0; i < sentenceBegin.GetNumRows(); i++) {
+        for (int j = 0; j < sentenceBegin.GetNumCols(); j++)
+            fprintf(stderr, "%.2lf ", sentenceBegin(i, j));
+        fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "debughtx vector minibatchPackingFlag size:%d\n", minibatchPackingFlag.size());
+    for (int i = 0; i < minibatchPackingFlag.size(); i++)
+        fprintf(stderr, "%d ", minibatchPackingFlag.at(i));
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "debughtx LMSequenceReader ---SetSentenceSegBatch ended---.\n");
+    system("sleep 0.1");
 }
 
 template<class ElemType>
