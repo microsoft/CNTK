@@ -746,37 +746,33 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // name lookup
     // -----------------------------------------------------------------------
 
-    struct Scope
-    {
-        shared_ptr<ConfigRecord> symbols;   // symbols in this scope
-        shared_ptr<Scope> up;               // one scope up
-        Scope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) : symbols(symbols), up(up) { }
-    };
-    typedef shared_ptr<Scope> ScopePtr;
-    ScopePtr MakeScope(shared_ptr<ConfigRecord> symbols, shared_ptr<Scope> up) { return make_shared<Scope>(symbols, up); }
-
-    static ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId); // forward declare
+    static ConfigValuePtr Evaluate(ExpressionPtr e, ConfigRecordPtr scope, wstring exprPath, const wstring & exprId); // forward declare
 
     // look up a member by id in the search scope
-    // If it is not found, it tries all lexically enclosing scopes inside out.
-    static const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ScopePtr scope)
+    // If it is not found, it tries all lexically enclosing scopes inside out. This is handled by the ConfigRecord itself.
+    static const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ConfigRecordPtr scope)
     {
-        if (!scope)                                         // no scope or went all the way up: not found
-            UnknownIdentifier(id, idLocation);
-        auto p = scope->symbols->Find(id);                  // look up the name
+        //if (!scope)                                           // no scope or went all the way up: not found
+        //    UnknownIdentifier(id, idLocation);
+        auto p = scope->Find(id);                               // look up the name
         if (!p)
-            return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
+            UnknownIdentifier(id, idLocation);
+        //    return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
         // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
-        p->ResolveValue();          // the entry will know
+        p->ResolveValue();          // if this is the first access, then the value will be a Thunk; this resolves it into the real value
         // now the value is available
         return *p;
     }
 
     // look up an identifier in an expression that is a ConfigRecord
-    static ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ScopePtr scope, const wstring & exprPath)
+    static ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ConfigRecordPtr scope, const wstring & exprPath)
     {
+        // Note on scope: The record itself (left of '.') must still be evaluated, and for that, we use the current scope;
+        // that is, variables inside that expression--often a single variable referencing something in the current scope--
+        // will be looked up there.
+        // Now, the identifier on the other hand is looked up in the record and *its* scope (parent chain).
         let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
-        return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
+        return ResolveIdentifier(id, idLocation, record/*resolve in scope of record; *not* the current scope*/);
     }
 
     // -----------------------------------------------------------------------
@@ -785,7 +781,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
 
     // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
     // which is meant to be passed to the constructor or Init() function of a runtime object
-    static shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ScopePtr scope, const wstring & exprPath)
+    static shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ConfigRecordPtr scope, const wstring & exprPath)
     {
         // evaluate the record expression itself
         // This will leave its members unevaluated since we do that on-demand
@@ -880,7 +876,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         if (newIter == configurableRuntimeTypes.end())
             LogicError("unknown magic runtime-object class");
         // form the ConfigRecord
-        ConfigRecord config;
+        ConfigRecord config(nullptr);
+        // Note on scope: This config holds the arguments of the XXXNode runtime-object instantiations.
+        // When they fetch their parameters, they should only look in this record, not in any parent scope (if they don't find what they are looking for, it's a bug in this routine here).
+        // The values themselves are already in ConfigValuePtr form, so we won't need any scope lookups there either.
         config.Add(L"class", e->location, ConfigValuePtr(make_shared<String>(classId), e->location, exprPath));
         vector<ConfigValuePtr> inputs;
         inputs.push_back(leftVal);
@@ -923,7 +922,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // -----------------------------------------------------------------------
 
     // create a lambda that calls Evaluate() on an expr to get or realize its value
-    static shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ScopePtr scope, const wstring & exprPath, const wstring & exprId)
+    static shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
     {
         function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
@@ -942,8 +941,15 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // Evaluate()
     //  - input:  expression
     //  - output: ConfigValuePtr that holds the evaluated value of the expression
+    //  - secondary inputs:
+    //     - scope: parent ConfigRecord to pass on to nested ConfigRecords we create, for recursive name lookup
+    //     - exprPath, exprId: for forming the expression path
+    // On expression paths:
+    //  - expression path encodes the path through the expression tree
+    //  - this is meant to be able to give ComputationNodes a name for later lookup that behaves the same as looking up an object directly
+    //  - not all nodes get their own path, in particular nodes with only one child, e.g. "-x", that would not be useful to address
     // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
-    static ConfigValuePtr Evaluate(ExpressionPtr e, ScopePtr scope, wstring exprPath, const wstring & exprId)
+    static ConfigValuePtr Evaluate(ExpressionPtr e, ConfigRecordPtr scope, wstring exprPath, const wstring & exprId)
     {
         try // catch clause for this will catch error, inject this tree node's TextLocation, and rethrow
         {
@@ -992,14 +998,20 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 let fnExpr = e->args[1];                // [1] = expression of the function itself
                 let f = [argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const shared_ptr<ConfigRecord> & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
                 {
+                    // TODO: document namedArgs--does it have a parent scope? Or is it just a dictionary? Should we just use a shared_ptr<map,ConfigValuPtr>> instead for clarity?
                     // on exprName
                     //  - 'callerExprPath' is the name to which the result of the fn evaluation will be assigned
                     //  - 'exprPath' (outside) is the name of the macro we are defining this lambda under
                     let & argList = argListExpr->args;
                     if (args.size() != argList.size()) LogicError("function application with mismatching number of arguments");
+                    // To execute a function body with passed arguments, we
+                    //  - create a new scope that contains all positional and named args
+                    //  - then evaluate the expression with that scope
+                    //  - parent scope for this is the scope of the function definition (captured context)
+                    //    Note that the 'scope' variable in here (we are in a lambda) is the scope of the '=>' expression, that is, the macro definition.
                     // create a ConfigRecord with param names from 'argList' and values from 'args'
-                    let record = make_shared<ConfigRecord>();
-                    let thisScope = MakeScope(record, scope);   // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
+                    let argScope = make_shared<ConfigRecord>(scope); // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
+                    //let thisScope = MakeScope(argScope, scope);   
                     // create an entry for every argument value
                     // Note that these values should normally be thunks since we only want to evaluate what's used.
                     for (size_t i = 0; i < args.size(); i++)    // positional arguments
@@ -1007,7 +1019,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                         let argName = argList[i];       // parameter name
                         if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
                         let & argVal = args[i];         // value of the parameter
-                        record->Add(argName->id, argName->location, argVal);
+                        argScope->Add(argName->id, argName->location, argVal);
                         // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                     }
                     // also named arguments
@@ -1015,7 +1027,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     {
                         let id = namedArg.first;
                         let & argVal = namedArg.second;
-                        record->Add(id, argVal.GetLocation(), argVal);
+                        argScope->Add(id, argVal.GetLocation(), argVal);
                     }
                     // get the macro name for the exprPath
                     wstring macroId = exprPath;
@@ -1023,7 +1035,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     if (pos != wstring::npos)
                         macroId.erase(0, pos + 1);
                     // now evaluate the function
-                    return Evaluate(fnExpr, MakeScope(record, scope), callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
+                    return Evaluate(fnExpr, argScope, callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
                 };
                 // positional args
                 vector<wstring> paramNames;
@@ -1035,16 +1047,16 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 }
                 // named args
                 // The nammedArgs in the definition lists optional arguments with their default values
-                let record = make_shared<ConfigRecord>();
+                let namedParams = make_shared<ConfigRecord>(nullptr);   // TODO: change to shared_ptr<map<>>; give it a name NamedArgs
                 for (let namedArg : argListExpr->namedArgs)
                 {
                     let id = namedArg.first;
                     let location = namedArg.second.first;   // location of identifier
                     let expr = namedArg.second.second;      // expression to evaluate to get default value
-                    record->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    namedParams->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
                     // the thunk is called if the default value is ever used
                 }
-                return ConfigValuePtr(make_shared<ConfigLambda>(paramNames, record, f), e->location, exprPath);
+                return ConfigValuePtr(make_shared<ConfigLambda>(paramNames, namedParams, f), e->location, exprPath);
             }
             else if (e->op == L"(")                                         // === apply a function to its arguments
             {
@@ -1060,22 +1072,31 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 vector<ConfigValuePtr> argVals(args.size());
                 for (size_t i = 0; i < args.size(); i++)    // positional arguments
                 {
-                    let argValExpr = args[i];               // expression of arg [i]
+                    let argValExpr = args[i];               // expression to evaluate arg [i]
                     let argName = lambda->GetParamNames()[i];
                     argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location, exprPath/*TODO??*/);  // make it a thunked value
                     /*this wstrprintf should be gone, this is now the exprName*/
+                    // Note on scope: macro arguments form a scope (ConfigRecord), the expression for an arg does not have access to that scope.
+                    // E.g. F(A,B) is used as F(13,A) then that A must come from outside, it is not the function argument.
+                    // This is a little inconsistent with real records, e.g. [ A = 13 ; B = A ] where this A now does refer to this record.
+                    // However, it is still the expected behavior, because in a real record, the user sees all the other names, while when
+                    // passing args to a function, he does not; and also the parameter names can depend on the specific lambda being used.
                 }
                 // named args are put into a ConfigRecord
                 // We could check whether the named ars are actually accepted by the lambda, but we leave that to Apply() so that the check also happens for lambda calls from CNTK C++ code.
                 let namedArgs = argsExpr->namedArgs;
-                let namedArgVals = make_shared<ConfigRecord>();
+                let namedArgVals = make_shared<ConfigRecord>(nullptr);  // TODO: change this to shared_ptr<map<>>
+                // TODO: no scope here? ^^ Where does the scope come in? Maybe not needed since all values are already resolved? Document this!
                 for (let namedArg : namedArgs)
                 {
                     let id = namedArg.first;                // id of passed in named argument
                     let location = namedArg.second.first;   // location of expression
                     let expr = namedArg.second.second;      // expression of named argument
-                    namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope, exprPath, id), expr->location, exprPath/*TODO??*/));
                     // the thunk is evaluated when/if the passed actual value is ever used the first time
+                    // Note on scope: same as above.
+                    // E.g. when a function declared as F(A=0,B=0) is called as F(A=13,B=A), then A in B=A is not A=13, but anything from above.
+                    // For named args, it is far less clear whether users would expect this. We still do it for consistency with positional args, which are far more common.
                 }
                 // call the function!
                 return lambda->Apply(argVals, namedArgVals, exprPath);
@@ -1083,9 +1104,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             // --- variable access
             else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
             {
-                let record = make_shared<ConfigRecord>();
+                let newScope = make_shared<ConfigRecord>(scope);      // new scope: inside this record, all symbols from above are also visible
                 // create an entry for every dictionary entry.
-                let thisScope = MakeScope(record, scope);       // lexical scope includes this dictionary itself, so we can access forward references
+                //let thisScope = MakeScope(record, scope);         // lexical scope includes this dictionary itself, so we can access forward references
                 // We do not evaluate the members at this point.
                 // Instead, as the value, we keep the ExpressionPtr itself wrapped in a lambda that evaluates that ExpressionPtr to a ConfigValuePtr when called.
                 // Members are evaluated on demand when they are used.
@@ -1093,16 +1114,19 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 {
                     let id = entry.first;
                     let expr = entry.second.second;             // expression to compute the entry
-                    record->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, thisScope, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    newScope->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    // Note on scope: record assignments are like a "let rec" in F#/OCAML. That is, all record members are visible to all
+                    // expressions that initialize the record members. E.g. [ A = 13 ; B = A ] assigns B as 13, not to a potentially outer A.
+                    // (To explicitly access an outer A, use the slightly ugly syntax ...A)
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
-                return ConfigValuePtr(record, e->location, exprPath);
+                return ConfigValuePtr(newScope, e->location, exprPath);
             }
             else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
             else if (e->op == L".")                                                         // === variable/macro access in given ConfigRecord element
             {
                 let recordExpr = e->args[0];
-                return RecordLookup(recordExpr, e->id, e->location, scope, exprPath);
+                return RecordLookup(recordExpr, e->id, e->location, scope/*for evaluating recordExpr*/, exprPath);
             }
             // --- arrays
             else if (e->op == L":")                                                         // === array expression (-> ConfigArray)
@@ -1145,9 +1169,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                         if (trace)
                             TextLocation::PrintIssue(vector<TextLocation>(1, initLambdaExpr->location), L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
                         // apply initLambdaExpr to indexValue and return the resulting value
-                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");
-                        vector<ConfigValuePtr> argVals(1, indexValue);  // create an arg list with indexValue as the one arg
-                        let namedArgs = make_shared<ConfigRecord>();    // no named args in initializer lambdas
+                        let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");  // get the function itself (most of the time just a simple name)
+                        vector<ConfigValuePtr> argVals(1, indexValue);      // create an arg list with indexValue as the one arg
+                        let namedArgs = make_shared<ConfigRecord>(nullptr); // no named args in initializer lambdas TODO: change to shared_ptr<map<>>
+                        // TODO: where does the current scope come in? Aren't we looking up in namedArgs directly?
                         let value = initLambda->Apply(argVals, namedArgs, elemExprPath);
                         return value;   // this is a great place to set a breakpoint!
                     };
@@ -1162,7 +1187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 let indexExpr = e->args[1];
                 let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
                 let index = ToInt(Evaluate(indexExpr, scope, exprPath, L"_index"), indexExpr);
-                return arr->At(index, indexExpr->location);
+                return arr->At(index, indexExpr->location); // note: the array element may be as of now unresolved; this resolved it
             }
             // --- unary operators '+' '-' and '!'
             else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
@@ -1242,7 +1267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     {
         //let record = AsPtr<ConfigRecord>(Evaluate(recordExpr, scope, exprPath, L""), recordExpr, L"record");
         //return ResolveIdentifier(id, idLocation, MakeScope(record, nullptr/*no up scope*/));
-        return RecordLookup(e, id, e->location, nullptr, L"$");  // we evaluate the member 'do'
+        return RecordLookup(e, id, e->location, nullptr/*scope for evaluating 'e'*/, L"$");  // we evaluate the member 'do'
     }
 
     ConfigValuePtr Evaluate(ExpressionPtr e)
