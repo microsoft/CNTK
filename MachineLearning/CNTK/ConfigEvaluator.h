@@ -26,6 +26,16 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
     // To get a shared_ptr<T> of an expected type T, type-cast the ConfigValuePtr to it.
     // To get the value of a copyable type like T=double or wstring, type-cast to T directly.
 
+    // TODO: refine Thunk handling
+    // Thunks may only be resolved in-place at places that are supposed to hold ConfigValuePtrs that are evaluated on demand, such as
+    //  - ConfigRecord
+    //  - ConfigArrays
+    //  - ConfigLambdas (default values of named arguments)
+    // ConfigValuePtrs with Thunks may not be stored anywhere else, and are not assignable.
+    // TODO: add two assignment/copy constructors:
+    //  - true assignment/copy: runtime-fail if a Thunk
+    //  - move assignment/copy: OK (then the few places that generate ConfigValuePtrs with Thunks must move them around as rvalue references with std::move())
+
     class ConfigValuePtr : public shared_ptr<Object>
     {
         TextLocation location;      // in source code
@@ -115,16 +125,18 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
                 // no need to reset currentlyResolving because this object gets replaced anyway
             }
         };
-        void ResolveValue() const   // (this is const but mutates the value if it resolves)
+        ConfigValuePtr ResolveValue() const   // (this is const but mutates the value if it resolves)
         {
             // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
             // get() is a pointer to a Thunk in that case, that is, a function object that yields the value
             const auto thunkp = dynamic_cast<Thunk*>(get());   // is it a Thunk?
-            if (!thunkp)                            // value is not a Thunk: we already got a proper value; done.
-                return;
-            const auto value = thunkp->ResolveValue();         // completely replace ourselves with the actual result. This also releases the Thunk object
-            const_cast<ConfigValuePtr&>(*this) = value;
-            ResolveValue();                         // allow it to return another Thunk...
+            if (thunkp)                             // value is a Thunk: we need to resolve
+            {
+                const auto value = thunkp->ResolveValue();      // completely replace ourselves with the actual result. This also releases the Thunk object
+                const_cast<ConfigValuePtr&>(*this) = value;
+                ResolveValue();                     // allow it to return another Thunk...
+            }
+            return *this;                           // return ourselves so we can access a value as p_resolved = p->ResolveValue()
         }
     };  // ConfigValuePtr
 
@@ -152,17 +164,30 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
     private:
         // change to ContextInsensitiveMap<ConfigValuePtr>
         map<wstring, ConfigValuePtr> members;
-        ConfigRecordPtr parentRecord;           // we look up the chain
+        ConfigRecordPtr parentScope;           // we look up the chain
+        ConfigRecord() { }  // must give a scope
     public:
+        ConfigRecord(ConfigRecordPtr parentScope) : parentScope(parentScope) { }
 
         // regular lookup: just use record[id]
+        // Note that this function does not resolve Thunks. Instead, an unresolved value will come back as a Thunk.
+        // TODO: Maybe this is the solution to the copying problem of ConfigValuePtrs:
+        //  - we should resolve here! Hence, any ConfigValuePtr ever obtained from a ConfigRecord would be resolved
+        //  - since ConfigRecords are the only place where multiple users may find a shared ConfigValuePtr, this would resolve it
+        //  - if one value gets assigned to another (X=Y) and Y is unresolved, it would get resolved in its 'Y' location and only after that copied to X;
+        //    that is OK, resolved ConfigValuePtrs can be copied
+        //  - this way, ConfigValuePtrs with Thunks would never be passed around, except at the very place where a Thunk is created
+        //    TODO: verify this, and maybe even add a custom assignment operator that prevents ConfigValuePtrs with Thunks to be assigned
+        // TODO:
+        //  - the LateInit problem could be solved by DelayNode accepting a lambda instead of a value, where that lambda would return the node;
+        //    and DelayNode's initializer would keep that lambda, and only call it upon FinalizeInit().
         /*IsConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"name", L"This specifies the object's internal name.")
         {
             const auto memberIter = members.find(id);
             if (memberIter != members.end())
-                return memberIter->second;          // found
-            if (parentRecord)
-                return (*parentRecord)[id];         // not found but have parent: look it up there
+                return memberIter->second;          // found--done
+            if (parentScope)
+                return (*parentScope)[id];          // not found but have parent: look it up there
             // failed: shown an error
             if (message.empty())
                 throw EvaluationError(L"required parameter '" + id + L"' not found", TextLocation());
@@ -173,8 +198,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         {
             auto memberIter = members.find(id);
             if (memberIter == members.end())
-                if (parentRecord)
-                    return parentRecord->Find(id);
+                if (parentScope)
+                    return parentScope->Find(id);
                 else
                     return nullptr;
             else
@@ -187,11 +212,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         // get members; used for optional argument lookup and logging
         const map<wstring, ConfigValuePtr> & GetMembers() const { return members; }
         // member resolution
-        void ResolveAll()   // resolve all members; do this before handing a ConfigRecord to C++ code
-        {
-            for (auto & member : members)
-                member.second.ResolveValue();
-        }
+        //void ResolveAll()   // resolve all members; do this before handing a ConfigRecord to C++ code
+        //{
+        //    for (auto & member : members)
+        //        member.second.ResolveValue();
+        //}
     };
     typedef ConfigRecord::ConfigRecordPtr ConfigRecordPtr;
 
@@ -246,6 +271,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         // inputs. This defines the interface to the function. Very simple in our case though.
         vector<wstring> paramNames;             // #parameters and parameter names (names are used for naming expressions only)
         shared_ptr<ConfigRecord> namedParams;   // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
+        // TODO: are these defaults already resolved? Or Thunked and resolved upon first use?
+        // TODO: Change namedParams to a shared_ptr<map<wstring,ConfigValuePtr>>
     public:
         template<typename F>
         ConfigLambda(const vector<wstring> & paramNames, shared_ptr<ConfigRecord> namedParams, const F & f) : paramNames(paramNames), namedParams(namedParams), f(f) { }
@@ -253,7 +280,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         const vector<wstring> & GetParamNames() const { return paramNames; }    // used for expression naming
         ConfigValuePtr Apply(vector<ConfigValuePtr> args, shared_ptr<ConfigRecord> namedArgs, const wstring & exprName)
         {
-            auto actualNamedArgs = make_shared<ConfigRecord>();
+            auto actualNamedArgs = make_shared<ConfigRecord>(nullptr);  // TODO: this should be changed to a shared_ptr<map>
             // actualNamedArgs is a filtered version of namedArgs that contains all optional args listed in namedParams,
             // falling back to their default if not given in namedArgs.
             // On the other hand, any name in namedArgs that is not found in namedParams should be rejected.
@@ -262,6 +289,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
                 const auto & id = namedParam.first;                         // id of expected named parameter
                 const auto valuep = namedArgs->Find(id);                    // was such parameter passed?
                 const auto value = valuep ? *valuep : namedParam.second;    // if not given then fall back to default
+                // BUGBUG: default may not have been resolved? -> first do namedParam.second->Resolve()? which would resolve in-place
                 actualNamedArgs->Add(id, value.GetLocation(), value);
                 // BUGBUG: we should pass in the location of the identifier, not that of the expression
             }
