@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNetworkHelper<ElemType> B;
         using B::UpdateEvalTimeStamps;
-        typedef ComputationNode<ElemType>* ComputationNodePtr;
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
     public:
 
@@ -43,10 +43,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_verbosity > 0)
                     fprintf (stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
-                if (m_net.OutputNodes()->size() == 0)
+                if (m_net.OutputNodes().size() == 0)
                     throw std::logic_error("There is no default output node specified in the network.");
 
-                outputNodes = *m_net.OutputNodes();
+                outputNodes = m_net.OutputNodes();
             }
             else
             {
@@ -55,16 +55,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //specify feature value nodes
-            std::vector<ComputationNodePtr>* featureNodes = m_net.FeatureNodes();
-            std::vector<ComputationNodePtr> * labelNodes = m_net.LabelNodes();
+            std::vector<ComputationNodePtr>& FeatureNodes = m_net.FeatureNodes();
+            std::vector<ComputationNodePtr>& labelNodes = m_net.LabelNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-            for (size_t i=0; i<featureNodes->size(); i++)
+            for (size_t i=0; i<FeatureNodes.size(); i++)
             {
-                inputMatrices[(*featureNodes)[i]->NodeName()] = &(*featureNodes)[i]->FunctionValues();
+                inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
             }
-            for (size_t i=0; i<labelNodes->size(); i++)
+            for (size_t i=0; i<labelNodes.size(); i++)
             {
-                inputMatrices[(*labelNodes)[i]->NodeName()] = &(*labelNodes)[i]->FunctionValues();                
+                inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();                
             }
             //Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
             //endOfFile(0,0)=0;
@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
+                UpdateEvalTimeStamps(FeatureNodes);
                 UpdateEvalTimeStamps(labelNodes);
 
                 size_t actualMBSize = m_net.GetActualMBSize();
@@ -131,10 +131,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (outputNodeNames.size() == 0)
             {
                 fprintf (stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
-                if (m_net.OutputNodes()->size() == 0)
+                if (m_net.OutputNodes().size() == 0)
                     throw std::logic_error("There is no default output node specified in the network.");
 
-                outputNodes = *m_net.OutputNodes();
+                outputNodes = m_net.OutputNodes();
             }
             else
             {
@@ -151,11 +151,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             //specify feature value nodes
-            std::vector<ComputationNodePtr>* featureNodes = m_net.FeatureNodes();
+            auto & FeatureNodes = m_net.FeatureNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-            for (size_t i=0; i<featureNodes->size(); i++)
+            for (size_t i=0; i<FeatureNodes.size(); i++)
             {
-                inputMatrices[(*featureNodes)[i]->NodeName()] = &(*featureNodes)[i]->FunctionValues();
+                inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
             }
                         
             //evaluate with minibatches
@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
+                UpdateEvalTimeStamps(FeatureNodes);
 
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);

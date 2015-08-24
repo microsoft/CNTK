@@ -391,7 +391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            PastValueNode<ElemType>* node = (PastValueNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<PastValueNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -405,14 +405,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PastValueNode(const PastValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_pastActivity(node->m_deviceId)
         {
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"")?NodeName():newName;
                 
-            ComputationNodePtr node = new PastValueNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<PastValueNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -751,7 +751,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            FutureValueNode<ElemType>* node = (FutureValueNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<FutureValueNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {
@@ -765,14 +765,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FutureValueNode(const FutureValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
             : ComputationNode<ElemType>(node->m_deviceId), m_futureActivity(node->m_deviceId)
         {
-                node->CopyTo(this, newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new FutureValueNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<FutureValueNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -853,7 +853,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_state_error_from_future_minibatch(node->m_deviceId), mLastState(node->m_deviceId), mLastOutput(node->m_deviceId)
         {
             m_use_errors_from_future_minibatch = false;
-            node->CopyTo(this, newName, flags);
+            node->CopyTo(shared_from_this(), newName, flags);
             m_DefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
         }
 
@@ -861,7 +861,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
 
-            ComputationNodePtr node = new LSTMNode<ElemType>(this, name, flags);
+            ComputationNodePtr node = make_shared<LSTMNode<ElemType>>(this, name, flags);
             return node;
         }
 
@@ -888,7 +888,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            LSTMNode<ElemType>* node = (LSTMNode<ElemType>*) nodeP;
+            auto node = dynamic_pointer_cast<LSTMNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
             {

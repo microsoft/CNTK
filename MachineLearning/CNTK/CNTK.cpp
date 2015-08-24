@@ -1475,8 +1475,8 @@ int wmain(int argc, wchar_t* argv[])
             fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
             fcloseOrDie(fp);
         }
-        fprintf(stderr, "COMPLETED\n");
-    }
+        fprintf(stderr, "COMPLETED\n"), fflush(stderr);
+	}
     catch (const std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());

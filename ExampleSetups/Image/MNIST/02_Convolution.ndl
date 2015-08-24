@@ -1,0 +1,63 @@
+load=ndlMnistMacros
+run=DNN
+
+ndlMnistMacros = [
+    ImageW = 28
+    ImageH = 28
+    LabelDim = 10
+
+    features = ImageInput(ImageW, ImageH, 1, tag = feature)
+    featScale = Const(0.00390625)
+    featScaled = Scale(featScale, features)
+    labels = Input(LabelDim, tag = label)
+]
+
+DNN=[
+    # conv1
+    kW1 = 5
+    kH1 = 5
+    cMap1 = 16
+    hStride1 = 1
+    vStride1 = 1
+    # weight[cMap1, kW1 * kH1 * inputChannels]
+    conv1W = Parameter(cMap1, 25, init = Uniform, initValueScale = 10)
+    conv1 = Convolution(conv1W, featScaled, kW1, kH1, cMap1, hStride1, vStride1, zeroPadding = false)
+    conv1bias = Parameter(cMap1, 1)
+    conv1plusbias = Plus(conv1, conv1bias);
+    conv1_act = Sigmoid(conv1plusbias);
+
+    # pool1
+    pool1W = 2
+    pool1H = 2
+    pool1hStride = 2
+    pool1vStride = 2
+    pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride)
+
+    # conv2
+    kW2 = 5
+    kH2 = 5
+    cMap2 = 32
+    hStride2 = 1
+    vStride2 = 1
+    # weight[cMap2, kW2 * kH2 * cMap1]
+    conv2W = Parameter(cMap2, 400, initValueScale = 10)
+    conv2 = Convolution(conv2W, pool1, kW2, kH2, cMap2, hStride2, vStride2, zeroPadding = false)
+    conv2bias = Parameter(cMap2, 1)
+    conv2plusbias = Plus(conv2, conv2bias);
+    conv2_act = Sigmoid(conv2plusbias);
+
+    # pool2
+    pool2W = 2
+    pool2H = 2
+    pool2hStride = 2
+    pool2vStride = 2
+    pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+
+    h1 = DNNLayer(512, 128, pool2, 1)
+    ol = DNNLastLayer(labelDim, 128, h1, 1)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ErrorPrediction(labels, ol, tag = Eval)
+    OutputNodes = ol
+]
+
