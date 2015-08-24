@@ -47,9 +47,27 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         //void operator=(const ConfigValuePtr &);
         // TODO: copying ConfigValuePtrs if they are not resolved yet, as it may lead to multiple executions of the Thunk.
         //       Solve by either forbidding assignment (move only) or by resolving upon assignment and deal with the fallout.
-        //       This is a little nasty.
+        //       Basically, ConfigValuePtr are not copyable when in Thunked state.
+        //       BUGBUG: This causes issues with macro parmaeters. They are copied (by value), but we cannot resolve when passing because Delay() will fail with circular reference.
         wstring expressionName;     // the name reflects the path to reach this expression in the (possibly dynamically macro-expanded) expression tree
     public:
+        void operator=(ConfigValuePtr && other)
+        {
+            (shared_ptr<Object>&)*this = move(other);
+            location = move(other.location);
+            expressionName = move(other.expressionName);
+        }
+        void operator=(const ConfigValuePtr & other)
+        {
+            if (other.GetThunk())
+                LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
+            (shared_ptr<Object>&)*this = other;
+            location = other.location;
+            expressionName = other.expressionName;
+        }
+        ConfigValuePtr(ConfigValuePtr && other) { *this = move(other); }
+        ConfigValuePtr(const ConfigValuePtr & other) { *this = other; }
+        //ConfigValuePtr(const ConfigValuePtr & other);
         // construction     ---TODO: no template here
         template<typename T>
         ConfigValuePtr(const shared_ptr<T> & p, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(p), location(location), expressionName(expressionName) { }
@@ -78,6 +96,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         template<class C>
         bool Is() const
         {
+            // TODO: change all these ResolveValue() calls to CheckResolved()
             ResolveValue();
             const auto p = dynamic_cast<C*>(get());
             return p != nullptr;
@@ -125,11 +144,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
                 // no need to reset currentlyResolving because this object gets replaced anyway
             }
         };
-        ConfigValuePtr ResolveValue() const   // (this is const but mutates the value if it resolves)
+        Thunk * GetThunk() const { return dynamic_cast<Thunk*>(get()); }    // get Thunk object or nullptr if already resolved
+        const ConfigValuePtr & ResolveValue() const   // (this is const but mutates the value if it resolves)
         {
             // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
             // get() is a pointer to a Thunk in that case, that is, a function object that yields the value
-            const auto thunkp = dynamic_cast<Thunk*>(get());   // is it a Thunk?
+            const auto thunkp = GetThunk();   // is it a Thunk?
             if (thunkp)                             // value is a Thunk: we need to resolve
             {
                 const auto value = thunkp->ResolveValue();      // completely replace ourselves with the actual result. This also releases the Thunk object
@@ -185,9 +205,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         {
             const auto memberIter = members.find(id);
             if (memberIter != members.end())
-                return memberIter->second;          // found--done
+                return memberIter->second.ResolveValue();   // resolve upon access
             if (parentScope)
-                return (*parentScope)[id];          // not found but have parent: look it up there
+                return (*parentScope)[id];                  // not found but have parent: look it up there
             // failed: shown an error
             if (message.empty())
                 throw EvaluationError(L"required parameter '" + id + L"' not found", TextLocation());
@@ -203,11 +223,12 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
                 else
                     return nullptr;
             else
-                return &memberIter->second;
+                return &memberIter->second.ResolveValue();
         }
         bool empty() const { return members.empty(); }      // late-init object constructors can test this
         // add a member
-        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr value) { members[id] = value; idLocation; }
+        void Add(const wstring & id, TextLocation idLocation, const ConfigValuePtr & value) { members[id] = value; idLocation; }
+        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr && value) { members[id] = move(value); idLocation; } // use this for unresolved ConfigPtrs
         // TODO: ^^ idLocation is meant to hold the text location of the identifier
         // get members; used for optional argument lookup and logging
         const map<wstring, ConfigValuePtr> & GetMembers() const { return members; }
@@ -237,26 +258,22 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
     {
         vector<ConfigValuePtr> values;
         int firstIndex;
-        ConfigValuePtr & GetElem(int index, TextLocation indexLocation)
+        // TODO: get rid of this function, only used in one place
+        const ConfigValuePtr & GetElemRef(int index, TextLocation indexLocation) const
         {
             if (index < firstIndex || index >= firstIndex + values.size())
                 throw EvaluationError(L"index out of bounds", indexLocation);
-            return values[(size_t)(index - firstIndex)];
+            return values[(size_t)(index - firstIndex)].ResolveValue(); // resolve upon access
         }
     public:
         ConfigArray() : firstIndex(0) { }
-        ConfigArray(int firstIndex, vector<ConfigValuePtr> && values) : firstIndex(firstIndex), values(values) { }
+        ConfigArray(int firstIndex, vector<ConfigValuePtr> && values) : firstIndex(firstIndex), values(move(values)) { }
         pair<int, int> GetRange() const { return make_pair(firstIndex, firstIndex+(int)values.size()-1); }
         // building the array from expressions: append an element or an array
         void Append(ConfigValuePtr value) { values.push_back(value); }
         void Append(const ConfigArray & other) { values.insert(values.end(), other.values.begin(), other.values.end()); }
         // get element at index, including bounds check
-        ConfigValuePtr At(int index, TextLocation indexLocation) /*const*/
-        {
-            auto & elem = GetElem(index, indexLocation);
-            elem.ResolveValue();
-            return elem;
-        }
+        const ConfigValuePtr & At(int index, TextLocation indexLocation) const { return GetElemRef(index, indexLocation); }
     };
     typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
@@ -266,35 +283,40 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
 
     class ConfigLambda : public Object
     {
+    public:
+        typedef map<wstring, ConfigValuePtr> NamedParams;   // TODO: maybe even not use a typedef, just use the type
+    private:
         // the function itself is a C++ lambda
-        function<ConfigValuePtr(const vector<ConfigValuePtr>&, shared_ptr<ConfigRecord>, const wstring & exprName)> f;
+        function<ConfigValuePtr(const vector<ConfigValuePtr> &, const NamedParams &, const wstring & exprName)> f;
         // inputs. This defines the interface to the function. Very simple in our case though.
         vector<wstring> paramNames;             // #parameters and parameter names (names are used for naming expressions only)
-        shared_ptr<ConfigRecord> namedParams;   // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
+        NamedParams namedParams;   // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
         // TODO: are these defaults already resolved? Or Thunked and resolved upon first use?
         // TODO: Change namedParams to a shared_ptr<map<wstring,ConfigValuePtr>>
     public:
         template<typename F>
-        ConfigLambda(const vector<wstring> & paramNames, shared_ptr<ConfigRecord> namedParams, const F & f) : paramNames(paramNames), namedParams(namedParams), f(f) { }
+        ConfigLambda(vector<wstring> && paramNames, NamedParams && namedParams, const F & f) : paramNames(move(paramNames)), namedParams(move(namedParams)), f(f) { }
         size_t GetNumParams() const { return paramNames.size(); }
         const vector<wstring> & GetParamNames() const { return paramNames; }    // used for expression naming
-        ConfigValuePtr Apply(vector<ConfigValuePtr> args, shared_ptr<ConfigRecord> namedArgs, const wstring & exprName)
+        // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
+        ConfigValuePtr Apply(vector<ConfigValuePtr> args, const NamedParams & namedArgs, const wstring & exprName)
         {
-            auto actualNamedArgs = make_shared<ConfigRecord>(nullptr);  // TODO: this should be changed to a shared_ptr<map>
+            NamedParams actualNamedArgs;
             // actualNamedArgs is a filtered version of namedArgs that contains all optional args listed in namedParams,
             // falling back to their default if not given in namedArgs.
             // On the other hand, any name in namedArgs that is not found in namedParams should be rejected.
-            for (const auto & namedParam : namedParams->GetMembers())
+            for (const auto & namedParam : namedParams)
             {
                 const auto & id = namedParam.first;                         // id of expected named parameter
-                const auto valuep = namedArgs->Find(id);                    // was such parameter passed?
-                const auto value = valuep ? *valuep : namedParam.second;    // if not given then fall back to default
+                const auto valuei = namedArgs.find(id);                    // was such parameter passed?
+                const auto & value = valuei != namedArgs.end() ? valuei->second : namedParam.second.ResolveValue();    // if not given then fall back to default
                 // BUGBUG: default may not have been resolved? -> first do namedParam.second->Resolve()? which would resolve in-place
-                actualNamedArgs->Add(id, value.GetLocation(), value);
+                actualNamedArgs[id] = value;
+                //actualNamedArgs->Add(id, value.GetLocation(), value);
                 // BUGBUG: we should pass in the location of the identifier, not that of the expression
             }
-            for (const auto & namedArg : namedArgs->GetMembers())   // make sure there are no extra named args that the macro does not take
-                if (namedParams->Find(namedArg.first) == nullptr)
+            for (const auto & namedArg : namedArgs)   // make sure there are no extra named args that the macro does not take
+                if (namedParams.find(namedArg.first) == namedParams.end())
                     throw EvaluationError(L"function does not have an optional argument '" + namedArg.first + L"'", namedArg.second.GetLocation());
             return f(args, actualNamedArgs, exprName);
         }

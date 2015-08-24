@@ -126,61 +126,86 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
     try
     {
         //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        let parserTest1 = L"do3 = new LearnableParameter [ inDim=13; outDim=42 ] * new InputValue [ ] + new LearnableParameter [ outDim=42 ]\n"
-            L"do2 = array [1..10] (i=>i*i) ;"
-            L"do = new PrintAction [ what = 'abc' ] ;"
-            L"do5 = new PrintAction [ what = new StringFunction [ x = 13 ; y = 42 ; what = 'format' ; how = '.2' ; arg = x*y ] ] ;"
-            L"do4 = new PrintAction [ what = \"new StringFunction [ what = 'format' ; how = '.2' ; arg = '13 > 42' ]\" ] ;"
-            L"do1 = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']";
-        let parserTest2 = L"i2s(i) = new StringFunction [ what = 'format' ; arg = i ; how = '.2' ] ; print(s) = new PrintAction [ what = s ] ; do = print('result=' + i2s((( [ v = (i => i + delta) ].v(5)))+13)) ; delta = 42 ";
-        let parserTest3 = L"do = new PrintAction [ what = val ] ; val=1+2*3; text = 'hello'+' world' ";
-        let parserTest4 = L"do = new PrintAction [ what = new StringFunction [ what = 'format' ; arg = (13:(fortytwo:1):100) ; how = '' ] ];fortytwo=42 ";
-        let parserTest5 = L"do = new PrintAction [ what = val ] ; val=if !false then 42 else -+-++-13:[a='a';b=42]:+14; arr = array [1..10] (i => 2*i) ";
-        let parserTest6 = L"do = new PrintAction [ what = arg ] ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr ";
-        let parserTest7 = L"do = new PrintAction [ what = val ] ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 ";
-        let parserTest8 = L" \n"
-                          L"do = Print(val) \n"
-                          L"val = new NDLComputationNetwork [\n"
-                          L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
-                          L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
-                          L"  featNorm = MeanVarNorm(myFeatures) \n"
-                          L"  HiddenStack(layer) = if layer > 1 then SBFF(HiddenStack(layer - 1).Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
-                          L"  outLayer = BFF(HiddenStack(numHiddenLayers).Eh, labelDim, hiddenDim) \n"
-                          L"  outZ = outLayer.z \n"
-                          L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
-                          L"  Err = ErrorPrediction(myLabels, outZ) \n"
-                          L"  logPrior = LogPrior(myLabels) \n"
-                          L"  ScaledLogLikelihood = outZ - logPrior \n"
-                          L"]\n";
-        let parserTest9 = L"do = Print(fac(5)) ; val = RequiredParameter('need to specify val') ; fac(i) = if i > 1 then fac(i-1)*i else i ";
-        let parserTest10 = L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) ";
-        let parserTest11 = L" \n"
-                           L"do = Print(val) \n"
-                           L"val = new NDLComputationNetwork [\n"
-                           L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
-                           L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
-                           L"  featNorm = MeanVarNorm(myFeatures) \n"
-                           //L"  layers/*[layer=1..numHiddenLayers]*/ = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
-                           L"  layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
-                           L"  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) \n"
-                           L"  outZ = outLayer.z + Delay(outZ, 1) \n"
-                           L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
-                           L"  Err = ErrorPrediction(myLabels, outZ) \n"
-                           L"  logPrior = LogPrior(myLabels) \n"
-                           L"  ScaledLogLikelihood = outZ - logPrior \n"
-                           L"]\n";
-        // alternative syntax?
-        // layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)
-        let parserTest12 = L"do = Print(Length('abc')) : Print(Length(1:2:(3:4))) : Print(Length(array[1..10](i=>i*i))) : Print(Floor(0.3)) : Print(Ceil(0.9)) : Print(Round(0.5)) : Print(Min(13,42)) : Print('a'+Chr(10)+'b') : Print(Replace('abcuhdnbsbbacb','b','##b')) : Print(Substr('Hello', 0, 4)) : Print(Substr('Hello', -2, 4)) : Print(Substr('Hello', 2, -1))";
-        let parserTest13 = L" \n"   // this fails because dict is outside val; expression name is not local to it
-                           L"do = Print(val) \n"
-                           L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
-                           L"]\n";
-        parserTest1; parserTest2; parserTest3; parserTest4; parserTest5; parserTest6; parserTest7; parserTest8; parserTest9; parserTest10; parserTest11; parserTest12; parserTest13;
-        let parserTest = parserTest11;
-        let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
-        //expr->Dump();
-        Do(expr);
+        wchar_t * parserTests[] = 
+        {
+            L"do = Parameter(13,42) * Input(42) + Parameter(13,1)"
+            ,
+            L"do = array [1..10] (i=>i*i)"
+            ,
+            L"do = new PrintAction [ what = 'abc' ]"
+            ,
+            L"do = Print(new StringFunction [ x = 13 ; y = 42 ; what = 'Format' ; how = '.2' ; arg = x*y ])"
+            ,
+            L"do = Print(\"new StringFunction [ what = 'Format' ; how = '.2' ; arg = '13 > 42' ]\")"
+            ,
+            L"do = new PrintAction [ what = if 13 > 42 || 12 > 1 then 'Hello World' + \"!\" else 'Oops?']"
+            ,
+            L"i2s(i) = new StringFunction [ what = 'Format' ; arg = i ; how = '.2' ] ; do = Print('result=' + i2s((( [ v = (i => i + delta) ].v(5)))+13)) ; delta = 42 "
+            ,
+            L"do = Print(1+2*3) : Print('hello'+' world')"
+            ,
+            L"do = Print(Format( (13:(fortytwo:1):100), '')) ; fortytwo=42 "
+            ,
+            L"do = Print(val) ; val=if !false then 42 else -+-++-13:[a='a';b=42]:+14; arr = array [1..10] (i => 2*i)"
+            ,
+            L"do = Print(arg) ; N = 5 ; arr = array [1..N] (i => if i < N then arr[i+1]*i else N) ; arg = arr "
+            ,
+            L"do = Print(val) ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 "
+            ,
+            L" \n"
+            L"do = Print(val) \n"
+            L"val = new NDLComputationNetwork [\n"
+            L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
+            L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
+            L"  featNorm = MeanVarNorm(myFeatures) \n"
+            L"  HiddenStack(layer) = if layer > 1 then SBFF(HiddenStack(layer - 1).Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
+            L"  outLayer = BFF(HiddenStack(numHiddenLayers).Eh, labelDim, hiddenDim) \n"
+            L"  outZ = outLayer.z \n"
+            L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
+            L"  Err = ErrorPrediction(myLabels, outZ) \n"
+            L"  logPrior = LogPrior(myLabels) \n"
+            L"  ScaledLogLikelihood = outZ - logPrior \n"
+            L"]\n"
+            ,
+            L"do = Print(fac(5)) ; val = RequiredParameter('need to specify val') ; fac(i) = if i > 1 then fac(i-1)*i else i "
+            ,
+            L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) "
+            ,
+            L" \n"
+            L"do = Print(val) \n"
+            L"val = new NDLComputationNetwork [\n"
+            L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
+            L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
+            L"  featNorm = MeanVarNorm(myFeatures) \n"
+            //L"  layers/*[layer=1..numHiddenLayers]*/ = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
+            L"  layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
+            L"  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) \n"
+            L"  outZ = outLayer.z //+ Delay(outZ, 1) \n"
+            L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
+            L"  Err = ErrorPrediction(myLabels, outZ) \n"
+            L"  logPrior = LogPrior(myLabels) \n"
+            L"  ScaledLogLikelihood = outZ - logPrior \n"
+            L"]\n"
+            ,
+            L" \n"   // this fails because dict is outside val; expression name is not local to it
+            L"do = Print(val) \n"
+            L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
+            L"]\n"
+            ,
+            NULL
+        };
+        let first = 0;// 12;
+        bool oneOnly = first > 0;
+        for (size_t i = first; parserTests[i]; i++)
+        {
+            fprintf(stderr, "\n### Test %d ###\n\n", i), fflush(stderr);
+            let parserTest = parserTests[i];
+            let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
+            //expr->Dump();
+            Do(expr);
+            if (oneOnly)
+                break;
+        }
         //ParseConfigFile(L"c:/me/test.txt")->Dump();
     }
     catch (const ConfigError & err)
