@@ -1629,6 +1629,9 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     //All zero!
     size_t wordNumber = mBlgSize * m_mbSize;
 
+    DEVICEID_TYPE featureDeviceId = feature_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
+    feature_m->TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false); 
+
     if (feature_m->GetMatrixType() == MatrixType::DENSE)
     {
         feature_m->Resize(nwords, wordNumber);
@@ -1639,6 +1642,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         feature_m->Resize(nwords, wordNumber, wordNumber);
         feature_m->Reset();
     }
+    for (int i = 0; i < wordNumber; i++)
+        feature_m->SetValue(0, i, (ElemType)1); //All word 0!
+    feature_m->TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false); //Done, move it back to GPU if necessary
+
     label_m->Resize(4, wordNumber);
     label_m->SetValue(0);
 
