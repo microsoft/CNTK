@@ -1615,6 +1615,7 @@ template<class ElemType>
 size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
     fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter called---\n");
+    //fprintf(stderr, "debughtx returning %d\n", mBlgSize);
     fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter ended---\n");
     return mBlgSize;
 }
@@ -1709,7 +1710,7 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentence
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 {
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd called---");
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd called---\n");
     bool ret = false;
     switch (endDataType)
     {
@@ -1727,7 +1728,7 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = mSentenceEnd;
         break;
     }
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd ended---");
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd ended---\n");
     return ret;
 
 }
@@ -1827,11 +1828,22 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
+    static bool first = true;
     fprintf(stderr, "debughtx ---SetSentenceSegBatch called---\n");
+    //For the stupid version, I need to set it to sequenceStart everything, otherwise the first pastActivity for the recurrent node will be wrong in dimension.
     sentenceBegin.Resize(mBlgSize, m_mbSize);
     sentenceBegin.SetValue(0);
     minibatchPackingFlag.resize(m_mbSize);
     std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+
+    if (first) {
+        for (int i = 0; i < mBlgSize; i++) {
+            sentenceBegin.SetValue(i, 0, (ElemType)1);
+        }
+        minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
+        first = false;
+    }
+
     fprintf(stderr, "debughtx ---SetSentenceSegBatch ended---\n");
     system("sleep 0.5");
 }
