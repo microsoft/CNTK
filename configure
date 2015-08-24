@@ -38,7 +38,7 @@ default_acmls="acml5.3.1/ifort64"
 default_mkls=""
 
 # NOTE: Will get compilation errors with cuda-6.0
-default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
+default_cudas="cuda-7.5 cuda-7.0 cuda-6.5 cuda-7.1"
 default_kaldis="kaldi-trunk"
 default_gdks="."
 
@@ -182,12 +182,12 @@ do
             fi
             default_path_list="$optarg $default_path_list"
             ;;
-        --cuda)
-            if test x$optarg = yes || test x$optarg = no
+        --cuda*)
+            if test x$optarg = xyes || test x$optarg = xno
             then
                 enable_cuda=$optarg
             else
-                echo "Invalid value for --cuda"
+                echo "Invalid value for --cuda $optarg"
                 show_help
                 exit
             fi
