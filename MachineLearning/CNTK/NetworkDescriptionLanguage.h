@@ -238,8 +238,8 @@ public:
     }
     
     // Get/Set eval values
-    void* GetEvalValue() const { return m_eval;}
-    void SetEvalValue(void* evalValue) {m_eval = evalValue;}
+    void* GetEvalValue() const { return m_eval; }
+    void SetEvalValue(void* evalValue) { m_eval = evalValue; }
 
     // GetOptionalParameter - Get an optional parameter value
     // name - the name to search for in the optional parameters
