@@ -19,7 +19,7 @@ testCases:
     patterns:
       - ^MPI Rank 0
       - Finished Epoch[{{integer}}]
-      - TrainLossPerSample = {{float,tolerance=0.0005%}}
+      - TrainLossPerSample = {{float,tolerance=0.001%}}
       - EvalErrPerSample = {{float,tolerance=0%}}
       - Ave LearnRatePerSample = {{float,tolerance=0%}}
 
@@ -27,7 +27,7 @@ testCases:
     patterns:
       - ^MPI Rank 1
       - Finished Epoch[{{integer}}]
-      - TrainLossPerSample = {{float,tolerance=0.0005%}}
+      - TrainLossPerSample = {{float,tolerance=0.001%}}
       - EvalErrPerSample = {{float,tolerance=0%}}
       - Ave LearnRatePerSample = {{float,tolerance=0%}}
 
@@ -36,7 +36,7 @@ testCases:
       - ^MPI Rank 0
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=0.0005%}}
+      - TrainLossPerSample = {{float,tolerance=0.001%}}
       - EvalErr[0]PerSample = {{float,tolerance=0%}}
 
   Per-minibatch training results must match for MPI Rank 1:
@@ -44,5 +44,5 @@ testCases:
       - ^MPI Rank 1
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=0.0005%}}
+      - TrainLossPerSample = {{float,tolerance=0.001%}}
       - EvalErr[0]PerSample = {{float,tolerance=0%}}
