@@ -316,7 +316,6 @@ public:
 	using SequenceReader<ElemType>::m_labelsBlock2UniqId;
 	using SequenceReader<ElemType>::m_id2classLocal;
 	using SequenceReader<ElemType>::m_classInfoLocal;
-	using SequenceReader<ElemType>::m_mbSize;
 	using SequenceReader<ElemType>::m_epochSize;
 	using SequenceReader<ElemType>::m_featureData;
 	using SequenceReader<ElemType>::labelInfoOut;
@@ -358,6 +357,8 @@ private:
 
 public:
     vector<bool> mProcessed; 
+    size_t m_mbSize;
+
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
     static void ReadClassInfo(const wstring & vocfile, int& class_size,
         map<string, int>& word4idx,

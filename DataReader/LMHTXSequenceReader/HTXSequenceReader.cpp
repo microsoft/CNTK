@@ -1452,6 +1452,8 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
 {
     fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop called---\n");
     fprintf(stderr, "mbSize:%d epoch:%d requestedEpochSamples:%d\n", mbSize, epoch, requestedEpochSamples); //requestedEpochSamples will be -1 when epochSize=0
+    m_mbSize = mbSize; //Size of minibatch requested
+
     fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
 }
 
@@ -1612,121 +1614,36 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
 template<class ElemType>
 size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
-    size_t sz = mToProcess.size();
-    if (sz == 0)
-        return mBlgSize;
-    return sz; 
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter called---\n");
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter ended---\n");
+    return mBlgSize;
 }
 
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
+    fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch called---\n");
+    //features idx2cls labels
+    Matrix<ElemType>* feature_m = matrices[L"features"];
+    Matrix<ElemType>* label_m = matrices[L"labels"];
+    //All zero!
+    size_t wordNumber = mBlgSize * m_mbSize;
 
-    // get out if they didn't call StartMinibatchLoop() first
-    if (m_mbSize == 0)
-        return false;
-
-    bool moreData = EnsureDataAvailable(m_mbStartSample);
-    if (moreData == false)
-        return false; 
-
-    // actual size is the size of the next seqence
-    size_t actualmbsize = 0;
-
-    // figure out the size of the next sequence
-    actualmbsize = m_labelIdData.size() ; 
-    if (actualmbsize > m_mbSize * mToProcess.size()){
-        RuntimeError("specified minibatch size %d is smaller than the actual minibatch size %d. memory can crash!", m_mbSize, actualmbsize);
-    }
-
-    // now get the labels
-    const LabelInfo& labelInfo = m_labelInfo[( m_labelInfo[labelInfoOut].type == labelNextWord)?labelInfoIn:labelInfoOut];
-
-    if (actualmbsize > 0)
+    if (feature_m->GetMatrixType() == MatrixType::DENSE)
     {
-
-        //loop through all the samples
-        Matrix<ElemType>& features = *matrices[m_featuresName];
-      
-        // copy m_featureData to matrix
-        // we always copy it to cpu first and then convert to gpu if gpu is desired.
-        DEVICEID_TYPE featureDeviceId = features.GetDeviceId();
-        features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
-
-        size_t nT = actualmbsize / mToProcess.size();
-        mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
-        mtSentenceBegin.Resize(mToProcess.size(), nT);
-        mtSentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        m_minibatchPackingFlag.resize(nT);
-        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-
-        if (features.GetMatrixType() == MatrixType::DENSE)
-        {
-            features.Resize(labelInfo.dim, actualmbsize);
-            features.SetValue(0);
-        }
-        else
-        {
-            features.Resize(labelInfo.dim, actualmbsize, actualmbsize);
-            features.Reset();
-        }
-
-        size_t timeIdx = 0;
-        for (size_t j = 0; j < actualmbsize; ++j)
-        {
-            // vector of feature data goes into matrix column
-            size_t idx = (size_t)m_featureData[j];
-
-            /// actual time position
-            timeIdx = (size_t)j / mToProcess.size();
-            size_t uttIdx = (size_t)fmod(j, mToProcess.size());
-
-            features.SetValue(idx, j, (ElemType)1);
-            SetSentenceBegin(idx, uttIdx, timeIdx);
-
-        }
-        
-        features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
-//        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-//        m_minibatchPackingFlag.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-
-        // TODO: move these two methods to startMiniBatchLoop()
-        if (readerMode == ReaderMode::Class)
-        {
-            GetInputToClass(matrices);
-            GetClassInfo();
-        }
-        GetLabelOutput(matrices, 0, actualmbsize);
-
-        // go to the next sequence
-        m_seqIndex++;
-    } 
+        feature_m->Resize(nwords, wordNumber);
+        feature_m->SetValue(0);
+    }
     else
-        return false; 
-
-    // now transfer to the GPU as needed
-    try{
-        // get the features array
-        if (matrices.find(m_featuresName) == matrices.end())
-        {
-            Matrix<ElemType>& nbs = *matrices[L"numberobs"];
-            int curDevId = nbs.GetDeviceId();
-            nbs.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-            nbs(0,0) = (float)actualmbsize;
-            nbs.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
-            for (size_t i = 0; i < actualmbsize; i++)
-            {
-                std::wstring ws = msra::strfun::wstrprintf (L"feature%d", i);
-                Matrix<ElemType>& features = *matrices[ws];
-                features.SetValue(labelInfo.dim, 1, &m_featuresBuffer[i*labelInfo.dim],matrixFlagNormal);
-            }
-        }
-    }catch(...)
     {
-        RuntimeError("features size might not be sufficiently large. The asked minibatch size is %s. check minibatchSize in the feature definition"  ,actualmbsize);
+        feature_m->Resize(nwords, wordNumber, wordNumber);
+        feature_m->Reset();
     }
+    label_m->Resize(4, wordNumber);
+    label_m->SetValue(0);
 
-    // we read some records, so process them
+    fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch ended---\n");
+    system("sleep 0.5");
     return true;
 }
 
@@ -1785,6 +1702,7 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentence
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 {
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd called---");
     bool ret = false;
     switch (endDataType)
     {
@@ -1802,6 +1720,7 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = mSentenceEnd;
         break;
     }
+    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd ended---");
     return ret;
 
 }
@@ -1901,12 +1820,13 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
-    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-    sentenceBegin.SetValue(mtSentenceBegin);
-    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
-
-    minibatchPackingFlag = m_minibatchPackingFlag;
+    fprintf(stderr, "debughtx ---SetSentenceSegBatch called---\n");
+    sentenceBegin.Resize(mBlgSize, m_mbSize);
+    sentenceBegin.SetValue(0);
+    minibatchPackingFlag.resize(m_mbSize);
+    std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+    fprintf(stderr, "debughtx ---SetSentenceSegBatch ended---\n");
+    system("sleep 0.5");
 }
 
 template<class ElemType>
