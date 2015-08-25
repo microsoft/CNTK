@@ -56,8 +56,9 @@ struct Issue
     wstring markup;         // string with markup symbols at char positions and dots inbetween
     void AddMarkup(wchar_t symbol, size_t charPos)
     {
-        markup.resize(charPos+1, L' '); // fill with '.' up to desired position if the string is not that long yet
-        if (markup[charPos] == L' ')    // don't overwrite
+        if (charPos >= markup.size())
+            markup.resize(charPos+1, L' '); // fill with '.' up to desired position if the string is not that long yet
+        if (markup[charPos] == L' ')        // don't overwrite
             markup[charPos] = symbol;
     }
     Issue(TextLocation location) : location(location) { }

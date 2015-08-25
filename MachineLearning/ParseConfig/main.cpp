@@ -189,9 +189,11 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY \n"
             L"]\n"
             ,
+            L"f(x,option='default') = Print(option); do = f(42,option='value')"
+            ,
             NULL
         };
-        let first = 0;// 12;
+        let first = 17;// 12;
         bool oneOnly = first > 0;
         for (size_t i = first; parserTests[i]; i++)
         {
