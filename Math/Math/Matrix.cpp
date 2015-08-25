@@ -3520,13 +3520,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_preferredDeviceId=GetDeviceId();
     }
     template<class ElemType>
-    void Matrix<ElemType>::TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const
+    void Matrix<ElemType>::TransferToDeviceIfNotThere(int id_to, bool ismoved, bool emptyTransfer, bool updatePreferredDevice) const
     {
         if (GetDeviceId() != id_to)
             TransferFromDeviceToDevice(id_to, ismoved, emptyTransfer, updatePreferredDevice);
     }
     template<class ElemType>
-    void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const
+    void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved, bool emptyTransfer, bool updatePreferredDevice) const
     {
         if (id_to != AUTOPLACEMATRIX)
             TransferToDeviceIfNotThere(id_to, ismoved, emptyTransfer, updatePreferredDevice);
