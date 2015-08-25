@@ -11,12 +11,13 @@
 //        - ^^ + [ new nodes ] - [ nodes to delete ]
 //          creates modified network
 //        - pass into new NDLComputationNetwork
-//  - fix the problem that ConfigValuePtrs are not really copyable (do this by move semantics instead of copying)
+//     - also, any access needs to go up the chain and check for qualified matches there, and take the first
+//       Or is that maybe the sole solution to the filter problem? [ ] + [ ] just computes a merged dict with possibly fully qualified names detected downstream?
+//  - fix the (new) DelayNode problem
 //  - I get stack overflows...? What's wrong with stack usage?? Need to use more references? Or only a problem in Debug?
 //  - a way to access a symbol up from the current scope, needed for function parameters of the same name as dict entries created from them, e.g. the optional 'tag'
 //     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
 //     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
-//  - config[".."] should search symbols the entire stack up, not only the current dictionary
 //  - name lookup should inject TextLocation into error stack
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
