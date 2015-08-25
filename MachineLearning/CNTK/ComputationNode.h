@@ -50,6 +50,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
     };
 
+    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
+    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
+    // TODO: m_samplesInRecurrentStep should be subsumed here & removed from nodes
+    struct FrameRange
+    {
+        const size_t timeIdxInSeq;  // start frame
+        const size_t numFrames;     // number of frames; currently only 1 or SIZE_MAX. SIZE_MAX means entire MB, or all input assuming ot is no time sequence
+        // can construct from a single size_t -> a single-frame range
+        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), numFrames(1) { }
+        // or without arguments -> entire minibatch / no frame-range
+        FrameRange() : timeIdxInSeq(0), numFrames(SIZE_MAX) { }
+        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
+        size_t t() const
+        {
+            if (numFrames != 1)
+                LogicError("FrameRange::t() called for a frame range > 1 frame");
+            else
+                return timeIdxInSeq;
+        }
+    private:
+        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
+        void operator=(const FrameRange &);
+    };
+
 #pragma region base computation class
 
     // =======================================================================
@@ -61,6 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:
+        using std::enable_shared_from_this<ComputationNode<ElemType>>::shared_from_this;
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
@@ -131,29 +156,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceSeg = nullptr;
             InitRecurrentNode();
         }
-
-        // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
-        // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
-        struct FrameRange
-        {
-            const size_t timeIdxInSeq;  // start frame
-            const size_t numFrames;     // number of frames; currently only 1 or SIZE_MAX. SIZE_MAX means entire MB, or all input assuming ot is no time sequence
-            // can construct from a single size_t -> a single-frame range
-            FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), numFrames(1) { }
-            // or without arguments -> entire minibatch / no frame-range
-            FrameRange() : timeIdxInSeq(0), numFrames(SIZE_MAX) { }
-            // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
-            size_t t() const
-            {
-                if (numFrames != 1)
-                    LogicError("FrameRange::t() called for a frame range > 1 frame");
-                else
-                    return timeIdxInSeq;
-            }
-        private:
-            FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
-            void operator=(const FrameRange &);
-        };
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1143,6 +1145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
     // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
+    // Whoever invented that insanity called two-phase name lookup shall rot in hell. [fseide]
 #define UsingComputationNodeMembers    \
         typedef ComputationNode<ElemType> B; \
 protected:  \
@@ -1162,12 +1165,12 @@ public: \
 protected:  \
         using B::m_loopId; using B::m_samplesInRecurrentStep; \
         using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop;  \
+        using B::m_indexInLoop; \
         using B::m_sentenceSeg; using B::m_minibatchPackingFlag; \
         using B::m_reqMultiSeqHandling; using B::UseCustomizedMultiSeqHandling; \
         using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
         using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
-        using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter
+        using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter; using B::shared_from_this \
 
 #pragma endregion base computation class
 

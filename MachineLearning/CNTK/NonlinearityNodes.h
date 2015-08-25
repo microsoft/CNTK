@@ -131,7 +131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingNonlinearityNodeMembers UsingComputationNodeMembers; typedef NonlinearityNode<ElemType> BB; \
 public:  \
-    using BB::Construct; using BB::EvaluateThisNode
+    using BB::m_gradient; using BB::Construct; using BB::EvaluateThisNode
 
     // =======================================================================
     // RectifiedLinearNode -- ReLU non-linearity
@@ -663,7 +663,7 @@ public:  \
             if (m_functionValues.GetNumCols() != c ||
                 m_functionValues.GetNumRows() != r)
                 m_functionValues.Resize(r, c);
-            NonlinearityNode::EvaluateThisNode(frameRange);
+            NonlinearityNode<ElemType>::EvaluateThisNode(frameRange);
         }
 
         /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
