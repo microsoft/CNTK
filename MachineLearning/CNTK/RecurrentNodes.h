@@ -378,6 +378,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_historyAlreadySet;               // for PastValueNode only
     };
 
+#define UsingDelayedValueNodeMembers UsingComputationNodeMembers; typedef DelayedValueNode<ElemType> BB; \
+public:  \
+    using BB::Construct; using BB::m_initialActivationValue; using BB::m_delayedActivation; using BB::m_timeStep; using BB::m_direction; \
+    using BB::m_SEQUENCE_BOUNDARY; using BB::m_SequenceBoundary; using BB::m_shiftedMinibatchPackingFlag; using BB::m_boundaryInfo; using BB::m_historyAlreadySet; \
+    using BB::ComputeInputPartialSRP; using BB::EvaluateThisNodeSRP
 
     // =======================================================================
     // PastValueNode -- delay node
@@ -386,23 +391,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PastValueNode : public DelayedValueNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingDelayedValueNodeMembers;
     public:
-        using DelayedValueNode::Construct;
 
         void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")  
         {
-            DelayedValueNode::Construct(deviceId, name, -1);
+            DelayedValueNode<ElemType>::Construct(deviceId, name, -1);
         }
 
         void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
-            DelayedValueNode::Construct(fstream, modelVersion, deviceId, name, -1);
+            DelayedValueNode<ElemType>::Construct(fstream, modelVersion, deviceId, name, -1);
         }
 
         void Construct(const DEVICEID_TYPE deviceId, ElemType initialActivationValue, size_t row_size, size_t col_size, const std::wstring name = L"")
         {
-            DelayedValueNode::Construct(deviceId, initialActivationValue, row_size, col_size, name, -1);
+            DelayedValueNode<ElemType>::Construct(deviceId, initialActivationValue, row_size, col_size, name, -1);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -473,23 +477,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class FutureValueNode : public DelayedValueNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        UsingDelayedValueNodeMembers;
     public:
-        using DelayedValueNode::Construct;
-
         void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
-            DelayedValueNode::Construct(deviceId, name, +1);
+            DelayedValueNode<ElemType>::Construct(deviceId, name, +1);
         }
 
         void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
         {
-            DelayedValueNode::Construct(fstream, modelVersion, deviceId, name, +1);
+            DelayedValueNode<ElemType>::Construct(fstream, modelVersion, deviceId, name, +1);
         }
 
         void Construct(const DEVICEID_TYPE deviceId, ElemType initialActivationValue, size_t row_size, size_t col_size, const std::wstring name = L"")
         {
-            DelayedValueNode::Construct(deviceId, initialActivationValue, row_size, col_size, name, +1);
+            DelayedValueNode<ElemType>::Construct(deviceId, initialActivationValue, row_size, col_size, name, +1);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }

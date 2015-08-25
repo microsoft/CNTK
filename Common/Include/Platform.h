@@ -1,3 +1,5 @@
+// Platform.h -- mapping platform-dependent stuff. E.g. contains a few emulations of VS-proprietary CRT functions for Linux.
+
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
@@ -7,7 +9,11 @@
 #define __UNIX__
 #endif
 
-#ifdef __UNIX__
+// ===========================================================================
+// emulation of some MSVC proprietary CRT
+// ===========================================================================
+
+#ifndef _MSC_VER
 // necessary header files for API conversion
 //#include <cstdint>
 #include <cstdio>
@@ -19,6 +25,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <string>
 // basic type conversion
 typedef int BOOL;
 typedef unsigned char BYTE;
@@ -117,25 +124,25 @@ inline int fscanf_s(FILE *stream, const char *format, ...)
 	return res;
 }
 
-inline char* wtocharpath (const wchar_t *p)
+static inline std::string wtocharpath (const wchar_t *p)
 {
-    size_t len = std::basic_string<wchar_t>(p).length();
-    char *buf = new char[2 * len + 1]; // max: 1 wchar => 2 mb chars
-    ::wcstombs(buf, p, 2 * len + 1);
+    size_t len = wcslen(p);
+    std::string buf;
+    buf.resize(2 * len + 1);       // max: 1 wchar => 2 mb chars
+    ::wcstombs(&buf[0], p, buf.size()); // note: technically it is forbidden to stomp over std::strings 0 terminator, but it is known to work in all implementations
+    buf.resize(strlen(&buf[0]));        // set size correctly for shorter strings
     return buf;
 }
 
 inline errno_t _wfopen_s(FILE **file, const wchar_t *fileName, const wchar_t *mode)
 {
-	char *fn = wtocharpath(fileName);
-	char *m = wtocharpath(mode);
-	FILE *f = fopen(fn, m);
-	delete[] fn;
-	delete[] m;
-	if (f == NULL)
-		return -1;
-	*file = f;
-	return 0;
+    const auto fn = wtocharpath(fileName);
+    const auto m = wtocharpath(mode);
+    FILE *f = fopen(fn.c_str(), m.c_str());
+    if (f == NULL)
+        return -1;
+    *file = f;
+    return 0;
 }
 
 inline pid_t GetCurrentProcessId()
@@ -143,6 +150,10 @@ inline pid_t GetCurrentProcessId()
 	return getpid();
 }
 
-#endif //__UNIX__
+static inline int _wsystem(const wchar_t *command) { return system(wtocharpath(command).c_str()); }
+static inline FILE * _wpopen(const wchar_t * command, const wchar_t *mode) { return popen(wtocharpath(command).c_str(), wtocharpath(mode).c_str()); }
+static inline int _pclose(FILE *stream) { return pclose(stream); }
+
+#endif // !_MSC_VER
 
 #endif //__PLATFORM_H

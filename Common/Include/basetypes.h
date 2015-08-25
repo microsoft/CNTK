@@ -568,9 +568,6 @@ static inline const char *strerror_(int e)
     return msgs[e].c_str();
 }
 #endif
-#ifdef __unix__
-extern int fileno(FILE*);   // somehow got deprecated in C++11
-#endif
 
 // ----------------------------------------------------------------------------
 // frequently missing string functions
