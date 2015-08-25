@@ -221,6 +221,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         {
             // we format it like "[TYPE] ( args )"
             wstring result = TidyName(NodeName()) + L" : " + wstring(OperationName());
+            if (!m_tag.empty())
+                result += L" {tag: " + m_tag + L"}";
             if (m_children.empty()) result.append(L"()");
             else
             {
@@ -326,11 +328,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     {
         size_t outDim, inDim;
     public:
-        LearnableParameter(size_t outDim, size_t inDim) : outDim(outDim), inDim(inDim) { }
+        LearnableParameter(size_t outDim, size_t inDim, const wstring & tag) : outDim(outDim), inDim(inDim) { SetTag(tag); }
         /*ComputationNode::*/ const wchar_t * OperationName() const { return L"LearnableParameter"; }
         /*HasToString::*/ wstring ToString() const
         {
-            return wstrprintf(L"%ls : %ls (%d, %d)", TidyName(NodeName()).c_str(), OperationName(), (int)outDim, (int)inDim);
+            return wstrprintf(L"%ls : %ls {tag: %s} (%d, %d)", TidyName(NodeName()).c_str(), OperationName(), GetTag().c_str(), (int)outDim, (int)inDim);
         }
     };
     // helper for the factory function for ComputationNodes
@@ -357,10 +359,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     {
         let classIdParam = config[L"class"];
         wstring classId = classIdParam;
-        let tagp = config.Find(L"optionalTag");
+        let tagp = config.Find(L"tag");
         wstring tag = tagp ? *tagp : wstring();
         if (classId == L"LearnableParameterNode")
-            return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"]);
+            return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"], tag);
         else if (classId == L"PlusNode")
             return make_shared<PlusNode>(GetInputs(config, 2, L"PlusNode"), tag);
         else if (classId == L"MinusNode")
