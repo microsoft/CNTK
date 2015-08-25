@@ -120,17 +120,14 @@ L""
 
 int wmain(int /*argc*/, wchar_t* /*argv*/[])
 {
-    // there is record of parameters
-    // user wants to get a parameter
-    // double x = config->GetParam("name", 0.0);
     try
     {
-        //let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = new PrintAction [message='hello'];do1=(print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
+        // collecting all sorts of test cases here
         wchar_t * parserTests[] = 
         {
             L"do = Parameter(13,42) * Input(42) + Parameter(13,1)"
             ,
-            L"do = array [1..10] (i=>i*i)"
+            L"do = Print(array [1..10] (i=>i*i))"
             ,
             L"do = new PrintAction [ what = 'abc' ]"
             ,
@@ -207,10 +204,11 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
                 break;
         }
         //ParseConfigFile(L"c:/me/test.txt")->Dump();
+        return EXIT_SUCCESS;
     }
     catch (const ConfigError & err)
     {
         err.PrintError();
+        return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
 }
