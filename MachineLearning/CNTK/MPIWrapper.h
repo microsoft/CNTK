@@ -1,5 +1,7 @@
 #pragma once
 
+// This uses mpi.h which requires the Microsoft MPI SDK to be installed on Windows
+// and the MPI dev package on Linux (sudo apt-get install libopenmpi-dev openmpi-bin openmpi-doc)
 #include "mpi.h"
 #pragma comment(lib, "msmpi.lib")
 
