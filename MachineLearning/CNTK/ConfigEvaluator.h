@@ -21,58 +21,89 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         /*Configerror::*/ const wchar_t * kind() const { return L"evaluating"; }
     };
 
-    // config values
-    // A ConfigValuePtr is a shared_ptr to something that derives from Object.
+    // =======================================================================
+    // ConfigValuePtr -- shared pointer to a config value
+    // =======================================================================
+
+    // A ConfigValuePtr holds the value of a configuration variable.
+    //  - specifically, it holds a shared_ptr to a strongly typed C++ object
+    //  - ConfigValuePtrs are immutable when consumed.
+    //
+    // All configuration values, that is, values that can be held by a ConfigValuePtr, derive from Config::Object.
     // To get a shared_ptr<T> of an expected type T, type-cast the ConfigValuePtr to it.
     // To get the value of a copyable type like T=double or wstring, type-cast to T directly.
-
-    // TODO: refine Thunk handling
-    // Thunks may only be resolved in-place at places that are supposed to hold ConfigValuePtrs that are evaluated on demand, such as
-    //  - ConfigRecord
-    //  - ConfigArrays
-    //  - ConfigLambdas (default values of named arguments)
-    // ConfigValuePtrs with Thunks may not be stored anywhere else, and are not assignable.
-    // TODO: add two assignment/copy constructors:
-    //  - true assignment/copy: runtime-fail if a Thunk
-    //  - move assignment/copy: OK (then the few places that generate ConfigValuePtrs with Thunks must move them around as rvalue references with std::move())
+    //
+    // ConfigValuePtrs are evaluated on-demand upon first retrieval:
+    //  - initially, a ConfigValuePtr would hold a Thunk; that is, a lambda that computes (resolves) the value
+    //  - upon first use, the Thunk is invoked to compute the value, which will then *replace* the Thunk
+    //  - any consumer of a ConfigValuePtr will only ever see the resolved value, since any access for consumption will force it to be resolved
+    //  - a resolved ConfigValuePtr is immutable
+    //
+    // On-demand evaluation is critical to the semantics of this entire configuration system.
+    // A configuration is but one big expression (of nested records), but some evaluations cause side effects (such as saving a model), and some expressions may not even be in use at all.
+    // Thus, we must use on-demand evaluation in order to ensure that side effects are only executed when desired.
+    //
+    // Further, to ensure a Thunk is executed at most once (otherwise we may get the same side-effect multiple times),
+    // an unresolved ConfigValuePtr can only live in a single place. This means,
+    //  - an unresolved ConfigValuePtr (i.e. one holding a Thunk) cannot be copied (while resolved ones are immutable and can be copied freely)
+    //  - it can be moved (std::move()) during creation
+    //  - after creation, it should only live in a known location from which it can be retrieved; specifically:
+    //     - ConfigRecord entries
+    //     - ConfigArrays elements
+    //     - ConfigLambdas (default values of named arguments)
 
     class ConfigValuePtr : public shared_ptr<Object>
     {
         TextLocation location;      // in source code
-        template<typename T> T * DynamicCast() const
+        wstring expressionName;     // the expression name reflects the path to reach this expression in the (possibly dynamically macro-expanded) expression tree. Used for naming ComputationNodes.
+
+        // Thunk for resolving a value. This Object represents a function that returns a ConfigValuePtr; call to resolve a deferred value
+        class Thunk : public Object
         {
-            ResolveValue();
-            return dynamic_cast<T*>(get());
-        }    // this casts the raw pointer that's inside the shared_ptr
-        //void operator=(const ConfigValuePtr &);
-        // TODO: copying ConfigValuePtrs if they are not resolved yet, as it may lead to multiple executions of the Thunk.
-        //       Solve by either forbidding assignment (move only) or by resolving upon assignment and deal with the fallout.
-        //       Basically, ConfigValuePtr are not copyable when in Thunked state.
-        //       BUGBUG: This causes issues with macro parmaeters. They are copied (by value), but we cannot resolve when passing because Delay() will fail with circular reference.
-        wstring expressionName;     // the name reflects the path to reach this expression in the (possibly dynamically macro-expanded) expression tree
+            function<ConfigValuePtr()> f;   // the function to compute the value
+            bool currentlyResolving;        // set during resolution phase, to detect circular references
+            TextLocation location;          // in source code
+        public:
+            Thunk(function<ConfigValuePtr()> f, TextLocation location) : f(f), location(location), currentlyResolving(false) { }
+            ConfigValuePtr ResolveValue()
+            {
+                if (currentlyResolving)                 // detect circular references (infinite recursion)
+                    throw EvaluationError(L"circular reference (expression to compute identifier's value uses the identifier's value)", location);
+                currentlyResolving = true;              // can't run from inside ourselves
+                return f();
+                // no need to reset currentlyResolving because this object gets replaced and thus deleted anyway
+            }
+        };
+        Thunk * GetThunk() const { return dynamic_cast<Thunk*>(get()); }    // get Thunk object or nullptr if already resolved
     public:
+
+        // --- assignment and copy/move constructors
+
+        ConfigValuePtr() {} // (formally needed somehow)
+        ConfigValuePtr(const shared_ptr<Object> & p, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(p), location(location), expressionName(expressionName) { }
+        //ConfigValuePtr(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(make_shared<Thunk>(f, location)), location(location), expressionName(expressionName) { }
+        static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName) { return ConfigValuePtr(make_shared<Thunk>(f, location), location, expressionName); }
+        // TODO: somehow the constructor overload from Thunk function fails to compile, so for now use MakeThunk instead
+
+        ConfigValuePtr(const ConfigValuePtr & other) { *this = other; }
+        ConfigValuePtr(ConfigValuePtr && other) { *this = move(other); }
+        void operator=(const ConfigValuePtr & other)
+        {
+            if (other.GetThunk())       // unresolved ConfigValuePtrs are not copyable, only movable
+                LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
+            (shared_ptr<Object>&)*this = other;
+            location = other.location;
+            expressionName = other.expressionName;
+        }
         void operator=(ConfigValuePtr && other)
         {
             (shared_ptr<Object>&)*this = move(other);
             location = move(other.location);
             expressionName = move(other.expressionName);
         }
-        void operator=(const ConfigValuePtr & other)
-        {
-            if (other.GetThunk())
-                LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
-            (shared_ptr<Object>&)*this = other;
-            location = other.location;
-            expressionName = other.expressionName;
-        }
-        ConfigValuePtr(ConfigValuePtr && other) { *this = move(other); }
-        ConfigValuePtr(const ConfigValuePtr & other) { *this = other; }
-        //ConfigValuePtr(const ConfigValuePtr & other);
-        // construction     ---TODO: no template here
-        template<typename T>
-        ConfigValuePtr(const shared_ptr<T> & p, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(p), location(location), expressionName(expressionName) { }
-        ConfigValuePtr() {} // (formally needed somehow)
-        // methods for retrieving values
+
+        // --- retrieving values by type cast
+
         // access as a reference, that is, as a shared_ptr<T>   --use this for Objects
         template<typename T> operator shared_ptr<T>() const { return AsPtr<T>(); }
         // access as a (const & to) value  --use this for primitive types (also works to get a const wstring & from a String)
@@ -92,20 +123,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         }
         operator size_t() const { return AsInt<size_t>(); }
         operator int() const { return AsInt<int>(); }
-        // type helpers
+
+        // --- access functions
+
         template<class C>
         bool Is() const
         {
-            // TODO: change all these ResolveValue() calls to CheckResolved()
-            ResolveValue();
+            EnsureResolved();
+            //ResolveValue();
             const auto p = dynamic_cast<C*>(get());
             return p != nullptr;
         }
         template<class C>
         const C & AsRef() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
-            // Note: since this returns a reference into 'this', keep the object you call this on around as long as you use the returned reference!
-            ResolveValue();
+            // Note: since this returns a reference into 'this', you must keep the object you call this on around as long as you use the returned reference
+            EnsureResolved();
+            //ResolveValue();
             const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
@@ -115,36 +149,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         template<class C>
         shared_ptr<C> AsPtr() const     // returns a shared_ptr cast to the 'value' member
         {
-            ResolveValue();
+            EnsureResolved();
+            //ResolveValue();
             const auto p = dynamic_pointer_cast<C>(*this);
             if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
             return p;
         }
-        // properties
+
+        // --- properties
+
         const char * TypeName() const { return typeid(*get()).name(); }
         TextLocation GetLocation() const { return location; }
         const wstring & GetExpressionName() const{ return expressionName;  }
         // TODO: ^^ it seems by saving the name in the ConfigValuePtr itself, we don't gain anything; maybe remove again in the future
-        // methods for resolving the value
-        // Thunk for resolving a value. This Object represents a function that returns a ConfigValuePtr; call to resolve a deferred value
-        class Thunk : public Object
-        {
-            function<ConfigValuePtr()> f;   // the function to compute the value
-            bool currentlyResolving;        // set during resolution phase, to detect circular references
-            TextLocation location;          // in source code
-        public:
-            Thunk(function<ConfigValuePtr()> f, TextLocation location) : f(f), location(location), currentlyResolving(false) { }
-            ConfigValuePtr ResolveValue()
-            {
-                if (currentlyResolving)                 // detect circular references (infinite recursion)
-                    throw EvaluationError(L"circular reference (expression to compute identifier's value uses the identifier's value)", location);
-                currentlyResolving = true;              // can't run from inside ourselves
-                return f();
-                // no need to reset currentlyResolving because this object gets replaced anyway
-            }
-        };
-        Thunk * GetThunk() const { return dynamic_cast<Thunk*>(get()); }    // get Thunk object or nullptr if already resolved
+
+        // --- methods for resolving the value
+
         const ConfigValuePtr & ResolveValue() const   // (this is const but mutates the value if it resolves)
         {
             // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
@@ -157,6 +178,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
                 ResolveValue();                     // allow it to return another Thunk...
             }
             return *this;                           // return ourselves so we can access a value as p_resolved = p->ResolveValue()
+        }
+        void EnsureResolved() const
+        {
+            if (GetThunk())
+                LogicError("ConfigValuePtr: unexpected access to unresolved object; ConfigValuePtrs can only be accessed after resolution");
         }
     };  // ConfigValuePtr
 
@@ -187,20 +213,17 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         ConfigRecordPtr parentScope;           // we look up the chain
         ConfigRecord() { }  // must give a scope
     public:
-        ConfigRecord(ConfigRecordPtr parentScope) : parentScope(parentScope) { }
 
-        // regular lookup: just use record[id]
-        // Note that this function does not resolve Thunks. Instead, an unresolved value will come back as a Thunk.
-        // TODO: Maybe this is the solution to the copying problem of ConfigValuePtrs:
-        //  - we should resolve here! Hence, any ConfigValuePtr ever obtained from a ConfigRecord would be resolved
-        //  - since ConfigRecords are the only place where multiple users may find a shared ConfigValuePtr, this would resolve it
-        //  - if one value gets assigned to another (X=Y) and Y is unresolved, it would get resolved in its 'Y' location and only after that copied to X;
-        //    that is OK, resolved ConfigValuePtrs can be copied
-        //  - this way, ConfigValuePtrs with Thunks would never be passed around, except at the very place where a Thunk is created
-        //    TODO: verify this, and maybe even add a custom assignment operator that prevents ConfigValuePtrs with Thunks to be assigned
-        // TODO:
-        //  - the LateInit problem could be solved by DelayNode accepting a lambda instead of a value, where that lambda would return the node;
-        //    and DelayNode's initializer would keep that lambda, and only call it upon FinalizeInit().
+        // --- creation phase
+
+        ConfigRecord(ConfigRecordPtr parentScope) : parentScope(parentScope) { }
+        void Add(const wstring & id, TextLocation idLocation/*text location of the identifier*/, const ConfigValuePtr & value) { members[id] = value; idLocation; }
+        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr && value) { members[id] = move(value); idLocation; } // use this for unresolved ConfigPtrs
+
+        // --- usage phase
+
+        // regular lookup: just use record[id] or record(id, L"helpful message what 'id' does")
+        // Any unresolved value is resolved at this time, as it is being consumed. Only after resolving a ConfigValuePtr, it can be copied.
         /*IsConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"name", L"This specifies the object's internal name.")
         {
             const auto memberIter = members.find(id);
@@ -225,19 +248,14 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
             else
                 return &memberIter->second.ResolveValue();
         }
-        bool empty() const { return members.empty(); }      // late-init object constructors can test this
-        // add a member
-        void Add(const wstring & id, TextLocation idLocation, const ConfigValuePtr & value) { members[id] = value; idLocation; }
-        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr && value) { members[id] = move(value); idLocation; } // use this for unresolved ConfigPtrs
-        // TODO: ^^ idLocation is meant to hold the text location of the identifier
-        // get members; used for optional argument lookup and logging
-        const map<wstring, ConfigValuePtr> & GetMembers() const { return members; }
-        // member resolution
-        //void ResolveAll()   // resolve all members; do this before handing a ConfigRecord to C++ code
-        //{
-        //    for (auto & member : members)
-        //        member.second.ResolveValue();
-        //}
+        // get members; use this when you intend to consume all record entries and do not know the names
+        // Note that unlike Find() and operator[], which return parent matches, this only returns entries in this record.
+        const map<wstring, ConfigValuePtr> & GetMembers() const
+        {
+            for (auto & member : members)
+                member.second.ResolveValue();   // we return all values, i.e. all must be resolved
+            return members;
+        }
     };
     typedef ConfigRecord::ConfigRecordPtr ConfigRecordPtr;
 

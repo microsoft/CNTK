@@ -922,7 +922,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // -----------------------------------------------------------------------
 
     // create a lambda that calls Evaluate() on an expr to get or realize its value
-    static shared_ptr<ConfigValuePtr::Thunk> MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
+    static shared_ptr<Object> MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
     {
         function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
@@ -931,7 +931,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             let value = Evaluate(expr, scope, exprPath, exprId);
             return value;   // this is a great place to set a breakpoint!
         };
-        return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
+        //return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
+        return ConfigValuePtr::MakeThunk(f, expr->location, exprPath);
     }
 
     // -----------------------------------------------------------------------
@@ -1185,7 +1186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                         let value = initLambda->Apply(argVals, ConfigLambda::NamedParams(), elemExprPath);
                         return value;   // this is a great place to set a breakpoint!
                     };
-                    elementThunks.push_back(ConfigValuePtr(make_shared<ConfigValuePtr::Thunk>(f, initLambdaExpr->location), initLambdaExpr->location, elemExprPath/*TODO??*/));
+                    elementThunks.push_back(ConfigValuePtr::MakeThunk(f, initLambdaExpr->location, elemExprPath/*TODO??*/));
                 }
                 auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
                 return ConfigValuePtr(arr, e->location, exprPath);
