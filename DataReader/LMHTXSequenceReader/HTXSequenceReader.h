@@ -358,6 +358,12 @@ private:
 public:
     vector<bool> mProcessed; 
     size_t m_mbSize;
+    
+    string fileName; 
+    ifstream fin;
+    vector<list<int>*> sequence_cache;
+    int sentenceEndId;
+    Matrix<ElemType>* label_m_ref; //A reference to the label matrix in the getMinibatch
 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
     static void ReadClassInfo(const wstring & vocfile, int& class_size,
@@ -369,6 +375,7 @@ public:
         string mUnk,
         noiseSampler<long>& m_noiseSampler,
         bool flatten);
+    bool refreshCacheSeq(int seq_id); //Refresh sequence_cache
     BatchSequenceReader() : mtSentenceBegin(CPUDEVICE)
     {
         mLastProcssedSentenceId  = 0;

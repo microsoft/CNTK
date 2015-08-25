@@ -1412,6 +1412,41 @@ void BatchSequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& 
 }
 
 template<class ElemType>
+bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/)
+{
+    fprintf(stderr, "debughtx ---EnsureDataAvailable called(do nothing)---\n");
+    /*
+    string word;
+    while (fin >> word) 
+    {
+        fprintf(stderr, "%s ", word.c_str());
+    }
+    fprintf(stderr, "\n");
+    fin.close();
+    fprintf(stderr, "debughtx ---EnsureDataAvailable ended---\n");
+    */
+    fprintf(stderr, "debughtx ---EnsureDataAvailable ended---\n");
+    return true;
+}
+
+template<class ElemType>
+bool BatchSequenceReader<ElemType>::refreshCacheSeq(int seq_id)
+{
+    if (sequence_cache[seq_id]->size() > 0)
+        return true;
+    bool res = false;
+    string word;
+    while (fin >> word) {
+        int word_id = word4idx[word];
+        sequence_cache[seq_id]->push_back(word_id);
+        if (word_id == sentenceEndId && sequence_cache[seq_id]->size() > 1) { //Meet a sentence End
+            break;
+        }
+    }
+    return res;
+}
+
+template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
     fprintf(stderr, "debughtx ---LMHTXSequenceReader Init---\n");
@@ -1428,6 +1463,8 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     if (wClassFile.compare(L"") == 0) {
         RuntimeError("[LMHTXSequenceReader] wordclass option not set.");
     }
+    std::wstring temp_s = readerConfig("file");
+    fileName = std::string(temp_s.begin(), temp_s.end());
 
     ReadClassInfo(wClassFile, class_size,
         word4idx,
@@ -1437,6 +1474,10 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         nwords,
         mUnk, m_noiseSampler,
         false);
+
+    sentenceEndId = word4idx["</s>"];
+    fprintf(stderr, "debughtx sentenceEndId is %d\n", sentenceEndId);
+
     fprintf(stderr, "debughtx ---LMHTXSequenceReader end---\n");
 }
 
@@ -1453,13 +1494,21 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop called---\n");
     fprintf(stderr, "mbSize:%d epoch:%d requestedEpochSamples:%d\n", mbSize, epoch, requestedEpochSamples); //requestedEpochSamples will be -1 when epochSize=0
     m_mbSize = mbSize; //Size of minibatch requested
+    fprintf(stderr, "fileName:%s\n", fileName.c_str());
+    fin.open(fileName);
 
-    fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
+    sequence_cache.clear();
+    for (int i = 0; i < mBlgSize; i++)
+        sequence_cache.push_back(new list<int>());
+    //EnsureDataAvailable(0); //debughtx, just for debug!
+
+    fprintf(stderr, "debughtx ---void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
 }
 
 template<class ElemType>
 size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 {  
+    fprintf(stderr, "!!!LMHTXReader::FindNextSentences called!!!\n");
     size_t sln = 0;
 
     if (numRead == 0) return 0;
@@ -1514,104 +1563,6 @@ size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 }
 
 template<class ElemType>
-bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/)
-{
-    bool bDataIsThere = true; 
-
-    m_featureData.clear();
-    m_labelIdData.clear();
-
-    // now get the labels
-    LabelInfo& labelIn = m_labelInfo[labelInfoIn];
-
-    bool nextWord = false;
-    if (m_labelInfo[labelInfoOut].type == labelNextWord)
-    {
-        nextWord = true;
-    }
-    LabelInfo& labelInfo = m_labelInfo[nextWord?labelInfoIn:labelInfoOut];
-
-    // see how many we already read
-    std::vector<SequencePosition> seqPos;
-    
-    size_t sLn = FindNextSentences(mNumRead);
-    if (sLn == 0)
-    {
-        Reset();
-
-        mNumRead = m_parser.Parse(CACHE_BLOG_SIZE, &m_labelTemp, &m_featureTemp, &seqPos);
-        if (mNumRead == 0) return false;
-
-        //if (mDoRandomize)
-        std::random_shuffle(m_parser.mSentenceIndex2SentenceInfo.begin(), m_parser.mSentenceIndex2SentenceInfo.end());
-
-        m_readNextSampleLine += mNumRead;
-        sLn = FindNextSentences(mNumRead);
-    }
-
-    /// add one minibatch 
-    size_t i = mLastPosInSentence; 
-    size_t j = 0;
-    // exclude the last token since it is the last label to be predicted
-    for (i = mLastPosInSentence; j < m_mbSize &&  i < sLn-1; i++ , j++)
-    {
-        for (int k = 0; k < mToProcess.size(); k++)
-        {
-            size_t seq = mToProcess[k];
-            size_t label = m_parser.mSentenceIndex2SentenceInfo[seq].sBegin + i;
-
-            // labelIn should be a category label 
-            LabelType labelValue = m_labelTemp[label++];
-
-            // to-do, should ignore <s>, check the sentence ending is </s> 
-            // need to remove <s> from the training set
-            // allocate and initialize the next chunck of featureData
-            if (labelIn.type == labelCategory)
-            {
-                LabelIdType index = GetIdFromLabel(labelValue, labelIn);
-
-                // use the found value, and set the appropriate location to a 1.0
-                assert(labelIn.dim > index); // if this goes off labelOut dimension is too small
-                m_featureData.push_back((float)index);
-            }
-            else
-            {
-                RuntimeError("Input label expected to be a category label");
-            }
-
-            // now get the output label
-            if (m_labelInfo[labelInfoOut].type == labelCategory)
-            {
-                labelValue = m_labelTemp[label++];
-            }
-            else if (nextWord)
-            {
-                // this is the next word (label was incremented above)
-                labelValue = m_labelTemp[label];
-                if (!_stricmp(labelValue.c_str(), m_labelInfo[labelInfoIn].endSequence.c_str()))
-                {
-                    labelValue = labelInfo.endSequence;
-                }
-            }
-            else
-            {
-                RuntimeError("Invalid output label type, expected Category, or Next Word");
-            }
-
-            // get the ID from the label
-            LabelIdType id = GetIdFromLabel(labelValue, labelInfo);
-            m_labelIdData.push_back(id);
-
-            m_totalSamples ++;
-        }
-    }
-
-    mLastPosInSentence = i;
-
-    return bDataIsThere;
-}
-
-template<class ElemType>
 size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
     fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter called---\n");
@@ -1627,6 +1578,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     //features idx2cls labels
     Matrix<ElemType>* feature_m = matrices[L"features"];
     Matrix<ElemType>* label_m = matrices[L"labels"];
+    label_m_ref = label_m;
     //All zero!
     size_t wordNumber = mBlgSize * m_mbSize;
 
@@ -1645,10 +1597,11 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     }
     for (int i = 0; i < wordNumber; i++)
         feature_m->SetValue(0, i, (ElemType)1); //All word 0!
-    feature_m->TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false); //Done, move it back to GPU if necessary
 
     label_m->Resize(4, wordNumber);
     label_m->SetValue(0);
+
+    feature_m->TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false); //Done, move it back to GPU if necessary
 
     fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch ended---\n");
     system("sleep 0.5");
