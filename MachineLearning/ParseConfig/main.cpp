@@ -57,7 +57,7 @@ ComputationNetwork<ElemType>* net = startEpoch < 0 ? netBuilder->BuildNetworkFro
 //  - there is also SparseLearnableParameter, but that's a different ComputationNode class type
 #endif
 
-// OUTDATED--moved to CNTK project
+// Note: currently this seems to be the master copy; got to check whether the other one was also changed
 
 wstring standardFunctions =
 L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
@@ -85,17 +85,17 @@ L""
 ;
 
 wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
-L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z ; optionalTag = 'tag' ]\n"
-L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z ; optionalTag = 'tag' ]\n"
-L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev ; optionalTag = 'tag' ]\n"
-L"Parameter(outD, inD/*, tag=''*/) = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; optionalTag = 'tag'*/ ]\n"
-L"Input(dim) = Parameter(dim,1/*,tag='features'*/)   // TODO: for now \n"
-L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows ; optionalTag = 'tag' ]\n"
-L"Delay(in, delay, tag='') = new ComputationNode [ class = 'DelayNode' ; input = in ; deltaT = -delay ; optionalTag = 'tag' ]\n"
-L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z ; optionalTag = 'tag' ]\n"
-L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z ; optionalTag = 'tag' ]\n"
-L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; inputs = labels:outZ ; optionalTag = 'tag' ]\n"
-L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ class = 'ErrorPredictionNode' ; inputs = labels:outZ ; optionalTag = 'tag' ]\n"
+L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z /* ; tag = tag */ ]\n"
+L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z /* ; tag = tag */ ]\n"
+L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
+L"Parameter(outD, inD, tag='parameter') = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; tag = tag*/ ]\n"
+L"Input(dim,tag='features') = Parameter(dim,1,tag=tag)   // TODO: for now \n"
+L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
+L"Delay(in, delay, tag='') = new ComputationNode [ class = 'DelayNode' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
+L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z /* ; tag = tag */ ]\n"
+L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z /* ; tag = tag */ ]\n"
+L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
+L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ class = 'ErrorPredictionNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
 L" \n"
 L" \n"
 L" \n"
@@ -172,7 +172,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"do = Print(val) \n"
             L"val = new NDLComputationNetwork [\n"
             L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
-            L"  myFeatures = Input(featDim) ; myLabels = Input(labelDim) \n"
+            L"  myFeatures = Input(featDim, tag='features') ; myLabels = Input(labelDim, tag='labels') \n"
             L"  featNorm = MeanVarNorm(myFeatures) \n"
             //L"  layers/*[layer=1..numHiddenLayers]*/ = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
             L"  layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
@@ -193,7 +193,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             ,
             NULL
         };
-        let first = 17;// 12;
+        let first = 0;// 12;
         bool oneOnly = first > 0;
         for (size_t i = first; parserTests[i]; i++)
         {
