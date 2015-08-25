@@ -1101,9 +1101,13 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     let id = namedArg.first;                // id of passed in named argument
                     let location = namedArg.second.first;   // location of expression
                     let expr = namedArg.second.second;      // expression of named argument
+#if 1
+                    namedArgVals[id] = Evaluate(expr, scope, exprPath, id);
+#else
                     namedArgVals[id] = ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope, exprPath, id), expr->location, exprPath/*TODO??*/);
                     //namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope, exprPath, id), expr->location, exprPath/*TODO??*/));
                     // the thunk is evaluated when/if the passed actual value is ever used the first time
+#endif
                     // Note on scope: same as above.
                     // E.g. when a function declared as F(A=0,B=0) is called as F(A=13,B=A), then A in B=A is not A=13, but anything from above.
                     // For named args, it is far less clear whether users would expect this. We still do it for consistency with positional args, which are far more common.
