@@ -4932,7 +4932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
     {
-        ElemType fAlpha = LZERO;
+        ElemType fAlpha = (ElemType)LZERO;
         for (int k = 0; k < GetNumElements(); k++)
             fAlpha = (ElemType) logadd(fAlpha, m_pArray[k]);
         return fAlpha;
@@ -4975,10 +4975,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t iNumPos = alpha.GetNumCols();
 
         ElemType fSum;
-        ElemType fTmp = LZERO;
+        ElemType fTmp = (ElemType)LZERO;
         if (t == iNumPos - 1)
         {
-            fSum = LZERO;
+            fSum = (ElemType)LZERO;
             for (int j = 0; j < iNumLab; j++)
             {
                 fSum = (ElemType)logadd((double)fSum, alpha(j, t));
@@ -4991,7 +4991,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (int j = 0; j < iNumLab; j++)
             {
-                fSum = LZERO;
+                fSum = (ElemType)LZERO;
                 for (int m = 0; m < iNumLab; m++)
                 {
                     fSum = (ElemType)logadd((double)fSum, alpha(m, t) + pair_scores(j, m));
@@ -5076,14 +5076,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             a = alpha.ColumnSlice(tPos - 1, 1);
 
         {
-            ElemType fTmp = LZERO;
+            ElemType fTmp = (ElemType)LZERO;
             for (int j = 0; j < iNumLab; j++){
                 if (tPos == 0){
                     if (i == firstLbl){
                         fTmp = 0;
                     }
                     else{
-                        fTmp = LZERO;
+                        fTmp = (ElemType)LZERO;
                     }
                 }
                 else{
@@ -5092,7 +5092,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fTmp += pair_scores(j, i);
 
 
-                ElemType fSum = LZERO;
+                ElemType fSum = (ElemType)LZERO;
                 for (int k = 0; k < iNumLab; k++){
                     ElemType fTmp2;
                     if (tPos == 0){
@@ -5100,7 +5100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             fTmp2 = 0;
                         }
                         else{
-                            fTmp2 = LZERO;
+                            fTmp2 = (ElemType)LZERO;
                         }
                     }
                     else{
@@ -5147,5 +5147,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CPUMatrix<float>;
     template class CPUMatrix<double>;
 
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explciitly instantiate the methods we need for that purpose
+    template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols);
+    template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags);
+    template CPUMatrix<char>::CPUMatrix();
+    template CPUMatrix<char>::CPUMatrix(CPUMatrix<char> const &);
+    template size_t CPUMatrix<char>::LocateElement(size_t, size_t) const;
+    template CPUMatrix<char>::~CPUMatrix();
+    template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+    template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 }}}
 

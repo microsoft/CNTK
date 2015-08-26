@@ -13,6 +13,7 @@
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
 #include "minibatchsourcehelpers.h"
 #include "minibatchiterator.h"
+#include "unordered_set"
 
 namespace msra { namespace dbn {
 
@@ -400,110 +401,116 @@ public:
                 if (m == 0 && !labels.empty())
                     classidsbegin.push_back(classids[0]->size());
                     
-                if (uttisvalid[i]){
-                utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels.empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
-                const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
-                    assert(uttframes == uttduration[i]); // ensure nothing funky happened
-                    // already performed these checks above
-                    // we need at least 2 frames for boundary markers to work
-                    //if (uttframes < 2)
-                    //    throw std::runtime_error ("minibatchutterancesource: utterances < 2 frames not supported");
-                    //if (uttframes > frameref::maxframesperutterance)
-                    //{
-                    //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
-                    //    continue;
-                    //}
-
-                // check whether we have the ref transcript
-                //auto labelsiter = labels[0].end();
-                bool lacksmlf = true;
-                if (!labels.empty())    // empty means unsupervised mode (don't load any)
+                if (uttisvalid[i])
                 {
-                    key = utterance.key();
-                    // check if labels are available (if not, it normally means that no path was found in realignment)
-                    auto labelsiter = labels[0].find (key);
-                    //const bool lacksmlf = (labelsiter == labels[0].end());
-                    lacksmlf = (labelsiter == labels[0].end());
-                    if (lacksmlf)
-                        if (nomlf++ < 5)
-                            fprintf (stderr, " [no labels for  %S]", key.c_str());
-                    // check if lattice is available (when in lattice mode)
-                    // TODO: also check the #frames here; requires a design change of the TOC format & a rerun
-                    const bool lackslat = !lattices.empty() && !lattices.haslattice (key); // ('true' if we have no lattices)
-                    if (lackslat)
-                        if (nolat++ < 5)
-                            fprintf (stderr, " [no lattice for %S]", key.c_str());
-                    // skip if either one is missing
-                        if (lacksmlf || lackslat){
-                            uttisvalid[i] = false;
-                        continue;   // skip this utterance at all
-                }
-                    }
-                // push the label sequence into classids[], since we already looked it up
-                // TODO: we can store labels more efficiently now since we don't do frame-wise random access anymore.
-    
-                // OK, utterance has all we need --remember it
+                    utterancedesc utterance (msra::asr::htkfeatreader::parsedpath (infiles[m][i]), labels.empty() ? 0 : classidsbegin[i] );  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
+                    const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
+                        assert(uttframes == uttduration[i]); // ensure nothing funky happened
+                        // already performed these checks above
+                        // we need at least 2 frames for boundary markers to work
+                        //if (uttframes < 2)
+                        //    throw std::runtime_error ("minibatchutterancesource: utterances < 2 frames not supported");
+                        //if (uttframes > frameref::maxframesperutterance)
+                        //{
+                        //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                        //    continue;
+                        //}
 
-                if (m==0)
-                {
-                    if (!labels.empty() && !lacksmlf)
-                    //if (!labels.empty() && labelsiter != labels[0].end())
+                    // check whether we have the ref transcript
+                    //auto labelsiter = labels[0].end();
+                    bool lacksmlf = true;
+                    if (!labels.empty())    // empty means unsupervised mode (don't load any)
                     {
-                        // first verify that all the label files have the proper duration
-                        foreach_index(j, labels)
+                        key = utterance.key();
+                        // check if labels are available (if not, it normally means that no path was found in realignment)
+                        auto labelsiter = labels[0].find (key);
+                        //const bool lacksmlf = (labelsiter == labels[0].end());
+                        lacksmlf = (labelsiter == labels[0].end());
+                        if (lacksmlf)
+                            if (nomlf++ < 5)
+                                fprintf (stderr, " [no labels for  %S]", key.c_str());
+                        // check if lattice is available (when in lattice mode)
+                        // TODO: also check the #frames here; requires a design change of the TOC format & a rerun
+                        const bool lackslat = !lattices.empty() && !lattices.haslattice (key); // ('true' if we have no lattices)
+                        if (lackslat)
+                            if (nolat++ < 5)
+                                fprintf (stderr, " [no lattice for %S]", key.c_str());
+                        // skip if either one is missing
+                            if (lacksmlf || lackslat){
+                                uttisvalid[i] = false;
+                            continue;   // skip this utterance at all
+                    }
+                        }
+                    // push the label sequence into classids[], since we already looked it up
+                    // TODO: we can store labels more efficiently now since we don't do frame-wise random access anymore.
+    
+                    // OK, utterance has all we need --remember it
+
+                    if (m==0)
+                    {
+                        if (!labels.empty() && !lacksmlf)
+                        //if (!labels.empty() && labelsiter != labels[0].end())
                         {
-                            const auto & labseq = labels[j].find(key)->second;
-                            // check if durations match; skip if not
-                            size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size() - 1].firstframe + labseq[labseq.size() - 1].numframes);
-                            if (labframes != uttframes)
+                            // first verify that all the label files have the proper duration
+                            foreach_index (j, labels)
                             {
-                                fprintf(stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", labframes, uttframes, key.c_str());
-                                nomlf++;
+                                const auto & labseq = labels[j].find(key)->second;
+                                // check if durations match; skip if not
+                                size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
+                                if (labframes != uttframes)
+                                {
+                                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", labframes, uttframes, key.c_str());
+                                    nomlf++;
                                     uttisvalid[i] = false;
                                     //continue;   // skip this utterance at all
                                     break;
-                            }
-                        }
-                            if (uttisvalid[i])
-                            {
-                            utteranceset.push_back(std::move(utterance));
-                            _totalframes += uttframes;
-                            // then parse each mlf if the durations are consistent
-                            foreach_index(j, labels)
-                            {
-                                const auto & labseq = labels[j].find(key)->second;
-                                // expand classid sequence into flat array
-                                foreach_index(i, labseq)
-                                {
-                                    const auto & e = labseq[i];
-                                    if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                                        throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
-                                    if (e.classid >= udim[j])
-                                        throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim, key.c_str()));
-                                    if (e.classid != (CLASSIDTYPE)e.classid)
-                                        throw std::runtime_error("CLASSIDTYPE has too few bits");
-                                    for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
-                                        classids[j]->push_back((CLASSIDTYPE)e.classid);
-                                    numclasses[j] = max(numclasses[j], 1u + e.classid);
-                                    counts[j].resize(numclasses[j], 0);
-                                    counts[j][e.classid] += e.numframes;
                                 }
+                            }
+                                if (uttisvalid[i])
+                                {
+                                utteranceset.push_back(std::move(utterance));
+                                _totalframes += uttframes;
+                                // then parse each mlf if the durations are consistent
+                                foreach_index(j, labels)
+                                {
+                                    const auto & labseq = labels[j].find(key)->second;
+                                    // expand classid sequence into flat array
+                                    foreach_index (i, labseq)
+                                    {
+                                        const auto & e = labseq[i];
+                                        if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
+                                        {
+                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                        }
+                                        if (e.classid >= udim[j])
+                                        {
+                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim, key.c_str()));
+                                        }
+                                        if (e.classid != (CLASSIDTYPE) e.classid)
+                                            throw std::runtime_error ("CLASSIDTYPE has too few bits");
+                                        for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
+                                            classids[j]->push_back ((CLASSIDTYPE) e.classid);
+                                        numclasses[j] = max (numclasses[j], 1u + e.classid);
+                                        counts[j].resize (numclasses[j], 0);
+                                        counts[j][e.classid] += e.numframes;
+                                    }
 
-                                classids[j]->push_back((CLASSIDTYPE)-1);  // append a boundary marker marker for checking
+                                    classids[j]->push_back ((CLASSIDTYPE) -1);  // append a boundary marker marker for checking
 
-                                if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
-                                    throw std::logic_error(msra::strfun::strprintf("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
-                                assert(labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
+                                    if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
+                                        throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                    assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
+                                }
                             }
                         }
+                        else
+                        {
+                                assert(classids.empty() && labels.empty());
+                                utteranceset.push_back(std::move(utterance));
+                                _totalframes += uttframes;
+                        }
                     }
-                    else{
-                            assert(classids.empty() && labels.empty());
-                            utteranceset.push_back(std::move(utterance));
-                            _totalframes += uttframes;
-                    }
-                }
-                            else
+                    else
                     {
                         utteranceset.push_back(std::move(utterance));
                     }
@@ -1048,9 +1055,15 @@ public:
     // We specify the utterance by its global start time (in a space of a infinitely repeated training set).
     // This is efficient since getbatch() is called with sequential 'globalts' except at epoch start.
     // Note that the start of an epoch does not necessarily fall onto an utterance boundary. The caller must use firstvalidglobalts() to find the first valid globalts at or after a given time.
-    /*implement*/ bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
-                                 std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
-                                 std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
+    // Support for data parallelism:  If mpinodes > 1 then we will
+    //  - load only a subset of blocks from the disk
+    //  - skip frames/utterances in not-loaded blocks in the returned data
+    //  - 'framesadvanced' will still return the logical #frames; that is, by how much the global time index is advanced
+    bool getbatch(const size_t globalts, const size_t framesrequested,
+                  const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced,
+                  std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+                  std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
+                  std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs) override
     {
         bool readfromdisk = false;  // return value: shall be 'true' if we paged in anything
 
@@ -1060,6 +1073,7 @@ public:
         // update randomization if a new sweep is entered  --this is a complex operation that updates many of the data members used below
         const size_t sweep = lazyrandomization (globalts);
 
+        size_t mbframes = 0;
         const std::vector<char> noboundaryflags;    // dummy
         if (!framemode)      // regular utterance mode
         {
@@ -1071,9 +1085,20 @@ public:
             const size_t spos = positer->second;
 
             // determine how many utterances will fit into the requested minibatch size
-            size_t mbframes = randomizedutterancerefs[spos].numframes;   // at least one utterance, even if too long
-            size_t epos;
-            for (epos = spos + 1; epos < numutterances && mbframes + randomizedutterancerefs[epos].numframes < framesrequested; epos++)  // add more utterances as long as they fit within requested minibatch size
+            // In case of MPI we need to choose enough number of frames such that current MPI subset
+            // gets at least one utterance even if 'mbframes' execeeds 'framesrequested'
+            size_t epos = spos;
+            bool currentSubsetCovered = false;
+            do
+            {
+                mbframes += randomizedutterancerefs[epos].numframes;
+                currentSubsetCovered = ((randomizedutterancerefs[epos].chunkindex % numsubsets) == subsetnum);
+                epos++;
+
+            } while (!currentSubsetCovered && (epos < numutterances));
+
+            // add more utterances as long as they fit within requested minibatch size
+            for (; epos < numutterances && ((mbframes + randomizedutterancerefs[epos].numframes) < framesrequested); epos++)  
                 mbframes += randomizedutterancerefs[epos].numframes;
 
             // do some paging housekeeping
@@ -1088,7 +1113,22 @@ public:
             for (size_t k = windowend; k < randomizedchunks[0].size(); k++)
                 releaserandomizedchunk (k);
             for (size_t pos = spos; pos < epos; pos++)
-                readfromdisk |= requirerandomizedchunk (randomizedutterancerefs[pos].chunkindex, windowbegin, windowend); // (window range passed in for checking only)
+                if ((randomizedutterancerefs[pos].chunkindex % numsubsets) == subsetnum)
+                    readfromdisk |= requirerandomizedchunk(randomizedutterancerefs[pos].chunkindex, windowbegin, windowend); // (window range passed in for checking only)
+
+            // Note that the above loop loops over all chunks incl. those that we already should have.
+            // This has an effect, e.g., if 'numsubsets' has changed (we will fill gaps).
+
+            // determine the true #frames we return, for allocation--it is less than mbframes in the case of MPI/data-parallel sub-set mode
+            size_t tspos = 0;
+            for (size_t pos = spos; pos < epos; pos++)
+            {
+                const auto & uttref = randomizedutterancerefs[pos];
+                if ((uttref.chunkindex % numsubsets) != subsetnum)            // chunk not to be returned for this MPI node
+                    continue;
+
+                tspos += uttref.numframes;
+            }
 
             // resize feat and uids
             feat.resize(vdim.size());
@@ -1097,14 +1137,14 @@ public:
             assert(feat.size()==randomizedchunks.size());
             foreach_index(i, feat)
             {
-                feat[i].resize (vdim[i], mbframes);
+                feat[i].resize (vdim[i], tspos);
 
                 if (i==0)
                 {
                     foreach_index(j, uids)
                     {
                         if (issupervised())             // empty means unsupervised training -> return empty uids
-                            uids[j].resize (mbframes);
+                            uids[j].resize(tspos);
                         else
                             uids[i].clear();
                         latticepairs.clear();               // will push_back() below
@@ -1113,18 +1153,21 @@ public:
                 }
             }
             // return these utterances
-			if (verbosity > 0)
-				fprintf (stderr, "getbatch: getting utterances %d..%d (%d frames out of %d requested) in sweep %d\n", spos, epos -1, mbframes, framesrequested, sweep);
-            size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
+            if (verbosity > 0)
+                fprintf(stderr, "getbatch: getting utterances %d..%d (%d subset of %d frames out of %d requested) in sweep %d\n", spos, epos - 1, tspos, mbframes, framesrequested, sweep);
+            tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
                 const auto & uttref = randomizedutterancerefs[pos];
-                size_t n=0;
+                if ((uttref.chunkindex % numsubsets) != subsetnum)            // chunk not to be returned for this MPI node
+                    continue;
+
+                size_t n = 0;
                 foreach_index(i, randomizedchunks)
                 {
                     const auto & chunk = randomizedchunks[i][uttref.chunkindex];
                     const auto & chunkdata = chunk.getchunkdata();
-                    assert (uttref.globalts == globalts + tspos);
+                    assert((numsubsets > 1) || (uttref.globalts == globalts + tspos));
                     auto uttframes = chunkdata.getutteranceframes (uttref.utteranceindex);
                     matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                     n = uttframevectors.size();
@@ -1177,14 +1220,18 @@ public:
                 }
                 tspos += n;
             }
-            assert (tspos == mbframes);
+
+            foreach_index(i, feat)
+            {
+                assert(tspos == feat[i].cols());
+            }
         }
-        else                // // debug mode returning randomized frames again, to see whether convergence is better (we don't ensure non-repetition at this point)
+        else
         {
             const size_t sweepts = sweep * _totalframes;         // first global frame index for this sweep
             const size_t sweepte = sweepts + _totalframes;       // and its end
-            const size_t globalte = min (globalts + framesrequested, sweepte);  // we return as much as requested, but not exceeding sweep end
-            const size_t mbframes = globalte - globalts;        // that's our mb size
+            const size_t globalte = min (globalts + framesrequested, sweepte);  // we return as much as requested, but not exceeding sweep end            
+            mbframes = globalte - globalts;        // that's our mb size
 
             // determine window range
             // We enumerate all frames--can this be done more efficiently?
@@ -1199,9 +1246,23 @@ public:
             for (size_t k = 0; k < windowbegin; k++)
                 releaserandomizedchunk (k);
             for (size_t k = windowbegin; k < windowend; k++)
-                readfromdisk |= requirerandomizedchunk (k, windowbegin, windowend); // (window range passed in for checking only, redundant here)
+                if ((k % numsubsets) == subsetnum)        // in MPI mode, we skip chunks this way
+                    readfromdisk |= requirerandomizedchunk(k, windowbegin, windowend); // (window range passed in for checking only, redundant here)
             for (size_t k = windowend; k < randomizedchunks[0].size(); k++)
                 releaserandomizedchunk (k);
+
+            // determine the true #frames we return--it is less than mbframes in the case of MPI/data-parallel sub-set mode
+            // First determine it for all nodes, then pick the min over all nodes, as to give all the same #frames for better load balancing.
+            // TODO: No, return all; and leave it to caller to redistribute them [Zhijie Yan]
+            std::vector<size_t> subsetsizes(numsubsets, 0);
+            for (size_t i = 0; i < mbframes; i++)   // i is input frame index; j < i in case of MPI/data-parallel sub-set mode
+            {
+                const size_t framepos = (globalts + i) % _totalframes;  // (for comments, see main loop below)
+                const frameref & frameref = randomizedframerefs[framepos];
+                subsetsizes[frameref.chunkindex % numsubsets]++;
+            }
+            size_t j = subsetsizes[subsetnum];        // return what we have  --TODO: we can remove the above full computation again now
+            const size_t allocframes = max(j, (mbframes + numsubsets - 1) / numsubsets);  // we leave space for the desired #frames, assuming caller will try to pad them later
 
             // resize feat and uids
             feat.resize(vdim.size());
@@ -1210,16 +1271,17 @@ public:
             assert(feat.size()==randomizedchunks.size());
             foreach_index(i, feat)
             {
-                feat[i].resize (vdim[i], mbframes);
+                feat[i].resize(vdim[i], allocframes);
+                feat[i].shrink(vdim[i], j);
 
                 if (i==0)
                 {
-                    foreach_index(j, uids)
+                    foreach_index(k, uids)
                     {
                         if (issupervised())             // empty means unsupervised training -> return empty uids
-                            uids[j].resize (mbframes);
+                            uids[k].resize (j);
                         else
-                            uids[i].clear();
+                            uids[k].clear();
                         latticepairs.clear();               // will push_back() below
                         transcripts.clear();
                     }
@@ -1227,11 +1289,19 @@ public:
             }
             
             // return randomized frames for the time range of those utterances
+            size_t currmpinodeframecount = 0;
             for (size_t j = 0; j < mbframes; j++)
             {
+                if (currmpinodeframecount >= feat[0].cols())               // MPI/data-parallel mode: all nodes return the same #frames, which is how feat(,) is allocated
+                    break;
+
                 // map to time index inside arrays
                 const size_t framepos = (globalts + j) % _totalframes;  // using mod because we may actually run beyond the sweep for the last call
                 const frameref & frameref = randomizedframerefs[framepos];
+
+                // in MPI/data-parallel mode, skip frames that are not in chunks loaded for this MPI node
+                if ((frameref.chunkindex % numsubsets) != subsetnum)
+                    continue;
 
                 // random utterance
                 readfromdisk |= requirerandomizedchunk (frameref.chunkindex, windowbegin, windowend);    // (this is just a check; should not actually page in anything)
@@ -1241,7 +1311,7 @@ public:
                     const auto & chunk = randomizedchunks[i][frameref.chunkindex];
                     const auto & chunkdata = chunk.getchunkdata();
                     auto uttframes = chunkdata.getutteranceframes (frameref.utteranceindex);
-                    matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
+                    matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[.].size() and m[.][.] as required by augmentneighbors())
                     const size_t n = uttframevectors.size();
                     assert (n == uttframes.cols() && chunkdata.numframes (frameref.utteranceindex) == n); n;
 
@@ -1259,37 +1329,58 @@ public:
                         leftextent = leftcontext[i];
                         rightextent = rightcontext[i];
                     }
-                    augmentneighbors(uttframevectors, noboundaryflags, t, leftextent, rightextent, feat[i], j);
+                    augmentneighbors(uttframevectors, noboundaryflags, t, leftextent, rightextent, feat[i], currmpinodeframecount);
                     
-                    //augmentneighbors(uttframevectors, noboundaryflags, t, feat[i], j);
                     if (issupervised() && i == 0)
                     {
                         auto frameclassids = getclassids(frameref);
                         foreach_index(k, uids)
-                            uids[k][j] = frameclassids[k][t];
+                            uids[k][currmpinodeframecount] = frameclassids[k][t];
                     }
-                }                
+                }
+
+                currmpinodeframecount++;
             }
         }
         timegetbatch = timergetbatch;
+
+        // this is the number of frames we actually moved ahead in time
+        framesadvanced = mbframes;
+
         return readfromdisk;
     }
+
+    bool supportsbatchsubsetting() const override
+    {
+        return true;
+    }
+
+    bool getbatch(const size_t globalts,
+                  const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
+                  std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
+                  std::vector<shared_ptr<const latticesource::latticepair>> & lattices)
+    {
+        size_t dummy;
+        return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices);
+    }
+
     double gettimegetbatch() { return timegetbatch;}
 
     // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
-    /*implement*/ bool getbatch (const size_t /*globalts*/,
-                           const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
-                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
-                           std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
+    bool getbatch (const size_t /*globalts*/,
+                   const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
+                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
+                   std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {
-           // should never get here
-            throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
-        
-            // for single input/output set size to be 1 and run old getbatch
-            //feat.resize(1);
-            //uids.resize(1);
-            //return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
+        // should never get here
+        throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
+
+        // for single input/output set size to be 1 and run old getbatch
+        //feat.resize(1);
+        //uids.resize(1);
+        //return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
     }
+
     size_t totalframes() const { return _totalframes; }
 
     // return first valid globalts to ask getbatch() for

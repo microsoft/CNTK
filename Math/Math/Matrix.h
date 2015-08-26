@@ -470,6 +470,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const int startLbl, /// the time 0 start symbol in the output layer
             const int shift);
 
+        template<typename T>
+        friend class MatrixQuantizer;
+
+        template<typename T>
+        friend class QuantizedMatrix;
     };
 
     typedef Matrix<float> SingleMatrix;
