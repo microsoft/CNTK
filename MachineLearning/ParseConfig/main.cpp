@@ -149,7 +149,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             ,
             L"do = Print(val) ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 "
             ,
-            L" \n"
+            // #12: DNN with recursion
             L"do = Print(val) \n"
             L"val = new NDLComputationNetwork [\n"
             L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
@@ -164,17 +164,18 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"  ScaledLogLikelihood = outZ - logPrior \n"
             L"]\n"
             ,
-            L"do = Print(fac(5)) ; val = RequiredParameter('need to specify val') ; fac(i) = if i > 1 then fac(i-1)*i else i "
+            // #13: factorial
+            L"do = Print(fac(5)) ; fac(i) = if i > 1 then fac(i-1)*i else i "
             ,
-            L"do = new PrintAction [ what = val ] ; fib(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals ; val = fib(10) "
+            // #14: Fibonacci sequence with memoization
+            L"do = Print(fibs(10)) ; fibs(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals   // [n] "
             ,
-            L" \n"
+            // #15: DNN with array
             L"do = Print(val) \n"
             L"val = new NDLComputationNetwork [\n"
             L"  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 \n"
             L"  myFeatures = Input(featDim, tag='features') ; myLabels = Input(labelDim, tag='labels') \n"
             L"  featNorm = MeanVarNorm(myFeatures) \n"
-            //L"  layers/*[layer=1..numHiddenLayers]*/ = array[1..numHiddenLayers] (layer => if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)) \n"
             L"  layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
             L"  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) \n"
             L"  outZ = outLayer.z //+ Delay(outZ, 1) \n"
@@ -182,6 +183,62 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"  Err = ErrorPrediction(myLabels, outZ) \n"
             L"  logPrior = LogPrior(myLabels) \n"
             L"  ScaledLogLikelihood = outZ - logPrior \n"
+            L"]\n"
+            ,
+            // #16: windowed RNN
+            L"do = Print(val)                                                                                                           \n"
+            L"val = new NDLComputationNetwork [                                                                                         \n"
+            L"   hiddenDim = 512                                                                                                        \n"
+            L"   numHiddenLayers = 2                                                                                                    \n"
+            L"   T = 3                                  // total context window                                                         \n"
+            L"                                                                                                                          \n"
+            L"   // data sources                                                                                                        \n"
+            L"   featDim = 40 ; labelDim = 9000                                                                                         \n"
+            L"   myFeatures = Input(featDim) ; myLabels = Input(labelDim)                                                               \n"
+            L"                                                                                                                          \n"
+            L"   // split the augmented input vector into individual frame vectors                                                      \n"
+            L"   subframes[t:0..T - 1] = RowSlice(t * featDim, featDim, myFeatures)                                                     \n"
+            L"                                                                                                                          \n"
+            L"   // hidden layers                                                                                                       \n"
+            L"   layers[layer:1..numHiddenLayers] = [     // each layer stores a dict that stores its hidden fwd and bwd state vectors  \n"
+            L"       // model parameters                                                                                                \n"
+            L"       W_fwd = Parameter(hiddenDim, featDim)                                              // Parameter(outdim, indim)     \n"
+            L"       W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else Fail('no W_bwd')    // input-to-hidden              \n"
+            L"       H_fwd = Parameter(hiddenDim, hiddenDim)                                            // hidden-to-hidden             \n"
+            L"       H_bwd = Parameter(hiddenDim, hiddenDim)                                                                            \n"
+            L"       b = Parameter(hiddenDim, 1)                                                        // bias                         \n"
+            L"       // shared part of activations (input connections and bias)                                                         \n"
+            L"       z_shared[t:0..T-1] = (if layer > 1                                                                                 \n"
+            L"                             then W_fwd * layers[layer - 1].h_fwd[t] + W_bwd * layers[layer - 1].h_bwd[t]                 \n"
+            L"                             else W_fwd * subframes[t]                                                                    \n"
+            L"                            ) + b                                                                                         \n"
+            L"       // recurrent part and non-linearity                                                                                \n"
+            L"       step(H, h, dt, t) = Sigmoid(if (t + dt >= 0 && t + dt < T)                                                         \n"
+            L"                                   then z_shared[t] + H * h[t + dt]                                                       \n"
+            L"                                   else z_shared[t])                                                                      \n"
+            L"       h_fwd[t:0..T-1] = step(H_fwd, h_fwd, -1, t)                                                                        \n"
+            L"       h_bwd[t:0..T-1] = step(H_bwd, h_bwd,  1, t)                                                                        \n"
+            L"   ]                                                                                                                      \n"
+            L"   // output layer --linear only at this point; Softmax is applied later                                                  \n"
+            L"   outLayer = [                                                                                                           \n"
+            L"       // model parameters                                                                                                \n"
+            L"       W_fwd = Parameter(labelDim, hiddenDim)                                                                             \n"
+            L"       W_bwd = Parameter(labelDim, hiddenDim)                                                                             \n"
+            L"       b = Parameter(labelDim, 1)                                                                                         \n"
+            L"       //  output                                                                                                         \n"
+            L"       topHiddenLayer = layers[numHiddenLayers]                                                                           \n"
+            L"       centerT = Floor(T/2)                                                                                               \n"
+            L"       z = W_fwd * topHiddenLayer.h_fwd[centerT] + W_bwd * topHiddenLayer.h_bwd[centerT] + b                              \n"
+            L"   ]                                                                                                                      \n"
+            L"   outZ = outLayer.z     // we only want this one & don't care about the rest of this dictionary                          \n"
+            L"                                                                                                                          \n"
+            L"   // define criterion nodes                                                                                              \n"
+            L"   CE = CrossEntropyWithSoftmax(myLabels, outZ)                                                                           \n"
+            L"   Err = ErrorPrediction(myLabels, outZ)                                                                                  \n"
+            L"                                                                                                                          \n"
+            L"   // define output node for decoding                                                                                     \n"
+            L"   logPrior = LogPrior(myLabels)                                                                                          \n"
+            L"   ScaledLogLikelihood = outZ - logPrior   // before: Minus(CE.BFF.FF.P,logPrior,tag=Output)                              \n"
             L"]\n"
             ,
             L" \n"   // this fails because dict is outside val; expression name is not local to it
@@ -193,7 +250,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             ,
             NULL
         };
-        let first = 0;// 12;
+        let first = 16;     // 0 for all
         bool oneOnly = first > 0;
         for (size_t i = first; parserTests[i]; i++)
         {
