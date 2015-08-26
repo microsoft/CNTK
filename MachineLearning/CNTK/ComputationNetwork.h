@@ -3193,7 +3193,7 @@ public:
             {
                 if (!allowFragment)
                 {
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 }
                 PrintComputationTree(node, false);
                 size_t actualMBSize = this->GetActualMBSize();
@@ -3216,7 +3216,7 @@ public:
             for (ComputationNodePtr node : OutputNodes())
             {
                 if (!allowFragment) {
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 }
 
                 ValidateNetwork(node);
@@ -3233,7 +3233,7 @@ public:
             for (ComputationNodePtr node : EvaluationNodes())
             {
                 if (!allowFragment) {
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 }
                 ValidateNetwork(node);
             }
@@ -3262,7 +3262,7 @@ public:
         if (m_built.find(key) == m_built.end())
         {
             m_built[key] = true;
-            FormRecurentLoops(rootNode);
+            FormRecurrentLoops(rootNode);
             ValidateNetwork(rootNode);
             CollectInputAndLeanableParameters(rootNode);
             SetNodesReqMultiSeqHandling();
@@ -3286,7 +3286,7 @@ public:
                     {
                         for (auto node : FinalCriterionNodes())
                         {
-                            if (!allowFragment) FormRecurentLoops(node);
+                            if (!allowFragment) FormRecurrentLoops(node);
                             size_t actualMBSize = this->GetActualMBSize();
                             this->SetActualMiniBatchSize(actualMBSize);
                             if (UnitTest(node) == false)
@@ -3730,7 +3730,7 @@ protected:
     }
             
     //must be called before ValidateNetwork
-                void FormRecurentLoops(const ComputationNodePtr rootNode)
+                void FormRecurrentLoops(const ComputationNodePtr rootNode)
     {
         std::vector<ComputationNodePtr> sourceLoopNodes;
 

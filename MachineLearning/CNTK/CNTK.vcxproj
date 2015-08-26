@@ -175,6 +175,7 @@
     <ClInclude Include="IExecutionEngine.h" />
     <ClInclude Include="InputAndParamNodes.h" />
     <ClInclude Include="LinearAlgebraNodes.h" />
+    <ClInclude Include="MatrixPool.h" />
     <ClInclude Include="ModelEditLanguage.h" />
     <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="NDLNetworkBuilder.h" />

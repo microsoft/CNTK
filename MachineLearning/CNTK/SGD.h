@@ -1841,6 +1841,16 @@ protected:
                                               labelNodes[0]->FunctionValues());
             }
 
+
+            //compute eval node first since when gradient is computed the forward function values
+            //may be changed and need to be recomputed when gradient and function value share the same matrix
+            for (size_t i = 0; i < numEvalNodes; i++)
+            {
+                net.Evaluate(evaluationNodes[i]);
+                Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(),
+                    0, 0, localEpochEvalErrors, 0, i);
+            }
+
             // only compute gradient when learning rate is large enough
             if (learnRatePerSample > m_minLearnRate * 0.01)
             {
@@ -1856,18 +1866,10 @@ protected:
             Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(),
                                                   0, 0, localEpochCriterion, 0, 0);
 
-            //for now since we share the same label masking flag we call this on the training
-            //criterion node ony. Later, when we apply different labels on different nodes
+            //for now since we share the same label masking flag we call this on the network. 
+            //Later, when we apply different labels on different nodes
             //we need to add code to call this function multiple times, one for each criteria node
             size_t numSamplesWithLabel = net.GetNumSamplesWithLabel(actualMBSize);
-
-            std::vector<ElemType> mbEvalErrors(numEvalNodes, 0);
-            for (size_t i = 0; i < numEvalNodes; i++)
-            {
-                net.Evaluate(evaluationNodes[i]);
-                Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(),
-                                                      0, 0, localEpochEvalErrors, 0, i);
-            }
 
             //update model parameters
             if (learnRatePerSample > m_minLearnRate * 0.01)
