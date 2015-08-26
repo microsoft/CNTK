@@ -196,6 +196,7 @@ public:
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
 
+    bool RequireSentenceSeg() { return !m_framemode; };
 };
 
 }}}
