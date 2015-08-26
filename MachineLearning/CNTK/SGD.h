@@ -1987,7 +1987,17 @@ protected:
 
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
 
-        fprintf(stderr, "\nStarting minibatch loop, distributed reading is: %s\n", useDistributedMBReading ? "ENABLED" : "DISABLED");
+        fprintf(stderr, "\nStarting minibatch loop");
+        if (useGradientAggregation)
+        {
+            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)", g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_numGradientBits);
+        }
+
+        if (useDistributedMBReading)
+        {
+            fprintf(stderr, "Distributed reading is ENABLED");
+        }
+        fprintf(stderr, ".\n");
 
         Timer timer;
         timer.Start();
