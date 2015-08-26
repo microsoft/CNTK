@@ -364,6 +364,7 @@ public:
     vector<list<int>*> sequence_cache;
     int sentenceEndId;
     Matrix<ElemType>* label_m_ref; //A reference to the label matrix in the getMinibatch
+    Matrix<ElemType> minibatchFlag; //A place to set minibatchFlag in the getMinibatch function
 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
     static void ReadClassInfo(const wstring & vocfile, int& class_size,
@@ -376,6 +377,8 @@ public:
         noiseSampler<long>& m_noiseSampler,
         bool flatten);
     bool refreshCacheSeq(int seq_id); //Refresh sequence_cache
+    void PrintMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+
     BatchSequenceReader() : mtSentenceBegin(CPUDEVICE)
     {
         mLastProcssedSentenceId  = 0;

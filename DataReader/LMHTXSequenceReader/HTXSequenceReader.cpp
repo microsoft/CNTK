@@ -1435,10 +1435,17 @@ bool BatchSequenceReader<ElemType>::refreshCacheSeq(int seq_id)
     if (sequence_cache[seq_id]->size() > 0)
         return true;
     bool res = false;
+    if (!fin.is_open())
+        return false;
     string word;
-    while (fin >> word) {
+    for (;;) {
+        if (!(fin >> word)) {
+            fin.close();
+            return false;
+        }
         int word_id = word4idx[word];
         sequence_cache[seq_id]->push_back(word_id);
+        res = true;
         if (word_id == sentenceEndId && sequence_cache[seq_id]->size() > 1) { //Meet a sentence End
             break;
         }
@@ -1500,6 +1507,9 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     sequence_cache.clear();
     for (int i = 0; i < mBlgSize; i++)
         sequence_cache.push_back(new list<int>());
+
+    minibatchFlag.TransferFromDeviceToDevice(minibatchFlag.GetDeviceId(), CPUDEVICE, false, true, false); //This matrix lies in CPU, because I want to use SetValue(i,j)
+
     //EnsureDataAvailable(0); //debughtx, just for debug!
 
     fprintf(stderr, "debughtx ---void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
@@ -1583,29 +1593,73 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     size_t wordNumber = mBlgSize * m_mbSize;
 
     DEVICEID_TYPE featureDeviceId = feature_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
+    DEVICEID_TYPE labelDeviceId = label_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
     feature_m->TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false); 
+    label_m->TransferFromDeviceToDevice(labelDeviceId, CPUDEVICE, false, true, false);
 
-    if (feature_m->GetMatrixType() == MatrixType::DENSE)
-    {
-        feature_m->Resize(nwords, wordNumber);
-        feature_m->SetValue(0);
-    }
-    else
-    {
-        feature_m->Resize(nwords, wordNumber, wordNumber);
-        feature_m->Reset();
-    }
+    feature_m->Resize(nwords, wordNumber, wordNumber);
+    feature_m->Reset();
     for (int i = 0; i < wordNumber; i++)
         feature_m->SetValue(0, i, (ElemType)1); //All word 0!
 
     label_m->Resize(4, wordNumber);
-    label_m->SetValue(0);
+    //label_m->Reset(); //Can't do this 
+
+    bool res = false; //Got something new?
+    minibatchFlag.Resize(mBlgSize, m_mbSize);
+
+    for (int i = 0; i < mBlgSize; i++) {
+        bool end = false;
+        for (int j = 0; j < m_mbSize; j++) {
+            int idx = j * (int)mBlgSize + i;
+            if (end) {
+                label_m->SetValue(0, idx, (ElemType)-1);
+                minibatchFlag.SetValue(i, j, (ElemType)(MinibatchPackingFlag::NoInput)); //Rubbish here
+                continue;
+            }
+            if (!refreshCacheSeq(i))  //can we have new words in the cache?
+                end = true;
+            if (sequence_cache[i]->size() < 2) {
+                LogicError("Error in BatchSequenceReader<ElemType>::GetMinibatch, sequence_cache[%d]->size() < 2, it should be always >= 2.", i);
+            }
+            feature_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
+            if (sequence_cache[i]->front() == sentenceEndId) //Beginning of a sentence
+                minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
+            res = true;
+            sequence_cache[i]->pop_front();
+            label_m->SetValue(0, idx, (ElemType)sequence_cache[i]->front());
+            if (sequence_cache[i]->front() == sentenceEndId) { //End of a sentence, pop it out for a new one.
+                sequence_cache[i]->pop_front();
+                minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceEnd);
+                end = true;
+            }
+        }
+    }
 
     feature_m->TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false); //Done, move it back to GPU if necessary
+    label_m->TransferFromDeviceToDevice(CPUDEVICE, labelDeviceId, false, false, false); //Done, move it back to GPU if necessary
+
+    PrintMinibatch(matrices); //Just for debughtx
 
     fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch ended---\n");
     system("sleep 0.5");
-    return true;
+    return res;
+}
+
+template<class ElemType>
+void BatchSequenceReader<ElemType>::PrintMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) {
+    fprintf(stderr, "debughtx LMHTXSequenceReader::PrintMinibatch matrix(label) row:%d col:%d\n", matrices.find(L"labels")->second->GetNumRows(), matrices.find(L"labels")->second->GetNumCols());
+    int sequence_number = (int)NumberSlicesInEachRecurrentIter();
+    for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
+        for (int j = 0; j < 4; j++) {
+            fprintf(stderr, " %.2lf", (*(matrices.find(L"labels")->second))(j, i));
+            if (j == 0)
+                fprintf(stderr, "[%s] ", idx4word[int((*(matrices.find(L"labels")->second))(j, i))].c_str());
+            if ((j == 3) && ((i + 1) % sequence_number == 0))
+                fprintf(stderr, "\n");
+        }
+    }
+    system("sleep 1");
 }
 
 template<class ElemType>
@@ -1781,14 +1835,18 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
-    static bool first = true;
+    //static bool first = true; //Stupid version debughtx
     fprintf(stderr, "debughtx ---SetSentenceSegBatch called---\n");
     //For the stupid version, I need to set it to sequenceStart everything, otherwise the first pastActivity for the recurrent node will be wrong in dimension.
     sentenceBegin.Resize(mBlgSize, m_mbSize);
     sentenceBegin.SetValue(0);
     minibatchPackingFlag.resize(m_mbSize);
-    std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
+    minibatchFlag.TransferFromDeviceToDevice(CPUDEVICE, sentenceBegin.GetDeviceId());
+    sentenceBegin.SetValue(minibatchFlag);
+    minibatchFlag.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), CPUDEVICE);
+    /* //Stupid version debughtx
+    std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
     if (first) {
         for (int i = 0; i < mBlgSize; i++) {
             sentenceBegin.SetValue(i, 0, (ElemType)1);
@@ -1796,6 +1854,26 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& senten
         minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
         first = false;
     }
+    */
+    
+    for (int i = 0; i < m_mbSize; i++) {
+        int k = (int)MinibatchPackingFlag::None;
+        for (int j = 0; j < mBlgSize; j++)
+            k |= (int)minibatchFlag(j, i);
+        minibatchPackingFlag[i] = (MinibatchPackingFlag)k;
+    }
+    
+    //print debug info
+    fprintf(stderr, "debughtx matrix sentenceBegin row:%d col:%d\n", sentenceBegin.GetNumRows(), sentenceBegin.GetNumCols());
+    for (int i = 0; i < sentenceBegin.GetNumRows(); i++) {
+        for (int j = 0; j < sentenceBegin.GetNumCols(); j++)
+            fprintf(stderr, "%.2lf ", sentenceBegin(i, j));
+        fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "debughtx vector minibatchPackingFlag size:%d\n", minibatchPackingFlag.size());
+    for (int i = 0; i < minibatchPackingFlag.size(); i++)
+        fprintf(stderr, "%d ", minibatchPackingFlag.at(i));
+    fprintf(stderr, "\n");
 
     fprintf(stderr, "debughtx ---SetSentenceSegBatch ended---\n");
     system("sleep 0.5");

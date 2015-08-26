@@ -1833,7 +1833,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     fprintf(stderr, "\n");
     fprintf(stderr, "debughtx readerConfig-nbruttsineachrecurrentiter:%s\n", m_readerConfig(L"nbruttsineachrecurrentiter", "WRONG").c_str());
 
-
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
         return false;
