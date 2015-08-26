@@ -12,6 +12,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // code
+    // TODO: move more code here to speed up compilation
 
     template<typename ElemType>
     /*virtual*/ void ComputationNode<ElemType>::MoveMatricesToDevice(const DEVICEID_TYPE deviceId)

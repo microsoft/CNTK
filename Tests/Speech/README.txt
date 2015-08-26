@@ -11,5 +11,12 @@ Execute 'Tests/Testdriver.py run' script. This will run the test in Tests/Speech
 Simple command line for debugging
 ---------------------------------
 
-WORKING DIR: $(SolutionDir)\Tests\Speech\Data
-COMMAND:     configFile=$(SolutionDir)\Tests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)\Tests\Speech\RunDir\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)\Tests\Speech\RunDir  DataDir=$(SolutionDir)\Tests\Speech\Data  DeviceId=Auto
+WORKING DIR: $(SolutionDir)Tests\Speech\Data
+COMMAND:     configFile=$(SolutionDir)Tests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
+
+
+Simple test
+-----------
+
+../build/debug/bin/cntk configFile=/home/cbasoglu/src/cntk/.run-linux/Simple.conf
+COMMAND:     configFile=$(SolutionDir)Demos\Simple\Simple.config  stderr=$(SolutionDir)Demos\Simple\RunDir\Simple.config.log  RootDir=$(SolutionDir)  DeviceNumber=-1
