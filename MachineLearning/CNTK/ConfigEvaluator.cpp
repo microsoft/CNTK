@@ -19,6 +19,7 @@
 //     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
 //     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
 //  - name lookup should inject TextLocation into error stack
+//  - short-circuit eval of boolean operators
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
