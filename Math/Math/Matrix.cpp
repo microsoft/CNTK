@@ -732,6 +732,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+    {
+        ASSERT(m_CPUMatrix != nullptr || m_GPUMatrix != nullptr);
+        // must already been allocated 
+
+        DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
+            this,
+            m_CPUMatrix->SetColumnSlice(*fromMatrix.m_CPUMatrix, startColumn, numCols),
+            m_GPUMatrix->SetColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE

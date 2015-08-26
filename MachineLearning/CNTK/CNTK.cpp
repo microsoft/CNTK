@@ -46,12 +46,9 @@
 // HPC Pack 2012 R2 MS-MPI Redistributable Package
 // http://www.microsoft.com/en-us/download/details.aspx?id=41634
 
-#ifdef MPI_SUPPORT
-#include "mpi.h"
-#pragma comment(lib, "msmpi.lib")
-#endif
-int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
-int mpiRank;            // and this is who we are amonghst these processes
+
+//int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
+//int mpiRank;            // and this is who we are amonghst these processes
 
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
@@ -1299,50 +1296,6 @@ std::string TimeDateStamp()
     return buf;
 }
 
-#ifdef MPI_SUPPORT
-// Oh, my gosh, this is going to be ugly. MPI_INIT needs a char* argv[], so let's interface.
-int MPIAPI MPI_Init(_In_opt_ int *argc, _Inout_count_(*argc) wchar_t*** argv)
-{
-    // this maps from the strings 
-    std::map<std::string, wchar_t*> recover_wstring;
-
-    // do the mapping to 8-bit encoding for MPI_Init()
-    vector<vector<char>> argv_string_vector;
-    transform(*argv, *argv + *argc, std::back_inserter(argv_string_vector),
-        [&recover_wstring](wchar_t*pws)->vector<char>
-    {
-        std::string tmp = msra::strfun::utf8(std::wstring(pws));
-        recover_wstring[tmp] = pws;
-        vector<char> rv(tmp.begin(), tmp.end());
-        rv.push_back('\0');
-        return rv;
-    }
-    );
-    vector<char*> argv_charptr_vector;
-    transform(argv_string_vector.begin(), argv_string_vector.end(), std::back_inserter(argv_charptr_vector),
-        [](std::vector<char>&cs)->char*{ return &(cs[0]); }
-    );
-    char** argv_char = &(argv_charptr_vector[0]);
-
-    // Do the initialization
-    int rv = MPI_Init(argc, &argv_char);
-
-    // try and reconstruct how MPI_Init changed the argv
-    transform(argv_char, argv_char + *argc, stdext::checked_array_iterator<wchar_t**>(*argv, *argc),
-        [&recover_wstring](char*pc)->wchar_t*
-    {
-        auto it = recover_wstring.find(std::string(pc));
-        if (it == recover_wstring.end())
-            RuntimeError("Unexpected interaction between MPI_Init and command line parameters");
-        return it->second;
-    }
-    );
-
-    // pass through return value from internal call to MPI_Init()
-    return rv;
-}
-#endif
-
 #ifdef _WIN32
 void PrintBuiltInfo()
 {
@@ -1375,24 +1328,6 @@ int wmain(int argc, wchar_t* argv[])
 {
     try
     {
-#ifdef MPI_SUPPORT
-        {
-            int rc;
-            rc = MPI_Init(&argc, &argv);
-            if (rc != MPI_SUCCESS)
-            {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-                RuntimeError("Failure in MPI_Init: %d", rc);
-            }
-            MPI_Comm_size(MPI_COMM_WORLD, &mpiNumProcesses);
-            MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-            fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), mpiRank, mpiNumProcesses);
-            fflush(stderr);
-        }
-#else
-        mpiNumProcesses = 1;
-        mpiRank = 0;
-#endif
 
         ConfigParameters config;
         std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
@@ -1419,14 +1354,7 @@ int wmain(int argc, wchar_t* argv[])
                 logpath += (wstring)command[i];
             }
             logpath += L".log";
-#ifdef MPI_SUPPORT
-            if (mpiNumProcesses > 1)
-            {
-                std::wostringstream oss;
-                oss << mpiRank;
-                logpath += L"rank" + oss.str();
-            }
-#endif  
+
             if (paralleltrain)
             {
                 std::wostringstream oss;
@@ -1441,10 +1369,6 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        // main process
-#ifdef MPI_SUPPORT
-        if (mpiRank == 0)
-#endif
         {
             //dump config info
             fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
@@ -1482,10 +1406,7 @@ int wmain(int argc, wchar_t* argv[])
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
             type = config("type", "float");
-#ifdef MPI_SUPPORT
-        if (mpiRank == 0)
-#endif
-            fprintf(stderr, "\nprecision = %s\n", type.c_str());
+        fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
             DoCommand<float>(config);
         else if (type == "double")
@@ -1515,9 +1436,6 @@ int wmain(int argc, wchar_t* argv[])
         PrintUsageInfo();
         return EXIT_FAILURE;
     }
-#ifdef MPI_SUPPORT
-    MPI_Finalize();
-#endif
     return EXIT_SUCCESS;
 }
 

@@ -112,6 +112,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
+        Matrix<ElemType>& SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
+        // difference between AssignColumnSlice and SetColumnSlice 
+        // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
+        // SetColumnSlice    :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, 0: startColumn+numCols-1) 
+        // AssignColumnSlice do not transfer data, it uses external data
+        // SetColumnSlice    copies data 
+
 
         void ShiftBy(int numShift) ;
 

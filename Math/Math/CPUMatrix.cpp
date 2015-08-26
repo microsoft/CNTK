@@ -247,6 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
+    // set this(:, 0:numCols-1) = fromMatrix(:, startColumn : startColumn+numCols-1)
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {
@@ -262,7 +263,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numRows = fromMatrix.m_numRows;
         m_numCols = numCols;
         m_elemSizeAllocated =  GetNumElements();
-        m_pArray = m_pArray + startColumn *m_numRows;
+        m_pArray = fromMatrix.m_pArray + startColumn *m_numRows; 
+
+        return *this;
+    }
+
+    // set this(: , startColumn:startColumn+numCols-1)= fromMatrix;  
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+    {
+        if (numCols == 0)
+            throw std::logic_error("The slice cannot have 0 columns.");
+        if (startColumn + numCols > m_numCols)
+            throw std::logic_error("The slice is out of range of the destination matrix.");
+        if (numCols > fromMatrix.GetNumCols())
+            throw std::logic_error("The slice is out of range of the source matrix.");
+        if (m_numRows != fromMatrix.m_numRows)
+            throw std::logic_error("The number of rows in source and destination matrices do not match");
+
+        //SetOwnBuffer(false);
+        memcpy(m_pArray + startColumn*m_numRows, fromMatrix.m_pArray, numCols*m_numRows*sizeof(ElemType));
 
         return *this;
     }
