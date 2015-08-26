@@ -619,7 +619,22 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
-        virtual const std::wstring OperationName() const {return TypeName();}
+        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        {
+            m_diff = Matrix<ElemType>(deviceId);
+            NonlinearityNode<ElemType>::Construct(deviceId, name);
+            // further initializations
+            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
+        }
+
+        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        {
+            m_diff = Matrix<ElemType>(deviceId);
+            NonlinearityNode<ElemType>::Construct(deviceId, name);
+            LoadFromFile(fstream, modelVersion, deviceId);
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"Softmax";}
 
         // TODO: code dup
@@ -692,8 +707,7 @@ public:  \
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            NonlinearityNode<ElemType>::MoveMatricesToDevice(deviceId);
             m_diff.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
