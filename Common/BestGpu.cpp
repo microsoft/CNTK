@@ -39,7 +39,7 @@
 #define PATH_DELIMITER '/'
 #endif//__WINDOWS__
 #include <stdio.h>
-
+#include <string.h>
 
 #include <memory>
 #include "CrossProcessMutex.h"
@@ -165,7 +165,7 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
                 }
                 g_mpi->Bcast(&yourDeviceId, 1, i);
                 {
-                    INT32 YourSize = (INT32)MyName.length();
+                    int YourSize = (int)MyName.length();
                     g_mpi->Bcast(&YourSize, 1, i);
                     vector<char> YourName(YourSize+1);
                     if (g_mpi->CurrentNodeRank() == i)
@@ -173,7 +173,11 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
                     g_mpi->Bcast(YourName.data(), YourSize + 1, i);
                     if (g_mpi->CurrentNodeRank() != i)
                     {
+#ifdef _WIN32
                         if (!_strcmpi(MyName.data(), YourName.data()))
+#else
+                        if (!strcasecmp(MyName.data(), YourName.data()))
+#endif
                         {
                             g_bestGpu->DisallowDevice(yourDeviceId);
                         }
