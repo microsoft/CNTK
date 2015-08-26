@@ -53,6 +53,9 @@
 int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
 int mpiRank;            // and this is who we are amonghst these processes
 
+// TODO: Get rid of this global
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
+
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
 
@@ -1400,6 +1403,14 @@ int wmain(int argc, wchar_t* argv[])
         wstring DoneFile = config("DoneFile", L"");
         ConfigArray command = config("command", "train");
 
+        // paralleltrain training
+        g_mpi = nullptr;
+        bool paralleltrain = config("parallelTrain", "false");
+        if (paralleltrain)
+        {
+            g_mpi = new MPIWrapper();
+        }
+
         if (logpath != L"")
         {
             for (int i = 0; i < command.size(); i++)
@@ -1408,10 +1419,18 @@ int wmain(int argc, wchar_t* argv[])
                 logpath += (wstring)command[i];
             }
             logpath += L".log";
+#ifdef MPI_SUPPORT
             if (mpiNumProcesses > 1)
             {
                 std::wostringstream oss;
                 oss << mpiRank;
+                logpath += L"rank" + oss.str();
+            }
+#endif  
+            if (paralleltrain)
+            {
+                std::wostringstream oss;
+                oss << g_mpi->CurrentNodeRank();
                 logpath += L"rank" + oss.str();
             }
             RedirectStdErr(logpath);
@@ -1422,7 +1441,10 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        if (mpiRank == 0) // main process
+        // main process
+#ifdef MPI_SUPPORT
+        if (mpiRank == 0)
+#endif
         {
             //dump config info
             fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
@@ -1460,7 +1482,9 @@ int wmain(int argc, wchar_t* argv[])
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
             type = config("type", "float");
+#ifdef MPI_SUPPORT
         if (mpiRank == 0)
+#endif
             fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
             DoCommand<float>(config);
@@ -1476,6 +1500,8 @@ int wmain(int argc, wchar_t* argv[])
             fcloseOrDie(fp);
         }
         fprintf(stderr, "COMPLETED\n"), fflush(stderr);
+
+        delete g_mpi;
 	}
     catch (const std::exception &err)
     {
