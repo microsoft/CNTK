@@ -72,7 +72,7 @@ inline errno_t _fopen_s(FILE **file, const char *fileName, const char *mode)
 	FILE *f = fopen(fileName, mode);
 	if (f == NULL)
 		return -1;
-	file = &f;
+	*file = f;
 	return 0;
 }
 
