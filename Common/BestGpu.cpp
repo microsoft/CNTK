@@ -150,7 +150,7 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 
     if (!_stricmp(val.c_str(), "Auto"))
     {
-        if (g_mpi && g_mpi->NumNodesInUse() > 1)
+        if (g_mpi && (g_mpi->NumNodesInUse() > 1))
         {
             // make sure deviceId is unique among processes on the same machine
             g_bestGpu->AllowAll();
@@ -166,7 +166,6 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
                 g_mpi->Bcast(&yourDeviceId, 1, i);
                 {
                     INT32 YourSize = (INT32)MyName.length();
-                    //MPI_Bcast(&YourSize,1,MPI_INT,i,MPI_COMM_WORLD);
                     g_mpi->Bcast(&YourSize, 1, i);
                     vector<char> YourName(YourSize+1);
                     if (g_mpi->CurrentNodeRank() == i)

@@ -42,14 +42,6 @@
 #include "BestGpu.h"
 #include <fileutil.h>
 
-// MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
-// HPC Pack 2012 R2 MS-MPI Redistributable Package
-// http://www.microsoft.com/en-us/download/details.aspx?id=41634
-
-
-//int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
-//int mpiRank;            // and this is who we are amonghst these processes
-
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
