@@ -172,6 +172,8 @@ public:
     void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoInputs);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){ NOT_IMPLEMENTED };
+
+    bool RequireSentenceSeg() { return !m_framemode; }; 
 };
 
 }}}

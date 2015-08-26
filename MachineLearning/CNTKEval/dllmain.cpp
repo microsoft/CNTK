@@ -12,8 +12,8 @@
 #include "MPIWrapper.h"
 
 // The SGD CLass is MPI-aware and expects these globals to exist.
-int mpiRank = 0;
-int mpiNumProcesses = 1;
+//int mpiRank = 0;
+//int mpiNumProcesses = 1;
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/,
