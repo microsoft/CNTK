@@ -1,7 +1,7 @@
-=== Running /home/vlivan/cntk/bin/x86_64.gpu.release.acml/cntk configFile=/home/vlivan/cntk/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu DataDir=/home/vlivan/cntk/Tests/Speech/Data DeviceId=Auto
-running on localhost at 2015/07/29 19:11:01
+=== Running /home/mluser/CNTK/public-master/build/debug/bin/cntk configFile=/home/mluser/CNTK/public-master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data DeviceId=-1
+running on localhost at 2015/08/25 20:26:10
 command line options: 
-configFile=/home/vlivan/cntk/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu DataDir=/home/vlivan/cntk/Tests/Speech/Data DeviceId=Auto 
+configFile=/home/mluser/CNTK/public-master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data DeviceId=-1 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 precision=float
@@ -61,21 +61,21 @@ speechTrain=[
       ]
     ]
 ]
-RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu
-DataDir=/home/vlivan/cntk/Tests/Speech/Data
-DeviceId=Auto
+RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu
+DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 precision=float
 command=speechTrain
-deviceId=Auto
+deviceId=-1
 parallelTrain=false
 speechTrain=[
     action=train
-    modelPath=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -118,30 +118,30 @@ speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=/home/vlivan/cntk/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/vlivan/cntk/Tests/Speech/Data/state.list
+          mlfFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/glob_0000.mlf
+          labelMappingFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/state.list
           labelDim=132
           labelType=Category
       ]
     ]
 ]
-RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu
-DataDir=/home/vlivan/cntk/Tests/Speech/Data
-DeviceId=Auto
+RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu
+DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=speechTrain
-configparameters: cntk.config:DataDir=/home/vlivan/cntk/Tests/Speech/Data
-configparameters: cntk.config:deviceId=Auto
+configparameters: cntk.config:DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data
+configparameters: cntk.config:deviceId=-1
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu
+configparameters: cntk.config:RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu
 configparameters: cntk.config:speechTrain=[
     action=train
-    modelPath=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -184,8 +184,8 @@ configparameters: cntk.config:speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=/home/vlivan/cntk/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/vlivan/cntk/Tests/Speech/Data/state.list
+          mlfFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/glob_0000.mlf
+          labelMappingFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/state.list
           labelDim=132
           labelType=Category
       ]
@@ -195,14 +195,10 @@ configparameters: cntk.config:speechTrain=[
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: speechTrain 
 precision = float
-lsof: WARNING: can't stat() ext4 file system /var/lib/docker/aufs
-      Output information may be incomplete.
-LockDevice: Capture device 0 and lock it for exclusive use
-LockDevice: Capture device 0 and lock it for exclusive use
-SimpleNetworkBuilder Using GPU 0
+SimpleNetworkBuilder Using CPU
 reading script file glob_0000.scp ... 948 entries
-total 132 state names in state list /home/vlivan/cntk/Tests/Speech/Data/state.list
-htkmlfreader: reading MLF file /home/vlivan/cntk/Tests/Speech/Data/glob_0000.mlf ...parse the line 55130
+total 132 state names in state list /home/mluser/CNTK/public-master/Tests/Speech/Data/state.list
+htkmlfreader: reading MLF file /home/mluser/CNTK/public-master/Tests/Speech/Data/glob_0000.mlf ...parse the line 55130
  total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
@@ -238,7 +234,7 @@ Found 3 PreCompute nodes
 	NodeName: InvStdOfFeatures
 	NodeName: MeanOfFeatures
 	NodeName: Prior
-minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0) with 1 datapasses
+minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 
@@ -263,7 +259,9 @@ Validating --> Prior = Mean(labels[132, 64])
 
 Set Max Temp Mem Size For Convolution Nodes to 0 samples.
 Starting Epoch 1: learning rate per sample = 0.015625  momentum = 0.900000 
-minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0) with 1 datapasses
+minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop.
 
 
 Validating node EvalErrorPrediction 
@@ -289,84 +287,65 @@ Validating --> B2 = LearnableParameter
 Validating --> HLast = Plus(W2*H1[132, 64], B2[132, 1])
 Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 64], HLast[132, 64])
 
- Epoch[1 of 3]-Minibatch[1-10 of 320]: SamplesSeen = 640; TrainLossPerSample = 4.3213539; EvalErr[0]PerSample = 0.89999998; TotalTime=0.064177; TotalTimePerSample=0.00010027656, SamplesPerSecond=9972
- Epoch[1 of 3]-Minibatch[11-20 of 320]: SamplesSeen = 640; TrainLossPerSample = 4.1507101; EvalErr[0]PerSample = 0.8671875; TotalTime=0.060664; TotalTimePerSample=9.47875e-05, SamplesPerSecond=10549
- Epoch[1 of 3]-Minibatch[21-30 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.9990096; EvalErr[0]PerSample = 0.87656248; TotalTime=0.062395; TotalTimePerSample=9.7492187e-05, SamplesPerSecond=10257
- Epoch[1 of 3]-Minibatch[31-40 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.8694596; EvalErr[0]PerSample = 0.87656248; TotalTime=0.058102; TotalTimePerSample=9.0784375e-05, SamplesPerSecond=11015
- Epoch[1 of 3]-Minibatch[41-50 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.8021927; EvalErr[0]PerSample = 0.87812501; TotalTime=0.058272; TotalTimePerSample=9.105e-05, SamplesPerSecond=10982
- Epoch[1 of 3]-Minibatch[51-60 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.7289093; EvalErr[0]PerSample = 0.86874998; TotalTime=0.056752; TotalTimePerSample=8.8675e-05, SamplesPerSecond=11277
- Epoch[1 of 3]-Minibatch[61-70 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.5618699; EvalErr[0]PerSample = 0.82343751; TotalTime=0.06015; TotalTimePerSample=9.3984375e-05, SamplesPerSecond=10640
- Epoch[1 of 3]-Minibatch[71-80 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.4279053; EvalErr[0]PerSample = 0.80781251; TotalTime=0.061573; TotalTimePerSample=9.6207812e-05, SamplesPerSecond=10394
- Epoch[1 of 3]-Minibatch[81-90 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.3392854; EvalErr[0]PerSample = 0.7734375; TotalTime=0.057831; TotalTimePerSample=9.0360938e-05, SamplesPerSecond=11066
- Epoch[1 of 3]-Minibatch[91-100 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.3639894; EvalErr[0]PerSample = 0.84375; TotalTime=0.05709; TotalTimePerSample=8.9203125e-05, SamplesPerSecond=11210
-WARNING: The same matrix with dim [1, 1] has been transferred between different devices for 20 times.
- Epoch[1 of 3]-Minibatch[101-110 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.2122345; EvalErr[0]PerSample = 0.75312501; TotalTime=0.061065; TotalTimePerSample=9.5414062e-05, SamplesPerSecond=10480
- Epoch[1 of 3]-Minibatch[111-120 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.3126526; EvalErr[0]PerSample = 0.78750002; TotalTime=0.058543; TotalTimePerSample=9.1473437e-05, SamplesPerSecond=10932
- Epoch[1 of 3]-Minibatch[121-130 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.1408203; EvalErr[0]PerSample = 0.74687499; TotalTime=0.0605; TotalTimePerSample=9.453125e-05, SamplesPerSecond=10578
- Epoch[1 of 3]-Minibatch[131-140 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.006897; EvalErr[0]PerSample = 0.69687498; TotalTime=0.054623; TotalTimePerSample=8.5348438e-05, SamplesPerSecond=11716
- Epoch[1 of 3]-Minibatch[141-150 of 320]: SamplesSeen = 640; TrainLossPerSample = 3.0049591; EvalErr[0]PerSample = 0.72343749; TotalTime=0.059955; TotalTimePerSample=9.3679687e-05, SamplesPerSecond=10674
- Epoch[1 of 3]-Minibatch[151-160 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.9785829; EvalErr[0]PerSample = 0.73906249; TotalTime=0.060773; TotalTimePerSample=9.4957812e-05, SamplesPerSecond=10530
- Epoch[1 of 3]-Minibatch[161-170 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.8568604; EvalErr[0]PerSample = 0.70781249; TotalTime=0.060235; TotalTimePerSample=9.4117187e-05, SamplesPerSecond=10625
- Epoch[1 of 3]-Minibatch[171-180 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.6905334; EvalErr[0]PerSample = 0.671875; TotalTime=0.064974; TotalTimePerSample=0.00010152188, SamplesPerSecond=9850
- Epoch[1 of 3]-Minibatch[181-190 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.7865357; EvalErr[0]PerSample = 0.70468748; TotalTime=0.05438; TotalTimePerSample=8.496875e-05, SamplesPerSecond=11769
- Epoch[1 of 3]-Minibatch[191-200 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.5770202; EvalErr[0]PerSample = 0.6484375; TotalTime=0.063006; TotalTimePerSample=9.8446875e-05, SamplesPerSecond=10157
- Epoch[1 of 3]-Minibatch[201-210 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.6157165; EvalErr[0]PerSample = 0.6640625; TotalTime=0.058268; TotalTimePerSample=9.104375e-05, SamplesPerSecond=10983
- Epoch[1 of 3]-Minibatch[211-220 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.552362; EvalErr[0]PerSample = 0.65781248; TotalTime=0.059349; TotalTimePerSample=9.2732812e-05, SamplesPerSecond=10783
- Epoch[1 of 3]-Minibatch[221-230 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.4821167; EvalErr[0]PerSample = 0.625; TotalTime=0.061069; TotalTimePerSample=9.5420313e-05, SamplesPerSecond=10479
- Epoch[1 of 3]-Minibatch[231-240 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.3877869; EvalErr[0]PerSample = 0.62812501; TotalTime=0.055723; TotalTimePerSample=8.7067188e-05, SamplesPerSecond=11485
- Epoch[1 of 3]-Minibatch[241-250 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.3690064; EvalErr[0]PerSample = 0.6484375; TotalTime=0.061959; TotalTimePerSample=9.6810937e-05, SamplesPerSecond=10329
- Epoch[1 of 3]-Minibatch[251-260 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.4396729; EvalErr[0]PerSample = 0.6328125; TotalTime=0.062976; TotalTimePerSample=9.84e-05, SamplesPerSecond=10162
- Epoch[1 of 3]-Minibatch[261-270 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.3028197; EvalErr[0]PerSample = 0.61250001; TotalTime=0.060925; TotalTimePerSample=9.5195312e-05, SamplesPerSecond=10504
- Epoch[1 of 3]-Minibatch[271-280 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.1966858; EvalErr[0]PerSample = 0.55937499; TotalTime=0.060799; TotalTimePerSample=9.4998438e-05, SamplesPerSecond=10526
- Epoch[1 of 3]-Minibatch[281-290 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.2898011; EvalErr[0]PerSample = 0.60468751; TotalTime=0.055702; TotalTimePerSample=8.7034375e-05, SamplesPerSecond=11489
- Epoch[1 of 3]-Minibatch[291-300 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.1775086; EvalErr[0]PerSample = 0.62187499; TotalTime=0.061515; TotalTimePerSample=9.6117187e-05, SamplesPerSecond=10403
- Epoch[1 of 3]-Minibatch[301-310 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.2626343; EvalErr[0]PerSample = 0.59687501; TotalTime=0.059247; TotalTimePerSample=9.2573438e-05, SamplesPerSecond=10802
- Epoch[1 of 3]-Minibatch[311-320 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.1507263; EvalErr[0]PerSample = 0.5625; TotalTime=0.059464; TotalTimePerSample=9.29125e-05, SamplesPerSecond=10762
-Finished Epoch[1]: [Training Set] TrainLossPerSample = 2.9799569; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=1.913549
+ Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.39182043; EvalErr[0]PerSample = 0.89843750; TotalTime = 0.19229s; TotalTimePerSample = 0.30045ms; SamplesPerSecond = 3328
+ Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.16675282; EvalErr[0]PerSample = 0.87187499; TotalTime = 0.18147s; TotalTimePerSample = 0.28355ms; SamplesPerSecond = 3526
+ Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.98683786; EvalErr[0]PerSample = 0.87812501; TotalTime = 0.18188s; TotalTimePerSample = 0.28420ms; SamplesPerSecond = 3518
+ Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86594629; EvalErr[0]PerSample = 0.87812501; TotalTime = 0.18224s; TotalTimePerSample = 0.28475ms; SamplesPerSecond = 3511
+ Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.81006169; EvalErr[0]PerSample = 0.88593751; TotalTime = 0.18206s; TotalTimePerSample = 0.28446ms; SamplesPerSecond = 3515
+ Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.73426819; EvalErr[0]PerSample = 0.87656248; TotalTime = 0.18219s; TotalTimePerSample = 0.28467ms; SamplesPerSecond = 3512
+ Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.57473898; EvalErr[0]PerSample = 0.81875002; TotalTime = 0.18486s; TotalTimePerSample = 0.28885ms; SamplesPerSecond = 3462
+ Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.43590689; EvalErr[0]PerSample = 0.80781251; TotalTime = 0.18234s; TotalTimePerSample = 0.28491ms; SamplesPerSecond = 3509
+ Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36040354; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.18198s; TotalTimePerSample = 0.28434ms; SamplesPerSecond = 3516
+ Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.39382315; EvalErr[0]PerSample = 0.85156250; TotalTime = 0.18226s; TotalTimePerSample = 0.28479ms; SamplesPerSecond = 3511
+ Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.25076604; EvalErr[0]PerSample = 0.76406252; TotalTime = 0.18173s; TotalTimePerSample = 0.28395ms; SamplesPerSecond = 3521
+ Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.35322261; EvalErr[0]PerSample = 0.79374999; TotalTime = 0.18154s; TotalTimePerSample = 0.28366ms; SamplesPerSecond = 3525
+ Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.19603872; EvalErr[0]PerSample = 0.76875001; TotalTime = 0.18242s; TotalTimePerSample = 0.28504ms; SamplesPerSecond = 3508
+ Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.06107187; EvalErr[0]PerSample = 0.73124999; TotalTime = 0.18480s; TotalTimePerSample = 0.28875ms; SamplesPerSecond = 3463
+ Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.05115366; EvalErr[0]PerSample = 0.75625002; TotalTime = 0.18206s; TotalTimePerSample = 0.28447ms; SamplesPerSecond = 3515
+ Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.02470088; EvalErr[0]PerSample = 0.74062502; TotalTime = 0.18196s; TotalTimePerSample = 0.28431ms; SamplesPerSecond = 3517
+ Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.89898682; EvalErr[0]PerSample = 0.70781249; TotalTime = 0.18190s; TotalTimePerSample = 0.28421ms; SamplesPerSecond = 3518
+ Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.75169063; EvalErr[0]PerSample = 0.68124998; TotalTime = 0.18167s; TotalTimePerSample = 0.28385ms; SamplesPerSecond = 3522
+ Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.83965445; EvalErr[0]PerSample = 0.71875000; TotalTime = 0.18243s; TotalTimePerSample = 0.28505ms; SamplesPerSecond = 3508
+ Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.62866831; EvalErr[0]PerSample = 0.65468752; TotalTime = 0.18170s; TotalTimePerSample = 0.28391ms; SamplesPerSecond = 3522
+ Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.66651011; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.18182s; TotalTimePerSample = 0.28410ms; SamplesPerSecond = 3519
+ Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61323857; EvalErr[0]PerSample = 0.65937501; TotalTime = 0.18127s; TotalTimePerSample = 0.28324ms; SamplesPerSecond = 3530
+ Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.53096318; EvalErr[0]PerSample = 0.63749999; TotalTime = 0.18121s; TotalTimePerSample = 0.28315ms; SamplesPerSecond = 3531
+ Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43744516; EvalErr[0]PerSample = 0.64375001; TotalTime = 0.18116s; TotalTimePerSample = 0.28306ms; SamplesPerSecond = 3532
+ Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.41102910; EvalErr[0]PerSample = 0.65312499; TotalTime = 0.18173s; TotalTimePerSample = 0.28395ms; SamplesPerSecond = 3521
+ Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48895264; EvalErr[0]PerSample = 0.63749999; TotalTime = 0.18135s; TotalTimePerSample = 0.28335ms; SamplesPerSecond = 3529
+ Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.34961557; EvalErr[0]PerSample = 0.61093748; TotalTime = 0.18169s; TotalTimePerSample = 0.28388ms; SamplesPerSecond = 3522
+ Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.23703623; EvalErr[0]PerSample = 0.57812500; TotalTime = 0.18148s; TotalTimePerSample = 0.28357ms; SamplesPerSecond = 3526
+ Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.33130503; EvalErr[0]PerSample = 0.62031251; TotalTime = 0.18185s; TotalTimePerSample = 0.28413ms; SamplesPerSecond = 3519
+ Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.21603394; EvalErr[0]PerSample = 0.62812501; TotalTime = 0.18165s; TotalTimePerSample = 0.28383ms; SamplesPerSecond = 3523
+ Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.29106450; EvalErr[0]PerSample = 0.60624999; TotalTime = 0.18136s; TotalTimePerSample = 0.28337ms; SamplesPerSecond = 3528
+ Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.20531011; EvalErr[0]PerSample = 0.57499999; TotalTime = 0.18055s; TotalTimePerSample = 0.28211ms; SamplesPerSecond = 3544
+Finished Epoch[1]: [Training Set] TrainLossPerSample = 3.0173442; EvalErrPerSample = 0.73061526; Ave LearnRatePerSample = 0.015625; EpochTime=6.531797
 Starting Epoch 2: learning rate per sample = 0.001953  momentum = 0.656119 
-minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480) with 1 datapasses
- Epoch[2 of 3]-Minibatch[1-10 of 80]: SamplesSeen = 2560; TrainLossPerSample = 2.0159853; EvalErr[0]PerSample = 0.54140627; TotalTime=0.100302; TotalTimePerSample=3.9180469e-05, SamplesPerSecond=25522
- Epoch[2 of 3]-Minibatch[11-20 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.9881856; EvalErr[0]PerSample = 0.54296875; TotalTime=0.093995; TotalTimePerSample=3.6716797e-05, SamplesPerSecond=27235
- Epoch[2 of 3]-Minibatch[21-30 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.9869812; EvalErr[0]PerSample = 0.54140627; TotalTime=0.09237; TotalTimePerSample=3.6082031e-05, SamplesPerSecond=27714
- Epoch[2 of 3]-Minibatch[31-40 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.9312614; EvalErr[0]PerSample = 0.5277344; TotalTime=0.092894; TotalTimePerSample=3.6286719e-05, SamplesPerSecond=27558
- Epoch[2 of 3]-Minibatch[41-50 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.9006774; EvalErr[0]PerSample = 0.52656251; TotalTime=0.08927; TotalTimePerSample=3.4871094e-05, SamplesPerSecond=28677
- Epoch[2 of 3]-Minibatch[51-60 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.9711578; EvalErr[0]PerSample = 0.54140627; TotalTime=0.091869; TotalTimePerSample=3.5886328e-05, SamplesPerSecond=27865
- Epoch[2 of 3]-Minibatch[61-70 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.8951813; EvalErr[0]PerSample = 0.52031249; TotalTime=0.092242; TotalTimePerSample=3.6032031e-05, SamplesPerSecond=27753
- Epoch[2 of 3]-Minibatch[71-80 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.904506; EvalErr[0]PerSample = 0.53164065; TotalTime=0.094062; TotalTimePerSample=3.6742969e-05, SamplesPerSecond=27216
-Finished Epoch[2]: [Training Set] TrainLossPerSample = 1.949242; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=0.747962
+minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop.
+ Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.05707335; EvalErr[0]PerSample = 0.55000001; TotalTime = 0.52942s; TotalTimePerSample = 0.20680ms; SamplesPerSecond = 4835
+ Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.02921271; EvalErr[0]PerSample = 0.54648435; TotalTime = 0.52684s; TotalTimePerSample = 0.20579ms; SamplesPerSecond = 4859
+ Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.02822423; EvalErr[0]PerSample = 0.54843748; TotalTime = 0.52690s; TotalTimePerSample = 0.20582ms; SamplesPerSecond = 4858
+ Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97091901; EvalErr[0]PerSample = 0.54140627; TotalTime = 0.52687s; TotalTimePerSample = 0.20581ms; SamplesPerSecond = 4858
+ Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.94545817; EvalErr[0]PerSample = 0.53867185; TotalTime = 0.52661s; TotalTimePerSample = 0.20571ms; SamplesPerSecond = 4861
+ Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01557612; EvalErr[0]PerSample = 0.54414064; TotalTime = 0.52684s; TotalTimePerSample = 0.20580ms; SamplesPerSecond = 4859
+ Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.94065166; EvalErr[0]PerSample = 0.52499998; TotalTime = 0.52700s; TotalTimePerSample = 0.20586ms; SamplesPerSecond = 4857
+ Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.94852901; EvalErr[0]PerSample = 0.54023439; TotalTime = 0.52384s; TotalTimePerSample = 0.20462ms; SamplesPerSecond = 4886
+Finished Epoch[2]: [Training Set] TrainLossPerSample = 1.9919556; EvalErrPerSample = 0.54179686; Ave LearnRatePerSample = 0.001953125; EpochTime=4.221602
 Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
-minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960) with 1 datapasses
- Epoch[3 of 3]-Minibatch[1-10 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8735985; EvalErr[0]PerSample = 0.51933593; TotalTime=0.27124; TotalTimePerSample=2.6488281e-05, SamplesPerSecond=37752
- Epoch[3 of 3]-Minibatch[11-20 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8665626; EvalErr[0]PerSample = 0.51748049; TotalTime=0.266098; TotalTimePerSample=2.5986133e-05, SamplesPerSecond=38482
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.539342
+minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop.
+ Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91941869; EvalErr[0]PerSample = 0.52890623; TotalTime = 1.86784s; TotalTimePerSample = 0.18241ms; SamplesPerSecond = 5482
+ Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91062427; EvalErr[0]PerSample = 0.52783203; TotalTime = 1.84987s; TotalTimePerSample = 0.18065ms; SamplesPerSecond = 5535
+Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.9150215; EvalErrPerSample = 0.52836913; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=3.736133
 COMPLETED
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-WARNING:
-
-You should always run with libnvidia-ml.so that is installed with your
-NVIDIA Display Driver. By default it's installed in /usr/lib and /usr/lib64.
-libnvidia-ml.so in GDK package is a stub library that is attached only for
-build purposes (e.g. machine that you build your application doesn't have
-to have Display Driver installed).
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-Linked to libnvidia-ml library at wrong path : /usr/src/gdk/nvml/lib/libnvidia-ml.so.1
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-WARNING:
-
-You should always run with libnvidia-ml.so that is installed with your
-NVIDIA Display Driver. By default it's installed in /usr/lib and /usr/lib64.
-libnvidia-ml.so in GDK package is a stub library that is attached only for
-build purposes (e.g. machine that you build your application doesn't have
-to have Display Driver installed).
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 === Deleting last epoch data
 ==== Re-running from checkpoint
-running on localhost at 2015/07/29 19:11:07
+running on localhost at 2015/08/25 20:26:31
 command line options: 
-configFile=/home/vlivan/cntk/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu DataDir=/home/vlivan/cntk/Tests/Speech/Data DeviceId=Auto 
+configFile=/home/mluser/CNTK/public-master/Tests/Speech/QuickE2E/cntk.config RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data DeviceId=-1 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 precision=float
@@ -426,21 +405,21 @@ speechTrain=[
       ]
     ]
 ]
-RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu
-DataDir=/home/vlivan/cntk/Tests/Speech/Data
-DeviceId=Auto
+RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu
+DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 precision=float
 command=speechTrain
-deviceId=Auto
+deviceId=-1
 parallelTrain=false
 speechTrain=[
     action=train
-    modelPath=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -483,30 +462,30 @@ speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=/home/vlivan/cntk/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/vlivan/cntk/Tests/Speech/Data/state.list
+          mlfFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/glob_0000.mlf
+          labelMappingFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/state.list
           labelDim=132
           labelType=Category
       ]
     ]
 ]
-RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu
-DataDir=/home/vlivan/cntk/Tests/Speech/Data
-DeviceId=Auto
+RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu
+DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=speechTrain
-configparameters: cntk.config:DataDir=/home/vlivan/cntk/Tests/Speech/Data
-configparameters: cntk.config:deviceId=Auto
+configparameters: cntk.config:DataDir=/home/mluser/CNTK/public-master/Tests/Speech/Data
+configparameters: cntk.config:deviceId=-1
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu
+configparameters: cntk.config:RunDir=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu
 configparameters: cntk.config:speechTrain=[
     action=train
-    modelPath=/tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=/tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -549,8 +528,8 @@ configparameters: cntk.config:speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=/home/vlivan/cntk/Tests/Speech/Data/glob_0000.mlf
-          labelMappingFile=/home/vlivan/cntk/Tests/Speech/Data/state.list
+          mlfFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/glob_0000.mlf
+          labelMappingFile=/home/mluser/CNTK/public-master/Tests/Speech/Data/state.list
           labelDim=132
           labelType=Category
       ]
@@ -560,19 +539,15 @@ configparameters: cntk.config:speechTrain=[
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: speechTrain 
 precision = float
-lsof: WARNING: can't stat() ext4 file system /var/lib/docker/aufs
-      Output information may be incomplete.
-LockDevice: Capture device 0 and lock it for exclusive use
-LockDevice: Capture device 0 and lock it for exclusive use
-SimpleNetworkBuilder Using GPU 0
+SimpleNetworkBuilder Using CPU
 reading script file glob_0000.scp ... 948 entries
-total 132 state names in state list /home/vlivan/cntk/Tests/Speech/Data/state.list
-htkmlfreader: reading MLF file /home/vlivan/cntk/Tests/Speech/Data/glob_0000.mlf ...parse the line 55130
+total 132 state names in state list /home/mluser/CNTK/public-master/Tests/Speech/Data/state.list
+htkmlfreader: reading MLF file /home/mluser/CNTK/public-master/Tests/Speech/Data/glob_0000.mlf ...parse the line 55130
  total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-Starting from checkpoint. Load Network From File /tmp/cntk-test-20150729191101.973007/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.2.
+Starting from checkpoint. Load Network From File /tmp/cntk-test-20150825202610.425642/Speech_QuickE2E@debug_cpu/models/cntkSpeech.dnn.2.
 
 
 Printing Gradient Computation Node Order ... 
@@ -703,8 +678,10 @@ Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, 256
 No PreCompute nodes found, skipping PreCompute step
 Set Max Temp Mem Size For Convolution Nodes to 0 samples.
 Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
-minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960) with 1 datapasses
+minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+Starting minibatch loop.
 
 
 Validating node EvalErrorPrediction 
@@ -730,29 +707,7 @@ Validating --> B2 = LearnableParameter
 Validating --> HLast = Plus(W2*H1[132, 1024], B2[132, 1])
 Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 1024], HLast[132, 1024])
 
- Epoch[3 of 3]-Minibatch[1-10 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8735985; EvalErr[0]PerSample = 0.51933593; TotalTime=0.390092; TotalTimePerSample=3.8094922e-05, SamplesPerSecond=26250
- Epoch[3 of 3]-Minibatch[11-20 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8665626; EvalErr[0]PerSample = 0.51748049; TotalTime=0.261875; TotalTimePerSample=2.557373e-05, SamplesPerSecond=39102
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.770276
+ Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91941869; EvalErr[0]PerSample = 0.52890623; TotalTime = 1.88723s; TotalTimePerSample = 0.18430ms; SamplesPerSecond = 5425
+ Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91062427; EvalErr[0]PerSample = 0.52783203; TotalTime = 1.84469s; TotalTimePerSample = 0.18015ms; SamplesPerSecond = 5551
+Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.9150215; EvalErrPerSample = 0.52836913; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=5.315324
 COMPLETED
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-WARNING:
-
-You should always run with libnvidia-ml.so that is installed with your
-NVIDIA Display Driver. By default it's installed in /usr/lib and /usr/lib64.
-libnvidia-ml.so in GDK package is a stub library that is attached only for
-build purposes (e.g. machine that you build your application doesn't have
-to have Display Driver installed).
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-Linked to libnvidia-ml library at wrong path : /usr/src/gdk/nvml/lib/libnvidia-ml.so.1
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-WARNING:
-
-You should always run with libnvidia-ml.so that is installed with your
-NVIDIA Display Driver. By default it's installed in /usr/lib and /usr/lib64.
-libnvidia-ml.so in GDK package is a stub library that is attached only for
-build purposes (e.g. machine that you build your application doesn't have
-to have Display Driver installed).
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

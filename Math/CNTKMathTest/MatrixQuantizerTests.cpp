@@ -409,6 +409,12 @@ namespace CNTKMathTest
                     rangeHigh = 0.005f;
                     TestQuantization<ElemType>(numBits, numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
 
+                    // Test a matrix with a very small range of values
+                    seed += 100;
+                    rangeLow = -0.00001f;
+                    rangeHigh = 0.00001f;
+                    TestQuantization<ElemType>(numBits, numRows, numCols, rangeLow, rangeHigh, seed, numIterations, deviceId, zeroThresholdFor1Bit);
+
                     // Test a matrix with larger range of values
                     seed += 100;
                     rangeLow = -10.0f;

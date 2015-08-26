@@ -1,18 +1,16 @@
-=== Running /cygdrive/c/Users/svcphil/workspace.vlivan/CNTK-Build-Windows/x64/release/cntk.exe configFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\QuickE2E\cntk.config RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data DeviceId=Auto
+=== Running /cygdrive/e/NetScale/CNTK/git_repos/public_master/x64/release/cntk.exe configFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\QuickE2E\cntk.config RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data DeviceId=-1
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Aug 11 2015 16:18:17
-		Last modified date: Tue Aug 11 16:16:08 2015
-		Built by svcphil on dphaim-26-new           
-		Build Path: C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\MachineLearning\CNTK\
+		Built time: Aug 25 2015 16:45:49
+		Last modified date: Mon Aug 24 16:38:42 2015
+		Built by amitaga on Amitaga-Win-DT3           
+		Build Path: E:\NetScale\CNTK\git_repos\public_master\MachineLearning\CNTK\
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-		Build Branch: master
-		Build SHA1: 397cc7cc16c00b1c12864d331c0729fde7a1bde3
 -------------------------------------------------------------------
-running on dphaim-26-new at 2015/08/11 17:47:10
+running on Amitaga-Win-DT3 at 2015/08/26 00:49:28
 command line options: 
-configFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\QuickE2E\cntk.config RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data DeviceId=Auto 
+configFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\QuickE2E\cntk.config RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data DeviceId=-1 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 precision=float
@@ -72,21 +70,21 @@ speechTrain=[
       ]
     ]
 ]
-RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu
-DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data
-DeviceId=Auto
+RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu
+DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 precision=float
 command=speechTrain
-deviceId=Auto
+deviceId=-1
 parallelTrain=false
 speechTrain=[
     action=train
-    modelPath=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -129,30 +127,30 @@ speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/glob_0000.mlf
-          labelMappingFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/state.list
+          mlfFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/glob_0000.mlf
+          labelMappingFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/state.list
           labelDim=132
           labelType=Category
       ]
     ]
 ]
-RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu
-DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data
-DeviceId=Auto
+RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu
+DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=speechTrain
-configparameters: cntk.config:DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data
-configparameters: cntk.config:deviceId=Auto
+configparameters: cntk.config:DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data
+configparameters: cntk.config:deviceId=-1
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu
+configparameters: cntk.config:RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu
 configparameters: cntk.config:speechTrain=[
     action=train
-    modelPath=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -195,8 +193,8 @@ configparameters: cntk.config:speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/glob_0000.mlf
-          labelMappingFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/state.list
+          mlfFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/glob_0000.mlf
+          labelMappingFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/state.list
           labelDim=132
           labelType=Category
       ]
@@ -206,16 +204,11 @@ configparameters: cntk.config:speechTrain=[
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: speechTrain 
 precision = float
-LockDevice: Capture device 1 and lock it for exclusive use
-LockDevice: Capture device 2 and lock it for exclusive use
-LockDevice: Capture device 3 and lock it for exclusive use
-LockDevice: Capture device 0 and lock it for exclusive use
-LockDevice: Capture device 1 and lock it for exclusive use
-SimpleNetworkBuilder Using GPU 1
+SimpleNetworkBuilder Using CPU
 reading script file glob_0000.scp ... 948 entries
 trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
-total 132 state names in state list C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/state.list
-htkmlfreader: reading MLF file C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/glob_0000.mlf ... total 948 entries
+total 132 state names in state list E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/state.list
+htkmlfreader: reading MLF file E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
@@ -250,7 +243,7 @@ Found 3 PreCompute nodes
 	NodeName: InvStdOfFeatures
 	NodeName: MeanOfFeatures
 	NodeName: Prior
-minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0) with 1 datapasses
+minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 
@@ -275,7 +268,9 @@ Validating --> Prior = Mean(labels[132, 64])
 
 Set Max Temp Mem Size For Convolution Nodes to 0 samples.
 Starting Epoch 1: learning rate per sample = 0.015625  momentum = 0.900000 
-minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0) with 1 datapasses
+minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop, distributed reading is: DISABLED
 
 
 Validating node EvalErrorPrediction 
@@ -301,73 +296,74 @@ Validating --> B2 = LearnableParameter
 Validating --> HLast = Plus(W2*H1[132, 64], B2[132, 1])
 Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 64], HLast[132, 64])
 
- Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.45646143; EvalErr[0]PerSample = 0.92500001; TotalTime = 0.01913s; TotalTimePerSample = 0.02988ms; SamplesPerSecond = 33462
- Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.22315693; EvalErr[0]PerSample = 0.90156251; TotalTime = 0.01453s; TotalTimePerSample = 0.02270ms; SamplesPerSecond = 44043
- Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.95180511; EvalErr[0]PerSample = 0.84687501; TotalTime = 0.01459s; TotalTimePerSample = 0.02279ms; SamplesPerSecond = 43874
- Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.94157934; EvalErr[0]PerSample = 0.89843750; TotalTime = 0.01459s; TotalTimePerSample = 0.02280ms; SamplesPerSecond = 43859
- Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.85668945; EvalErr[0]PerSample = 0.91093749; TotalTime = 0.01456s; TotalTimePerSample = 0.02275ms; SamplesPerSecond = 43953
- Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72866368; EvalErr[0]PerSample = 0.89531249; TotalTime = 0.01450s; TotalTimePerSample = 0.02265ms; SamplesPerSecond = 44140
- Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.51809072; EvalErr[0]PerSample = 0.82968748; TotalTime = 0.01453s; TotalTimePerSample = 0.02271ms; SamplesPerSecond = 44034
- Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.48454905; EvalErr[0]PerSample = 0.80781251; TotalTime = 0.01452s; TotalTimePerSample = 0.02269ms; SamplesPerSecond = 44074
- Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33829641; EvalErr[0]PerSample = 0.76875001; TotalTime = 0.01453s; TotalTimePerSample = 0.02271ms; SamplesPerSecond = 44037
- Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.50167227; EvalErr[0]PerSample = 0.79843748; TotalTime = 0.01447s; TotalTimePerSample = 0.02261ms; SamplesPerSecond = 44229
-WARNING: The same matrix with dim [1, 1] has been transferred between different devices for 20 times.
- Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.22861624; EvalErr[0]PerSample = 0.80000001; TotalTime = 0.01459s; TotalTimePerSample = 0.02279ms; SamplesPerSecond = 43874
- Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.32616878; EvalErr[0]PerSample = 0.79062498; TotalTime = 0.01449s; TotalTimePerSample = 0.02264ms; SamplesPerSecond = 44174
- Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.16897583; EvalErr[0]PerSample = 0.77968752; TotalTime = 0.01448s; TotalTimePerSample = 0.02262ms; SamplesPerSecond = 44201
- Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.08891916; EvalErr[0]PerSample = 0.77656251; TotalTime = 0.01442s; TotalTimePerSample = 0.02253ms; SamplesPerSecond = 44385
- Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.06004953; EvalErr[0]PerSample = 0.72968751; TotalTime = 0.01454s; TotalTimePerSample = 0.02271ms; SamplesPerSecond = 44031
- Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.91128540; EvalErr[0]PerSample = 0.69531250; TotalTime = 0.01446s; TotalTimePerSample = 0.02259ms; SamplesPerSecond = 44272
- Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.90172124; EvalErr[0]PerSample = 0.72968751; TotalTime = 0.01450s; TotalTimePerSample = 0.02266ms; SamplesPerSecond = 44128
- Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.73261714; EvalErr[0]PerSample = 0.65312499; TotalTime = 0.01447s; TotalTimePerSample = 0.02261ms; SamplesPerSecond = 44232
- Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.66515493; EvalErr[0]PerSample = 0.68437499; TotalTime = 0.01453s; TotalTimePerSample = 0.02270ms; SamplesPerSecond = 44061
- Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.67383432; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.01449s; TotalTimePerSample = 0.02264ms; SamplesPerSecond = 44165
- Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.52869272; EvalErr[0]PerSample = 0.63593751; TotalTime = 0.01450s; TotalTimePerSample = 0.02266ms; SamplesPerSecond = 44134
- Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.60032344; EvalErr[0]PerSample = 0.66718751; TotalTime = 0.01450s; TotalTimePerSample = 0.02266ms; SamplesPerSecond = 44128
- Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.51134038; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.01452s; TotalTimePerSample = 0.02268ms; SamplesPerSecond = 44086
- Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.45362544; EvalErr[0]PerSample = 0.63749999; TotalTime = 0.01452s; TotalTimePerSample = 0.02269ms; SamplesPerSecond = 44068
- Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.41640615; EvalErr[0]PerSample = 0.61562502; TotalTime = 0.01445s; TotalTimePerSample = 0.02258ms; SamplesPerSecond = 44287
- Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.39745474; EvalErr[0]PerSample = 0.62812501; TotalTime = 0.01447s; TotalTimePerSample = 0.02261ms; SamplesPerSecond = 44229
- Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.16415405; EvalErr[0]PerSample = 0.56718749; TotalTime = 0.01454s; TotalTimePerSample = 0.02272ms; SamplesPerSecond = 44013
- Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30347300; EvalErr[0]PerSample = 0.63593751; TotalTime = 0.01454s; TotalTimePerSample = 0.02272ms; SamplesPerSecond = 44016
- Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.24398804; EvalErr[0]PerSample = 0.60937500; TotalTime = 0.01446s; TotalTimePerSample = 0.02260ms; SamplesPerSecond = 44253
- Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15322256; EvalErr[0]PerSample = 0.57968748; TotalTime = 0.01447s; TotalTimePerSample = 0.02262ms; SamplesPerSecond = 44214
- Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.21664429; EvalErr[0]PerSample = 0.59531248; TotalTime = 0.01448s; TotalTimePerSample = 0.02262ms; SamplesPerSecond = 44208
- Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.25246572; EvalErr[0]PerSample = 0.60156250; TotalTime = 0.01442s; TotalTimePerSample = 0.02253ms; SamplesPerSecond = 44392
-Finished Epoch[1]: [Training Set] TrainLossPerSample = 3.0000031; EvalErrPerSample = 0.72836918; Ave LearnRatePerSample = 0.015625; EpochTime=0.4851
+ Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.46945000; EvalErr[0]PerSample = 0.90781248; TotalTime = 0.15951s; TotalTimePerSample = 0.24923ms; SamplesPerSecond = 4012
+ Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.22299910; EvalErr[0]PerSample = 0.90156251; TotalTime = 0.11267s; TotalTimePerSample = 0.17605ms; SamplesPerSecond = 5680
+ Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.93971014; EvalErr[0]PerSample = 0.84687501; TotalTime = 0.08605s; TotalTimePerSample = 0.13445ms; SamplesPerSecond = 7437
+ Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.92341161; EvalErr[0]PerSample = 0.90468752; TotalTime = 0.08652s; TotalTimePerSample = 0.13519ms; SamplesPerSecond = 7396
+ Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.84073496; EvalErr[0]PerSample = 0.91093749; TotalTime = 0.08751s; TotalTimePerSample = 0.13673ms; SamplesPerSecond = 7313
+ Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.71251225; EvalErr[0]PerSample = 0.88437498; TotalTime = 0.08594s; TotalTimePerSample = 0.13429ms; SamplesPerSecond = 7446
+ Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.51561427; EvalErr[0]PerSample = 0.82499999; TotalTime = 0.06897s; TotalTimePerSample = 0.10776ms; SamplesPerSecond = 9279
+ Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.49347544; EvalErr[0]PerSample = 0.81093752; TotalTime = 0.07648s; TotalTimePerSample = 0.11950ms; SamplesPerSecond = 8367
+ Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.34738159; EvalErr[0]PerSample = 0.76562500; TotalTime = 0.07461s; TotalTimePerSample = 0.11658ms; SamplesPerSecond = 8578
+ Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.51958919; EvalErr[0]PerSample = 0.79843748; TotalTime = 0.07481s; TotalTimePerSample = 0.11688ms; SamplesPerSecond = 8555
+ Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.24653316; EvalErr[0]PerSample = 0.80312502; TotalTime = 0.07801s; TotalTimePerSample = 0.12189ms; SamplesPerSecond = 8203
+ Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33394170; EvalErr[0]PerSample = 0.80000001; TotalTime = 0.06899s; TotalTimePerSample = 0.10780ms; SamplesPerSecond = 9276
+ Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.17777109; EvalErr[0]PerSample = 0.77031249; TotalTime = 0.07871s; TotalTimePerSample = 0.12298ms; SamplesPerSecond = 8131
+ Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.09841919; EvalErr[0]PerSample = 0.76875001; TotalTime = 0.07223s; TotalTimePerSample = 0.11287ms; SamplesPerSecond = 8860
+ Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.06454778; EvalErr[0]PerSample = 0.72968751; TotalTime = 0.06287s; TotalTimePerSample = 0.09824ms; SamplesPerSecond = 10179
+ Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.91630864; EvalErr[0]PerSample = 0.69531250; TotalTime = 0.07019s; TotalTimePerSample = 0.10967ms; SamplesPerSecond = 9117
+ Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.90603018; EvalErr[0]PerSample = 0.73281252; TotalTime = 0.07790s; TotalTimePerSample = 0.12172ms; SamplesPerSecond = 8215
+ Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.74090576; EvalErr[0]PerSample = 0.65937501; TotalTime = 0.06086s; TotalTimePerSample = 0.09509ms; SamplesPerSecond = 10516
+ Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.67082524; EvalErr[0]PerSample = 0.67343748; TotalTime = 0.07217s; TotalTimePerSample = 0.11276ms; SamplesPerSecond = 8868
+ Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.67603755; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.06790s; TotalTimePerSample = 0.10610ms; SamplesPerSecond = 9425
+ Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.54728389; EvalErr[0]PerSample = 0.62968749; TotalTime = 0.06230s; TotalTimePerSample = 0.09734ms; SamplesPerSecond = 10273
+ Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61919546; EvalErr[0]PerSample = 0.67343748; TotalTime = 0.06631s; TotalTimePerSample = 0.10361ms; SamplesPerSecond = 9651
+ Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.52385259; EvalErr[0]PerSample = 0.65781248; TotalTime = 0.06634s; TotalTimePerSample = 0.10366ms; SamplesPerSecond = 9646
+ Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.47539663; EvalErr[0]PerSample = 0.63437498; TotalTime = 0.05956s; TotalTimePerSample = 0.09306ms; SamplesPerSecond = 10745
+ Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43261099; EvalErr[0]PerSample = 0.61406249; TotalTime = 0.07746s; TotalTimePerSample = 0.12103ms; SamplesPerSecond = 8262
+ Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.41724253; EvalErr[0]PerSample = 0.63125002; TotalTime = 0.06865s; TotalTimePerSample = 0.10726ms; SamplesPerSecond = 9322
+ Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17669678; EvalErr[0]PerSample = 0.57812500; TotalTime = 0.05732s; TotalTimePerSample = 0.08956ms; SamplesPerSecond = 11165
+ Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.31016231; EvalErr[0]PerSample = 0.64062500; TotalTime = 0.07145s; TotalTimePerSample = 0.11164ms; SamplesPerSecond = 8957
+ Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26395869; EvalErr[0]PerSample = 0.61093748; TotalTime = 0.06920s; TotalTimePerSample = 0.10813ms; SamplesPerSecond = 9248
+ Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15880728; EvalErr[0]PerSample = 0.58281249; TotalTime = 0.05704s; TotalTimePerSample = 0.08913ms; SamplesPerSecond = 11219
+ Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.22708130; EvalErr[0]PerSample = 0.59218752; TotalTime = 0.06261s; TotalTimePerSample = 0.09782ms; SamplesPerSecond = 10222
+ Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.25599360; EvalErr[0]PerSample = 0.60624999; TotalTime = 0.06078s; TotalTimePerSample = 0.09496ms; SamplesPerSecond = 10530
+Finished Epoch[1]: [Training Set] TrainLossPerSample = 3.007015; EvalErrPerSample = 0.72827148; Ave LearnRatePerSample = 0.015625; EpochTime=2.990345
 Starting Epoch 2: learning rate per sample = 0.001953  momentum = 0.656119 
-minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480) with 1 datapasses
- Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.08151960; EvalErr[0]PerSample = 0.55859375; TotalTime = 0.03149s; TotalTimePerSample = 0.01230ms; SamplesPerSecond = 81290
- Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98395634; EvalErr[0]PerSample = 0.54257810; TotalTime = 0.02336s; TotalTimePerSample = 0.00913ms; SamplesPerSecond = 109570
- Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98575521; EvalErr[0]PerSample = 0.54492188; TotalTime = 0.02325s; TotalTimePerSample = 0.00908ms; SamplesPerSecond = 110116
- Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90484965; EvalErr[0]PerSample = 0.53164065; TotalTime = 0.02321s; TotalTimePerSample = 0.00906ms; SamplesPerSecond = 110316
- Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.88324130; EvalErr[0]PerSample = 0.52539063; TotalTime = 0.02328s; TotalTimePerSample = 0.00909ms; SamplesPerSecond = 109975
- Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89109266; EvalErr[0]PerSample = 0.53359377; TotalTime = 0.02325s; TotalTimePerSample = 0.00908ms; SamplesPerSecond = 110093
- Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89496076; EvalErr[0]PerSample = 0.52890623; TotalTime = 0.02326s; TotalTimePerSample = 0.00909ms; SamplesPerSecond = 110055
- Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.85944366; EvalErr[0]PerSample = 0.52265626; TotalTime = 0.02296s; TotalTimePerSample = 0.00897ms; SamplesPerSecond = 111473
-Finished Epoch[2]: [Training Set] TrainLossPerSample = 1.9356024; EvalErrPerSample = 0.53603518; Ave LearnRatePerSample = 0.001953125; EpochTime=0.195263
+minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop, distributed reading is: DISABLED
+ Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.10253263; EvalErr[0]PerSample = 0.56484377; TotalTime = 0.16070s; TotalTimePerSample = 0.06277ms; SamplesPerSecond = 15930
+ Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.00544047; EvalErr[0]PerSample = 0.54843748; TotalTime = 0.16252s; TotalTimePerSample = 0.06349ms; SamplesPerSecond = 15751
+ Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.00762367; EvalErr[0]PerSample = 0.54960936; TotalTime = 0.15862s; TotalTimePerSample = 0.06196ms; SamplesPerSecond = 16138
+ Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.92045140; EvalErr[0]PerSample = 0.53281248; TotalTime = 0.16430s; TotalTimePerSample = 0.06418ms; SamplesPerSecond = 15581
+ Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90173948; EvalErr[0]PerSample = 0.52265626; TotalTime = 0.16651s; TotalTimePerSample = 0.06504ms; SamplesPerSecond = 15374
+ Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.91355443; EvalErr[0]PerSample = 0.53984374; TotalTime = 0.15059s; TotalTimePerSample = 0.05882ms; SamplesPerSecond = 17000
+ Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.91760945; EvalErr[0]PerSample = 0.53125000; TotalTime = 0.13933s; TotalTimePerSample = 0.05443ms; SamplesPerSecond = 18373
+ Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.87678528; EvalErr[0]PerSample = 0.52890623; TotalTime = 0.14171s; TotalTimePerSample = 0.05536ms; SamplesPerSecond = 18064
+Finished Epoch[2]: [Training Set] TrainLossPerSample = 1.9557171; EvalErrPerSample = 0.53979492; Ave LearnRatePerSample = 0.001953125; EpochTime=1.245717
 Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
-minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960) with 1 datapasses
- Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86752820; EvalErr[0]PerSample = 0.52177733; TotalTime = 0.08160s; TotalTimePerSample = 0.00797ms; SamplesPerSecond = 125485
- Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87358737; EvalErr[0]PerSample = 0.51542968; TotalTime = 0.05742s; TotalTimePerSample = 0.00561ms; SamplesPerSecond = 178319
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8705578; EvalErrPerSample = 0.5186035; Ave LearnRatePerSample = 9.765625146e-005; EpochTime=0.142001
+minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop, distributed reading is: DISABLED
+ Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.88589633; EvalErr[0]PerSample = 0.52529299; TotalTime = 0.59385s; TotalTimePerSample = 0.05799ms; SamplesPerSecond = 17243
+ Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.89380074; EvalErr[0]PerSample = 0.51816404; TotalTime = 0.51284s; TotalTimePerSample = 0.05008ms; SamplesPerSecond = 19967
+Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8898486; EvalErrPerSample = 0.52172852; Ave LearnRatePerSample = 9.765625146e-005; EpochTime=1.109687
 COMPLETED
 === Deleting last epoch data
 ==== Re-running from checkpoint
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Aug 11 2015 16:18:17
-		Last modified date: Tue Aug 11 16:16:08 2015
-		Built by svcphil on dphaim-26-new           
-		Build Path: C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\MachineLearning\CNTK\
+		Built time: Aug 25 2015 16:45:49
+		Last modified date: Mon Aug 24 16:38:42 2015
+		Built by amitaga on Amitaga-Win-DT3           
+		Build Path: E:\NetScale\CNTK\git_repos\public_master\MachineLearning\CNTK\
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
-		Build Branch: master
-		Build SHA1: 397cc7cc16c00b1c12864d331c0729fde7a1bde3
 -------------------------------------------------------------------
-running on dphaim-26-new at 2015/08/11 17:47:19
+running on Amitaga-Win-DT3 at 2015/08/26 00:49:37
 command line options: 
-configFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\QuickE2E\cntk.config RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data DeviceId=Auto 
+configFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\QuickE2E\cntk.config RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data DeviceId=-1 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 precision=float
@@ -427,21 +423,21 @@ speechTrain=[
       ]
     ]
 ]
-RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu
-DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data
-DeviceId=Auto
+RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu
+DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 precision=float
 command=speechTrain
-deviceId=Auto
+deviceId=-1
 parallelTrain=false
 speechTrain=[
     action=train
-    modelPath=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -484,30 +480,30 @@ speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/glob_0000.mlf
-          labelMappingFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/state.list
+          mlfFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/glob_0000.mlf
+          labelMappingFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/state.list
           labelDim=132
           labelType=Category
       ]
     ]
 ]
-RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu
-DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data
-DeviceId=Auto
+RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu
+DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data
+DeviceId=-1
 
 <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.config:command=speechTrain
-configparameters: cntk.config:DataDir=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data
-configparameters: cntk.config:deviceId=Auto
+configparameters: cntk.config:DataDir=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data
+configparameters: cntk.config:deviceId=-1
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu
+configparameters: cntk.config:RunDir=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu
 configparameters: cntk.config:speechTrain=[
     action=train
-    modelPath=C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-    deviceId=Auto
+    modelPath=C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
+    deviceId=-1
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
@@ -550,8 +546,8 @@ configparameters: cntk.config:speechTrain=[
           scpFile=glob_0000.scp
       ]
       labels=[
-          mlfFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/glob_0000.mlf
-          labelMappingFile=C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/state.list
+          mlfFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/glob_0000.mlf
+          labelMappingFile=E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/state.list
           labelDim=132
           labelType=Category
       ]
@@ -561,20 +557,15 @@ configparameters: cntk.config:speechTrain=[
 <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 command: speechTrain 
 precision = float
-LockDevice: Capture device 1 and lock it for exclusive use
-LockDevice: Capture device 2 and lock it for exclusive use
-LockDevice: Capture device 3 and lock it for exclusive use
-LockDevice: Capture device 0 and lock it for exclusive use
-LockDevice: Capture device 1 and lock it for exclusive use
-SimpleNetworkBuilder Using GPU 1
+SimpleNetworkBuilder Using CPU
 reading script file glob_0000.scp ... 948 entries
 trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
-total 132 state names in state list C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/state.list
-htkmlfreader: reading MLF file C:\Users\svcphil\workspace.vlivan\CNTK-Build-Windows\Tests\Speech\Data/glob_0000.mlf ... total 948 entries
+total 132 state names in state list E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/state.list
+htkmlfreader: reading MLF file E:\NetScale\CNTK\git_repos\public_master\Tests\Speech\Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-Starting from checkpoint. Load Network From File C:\Users\svcphil\AppData\Local\Temp\2\cntk-test-20150811174551.851046\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.2.
+Starting from checkpoint. Load Network From File C:\cygwin64\tmp\cntk-test-20150825164805.73967\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.2.
 
 
 Printing Gradient Computation Node Order ... 
@@ -705,8 +696,10 @@ Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, 256
 No PreCompute nodes found, skipping PreCompute step
 Set Max Temp Mem Size For Convolution Nodes to 0 samples.
 Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
-minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960) with 1 datapasses
+minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+Starting minibatch loop, distributed reading is: DISABLED
 
 
 Validating node EvalErrorPrediction 
@@ -732,7 +725,7 @@ Validating --> B2 = LearnableParameter
 Validating --> HLast = Plus(W2*H1[132, 1024], B2[132, 1])
 Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 1024], HLast[132, 1024])
 
- Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86752820; EvalErr[0]PerSample = 0.52177733; TotalTime = 0.40600s; TotalTimePerSample = 0.03965ms; SamplesPerSecond = 25221
- Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87358737; EvalErr[0]PerSample = 0.51542968; TotalTime = 0.05538s; TotalTimePerSample = 0.00541ms; SamplesPerSecond = 184900
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8705578; EvalErrPerSample = 0.5186035; Ave LearnRatePerSample = 9.765625146e-005; EpochTime=0.692077
-COMPLETED
+ Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.88589633; EvalErr[0]PerSample = 0.52529299; TotalTime = 0.86012s; TotalTimePerSample = 0.08400ms; SamplesPerSecond = 11905
+ Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.89380074; EvalErr[0]PerSample = 0.51816404; TotalTime = 0.60616s; TotalTimePerSample = 0.05919ms; SamplesPerSecond = 16893
+Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8898486; EvalErrPerSample = 0.52172852; Ave LearnRatePerSample = 9.765625146e-005; EpochTime=2.711551
+COMPLETED
