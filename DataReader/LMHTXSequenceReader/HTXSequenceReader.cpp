@@ -1611,9 +1611,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     for (int i = 0; i < mBlgSize; i++) {
         bool end = false;
         for (int j = 0; j < m_mbSize; j++) {
+            minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::None);
             int idx = j * (int)mBlgSize + i;
             if (end) {
-                label_m->SetValue(0, idx, (ElemType)-1);
+                label_m->SetValue(0, idx, (ElemType)0); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
                 minibatchFlag.SetValue(i, j, (ElemType)(MinibatchPackingFlag::NoInput)); //Rubbish here
                 continue;
             }
