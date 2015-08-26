@@ -1460,6 +1460,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     system("sleep 0.1");
 
     mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+    fprintf(stderr, "debughtx sequence number is %d\n", mBlgSize);
     nwords = readerConfig("vocabsize", "0");
     if (nwords == 0) {
         RuntimeError("[LMHTXSequenceReader] vocabsize option not set.");
@@ -1472,6 +1473,10 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
     std::wstring temp_s = readerConfig("file");
     fileName = std::string(temp_s.begin(), temp_s.end());
+
+    debughtx = readerConfig("debughtx", "1");
+    if (debughtx == 1)
+        fprintf(stderr, "debughtx set to one, will give a lot of debug output....\n");
 
     ReadClassInfo(wClassFile, class_size,
         word4idx,
@@ -1491,17 +1496,19 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 template<class ElemType>
 void BatchSequenceReader<ElemType>::Reset()
 {
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::Reset() called---");
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::Reset() ended---");
+    DEBUG_HTX fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::Reset() called---");
+    //TODO clear some memory
+    DEBUG_HTX fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::Reset() ended---");
 }
 
 template<class ElemType>
 void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
-    fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop called---\n");
-    fprintf(stderr, "mbSize:%d epoch:%d requestedEpochSamples:%d\n", mbSize, epoch, requestedEpochSamples); //requestedEpochSamples will be -1 when epochSize=0
+    DEBUG_HTX fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop called---\n");
+    DEBUG_HTX fprintf(stderr, "mbSize:%d epoch:%d requestedEpochSamples:%d\n", mbSize, epoch, requestedEpochSamples); //requestedEpochSamples will be -1 when epochSize=0
     m_mbSize = mbSize; //Size of minibatch requested
-    fprintf(stderr, "fileName:%s\n", fileName.c_str());
+    fprintf(stderr, "debughtx StartMinibatchLoop MBSize is %d\n", m_mbSize);
+    DEBUG_HTX fprintf(stderr, "fileName:%s\n", fileName.c_str());
     fin.open(fileName);
 
     sequence_cache.clear();
@@ -1512,7 +1519,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
 
     //EnsureDataAvailable(0); //debughtx, just for debug!
 
-    fprintf(stderr, "debughtx ---void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
 }
 
 template<class ElemType>
@@ -1575,16 +1582,16 @@ size_t BatchSequenceReader<ElemType>::FindNextSentences(size_t numRead)
 template<class ElemType>
 size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 {
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter called---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter called---\n");
     //fprintf(stderr, "debughtx returning %d\n", mBlgSize);
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter ended---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter ended---\n");
     return mBlgSize;
 }
 
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch called---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch called---\n");
     //features idx2cls labels
     Matrix<ElemType>* feature_m = matrices[L"features"];
     Matrix<ElemType>* label_m = matrices[L"labels"];
@@ -1599,9 +1606,16 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     feature_m->Resize(nwords, wordNumber, wordNumber);
     feature_m->Reset();
-    for (int i = 0; i < wordNumber; i++)
-        feature_m->SetValue(0, i, (ElemType)1); //All word 0!
-
+    
+    /*
+    for (int i = 0; i < wordNumber; i++) {
+        fprintf(stderr, "1\n");
+        feature_m->SetValue(0, i, (ElemType)2); //All word 0! This is for stupid version, should be deleted for simple version
+        fprintf(stderr, "2\n");
+        feature_m->SetValue(0, i, (ElemType)2); //All word 0! This is for stupid version, should be deleted for simple version
+        fprintf(stderr, "3\n");
+    }
+    */
     label_m->Resize(4, wordNumber);
     //label_m->Reset(); //Can't do this 
 
@@ -1613,20 +1627,22 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         for (int j = 0; j < m_mbSize; j++) {
             minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::None);
             int idx = j * (int)mBlgSize + i;
+            if (!refreshCacheSeq(i))  //can we have new words in the cache for stream i?
+                end = true;
             if (end) {
+                feature_m->SetValue(0, idx, (ElemType)1); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
                 label_m->SetValue(0, idx, (ElemType)0); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
                 minibatchFlag.SetValue(i, j, (ElemType)(MinibatchPackingFlag::NoInput)); //Rubbish here
                 continue;
             }
-            if (!refreshCacheSeq(i))  //can we have new words in the cache?
-                end = true;
             if (sequence_cache[i]->size() < 2) {
                 LogicError("Error in BatchSequenceReader<ElemType>::GetMinibatch, sequence_cache[%d]->size() < 2, it should be always >= 2.", i);
             }
+            //fprintf(stderr, "debughtx feature_m->SetValue seq i:%d mbCol j:%d row:%d col:%d matrixrow:%d matrixcol:%d\n", i, j, sequence_cache[i]->front(), idx, feature_m->GetNumRows(), feature_m->GetNumCols()); //added when meet a bug crash
             feature_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
             if (sequence_cache[i]->front() == sentenceEndId) //Beginning of a sentence
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
-            res = true;
+            res = true; //Got some word new
             sequence_cache[i]->pop_front();
             label_m->SetValue(0, idx, (ElemType)sequence_cache[i]->front());
             if (sequence_cache[i]->front() == sentenceEndId) { //End of a sentence, pop it out for a new one.
@@ -1640,10 +1656,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     feature_m->TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false); //Done, move it back to GPU if necessary
     label_m->TransferFromDeviceToDevice(CPUDEVICE, labelDeviceId, false, false, false); //Done, move it back to GPU if necessary
 
-    PrintMinibatch(matrices); //Just for debughtx
+    DEBUG_HTX PrintMinibatch(matrices); //Just for debughtx
 
-    fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch ended---\n");
-    system("sleep 0.5");
+    DEBUG_HTX fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch ended, returning res is %d---\n", res);
+    DEBUG_HTX system("sleep 0.5");
     return res;
 }
 
@@ -1718,7 +1734,7 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentence
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
 {
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd called---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd called---\n");
     bool ret = false;
     switch (endDataType)
     {
@@ -1736,7 +1752,7 @@ bool BatchSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = mSentenceEnd;
         break;
     }
-    fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd ended---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---BatchSequenceReader<ElemType>::DataEnd ended---\n");
     return ret;
 
 }
@@ -1837,7 +1853,7 @@ template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     //static bool first = true; //Stupid version debughtx
-    fprintf(stderr, "debughtx ---SetSentenceSegBatch called---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---SetSentenceSegBatch called---\n");
     //For the stupid version, I need to set it to sequenceStart everything, otherwise the first pastActivity for the recurrent node will be wrong in dimension.
     sentenceBegin.Resize(mBlgSize, m_mbSize);
     sentenceBegin.SetValue(0);
@@ -1863,21 +1879,23 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& senten
             k |= (int)minibatchFlag(j, i);
         minibatchPackingFlag[i] = (MinibatchPackingFlag)k;
     }
-    
-    //print debug info
-    fprintf(stderr, "debughtx matrix sentenceBegin row:%d col:%d\n", sentenceBegin.GetNumRows(), sentenceBegin.GetNumCols());
-    for (int i = 0; i < sentenceBegin.GetNumRows(); i++) {
-        for (int j = 0; j < sentenceBegin.GetNumCols(); j++)
-            fprintf(stderr, "%.2lf ", sentenceBegin(i, j));
+
+    DEBUG_HTX {
+        //print debug info
+        fprintf(stderr, "debughtx matrix sentenceBegin row:%d col:%d\n", sentenceBegin.GetNumRows(), sentenceBegin.GetNumCols());
+        for (int i = 0; i < sentenceBegin.GetNumRows(); i++) {
+            for (int j = 0; j < sentenceBegin.GetNumCols(); j++)
+                fprintf(stderr, "%.2lf ", sentenceBegin(i, j));
+            fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "debughtx vector minibatchPackingFlag size:%d\n", minibatchPackingFlag.size());
+        for (int i = 0; i < minibatchPackingFlag.size(); i++)
+            fprintf(stderr, "%d ", minibatchPackingFlag.at(i));
         fprintf(stderr, "\n");
     }
-    fprintf(stderr, "debughtx vector minibatchPackingFlag size:%d\n", minibatchPackingFlag.size());
-    for (int i = 0; i < minibatchPackingFlag.size(); i++)
-        fprintf(stderr, "%d ", minibatchPackingFlag.at(i));
-    fprintf(stderr, "\n");
 
-    fprintf(stderr, "debughtx ---SetSentenceSegBatch ended---\n");
-    system("sleep 0.5");
+    DEBUG_HTX fprintf(stderr, "debughtx ---SetSentenceSegBatch ended---\n");
+    DEBUG_HTX system("sleep 0.5");
 }
 
 template<class ElemType>

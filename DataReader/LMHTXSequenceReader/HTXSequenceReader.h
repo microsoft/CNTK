@@ -266,6 +266,8 @@ public:
 
 };
 
+#define DEBUG_HTX if(debughtx) //Do you want to print the debug info?
+
 template<class ElemType>
 class BatchSequenceReader : public SequenceReader<ElemType>
 {
@@ -358,10 +360,12 @@ private:
 public:
     vector<bool> mProcessed; 
     size_t m_mbSize;
-    
+
     string fileName; 
     ifstream fin;
     vector<list<int>*> sequence_cache;
+    int debughtx; //used in the DEBUG_HTX macro, control the debug output
+
     int sentenceEndId;
     Matrix<ElemType>* label_m_ref; //A reference to the label matrix in the getMinibatch
     Matrix<ElemType> minibatchFlag; //A place to set minibatchFlag in the getMinibatch function
