@@ -223,7 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
             {
-                MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
+                MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
             }
         }
 

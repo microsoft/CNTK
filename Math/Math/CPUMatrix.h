@@ -63,9 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
-        // AssignColumnSlice:  
         CPUMatrix<ElemType>& SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
-        // SetColumnSice:   
 
         ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
         ElemType RmsProp(CPUMatrix<ElemType>& gradients,

@@ -22,15 +22,11 @@
 #include "TimerUtility.h"
 #include "Profiler.h"
 
-
-//extern int mpiRank;
-//extern int mpiNumProcesses;
 extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
 
 template<class ElemType>
 void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int numProcessor, int myID)
@@ -80,14 +76,12 @@ void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb,
 }
 
 template<class ElemType> 
-size_t DecimateMinibatchWithSentences(
-                                        std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
-                                        int rank, int numprocs,                                    /* (input) rank info */
-                                        size_t& nSlices,                                              /* (input/output): on input, # parallel sentence total , on output, # paralel sentence in this node  */
-                                        Matrix<ElemType>& SentenceBoundary,                        /* (output) nSlices X nMBsize matrix */
-                                        vector<MinibatchPackingFlag>& PackingFlags,                /* (output) 1 X nMBsize vector  */
-                                        IDataReader<ElemType>* trainDataReader                     /* (input)  to have access to reader */
-                                        )
+size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
+                                      int rank, int numprocs,                                    /* (input) rank info */
+                                      size_t& nSlices,                                           /* (input/output): on input, # parallel sentence total , on output, # paralel sentence in this node  */
+                                      Matrix<ElemType>& SentenceBoundary,                        /* (output) nSlices X nMBsize matrix */
+                                      vector<MinibatchPackingFlag>& PackingFlags,                /* (output) 1 X nMBsize vector  */
+                                      IDataReader<ElemType>* trainDataReader)                    /* (input)  to have access to reader */
 {
     // For RNN, a input Matrix is organized in the following way: 
     //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
@@ -203,83 +197,6 @@ size_t DecimateMinibatchWithSentences(
     return rv; 
 }
 
-template<class ElemType>
-size_t DecimateMinibatchWithFrames(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,/* (input) matrix to be decimated */
-                                 int rank, int procs,                                       /* (input) rank info */
-                                 size_t& nSlices,                                           /* (output) always 1 */
-                                 Matrix<ElemType>& SentenceBoundary,                        /* (output) don't care */
-                                 vector<MinibatchPackingFlag>& PackingFlags,                /* (output) don't care */
-                                 IDataReader<ElemType>* trainDataReader                     /* (input)  to have access to reader */
-                                 )
-{
-    size_t rv = 0;
-    size_t col_start = 0, col_end = 0;
-    if (procs > 1)
-    {
-        for (auto it = mb.begin(); it != mb.end(); ++it)
-        {
-            MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
-            size_t nCols = mat.GetNumCols();
-            col_start = (nCols * rank) / procs;
-            col_end = (nCols * (rank + 1)) / procs;
-            if (col_end > nCols)
-            {
-                // this shouldn't happen
-                col_end = nCols;
-            }
-
-            if (col_end == col_start)
-            {
-                MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), 0, AUTOPLACEMATRIX, DENSE);
-                mat.SetValue(tmp);
-            }
-            else
-            {
-                MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
-                mat.SetValue(tmp);
-            }
-
-            if (rv == 0)
-            {
-                rv = mat.GetNumCols();
-            }
-            else
-            {
-                if (rv != mat.GetNumCols())
-                {
-                    throw std::logic_error("Uneven number of columns among inputs.");
-                }
-            }
-        }
-    }
-    
-    nSlices = 1; 
-    trainDataReader->SetSentenceSegBatch(SentenceBoundary, PackingFlags);
-    
-    // TODO : does step 1 and 2 really need ? (as we are in frame mode)
-    // 1. decimate sentence boundary 
-    // SentenceBoundary.RowSlice(col_start, col_end - col_start);
-    size_t numCols = SentenceBoundary.GetNumCols();         // numCols should equal to the minibatch size  
-    size_t numRows = col_end - col_start; 
-    Matrix<ElemType> newBoundary(CPUDEVICE);
-    newBoundary.AssignRowSliceValuesOf(SentenceBoundary, col_start, numRows);    
-    SentenceBoundary = newBoundary; 
-    // 2. calculate the PackingFlags 
-    fill(PackingFlags.begin(), PackingFlags.end(), MinibatchPackingFlag::None); 
-    for (size_t iCol = 0; iCol < numCols; iCol++)
-    {
-        for (size_t iRow = 0; iRow < numRows; iRow++)
-        {
-            if (SentenceBoundary(iRow, iCol) == SEQUENCE_START)
-                PackingFlags[iCol] |= MinibatchPackingFlag::SequenceStart; 
-            if (SentenceBoundary(iRow, iCol) == SEQUENCE_END)
-                PackingFlags[iCol] |= MinibatchPackingFlag::SequenceEnd; 
-        }
-    }
-
-    return numRows; 
-}
-
 enum class LearningRateSearchAlgorithm : int
 {
     None,
@@ -307,7 +224,7 @@ enum class ParallelizationMethod : int
 {
     None = 0,
     DataParallelSGD = 1,
-    ModelAveraging = (1 << 1),   // Currently unsupported but will soon replace #ifdef MPI_SUPPORT
+    ModelAveragingSGD = (1 << 1),
     ModelParallelSGD = (1 << 2), // Currently unsupported
 };
 
@@ -486,6 +403,8 @@ public:
         {
             ConfigParameters configParallelTrain(configSGD("ParallelTrain", ""));
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", "None"));
+            m_parallelizationStartEpochNum = configParallelTrain("parallelizationStartEpoch", "1");
+            m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain("distributedMBReading", "false");
 
             if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
@@ -498,18 +417,13 @@ public:
                 {
                     throw std::invalid_argument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
                 }
-
-                m_parallelizationStartEpochNum = configDataParallelSGD("parallelizationStartEpoch", "1");
-                m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
             }
+
             if (configParallelTrain.ExistsCurrent("ModelAveragingSGD") )
             {
-                ConfigParameters configMASGD( configParallelTrain("ModelAveragingSGD", "")); 
-                m_nFramesBetweenMASync = configMASGD("SyncAfterFrame", "40000"); 
+                ConfigParameters configMASGD(configParallelTrain("ModelAveragingSGD", "")); 
+                m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", "40000"); 
                 m_iMASyncStatsTrace = configMASGD("MAPerfStats", "0");
-
-                m_parallelizationStartEpochNum = configMASGD("parallelizationStartEpoch", "1");
-                m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
             }
                 
         }
@@ -1063,7 +977,6 @@ protected:
                 g_mpi->WaitAll();
             }
 
-
             if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
             {
                 // only needs to be done by one process
@@ -1173,7 +1086,6 @@ protected:
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
-
                     if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
                     {
                         net.SaveToFile(m_modelPath);
@@ -1281,7 +1193,6 @@ protected:
                 }
             }
 
-
             if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
@@ -1310,11 +1221,10 @@ protected:
             }
 
             // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
-            if (m_parallelizationMethod == ParallelizationMethod::ModelAveraging && g_mpi->NumNodesInUse() > 1)
+            if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
             {
                 g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
             }
-
 
             bool loadedPrevModel = false;
             size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
@@ -1362,7 +1272,6 @@ protected:
                         }
                         else
                         {
-
                             if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
                             {
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
@@ -2041,10 +1950,10 @@ protected:
         localEpochCriterion.SetValue(0);
         localEpochEvalErrors.SetValue(0);
 
-        bool useGradientAggregation = ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) 
-                                            && (epochNumber >= m_parallelizationStartEpochNum));
-        bool useModelAveraging      = ((m_parallelizationMethod == ParallelizationMethod::ModelAveraging)
-                                            && (epochNumber >= m_parallelizationStartEpochNum));
+        bool useGradientAggregation = ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) &&
+                                       (epochNumber >= m_parallelizationStartEpochNum));
+        bool useModelAveraging = ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) &&
+                                  (epochNumber >= m_parallelizationStartEpochNum));
         bool useParallelTrain = useGradientAggregation || useModelAveraging; 
 
         // MA-related variables
@@ -2064,8 +1973,9 @@ protected:
         // resetting this, so profiling is performed for one epoch only
         m_numMBsToCUDAProfile = 0;
 
-        bool useDistributedMBReading =  m_enableDistributedMBReading && 
-                                        trainSetDataReader->SupportsDistributedMBRead();
+        bool useDistributedMBReading = useParallelTrain &&
+                                       m_enableDistributedMBReading &&
+                                       trainSetDataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
         {
             trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_epochSize);
@@ -2110,49 +2020,47 @@ protected:
             size_t actualMBSize = 0;
             if (wasDataRead)
             {
-                if (!useDistributedMBReading && useParallelTrain )
+                size_t nSlices = trainSetDataReader->NumberSlicesInEachRecurrentIter();
+                Matrix<ElemType> sentenceBegin(CPUDEVICE);
+                vector<MinibatchPackingFlag> packingFlags;
+                if (!useDistributedMBReading && useParallelTrain)
                 {
                     // TODO: refactor this as a function 
-                    size_t nSlices = trainSetDataReader->NumberSlicesInEachRecurrentIter();
-                    Matrix<ElemType>                SentenceBegin(CPUDEVICE); 
-                    vector<MinibatchPackingFlag>    PackingFlags; 
-
                     if (trainSetDataReader->RequireSentenceSeg())
                     {
-                        nSamplesSinceLastModelSync +=DecimateMinibatchWithFrames(*inputMatrices, 
-                                                    g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), 
-                                                    nSlices, SentenceBegin, PackingFlags, 
-                                                    trainSetDataReader);
+                        DecimateMinibatchWithSentences(*inputMatrices,
+                                                       g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(),
+                                                       nSlices, sentenceBegin, packingFlags,
+                                                       trainSetDataReader);
                     }
                     else
                     {
-                        nSamplesSinceLastModelSync +=DecimateMinibatchWithSentences(*inputMatrices, 
-                                                        g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), 
-                                                        nSlices, SentenceBegin, PackingFlags, 
-                                                        trainSetDataReader);
+                        DecimateMinibatch(*inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
                     }
-                    actualMBSize = net.GetActualMBSize(); 
-                    net.SetActualMiniBatchSize(actualMBSize); 
-                    net.SetActualNbrSlicesInEachRecIter(nSlices); 
-                    trainSetDataReader->SetSentenceSegBatch(SentenceBegin, PackingFlags);
                 }
-                else
-                {
-                    actualMBSize = net.GetActualMBSize();
-                    net.SetActualMiniBatchSize(actualMBSize);
-                    nSamplesSinceLastModelSync += actualMBSize;
-                    net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                    trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
-                }
-                UpdateEvalTimeStamps(FeatureNodes);
-                UpdateEvalTimeStamps(labelNodes);
 
+                actualMBSize = net.GetActualMBSize();
                 if (actualMBSize == 0)
                 {
                     continue;
                 }
 
+                nSamplesSinceLastModelSync += actualMBSize;
+                net.SetActualMiniBatchSize(actualMBSize);
+                net.SetActualNbrSlicesInEachRecIter(nSlices);
 
+                if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
+                {
+                    net.SentenceBoundary().SetValue(sentenceBegin);
+                    net.MinibatchPackingFlags() = packingFlags;
+                }
+                else
+                {
+                    trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+                }
+
+                UpdateEvalTimeStamps(FeatureNodes);
+                UpdateEvalTimeStamps(labelNodes);
 
 #ifndef EVALDLL
                 if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
@@ -2249,13 +2157,13 @@ protected:
                 }
             }
     
-            if (useModelAveraging && g_mpi->NumNodesInUse() > 1 )
+            if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
             {
                 size_t processedSamples = 0; 
                 float secondsSinceLastSyncFinished = 0; 
                 float secondsSpentOnSync = 0;
-                if (ModelAveragingWork(nSamplesSinceLastModelSync, learnableNodes, processedSamples, 
-                                        secondsSinceLastSyncFinished, secondsSpentOnSync))
+                if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
+                                             secondsSinceLastSyncFinished, secondsSpentOnSync))
                 {
                     aggregateNumSamplesWithLabel = processedSamples; 
                     nSamplesSinceLastModelSync = 0; 
@@ -2276,7 +2184,6 @@ protected:
                     }
                 }
             }
-            
 
             timer.Stop();
             numMBsRun++;
@@ -2383,7 +2290,7 @@ protected:
 
         UninitDistGradAgg();
 
-        if (useModelAveraging && g_mpi->NumNodesInUse() > 1 && nSamplesSinceLastModelSync)
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) && nSamplesSinceLastModelSync)
         {
             // may not be synced after epoch finished, so do the sync here 
             ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
@@ -2434,8 +2341,8 @@ protected:
         }
     }
 
-    bool ModelAveragingWork(size_t nSamplesSinceLastSync, const std::list<ComputationNodePtr>& learnableNodes, size_t& nProcessedFrames, 
-                        float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
+    bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodePtr>& learnableNodes, size_t& nProcessedFrames, 
+                                  float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
     {
         //////////////////////////////////////////////////////////////////////////
         // the current strategy is that after each minibatch, we will sync between processors 
@@ -2479,6 +2386,7 @@ protected:
         }
         return true; 
     }
+
     size_t ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodePtr>& learnableNodes)
     {
         if (g_mpi->NumNodesInUse() <= 1)
@@ -2859,9 +2767,13 @@ protected:
         {
             return ParallelizationMethod::DataParallelSGD;
         }
+        else if (s == L"modelaveragingsgd")
+        {
+            return ParallelizationMethod::ModelAveragingSGD;
+        }
         else
         {
-            throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD)");
+            throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
         }
     }
 
@@ -3108,12 +3020,12 @@ protected:
     int m_parallelizationStartEpochNum;
 
     // Parallel training related with MA 
-    size_t m_nFramesBetweenMASync; 
-    int    m_iMASyncStatsTrace;         // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
-                                        // 0: means no perfomance stats show
-                                        // 1: means show stats every sync 
-                                        // n>1: means show stats after every n sync 
-
+    // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
+    // 0: means no perfomance stats show
+    // 1: means show stats every sync 
+    // n>1: means show stats after every n sync
+    int    m_iMASyncStatsTrace;
+    size_t m_nFramesBetweenMASync;
 
     bool m_needAveMultiplier;
     ElemType m_L2RegWeight;
