@@ -150,46 +150,8 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 
     if (!_stricmp(val.c_str(), "Auto"))
     {
-        if (g_mpi && (g_mpi->NumNodesInUse() > 1))
-        {
-            // make sure deviceId is unique among processes on the same machine
-            g_bestGpu->AllowAll();
-            std::string MyName(getenv("COMPUTERNAME"));
-            for (int i = 0; i < g_mpi->NumNodesInUse(); i++)
-            {
-                DEVICEID_TYPE yourDeviceId = deviceId;
-                if (g_mpi->CurrentNodeRank()== i)
-                {
-                    std::vector<int> devices = g_bestGpu->GetDevices(1);
-                    deviceId = yourDeviceId = (DEVICEID_TYPE)devices[0];
-                }
-                g_mpi->Bcast(&yourDeviceId, 1, i);
-                {
-                    int YourSize = (int)MyName.length();
-                    g_mpi->Bcast(&YourSize, 1, i);
-                    vector<char> YourName(YourSize+1);
-                    if (g_mpi->CurrentNodeRank() == i)
-                        copy(MyName.begin(), MyName.end(), YourName.begin());
-                    g_mpi->Bcast(YourName.data(), YourSize + 1, i);
-                    if (g_mpi->CurrentNodeRank() != i)
-                    {
-#ifdef _WIN32
-                        if (!_strcmpi(MyName.data(), YourName.data()))
-#else
-                        if (!strcasecmp(MyName.data(), YourName.data()))
-#endif
-                        {
-                            g_bestGpu->DisallowDevice(yourDeviceId);
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            deviceId = (DEVICEID_TYPE)
-                g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
-        }
+        deviceId = (DEVICEID_TYPE)
+            g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
     }
     else if (!_stricmp(val.c_str(), "All"))
     {
