@@ -178,7 +178,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"  featNorm = MeanVarNorm(myFeatures) \n"
             L"  layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) \n"
             L"  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) \n"
-            L"  outZ = outLayer.z //+ Delay(outZ, 1) \n"
+            L"  outZ = outLayer.z + Delay(outZ, 1) \n"
             L"  CE = CrossEntropyWithSoftmax(myLabels, outZ) \n"
             L"  Err = ErrorPrediction(myLabels, outZ) \n"
             L"  logPrior = LogPrior(myLabels) \n"

@@ -85,6 +85,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName)
         {
             return ConfigValuePtr(make_shared<Thunk>(f, location), location, expressionName);
+            //return ConfigValuePtr(f, location, expressionName);
         }
         // TODO: somehow the constructor overload from Thunk function fails to compile, so for now use MakeThunk instead
 
@@ -132,8 +133,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         template<class C>
         bool Is() const
         {
-            EnsureResolved();
-            //ResolveValue();
+            EnsureIsResolved();
             const auto p = dynamic_cast<C*>(get());
             return p != nullptr;
         }
@@ -141,8 +141,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         const C & AsRef() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
             // Note: since this returns a reference into 'this', you must keep the object you call this on around as long as you use the returned reference
-            EnsureResolved();
-            //ResolveValue();
+            EnsureIsResolved();
             const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
@@ -152,8 +151,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         template<class C>
         shared_ptr<C> AsPtr() const     // returns a shared_ptr cast to the 'value' member
         {
-            EnsureResolved();
-            //ResolveValue();
+            EnsureIsResolved();
             const auto p = dynamic_pointer_cast<C>(*this);
             if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
@@ -182,7 +180,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
             }
             return *this;                           // return ourselves so we can access a value as p_resolved = p->ResolveValue()
         }
-        void EnsureResolved() const
+        void EnsureIsResolved() const
         {
             if (GetThunk())
                 LogicError("ConfigValuePtr: unexpected access to unresolved object; ConfigValuePtrs can only be accessed after resolution");
