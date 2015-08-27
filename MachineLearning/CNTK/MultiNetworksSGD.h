@@ -21,11 +21,7 @@
 #include "TimerUtility.h"
 #include "SGD.h"
 
-#ifdef MPI_SUPPORT
-#include "mpi.h"
-#endif
-extern int myRank;
-extern int numProcs;
+
 
 using namespace std;
 
