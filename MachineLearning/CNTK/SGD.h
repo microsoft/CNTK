@@ -22,11 +22,6 @@
 #include "TimerUtility.h"
 #include "Profiler.h"
 
-#ifdef MPI_SUPPORT
-#include "mpi.h"
-#endif
-extern int mpiRank;
-extern int mpiNumProcesses;
 extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 using namespace std;
@@ -80,10 +75,126 @@ void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb,
     }
 }
 
-template<class ElemType>
-void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb)
+template<class ElemType> 
+size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
+                                      int rank, int numprocs,                                    /* (input) rank info */
+                                      size_t& nSlices,                                           /* (input/output): on input, # parallel sentence total , on output, # paralel sentence in this node  */
+                                      Matrix<ElemType>& SentenceBoundary,                        /* (output) nSlices X nMBsize matrix */
+                                      vector<MinibatchPackingFlag>& PackingFlags,                /* (output) 1 X nMBsize vector  */
+                                      IDataReader<ElemType>* trainDataReader)                    /* (input)  to have access to reader */
 {
-    DecimateMinibatch(mb, mpiNumProcesses, mpiRank);
+    // For RNN, a input Matrix is organized in the following way: 
+    //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
+    //   |<----   block 1    ---->|  .... |<------  block T       ----->| 
+    // N is the nSlice (input)
+    // The decimation here is to split each block to individual GPUs 
+    // So After decimation 
+    //   | x_t^{st} ... x_t^{en-1}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en-1} | 
+    // Each block now has nSlice/nProcs 
+    // 
+    // Correspondingly, the SentenceBoundary and PackingFlags will be revised 
+    trainDataReader->SetSentenceSegBatch(SentenceBoundary, PackingFlags);
+
+    size_t rv = 0;
+    size_t nOrigParallelUtts = nSlices;
+    static bool warned = false;
+    if (numprocs > 1)
+    {
+        // decide new parallel utterances 
+        size_t sent_start = 0;
+        size_t sent_end = 0;
+        if (nOrigParallelUtts % numprocs != 0)
+        {
+            if (!warned)
+            {
+                /* give a warning of potential bandwidth wasting */
+                fprintf(stderr, "WARNING: %d GPUs are used in model averaging, but the number of parallel utterances are %d, a potential training speed degradation.\n",
+                    g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
+                warned = true;
+            }
+            if (rank == numprocs - 1)
+            {
+                nSlices = nOrigParallelUtts - (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
+                sent_start = (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
+                sent_end = nOrigParallelUtts;
+            }
+            else
+            {
+                nSlices = nOrigParallelUtts / numprocs + 1;
+                sent_start = nSlices * rank;
+                sent_end = nSlices * (rank + 1);
+                if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
+            }
+        }
+        else
+        {
+            nSlices = nOrigParallelUtts / numprocs;
+            sent_start = rank*nSlices;
+            sent_end = (rank + 1)*nSlices;
+            if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
+        }
+        // decimate data 
+        for (auto it = mb.begin(); it != mb.end(); ++it)
+        {
+            MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
+            size_t nCols = mat.GetNumCols();
+
+            if (nCols % nOrigParallelUtts != 0)
+            {
+                // this should not happen for DNN, RNN with truncated BPTT, not sure about other special stuff ... 
+                RuntimeError("ERROR: minibatch size %d, but with %d parallel utterances\n", nCols, nOrigParallelUtts);
+            }
+            size_t nBlocks = nCols / nOrigParallelUtts;
+            // for RNN, nBlocks is the size of truncated BPTT
+            if (sent_end == sent_start)
+            {
+                // should never happen, print debug info
+                RuntimeError("ERROR: in DecimateMinibatch, col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d\n",
+                    (int)sent_start, (int)nCols, (int)nBlocks, (int)nOrigParallelUtts, (int)numprocs);
+            }
+
+            MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), nSlices*nBlocks, mat.GetPreferredDeviceId(), mat.GetMatrixType());
+
+            // do the column slice for each block 
+            for (size_t iblock = 0; iblock < nBlocks; iblock++)
+            {
+                tmp.SetColumnSlice(mat.ColumnSlice(nOrigParallelUtts*iblock + sent_start, nSlices),
+                    iblock*nSlices, nSlices);
+            }
+            mat.SetValue(tmp);
+
+            // assert the cols are even among nodes 
+            if (0 == rv)
+            {
+                rv = mat.GetNumCols();
+            }
+            else
+            {
+                if (rv != mat.GetNumCols())
+                    throw std::logic_error("Uneven number of columns among inputs.");
+            }
+        }
+        // revise sentence boundary and packing flags
+        Matrix<ElemType>  newBoundary(CPUDEVICE);
+        size_t nMBSize = PackingFlags.size(); 
+        newBoundary.Resize(nSlices, nMBSize);
+        newBoundary.AssignRowSliceValuesOf(SentenceBoundary, sent_start, nSlices);
+        fill(PackingFlags.begin(), PackingFlags.end(), MinibatchPackingFlag::None);
+        for (size_t nt = 0; nt < nMBSize; nt++)
+        {
+            for (size_t ns = 0; ns < nSlices; ns++)
+            {
+                if (newBoundary(ns, nt) == SEQUENCE_START)
+                    PackingFlags[nt] |= MinibatchPackingFlag::SequenceStart;
+                if (newBoundary(ns, nt) == SEQUENCE_END)
+                    PackingFlags[nt] |= MinibatchPackingFlag::SequenceEnd;
+            }
+        }
+       
+ 
+    }
+
+    return rv; 
 }
 
 enum class LearningRateSearchAlgorithm : int
@@ -113,7 +224,7 @@ enum class ParallelizationMethod : int
 {
     None = 0,
     DataParallelSGD = 1,
-    ModelAveraging = (1 << 1),   // Currently unsupported but will soon replace #ifdef MPI_SUPPORT
+    ModelAveragingSGD = (1 << 1),
     ModelParallelSGD = (1 << 2), // Currently unsupported
 };
 
@@ -286,10 +397,14 @@ public:
         m_zeroThresholdFor1Bit = true;
         m_enableDistributedMBReading = false;
         m_parallelizationStartEpochNum = 0;
+        m_nFramesBetweenMASync = 40000; // default 40k frames 
+
         if ((g_mpi != nullptr) && configSGD.ExistsCurrent("ParallelTrain"))
         {
             ConfigParameters configParallelTrain(configSGD("ParallelTrain", ""));
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain("parallelizationMethod", "None"));
+            m_parallelizationStartEpochNum = configParallelTrain("parallelizationStartEpoch", "1");
+            m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain("distributedMBReading", "false");
 
             if (configParallelTrain.ExistsCurrent("DataParallelSGD"))
@@ -302,10 +417,15 @@ public:
                 {
                     throw std::invalid_argument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
                 }
-
-                m_parallelizationStartEpochNum = configDataParallelSGD("parallelizationStartEpoch", "1");
-                m_parallelizationStartEpochNum -= 1; // Epoch numbers internally are 0 based
             }
+
+            if (configParallelTrain.ExistsCurrent("ModelAveragingSGD") )
+            {
+                ConfigParameters configMASGD(configParallelTrain("ModelAveragingSGD", "")); 
+                m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", "40000"); 
+                m_iMASyncStatsTrace = configMASGD("MAPerfStats", "0");
+            }
+                
         }
 
         Init(learningRatesPerMB,
@@ -857,11 +977,7 @@ protected:
                 g_mpi->WaitAll();
             }
 
-#ifdef MPI_SUPPORT
-            if (mpiRank == 0)
-#else
             if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
-#endif
             {
                 // only needs to be done by one process
                 net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
@@ -970,14 +1086,10 @@ protected:
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
-#ifdef MPI_SUPPORT
-                    if (mpiRank == 0)
-#else
                     if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
-#endif
                     {
-                    net.SaveToFile(m_modelPath);
-                }
+                        net.SaveToFile(m_modelPath);
+                    }
                 }
                 break;
             }
@@ -1023,9 +1135,6 @@ protected:
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                     i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
 
-#ifdef MPI_SUPPORT
-            INT32 mySamples = (INT32)
-#endif
             TrainOneEpoch(net,
                           refNet, 
                           refNode, 
@@ -1084,53 +1193,7 @@ protected:
                 }
             }
 
-#ifdef MPI_SUPPORT
-            // model reduction and averaging
-            if (mpiNumProcesses > 0)
-            {
-                ElemType factor; // weight for the parameter of my model
-                {
-                    // compute total minibatch size
-                    INT32 allSamples = 0;
-                    MPI_Allreduce(&mySamples, &allSamples, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-                    if (allSamples == 0)
-                    {
-                        allSamples = 1;
-                    }
-
-                                factor = (ElemType)mySamples / (ElemType)allSamples;
-                }
-
-                for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
-                {
-                    ComputationNodePtr node = (*nodeIter);
-                    Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->FunctionValues();
-
-                    // weight model by relative size of minibatch samples (and number of processors, for averaging)
-                    ElemType *px = mat.CopyToArray();
-                    size_t nx = mat.GetNumElements();
-                    transform(px,
-                              px + nx,
-                              px,
-                              [factor](ElemType&val)->ElemType {
-                                  return val * factor;
-                              });
-
-                    // TODO: Replace default Allreduce with the reduction-shuffle-dance
-                    vector<ElemType> py = vector<ElemType>(nx, ElemType(0));
-                    MPI_Allreduce(px, &(py[0]), (int)nx, sizeof(ElemType) == 4 ? MPI_FLOAT : MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), &(py[0]));
-                    delete px;
-                }
-            }
-#endif
-
-            // only evaluate once, on the master process. TODO: This could be faster by farming out the validation parts
-#ifdef MPI_SUPPORT
-            if (mpiRank == 0)
-#else
             if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
-#endif
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
                 {
@@ -1157,10 +1220,11 @@ protected:
                 }
             }
 
-#ifdef MPI_SUPPORT
-            // ensure all processes have the same epochCriterion
-            MPI_Bcast(&epochCriterion, 1, sizeof(epochCriterion) == 4 ? MPI_FLOAT : MPI_DOUBLE, 0, MPI_COMM_WORLD);
-#endif
+            // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
+            if ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) && (g_mpi->NumNodesInUse() > 1))
+            {
+                g_mpi->Bcast(&epochCriterion, 1, g_mpi->MainNodeRank());
+            }
 
             bool loadedPrevModel = false;
             size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
@@ -1208,11 +1272,7 @@ protected:
                         }
                         else
                         {
-#ifdef MPI_SUPPORT
-                            if (mpiRank == 0)
-#else
                             if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
-#endif
                             {
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
                             }
@@ -1268,11 +1328,7 @@ protected:
             }
 
             // persist model and check-point info
-#ifdef MPI_SUPPORT
-            if (mpiRank == 0)
-#else
             if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
-#endif
             {
                 net.SaveToFile(GetModelNameForEpoch(i));
                 SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
@@ -1894,7 +1950,18 @@ protected:
         localEpochCriterion.SetValue(0);
         localEpochEvalErrors.SetValue(0);
 
-        bool useGradientAggregation = ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
+        bool useGradientAggregation = ((m_parallelizationMethod == ParallelizationMethod::DataParallelSGD) &&
+                                       (epochNumber >= m_parallelizationStartEpochNum));
+        bool useModelAveraging = ((m_parallelizationMethod == ParallelizationMethod::ModelAveragingSGD) &&
+                                  (epochNumber >= m_parallelizationStartEpochNum));
+        bool useParallelTrain = useGradientAggregation || useModelAveraging; 
+
+        // MA-related variables
+        size_t nSamplesSinceLastModelSync = 0;
+        size_t nSynced = 0; 
+        float  nSecondsOnMASync = 0; 
+        float  nSecondsSinceLastMAPerfReport = 0;
+
         if (useGradientAggregation)
         {
             epochCriterion = ElemType(0.0);
@@ -1906,7 +1973,9 @@ protected:
         // resetting this, so profiling is performed for one epoch only
         m_numMBsToCUDAProfile = 0;
 
-        bool useDistributedMBReading = useGradientAggregation && m_enableDistributedMBReading && trainSetDataReader->SupportsDistributedMBRead();
+        bool useDistributedMBReading = useParallelTrain &&
+                                       m_enableDistributedMBReading &&
+                                       trainSetDataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
         {
             trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_epochSize);
@@ -1961,26 +2030,47 @@ protected:
             size_t actualMBSize = 0;
             if (wasDataRead)
             {
-#ifdef MPI_SUPPORT
-                DecimateMinibatch(inputMatrices);
-#endif
-                if (!useDistributedMBReading && useGradientAggregation)
+                size_t nSlices = trainSetDataReader->NumberSlicesInEachRecurrentIter();
+                Matrix<ElemType> sentenceBegin(CPUDEVICE);
+                vector<MinibatchPackingFlag> packingFlags;
+                if (!useDistributedMBReading && useParallelTrain)
                 {
-                    DecimateMinibatch(*inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
+                    // TODO: refactor this as a function 
+                    if (trainSetDataReader->RequireSentenceSeg())
+                    {
+                        DecimateMinibatchWithSentences(*inputMatrices,
+                                                       g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(),
+                                                       nSlices, sentenceBegin, packingFlags,
+                                                       trainSetDataReader);
+                    }
+                    else
+                    {
+                        DecimateMinibatch(*inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
+                    }
                 }
-                UpdateEvalTimeStamps(FeatureNodes);
-                UpdateEvalTimeStamps(labelNodes);
 
                 actualMBSize = net.GetActualMBSize();
-
                 if (actualMBSize == 0)
                 {
                     continue;
                 }
 
+                nSamplesSinceLastModelSync += actualMBSize;
                 net.SetActualMiniBatchSize(actualMBSize);
-                net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+                net.SetActualNbrSlicesInEachRecIter(nSlices);
+
+                if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
+                {
+                    net.SentenceBoundary().SetValue(sentenceBegin);
+                    net.MinibatchPackingFlags() = packingFlags;
+                }
+                else
+                {
+                    trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+                }
+
+                UpdateEvalTimeStamps(FeatureNodes);
+                UpdateEvalTimeStamps(labelNodes);
 
 #ifndef EVALDLL
                 if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
@@ -2005,8 +2095,6 @@ protected:
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
                     net.Evaluate(evaluationNodes[i]);
-                    Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(),
-                        0, 0, localEpochEvalErrors, 0, i);
                 }
 
                 // only compute gradient when learning rate is large enough
@@ -2019,11 +2107,6 @@ protected:
                 {
                     // use only the first criterion. Is there any possibility to use more?
                     net.Evaluate(criterionNodes[0]);
-                }
-
-                for (size_t i = 0; i < numEvalNodes; i++)
-                {
-                    net.Evaluate(evaluationNodes[i]);
                 }
             }
 
@@ -2085,13 +2168,41 @@ protected:
                                   m_needAveMultiplier);
                 }
             }
+    
+            if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
+            {
+                size_t processedSamples = 0; 
+                float secondsSinceLastSyncFinished = 0; 
+                float secondsSpentOnSync = 0;
+                if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
+                                             secondsSinceLastSyncFinished, secondsSpentOnSync))
+                {
+                    aggregateNumSamplesWithLabel = processedSamples; 
+                    nSamplesSinceLastModelSync = 0; 
+                    nSynced++;
+
+                    nSecondsOnMASync += secondsSpentOnSync; 
+                    nSecondsSinceLastMAPerfReport += secondsSinceLastSyncFinished; 
+                    
+                    if (m_iMASyncStatsTrace > 0)
+                    {
+                        if (nSynced % m_iMASyncStatsTrace == 0)
+                        {
+                            fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
+                                            nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                            nSecondsOnMASync = 0; 
+                            nSecondsSinceLastMAPerfReport = 0; 
+                        }
+                    }
+                }
+            }
 
             timer.Stop();
             numMBsRun++;
             if (m_traceLevel > 0)
             {
                 totalTimeInMBs += timer.ElapsedSeconds();
-                numSamplesLastMBs += int(aggregateNumSamplesWithLabel);
+                numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
 
                 if (numMBsRun % m_numMBsToShowResult == 0)
                 {
@@ -2191,6 +2302,12 @@ protected:
 
         UninitDistGradAgg();
 
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) && nSamplesSinceLastModelSync)
+        {
+            // may not be synced after epoch finished, so do the sync here 
+            ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
+            nSynced++;
+        }
         return totalEpochSamples;
     }
 
@@ -2235,6 +2352,111 @@ protected:
             }
         }
     }
+
+    bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodePtr>& learnableNodes, size_t& nProcessedFrames, 
+                                  float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
+    {
+        //////////////////////////////////////////////////////////////////////////
+        // the current strategy is that after each minibatch, we will sync between processors 
+        // to decide whether a sync need to be performed. This is definitely not optimal, 
+        // which we will fix it later. 
+
+        // TODO: the way we handle timer is not very good 
+        //////////////////////////////////////////////////////////////////////////
+        static bool first = true ; 
+        static Timer MAtimer;
+        if (first)
+        {
+            MAtimer.Start(); 
+            first = false; 
+        }
+       
+        char bNeedToSync = (char)0; // use char for bool 
+        if (g_mpi->IsMainNode() && nSamplesSinceLastSync >= m_nFramesBetweenMASync)
+        {
+            // only the main node can decide whether a sync need to be performed 
+            bNeedToSync = (char)1; 
+        }
+        g_mpi->Bcast(&bNeedToSync, 1, g_mpi->MainNodeRank());
+        if (bNeedToSync)
+        {
+            MAtimer.Stop();
+            double elapsedsec = MAtimer.ElapsedSeconds(); 
+            SecondsSinceLastSyncFinished = first ?  0  : (float) elapsedsec  ;
+            MAtimer.Start();
+            nProcessedFrames = ModelAveragingSync((int)nSamplesSinceLastSync, learnableNodes);
+            MAtimer.Stop();
+            SecondsSpentOnSync = (float)MAtimer.ElapsedSeconds();
+            
+            MAtimer.Start();
+
+        }
+        else
+        {
+            nProcessedFrames = 0; 
+            return false;
+        }
+        return true; 
+    }
+
+    size_t ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodePtr>& learnableNodes)
+    {
+        if (g_mpi->NumNodesInUse() <= 1)
+        {
+            return nSamplesSinceLastSync; 
+        }
+
+        //========================================
+        // Sec. 1 calculate factor
+        //========================================
+        float factor = 0; 
+        int   nTotalSamples = nSamplesSinceLastSync; 
+        g_mpi->AllReduce(&nTotalSamples, 1);
+        if (nTotalSamples < 0)
+        {
+            // prepare for overflow 
+            factor = 1.0f / g_mpi->NumNodesInUse(); 
+        }
+        else
+        {
+            factor = (nSamplesSinceLastSync + 0.0f) / nTotalSamples; 
+        }
+
+        //========================================
+        // Sec. 2 sync models based on factor 
+        // Note: this is suboptimal at the moment: 
+        //       we do the averaging for each node in a sequence manner, i.e., 
+        //          (node1) GPU->CPU->MPI_AllReduce -> (node2)GPU->CPU->MPI_AllReduce
+        //       we can improve it by using a pipeline 
+        //          (node1) GPU ->  CPU  ->  MPI_AllReduce
+        //          (node2)         GPU  ->  CPU            -> MPI_AllReduce
+        //          (node3)                  GPU            -> CPU              -> MPI_AllReduce
+        //========================================
+        for (auto iter = learnableNodes.begin(); iter != learnableNodes.end(); iter++)
+        {
+            ComputationNodePtr pNode = *iter; 
+            if (!pNode->NeedGradient())
+            {
+                continue;
+            }
+
+            Matrix<ElemType>& mat = pNode->FunctionValues();
+            // 1. normalize the weight matrix 
+            Matrix<ElemType>::Scale(factor, mat);
+            // 2. sent weight matrix over MPI nodes; 
+            ElemType* px = mat.CopyToArray(); 
+            size_t    nx = mat.GetNumElements(); 
+
+            // 3. inplace sum 
+            g_mpi->AllReduce(px, nx);
+            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), px);
+            // 4. clean up 
+            delete []px; 
+        }
+
+        return nTotalSamples; 
+    }
+    
 
 public:
     // UpdateWeightsS - static version of UpdateWeights()
@@ -2557,9 +2779,13 @@ protected:
         {
             return ParallelizationMethod::DataParallelSGD;
         }
+        else if (s == L"modelaveragingsgd")
+        {
+            return ParallelizationMethod::ModelAveragingSGD;
+        }
         else
         {
-            throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD)");
+            throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
         }
     }
 
@@ -2804,6 +3030,14 @@ protected:
     bool m_zeroThresholdFor1Bit;
     bool m_enableDistributedMBReading;
     int m_parallelizationStartEpochNum;
+
+    // Parallel training related with MA 
+    // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
+    // 0: means no perfomance stats show
+    // 1: means show stats every sync 
+    // n>1: means show stats after every n sync
+    int    m_iMASyncStatsTrace;
+    size_t m_nFramesBetweenMASync;
 
     bool m_needAveMultiplier;
     ElemType m_L2RegWeight;
