@@ -22,7 +22,6 @@ namespace Microsoft {
             class MatrixPool
             {
             protected:
-                typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
                 typedef shared_ptr<Matrix<ElemType>> MatrixPtr;
 
             public:

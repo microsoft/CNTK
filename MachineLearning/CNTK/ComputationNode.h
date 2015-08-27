@@ -21,6 +21,8 @@
 #include "Basics.h"
 #include "Matrix.h"
 
+#include "MatrixPool.h"
+
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVITY 0.1
 
@@ -425,10 +427,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_nodeName;
         }
 
-        std::vector<ComputationNodePtr>	GetChildren() const
+        std::vector<ComputationNodePtr> GetChildren() const
         {
             return m_children;
         }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestEvalMatrices(MatrixPool<ElemType>& matrixPool)
+        {
+            matrixPool;
+        }
+
+        //release temp matrices that are only used by forward computation
+        //don't release matrices that need to be used in the gradient computation
+        virtual void ReleaseMatricesAfterEval(MatrixPool<ElemType>& matrixPool)
+        {
+            matrixPool;
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestGradientMatrices(MatrixPool<ElemType>& matrixPool, const int numParents)
+        {
+            matrixPool; numParents;
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseGradientMatrices(MatrixPool<ElemType>& matrixPool)
+        {
+            matrixPool;
+        }
+
 
         bool isVisisted() const
         {
@@ -793,6 +821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+
         void InferImageDimsFromInput(const size_t index, const bool outputSameAsInput = true)
         {
             if (index >= ChildrenSize())
