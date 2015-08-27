@@ -1042,7 +1042,21 @@ public:
 
         if (!NodeNameExist(toName))
         {
+            // TODO: get rid of Duplicate(), instead create the node and call CopyTo()
+            // Problem: how to create a node of a given type? Needs a virtual function... but that could at least be defined inside those inheritance macros
+            // Could CopyTo() accept a nullptr and return itself?
             pToNode = pFromNode->Duplicate(toName, flags);
+            //const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            //return New<MeanNode<ElemType>>(this, name, flags);
+            //PreComputedNode<ElemType>::Construct(node->m_deviceId, newName);
+            //node->CopyTo(shared_from_this(), newName, flags);
+            //ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            //auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
+            //if (flags & CopyNodeFlags::copyNodeValue)
+            //{
+            //    node->m_hasComputed = m_hasComputed;
+            //    node->m_numSamples = m_numSamples;
+            //}
             AddNodeToNet(pToNode);
         }
         else
