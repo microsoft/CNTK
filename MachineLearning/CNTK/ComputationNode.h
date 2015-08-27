@@ -1060,6 +1060,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        // TODO: eliminate those one; it is only called from one place, namely ComputationNetwork::CopyNode()
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
 
         /// these are used to export hidden state activity
