@@ -35,7 +35,7 @@ namespace Microsoft {
 
                 MatrixPtr Request(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
                 {
-                    MatrixPtr matrixPtr = null;
+                    MatrixPtr matrixPtr = nullptr;
                     if (m_releasedMatrices.empty())
                     {
                         matrixPtr = make_shared<Matrix<ElemType>>(deviceId)

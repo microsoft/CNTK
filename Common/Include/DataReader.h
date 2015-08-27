@@ -79,6 +79,7 @@ public:
     virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
     virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
+    virtual bool RequireSentenceSeg() { return false; };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
