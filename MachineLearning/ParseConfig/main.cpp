@@ -165,10 +165,10 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             L"]\n"
             ,
             // #13: factorial
-            L"do = Print(fac(5)) ; fac(i) = if i > 1 then fac(i-1)*i else i "
+            L"do = Print(fac(5)) ; fac(i) = if i > 1 then fac(i-1)*i else 1 "
             ,
             // #14: Fibonacci sequence with memoization
-            L"do = Print(fibs(10)) ; fibs(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals   // [n] "
+            L"do = Print(fibs(10)) ; fibs(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals[n] "
             ,
             // #15: DNN with array
             L"do = Print(val) \n"
