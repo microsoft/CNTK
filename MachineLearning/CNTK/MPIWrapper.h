@@ -219,6 +219,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        // for raw pointer 
+        template<typename ElemType>
+        void AllReduce(ElemType* pData, size_t nData)
+        {
+            if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+            {
+                MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+            }
+        }
+
+        template<typename ElemType>
+        void Bcast(ElemType* pData, size_t nData, size_t srcRank)
+        {
+            if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+            {
+                MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast"); 
+            }
+        }
+
         // wait for all ranks to reach here
         void WaitAll() 
         {

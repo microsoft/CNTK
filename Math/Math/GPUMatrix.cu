@@ -567,6 +567,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+    {
+        if (numCols == 0)
+            throw std::logic_error("The slice cannot have 0 columns.");
+        if (startColumn + numCols > m_numCols)
+            throw std::logic_error("The slice is out of range of the destination matrix.");
+        if (numCols > fromMatrix.GetNumCols())
+            throw std::logic_error("The slice is out of range of the source matrix.");
+        if (m_numRows != fromMatrix.m_numRows)
+            throw std::logic_error("The number of rows in source and destination matrices do not match");
+
+        CUDA_CALL(cudaMemcpy(m_pArray + LocateColumn(startColumn), fromMatrix.m_pArray, sizeof(ElemType)*m_numRows*numCols, cudaMemcpyDeviceToDevice));
+        return *this;
+    }
+
+
     //for each column of a, we assign all rows of a to this starting from startIndex
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
