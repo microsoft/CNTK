@@ -250,7 +250,7 @@ int wmain(int /*argc*/, wchar_t* /*argv*/[])
             ,
             NULL
         };
-        let first = 16;     // 0 for all
+        let first = 0;     // 0 for all
         bool oneOnly = first > 0;
         for (size_t i = first; parserTests[i]; i++)
         {

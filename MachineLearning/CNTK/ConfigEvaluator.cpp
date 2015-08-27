@@ -925,7 +925,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // -----------------------------------------------------------------------
 
     // create a lambda that calls Evaluate() on an expr to get or realize its value
-    static shared_ptr<Object> MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
+    // Unresolved ConfigValuePtrs (i.e. containing a Thunk) may only be moved, not copied.
+    static ConfigValuePtr MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
     {
         function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
@@ -934,7 +935,6 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             let value = Evaluate(expr, scope, exprPath, exprId);
             return value;   // this is a great place to set a breakpoint!
         };
-        //return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
         return ConfigValuePtr::MakeThunk(f, expr->location, exprPath);
     }
 
@@ -1000,7 +1000,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
                 if (argListExpr->op != L"()") LogicError("parameter list expected");
                 let fnExpr = e->args[1];                // [1] = expression of the function itself
-                let f = [argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const ConfigLambda::NamedParams & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
+                let f = [argListExpr, fnExpr, scope, exprPath](vector<ConfigValuePtr> && args, ConfigLambda::NamedParams && namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
                 {
                     // TODO: document namedArgs--does it have a parent scope? Or is it just a dictionary? Should we just use a shared_ptr<map,ConfigValuPtr>> instead for clarity?
                     // on exprName
@@ -1022,16 +1022,17 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     {
                         let argName = argList[i];       // parameter name
                         if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
-                        let & argVal = args[i];         // value of the parameter
-                        argScope->Add(argName->id, argName->location, argVal);
+                        auto argVal = move(args[i]);         // value of the parameter
+                        argScope->Add(argName->id, argName->location, move(argVal));
                         // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                     }
                     // also named arguments
-                    for (let namedArg : namedArgs)
+                    for (auto & namedArg : namedArgs)
                     {
                         let id = namedArg.first;
-                        let & argVal = namedArg.second;
-                        argScope->Add(id, argVal.GetLocation(), argVal);
+                        auto argVal = move(namedArg.second);
+                        let location = argVal.GetLocation();    // note: do before argVal gets destroyed in the upcoming move()
+                        argScope->Add(id, location, move(argVal));
                     }
                     // get the macro name for the exprPath
                     wstring macroId = exprPath;
@@ -1057,7 +1058,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     let id = namedArg.first;
                     let location = namedArg.second.first;   // location of identifier
                     let expr = namedArg.second.second;      // expression to evaluate to get default value
-                    namedParams[id] = ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/);
+                    namedParams[id] = move(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath/*TODO??*/, id));
                     //namedParams->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
                     // the thunk is called if the default value is ever used
                 }
@@ -1079,14 +1080,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 {
                     let argValExpr = args[i];               // expression to evaluate arg [i]
                     let argName = lambda->GetParamNames()[i];
-#if 1
-                    argVals[i] = Evaluate(argValExpr, scope, exprPath, L"(" + argName + L")");  // evaluate right here
-                    // We evaluate all macros at time of macro invocation, not at time of first use inside the macro.
-                    // This is to make the ConfigValuePtr single-ownership-while-thunked problem easier.
-                    // Revisit this if this ever causes a problem.
-#else
-                    argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location, exprPath/*TODO??*/);  // make it a thunked value
-#endif
+                    argVals[i] = move(MakeEvaluateThunkPtr(argValExpr, scope, exprPath/*TODO??*/, L"(" + argName + L")"));
+                    // Make it a thunked value and pass by rvalue ref since unresolved ConfigValuePtrs may not be copied.
                     /*this wstrprintf should be gone, this is now the exprName*/
                     // Note on scope: macro arguments form a scope (ConfigRecord), the expression for an arg does not have access to that scope.
                     // E.g. F(A,B) is used as F(13,A) then that A must come from outside, it is not the function argument.
@@ -1104,19 +1099,15 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     let id = namedArg.first;                // id of passed in named argument
                     let location = namedArg.second.first;   // location of expression
                     let expr = namedArg.second.second;      // expression of named argument
-#if 1
-                    namedArgVals[id] = Evaluate(expr, scope, exprPath, id);
-#else
-                    namedArgVals[id] = ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope, exprPath, id), expr->location, exprPath/*TODO??*/);
-                    //namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    namedArgVals[id] = move(MakeEvaluateThunkPtr(expr, scope, exprPath/*TODO??*/, id));
                     // the thunk is evaluated when/if the passed actual value is ever used the first time
-#endif
+                    // This array owns the Thunk, and passes it by styd::move() to Apply, since it is not allowed to copy unresolved ConfigValuePtrs.
                     // Note on scope: same as above.
                     // E.g. when a function declared as F(A=0,B=0) is called as F(A=13,B=A), then A in B=A is not A=13, but anything from above.
                     // For named args, it is far less clear whether users would expect this. We still do it for consistency with positional args, which are far more common.
                 }
                 // call the function!
-                return lambda->Apply(argVals, namedArgVals, exprPath);
+                return lambda->Apply(move(argVals), move(namedArgVals), exprPath);
             }
             // --- variable access
             else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
@@ -1131,7 +1122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 {
                     let id = entry.first;
                     let expr = entry.second.second;             // expression to compute the entry
-                    newScope->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    newScope->Add(id, entry.second.first/*loc of id*/, MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath/*TODO??*/, id));
                     // Note on scope: record assignments are like a "let rec" in F#/OCAML. That is, all record members are visible to all
                     // expressions that initialize the record members. E.g. [ A = 13 ; B = A ] assigns B as 13, not to a potentially outer A.
                     // (To explicitly access an outer A, use the slightly ugly syntax ...A)
@@ -1187,10 +1178,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                             TextLocation::PrintIssue(vector<TextLocation>(1, initLambdaExpr->location), L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
                         // apply initLambdaExpr to indexValue and return the resulting value
                         let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");  // get the function itself (most of the time just a simple name)
-                        vector<ConfigValuePtr> argVals(1, indexValue);      // create an arg list with indexValue as the one arg
-                        //NamedArgs namedArgs = make_shared<ConfigRecord>(nullptr); // no named args in initializer lambdas TODO: change to shared_ptr<map<>>
+                        vector<ConfigValuePtr> argVals(1, indexValue);              // create an arg list with indexValue as the one arg
                         // TODO: where does the current scope come in? Aren't we looking up in namedArgs directly?
-                        let value = initLambda->Apply(argVals, ConfigLambda::NamedParams(), elemExprPath);
+                        let value = initLambda->Apply(move(argVals), ConfigLambda::NamedParams(), elemExprPath);
+                        // TODO: change this ^^ to the const & version of Apply() once it is there
                         return value;   // this is a great place to set a breakpoint!
                     };
                     elementThunks.push_back(ConfigValuePtr::MakeThunk(f, initLambdaExpr->location, elemExprPath/*TODO??*/));
